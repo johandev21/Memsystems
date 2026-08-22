@@ -46,11 +46,11 @@ const HeadingWithId = ({
     <HeadingTag
       id={id}
       className={cn(
-        "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3",
-        level === 1 && "text-2xl pt-6 my-4",
-        level === 2 && "text-xl pt-5 my-3.5",
-        level === 3 && "text-lg pt-4 my-3",
-        level >= 4 && "text-base font-semibold pt-3 my-2",
+        "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3 wrap-break-words",
+        level === 1 && "text-lg sm:text-2xl pt-4 sm:pt-6 my-3 sm:my-4",
+        level === 2 && "text-base sm:text-xl pt-4 sm:pt-5 my-3 sm:my-3.5",
+        level === 3 && "text-[15px] sm:text-lg pt-3 sm:pt-4 my-2.5 sm:my-3",
+        level >= 4 && "text-sm sm:text-base font-semibold pt-3 my-2",
       )}
     >
       {children}
@@ -78,7 +78,9 @@ const markdownComponents = {
     <HeadingWithId level={6}>{children}</HeadingWithId>
   ),
   p: ({ children }: { children?: ReactNode }) => (
-    <p className="text-foreground/90 leading-relaxed font-sans my-2.5">{children}</p>
+    <p className="text-foreground/90 leading-relaxed font-sans my-2.5 wrap-break-words">
+      {children}
+    </p>
   ),
   ul: ({ children }: { children?: ReactNode }) => (
     <ul className="list-disc pl-6 my-3 space-y-1.5 text-foreground/90">{children}</ul>
@@ -90,8 +92,10 @@ const markdownComponents = {
     <li className="leading-relaxed font-sans pl-1">{children}</li>
   ),
   table: ({ children }: { children?: ReactNode }) => (
-    <div className="my-4 overflow-x-auto">
-      <table className="w-full text-left text-sm border-collapse">{children}</table>
+    <div className="my-4 overflow-x-auto overscroll-x-contain -mx-3 sm:mx-0 px-3 sm:px-0">
+      <table className="w-full text-left text-sm border-collapse min-w-[480px] sm:min-w-0">
+        {children}
+      </table>
     </div>
   ),
   thead: ({ children }: { children?: ReactNode }) => (
@@ -109,8 +113,8 @@ const markdownComponents = {
   ),
   code: ({ className, children }: { className?: string; children?: ReactNode }) => (
     <MarkdownCodeBlock
-      className={className}
-      containerClassName="rounded-xl border border-border/60"
+      className={cn("max-w-full overflow-x-auto", className)}
+      containerClassName="rounded-xl border border-border/60 max-w-full overflow-x-auto"
       showLineNumbers
     >
       {children}

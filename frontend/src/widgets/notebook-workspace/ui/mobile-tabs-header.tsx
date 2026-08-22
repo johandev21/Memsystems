@@ -9,8 +9,8 @@ export interface MobileTabsHeaderProps {
 export function MobileTabsHeader({ notebookId }: MobileTabsHeaderProps) {
   return (
     <div className="shrink-0 px-3 pt-2 pb-1.5">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold">Notebook</h2>
+      <div className="flex items-center justify-end mb-2">
+        <span className="sr-only">Notebook sections</span>
         <NotebookSettingsDialog notebookId={notebookId} />
       </div>
       <TabsList className="w-full !h-auto bg-muted/50 p-1 grid grid-cols-3 gap-0">

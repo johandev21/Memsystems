@@ -121,7 +121,7 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
   return (
     <div className="flex flex-col gap-2 p-2">
       {/* Creation Buttons Grid */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {RESOURCES.map((resource) => {
           const disabled = !isInScope(resource.kind);
 
@@ -132,12 +132,12 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
               disabled={disabled}
               onClick={() => !disabled && onGenerate(resource.kind)}
               className={cn(
-                "group relative flex items-center h-11 w-full justify-between px-3.5 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background rounded-2xl cursor-pointer select-none overflow-hidden",
+                "group relative flex items-center min-h-11 h-auto py-2.5 w-full justify-between px-3 gap-2 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background rounded-2xl cursor-pointer select-none overflow-hidden",
                 resource.colorClasses,
                 disabled && "opacity-50 cursor-not-allowed",
               )}
             >
-              <span className="text-sm font-medium text-foreground min-w-0 truncate">
+              <span className="text-[13px] font-medium text-foreground min-w-0 truncate leading-tight">
                 {resource.label}
               </span>
 
@@ -170,15 +170,17 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
                 key={job.id}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/60 dark:bg-muted/30 p-3 shadow-xs transition-all animate-in fade-in slide-in-from-top-1"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-border/50 shadow-2xs text-foreground shrink-0">
                     <RefreshCw className="h-4.5 w-4.5 animate-spin text-primary" />
                   </div>
-                  <div className="flex flex-col min-w-0">
+                  <div className="flex flex-col min-w-0 flex-1">
                     <span className="text-xs font-semibold text-foreground truncate">
                       Generating {KIND_LABELS[job.kind] || job.kind}...
                     </span>
-                    <span className="text-xs text-muted-foreground truncate">{subtitleText}</span>
+                    <span className="text-xs text-muted-foreground truncate wrap-break-words">
+                      {subtitleText}
+                    </span>
                   </div>
                 </div>
                 <Button

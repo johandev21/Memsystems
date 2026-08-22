@@ -101,7 +101,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
           <ConversationScrollButton />
         </Conversation>
 
-        <div className="shrink-0 p-2 select-none">
+        <div className="shrink-0 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none">
           <ClearHistoryDialog
             open={isClearDialogOpen}
             onOpenChange={(open) => {

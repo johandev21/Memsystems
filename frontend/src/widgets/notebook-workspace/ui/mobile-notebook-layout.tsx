@@ -54,17 +54,25 @@ export function MobileNotebookLayout({
     );
   }, [activeTab, pendingChatPrompt]);
 
+  // Mobile fullscreen overlays — lock body scroll while a viewer is open
+  useEffect(() => {
+    const hasOverlay = Boolean(selectedSourceId || dialogs.selectedStudyMaterialId);
+    if (!hasOverlay) return;
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [selectedSourceId, dialogs.selectedStudyMaterialId]);
+
   return (
     <div className="lg:hidden h-full flex flex-col">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full gap-0">
         <MobileTabsHeader notebookId={notebookId} />
 
         <TabsContent value="sources" className="flex-1 mt-0 min-h-0">
-          {selectedSourceId ? (
-            <SourceContentViewer sourceId={selectedSourceId} onClose={() => onSelectSource(null)} />
-          ) : (
-            <SourcesPanel notebookId={notebookId} onSelectSource={onSelectSource} />
-          )}
+          <SourcesPanel notebookId={notebookId} onSelectSource={onSelectSource} />
         </TabsContent>
 
         <TabsContent value="chat" className="flex-1 mt-0 min-h-0">
@@ -72,39 +80,48 @@ export function MobileNotebookLayout({
         </TabsContent>
 
         <TabsContent value="studio" className="flex-1 mt-0 min-h-0">
-          {dialogs.selectedStudyMaterialId ? (
-            <RightPane
-              notebookId={notebookId}
-              mode={{
-                kind: "viewer",
-                materialId: dialogs.selectedStudyMaterialId,
-              }}
-              onModeChange={(mode) => {
-                if (mode.kind === "select") {
-                  dialogs.setSelectedStudyMaterialId(null);
-                }
-              }}
-            />
-          ) : (
-            <ScrollArea className="h-full">
-              <div className="p-3 space-y-3">
-                <StudioResources
-                  notebookId={notebookId}
-                  collapsed={false}
-                  onGenerate={dialogs.handleGenerate}
-                />
-                <MobileStudyMaterialsPanel
-                  notebookId={notebookId}
-                  open={dialogs.studyMaterialsDialogOpen}
-                  onOpenChange={dialogs.setStudyMaterialsDialogOpen}
-                  selectedMaterialId={dialogs.selectedStudyMaterialId}
-                  onSelectMaterial={dialogs.setSelectedStudyMaterialId}
-                />
-              </div>
-            </ScrollArea>
-          )}
+          <ScrollArea className="h-full">
+            <div className="p-3 space-y-3">
+              <StudioResources
+                notebookId={notebookId}
+                collapsed={false}
+                onGenerate={dialogs.handleGenerate}
+              />
+              <MobileStudyMaterialsPanel
+                notebookId={notebookId}
+                open={dialogs.studyMaterialsDialogOpen}
+                onOpenChange={dialogs.setStudyMaterialsDialogOpen}
+                selectedMaterialId={dialogs.selectedStudyMaterialId}
+                onSelectMaterial={dialogs.setSelectedStudyMaterialId}
+              />
+            </div>
+          </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      {/* Mobile-only fullscreen viewers — never inline, always overlay */}
+      {selectedSourceId && (
+        <SourceContentViewer
+          sourceId={selectedSourceId}
+          onClose={() => onSelectSource(null)}
+          forceFullscreen
+        />
+      )}
+      {dialogs.selectedStudyMaterialId && (
+        <RightPane
+          notebookId={notebookId}
+          mode={{
+            kind: "viewer",
+            materialId: dialogs.selectedStudyMaterialId,
+          }}
+          onModeChange={(mode) => {
+            if (mode.kind === "select") {
+              dialogs.setSelectedStudyMaterialId(null);
+            }
+          }}
+          forceFullscreen
+        />
+      )}
       {dialogs.dialogOpen && (
         <GenerateBriefDialog
           notebookId={notebookId}

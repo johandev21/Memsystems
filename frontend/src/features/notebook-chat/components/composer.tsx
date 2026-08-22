@@ -118,7 +118,7 @@ export function Composer({
           value={input}
           onChange={(e) => onInputChange(e.currentTarget.value)}
           placeholder="Type a message..."
-          className="min-h-[44px] max-h-[200px] px-2 py-1 text-[14.5px] border-0 focus:ring-0 focus-visible:ring-0 select-none placeholder:select-none"
+          className="min-h-[44px] max-h-[200px] px-2 py-1 text-[16px] sm:text-[14.5px] border-0 focus:ring-0 focus-visible:ring-0 select-none placeholder:select-none"
         />
       </PromptInputBody>
       <PromptInputFooter className="px-1 pt-1 pb-0.5">

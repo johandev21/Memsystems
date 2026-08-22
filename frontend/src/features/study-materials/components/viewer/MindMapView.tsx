@@ -69,8 +69,9 @@ function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
   return (
     <div
       className={cn(
-        "group relative min-w-[190px] max-w-[230px] rounded-lg border bg-card px-4 py-3 text-left text-card-foreground shadow-sm transition-all duration-200",
-        isRoot && "min-w-[210px] rounded-full border-primary bg-primary text-primary-foreground",
+        "group relative min-w-[150px] max-w-[190px] sm:min-w-[190px] sm:max-w-[230px] rounded-lg border bg-card px-3 sm:px-4 py-2.5 sm:py-3 text-left text-card-foreground shadow-sm transition-all duration-200",
+        isRoot &&
+          "min-w-[170px] sm:min-w-[210px] rounded-full border-primary bg-primary text-primary-foreground",
         data.selected && !isRoot && "border-primary ring-1 ring-primary",
         !data.selected && !isRoot && "border-border hover:border-foreground/30",
       )}
@@ -81,7 +82,9 @@ function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
         className="!h-1 !w-1 !border-0 !bg-transparent"
       />
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold leading-tight">{data.item.label}</span>
+        <span className="text-[13px] sm:text-sm font-semibold leading-tight wrap-break-words">
+          {data.item.label}
+        </span>
       </div>
 
       {hasChildren && (
@@ -162,10 +165,13 @@ function buildGraph(
   expandedIds: Set<string>,
   selectedId: string | null,
   onToggle: (id: string) => void,
+  isMobileLayout = false,
 ): { nodes: MindMapFlowNode[]; edges: Edge[] } {
   const nodes: MindMapFlowNode[] = [];
   const edges: Edge[] = [];
   const rowsByDepth = new Map<number, number>();
+  const xStep = isMobileLayout ? 220 : 330;
+  const yStep = isMobileLayout ? 112 : 128;
 
   const visit = (item: MapItem, depth: number, parentId?: string) => {
     const row = rowsByDepth.get(depth) ?? 0;
@@ -174,7 +180,7 @@ function buildGraph(
     nodes.push({
       id: item.id,
       type: "mindMap",
-      position: { x: depth * 330, y: (row - 2) * 128 },
+      position: { x: depth * xStep, y: (row - 2) * yStep },
       data: {
         item,
         depth,
@@ -272,9 +278,22 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
     [materialTitle, toggleNode],
   );
 
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+    const update = () => setIsMobileViewport(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+
   const graph = useMemo(
-    () => (root ? buildGraph(root, expandedIds, selectedId, toggleNode) : { nodes: [], edges: [] }),
-    [expandedIds, root, selectedId, toggleNode],
+    () =>
+      root
+        ? buildGraph(root, expandedIds, selectedId, toggleNode, isMobileViewport)
+        : { nodes: [], edges: [] },
+    [expandedIds, root, selectedId, toggleNode, isMobileViewport],
   );
 
   useEffect(() => setNodes(graph.nodes), [graph.nodes, setNodes]);
@@ -330,7 +349,7 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
   }
 
   return (
-    <div className="relative h-[min(680px,calc(100vh-180px))] min-h-[420px] w-full overflow-hidden rounded-xl border border-border bg-panel-bg shadow-sm">
+    <div className="relative h-[min(520px,calc(100dvh-160px))] sm:h-[min(680px,calc(100dvh-180px))] min-h-[420px] w-full overflow-hidden rounded-xl border border-border bg-panel-bg shadow-sm">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -351,7 +370,7 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} className="opacity-60" />
       </ReactFlow>
 
-      <div className="absolute right-4 top-4 flex flex-col gap-1.5 rounded-xl border border-border bg-card p-1.5 shadow-sm">
+      <div className="absolute bottom-4 right-4 sm:bottom-auto sm:top-4 flex flex-row sm:flex-col gap-1.5 rounded-xl border border-border bg-card p-1.5 shadow-sm">
         <Button
           variant="ghost"
           size="icon"
@@ -370,7 +389,8 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
         >
           <Minus className="size-4" />
         </Button>
-        <div className="mx-1 h-px bg-border" />
+        <div className="mx-1 h-px bg-border hidden sm:block" />
+        <div className="mx-1 w-px bg-border sm:hidden" />
         <Button
           variant="ghost"
           size="icon"

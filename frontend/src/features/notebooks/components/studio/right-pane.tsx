@@ -10,9 +10,17 @@ export interface RightPaneProps {
   notebookId: string;
   mode: RightPaneMode;
   onModeChange: (mode: RightPaneMode) => void;
+  forceFullscreen?: boolean;
+  defaultFullscreen?: boolean;
 }
 
-export function RightPane({ notebookId: _notebookId, mode, onModeChange }: RightPaneProps) {
+export function RightPane({
+  notebookId: _notebookId,
+  mode,
+  onModeChange,
+  forceFullscreen,
+  defaultFullscreen,
+}: RightPaneProps) {
   switch (mode.kind) {
     case "select":
       return (
@@ -28,6 +36,8 @@ export function RightPane({ notebookId: _notebookId, mode, onModeChange }: Right
           materialId={mode.materialId}
           initialMaterial={mode.initialMaterial}
           onClose={() => onModeChange({ kind: "select" })}
+          forceFullscreen={forceFullscreen}
+          defaultFullscreen={defaultFullscreen}
         />
       );
   }
@@ -37,10 +47,14 @@ function RightPaneViewerWrapper({
   materialId,
   initialMaterial,
   onClose,
+  forceFullscreen,
+  defaultFullscreen,
 }: {
   materialId: string;
   initialMaterial?: StudyMaterialDTO;
   onClose: () => void;
+  forceFullscreen?: boolean;
+  defaultFullscreen?: boolean;
 }) {
   const {
     data: material,
@@ -76,5 +90,12 @@ function RightPaneViewerWrapper({
     );
   }
 
-  return <MaterialViewer material={material} onClose={onClose} />;
+  return (
+    <MaterialViewer
+      material={material}
+      onClose={onClose}
+      forceFullscreen={forceFullscreen}
+      defaultFullscreen={defaultFullscreen}
+    />
+  );
 }

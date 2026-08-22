@@ -175,7 +175,7 @@ function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
 
 function PhaseMilestoneCard({ phase, phaseIndex, onStudyPhase }: PhaseMilestoneCardProps) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 @sm:p-5 @3xl:p-6 max-w-lg w-full text-center flex flex-col items-center gap-2.5 shadow-2xs transition-all hover:border-primary/40 hover:shadow-xs">
+    <div className="bg-card border border-border rounded-2xl p-4 @sm:p-5 @3xl:p-6 max-w-full sm:max-w-lg w-full text-center flex flex-col items-center gap-2.5 shadow-2xs transition-all hover:border-primary/40 hover:shadow-xs">
       <Badge
         variant="default"
         className="bg-primary text-primary-foreground border-primary text-xs font-bold uppercase px-2.5 py-0.5"
@@ -374,7 +374,7 @@ export function RoadmapView({ materialId, content }: RoadmapViewProps) {
 
   // 6. Render
   return (
-    <div className="roadmap-view @container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-20 select-none px-2 @sm:px-4">
+    <div className="roadmap-view @container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-20 select-none px-3 @sm:px-4">
       <RoadmapHeader title={content.title} description={content.description} />
 
       <RoadmapSpine

@@ -72,7 +72,11 @@ export function StudyMaterialsTreeContainer({
 
   // hasData: render tree, retain last good during background refetch
   const contentHeight =
-    variant === "desktop" ? "h-[250px]" : variant === "mobile" ? "max-h-[40vh] h-[300px]" : "h-[400px]";
+    variant === "desktop"
+      ? "h-[250px]"
+      : variant === "mobile"
+        ? "max-h-[38dvh] min-h-[240px] h-auto overflow-y-auto overscroll-contain"
+        : "h-[400px]";
 
   return (
     <div data-slot="study-materials-tree-container" className={className}>
