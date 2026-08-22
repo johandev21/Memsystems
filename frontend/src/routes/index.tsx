@@ -1,11 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import type { MotionValue } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from "motion/react";
+import { useMemo, useRef, useState } from "react";
 import { Logo } from "@/shared/ui/logo";
 import { authClient } from "@/shared/auth";
+import { Button } from "@/shared/ui/button";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
 });
+
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 const benefits = [
   {
@@ -22,6 +33,24 @@ const benefits = [
     label: "Leave with something useful",
     title: "Turn a reading list into a study system.",
     body: "Generate flashcards, quizzes, roadmaps, and mind maps from the work you already did.",
+  },
+];
+
+const workflows = [
+  {
+    step: "01",
+    title: "Collect",
+    body: "Start a notebook and bring in the sources that shape your question.",
+  },
+  {
+    step: "02",
+    title: "Connect",
+    body: "Ask questions with the material close by, and keep useful answers beside it.",
+  },
+  {
+    step: "03",
+    title: "Remember",
+    body: "Turn the ideas into flashcards, quizzes, and maps you can return to.",
   },
 ];
 
@@ -67,149 +96,342 @@ function ArrowUpRight() {
   );
 }
 
+function RevealWord({
+  word,
+  range,
+  progress,
+  isLast,
+  shouldReduceMotion,
+}: {
+  word: string;
+  range: [number, number];
+  progress: MotionValue<number>;
+  isLast: boolean;
+  shouldReduceMotion: boolean;
+}) {
+  const opacity = useTransform(progress, range, [0.25, 1]);
+  const y = useTransform(progress, range, [4, 0]);
+
+  return (
+    <span className={`inline-block ${!isLast ? "mr-[0.24em]" : ""}`}>
+      {shouldReduceMotion ? (
+        <motion.span style={{ opacity }} className="text-foreground">
+          {word}
+        </motion.span>
+      ) : (
+        <motion.span
+          style={{ opacity, y, display: "inline-block" }}
+          className="text-foreground"
+        >
+          {word}
+        </motion.span>
+      )}
+    </span>
+  );
+}
+
+function ScrollWordReveal({ text }: { text: string }) {
+  const containerRef = useRef<HTMLParagraphElement>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start 0.85", "start 0.35"],
+  });
+  const words = useMemo(() => text.split(" "), [text]);
+
+  return (
+    <p
+      ref={containerRef}
+      className="max-w-4xl text-4xl font-semibold leading-tight tracking-[-0.06em] text-foreground/30 text-balance sm:text-6xl"
+    >
+      {words.map((word, index) => {
+        const start = index / words.length;
+        const end = Math.min(start + 1.2 / words.length, 1);
+        return (
+          <RevealWord
+            key={`${word}-${index}`}
+            word={word}
+            range={[start, end]}
+            progress={scrollYProgress}
+            isLast={index === words.length - 1}
+            shouldReduceMotion={!!shouldReduceMotion}
+          />
+        );
+      })}
+    </p>
+  );
+}
+
+function FaqAccordionItem({
+  question,
+  answer,
+  isOpen,
+  onToggle,
+  shouldReduceMotion,
+}: {
+  question: string;
+  answer: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  shouldReduceMotion: boolean;
+}) {
+  return (
+    <div className="border-b border-border py-5">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="flex w-full cursor-pointer items-center justify-between gap-6 text-left text-lg font-medium tracking-[-0.02em] text-foreground transition-colors duration-150 ease-out hover:text-foreground/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+      >
+        <span>{question}</span>
+        <motion.span
+          animate={{ rotate: isOpen ? 45 : 0 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: EASE_OUT }}
+          className="inline-flex size-6 shrink-0 items-center justify-center text-2xl font-light text-primary"
+        >
+          +
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            animate={
+              shouldReduceMotion
+                ? { opacity: 1 }
+                : {
+                    height: "auto",
+                    opacity: 1,
+                    transition: {
+                      height: { duration: 0.24, ease: EASE_OUT },
+                      opacity: { duration: 0.2, delay: 0.04 },
+                    },
+                  }
+            }
+            exit={
+              shouldReduceMotion
+                ? { opacity: 0 }
+                : {
+                    height: 0,
+                    opacity: 0,
+                    transition: {
+                      height: { duration: 0.2, ease: EASE_OUT },
+                      opacity: { duration: 0.12 },
+                    },
+                  }
+            }
+            className="overflow-hidden"
+          >
+            <p className="max-w-2xl pt-4 text-base leading-6 text-muted-foreground text-pretty">
+              {answer}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function LandingPage() {
   const { isPending } = authClient.useSession();
   const [menuOpen, setMenuOpen] = useState(false);
-  const revealRef = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => {
-    const node = revealRef.current;
-    if (!node) return;
-    const words = node.querySelectorAll<HTMLElement>("[data-reveal-word]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            (entry.target as HTMLElement).dataset.active = "true";
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.8, rootMargin: "0px 0px -12% 0px" },
-    );
-    words.forEach((word) => observer.observe(word));
-    return () => observer.disconnect();
-  }, []);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   if (isPending) {
     return <div className="min-h-screen bg-background" />;
   }
 
   const closeMenu = () => setMenuOpen(false);
+  const toggleFaq = (index: number) => {
+    setOpenFaqIndex((prev) => (prev === index ? null : index));
+  };
+
+  const navItemTransition = { duration: 0.18, ease: EASE_OUT };
 
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
+
+      {/* Navigation */}
       <header className="relative z-20 px-4 pt-4 sm:px-6 sm:pt-6">
-        <nav
+        <motion.nav
+          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE_OUT }}
           className="mx-auto flex max-w-6xl items-center justify-between rounded-full border border-border bg-card/90 px-4 py-3 backdrop-blur-xl sm:px-5"
           aria-label="Main navigation"
         >
-          <a href="#top" className="flex items-center gap-2.5" onClick={closeMenu}>
+          <a
+            href="#top"
+            className="flex items-center gap-2.5 transition-transform active:scale-[0.98]"
+            onClick={closeMenu}
+          >
             <Logo className="size-7 text-primary" />
             <span className="text-sm font-semibold tracking-[-0.02em]">Memsystems</span>
           </a>
+
           <div className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
             <a
               href="#why"
-              className="transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-foreground"
+              className="transition-colors duration-150 ease-out hover:text-foreground active:scale-[0.98]"
             >
               Why it works
             </a>
             <a
               href="#how"
-              className="transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-foreground"
+              className="transition-colors duration-150 ease-out hover:text-foreground active:scale-[0.98]"
             >
               How it works
             </a>
             <a
               href="#faq"
-              className="transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-foreground"
+              className="transition-colors duration-150 ease-out hover:text-foreground active:scale-[0.98]"
             >
               FAQ
             </a>
           </div>
-          <Link
-            to="/login"
-            className="btn-cta hidden px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:inline-flex"
+
+          <Button
+            render={<Link to="/login" />}
+            className="hidden cursor-pointer md:inline-flex"
           >
             Start free
-          </Link>
+          </Button>
+
+          {/* Mobile hamburger button with animated icon bars */}
           <button
             type="button"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
-            className="relative flex size-9 items-center justify-center rounded-full text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:hidden"
+            className="relative flex size-9 items-center justify-center rounded-full text-foreground transition-transform active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:hidden"
           >
-            <span
-              className={`absolute h-px w-4 bg-current transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${menuOpen ? "rotate-45" : "-translate-y-1"}`}
+            <motion.span
+              animate={{
+                rotate: menuOpen ? 45 : 0,
+                y: menuOpen ? 0 : -4,
+              }}
+              transition={navItemTransition}
+              className="absolute h-px w-4 bg-current"
             />
-            <span
-              className={`absolute h-px w-4 bg-current transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${menuOpen ? "-rotate-45" : "translate-y-1"}`}
+            <motion.span
+              animate={{
+                rotate: menuOpen ? -45 : 0,
+                y: menuOpen ? 0 : 4,
+              }}
+              transition={navItemTransition}
+              className="absolute h-px w-4 bg-current"
             />
           </button>
-        </nav>
-        <div
-          className={`fixed inset-0 -z-10 flex flex-col justify-center bg-background/95 px-8 backdrop-blur-3xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] md:hidden ${menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
-        >
-          <div className="flex flex-col gap-6 text-4xl font-semibold tracking-[-0.05em]">
-            {[
-              ["Why it works", "#why"],
-              ["How it works", "#how"],
-              ["FAQ", "#faq"],
-            ].map(([label, href], index) => (
-              <a
-                key={label}
-                href={href}
-                onClick={closeMenu}
-                className={`transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${menuOpen ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0"}`}
-                style={{ transitionDelay: `${100 + index * 50}ms` }}
-              >
-                {label}
-              </a>
-            ))}
-            <Link
-              to="/login"
-              onClick={closeMenu}
-              className={`btn-cta mt-4 w-fit px-5 py-3 text-lg transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${menuOpen ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0"}`}
-              style={{ transitionDelay: "250ms" }}
+        </motion.nav>
+
+        {/* Mobile Menu Drawer */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
+              className="fixed inset-0 -z-10 flex flex-col justify-center bg-background/95 px-8 backdrop-blur-3xl md:hidden"
             >
-              Start free
-            </Link>
-          </div>
-        </div>
+              <div className="flex flex-col gap-6 text-4xl font-semibold tracking-[-0.05em]">
+                {[
+                  ["Why it works", "#why"],
+                  ["How it works", "#how"],
+                  ["FAQ", "#faq"],
+                ].map(([label, href], index) => (
+                  <motion.a
+                    key={label}
+                    href={href}
+                    onClick={closeMenu}
+                    initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.25,
+                      delay: 0.05 + index * 0.04,
+                      ease: EASE_OUT,
+                    }}
+                    className="transition-colors hover:text-primary active:scale-[0.98]"
+                  >
+                    {label}
+                  </motion.a>
+                ))}
+                <motion.div
+                  initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: 0.2, ease: EASE_OUT }}
+                >
+                  <Button
+                    render={<Link to="/login" onClick={closeMenu} />}
+                    size="lg"
+                    className="mt-4 w-fit cursor-pointer text-base"
+                  >
+                    Start free
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       <main id="main-content">
+        {/* Hero Section */}
         <section
           id="top"
           className="mx-auto max-w-6xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:pb-32 lg:pt-36"
         >
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="mx-auto max-w-2xl text-5xl font-semibold leading-none tracking-[-0.06em] text-transparent bg-clip-text bg-gradient-to-r from-foreground to-muted-foreground text-balance sm:text-7xl">
+            <motion.h1
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: EASE_OUT }}
+              className="mx-auto max-w-2xl text-5xl font-semibold leading-none tracking-[-0.06em] text-transparent bg-clip-text bg-gradient-to-r from-foreground to-muted-foreground text-balance sm:text-7xl"
+            >
               Think with your sources, not around them.
-            </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-7 text-muted-foreground text-pretty sm:text-xl">
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.08, ease: EASE_OUT }}
+              className="mx-auto mt-6 max-w-xl text-lg leading-7 text-muted-foreground text-pretty sm:text-xl"
+            >
               Memsystems brings research, notes, and AI into one quiet workspace so you can go
               from scattered reading to a point of view.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Link
-                to="/login"
-                className="btn-cta inline-flex items-center gap-2 px-5 py-3 text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.16, ease: EASE_OUT }}
+              className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
+            >
+              <Button
+                render={<Link to="/login" />}
+                size="lg"
+                className="cursor-pointer gap-2 px-5 py-3 text-base font-semibold"
               >
                 Start building your notebook <ArrowUpRight />
-              </Link>
-            </div>
+              </Button>
+            </motion.div>
           </div>
         </section>
 
+        {/* Benefits Section */}
         <section id="why" className="border-y border-border bg-card px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto max-w-6xl">
-            <div className="mb-12 flex flex-col gap-4 md:mb-16 md:flex-row md:items-end md:justify-between">
+            <motion.div
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.45, ease: EASE_OUT }}
+              className="mb-12 flex flex-col gap-4 md:mb-16 md:flex-row md:items-end md:justify-between"
+            >
               <div>
                 <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                   The difference
@@ -222,10 +444,22 @@ function LandingPage() {
                 A useful notebook does not just hold information. It gives the next thought
                 somewhere to land.
               </p>
-            </div>
+            </motion.div>
+
             <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-3">
-              {benefits.map((benefit) => (
-                <article key={benefit.label} className="bg-card p-6 sm:p-8">
+              {benefits.map((benefit, index) => (
+                <motion.article
+                  key={benefit.label}
+                  initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{
+                    duration: 0.45,
+                    delay: index * 0.08,
+                    ease: EASE_OUT,
+                  }}
+                  className="group relative bg-card p-6 transition-colors duration-200 hover:bg-card/90 sm:p-8"
+                >
                   <p className="mb-16 font-mono text-xs uppercase tracking-[0.15em] text-primary">
                     {benefit.label}
                   </p>
@@ -235,41 +469,30 @@ function LandingPage() {
                   <p className="text-base leading-6 text-muted-foreground text-pretty">
                     {benefit.body}
                   </p>
-                </article>
+                </motion.article>
               ))}
             </div>
           </div>
         </section>
 
+        {/* Editorial Scroll-Progress Word Reveal */}
         <section className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-36">
-          <p
-            ref={revealRef}
-            className="max-w-4xl text-4xl font-semibold leading-tight tracking-[-0.06em] text-foreground/30 text-balance sm:text-6xl"
-          >
-            {"Good research is not more tabs. It is a clear path through what you already know."
-              .split(" ")
-              .map((word, index, words) => (
-                <span
-                  key={`${word}-${index}`}
-                  className={`inline-block ${index < words.length - 1 ? "mr-[0.24em]" : ""}`}
-                >
-                  <span
-                    data-reveal-word
-                    className="transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
-                  >
-                    {word}
-                  </span>
-                </span>
-              ))}
-          </p>
+          <ScrollWordReveal text="Good research is not more tabs. It is a clear path through what you already know." />
         </section>
 
+        {/* Workflow Section */}
         <section
           id="how"
           className="border-y border-border bg-secondary px-4 py-20 text-secondary-foreground sm:px-6 sm:py-28"
         >
           <div className="mx-auto max-w-6xl">
-            <div className="mb-12 flex flex-col gap-4 md:mb-16 md:flex-row md:justify-between">
+            <motion.div
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.45, ease: EASE_OUT }}
+              className="mb-12 flex flex-col gap-4 md:mb-16 md:flex-row md:justify-between"
+            >
               <div>
                 <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                   A calmer workflow
@@ -281,33 +504,42 @@ function LandingPage() {
               <p className="max-w-sm text-base leading-6 text-muted-foreground text-pretty">
                 Keep the messy middle. Memsystems helps you make it legible.
               </p>
-            </div>
+            </motion.div>
+
             <div className="grid gap-10 md:grid-cols-3">
-              {[
-                ["Collect", "Start a notebook and bring in the sources that shape your question."],
-                [
-                  "Connect",
-                  "Ask questions with the material close by, and keep useful answers beside it.",
-                ],
-                [
-                  "Remember",
-                  "Turn the ideas into flashcards, quizzes, and maps you can return to.",
-                ],
-              ].map(([title, body], index) => (
-                <article key={title} className="border-t border-secondary-foreground/20 pt-5">
-                  <p className="mb-12 font-mono text-xs text-muted-foreground">0{index + 1}</p>
-                  <h3 className="mb-3 text-2xl font-semibold tracking-[-0.04em]">{title}</h3>
+              {workflows.map((item, index) => (
+                <motion.article
+                  key={item.title}
+                  initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{
+                    duration: 0.45,
+                    delay: index * 0.08,
+                    ease: EASE_OUT,
+                  }}
+                  className="border-t border-secondary-foreground/20 pt-5"
+                >
+                  <p className="mb-12 font-mono text-xs text-muted-foreground">{item.step}</p>
+                  <h3 className="mb-3 text-2xl font-semibold tracking-[-0.04em]">{item.title}</h3>
                   <p className="max-w-xs text-base leading-6 text-muted-foreground text-pretty">
-                    {body}
+                    {item.body}
                   </p>
-                </article>
+                </motion.article>
               ))}
             </div>
           </div>
         </section>
 
+        {/* Testimonial Quote */}
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-          <div className="grid gap-10 md:grid-cols-[1fr_1.4fr] md:items-start">
+          <motion.div
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.45, ease: EASE_OUT }}
+            className="grid gap-10 md:grid-cols-[1fr_1.4fr] md:items-start"
+          >
             <div>
               <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-primary">
                 Built for the long read
@@ -324,52 +556,69 @@ function LandingPage() {
                 Maya Chen / graduate researcher
               </footer>
             </blockquote>
-          </div>
+          </motion.div>
         </section>
 
+        {/* FAQ Section */}
         <section id="faq" className="border-t border-border bg-card px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto max-w-3xl">
-            <div className="mb-10">
+            <motion.div
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.45, ease: EASE_OUT }}
+              className="mb-10"
+            >
               <h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-5xl">
                 Questions worth answering.
               </h2>
-            </div>
-            <div className="divide-y divide-border">
-              {faqs.map(([question, answer]) => (
-                <details key={question} className="group py-5">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium tracking-[-0.02em] marker:hidden focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
-                    <span>{question}</span>
-                    <span className="text-2xl font-light text-primary transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <p className="max-w-2xl pt-4 text-base leading-6 text-muted-foreground text-pretty">
-                    {answer}
-                  </p>
-                </details>
+            </motion.div>
+
+            <div className="border-t border-border">
+              {faqs.map(([question, answer], index) => (
+                <FaqAccordionItem
+                  key={question}
+                  question={question}
+                  answer={answer}
+                  isOpen={openFaqIndex === index}
+                  onToggle={() => toggleFaq(index)}
+                  shouldReduceMotion={!!shouldReduceMotion}
+                />
               ))}
             </div>
           </div>
         </section>
 
+        {/* Final CTA Section */}
         <section className="px-4 py-24 sm:px-6 sm:py-36">
-          <div className="mx-auto max-w-4xl text-center">
+          <motion.div
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.45, ease: EASE_OUT }}
+            className="mx-auto max-w-4xl text-center"
+          >
             <h2 className="text-4xl font-semibold tracking-[-0.06em] text-balance sm:text-6xl">
               Make room for the thought after the thought.
             </h2>
-            <Link
-              to="/login"
-              className="btn-cta mt-8 inline-flex items-center gap-2 px-5 py-3 text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            <Button
+              render={<Link to="/login" />}
+              size="lg"
+              className="mt-8 cursor-pointer gap-2 px-5 py-3 text-base font-semibold"
             >
               Start building your notebook <ArrowUpRight />
-            </Link>
-          </div>
+            </Button>
+          </motion.div>
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="border-t border-border px-4 py-8 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <a href="#top" className="flex items-center gap-2 text-foreground">
+          <a
+            href="#top"
+            className="flex items-center gap-2 text-foreground transition-transform active:scale-[0.98]"
+          >
             <Logo className="size-5 text-primary" />
             <span className="font-semibold">Memsystems</span>
           </a>

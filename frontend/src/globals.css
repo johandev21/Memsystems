@@ -72,6 +72,9 @@
 }
 
 :root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --transparent: transparent;
   --brand-google-blue: oklch(0.556 0 0);
   --brand-google-green: oklch(0.556 0 0);
@@ -91,13 +94,13 @@
   --type-leading-heading: 1.15;
   --type-tracking-heading: -0.025em;
   --type-tracking-label: 0.035em;
-  --card: oklch(1 0 0);
+  --card: oklch(0.99 0 0);
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.99 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --popover-hover: oklch(0.96 0 0);
   --popover-selected: oklch(0.94 0 0);
-  --primary: oklch(0 0 0);
+  --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -106,7 +109,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(1 0 0);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -124,9 +127,9 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --panel-bg: oklch(1 0 0);
+  --panel-bg: oklch(0.99 0 0);
   --panel-header-bg: oklch(0.97 0 0);
-  --study-materials-panel: oklch(1 0 0);
+  --study-materials-panel: oklch(0.99 0 0);
   --studio-resource: oklch(0.97 0 0);
   --studio-resource-hover: oklch(0.922 0 0);
   --studio-resource-foreground: oklch(0.145 0 0);
@@ -257,6 +260,11 @@
   border-radius: 9999px;
   color: var(--cta-foreground);
   background-image: linear-gradient(135deg, var(--cta-start), var(--cta-end));
+  transition: transform 160ms var(--ease-out);
+}
+
+.btn-cta:active {
+  transform: scale(0.97);
 }
 
 .btn-cta::after {
@@ -266,7 +274,7 @@
   z-index: -1;
   background-image: linear-gradient(135deg, var(--cta-start-hover), var(--cta-end-hover));
   opacity: 0;
-  transition: opacity 300ms ease;
+  transition: opacity 200ms ease;
 }
 
 .btn-cta:hover::after,
