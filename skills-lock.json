@@ -31,6 +31,12 @@
       "skillPath": "skills/conventional-commit/SKILL.md",
       "computedHash": "f29c9486cede6c7b2df0cfb0a2e4aa67446552b991bcf17d1b309e903171f03d"
     },
+    "design-taste-frontend": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "899b84384f74f540ea5284d9b2e9234e050998b42eacc805410b518d4226c0b3"
+    },
     "diagnosing-bugs": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -42,6 +48,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/domain-modeling/SKILL.md",
       "computedHash": "b747e8b4dcd0f367ef940c290b14f858bf9576ad9961fd6684bacff5688f4a2b"
+    },
+    "emil-design-eng": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "87067d79205fdedc6d682891027dd9c7335486c4b4dc2e785638941a9d2e6061"
     },
     "feature-sliced-design": {
       "source": "feature-sliced/skills",
@@ -78,6 +90,12 @@
       "sourceType": "github",
       "skillPath": "skills/productivity/handoff/SKILL.md",
       "computedHash": "7b03a812d5ca10fa8fe69d4cf8a34542684db51f5db0271254b96074e9f3a243"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "563296d42aab4f81fdf88255cfd42a8f4cfa8cb9596c8679a3a7ef00c60b551b"
     },
     "implement": {
       "source": "mattpocock/skills",
