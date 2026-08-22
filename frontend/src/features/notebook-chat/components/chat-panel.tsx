@@ -43,13 +43,18 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
   useEffect(() => {
     const handleClearRequest = (event: Event) => {
       const detail = (event as CustomEvent<{ notebookId?: string }>).detail;
-      if (detail?.notebookId === notebookId && messageCount > 0 && !isLoading) {
+      if (
+        detail?.notebookId === notebookId &&
+        messageCount > 0 &&
+        !isLoading &&
+        (!panelRef.current || panelRef.current.getClientRects().length > 0)
+      ) {
         setIsClearDialogOpen(true);
       }
     };
     window.addEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
     return () => window.removeEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
-  }, [isLoading, messageCount, notebookId, setIsClearDialogOpen]);
+  }, [isLoading, messageCount, notebookId, panelRef, setIsClearDialogOpen]);
 
   const notebookTitle = notebook?.title ?? "Notebook";
   const isUntitled = notebookTitle.toLowerCase() === "untitled";

@@ -1,11 +1,11 @@
-import { useChat } from "@ai-sdk/react";
+import { type UIMessage, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
 import { useModelPersistence } from "@/features/notebooks";
-import { type CitedSourceDTO, chatMessagesQueryOptions, clearChatHistory } from "@/shared/api/chat";
+import { type ChatMessageDTO, type CitedSourceDTO, chatMessagesQueryOptions, clearChatHistory } from "@/shared/api/chat";
 import { modelsQueryOptions } from "@/shared/api/models";
 import { notebookQueryOptions } from "@/shared/api";
 
@@ -17,6 +17,25 @@ export interface SendChatPromptDetail {
   focusChat?: boolean;
   concept?: string;
   chatNavigationRetry?: boolean;
+}
+
+export function formatChatMessages(history?: ChatMessageDTO[]): UIMessage[] {
+  if (!history) return [];
+  const seenIds = new Set<string>();
+  const formatted: UIMessage[] = [];
+
+  for (const msg of history) {
+    if (!msg.id || seenIds.has(msg.id)) continue;
+    seenIds.add(msg.id);
+
+    formatted.push({
+      id: msg.id,
+      role: msg.role as "user" | "assistant",
+      parts: [{ type: "text" as const, text: msg.content ?? "" }],
+    });
+  }
+
+  return formatted;
 }
 
 export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTMLElement | null>) {
@@ -71,12 +90,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   }, [notebookId]);
 
   const initialMessages = useMemo(
-    () =>
-      (chatHistory ?? []).map((msg) => ({
-        id: msg.id,
-        role: msg.role as "user" | "assistant",
-        parts: [{ type: "text" as const, text: msg.content }],
-      })),
+    () => formatChatMessages(chatHistory),
     [chatHistory],
   );
 
@@ -102,6 +116,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   }, [queryClient, notebookId]);
 
   const { messages, sendMessage, regenerate, setMessages, status, stop } = useChat({
+    id: notebookId,
     transport,
     messages: initialMessages,
     onFinish: async ({ isError }) => {
@@ -121,6 +136,17 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     },
   });
 
+  const formattedMessages = useMemo(
+    () => formatChatMessages(chatHistory),
+    [chatHistory],
+  );
+
+  useEffect(() => {
+    if (!chatHistory) return;
+    if (status === "streaming" || status === "submitted") return;
+    setMessages(formattedMessages);
+  }, [chatHistory, formattedMessages, status, setMessages]);
+
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;
 
@@ -133,9 +159,13 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     mutationFn: () => clearChatHistory(notebookId),
     onSuccess: () => {
       setMessages([]);
+      queryClient.setQueryData(["chat", notebookId, "messages"], []);
       queryClient.invalidateQueries({
         queryKey: ["chat", notebookId, "messages"],
       });
+      queryClient.invalidateQueries({ queryKey: ["notebooks", notebookId] });
+      queryClient.invalidateQueries({ queryKey: ["notebooks", "home"] });
+      queryClient.invalidateQueries({ queryKey: ["notebooks", "all"] });
       setIsClearDialogOpen(false);
       toast.success("Chat history cleared");
     },
@@ -166,11 +196,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       const detail = (e as CustomEvent<SendChatPromptDetail>).detail;
       const promptText = detail?.prompt;
       if (promptText?.trim()) {
-        if (
-          detail.focusChat &&
-          panelRef?.current &&
-          panelRef.current.getClientRects().length === 0
-        ) {
+        if (panelRef?.current && panelRef.current.getClientRects().length === 0) {
           return;
         }
 
