@@ -1,188 +1,98 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  OnModuleInit,
-  Optional,
-} from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as authSchema from '../../database/auth-schema';
-import * as appSchema from '../../database/schema';
-import { webSearchJobs } from '../../database/schema';
+import { Injectable } from '@nestjs/common';
+import { WebSearchResult } from '../ai/ai.service';
+import { Job } from '../jobs/job-handler.interface';
+import { JobQueueService } from '../jobs/job-queue.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
-import { DRIZZLE } from '../database/database.module';
-import { WebSearchService } from './web-search.service';
+import { WebSearchJobPayload } from './web-search.handler';
 
-export const WEB_SEARCH_JOBS_CONFIG = 'WEB_SEARCH_JOBS_CONFIG';
-
-export interface WebSearchJobsConfig {
-  /** Poller interval for pending jobs. */
-  pollIntervalMs: number;
+export interface FormattedWebSearchJob {
+  id: string;
+  notebookId: string;
+  userId: string;
+  query: string;
+  modelId: string;
+  status: 'pending' | 'processing' | 'ready' | 'failed';
+  summary: string | null;
+  candidates: { title: string; url: string; description: string | null }[];
+  lastError: string | null;
+  createdAt: Date;
+  completedAt: Date | null;
 }
 
-export const DEFAULT_WEB_SEARCH_JOBS_CONFIG: WebSearchJobsConfig = {
-  pollIntervalMs: 2_000,
-};
-
-type JobRow = typeof webSearchJobs.$inferSelect;
+export function formatWebSearchJob(
+  job: Job<WebSearchJobPayload, WebSearchResult>,
+): FormattedWebSearchJob {
+  return {
+    id: job.id,
+    notebookId: job.payload.notebookId,
+    userId: job.payload.userId,
+    query: job.payload.query,
+    modelId: job.payload.modelId,
+    status: job.status === 'cancelled' ? 'failed' : job.status,
+    summary: job.result?.summary ?? null,
+    candidates: (job.result?.sources ?? []).map((s) => ({
+      title: s.title,
+      url: s.url,
+      description: s.description ?? null,
+    })),
+    lastError: job.lastError,
+    createdAt: job.createdAt,
+    completedAt: job.completedAt,
+  };
+}
 
 @Injectable()
-export class WebSearchJobsService implements OnModuleInit {
-  private readonly logger = new Logger(WebSearchJobsService.name);
-  private readonly config: WebSearchJobsConfig;
-  private pollTimer: NodeJS.Timeout | null = null;
-  private draining = false;
-  private drainPromise: Promise<void> | null = null;
-
+export class WebSearchJobsService {
   constructor(
-    @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof authSchema & typeof appSchema>,
     private readonly notebooksService: NotebooksService,
-    private readonly webSearchService: WebSearchService,
-    @Optional() @Inject(WEB_SEARCH_JOBS_CONFIG) config?: WebSearchJobsConfig,
-  ) {
-    this.config = config ?? DEFAULT_WEB_SEARCH_JOBS_CONFIG;
-  }
+    private readonly jobQueue: JobQueueService,
+  ) {}
 
-  onModuleInit(): void {
-    this.pollTimer = setInterval(
-      () => void this.drain(),
-      this.config.pollIntervalMs,
-    );
-    this.pollTimer.unref?.();
-  }
-
-  /**
-   * Enqueues a search job for a notebook, replacing any existing job so the
-   * notebook always has at most one latest job. Processing is durable: the
-   * poller claims the job even if the originating request/client is gone.
-   */
   async enqueue(
     userId: string,
     notebookId: string,
     input: { query: string; modelId: string },
-  ): Promise<JobRow> {
+  ): Promise<FormattedWebSearchJob> {
     await this.notebooksService.assertNotebookOwner(userId, notebookId);
 
-    await this.db
-      .delete(webSearchJobs)
-      .where(eq(webSearchJobs.notebookId, notebookId));
-
-    const [job] = await this.db
-      .insert(webSearchJobs)
-      .values({
-        notebookId,
+    const job = await this.jobQueue.enqueue<
+      WebSearchJobPayload,
+      WebSearchResult
+    >(
+      'web_search',
+      {
         userId,
+        notebookId,
         query: input.query,
         modelId: input.modelId,
-      })
-      .returning();
+      },
+      {
+        groupKey: `web_search:${notebookId}`,
+        onConflict: 'replace',
+      },
+    );
 
-    void this.drain();
-    return job;
+    return formatWebSearchJob(job);
   }
 
-  async latest(userId: string, notebookId: string): Promise<JobRow | null> {
+  async latest(
+    userId: string,
+    notebookId: string,
+  ): Promise<FormattedWebSearchJob | null> {
     await this.notebooksService.assertNotebookOwner(userId, notebookId);
-    const [job] = await this.db
-      .select()
-      .from(webSearchJobs)
-      .where(
-        and(
-          eq(webSearchJobs.notebookId, notebookId),
-          eq(webSearchJobs.userId, userId),
-        ),
-      )
-      .orderBy(asc(webSearchJobs.createdAt))
-      .limit(1);
-    return job ?? null;
+    const job = await this.jobQueue.getLatestByGroup<
+      WebSearchJobPayload,
+      WebSearchResult
+    >(`web_search:${notebookId}`);
+    return job ? formatWebSearchJob(job) : null;
   }
 
   async dismiss(userId: string, notebookId: string): Promise<void> {
     await this.notebooksService.assertNotebookOwner(userId, notebookId);
-    await this.db
-      .delete(webSearchJobs)
-      .where(
-        and(
-          eq(webSearchJobs.notebookId, notebookId),
-          eq(webSearchJobs.userId, userId),
-        ),
-      );
+    await this.jobQueue.deleteByGroup(`web_search:${notebookId}`);
   }
 
-  /** Claims and processes pending jobs, one at a time. */
-  drain(): Promise<void> {
-    if (this.draining) return this.drainPromise ?? Promise.resolve();
-    this.draining = true;
-    this.drainPromise = (async () => {
-      try {
-        for (;;) {
-          const job = await this.claimNext();
-          if (!job) break;
-          await this.process(job);
-        }
-      } finally {
-        this.draining = false;
-        this.drainPromise = null;
-      }
-    })();
-    return this.drainPromise;
-  }
-
-  private async claimNext(): Promise<JobRow | null> {
-    return this.db.transaction(async (tx) => {
-      const [candidate] = await tx
-        .select({ id: webSearchJobs.id })
-        .from(webSearchJobs)
-        .where(eq(webSearchJobs.status, 'pending'))
-        .orderBy(asc(webSearchJobs.createdAt))
-        .limit(1)
-        .for('update', { skipLocked: true });
-
-      if (!candidate) return null;
-
-      const [job] = await tx
-        .update(webSearchJobs)
-        .set({ status: 'processing', startedAt: new Date() })
-        .where(eq(webSearchJobs.id, candidate.id))
-        .returning();
-      return job ?? null;
-    });
-  }
-
-  private async process(job: JobRow): Promise<void> {
-    try {
-      const result = await this.webSearchService.search(
-        job.userId,
-        job.notebookId,
-        { query: job.query, modelId: job.modelId },
-      );
-      await this.db
-        .update(webSearchJobs)
-        .set({
-          status: 'ready',
-          summary: result.summary,
-          candidates: result.sources,
-          completedAt: new Date(),
-          lastError: null,
-        })
-        .where(eq(webSearchJobs.id, job.id));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error('Web search job failed', {
-        jobId: job.id,
-        notebookId: job.notebookId,
-        error: message,
-      });
-      await this.db
-        .update(webSearchJobs)
-        .set({
-          status: 'failed',
-          lastError: message,
-          completedAt: new Date(),
-        })
-        .where(eq(webSearchJobs.id, job.id));
-    }
+  async drain(): Promise<void> {
+    await this.jobQueue.drain();
   }
 }

@@ -1,14 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
+import { AiModule } from '../ai/ai.module';
+import { JobQueueService } from '../jobs/job-queue.service';
 import { NotebooksModule } from '../notebooks/notebooks.module';
 import { DocumentNormalizerService } from './document-normalizer.service';
 import { HttpFetcherService } from './http-fetcher.service';
 import { SourceAcquisitionService } from './source-acquisition.service';
 import { SourceExtractionService } from './source-extraction.service';
-import {
-  SOURCE_JOBS_CONFIG,
-  loadSourceJobsConfig,
-  SourceJobsService,
-} from './source-jobs.service';
+import { SourceIndexingHandler } from './source-indexing.handler';
+import { SourceJobsService } from './source-jobs.service';
 import {
   loadSourceFetchConfig,
   SOURCE_FETCH_CONFIG,
@@ -17,20 +16,17 @@ import {
 import { SourcesController } from './sources.controller';
 import { SourcesService } from './sources.service';
 import { WebScraperService } from './web-scraper.service';
+import { WebSearchHandler } from './web-search.handler';
 import { WebSearchJobsService } from './web-search-jobs.service';
 import { WebSearchService } from './web-search.service';
 
 @Module({
-  imports: [NotebooksModule],
+  imports: [NotebooksModule, AiModule],
   controllers: [SourcesController],
   providers: [
     {
       provide: SOURCE_FETCH_CONFIG,
       useFactory: loadSourceFetchConfig,
-    },
-    {
-      provide: SOURCE_JOBS_CONFIG,
-      useFactory: loadSourceJobsConfig,
     },
     SourcePolicyService,
     HttpFetcherService,
@@ -38,6 +34,8 @@ import { WebSearchService } from './web-search.service';
     DocumentNormalizerService,
     WebScraperService,
     SourceAcquisitionService,
+    SourceIndexingHandler,
+    WebSearchHandler,
     SourceJobsService,
     SourcesService,
     WebSearchService,
@@ -48,6 +46,19 @@ import { WebSearchService } from './web-search.service';
     WebSearchService,
     SourceJobsService,
     WebSearchJobsService,
+    SourceIndexingHandler,
+    WebSearchHandler,
   ],
 })
-export class SourcesModule {}
+export class SourcesModule implements OnModuleInit {
+  constructor(
+    private readonly jobQueue: JobQueueService,
+    private readonly sourceIndexingHandler: SourceIndexingHandler,
+    private readonly webSearchHandler: WebSearchHandler,
+  ) {}
+
+  onModuleInit(): void {
+    this.jobQueue.registerHandler(this.sourceIndexingHandler);
+    this.jobQueue.registerHandler(this.webSearchHandler);
+  }
+}

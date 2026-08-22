@@ -75,6 +75,7 @@ export async function seedSource(
     kind: 'text' | 'url' | 'file';
     title: string;
     rawText: string;
+    contentHash?: string | null;
     url?: string | null;
     createdAt?: Date;
   },
@@ -87,6 +88,7 @@ export async function seedSource(
       kind: input.kind,
       title: input.title,
       rawText: input.rawText,
+      contentHash: (input as any).contentHash ?? null,
       url: input.url ?? null,
       createdAt: input.createdAt ?? new Date(),
     })

@@ -6,6 +6,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { DatabaseModule } from './modules/database/database.module';
+import { JobsModule } from './modules/jobs/jobs.module';
 import { NotebooksModule } from './modules/notebooks/notebooks.module';
 import { SourcesModule } from './modules/sources/sources.module';
 import { StorageModule } from './modules/storage/storage.module';
@@ -18,6 +19,7 @@ import { StudyMaterialsModule } from './modules/study-materials/study-materials.
       envFilePath: ['.env.local', '.env'],
     }),
     DatabaseModule,
+    JobsModule,
     AuthModule,
     StorageModule,
     AiModule,
