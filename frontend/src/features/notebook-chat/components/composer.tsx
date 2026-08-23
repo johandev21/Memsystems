@@ -1,4 +1,4 @@
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { type RefObject, useMemo, useState } from "react";
 import {
   ModelSelector,
@@ -109,8 +109,10 @@ export function Composer({
 
   return (
     <PromptInput
+      data-slot="notebook-chat-composer"
+      data-composer-state={isLoading ? "streaming" : hasInput ? "ready" : "empty"}
       onSubmit={handleSubmit}
-      className="w-full select-none [&_[data-slot=input-group]]:flex-col [&_[data-slot=input-group]]:items-stretch [&_[data-slot=input-group]]:p-2 [&_[data-slot=input-group]]:pb-1.5"
+      className="w-full [&_[data-slot=input-group]]:flex-col [&_[data-slot=input-group]]:items-stretch [&_[data-slot=input-group]]:border-composer-border [&_[data-slot=input-group]]:bg-composer-bg [&_[data-slot=input-group]]:p-2 [&_[data-slot=input-group]]:pb-1.5 [&_[data-slot=input-group]]:shadow-[inset_0_1px_0_var(--composer-highlight),0_16px_44px_-28px_var(--composer-shadow)] [&_[data-slot=input-group]]:backdrop-blur-xl [&_[data-slot=input-group]]:backdrop-saturate-150 [&_[data-slot=input-group]]:transition-[background-color,border-color,box-shadow] [&_[data-slot=input-group]]:duration-200 [&_[data-slot=input-group]]:focus-within:border-ring/60 [&_[data-slot=input-group]]:focus-within:shadow-[inset_0_1px_0_var(--composer-highlight),0_18px_48px_-26px_var(--composer-shadow)] [&_[data-slot=input-group]]:focus-within:ring-2 [&_[data-slot=input-group]]:focus-within:ring-ring/15"
     >
       <PromptInputBody>
         <PromptInputTextarea
@@ -118,19 +120,23 @@ export function Composer({
           value={input}
           onChange={(e) => onInputChange(e.currentTarget.value)}
           placeholder="Type a message..."
-          className="min-h-[44px] max-h-[200px] px-2 py-1 text-[16px] sm:text-[14.5px] border-0 focus:ring-0 focus-visible:ring-0 select-none placeholder:select-none"
+          className="min-h-12 max-h-48 select-text border-0 px-3 py-2 text-base leading-6 focus:ring-0 focus-visible:ring-0 sm:text-sm"
         />
       </PromptInputBody>
-      <PromptInputFooter className="px-1 pt-1 pb-0.5">
+      <PromptInputFooter className="px-1.5 pt-0.5 pb-0.5">
         <PromptInputTools>
           <ModelSelector open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
             <ModelSelectorTrigger
               render={
-                <PromptInputButton className="flex items-center gap-2 cursor-pointer transition-colors hover:bg-muted/60 h-8 px-2 text-xs">
-                  <ModelSelectorLogo provider={activeProvider} />
-                  <ModelSelectorName>
+                <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-7rem))] cursor-pointer items-center gap-1.5 rounded-xl px-2 text-xs font-medium text-muted-foreground transition-[background-color,color] duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground [@media(pointer:coarse)]:h-9">
+                  <ModelSelectorLogo provider={activeProvider} className="size-4 opacity-80" />
+                  <ModelSelectorName className="min-w-0">
                     {activeModelDetails?.displayName || selectedModel}
                   </ModelSelectorName>
+                  <ChevronDownIcon
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 opacity-55 transition-transform duration-150 group-aria-expanded/model-trigger:rotate-180"
+                  />
                 </PromptInputButton>
               }
             />
@@ -177,6 +183,11 @@ export function Composer({
           status={isLoading ? "streaming" : "ready"}
           onStop={onStop}
           disabled={!hasInput && !isLoading}
+          tooltip={{
+            content: isLoading ? "Stop response" : "Send message",
+            shortcut: isLoading ? undefined : "Enter",
+          }}
+          className="size-8 rounded-xl shadow-none transition-[background-color,color,box-shadow] duration-150 enabled:shadow-sm [@media(pointer:coarse)]:size-9"
         />
       </PromptInputFooter>
     </PromptInput>

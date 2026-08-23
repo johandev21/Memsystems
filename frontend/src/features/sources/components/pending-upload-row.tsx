@@ -55,7 +55,7 @@ export function PendingUploadRow({ upload, onCancel }: PendingUploadRowProps) {
       </div>
 
       {/* Status details & percentage */}
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className="truncate max-w-[180px]">
           {isError ? upload.errorMessage || "Failed to add source" : upload.statusText}
         </span>

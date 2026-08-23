@@ -1,32 +1,44 @@
 import { act, renderHook } from "@testing-library/react";
 import type { RefObject } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChatMessageDTO } from "@/shared/api/chat";
+import type { ChatMessageDTO } from "@/shared/api";
 
 const mocks = vi.hoisted(() => ({
   sendMessage: vi.fn(),
+  stop: vi.fn(),
   setMessages: vi.fn(),
   invalidateQueries: vi.fn(),
   refetchQueries: vi.fn(),
   setQueryData: vi.fn(),
+  chatHistory: undefined as unknown,
+  chatState: {
+    messages: [] as unknown[],
+    status: "ready",
+  },
+  useChatOptions: undefined as unknown,
 }));
 
 vi.mock("@ai-sdk/react", () => ({
-  useChat: () => ({
-    messages: [],
-    sendMessage: mocks.sendMessage,
-    regenerate: vi.fn(),
-    setMessages: mocks.setMessages,
-    status: "ready",
-    stop: vi.fn(),
-  }),
+  useChat: (options: unknown) => {
+    mocks.useChatOptions = options;
+    return {
+      messages: mocks.chatState.messages,
+      sendMessage: mocks.sendMessage,
+      regenerate: vi.fn(),
+      setMessages: mocks.setMessages,
+      status: mocks.chatState.status,
+      stop: mocks.stop,
+    };
+  },
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();
   return {
     ...actual,
-    useQuery: () => ({ data: undefined }),
+    useQuery: (options: { queryKey?: readonly unknown[] }) => ({
+      data: options.queryKey?.[0] === "chat" ? mocks.chatHistory : undefined,
+    }),
     useQueryClient: () => ({
       invalidateQueries: mocks.invalidateQueries,
       refetchQueries: mocks.refetchQueries,
@@ -54,7 +66,9 @@ vi.mock("sonner", () => ({
 
 import { formatChatMessages, useChatPanel } from "./use-chat-panel";
 
-function createMessage(overrides: Partial<ChatMessageDTO> & Pick<ChatMessageDTO, "id">): ChatMessageDTO {
+function createMessage(
+  overrides: Partial<ChatMessageDTO> & Pick<ChatMessageDTO, "id">,
+): ChatMessageDTO {
   return {
     id: overrides.id,
     role: overrides.role ?? "user",
@@ -127,7 +141,7 @@ describe("formatChatMessages", () => {
   it("handles null or undefined content safely", () => {
     const history: ChatMessageDTO[] = [
       createMessage({ id: "msg-empty", role: "user", content: "" }),
-      createMessage({ id: "msg-null", role: "assistant", content: (null as unknown as string) }),
+      createMessage({ id: "msg-null", role: "assistant", content: null as unknown as string }),
     ];
 
     const result = formatChatMessages(history);
@@ -150,6 +164,71 @@ describe("formatChatMessages", () => {
 describe("useChatPanel send-chat-prompt handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.chatHistory = undefined;
+    mocks.chatState.messages = [];
+    mocks.chatState.status = "ready";
+    mocks.useChatOptions = undefined;
+  });
+
+  it("keeps a partial assistant message when streaming is stopped", async () => {
+    const userMessage = createMessage({
+      id: "user-1",
+      role: "user",
+      content: "Explain Plato's Republic",
+    });
+    const partialAssistantMessage = {
+      id: "assistant-1",
+      role: "assistant",
+      parts: [{ type: "text", text: "Plato begins by asking what justice is..." }],
+    };
+
+    mocks.chatHistory = [userMessage];
+    mocks.chatState.messages = [
+      {
+        id: userMessage.id,
+        role: userMessage.role,
+        parts: [{ type: "text", text: userMessage.content }],
+      },
+      partialAssistantMessage,
+    ];
+    mocks.chatState.status = "streaming";
+
+    const { result, rerender } = renderHook(() => useChatPanel("notebook-1"));
+
+    const onFinish = (
+      mocks.useChatOptions as {
+        onFinish: (event: {
+          isAbort: boolean;
+          isError: boolean;
+          messages: typeof mocks.chatState.messages;
+        }) => Promise<void>;
+      }
+    ).onFinish;
+
+    act(() => {
+      result.current.stop();
+    });
+    await act(() =>
+      onFinish({
+        isAbort: true,
+        isError: false,
+        messages: mocks.chatState.messages,
+      }),
+    );
+
+    mocks.chatState.status = "ready";
+    rerender();
+
+    expect(mocks.setMessages).not.toHaveBeenCalledWith([
+      {
+        id: userMessage.id,
+        role: userMessage.role,
+        parts: [{ type: "text", text: userMessage.content }],
+      },
+    ]);
+    expect(mocks.refetchQueries).toHaveBeenCalledWith({
+      queryKey: ["chat", "notebook-1", "messages"],
+    });
   });
 
   it("sends an auto prompt only from the visible responsive panel", () => {

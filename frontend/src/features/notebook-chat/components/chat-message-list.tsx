@@ -1,6 +1,6 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { Loader2 } from "lucide-react";
-import type { CitedSourceDTO } from "@/shared/api/chat";
+import type { CitedSourceDTO } from "@/shared/api";
 import { AssistantMessage } from "./assistant-message";
 import { UserMessage } from "./user-message";
 

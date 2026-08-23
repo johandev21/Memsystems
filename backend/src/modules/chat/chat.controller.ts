@@ -67,30 +67,52 @@ export class ChatController {
       throw new BadRequestError('Empty user message');
     }
 
-    const { streamResponse } = await this.chatService.sendMessage(
-      userId,
-      notebookId,
-      {
-        content,
-        model: body.model,
-      },
-    );
-
-    // Pipe Web Response headers & body directly to Express Response
-    res.status(streamResponse.status);
-    streamResponse.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-
-    if (streamResponse.body) {
-      const reader = streamResponse.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) res.write(value);
+    const generationController = new AbortController();
+    const abortOnDisconnect = () => {
+      if (!res.writableEnded && !generationController.signal.aborted) {
+        generationController.abort();
       }
+    };
+    res.once('close', abortOnDisconnect);
+
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    try {
+      const { streamResponse } = await this.chatService.sendMessage(
+        userId,
+        notebookId,
+        {
+          content,
+          model: body.model,
+          abortSignal: generationController.signal,
+        },
+      );
+
+      // Pipe Web Response headers & body directly to Express Response
+      res.status(streamResponse.status);
+      streamResponse.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+
+      if (streamResponse.body) {
+        reader = streamResponse.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value && !generationController.signal.aborted && !res.destroyed) {
+            res.write(value);
+          }
+        }
+      }
+
+      if (!res.destroyed && !res.writableEnded) {
+        res.end();
+      }
+    } catch (error) {
+      if (!generationController.signal.aborted) throw error;
+    } finally {
+      res.off('close', abortOnDisconnect);
+      reader?.releaseLock();
     }
-    res.end();
   }
 
   @Delete()

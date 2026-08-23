@@ -49,7 +49,7 @@ const HeadingWithId = ({
         "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3 wrap-break-words",
         level === 1 && "text-lg sm:text-2xl pt-4 sm:pt-6 my-3 sm:my-4",
         level === 2 && "text-base sm:text-xl pt-4 sm:pt-5 my-3 sm:my-3.5",
-        level === 3 && "text-[15px] sm:text-lg pt-3 sm:pt-4 my-2.5 sm:my-3",
+        level === 3 && "text-base sm:text-lg pt-3 sm:pt-4 my-2.5 sm:my-3",
         level >= 4 && "text-sm sm:text-base font-semibold pt-3 my-2",
       )}
     >

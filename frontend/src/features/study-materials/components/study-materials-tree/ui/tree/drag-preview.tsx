@@ -25,7 +25,7 @@ export function DragPreview({ node }: DragPreviewProps) {
       data-size={controller.size}
       className={cn(
         studyMaterialsTreeVariants({ size: controller.size }),
-        "inline-flex w-fit max-w-[min(18rem,calc(100vw-2rem))] items-center gap-1.5 rounded-xl border border-transparent bg-popover/95 px-[var(--tree-drag-preview-px)] py-[var(--tree-drag-preview-py)] font-mono text-[var(--tree-font-size)] font-medium leading-none tracking-normal text-popover-foreground shadow-[0_8px_24px_oklch(0_0_0/0.14)] ring-1 ring-foreground/8 backdrop-blur-[6px] dark:shadow-[0_8px_24px_oklch(0_0_0/0.35)] dark:ring-white/10",
+        "inline-flex w-fit max-w-[min(18rem,calc(100vw-2rem))] items-center gap-1.5 rounded-xl border border-transparent bg-popover/95 px-[var(--tree-drag-preview-px)] py-[var(--tree-drag-preview-py)] font-sans text-sm font-medium leading-none tracking-normal text-popover-foreground shadow-[0_8px_24px_oklch(0_0_0/0.14)] ring-1 ring-foreground/8 backdrop-blur-[6px] dark:shadow-[0_8px_24px_oklch(0_0_0/0.35)] dark:ring-white/10",
       )}
     >
       <Icon className="size-[var(--tree-icon-size)] shrink-0 opacity-80" strokeWidth={1.7} />

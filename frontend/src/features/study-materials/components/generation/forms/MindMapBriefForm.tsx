@@ -103,7 +103,7 @@ export function MindMapBriefForm({
               Generate an expandable hierarchy you can explore one branch at a time.
             </p>
           </div>
-          <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+          <Badge variant="outline" className="shrink-0 gap-1 text-xs">
             <GitBranch className="size-3" /> Tree view
           </Badge>
         </div>
@@ -256,7 +256,7 @@ function TreePreview() {
   return (
     <div className="mt-5 overflow-hidden rounded-xl border border-border bg-card px-3 py-5 sm:px-8">
       <div className="flex min-w-[420px] items-center justify-center gap-4">
-        <div className="relative flex h-12 w-32 items-center justify-center rounded-full bg-primary px-3 text-center text-[11px] font-semibold text-primary-foreground shadow-sm">
+        <div className="relative flex h-12 w-32 items-center justify-center rounded-full bg-primary px-3 text-center text-xs font-semibold text-primary-foreground shadow-sm">
           Core concept
           <span className="absolute -right-5 h-px w-5 bg-border" />
         </div>
@@ -269,11 +269,11 @@ function TreePreview() {
           ].map(([title, detail]) => (
             <div key={title} className="relative flex items-center gap-2">
               <span className="absolute -left-4 h-px w-4 bg-border" />
-              <div className="flex h-9 w-28 items-center rounded-lg border border-border bg-background px-2.5 text-[10px] font-semibold">
+              <div className="flex h-9 w-28 items-center rounded-lg border border-border bg-background px-2.5 text-xs font-semibold">
                 {title}
               </div>
               <span className="h-px w-4 bg-border" />
-              <div className="flex h-8 w-24 items-center rounded-lg border border-border bg-muted px-2 text-[10px] text-muted-foreground">
+              <div className="flex h-8 w-24 items-center rounded-lg border border-border bg-muted px-2 text-xs text-muted-foreground">
                 {detail}
               </div>
             </div>

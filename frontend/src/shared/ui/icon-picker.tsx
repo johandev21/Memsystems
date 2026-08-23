@@ -401,7 +401,7 @@ export function IconPicker({
           {isSearching ? (
             matchingIcons.length > 0 ? (
               <div className="grid gap-2">
-                <div className="px-0.5 text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                <div className="px-0.5 text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
                   Results
                 </div>
                 <div className="grid grid-cols-6 gap-1">
@@ -417,7 +417,7 @@ export function IconPicker({
                   ))}
                 </div>
                 {displayedMatchingIcons.length < matchingIcons.length && (
-                  <div className="py-1 text-center text-[10px] text-muted-foreground">
+                  <div className="py-1 text-center text-xs text-muted-foreground">
                     Scroll down for more icons...
                   </div>
                 )}
@@ -426,14 +426,14 @@ export function IconPicker({
               <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                 <Search className="size-8 mb-2 stroke-1 opacity-50" />
                 <p className="text-xs font-medium">No icons found</p>
-                <p className="text-[11px] opacity-75 mt-0.5">Try searching for another keyword</p>
+                <p className="text-xs opacity-75 mt-0.5">Try searching for another keyword</p>
               </div>
             )
           ) : (
             <div className="flex flex-col gap-2.5">
               {CURATED_CATEGORIES.map((category) => (
                 <div key={category.name} className="flex flex-col gap-1">
-                  <div className="px-0.5 text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                  <div className="px-0.5 text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
                     {category.name}
                   </div>
                   <div className="grid grid-cols-6 gap-1">

@@ -7,6 +7,8 @@ import { DRIZZLE } from '../database/database.module';
 import { EmbeddingService } from './embedding.service';
 
 export interface RetrievedChunk {
+  chunkId: string;
+  chunkIndex: number;
   sourceId: string;
   title: string;
   content: string;
@@ -41,6 +43,8 @@ export class RetrievalService {
     const result = await this.db.execute(
       sql`
         SELECT
+          sc.id AS chunk_id,
+          sc.chunk_index,
           sc.source_id,
           s.title,
           s.url,
@@ -56,6 +60,8 @@ export class RetrievalService {
     );
 
     const rows = result.rows as {
+      chunk_id: string;
+      chunk_index: number;
       source_id: string;
       title: string;
       url: string | null;
@@ -65,6 +71,8 @@ export class RetrievalService {
     }[];
 
     return rows.map((row) => ({
+      chunkId: row.chunk_id,
+      chunkIndex: row.chunk_index,
       sourceId: row.source_id,
       title: row.title,
       url: row.url,

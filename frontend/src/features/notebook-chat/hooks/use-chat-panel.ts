@@ -5,9 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
 import { useModelPersistence } from "@/features/notebooks";
-import { type ChatMessageDTO, type CitedSourceDTO, chatMessagesQueryOptions, clearChatHistory } from "@/shared/api/chat";
-import { modelsQueryOptions } from "@/shared/api/models";
-import { notebookQueryOptions } from "@/shared/api";
+import {
+  type ChatMessageDTO,
+  type CitedSourceDTO,
+  chatMessagesQueryOptions,
+  clearChatHistory,
+  modelsQueryOptions,
+  notebookQueryOptions,
+} from "@/shared/api";
 
 const DEFAULT_MODEL_ID = "openai/gpt-5.6-sol";
 
@@ -89,10 +94,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     });
   }, [notebookId]);
 
-  const initialMessages = useMemo(
-    () => formatChatMessages(chatHistory),
-    [chatHistory],
-  );
+  const initialMessages = useMemo(() => formatChatMessages(chatHistory), [chatHistory]);
 
   const citedSourcesMap = useMemo(() => {
     const map = new Map<string, CitedSourceDTO[]>();
@@ -105,6 +107,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   }, [chatHistory]);
 
   const queryClient = useQueryClient();
+  const abortedMessagesRef = useRef<UIMessage[] | null>(null);
 
   const invalidateNotebookCaches = useCallback(() => {
     queryClient.invalidateQueries({
@@ -119,7 +122,16 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     id: notebookId,
     transport,
     messages: initialMessages,
-    onFinish: async ({ isError }) => {
+    onFinish: async ({ isAbort, isError, messages: finishedMessages }) => {
+      if (isAbort) {
+        abortedMessagesRef.current = finishedMessages;
+        await queryClient.refetchQueries({
+          queryKey: ["chat", notebookId, "messages"],
+        });
+        return;
+      }
+
+      abortedMessagesRef.current = null;
       if (!isError) {
         await queryClient.refetchQueries({
           queryKey: ["chat", notebookId, "messages"],
@@ -136,14 +148,12 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     },
   });
 
-  const formattedMessages = useMemo(
-    () => formatChatMessages(chatHistory),
-    [chatHistory],
-  );
+  const formattedMessages = useMemo(() => formatChatMessages(chatHistory), [chatHistory]);
 
   useEffect(() => {
     if (!chatHistory) return;
     if (status === "streaming" || status === "submitted") return;
+    if (abortedMessagesRef.current) return;
     setMessages(formattedMessages);
   }, [chatHistory, formattedMessages, status, setMessages]);
 
@@ -158,6 +168,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   const clearHistoryMutation = useMutation({
     mutationFn: () => clearChatHistory(notebookId),
     onSuccess: () => {
+      abortedMessagesRef.current = null;
       setMessages([]);
       queryClient.setQueryData(["chat", notebookId, "messages"], []);
       queryClient.invalidateQueries({
@@ -177,6 +188,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   const handleSubmit = useCallback(
     (text: string) => {
       if (!text.trim() || isLoading) return;
+      abortedMessagesRef.current = null;
       setInput("");
       sendMessage({ text });
     },
@@ -188,6 +200,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   }, []);
 
   const handleRegenerate = useCallback(() => {
+    abortedMessagesRef.current = null;
     regenerate();
   }, [regenerate]);
 

@@ -139,7 +139,7 @@ export function FlashcardVariantC({
 
               <div className="flex items-center justify-center pt-4 border-t border-border/40 text-xs font-medium text-muted-foreground gap-1.5">
                 <Eye className="size-4 text-muted-foreground/80" /> Click or press{" "}
-                <kbd className="px-1.5 py-0.5 bg-muted rounded-md border border-border text-[10px] font-mono font-semibold">
+                <kbd className="px-1.5 py-0.5 bg-muted rounded-md border border-border text-xs font-mono font-semibold">
                   Space
                 </kbd>{" "}
                 to reveal answer
@@ -165,7 +165,7 @@ export function FlashcardVariantC({
                   className="rounded-full h-8 px-3 text-xs font-medium gap-1.5 cursor-pointer bg-background/50"
                 >
                   <Sparkles className="size-3.5 text-muted-foreground" /> Explain{" "}
-                  <kbd className="text-[10px] font-mono bg-muted px-1 rounded">E</kbd>
+                  <kbd className="text-xs font-mono bg-muted px-1 rounded">E</kbd>
                 </Button>
 
                 <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -263,7 +263,7 @@ export function FlashcardVariantC({
               variant="ghost"
               size="sm"
               onClick={() => setShowExplainModal(false)}
-              className="h-5 px-1.5 text-[11px] cursor-pointer"
+              className="h-5 px-1.5 text-xs cursor-pointer"
             >
               <X className="size-3" />
             </Button>

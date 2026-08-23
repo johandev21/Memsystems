@@ -1,4 +1,5 @@
 import type { UIMessage } from "@ai-sdk/react";
+import { useMemo } from "react";
 import {
   Message,
   MessageContent,
@@ -8,7 +9,9 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/features/ai";
-import type { CitedSourceDTO } from "@/shared/api/chat";
+import type { CitedSourceDTO } from "@/shared/api";
+import { getReferenceKeyFromHref, prepareReferenceMessage } from "../model/message-reference";
+import { MessageReferences, ReferencePopover } from "./reference-popover";
 
 interface AssistantMessageProps {
   message: UIMessage;
@@ -34,18 +37,7 @@ function getReasoningText(parts: UIMessage["parts"]): string {
 
 type MessageComponents = NonNullable<MessageResponseProps["components"]>;
 
-const messageComponents: MessageComponents = {
-  a: (props) => (
-    <a
-      {...props}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary font-medium underline underline-offset-[3px] decoration-1 transition-opacity hover:opacity-80"
-    />
-  ),
-};
-
-export function AssistantMessage({ message }: AssistantMessageProps) {
+export function AssistantMessage({ message, citedSources }: AssistantMessageProps) {
   const isStreaming = message.parts.some((part) => isTextPart(part) && part.state === "streaming");
 
   const reasoningText = getReasoningText(message.parts);
@@ -55,6 +47,46 @@ export function AssistantMessage({ message }: AssistantMessageProps) {
   const isReasoningStreaming = isStreaming && lastPart?.type === "reasoning";
 
   const textParts = message.parts.filter(isTextPart);
+  const referencesByKey = useMemo(
+    () => new Map(citedSources.map((source) => [source.citationKey.toUpperCase(), source])),
+    [citedSources],
+  );
+
+  const messageComponents = useMemo<MessageComponents>(
+    () => ({
+      a: ({ href, children, ...props }) => {
+        const referenceKey = getReferenceKeyFromHref(href);
+        const reference = referenceKey
+          ? referencesByKey.get(referenceKey.toUpperCase())
+          : undefined;
+
+        if (reference) {
+          return <ReferencePopover reference={reference}>{children}</ReferencePopover>;
+        }
+
+        return (
+          <a
+            {...props}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-muted-foreground underline decoration-1 underline-offset-[3px] transition-colors hover:text-foreground focus-visible:text-foreground"
+          >
+            {children}
+          </a>
+        );
+      },
+    }),
+    [referencesByKey],
+  );
+
+  const preparedParts = textParts.map((part) =>
+    prepareReferenceMessage(part.text ?? "", citedSources, isStreaming),
+  );
+  const inlineCitationKeys = new Set(preparedParts.flatMap((part) => [...part.inlineCitationKeys]));
+  const remainingReferences = citedSources.filter(
+    (source) => !inlineCitationKeys.has(source.citationKey),
+  );
 
   const isEmpty = textParts.length === 0 && !hasReasoning;
 
@@ -78,15 +110,17 @@ export function AssistantMessage({ message }: AssistantMessageProps) {
           </Reasoning>
         )}
 
-        {textParts.map((part, index) => (
+        {preparedParts.map((part, index) => (
           <MessageResponse
             key={`${message.id}-${index}`}
             components={messageComponents}
             isStreaming={isStreaming}
           >
-            {part.text ?? ""}
+            {part.markdown}
           </MessageResponse>
         ))}
+
+        {!isStreaming && <MessageReferences references={remainingReferences} />}
       </MessageContent>
     </Message>
   );

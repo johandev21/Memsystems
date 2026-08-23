@@ -29,32 +29,28 @@ const RESOURCES: ResourceConfig[] = [
     kind: "quiz",
     icon: HelpCircle,
     label: "Quiz",
-    colorClasses:
-      "bg-studio-resource hover:bg-studio-resource-hover text-studio-resource-foreground",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "flashcards",
     kind: "simple_flashcard",
     icon: Brain,
     label: "Flashcards",
-    colorClasses:
-      "bg-studio-resource hover:bg-studio-resource-hover text-studio-resource-foreground",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "roadmap",
     kind: "roadmap",
     icon: MapIcon,
     label: "Roadmap",
-    colorClasses:
-      "bg-studio-resource hover:bg-studio-resource-hover text-studio-resource-foreground",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "mindMap",
     kind: "mind_map",
     icon: Network,
     label: "Mind Map",
-    colorClasses:
-      "bg-studio-resource hover:bg-studio-resource-hover text-studio-resource-foreground",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
 ];
 
@@ -90,7 +86,7 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
                       tabIndex={disabled ? -1 : 0}
                       className={cn(
                         "flex h-10 w-10 shrink-0 items-center justify-center relative",
-                        "text-studio-resource-foreground",
+                        "text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground",
                         disabled && "opacity-50 cursor-not-allowed",
                       )}
                       onClick={() => !disabled && onGenerate(resource.kind)}
@@ -132,22 +128,16 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
               disabled={disabled}
               onClick={() => !disabled && onGenerate(resource.kind)}
               className={cn(
-                "group relative flex items-center min-h-11 h-auto py-2.5 w-full justify-between px-3 gap-2 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background rounded-2xl cursor-pointer select-none overflow-hidden",
+                "relative flex min-h-11 h-auto w-full items-center justify-between gap-2 overflow-hidden rounded-2xl px-3 py-2.5 text-muted-foreground outline-none transition-colors duration-200 select-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background cursor-pointer",
                 resource.colorClasses,
                 disabled && "opacity-50 cursor-not-allowed",
               )}
             >
-              <span className="text-[13px] font-medium text-foreground min-w-0 truncate leading-tight">
+              <span className="min-w-0 truncate text-sm font-medium leading-tight">
                 {resource.label}
               </span>
 
-              <resource.icon
-                className={cn(
-                  "h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-105",
-                  "text-studio-resource-icon opacity-80 group-hover:opacity-100",
-                )}
-                strokeWidth={1.75}
-              />
+              <resource.icon className="h-4.5 w-4.5 shrink-0" strokeWidth={1.75} />
             </button>
           );
         })}

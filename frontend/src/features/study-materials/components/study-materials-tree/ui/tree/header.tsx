@@ -33,11 +33,11 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
         )}
       >
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate font-sans text-[var(--tree-font-size)] font-semibold text-foreground">
+          <span className="truncate font-sans text-sm font-semibold text-foreground">
             Study Materials
           </span>
           {controller.activeDragItemId && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {isOver && isValidRootTarget ? "Drop to move to root" : "Drag to a folder"}
             </span>
           )}

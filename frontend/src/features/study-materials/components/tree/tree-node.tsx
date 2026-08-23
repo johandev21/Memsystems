@@ -58,7 +58,7 @@ export function FileTreeItemNode({
       }}
       style={{ paddingLeft: `${paddingLeft}px` }}
       className={cn(
-        "group relative flex w-full items-center gap-2.5 py-1.5 pr-4 text-left text-[13px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none rounded-xl w-max min-w-full",
+        "group relative flex w-full items-center gap-2.5 py-1.5 pr-4 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none rounded-xl w-max min-w-full",
         isFolder
           ? "text-foreground hover:bg-muted"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -81,7 +81,7 @@ export function FileTreeItemNode({
       {isFolder && (
         <div className="ml-auto flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
           {typeof item.materialCount === "number" && item.materialCount > 0 && (
-            <span className="text-[10px] text-muted-foreground tabular-nums mr-1">
+            <span className="text-xs text-muted-foreground tabular-nums mr-1">
               {item.materialCount}
             </span>
           )}

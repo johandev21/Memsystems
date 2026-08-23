@@ -341,10 +341,24 @@ export const notebookChatMessages = pgTable(
     role: chatRoleEnum('role').notNull(),
     content: text('content').notNull(),
     reasoning: text('reasoning'),
-    citedSourceIds:
-      jsonb('cited_source_ids').$type<
-        { sourceId: string; number: number; quote: string | null }[]
-      >(),
+    citedSourceIds: jsonb('cited_source_ids').$type<
+      (
+        | string
+        | {
+            schemaVersion?: number;
+            citationKey?: string;
+            sourceId: string;
+            chunkId?: string | null;
+            chunkIndex?: number | null;
+            number: number;
+            title?: string | null;
+            kind?: string | null;
+            url?: string | null;
+            description?: string | null;
+            quote: string | null;
+          }
+      )[]
+    >(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [

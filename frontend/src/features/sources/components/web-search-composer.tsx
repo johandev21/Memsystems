@@ -90,7 +90,7 @@ export function WebSearchComposer({ notebookId }: { notebookId: string }) {
           }}
           placeholder="Search sources about any topic..."
           disabled={!hasCapableModel}
-          className="field-sizing-content min-h-10 w-full resize-none rounded-lg bg-muted/60 px-3 py-2 text-[13px] outline-none placeholder:text-muted-foreground/70 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-100"
+          className="field-sizing-content min-h-10 w-full resize-none rounded-lg bg-muted/60 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-100"
         />
 
         <div className="flex items-center justify-between gap-1">

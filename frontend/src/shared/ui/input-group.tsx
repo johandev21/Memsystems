@@ -52,7 +52,7 @@ function InputGroupTextarea({ className, ...props }: React.ComponentProps<"texta
     <textarea
       data-slot="input-group-textarea"
       className={cn(
-        "flex w-full bg-transparent px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground/70 placeholder:select-none disabled:cursor-not-allowed disabled:opacity-50 resize-none field-sizing-content min-h-[60px]",
+        "flex w-full bg-transparent px-4 py-3 text-base outline-none placeholder:text-muted-foreground/70 placeholder:select-none disabled:cursor-not-allowed disabled:opacity-50 resize-none field-sizing-content min-h-[60px]",
         className,
       )}
       {...props}

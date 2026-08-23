@@ -2,12 +2,17 @@ import { apiDelete, createQueryOptions } from "./factory";
 
 export interface CitedSourceDTO {
   id: string;
+  schemaVersion: number;
+  citationKey: string;
+  chunkId: string | null;
+  chunkIndex: number | null;
   number: number;
   title: string;
   kind: string;
   url: string | null;
   description: string | null;
   quote: string | null;
+  isAvailable: boolean;
 }
 
 export interface ChatMessageDTO {
@@ -21,8 +26,16 @@ export interface ChatMessageDTO {
 }
 
 export interface CitedSourceEntry {
+  schemaVersion: number;
+  citationKey: string;
   sourceId: string;
+  chunkId: string | null;
+  chunkIndex: number | null;
   number: number;
+  title: string | null;
+  kind: string | null;
+  url: string | null;
+  description: string | null;
   quote: string | null;
 }
 

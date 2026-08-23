@@ -156,7 +156,7 @@ export function NotebookCardPreview({
             <ImageIcon className="size-9 stroke-1 opacity-60" />
             <div className="flex flex-col items-center gap-1">
               <p className="text-xs font-medium">No banner image set</p>
-              <p className="text-[11px] opacity-75">Upload an image to customize your notebook</p>
+              <p className="text-xs opacity-75">Upload an image to customize your notebook</p>
             </div>
             <Button
               type="button"

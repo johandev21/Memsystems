@@ -39,7 +39,7 @@ export function MarkdownCodeBlock({
 
   if (!className && typeof children === "string" && !children.includes("\n")) {
     return (
-      <code className="rounded border border-border/40 bg-muted px-1.5 py-0.5 font-mono text-[13px] font-medium text-foreground">
+      <code className="rounded border border-border/40 bg-muted px-1.5 py-0.5 font-mono text-sm font-medium text-foreground">
         {children}
       </code>
     );

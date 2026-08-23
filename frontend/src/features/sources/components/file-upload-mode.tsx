@@ -103,7 +103,7 @@ export function FileUploadMode({
           <FileUp className="h-6 w-6 text-primary" strokeWidth={2} />
         )}
       </div>
-      <h3 className="mb-1.5 text-[17px] font-medium text-foreground">
+      <h3 className="mb-1.5 text-lg font-medium text-foreground">
         {isUploading ? "Uploading file..." : "Drop your files here"}
       </h3>
       <p className="text-sm text-muted-foreground mb-8 text-center max-w-[280px]">

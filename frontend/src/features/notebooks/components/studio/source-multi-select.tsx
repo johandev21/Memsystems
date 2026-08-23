@@ -79,7 +79,7 @@ function SourceRow({
     >
       <Checkbox id={id} checked={checked} onCheckedChange={(c) => onToggle(c === true)} />
       <span className="truncate flex-1">{source.title}</span>
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+      <span className="text-xs uppercase tracking-wide text-muted-foreground/70">
         {source.kind}
       </span>
     </Label>

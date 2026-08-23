@@ -237,7 +237,7 @@ export function RoadmapBriefForm({
                     <span className="text-xs font-semibold text-foreground">{opt.title}</span>
                     {selected && <Check className="size-3.5 text-primary shrink-0" />}
                   </div>
-                  <span className="text-[11px] text-muted-foreground leading-tight">
+                  <span className="text-xs text-muted-foreground leading-tight">
                     {opt.desc}
                   </span>
                 </div>

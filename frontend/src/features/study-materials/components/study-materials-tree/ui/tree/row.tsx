@@ -132,7 +132,7 @@ export function Row({ node, depth }: RowProps) {
       tabIndex={isFocused ? 0 : -1}
       style={{ paddingLeft: `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` }}
       className={cn(
-        "group/tree-row relative flex h-[var(--tree-row-height)] w-full min-w-0 items-center gap-1.5 pr-1 text-left font-mono text-[var(--tree-font-size)] outline-none select-none",
+        "group/tree-row relative flex h-[var(--tree-row-height)] w-full min-w-0 items-center gap-1.5 pr-1 text-left font-sans text-sm outline-none select-none",
         "text-muted-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring",
         "hover:bg-muted/70 hover:text-foreground",
         isSelected &&

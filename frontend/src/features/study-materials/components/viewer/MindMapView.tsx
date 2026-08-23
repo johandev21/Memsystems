@@ -82,7 +82,7 @@ function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
         className="!h-1 !w-1 !border-0 !bg-transparent"
       />
       <div className="flex items-center gap-2">
-        <span className="text-[13px] sm:text-sm font-semibold leading-tight wrap-break-words">
+        <span className="text-sm sm:text-sm font-semibold leading-tight wrap-break-words">
           {data.item.label}
         </span>
       </div>
@@ -402,7 +402,7 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
         </Button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-[10px] text-muted-foreground sm:flex">
+      <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground sm:flex">
         <span className="size-1.5 rounded-full bg-primary" /> Drag to pan · Scroll to zoom · Click a
         node to explore
       </div>

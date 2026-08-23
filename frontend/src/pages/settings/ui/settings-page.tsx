@@ -106,27 +106,27 @@ function StatusBadge({
 }) {
   if (isPending)
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
         <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" />
         Checking
       </span>
     );
   if (isInvalid || (hasKey && !ok))
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive">
         <AlertCircle className="size-3" />
         Invalid key
       </span>
     );
   if (hasKey && ok)
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
         <CheckCircle2 className="size-3" />
         Connected
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
       <span className="size-1.5 rounded-full bg-muted-foreground/50" />
       Not configured
     </span>
@@ -235,7 +235,7 @@ function ProviderRow({ provider }: { provider: Provider }) {
             href={provider.keyUrl}
             target="_blank"
             rel="noreferrer"
-            className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground hover:underline"
+            className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
           >
             Get an API key <ExternalLink className="size-2.5" />
           </a>
@@ -255,13 +255,13 @@ function ProviderRow({ provider }: { provider: Provider }) {
             onChange={(event) => setApiKeyInput(event.target.value)}
             readOnly={isMasked}
             disabled={isSaving || isDeleting}
-            className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-[13px] outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
+            className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
           />
           {isMasked && (
             <button
               type="button"
               onClick={() => setReplaceOpen(true)}
-              className="mr-1 rounded-lg px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="mr-1 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               Replace
             </button>
@@ -298,7 +298,7 @@ function ProviderRow({ provider }: { provider: Provider }) {
           )}
         </div>
         {isInvalid && (
-          <p className="mt-1.5 text-[11px] text-destructive">
+          <p className="mt-1.5 text-xs text-destructive">
             That key format doesn&apos;t look right.
           </p>
         )}
@@ -412,7 +412,7 @@ export function SettingsPage() {
       <main className="mx-auto max-w-[1040px] px-5 pb-16 pt-10 sm:px-8 lg:pt-14">
         <header className="flex flex-col gap-6  pb-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-[2rem] font-semibold leading-none tracking-[-0.055em] sm:text-[2.4rem]">
+            <h1 className="text-3xl font-semibold leading-none tracking-[-0.055em] sm:text-4xl">
               Settings
             </h1>
             <p className="mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
@@ -432,7 +432,7 @@ export function SettingsPage() {
                 Use your own keys for more control over models and usage.
               </p>
             </div>
-            <span className="hidden items-center gap-1.5 text-[11px] text-muted-foreground sm:flex">
+            <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
               <ShieldCheck className="size-3.5" /> Encrypted at rest
             </span>
           </div>
@@ -479,7 +479,7 @@ export function SettingsPage() {
                     role="radio"
                     aria-checked={selected}
                     onClick={() => setTheme(item.value)}
-                    className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg text-[11px] font-medium transition-all ${selected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all ${selected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     <Icon className="size-3.5" />
                     {item.name}

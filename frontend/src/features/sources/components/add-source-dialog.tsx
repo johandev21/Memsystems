@@ -318,7 +318,7 @@ export function AddSourceDialog({
           )}
 
           <div className="flex flex-col gap-2 px-2">
-            <div className="flex items-center justify-between text-[13px] font-medium text-muted-foreground">
+            <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
               <span>Sources Limit</span>
               <span className="text-foreground">
                 {count} / {SOURCE_LIMIT}

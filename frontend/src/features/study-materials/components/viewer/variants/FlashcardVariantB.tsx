@@ -92,7 +92,7 @@ export function FlashcardVariantB({
           <h2 className="text-base font-bold text-foreground truncate">{deckTitle}</h2>
           <Badge
             variant="outline"
-            className="rounded-full text-[11px] px-2.5 py-0.5 font-normal gap-1"
+            className="rounded-full text-xs px-2.5 py-0.5 font-normal gap-1"
           >
             <BookOpen className="size-3 text-muted-foreground" /> {sourceCount} sources
           </Badge>
@@ -141,7 +141,7 @@ export function FlashcardVariantB({
                       : "bg-card/50 border-border/40 hover:bg-card text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <span className="text-[10px] text-muted-foreground/80 block">
+                  <span className="text-xs text-muted-foreground/80 block">
                     #{c.originalIndex + 1}
                   </span>
                   <p className="line-clamp-2 leading-relaxed">{c.front}</p>
@@ -200,7 +200,7 @@ export function FlashcardVariantB({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowExplainModal(!showExplainModal)}
-                        className="rounded-full h-7 px-3 text-[11px] gap-1 cursor-pointer bg-background"
+                        className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-background"
                       >
                         <Sparkles className="size-3 text-muted-foreground" /> Explain
                       </Button>
@@ -237,7 +237,7 @@ export function FlashcardVariantB({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowExplainModal(!showExplainModal)}
-                        className="rounded-full h-7 px-3 text-[11px] gap-1 cursor-pointer bg-background"
+                        className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-background"
                       >
                         <Sparkles className="size-3 text-muted-foreground" /> Explain
                       </Button>
@@ -296,7 +296,7 @@ export function FlashcardVariantB({
                   size="sm"
                   onClick={() => setFeedback(feedback === "good" ? null : "good")}
                   className={cn(
-                    "h-7 px-2.5 text-[11px] gap-1 cursor-pointer",
+                    "h-7 px-2.5 text-xs gap-1 cursor-pointer",
                     feedback === "good" && "text-foreground font-semibold",
                   )}
                 >
@@ -308,7 +308,7 @@ export function FlashcardVariantB({
                   size="sm"
                   onClick={() => setFeedback(feedback === "bad" ? null : "bad")}
                   className={cn(
-                    "h-7 px-2.5 text-[11px] gap-1 cursor-pointer",
+                    "h-7 px-2.5 text-xs gap-1 cursor-pointer",
                     feedback === "bad" && "text-foreground font-semibold",
                   )}
                 >
@@ -332,7 +332,7 @@ export function FlashcardVariantB({
               variant="ghost"
               size="sm"
               onClick={() => setShowExplainModal(false)}
-              className="h-5 px-1.5 text-[11px]"
+              className="h-5 px-1.5 text-xs"
             >
               <X className="size-3" />
             </Button>

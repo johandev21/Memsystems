@@ -1,5 +1,5 @@
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai";
-import { CornerDownLeftIcon, ImageIcon, Monitor, PlusIcon, SquareIcon, XIcon } from "lucide-react";
+import { ArrowUpIcon, ImageIcon, Monitor, PlusIcon, SquareIcon, XIcon } from "lucide-react";
 import { nanoid } from "nanoid";
 import type {
   ChangeEvent,
@@ -1003,6 +1003,7 @@ export const PromptInputActionMenuItem = ({
 export type PromptInputSubmitProps = ComponentProps<typeof InputGroupButton> & {
   status?: ChatStatus;
   onStop?: () => void;
+  tooltip?: PromptInputButtonTooltip;
 };
 
 export const PromptInputSubmit = ({
@@ -1011,13 +1012,14 @@ export const PromptInputSubmit = ({
   size = "icon-sm",
   status,
   onStop,
+  tooltip,
   onClick,
   children,
   ...props
 }: PromptInputSubmitProps) => {
   const isGenerating = status === "submitted" || status === "streaming";
 
-  let Icon = <CornerDownLeftIcon className="size-4" />;
+  let Icon = <ArrowUpIcon aria-hidden="true" className="size-4" />;
 
   if (status === "submitted") {
     Icon = <Spinner />;
@@ -1039,7 +1041,7 @@ export const PromptInputSubmit = ({
     [isGenerating, onStop, onClick],
   );
 
-  return (
+  const button = (
     <InputGroupButton
       aria-label={isGenerating ? "Stop" : "Submit"}
       className={cn("cursor-pointer", className)}
@@ -1051,6 +1053,22 @@ export const PromptInputSubmit = ({
     >
       {children ?? Icon}
     </InputGroupButton>
+  );
+
+  if (!tooltip) return button;
+
+  const tooltipContent = typeof tooltip === "string" ? tooltip : tooltip.content;
+  const shortcut = typeof tooltip === "string" ? undefined : tooltip.shortcut;
+  const side = typeof tooltip === "string" ? "top" : (tooltip.side ?? "top");
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span />}>{button}</TooltipTrigger>
+      <TooltipContent side={side}>
+        {tooltipContent}
+        {shortcut && <span className="ml-2 text-muted-foreground">{shortcut}</span>}
+      </TooltipContent>
+    </Tooltip>
   );
 };
 

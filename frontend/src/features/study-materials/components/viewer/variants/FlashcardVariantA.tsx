@@ -297,7 +297,7 @@ export function FlashcardVariantA({
               variant="ghost"
               size="sm"
               onClick={() => setShowExplainModal(false)}
-              className="h-6 px-2 text-[11px] cursor-pointer"
+              className="h-6 px-2 text-xs cursor-pointer"
             >
               Close
             </Button>

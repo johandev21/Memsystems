@@ -149,7 +149,7 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
             <p className="text-xs font-semibold text-foreground">
               Click to browse or drag & drop image
             </p>
-            <p className="text-[11px] text-muted-foreground">JPG, PNG, WebP up to 2MB</p>
+            <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 2MB</p>
           </div>
 
           <Button type="button" variant="secondary" size="sm" className="mt-1 cursor-pointer">

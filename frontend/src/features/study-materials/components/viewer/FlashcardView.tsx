@@ -179,7 +179,7 @@ export function FlashcardView({
         <span className="font-semibold text-muted-foreground/80">
           {currentCardIndex + 1} / {totalCardsCount}
         </span>
-        <span className="text-[10px] uppercase font-semibold text-primary/70 tracking-wider">
+        <span className="text-xs uppercase font-semibold text-primary/70 tracking-wider">
           {activeCardFormat === "cloze"
             ? "Fill in the blank"
             : activeCardFormat === "definition"
@@ -205,7 +205,7 @@ export function FlashcardView({
 
       {activeCardFormat !== "cloze" && (
         <div className="flex items-center justify-center pt-2">
-          <span className="text-[11px] text-muted-foreground/60 font-medium">
+          <span className="text-xs text-muted-foreground/60 font-medium">
             Click card to flip
           </span>
         </div>
@@ -219,7 +219,7 @@ export function FlashcardView({
         <span className="font-semibold text-muted-foreground/80">
           {currentCardIndex + 1} / {totalCardsCount}
         </span>
-        <span className="text-[10px] uppercase font-semibold text-success tracking-wider">
+        <span className="text-xs uppercase font-semibold text-success tracking-wider">
           Answer
         </span>
       </div>

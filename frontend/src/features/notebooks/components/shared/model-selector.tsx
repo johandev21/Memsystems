@@ -69,7 +69,7 @@ export function ModelSelector({ models, selectedModel, onModelChange }: ModelSel
         <ScrollArea className="h-[200px]">
           <div className="space-y-0.5 pr-2">
             {filteredModels.length === 0 ? (
-              <div className="text-[11px] text-muted-foreground text-center py-8">
+              <div className="text-xs text-muted-foreground text-center py-8">
                 No models found
               </div>
             ) : (
@@ -122,7 +122,7 @@ function ModelRow({ model, selectedModel, onSelectModel }: ModelRowProps) {
         <span className="text-xs font-semibold text-foreground leading-tight truncate">
           {model.displayName}
         </span>
-        <span className="text-[10px] text-muted-foreground/70 leading-none mt-1 truncate">
+        <span className="text-xs text-muted-foreground/70 leading-none mt-1 truncate">
           {model.id}
         </span>
       </div>
@@ -170,7 +170,7 @@ export function DialogModelSelector({
               <span className="font-semibold text-foreground leading-tight truncate">
                 {model.displayName}
               </span>
-              <span className="text-[10px] text-muted-foreground/70 leading-none mt-1 truncate">
+              <span className="text-xs text-muted-foreground/70 leading-none mt-1 truncate">
                 {model.id}
               </span>
             </div>

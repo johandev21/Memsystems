@@ -66,9 +66,9 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
       <div aria-live="polite" className="sr-only">
         {chatAnnouncement}
       </div>
-      <div className="mx-auto w-full max-w-4xl flex flex-col min-h-0 flex-1">
+      <div className="relative flex w-full min-h-0 flex-1 flex-col">
         <Conversation className="flex-1 min-h-0">
-          <ConversationContent>
+          <ConversationContent className="mx-auto w-full max-w-4xl pb-32">
             {notebook && (
               <NotebookBanner
                 notebookId={notebook.id}
@@ -101,39 +101,41 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
           <ConversationScrollButton />
         </Conversation>
 
-        <div className="shrink-0 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none">
-          <ClearHistoryDialog
-            open={isClearDialogOpen}
-            onOpenChange={(open) => {
-              if (!clearHistoryMutation.isPending) {
-                setIsClearDialogOpen(open);
-              }
-            }}
-            onConfirm={() => clearHistoryMutation.mutate()}
-            isClearing={clearHistoryMutation.isPending}
-          />
-          {connection?.ok !== false ? (
-            <Composer
-              input={input}
-              onInputChange={setInput}
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-              onStop={stop}
-              models={modelOptions}
-              selectedModel={selectedModel}
-              onModelChange={handleModelChange}
-              textareaRef={composerTextareaRef}
+        <div className="absolute inset-x-0 bottom-0 z-[60] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none">
+          <div className="mx-auto w-full max-w-4xl">
+            <ClearHistoryDialog
+              open={isClearDialogOpen}
+              onOpenChange={(open) => {
+                if (!clearHistoryMutation.isPending) {
+                  setIsClearDialogOpen(open);
+                }
+              }}
+              onConfirm={() => clearHistoryMutation.mutate()}
+              isClearing={clearHistoryMutation.isPending}
             />
-          ) : (
-            <OpenAIKeyPrompt
-              provider={modelOptions.length > 0 ? selectedModel.split("/")[0] : undefined}
-              description={
-                modelOptions.length > 0
-                  ? "An API key is required to chat with your study assistant."
-                  : undefined
-              }
-            />
-          )}
+            {connection?.ok !== false ? (
+              <Composer
+                input={input}
+                onInputChange={setInput}
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
+                onStop={stop}
+                models={modelOptions}
+                selectedModel={selectedModel}
+                onModelChange={handleModelChange}
+                textareaRef={composerTextareaRef}
+              />
+            ) : (
+              <OpenAIKeyPrompt
+                provider={modelOptions.length > 0 ? selectedModel.split("/")[0] : undefined}
+                description={
+                  modelOptions.length > 0
+                    ? "An API key is required to chat with your study assistant."
+                    : undefined
+                }
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
