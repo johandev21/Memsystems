@@ -1,0 +1,81 @@
+/* utilities.css — z-index helpers and frosted-glass effects */
+
+@layer utilities {
+  .z-popover {
+    z-index: var(--layer-popover);
+  }
+
+  .z-composer {
+    z-index: var(--layer-composer);
+  }
+
+  .z-floating-control {
+    z-index: var(--layer-floating-control);
+  }
+
+  .z-viewer {
+    z-index: var(--layer-viewer);
+  }
+
+  .z-viewer-popover {
+    z-index: var(--layer-viewer-popover);
+  }
+
+  .z-modal-backdrop {
+    z-index: var(--layer-modal-backdrop);
+  }
+
+  .z-modal-content {
+    z-index: var(--layer-modal-content);
+  }
+
+  .z-modal-popover {
+    z-index: var(--layer-modal-popover);
+  }
+
+  /* Frosted glass: a translucent, backdrop-blurred pane. Content stays crisp:
+     glow layer (::before) and glass pane (::after) sit behind it via z-index + isolation. */
+  .liquid-glass {
+    isolation: isolate;
+  }
+
+  .liquid-glass::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    box-shadow: var(--composer-inner-glow);
+  }
+
+  .liquid-glass::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    backdrop-filter: blur(21px) saturate(150%);
+    -webkit-backdrop-filter: blur(21px) saturate(150%);
+    isolation: isolate;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .liquid-glass::before,
+  .liquid-glass::after {
+    display: none;
+  }
+}
+
+/* Fallback when backdrop-filter is unsupported: composer becomes solid */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  [data-slot="notebook-chat-composer"] [data-slot="input-group"] {
+    background-color: var(--composer-bg-solid);
+  }
+}
+
+[data-reveal-word][data-active="true"] {
+  color: var(--foreground);
+}

@@ -1,0 +1,61 @@
+/* base.css — global element defaults and @layer base */
+
+.typeset-chat {
+  --typeset-font-body: var(--font-primary);
+  --typeset-font-heading: var(--font-primary);
+  --typeset-font-mono: var(--font-code);
+  --typeset-size: var(--type-size-body);
+  --typeset-leading: 1.7;
+  --typeset-flow: 1.25em;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-primary);
+    font-size: var(--type-size-body);
+    line-height: var(--type-leading-body);
+    font-feature-settings:
+      "ss01" 1,
+      "cv11" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    font-family: var(--font-primary);
+  }
+
+  :where(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--font-primary);
+    line-height: var(--type-leading-heading);
+    letter-spacing: var(--type-tracking-heading);
+  }
+
+  :where(button, input, textarea, select) {
+    font: inherit;
+  }
+}
+
+/* Text selection */
+::selection {
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
+/* Remove Edge password reveal/clear icons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* Remove tap highlight on touch devices */
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
