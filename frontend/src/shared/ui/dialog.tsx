@@ -3,6 +3,7 @@ import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import { MODAL_POPOVER_LAYER, OverlayLayerContext } from "@/shared/ui/overlay-layer";
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -60,25 +61,27 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            render={
-              <Button
-                variant="ghost"
-                className={cn(
-                  "absolute top-4 right-4 bg-secondary",
-                  !motion && "transition-none active:translate-y-0",
-                )}
-                size="icon-sm"
-              />
-            }
-          >
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
+        <OverlayLayerContext.Provider value={MODAL_POPOVER_LAYER}>
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              render={
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "absolute top-4 right-4 bg-secondary",
+                    !motion && "transition-none active:translate-y-0",
+                  )}
+                  size="icon-sm"
+                />
+              }
+            >
+              <XIcon />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </OverlayLayerContext.Provider>
       </DialogPrimitive.Popup>
     </DialogPortal>
   );

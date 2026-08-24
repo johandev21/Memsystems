@@ -2,6 +2,7 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 import type * as React from "react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import { MODAL_POPOVER_LAYER, OverlayLayerContext } from "@/shared/ui/overlay-layer";
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
@@ -31,6 +32,7 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
 function AlertDialogContent({
   className,
   size = "default",
+  children,
   ...props
 }: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm";
@@ -46,7 +48,11 @@ function AlertDialogContent({
           className,
         )}
         {...props}
-      />
+      >
+        <OverlayLayerContext.Provider value={MODAL_POPOVER_LAYER}>
+          {children}
+        </OverlayLayerContext.Provider>
+      </AlertDialogPrimitive.Popup>
     </AlertDialogPortal>
   );
 }
