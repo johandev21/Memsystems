@@ -6,9 +6,8 @@ import {
 } from "@/features/ai";
 import { NotebookBanner } from "@/features/notebooks";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useChatPanel } from "../hooks/use-chat-panel";
-import { useRef } from "react";
 import { ChatEmptyState } from "./chat-empty-state";
 import { ChatMessageList } from "./chat-message-list";
 import { ClearHistoryDialog } from "./clear-history-dialog";
@@ -16,6 +15,8 @@ import { Composer } from "./composer";
 
 export function ChatPanel({ notebookId }: { notebookId: string }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const composerWrapperRef = useRef<HTMLDivElement>(null);
+  const conversationWrapperRef = useRef<HTMLDivElement>(null);
   const {
     notebook,
     connection,
@@ -56,6 +57,28 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
     return () => window.removeEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
   }, [isLoading, messageCount, notebookId, panelRef, setIsClearDialogOpen]);
 
+  useLayoutEffect(() => {
+    const parent = conversationWrapperRef.current;
+    const composer = composerWrapperRef.current;
+    if (!parent || !composer) return;
+
+    const update = () => {
+      parent.style.setProperty("--composer-height", `${composer.offsetHeight}px`);
+    };
+
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(composer);
+
+    // Re-measure on font load / window resize as fallback
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
   const notebookTitle = notebook?.title ?? "Notebook";
   const isUntitled = notebookTitle.toLowerCase() === "untitled";
   const showBannerAsUntitled = isUntitled && messageCount === 0;
@@ -66,9 +89,16 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
       <div aria-live="polite" className="sr-only">
         {chatAnnouncement}
       </div>
-      <div className="relative flex w-full min-h-0 flex-1 flex-col">
+      <div
+        ref={conversationWrapperRef}
+        className="relative flex w-full min-h-0 flex-1 flex-col"
+        style={{ ["--composer-height" as string]: "96px" } as React.CSSProperties}
+      >
         <Conversation className="flex-1 min-h-0">
-          <ConversationContent className="mx-auto w-full max-w-4xl pb-32">
+          <ConversationContent
+            className="mx-auto w-full max-w-4xl pb-32"
+            style={{ paddingBottom: "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties}
+          >
             {notebook && (
               <NotebookBanner
                 notebookId={notebook.id}
@@ -98,10 +128,19 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
               />
             )}
           </ConversationContent>
-          <ConversationScrollButton />
+          <ConversationScrollButton
+            style={
+              {
+                bottom: "calc(var(--composer-height, 96px) + 0.75rem)",
+              } as React.CSSProperties
+            }
+          />
         </Conversation>
 
-        <div className="absolute inset-x-0 bottom-0 z-composer p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none">
+        <div
+          ref={composerWrapperRef}
+          className="absolute inset-x-0 bottom-0 z-composer p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none"
+        >
           <div className="mx-auto w-full max-w-4xl">
             <ClearHistoryDialog
               open={isClearDialogOpen}

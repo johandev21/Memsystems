@@ -17,6 +17,7 @@ function ThemeKeyboardShortcut() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
+        event.defaultPrevented ||
         event.repeat ||
         event.isComposing ||
         event.key.toLowerCase() !== "d" ||
@@ -25,6 +26,12 @@ function ThemeKeyboardShortcut() {
         event.altKey ||
         isEditableTarget(event.target)
       ) {
+        return;
+      }
+
+      // Do not toggle theme while a quiz is actively being taken — bare "d"
+      // is consumed by the quiz viewer to select answer D.
+      if (document.querySelector('[data-quiz-active="true"]')) {
         return;
       }
 

@@ -29,7 +29,7 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
   <div
     className={cn(
       "is-user:dark flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-sm",
-      "group-[.is-user]:ml-auto group-[.is-user]:rounded-2xl group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
+      "group-[.is-user]:ml-auto group-[.is-user]:rounded-2xl group-[.is-user]:bg-primary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-primary-foreground group-[.is-user]:[--color-foreground:var(--primary-foreground)] group-[.is-user]:[--color-muted-foreground:color-mix(in_oklab,var(--primary-foreground)_60%,transparent)] group-[.is-user]:[--color-border:color-mix(in_oklab,var(--primary-foreground)_20%,transparent)] group-[.is-user]:[--color-muted:color-mix(in_oklab,var(--primary-foreground)_8%,transparent)] group-[.is-user]:[--color-ring:var(--primary-foreground)] group-[.is-user]:[&_.typeset]:text-primary-foreground",
       "group-[.is-assistant]:text-foreground",
       className,
     )}

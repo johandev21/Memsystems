@@ -401,9 +401,7 @@ export function IconPicker({
           {isSearching ? (
             matchingIcons.length > 0 ? (
               <div className="grid gap-2">
-                <div className="px-0.5 text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                  Results
-                </div>
+                <div className="px-0.5 text-xs font-medium text-muted-foreground">Results</div>
                 <div className="grid grid-cols-6 gap-1">
                   {displayedMatchingIcons.map((iconName, index) => (
                     <IconItem
@@ -433,9 +431,7 @@ export function IconPicker({
             <div className="flex flex-col gap-2.5">
               {CURATED_CATEGORIES.map((category) => (
                 <div key={category.name} className="flex flex-col gap-1">
-                  <div className="px-0.5 text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                    {category.name}
-                  </div>
+                  <div className="px-0.5 text-xs font-medium text-muted-foreground">{category.name}</div>
                   <div className="grid grid-cols-6 gap-1">
                     {category.icons.map((iconName) => {
                       const globalIdx = currentIcons.indexOf(iconName);
