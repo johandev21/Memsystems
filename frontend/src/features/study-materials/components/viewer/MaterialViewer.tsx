@@ -28,7 +28,9 @@ export function MaterialViewer({
   defaultFullscreen,
   forceFullscreen,
 }: MaterialViewerProps) {
-  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(defaultFullscreen || forceFullscreen));
+  const [isFullscreen, setIsFullscreen] = useState(() =>
+    Boolean(defaultFullscreen || forceFullscreen),
+  );
   const [isExitingFullscreen, setIsExitingFullscreen] = useState(false);
   const isEffectivelyFullscreen = forceFullscreen || isFullscreen;
 
@@ -158,7 +160,7 @@ export function MaterialViewer({
   if (isEffectivelyFullscreen || isExitingFullscreen) {
     return (
       <div
-        className={`fixed inset-0 z-50 flex h-[100dvh] w-screen flex-col overflow-hidden bg-panel-bg text-foreground motion-reduce:animate-none ${
+        className={`fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col overflow-hidden bg-panel-bg text-foreground motion-reduce:animate-none ${
           isExitingFullscreen
             ? "animate-out fade-out duration-150"
             : "animate-in fade-in duration-150"

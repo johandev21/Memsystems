@@ -77,6 +77,15 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --transparent: transparent;
+  /* Keep the overlay hierarchy explicit: content popovers sit below the
+     composer, while fullscreen and modal surfaces cover the whole workspace. */
+  --layer-popover: 50;
+  --layer-composer: 60;
+  --layer-floating-control: 70;
+  --layer-viewer: 80;
+  --layer-viewer-popover: 85;
+  --layer-modal-backdrop: 90;
+  --layer-modal-content: 100;
   --brand-google-blue: oklch(0.556 0 0);
   --brand-google-green: oklch(0.556 0 0);
   --brand-google-yellow: oklch(0.708 0 0);
@@ -317,6 +326,36 @@
 
   :where(button, input, textarea, select) {
     font: inherit;
+  }
+}
+
+@layer utilities {
+  .z-popover {
+    z-index: var(--layer-popover);
+  }
+
+  .z-composer {
+    z-index: var(--layer-composer);
+  }
+
+  .z-floating-control {
+    z-index: var(--layer-floating-control);
+  }
+
+  .z-viewer {
+    z-index: var(--layer-viewer);
+  }
+
+  .z-viewer-popover {
+    z-index: var(--layer-viewer-popover);
+  }
+
+  .z-modal-backdrop {
+    z-index: var(--layer-modal-backdrop);
+  }
+
+  .z-modal-content {
+    z-index: var(--layer-modal-content);
   }
 }
 

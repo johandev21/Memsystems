@@ -101,7 +101,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
           <ConversationScrollButton />
         </Conversation>
 
-        <div className="absolute inset-x-0 bottom-0 z-[60] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none">
+        <div className="absolute inset-x-0 bottom-0 z-composer p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none">
           <div className="mx-auto w-full max-w-4xl">
             <ClearHistoryDialog
               open={isClearDialogOpen}

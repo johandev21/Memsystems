@@ -40,10 +40,12 @@ function ReaderMoreMenu({
   source,
   downloading,
   onDownload,
+  isFullscreen,
 }: {
   source: SourceWithContent;
   downloading: boolean;
   onDownload: () => void;
+  isFullscreen: boolean;
 }) {
   const showWebpage = source.kind === "url" && !!source.url;
   const showDownload = source.kind === "file";
@@ -63,7 +65,11 @@ function ReaderMoreMenu({
       >
         <MoreVertical className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent
+        align="end"
+        layerClassName={isFullscreen ? "z-viewer-popover" : undefined}
+        className="w-48"
+      >
         {showWebpage && (
           <DropdownMenuItem
             render={
@@ -103,7 +109,9 @@ export function SourceContentViewer({
   const { data: source, isPending, isError } = useQuery(sourceQueryOptions(sourceId));
 
   const [downloading, setDownloading] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(defaultFullscreen || forceFullscreen));
+  const [isFullscreen, setIsFullscreen] = useState(() =>
+    Boolean(defaultFullscreen || forceFullscreen),
+  );
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const isEffectivelyFullscreen = forceFullscreen || isFullscreen;
 
@@ -191,7 +199,12 @@ export function SourceContentViewer({
       </div>
 
       <div className="flex items-center gap-1">
-        <ReaderMoreMenu source={source} downloading={downloading} onDownload={handleDownload} />
+        <ReaderMoreMenu
+          source={source}
+          downloading={downloading}
+          onDownload={handleDownload}
+          isFullscreen={isEffectivelyFullscreen}
+        />
         {!forceFullscreen && (
           <Button
             type="button"
@@ -253,7 +266,7 @@ export function SourceContentViewer({
     <div
       className={
         isEffectivelyFullscreen
-          ? "fixed inset-0 z-50 flex h-[100dvh] w-screen flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
+          ? "fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
           : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden"
       }
     >
