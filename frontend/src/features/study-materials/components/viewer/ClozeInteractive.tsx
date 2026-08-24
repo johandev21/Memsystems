@@ -38,9 +38,9 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-xl mx-auto text-center py-1">
       {/* Sentence display with inline blank slot */}
-      <p className="text-lg md:text-xl font-medium leading-relaxed tracking-tight text-foreground">
+      <p className="text-lg md:text-xl font-medium leading-relaxed tracking-tight text-text-primary">
         <span>{parsed.prefix}</span>
-        <span className="inline-flex items-center px-3 py-1 mx-1.5 rounded-xl border-2 border-dashed border-primary bg-primary font-bold text-primary-foreground text-base transition-colors">
+        <span className="inline-flex items-center px-3 py-1 mx-1.5 rounded-xl border-2 border-dashed border-surface-border-strong bg-surface-4 font-bold text-text-primary text-base transition-colors">
           {inputVal || "____"}
         </span>
         <span>{parsed.suffix}</span>
@@ -64,7 +64,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
           }}
           placeholder="Type missing word..."
           className={cn(
-            "h-10 text-sm rounded-2xl text-center font-medium transition-all shadow-2xs focus-visible:ring-2",
+            "h-10 text-sm rounded-2xl text-center font-medium transition-all shadow-2xs border-surface-border-strong focus-visible:ring-surface-border-strong",
             status === "correct" &&
               "border-success bg-success text-success-foreground focus-visible:ring-success",
             status === "incorrect" &&
@@ -93,7 +93,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
           <div className="flex items-center gap-1.5 font-semibold text-destructive">
             <XCircle className="size-4 shrink-0" /> Incorrect
           </div>
-          <p className="text-foreground text-xs font-medium">
+          <p className="text-destructive-foreground text-xs font-medium">
             Correct Answer: <span className="font-bold text-success">{parsed.expected}</span>
           </p>
         </div>

@@ -105,7 +105,7 @@ export function MaterialViewer({
         );
       default:
         return (
-          <div className="p-8 text-center text-muted-foreground">Unsupported material type</div>
+          <div className="p-8 text-center text-text-tertiary">Unsupported material type</div>
         );
     }
   };
@@ -118,12 +118,12 @@ export function MaterialViewer({
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1.5 rounded-lg shrink-0"
+          className="h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary cursor-pointer flex items-center gap-1.5 rounded-lg shrink-0"
           title="Return to Studio overview"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
         </Button>
-        <h3 className="text-sm font-semibold truncate text-foreground ml-1 min-w-0 flex-1">
+        <h3 className="text-sm font-semibold truncate text-text-primary ml-1 min-w-0 flex-1">
           {material.title}
         </h3>
       </div>
@@ -135,7 +135,7 @@ export function MaterialViewer({
             variant="ghost"
             size="icon"
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
+            className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
             title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Mode"}
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -147,7 +147,7 @@ export function MaterialViewer({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
+            className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
             title="Close"
           >
             <X className="h-4 w-4" />
@@ -160,7 +160,7 @@ export function MaterialViewer({
   if (isEffectivelyFullscreen || isExitingFullscreen) {
     return (
       <div
-        className={`fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col overflow-hidden bg-panel-bg text-foreground motion-reduce:animate-none ${
+        className={`fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col overflow-hidden bg-surface-1 text-text-primary motion-reduce:animate-none ${
           isExitingFullscreen
             ? "animate-out fade-out duration-150"
             : "animate-in fade-in duration-150"
@@ -175,7 +175,7 @@ export function MaterialViewer({
   }
 
   return (
-    <div className="flex h-full flex-col bg-panel-bg text-foreground overflow-hidden">
+    <div className="flex h-full flex-col bg-surface-1 text-text-primary overflow-hidden">
       {showHeader && header}
       <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-6">
         {renderContent()}

@@ -124,7 +124,7 @@ function ScoreDonut({
   const wrongCount = totalQuestions - correctCount;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6 bg-card border border-border/80 rounded-2xl shadow-xs">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6 rounded-3xl bg-surface-2 border border-surface-border">
       <div className="flex items-center gap-6">
         <div className="relative size-32 flex items-center justify-center shrink-0">
           <svg className="size-full -rotate-90" viewBox="0 0 120 120">
@@ -132,14 +132,14 @@ function ScoreDonut({
               cx="60"
               cy="60"
               r={radius}
-              className="stroke-muted/50 fill-none"
+              className="stroke-surface-4 fill-none"
               strokeWidth="10"
             />
             <circle
               cx="60"
               cy="60"
               r={radius}
-              className="stroke-emerald-500 fill-none transition-all duration-700 ease-out"
+              className="stroke-success fill-none transition-all duration-700 ease-out"
               strokeWidth="10"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
@@ -147,10 +147,10 @@ function ScoreDonut({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-xl font-extrabold text-foreground leading-none">
+            <span className="text-xl font-extrabold text-text-primary leading-none">
               {correctCount}/{totalQuestions}
             </span>
-            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mt-1">
+            <span className="text-xs font-semibold text-success mt-1">
               {percent}%
             </span>
           </div>
@@ -158,16 +158,16 @@ function ScoreDonut({
 
         <div className="flex flex-col justify-center gap-2 text-sm">
           <div className="flex items-center gap-3">
-            <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
-            <span className="text-muted-foreground font-medium">Right</span>
-            <span className="font-bold text-emerald-700 dark:text-emerald-300 ml-4">
+            <span className="size-2.5 rounded-full bg-success shrink-0" />
+            <span className="text-text-tertiary font-medium">Right</span>
+            <span className="font-bold text-success ml-4">
               {correctCount}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="size-2.5 rounded-full bg-muted-foreground/30 shrink-0" />
-            <span className="text-muted-foreground font-medium">Wrong</span>
-            <span className="font-bold text-foreground ml-4">{wrongCount}</span>
+            <span className="size-2.5 rounded-full bg-destructive shrink-0" />
+            <span className="text-text-tertiary font-medium">Wrong</span>
+            <span className="font-bold text-text-primary ml-4">{wrongCount}</span>
           </div>
         </div>
       </div>
@@ -178,8 +178,8 @@ function ScoreDonut({
           className={cn(
             "px-3 py-1 text-xs font-semibold rounded-full",
             percent >= 70
-              ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700"
-              : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-700",
+              ? "border-success bg-success/10 text-success"
+              : "border-warning bg-warning/10 text-warning",
           )}
         >
           {percent === 100 ? "Perfect Score!" : percent >= 70 ? "Passed" : "Practice Needed"}
@@ -209,11 +209,11 @@ function QuizUnansweredModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-warning-foreground">
+          <DialogTitle className="flex items-center gap-2 text-warning">
             <AlertCircle className="size-5" /> Unanswered Questions
           </DialogTitle>
-          <DialogDescription className="pt-2 text-sm text-muted-foreground leading-relaxed">
-            You still have <span className="font-bold text-foreground">{unansweredCount}</span>{" "}
+          <DialogDescription className="pt-2 text-sm text-text-tertiary leading-relaxed">
+            You still have <span className="font-bold text-text-primary">{unansweredCount}</span>{" "}
             unanswered question{unansweredCount > 1 ? "s" : ""}. Would you like to review them
             before submitting?
           </DialogDescription>
@@ -262,10 +262,10 @@ function QuizCompletionSummary({
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
       {/* Header */}
       <div className="space-y-1">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        <h2 className="text-2xl font-bold tracking-tight text-text-primary">
           You did it! Quiz Complete.
         </h2>
-        <p className="text-xs text-muted-foreground">Review your performance summary.</p>
+        <p className="text-xs text-text-tertiary">Review your performance summary.</p>
       </div>
 
       {/* Donut Score Card */}
@@ -281,7 +281,7 @@ function QuizCompletionSummary({
           type="button"
           variant="outline"
           onClick={onReviewQuiz}
-          className="gap-1.5 cursor-pointer text-xs h-9 rounded-xl font-medium"
+          className="gap-1.5 cursor-pointer text-xs h-9 rounded-xl font-medium border-surface-border text-text-secondary hover:bg-surface-2 hover:text-text-primary"
         >
           <BookOpen className="size-3.5" />
           Review Quiz
@@ -290,7 +290,7 @@ function QuizCompletionSummary({
         <Button
           type="button"
           onClick={onRetakeQuiz}
-          className="gap-1.5 cursor-pointer text-xs h-9 rounded-xl font-semibold"
+          className="gap-1.5 cursor-pointer text-xs h-9 rounded-xl font-semibold border border-surface-border bg-surface-3 text-text-primary hover:bg-surface-4"
         >
           <RotateCcw className="size-3.5" />
           Retake Quiz
@@ -338,10 +338,10 @@ function QuizQuestionStepper({
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 animate-in fade-in duration-300">
       {/* Container Card */}
-      <div className="rounded-2xl border border-border/80 bg-card p-6 md:p-8 shadow-sm flex flex-col gap-6">
+      <div className="rounded-3xl border border-surface-border bg-surface-2 p-6 md:p-8 flex flex-col gap-6">
         {/* Top Progress & Header Bar */}
         <div className="flex flex-col gap-2.5">
-          <div className="flex justify-between items-center text-xs font-medium text-muted-foreground">
+          <div className="flex justify-between items-center text-xs font-medium text-text-faint">
             <div className="flex items-center gap-2">
               {isReviewMode && onBackToResults && (
                 <Button
@@ -349,7 +349,7 @@ function QuizQuestionStepper({
                   variant="ghost"
                   size="sm"
                   onClick={onBackToResults}
-                  className="h-7 px-2 text-xs gap-1.5 text-primary hover:text-primary/80 cursor-pointer rounded-lg"
+                  className="h-7 px-2 text-xs gap-1.5 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
                 >
                   <ArrowLeft className="size-3.5" /> Back to Results
                 </Button>
@@ -363,9 +363,9 @@ function QuizQuestionStepper({
             </span>
           </div>
 
-          <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+          <div className="h-1.5 w-full bg-surface-4 rounded-full overflow-hidden">
             <div
-              className="h-full bg-primary rounded-full transition-all duration-300 ease-in-out"
+              className="h-full bg-text-faint rounded-full transition-all duration-300 ease-in-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -376,7 +376,7 @@ function QuizQuestionStepper({
           key={currentIdx}
           className="flex flex-col animate-in fade-in duration-300 border-none p-0 m-0"
         >
-          <legend className="text-base sm:text-lg font-bold leading-relaxed text-foreground mb-6 tracking-tight">
+          <legend className="text-base sm:text-lg font-bold leading-relaxed text-text-primary mb-6 tracking-tight">
             {currentIdx + 1}. {q.prompt}
           </legend>
 
@@ -386,57 +386,58 @@ function QuizQuestionStepper({
               const isCurrentSelected = selectedIdx === oi;
               const isCurrentCorrect = oi === correctOptionIdx;
 
-              let optionStyle =
-                "border-border bg-card hover:bg-muted hover:border-foreground/15 text-foreground transition-colors duration-200 shadow-2xs";
+              let optionStyle = isCurrentSelected
+                ? "border-surface-border-strong bg-surface-4 text-text-secondary transition-colors duration-200"
+                : "border-surface-border bg-surface-3 text-text-tertiary hover:bg-surface-4 hover:text-text-secondary transition-colors duration-200";
               let badge = (
                 <span
                   className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-xl border text-xs font-bold transition-all",
+                    "flex size-8 shrink-0 items-center justify-center rounded-full border border-surface-border-strong text-[16px] font-semibold transition-all",
                     isCurrentSelected
-                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                      : "border-border bg-background text-foreground",
+                      ? "text-text-primary"
+                      : "text-text-secondary",
                   )}
                 >
                   {String.fromCharCode(65 + oi)}
                 </span>
               );
               let statusTag: React.ReactNode = null;
-              let explanationStyle = "text-muted-foreground";
+              let explanationStyle = "text-text-tertiary";
 
               if (isChecked) {
                 if (isCurrentCorrect) {
                   optionStyle =
-                    "border-emerald-500/80 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/50 dark:text-emerald-50 font-medium shadow-2xs";
-                  explanationStyle = "text-emerald-900/80 dark:text-emerald-100/80";
+                    "border-success bg-success/10 text-success font-medium";
+                  explanationStyle = "text-success";
                   badge = (
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white dark:bg-emerald-500 border-emerald-600 dark:border-emerald-500 shadow-2xs">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-success bg-success/10 text-success">
                       <CheckCircle2 className="size-4" />
                     </span>
                   );
                   statusTag = (
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                    <span className="text-xs font-bold text-success flex items-center gap-1">
                       <Check className="size-3.5" /> Right answer
                     </span>
                   );
                 } else if (isCurrentSelected && !isCorrect) {
                   optionStyle =
-                    "border-rose-500/80 bg-rose-50 text-rose-950 dark:bg-rose-950/40 dark:text-rose-50 font-medium shadow-2xs";
-                  explanationStyle = "text-rose-900/80 dark:text-rose-100/80";
+                    "border-destructive bg-destructive/10 text-destructive font-medium";
+                  explanationStyle = "text-destructive";
                   badge = (
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-rose-500 text-white border-rose-500 shadow-2xs">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/10 text-destructive">
                       <XCircle className="size-4" />
                     </span>
                   );
                   statusTag = (
-                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                    <span className="text-xs font-bold text-destructive flex items-center gap-1">
                       <XCircle className="size-3.5" /> Not quite
                     </span>
                   );
                 } else {
                   optionStyle =
-                    "border-border bg-muted/60 text-foreground/70 dark:bg-muted/40 dark:text-foreground/70 pointer-events-none";
+                    "border-surface-border bg-surface-3 text-text-faint pointer-events-none";
                   badge = (
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-foreground/70 text-xs font-bold">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-surface-border-strong text-text-faint text-[16px] font-semibold">
                       {String.fromCharCode(65 + oi)}
                     </span>
                   );
@@ -447,7 +448,7 @@ function QuizQuestionStepper({
                 <div
                   key={`${q.id}-${oi}`}
                   className={cn(
-                    "w-full p-4 rounded-xl border text-sm flex flex-col gap-2 relative overflow-hidden focus-within:ring-2 focus-within:ring-ring/40 focus-within:ring-offset-2",
+                    "w-full p-4 rounded-2xl border text-sm flex flex-col gap-2 relative overflow-hidden focus-within:ring-2 focus-within:ring-surface-border-strong focus-within:ring-offset-2",
                     optionStyle,
                     !isChecked && !isReviewMode && "cursor-pointer",
                   )}
@@ -506,7 +507,7 @@ function QuizQuestionStepper({
               size="sm"
               onClick={onPrev}
               disabled={currentIdx === 0}
-              className="flex items-center gap-1 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer text-xs h-8 rounded-lg"
+              className="flex items-center gap-1 hover:bg-surface-3 text-text-secondary hover:text-text-primary cursor-pointer text-xs h-8 rounded-lg"
             >
               <ChevronLeft className="size-4" />
               Previous
@@ -517,7 +518,7 @@ function QuizQuestionStepper({
                 type="button"
                 size="sm"
                 onClick={onSubmit}
-                className="min-w-[100px] cursor-pointer text-xs h-8 font-semibold rounded-lg"
+                className="min-w-[100px] cursor-pointer text-xs h-8 font-semibold rounded-lg border border-surface-border bg-surface-3 text-text-primary hover:bg-surface-4"
               >
                 Submit Quiz
               </Button>
@@ -527,7 +528,7 @@ function QuizQuestionStepper({
                 size="sm"
                 onClick={onNext}
                 disabled={isLastQuestion && isReviewMode}
-                className="flex items-center gap-1 min-w-[90px] cursor-pointer text-xs h-8 rounded-lg"
+                className="flex items-center gap-1 min-w-[90px] cursor-pointer text-xs h-8 rounded-lg border border-surface-border bg-surface-3 text-text-primary font-semibold hover:bg-surface-4"
               >
                 Next
                 <ChevronRight className="size-4" />
@@ -634,8 +635,16 @@ export function QuizView({ content }: QuizViewProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+      }
+
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest("input, textarea, select, [contenteditable='true']") !== null)
+      ) {
         return;
       }
 
@@ -664,14 +673,16 @@ export function QuizView({ content }: QuizViewProps) {
             optIdx = parseInt(key, 10) - 1;
           }
           if (optIdx >= 0 && optIdx < questions[currentIdx].options.length) {
+            e.preventDefault();
+            e.stopPropagation();
             handleSelectOption(questions[currentIdx].id, optIdx);
           }
         }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [
     viewMode,
     currentIdx,
@@ -685,7 +696,7 @@ export function QuizView({ content }: QuizViewProps) {
 
   if (totalQuestions === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+      <div className="flex flex-col items-center justify-center p-8 text-center text-text-tertiary">
         <AlertCircle className="size-8 mb-2 text-warning" />
         <p>No quiz questions available.</p>
       </div>
@@ -705,16 +716,18 @@ export function QuizView({ content }: QuizViewProps) {
       )}
 
       {viewMode === "active" && (
-        <QuizQuestionStepper
-          questions={questions}
-          currentIdx={currentIdx}
-          selectedOptions={selectedOptions}
-          checkedQuestions={checkedQuestions}
-          onSelectOption={handleSelectOption}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onSubmit={handleSubmit}
-        />
+        <div data-quiz-active="true">
+          <QuizQuestionStepper
+            questions={questions}
+            currentIdx={currentIdx}
+            selectedOptions={selectedOptions}
+            checkedQuestions={checkedQuestions}
+            onSelectOption={handleSelectOption}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onSubmit={handleSubmit}
+          />
+        </div>
       )}
 
       {viewMode === "review" && (

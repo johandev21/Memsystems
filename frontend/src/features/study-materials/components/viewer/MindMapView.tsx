@@ -69,11 +69,10 @@ function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
   return (
     <div
       className={cn(
-        "group relative min-w-[150px] max-w-[190px] sm:min-w-[190px] sm:max-w-[230px] rounded-lg border bg-card px-3 sm:px-4 py-2.5 sm:py-3 text-left text-card-foreground shadow-sm transition-all duration-200",
-        isRoot &&
-          "min-w-[170px] sm:min-w-[210px] rounded-full border-primary bg-primary text-primary-foreground",
-        data.selected && !isRoot && "border-primary ring-1 ring-primary",
-        !data.selected && !isRoot && "border-border hover:border-foreground/30",
+        "group relative min-w-[150px] max-w-[190px] sm:min-w-[190px] sm:max-w-[230px] rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200",
+        isRoot && "min-w-[170px] sm:min-w-[210px] rounded-full border-surface-border bg-surface-3 text-text-primary",
+        data.selected && !isRoot && "bg-surface-3 border-surface-border",
+        !data.selected && !isRoot && "hover:bg-surface-3 hover:border-surface-border",
       )}
     >
       <Handle
@@ -95,7 +94,7 @@ function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
             event.stopPropagation();
             data.onToggle(data.item.id);
           }}
-          className="absolute -right-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+          className="absolute -right-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border border-surface-border-strong bg-surface-2 text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
         >
           <ChevronRight
             className={cn("size-3.5 transition-transform", data.expanded && "rotate-90")}
@@ -198,7 +197,7 @@ function buildGraph(
         target: item.id,
         type: active ? "highlight" : "default",
         style: {
-          stroke: active ? "var(--foreground)" : "var(--border)",
+          stroke: active ? "var(--surface-border-strong)" : "var(--surface-border)",
           strokeWidth: active ? 2.5 : 1.5,
         },
       });
@@ -342,14 +341,14 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
 
   if (!root) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
+      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-surface-border-subtle bg-surface-2 text-sm text-text-tertiary">
         This mind map has no connected nodes yet.
       </div>
     );
   }
 
   return (
-    <div className="relative h-[min(520px,calc(100dvh-160px))] sm:h-[min(680px,calc(100dvh-180px))] min-h-[420px] w-full overflow-hidden rounded-xl border border-border bg-panel-bg shadow-sm">
+    <div className="relative h-[min(520px,calc(100dvh-160px))] sm:h-[min(680px,calc(100dvh-180px))] min-h-[420px] w-full overflow-hidden rounded-xl border border-surface-border bg-surface-1">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -367,15 +366,20 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
         zoomOnPinch
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} className="opacity-60" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="var(--surface-border)"
+        />
       </ReactFlow>
 
-      <div className="absolute bottom-4 right-4 sm:bottom-auto sm:top-4 flex flex-row sm:flex-col gap-1.5 rounded-xl border border-border bg-card p-1.5 shadow-sm">
+      <div className="absolute bottom-4 right-4 sm:bottom-auto sm:top-4 flex flex-row sm:flex-col gap-1.5 rounded-xl border border-surface-border bg-surface-2 p-1.5">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => zoomIn({ duration: 300 })}
-          className="size-8 text-muted-foreground"
+          className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
           aria-label="Zoom in"
         >
           <Plus className="size-4" />
@@ -384,26 +388,26 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
           variant="ghost"
           size="icon"
           onClick={() => zoomOut({ duration: 300 })}
-          className="size-8 text-muted-foreground"
+          className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
           aria-label="Zoom out"
         >
           <Minus className="size-4" />
         </Button>
-        <div className="mx-1 h-px bg-border hidden sm:block" />
-        <div className="mx-1 w-px bg-border sm:hidden" />
+        <div className="mx-1 h-px bg-surface-border hidden sm:block" />
+        <div className="mx-1 w-px bg-surface-border sm:hidden" />
         <Button
           variant="ghost"
           size="icon"
           onClick={centerSelected}
-          className="size-8 text-muted-foreground"
+          className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
           aria-label="Center selected node"
         >
           <Crosshair className="size-4" />
         </Button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground sm:flex">
-        <span className="size-1.5 rounded-full bg-primary" /> Drag to pan · Scroll to zoom · Click a
+      <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-surface-border-subtle bg-surface-2 px-3 py-2 text-xs text-text-faint sm:flex">
+        <span className="size-1.5 rounded-full bg-surface-border-strong" /> Drag to pan · Scroll to zoom · Click a
         node to explore
       </div>
     </div>

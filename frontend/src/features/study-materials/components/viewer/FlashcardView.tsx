@@ -175,8 +175,8 @@ export function FlashcardView({
 
   const renderCardFront = () => (
     <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="font-semibold text-muted-foreground/80">
+      <div className="flex items-center justify-between text-xs text-text-faint">
+        <span className="font-semibold text-text-faint">
           {currentCardIndex + 1} / {totalCardsCount}
         </span>
         <span className="text-xs uppercase font-semibold text-primary/70 tracking-wider">
@@ -197,7 +197,7 @@ export function FlashcardView({
             onAnswerChecked={handleClozeAnswerChecked}
           />
         ) : (
-          <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-foreground max-w-lg mx-auto">
+          <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-text-primary max-w-lg mx-auto">
             {activeCard.front}
           </p>
         )}
@@ -205,7 +205,7 @@ export function FlashcardView({
 
       {activeCardFormat !== "cloze" && (
         <div className="flex items-center justify-center pt-2">
-          <span className="text-xs text-muted-foreground/60 font-medium">
+          <span className="text-xs text-text-faint font-medium">
             Click card to flip
           </span>
         </div>
@@ -215,8 +215,8 @@ export function FlashcardView({
 
   const renderCardBack = () => (
     <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="font-semibold text-muted-foreground/80">
+      <div className="flex items-center justify-between text-xs text-text-faint">
+        <span className="font-semibold text-text-faint">
           {currentCardIndex + 1} / {totalCardsCount}
         </span>
         <span className="text-xs uppercase font-semibold text-success tracking-wider">
@@ -225,13 +225,13 @@ export function FlashcardView({
       </div>
 
       <div className="py-2 flex flex-col justify-center my-auto space-y-4 text-center max-w-lg mx-auto">
-        <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-foreground">
+        <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-text-primary">
           {activeCard.back}
         </p>
         {activeCardFormat === "cloze" && (
-          <p className="text-xs text-muted-foreground italic leading-relaxed pt-2 border-t border-border/30">
+          <p className="text-xs text-text-faint italic leading-relaxed pt-2 border-t border-surface-border-subtle">
             Full sentence:{" "}
-            <span className="text-foreground font-medium not-italic">
+            <span className="text-text-secondary font-medium not-italic">
               {activeCard.front.replace(
                 /_{2,}|\[\s*blank\s*\]|\[\s*\.\.\.\s*\]|___+/i,
                 activeCard.back,
@@ -247,16 +247,16 @@ export function FlashcardView({
           variant="outline"
           size="sm"
           onClick={handleExplainInChat}
-          className="rounded-full h-8 px-3.5 text-xs font-medium gap-1.5 border-border/80 bg-background/50 hover:bg-muted transition-all cursor-pointer"
+          className="rounded-full h-8 px-3.5 text-xs font-medium gap-1.5 border-surface-border-subtle bg-surface-2 hover:bg-surface-3 transition-all cursor-pointer"
         >
-          <Sparkles className="size-3.5 text-muted-foreground" />
+          <Sparkles className="size-3.5 text-text-tertiary" />
           Explain
         </Button>
 
         <button
           type="button"
           onClick={handleToggleFlipCard}
-          className="text-xs text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+          className="text-xs text-text-faint hover:text-text-secondary font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
         >
           <RotateCw className="size-3.5" /> Show question
         </button>
@@ -302,7 +302,7 @@ export function FlashcardView({
           "relative w-full rounded-[28px] border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-[300px]",
           canDrag && ratingSwipeState === "idle" && "cursor-grab active:cursor-grabbing",
           !isFlipped && activeCardFormat !== "cloze" && "cursor-pointer hover:border-primary/40",
-          !isFlipped ? "bg-card border-border" : "bg-muted border-border",
+          !isFlipped ? "bg-surface-2 border-surface-border" : "bg-surface-3 border-surface-border",
         )}
       >
         {/* Tinder Swipe Badge Indicator Overlay (only on back when dragging) */}
@@ -312,7 +312,7 @@ export function FlashcardView({
           </div>
         )}
         {canDrag && dragXOffset < -25 && ratingSwipeState === "idle" && (
-          <div className="absolute top-4 right-4 z-20 px-4 py-1.5 rounded-xl border-2 border-rose-500 bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-sm tracking-wider uppercase rotate-[12deg] pointer-events-none animate-in fade-in duration-100">
+          <div className="absolute top-4 right-4 z-20 px-4 py-1.5 rounded-xl border-2 border-destructive bg-destructive/10 text-destructive font-bold text-sm tracking-wider uppercase rotate-[12deg] pointer-events-none animate-in fade-in duration-100">
             NEED PRACTICE
           </div>
         )}
@@ -329,18 +329,18 @@ export function FlashcardView({
         variant="secondary"
         onClick={handlePrevCard}
         disabled={totalCardsCount <= 1}
-        aria-label="Previous Card"
-        className="size-10 p-0 rounded-full cursor-pointer hover:bg-muted transition-all"
-      >
-        <ChevronLeft className="size-5" />
-      </Button>
+          aria-label="Previous Card"
+          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
+        >
+          <ChevronLeft className="size-5" />
+        </Button>
 
       {showRatingButtons && (
         <>
           <button
             type="button"
             onClick={() => handleRateCard("incorrect")}
-            className="h-10 px-4 rounded-full border border-border bg-muted hover:bg-muted text-rose-600 text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
+            className="h-10 px-4 rounded-full border border-surface-border-subtle bg-surface-2 hover:bg-surface-3 text-destructive text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
             title="Swipe Left: Need Practice (Left Arrow)"
           >
             <X className="size-3.5" />
@@ -350,7 +350,7 @@ export function FlashcardView({
           <button
             type="button"
             onClick={() => handleRateCard("correct")}
-            className="h-10 px-4 rounded-full border border-border bg-muted hover:bg-muted text-success text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
+            className="h-10 px-4 rounded-full border border-surface-border-subtle bg-surface-2 hover:bg-surface-3 text-success text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
             title="Swipe Right: Know (Right Arrow)"
           >
             <span>{correctRatingCount}</span>
@@ -364,10 +364,10 @@ export function FlashcardView({
         variant="secondary"
         onClick={handleNextCard}
         disabled={totalCardsCount <= 1}
-        aria-label="Next Card"
-        className="size-10 p-0 rounded-full cursor-pointer hover:bg-muted transition-all"
-      >
-        <ChevronRight className="size-5" />
+          aria-label="Next Card"
+          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
+        >
+          <ChevronRight className="size-5" />
       </Button>
     </div>
   );

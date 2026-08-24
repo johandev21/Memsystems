@@ -1,14 +1,8 @@
-import { useState } from "react";
-import { Sparkles, Target } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/ui/dialog";
 import { cn, formatDisplayTitle } from "@/shared/lib/utils";
 import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "./useRoadmapProgress";
 import "./roadmap-theme.css";
@@ -43,19 +37,11 @@ interface PhaseMilestoneCardProps {
 interface TopicCardProps {
   topic: RoadmapTopic;
   isLeft: boolean;
-  onSelectTopic: (topic: RoadmapTopic) => void;
 }
 
 interface RoadmapSpineProps {
   phases: RoadmapPhase[];
   onStudyPhase: (phase: RoadmapPhase, phaseIndex: number) => void;
-  onSelectTopic: (topic: RoadmapTopic) => void;
-}
-
-interface TopicDetailModalProps {
-  topic: RoadmapTopic | null;
-  onClose: () => void;
-  onExplainInChat: (topic: RoadmapTopic) => void;
 }
 
 // =============================================================================
@@ -69,10 +55,10 @@ const SEND_CHAT_PROMPT_EVENT = "send-chat-prompt";
 // =============================================================================
 
 /**
- * Formats a 0-padded milestone index label (e.g. "MILESTONE 01").
+ * Formats a phase index label (e.g. "Phase 1").
  */
 function formatMilestoneLabel(phaseIndex: number): string {
-  return `MILESTONE 0${phaseIndex + 1}`;
+  return `Phase ${phaseIndex + 1}`;
 }
 
 /**
@@ -103,18 +89,18 @@ function buildPhaseStudyPrompt(
 }
 
 /**
- * Builds the AI chat prompt for explaining a specific topic.
+ * Builds the clipboard text for a single topic node.
  */
-function buildTopicExplainPrompt(topic: RoadmapTopic, roadmapTitle?: string): string {
-  const formattedTopicTitle = formatDisplayTitle(topic.title);
-  const roadmapContext = roadmapTitle
-    ? ` in my roadmap ("${formatDisplayTitle(roadmapTitle)}")`
-    : "";
-  const takeawaysText = topic.keyTakeaways?.length
-    ? `\n\nKey Objectives:\n${topic.keyTakeaways.map((keyPoint) => `- ${keyPoint}`).join("\n")}`
-    : "";
-
-  return `I'm studying the topic "${formattedTopicTitle}"${roadmapContext}.\n\nDescription: ${topic.description || "N/A"}${takeawaysText}\n\nPlease explain this concept in depth with practical examples, best practices, and key insights I should keep in mind.`;
+function buildTopicCopyText(topic: RoadmapTopic): string {
+  const lines: string[] = [formatDisplayTitle(topic.title)];
+  if (topic.description) {
+    lines.push("", topic.description);
+  }
+  if (topic.keyTakeaways?.length) {
+    lines.push("", "Key Objectives:");
+    topic.keyTakeaways.forEach((keyPoint) => lines.push(`- ${keyPoint}`));
+  }
+  return lines.join("\n");
 }
 
 /**
@@ -160,12 +146,12 @@ function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
 
   return (
     <div className="flex flex-col items-center gap-2.5 text-center max-w-2xl px-2">
-      <h1 className="text-lg @sm:text-2xl @3xl:text-3xl font-extrabold tracking-tight text-foreground wrap-break-words leading-tight">
+      <h1 className="text-lg @sm:text-2xl @3xl:text-3xl font-extrabold tracking-tight text-text-primary wrap-break-words leading-tight">
         {formatDisplayTitle(title)}
       </h1>
 
       {description && (
-        <p className="roadmap-muted text-xs @sm:text-sm @3xl:text-base leading-relaxed">
+        <p className="roadmap-description text-xs @sm:text-sm @3xl:text-base leading-relaxed">
           {description}
         </p>
       )}
@@ -175,39 +161,62 @@ function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
 
 function PhaseMilestoneCard({ phase, phaseIndex, onStudyPhase }: PhaseMilestoneCardProps) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 @sm:p-5 @3xl:p-6 max-w-full sm:max-w-lg w-full text-center flex flex-col items-center gap-2.5 shadow-2xs transition-all hover:border-primary/40 hover:shadow-xs">
+    <div className="rounded-2xl border bg-surface-2 border-surface-border-subtle p-4 @sm:p-5 @3xl:p-6 max-w-full sm:max-w-lg w-full text-center flex flex-col items-center gap-2.5">
       <Badge
         variant="default"
-        className="bg-primary text-primary-foreground border-primary text-xs font-bold uppercase px-2.5 py-0.5"
+        className="bg-primary text-primary-foreground border-primary text-xs font-semibold px-2.5 py-0.5"
       >
         {formatMilestoneLabel(phaseIndex)}
       </Badge>
 
-      <h3 className="text-base @sm:text-lg @3xl:text-xl font-extrabold text-foreground tracking-tight leading-snug wrap-break-words">
+      <h3 className="text-base @sm:text-lg @3xl:text-xl font-extrabold text-text-primary tracking-tight leading-snug wrap-break-words">
         {formatDisplayTitle(phase.title)}
       </h3>
 
       {phase.description && (
-        <p className="roadmap-muted text-xs @sm:text-sm leading-relaxed wrap-break-words">
+        <p className="roadmap-description text-xs @sm:text-sm leading-relaxed wrap-break-words">
           {phase.description}
         </p>
       )}
 
       <Button
         type="button"
-        variant="default"
+        variant="outline"
         size="sm"
         onClick={() => onStudyPhase(phase, phaseIndex)}
-        className="mt-1 h-8 @sm:h-9 px-3 @sm:px-4 rounded-xl border-primary bg-primary text-primary-foreground text-xs @sm:text-sm font-semibold gap-2 cursor-pointer transition-colors hover:bg-primary/90"
+        className="mt-1 h-8 @sm:h-9 px-3 @sm:px-4 rounded-xl border border-surface-border-subtle bg-surface-2 text-text-secondary hover:bg-surface-3 text-xs @sm:text-sm font-medium cursor-pointer transition-colors"
       >
-        <Sparkles className="size-3.5 @sm:size-4" />
-        <span>Study Phase in Chat</span>
+        Study in chat
       </Button>
     </div>
   );
 }
 
-function TopicCard({ topic, isLeft, onSelectTopic }: TopicCardProps) {
+function TopicCard({ topic, isLeft }: TopicCardProps) {
+  const [isCopied, setIsCopied] = useState(false);
+  const timeoutRef = useRef<number>(0);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(timeoutRef.current);
+    },
+    [],
+  );
+
+  const handleCopy = async () => {
+    const text = buildTopicCopyText(topic);
+    if (!navigator?.clipboard?.writeText) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setIsCopied(true);
+      toast.success("Copied");
+      timeoutRef.current = window.setTimeout(() => setIsCopied(false), 1500);
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -224,32 +233,37 @@ function TopicCard({ topic, isLeft, onSelectTopic }: TopicCardProps) {
       />
 
       {/* Topic Box Card */}
-      <div
-        onClick={() => onSelectTopic(topic)}
-        tabIndex={0}
-        role="button"
-        aria-label={`Topic: ${formatDisplayTitle(topic.title)}`}
-        className="group bg-card border border-border/80 hover:border-primary/60 rounded-xl p-3.5 @sm:p-4 @3xl:p-5 flex flex-col gap-1.5 @sm:gap-2 cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-[0.99] w-full max-w-full @3xl:max-w-sm z-10 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <h4 className="text-sm @sm:text-base font-bold text-foreground group-hover:text-primary transition-colors leading-snug wrap-break-words">
+      <div className="group relative rounded-xl border border-surface-border-subtle bg-surface-2 p-3.5 @sm:p-4 @3xl:p-5 flex flex-col gap-1.5 @sm:gap-2 w-full max-w-full @3xl:max-w-sm z-10">
+        <h4 className="text-sm @sm:text-base font-bold text-text-tertiary leading-snug wrap-break-words">
           {formatDisplayTitle(topic.title)}
         </h4>
 
         {topic.description && (
-          <p className="roadmap-muted text-xs @sm:text-sm line-clamp-3 leading-relaxed wrap-break-words">
+          <p className="roadmap-description text-xs @sm:text-sm line-clamp-3 leading-relaxed wrap-break-words">
             {topic.description}
           </p>
         )}
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleCopy}
+          aria-label={`Copy ${formatDisplayTitle(topic.title)}`}
+          className="absolute top-2 right-2 text-text-faint hover:text-text-secondary opacity-0 transition-opacity duration-200 focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          {isCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+        </Button>
       </div>
     </div>
   );
 }
 
-function RoadmapSpine({ phases, onStudyPhase, onSelectTopic }: RoadmapSpineProps) {
+function RoadmapSpine({ phases, onStudyPhase }: RoadmapSpineProps) {
   return (
     <div className="relative w-full flex flex-col items-center gap-8 @sm:gap-12 @3xl:gap-14 pt-2">
       {/* Spine Line */}
-      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary/30 -translate-x-1/2 z-0" />
+      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-surface-4 -translate-x-1/2 z-0" />
 
       {phases.map((phase, phaseIndex) => (
         <div
@@ -264,76 +278,12 @@ function RoadmapSpine({ phases, onStudyPhase, onSelectTopic }: RoadmapSpineProps
                 key={topic.id}
                 topic={topic}
                 isLeft={isLeftPosition(topicIndex)}
-                onSelectTopic={onSelectTopic}
               />
             ))}
           </div>
         </div>
       ))}
     </div>
-  );
-}
-
-function TopicDetailModal({ topic, onClose, onExplainInChat }: TopicDetailModalProps) {
-  const isModalOpen = Boolean(topic);
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      onClose();
-    }
-  };
-
-  return (
-    <Dialog open={isModalOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg w-[95vw] sm:w-full p-4 @sm:p-6 gap-4 @sm:gap-5 rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl">
-        {topic && (
-          <>
-            <DialogHeader className="gap-2 shrink-0">
-              <DialogTitle className="text-base sm:text-xl font-bold text-foreground tracking-tight wrap-break-words">
-                {formatDisplayTitle(topic.title)}
-              </DialogTitle>
-
-              {topic.description && (
-                <DialogDescription className="roadmap-muted text-xs sm:text-sm leading-relaxed wrap-break-words">
-                  {topic.description}
-                </DialogDescription>
-              )}
-            </DialogHeader>
-
-            {/* Key Objectives */}
-            {topic.keyTakeaways && topic.keyTakeaways.length > 0 && (
-              <div className="bg-muted p-3.5 sm:p-4 rounded-xl border border-border flex flex-col gap-2.5">
-                <span className="font-bold uppercase text-xs text-primary flex items-center gap-1.5">
-                  <Target className="size-4 shrink-0" /> Key Objectives
-                </span>
-                <ul className="roadmap-muted flex flex-col gap-2 text-xs sm:text-sm">
-                  {topic.keyTakeaways.map((keyPoint, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="size-1.5 rounded-full bg-primary mt-2 shrink-0" />
-                      <span className="text-foreground leading-relaxed wrap-break-words">
-                        {keyPoint}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Dialog Actions */}
-            <div className="flex items-center justify-end pt-2 shrink-0">
-              <Button
-                type="button"
-                onClick={() => onExplainInChat(topic)}
-                className="w-full h-10 sm:h-11 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold gap-2 cursor-pointer shadow-2xs"
-              >
-                <Sparkles className="size-4" />
-                <span>Explain in Chat</span>
-              </Button>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -346,7 +296,6 @@ export function RoadmapView({ materialId, content }: RoadmapViewProps) {
   useRoadmapProgress(materialId, content.phases);
 
   // 2. State
-  const [selectedTopic, setSelectedTopic] = useState<RoadmapTopic | null>(null);
 
   // 3. Derived Values
 
@@ -358,36 +307,12 @@ export function RoadmapView({ materialId, content }: RoadmapViewProps) {
     dispatchChatPrompt(promptText);
   };
 
-  const handleExplainTopicInChat = (topic: RoadmapTopic) => {
-    const promptText = buildTopicExplainPrompt(topic, content.title);
-    dispatchChatPrompt(promptText);
-    setSelectedTopic(null);
-  };
-
-  const handleSelectTopic = (topic: RoadmapTopic) => {
-    setSelectedTopic(topic);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedTopic(null);
-  };
-
   // 6. Render
   return (
     <div className="roadmap-view @container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-20 select-none px-3 @sm:px-4">
       <RoadmapHeader title={content.title} description={content.description} />
 
-      <RoadmapSpine
-        phases={content.phases}
-        onStudyPhase={handleStudyPhaseInChat}
-        onSelectTopic={handleSelectTopic}
-      />
-
-      <TopicDetailModal
-        topic={selectedTopic}
-        onClose={handleCloseModal}
-        onExplainInChat={handleExplainTopicInChat}
-      />
+      <RoadmapSpine phases={content.phases} onStudyPhase={handleStudyPhaseInChat} />
     </div>
   );
 }

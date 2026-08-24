@@ -1,23 +1,20 @@
 /* Roadmap View Theme Variables - Integrated with Design System globals.css */
 
 :root {
-  --roadmap-muted-foreground: #525252;
-  --roadmap-milestone-bg: var(--card);
-  --roadmap-milestone-text: var(--foreground);
-  --roadmap-milestone-border: var(--border);
-  --roadmap-milestone-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
-  --roadmap-stem-color: var(--primary);
-  --roadmap-node-bg: var(--card);
-  --roadmap-node-text: var(--card-foreground);
-  --roadmap-node-border: var(--border);
-  --roadmap-node-hover-border: var(--primary);
-  --roadmap-node-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
-  --roadmap-check-bg: color-mix(in srgb, var(--primary) 12%, transparent);
-  --roadmap-check-text: var(--primary);
-  --roadmap-popover-bg: var(--card);
-  --roadmap-popover-text: var(--card-foreground);
-  --roadmap-popover-border: var(--border);
-  --roadmap-popover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --roadmap-description-text: var(--text-secondary);
+  --roadmap-milestone-bg: var(--surface-1);
+  --roadmap-milestone-text: var(--text-primary);
+  --roadmap-milestone-border: var(--surface-border);
+  --roadmap-stem-color: var(--surface-4);
+  --roadmap-node-bg: var(--surface-2);
+  --roadmap-node-text: var(--text-primary);
+  --roadmap-node-border: var(--surface-border-subtle);
+  --roadmap-node-hover-border: var(--surface-border);
+  --roadmap-check-bg: color-mix(in srgb, var(--success) 10%, transparent);
+  --roadmap-check-text: var(--success);
+  --roadmap-popover-bg: var(--surface-1);
+  --roadmap-popover-text: var(--text-primary);
+  --roadmap-popover-border: var(--surface-border);
   --roadmap-badge-bg: color-mix(in srgb, var(--primary) 10%, transparent);
   --roadmap-badge-text: var(--primary);
   --roadmap-badge-border: color-mix(in srgb, var(--primary) 20%, transparent);
@@ -25,29 +22,26 @@
 
 .dark,
 [data-theme="dark"] {
-  --roadmap-muted-foreground: #c4c4c4;
-  --roadmap-milestone-bg: var(--card);
-  --roadmap-milestone-text: var(--foreground);
-  --roadmap-milestone-border: var(--border);
-  --roadmap-milestone-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.3);
-  --roadmap-stem-color: var(--primary);
-  --roadmap-node-bg: var(--card);
-  --roadmap-node-text: var(--card-foreground);
-  --roadmap-node-border: var(--border);
-  --roadmap-node-hover-border: var(--primary);
-  --roadmap-node-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2);
-  --roadmap-check-bg: color-mix(in srgb, var(--primary) 15%, transparent);
-  --roadmap-check-text: var(--primary);
-  --roadmap-popover-bg: var(--card);
-  --roadmap-popover-text: var(--card-foreground);
-  --roadmap-popover-border: var(--border);
-  --roadmap-popover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  --roadmap-description-text: var(--text-secondary);
+  --roadmap-milestone-bg: var(--surface-1);
+  --roadmap-milestone-text: var(--text-primary);
+  --roadmap-milestone-border: var(--surface-border);
+  --roadmap-stem-color: var(--surface-4);
+  --roadmap-node-bg: var(--surface-2);
+  --roadmap-node-text: var(--text-primary);
+  --roadmap-node-border: var(--surface-border-subtle);
+  --roadmap-node-hover-border: var(--surface-border);
+  --roadmap-check-bg: color-mix(in srgb, var(--success) 15%, transparent);
+  --roadmap-check-text: var(--success);
+  --roadmap-popover-bg: var(--surface-1);
+  --roadmap-popover-text: var(--text-primary);
+  --roadmap-popover-border: var(--surface-border);
   --roadmap-badge-bg: color-mix(in srgb, var(--primary) 15%, transparent);
   --roadmap-badge-text: var(--primary);
   --roadmap-badge-border: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 /* Roadmap descriptions need a stronger reading contrast than generic metadata. */
-.roadmap-view .roadmap-muted {
-  color: var(--roadmap-muted-foreground);
+.roadmap-view .roadmap-description {
+  color: var(--roadmap-description-text);
 }

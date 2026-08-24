@@ -68,21 +68,21 @@ export function FlashcardVariantA({
   return (
     <div className="flex flex-col items-center w-full max-w-2xl mx-auto gap-6 animate-in fade-in duration-200">
       {/* Top Deck Title & Header Actions */}
-      <div className="w-full flex items-center justify-between pb-2 border-b border-border/60">
+      <div className="w-full flex items-center justify-between pb-2 border-b border-surface-border-subtle">
         <div className="flex items-center gap-3">
-          <h2 className="text-base font-bold tracking-tight text-foreground truncate max-w-xs md:max-w-md">
+          <h2 className="text-base font-bold tracking-tight text-text-primary truncate max-w-xs md:max-w-md">
             {deckTitle}
           </h2>
           <Badge
             variant="outline"
-            className="rounded-full bg-muted/60 text-muted-foreground text-xs px-3 py-0.5 font-normal gap-1.5 cursor-pointer hover:bg-muted"
+            className="rounded-full bg-surface-2 text-text-tertiary text-xs px-3 py-0.5 font-normal gap-1.5 cursor-pointer hover:bg-surface-3"
           >
-            <BookOpen className="size-3 text-muted-foreground" />
+            <BookOpen className="size-3 text-text-tertiary" />
             View {sourceCount} sources
           </Badge>
         </div>
 
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="flex items-center gap-1 text-text-tertiary">
           <Button
             type="button"
             variant="ghost"
@@ -115,7 +115,7 @@ export function FlashcardVariantA({
         <div
           className={cn(
             "relative w-full rounded-[28px] border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-[300px] transition-all duration-300 ease-out select-none",
-            !isFlipped ? "bg-card border-border" : "bg-muted border-border",
+            !isFlipped ? "bg-surface-2 border-surface-border" : "bg-surface-3 border-surface-border",
             swipeState === "correct" && "translate-x-24 rotate-6 opacity-0 scale-95",
             swipeState === "incorrect" && "-translate-x-24 -rotate-6 opacity-0 scale-95",
           )}
@@ -123,11 +123,11 @@ export function FlashcardVariantA({
           {!isFlipped ? (
             /* FRONT SIDE */
             <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="font-semibold text-muted-foreground/80">
+              <div className="flex items-center justify-between text-xs text-text-faint">
+                <span className="font-semibold text-text-faint">
                   {currentIndex + 1} / {cards.length}
                 </span>
-                <MoreVertical className="size-4 text-muted-foreground/60 cursor-pointer" />
+                <MoreVertical className="size-4 text-text-faint cursor-pointer" />
               </div>
 
               <div className="py-2 flex flex-col justify-center my-auto text-center">
@@ -142,7 +142,7 @@ export function FlashcardVariantA({
                     }}
                   />
                 ) : (
-                  <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-foreground max-w-lg mx-auto">
+                  <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-text-primary max-w-lg mx-auto">
                     {currentCard.front}
                   </p>
                 )}
@@ -152,7 +152,7 @@ export function FlashcardVariantA({
                 <button
                   type="button"
                   onClick={onFlip}
-                  className="text-xs text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="text-xs text-text-faint hover:text-text-secondary font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <Eye className="size-3.5" /> See answer
                 </button>
@@ -161,21 +161,21 @@ export function FlashcardVariantA({
           ) : (
             /* BACK SIDE */
             <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="font-semibold text-muted-foreground/80">
+              <div className="flex items-center justify-between text-xs text-text-faint">
+                <span className="font-semibold text-text-faint">
                   {currentIndex + 1} / {cards.length}
                 </span>
-                <MoreVertical className="size-4 text-muted-foreground/60 cursor-pointer" />
+                <MoreVertical className="size-4 text-text-faint cursor-pointer" />
               </div>
 
               <div className="py-2 flex flex-col justify-center my-auto space-y-4 text-center max-w-lg mx-auto">
-                <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-foreground">
+                <p className="text-xl md:text-2xl font-semibold leading-relaxed tracking-tight text-text-primary">
                   {currentCard.back}
                 </p>
                 {cardFormat === "cloze" && (
-                  <p className="text-xs text-muted-foreground italic leading-relaxed pt-2 border-t border-border/30">
+                  <p className="text-xs text-text-faint italic leading-relaxed pt-2 border-t border-surface-border-subtle">
                     Full sentence:{" "}
-                    <span className="text-foreground font-medium not-italic">
+                    <span className="text-text-secondary font-medium not-italic">
                       {currentCard.front.replace(
                         /_{2,}|\[\s*blank\s*\]|\[\s*\.\.\.\s*\]|___+/i,
                         currentCard.back,
@@ -191,16 +191,16 @@ export function FlashcardVariantA({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowExplainModal(!showExplainModal)}
-                  className="rounded-full h-8 px-3.5 text-xs font-medium gap-1.5 border-border/80 bg-background/50 hover:bg-muted transition-all cursor-pointer"
+                  className="rounded-full h-8 px-3.5 text-xs font-medium gap-1.5 border-surface-border-subtle bg-surface-2 hover:bg-surface-3 transition-all cursor-pointer"
                 >
-                  <Sparkles className="size-3.5 text-muted-foreground" />
+                  <Sparkles className="size-3.5 text-text-tertiary" />
                   Explain
                 </Button>
 
                 <button
                   type="button"
                   onClick={onFlip}
-                  className="text-xs text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="text-xs text-text-faint hover:text-text-secondary font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <RotateCw className="size-3.5" /> Show question
                 </button>
@@ -218,7 +218,7 @@ export function FlashcardVariantA({
           onClick={onPrev}
           disabled={cards.length <= 1}
           aria-label="Previous Card"
-          className="size-10 p-0 rounded-full cursor-pointer hover:bg-muted transition-all"
+          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
         >
           <ChevronLeft className="size-5" />
         </Button>
@@ -226,7 +226,7 @@ export function FlashcardVariantA({
         <button
           type="button"
           onClick={() => triggerRating("incorrect")}
-          className="h-10 px-4 rounded-full border border-border bg-muted hover:bg-muted text-rose-600 text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
+          className="h-10 px-4 rounded-full border border-surface-border-subtle bg-surface-2 hover:bg-surface-3 text-destructive text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
         >
           <X className="size-3.5" />
           <span>{incorrectCount}</span>
@@ -235,7 +235,7 @@ export function FlashcardVariantA({
         <button
           type="button"
           onClick={() => triggerRating("correct")}
-          className="h-10 px-4 rounded-full border border-border bg-muted hover:bg-muted text-success text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
+          className="h-10 px-4 rounded-full border border-surface-border-subtle bg-surface-2 hover:bg-surface-3 text-success text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
         >
           <span>{correctCount}</span>
           <Check className="size-3.5" />
@@ -247,7 +247,7 @@ export function FlashcardVariantA({
           onClick={onNext}
           disabled={cards.length <= 1}
           aria-label="Next Card"
-          className="size-10 p-0 rounded-full cursor-pointer hover:bg-muted transition-all"
+          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
         >
           <ChevronRight className="size-5" />
         </Button>
@@ -262,8 +262,9 @@ export function FlashcardVariantA({
             size="sm"
             onClick={() => setFeedback(feedback === "good" ? null : "good")}
             className={cn(
-              "rounded-full h-8 px-3 text-xs gap-1.5 border-border/80 cursor-pointer transition-all",
-              feedback === "good" && "bg-muted text-foreground border-foreground/40 font-medium",
+              "rounded-full h-8 px-3 text-xs gap-1.5 border-surface-border-subtle cursor-pointer transition-all",
+              feedback === "good" &&
+                "bg-surface-3 text-text-secondary border-surface-border font-medium",
             )}
           >
             <ThumbsUp className="size-3.5" /> Good content
@@ -275,8 +276,9 @@ export function FlashcardVariantA({
             size="sm"
             onClick={() => setFeedback(feedback === "bad" ? null : "bad")}
             className={cn(
-              "rounded-full h-8 px-3 text-xs gap-1.5 border-border/80 cursor-pointer transition-all",
-              feedback === "bad" && "bg-muted text-foreground border-foreground/40 font-medium",
+              "rounded-full h-8 px-3 text-xs gap-1.5 border-surface-border-subtle cursor-pointer transition-all",
+              feedback === "bad" &&
+                "bg-surface-3 text-text-secondary border-surface-border font-medium",
             )}
           >
             <ThumbsDown className="size-3.5" /> Bad content
@@ -286,10 +288,10 @@ export function FlashcardVariantA({
 
       {/* Static Prompt Preview Modal */}
       {showExplainModal && (
-        <div className="w-full rounded-2xl border border-border/80 bg-card p-5 shadow-lg space-y-3 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between border-b border-border/60 pb-2">
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <MessageSquare className="size-4 text-muted-foreground" /> Static Explain Prompt
+        <div className="w-full rounded-2xl border border-surface-border-subtle bg-surface-2 p-5 shadow-lg space-y-3 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between border-b border-surface-border-subtle pb-2">
+            <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <MessageSquare className="size-4 text-text-tertiary" /> Static Explain Prompt
               Preview
             </span>
             <Button
@@ -302,20 +304,20 @@ export function FlashcardVariantA({
               Close
             </Button>
           </div>
-          <div className="rounded-xl bg-muted/40 p-3.5 text-xs text-foreground leading-relaxed space-y-2">
-            <p className="text-muted-foreground">
+          <div className="rounded-xl bg-surface-4 p-3.5 text-xs text-text-tertiary leading-relaxed space-y-2">
+            <p className="text-text-faint">
               &quot;I&apos;m reviewing flashcards based on the source material and I&apos;d like to
               expand my understanding of one of them.
             </p>
             <p>
               On the front it reads:{" "}
-              <span className="text-foreground font-semibold">&quot;{currentCard.front}&quot;</span>
+              <span className="text-text-secondary font-semibold">&quot;{currentCard.front}&quot;</span>
             </p>
             <p>
               The answer on the back reads:{" "}
-              <span className="text-foreground font-semibold">&quot;{currentCard.back}&quot;</span>
+              <span className="text-text-secondary font-semibold">&quot;{currentCard.back}&quot;</span>
             </p>
-            <p className="text-muted-foreground">Explain this topic in more detail.&quot;</p>
+            <p className="text-text-faint">Explain this topic in more detail.&quot;</p>
           </div>
         </div>
       )}

@@ -85,16 +85,16 @@ export function FlashcardVariantB({
   };
 
   return (
-    <div className="flex flex-col w-full min-h-[500px] bg-card border border-border/80 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200">
+    <div className="flex flex-col w-full min-h-[500px] bg-surface-1 border border-surface-border rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200">
       {/* Header Bar */}
-      <div className="flex items-center justify-between px-6 py-3.5 border-b border-border/80 bg-muted/20">
+      <div className="flex items-center justify-between px-6 py-3.5 border-b border-surface-border-subtle bg-surface-2">
         <div className="flex items-center gap-3">
-          <h2 className="text-base font-bold text-foreground truncate">{deckTitle}</h2>
+          <h2 className="text-base font-bold text-text-primary truncate">{deckTitle}</h2>
           <Badge
             variant="outline"
             className="rounded-full text-xs px-2.5 py-0.5 font-normal gap-1"
           >
-            <BookOpen className="size-3 text-muted-foreground" /> {sourceCount} sources
+            <BookOpen className="size-3 text-text-tertiary" /> {sourceCount} sources
           </Badge>
         </div>
 
@@ -111,18 +111,18 @@ export function FlashcardVariantB({
       </div>
 
       {/* Main Dual-Pane Section */}
-      <div className="flex flex-1 min-h-0 divide-x divide-border/80">
+      <div className="flex flex-1 min-h-0 divide-x divide-surface-border-subtle">
         {/* Left Sidebar: Cards List */}
-        <div className="w-56 md:w-64 flex flex-col shrink-0 bg-muted/10">
-          <div className="p-3 border-b border-border/80">
+        <div className="w-56 md:w-64 flex flex-col shrink-0 bg-surface-1">
+          <div className="p-3 border-b border-surface-border-subtle">
             <div className="relative">
-              <Search className="size-3.5 absolute left-3 top-3 text-muted-foreground" />
+              <Search className="size-3.5 absolute left-3 top-3 text-text-faint" />
               <Input
                 type="text"
                 placeholder="Search cards..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-2xl bg-card border-border/80"
+                className="h-8 pl-8 text-xs rounded-2xl bg-surface-2 border-surface-border-strong focus-visible:ring-surface-border-strong"
               />
             </div>
           </div>
@@ -137,11 +137,11 @@ export function FlashcardVariantB({
                   className={cn(
                     "p-3 rounded-2xl border text-xs transition-all cursor-pointer space-y-1",
                     isSelected
-                      ? "bg-card border-primary/40 font-semibold shadow-2xs text-foreground ring-1 ring-primary/20"
-                      : "bg-card/50 border-border/40 hover:bg-card text-muted-foreground hover:text-foreground",
+                      ? "bg-surface-3 border-surface-border font-semibold shadow-2xs text-text-secondary"
+                      : "bg-surface-2 border-surface-border-subtle hover:bg-surface-3 text-text-tertiary hover:text-text-secondary",
                   )}
                 >
-                  <span className="text-xs text-muted-foreground/80 block">
+                  <span className="text-xs text-text-faint block">
                     #{c.originalIndex + 1}
                   </span>
                   <p className="line-clamp-2 leading-relaxed">{c.front}</p>
@@ -154,7 +154,7 @@ export function FlashcardVariantB({
         {/* Right Stage: Active Card & Navigation */}
         <div className="flex-1 p-6 md:p-8 overflow-y-auto flex flex-col justify-between space-y-6">
           <div className="space-y-6">
-            <div className="text-xs font-medium text-muted-foreground border-b border-border/40 pb-3 flex items-center justify-between">
+            <div className="text-xs font-medium text-text-faint border-b border-surface-border-subtle pb-3 flex items-center justify-between">
               <span>ACTIVE CARD</span>
               <span>
                 Card {currentIndex + 1} of {cards.length}
@@ -171,7 +171,7 @@ export function FlashcardVariantB({
               {showSideBySide ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Front Side */}
-                  <div className="rounded-2xl border border-border/80 bg-card p-5 flex flex-col justify-center min-h-[160px]">
+                  <div className="rounded-2xl border border-surface-border-subtle bg-surface-2 p-5 flex flex-col justify-center min-h-[160px]">
                     {activeCard.format === "cloze" ? (
                       <ClozeInteractive
                         front={activeCard.front}
@@ -183,32 +183,32 @@ export function FlashcardVariantB({
                         }}
                       />
                     ) : (
-                      <p className="text-base font-medium text-foreground leading-relaxed text-center">
+                      <p className="text-base font-medium text-text-primary leading-relaxed text-center">
                         {activeCard.front}
                       </p>
                     )}
                   </div>
 
                   {/* Back Side */}
-                  <div className="rounded-2xl border border-border bg-muted/40 dark:bg-muted/20 p-5 flex flex-col justify-between min-h-[160px]">
-                    <p className="text-base font-medium text-foreground leading-relaxed text-center my-auto">
+                  <div className="rounded-2xl border border-surface-border-subtle bg-surface-3 p-5 flex flex-col justify-between min-h-[160px]">
+                    <p className="text-base font-medium text-text-primary leading-relaxed text-center my-auto">
                       {activeCard.back}
                     </p>
-                    <div className="pt-3 border-t border-border/30 flex justify-start">
+                    <div className="pt-3 border-t border-surface-border-subtle flex justify-start">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setShowExplainModal(!showExplainModal)}
-                        className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-background"
+                        className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-surface-2"
                       >
-                        <Sparkles className="size-3 text-muted-foreground" /> Explain
+                        <Sparkles className="size-3 text-text-tertiary" /> Explain
                       </Button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-border/80 bg-card p-6 space-y-6 shadow-2xs">
+                <div className="rounded-2xl border border-surface-border-subtle bg-surface-2 p-6 space-y-6 shadow-2xs">
                   <div className="space-y-3">
                     {activeCard.format === "cloze" ? (
                       <ClozeInteractive
@@ -221,14 +221,14 @@ export function FlashcardVariantB({
                         }}
                       />
                     ) : (
-                      <p className="text-xl font-medium text-foreground leading-relaxed text-center">
+                      <p className="text-xl font-medium text-text-primary leading-relaxed text-center">
                         {activeCard.front}
                       </p>
                     )}
                   </div>
 
-                  <div className="pt-6 border-t border-border/40 space-y-4 rounded-xl bg-muted/30 p-4">
-                    <p className="text-lg font-medium text-foreground leading-relaxed text-center">
+                  <div className="pt-6 border-t border-surface-border-subtle space-y-4 rounded-xl bg-surface-4 p-4">
+                    <p className="text-lg font-medium text-text-primary leading-relaxed text-center">
                       {activeCard.back}
                     </p>
                     <div className="flex justify-start">
@@ -237,9 +237,9 @@ export function FlashcardVariantB({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowExplainModal(!showExplainModal)}
-                        className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-background"
+                        className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-surface-2"
                       >
-                        <Sparkles className="size-3 text-muted-foreground" /> Explain
+                        <Sparkles className="size-3 text-text-tertiary" /> Explain
                       </Button>
                     </div>
                   </div>
@@ -264,7 +264,7 @@ export function FlashcardVariantB({
               <button
                 type="button"
                 onClick={() => triggerRating("incorrect")}
-                className="h-9 px-3.5 rounded-full border border-border/80 bg-muted/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+                className="h-9 px-3.5 rounded-full border border-destructive bg-destructive/10 text-destructive text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
               >
                 <X className="size-3" /> {incorrectCount}
               </button>
@@ -272,7 +272,7 @@ export function FlashcardVariantB({
               <button
                 type="button"
                 onClick={() => triggerRating("correct")}
-                className="h-9 px-3.5 rounded-full border border-border/80 bg-muted/30 hover:bg-success/10 hover:border-success/30 text-success text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+                className="h-9 px-3.5 rounded-full border border-success bg-success/10 text-success text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
               >
                 {correctCount} <Check className="size-3" />
               </button>
@@ -288,7 +288,7 @@ export function FlashcardVariantB({
               </Button>
             </div>
 
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-surface-border-subtle">
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -297,7 +297,7 @@ export function FlashcardVariantB({
                   onClick={() => setFeedback(feedback === "good" ? null : "good")}
                   className={cn(
                     "h-7 px-2.5 text-xs gap-1 cursor-pointer",
-                    feedback === "good" && "text-foreground font-semibold",
+                    feedback === "good" && "text-text-secondary font-semibold",
                   )}
                 >
                   <ThumbsUp className="size-3" /> Good
@@ -309,7 +309,7 @@ export function FlashcardVariantB({
                   onClick={() => setFeedback(feedback === "bad" ? null : "bad")}
                   className={cn(
                     "h-7 px-2.5 text-xs gap-1 cursor-pointer",
-                    feedback === "bad" && "text-foreground font-semibold",
+                    feedback === "bad" && "text-text-secondary font-semibold",
                   )}
                 >
                   <ThumbsDown className="size-3" /> Bad
@@ -322,10 +322,10 @@ export function FlashcardVariantB({
 
       {/* Static Prompt Preview Modal */}
       {showExplainModal && (
-        <div className="p-4 bg-muted/40 border-t border-border space-y-2">
-          <div className="flex justify-between items-center text-xs font-semibold text-foreground">
+        <div className="p-4 bg-surface-2 border-t border-surface-border-subtle space-y-2">
+          <div className="flex justify-between items-center text-xs font-semibold text-text-primary">
             <span className="flex items-center gap-1">
-              <MessageSquare className="size-3.5 text-muted-foreground" /> Static Explain Prompt
+              <MessageSquare className="size-3.5 text-text-tertiary" /> Static Explain Prompt
             </span>
             <Button
               type="button"
@@ -337,7 +337,7 @@ export function FlashcardVariantB({
               <X className="size-3" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-text-faint">
             &quot;On the front: &apos;{activeCard.front}&apos;. On the back: &apos;{activeCard.back}
             &apos;. Explain this topic in more detail.&quot;
           </p>

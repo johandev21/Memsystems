@@ -54,11 +54,11 @@ export function MobileExpandedStudyMaterials({
     >
       <DialogContent
         showCloseButton={false}
-        className="w-[92vw] sm:max-w-[80vw] h-[85vh] max-h-[85vh] p-0 gap-0 flex flex-col rounded-lg overflow-hidden"
+        className="w-[92vw] sm:max-w-[80vw] h-[85vh] max-h-[85vh] p-0 gap-0 flex flex-col rounded-3xl overflow-hidden bg-surface-1 border border-surface-border"
       >
-        <DialogHeader className="px-4 py-1.5 bg-panel-header-bg min-h-[44px] flex flex-col justify-center border-b border-border shrink-0">
+        <DialogHeader className="px-4 py-1.5 bg-surface-1 min-h-[44px] flex flex-col justify-center border-b border-surface-border-subtle shrink-0">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-sm font-semibold text-foreground truncate max-w-[80%]">
+            <DialogTitle className="text-sm font-semibold text-text-primary truncate max-w-[80%]">
               {title}
             </DialogTitle>
             <DialogClose
@@ -66,7 +66,7 @@ export function MobileExpandedStudyMaterials({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="h-7 w-7 text-text-faint hover:text-text-secondary cursor-pointer"
                 />
               }
             >
@@ -77,14 +77,14 @@ export function MobileExpandedStudyMaterials({
         </DialogHeader>
         {materialsQuery.isPending && !hasMaterials ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Loader2 className="h-5 w-5 animate-spin text-text-faint" />
           </div>
         ) : !hasMaterials ? (
           <div className="flex-1 flex items-center justify-center">
             <StudyMaterialsEmptyState />
           </div>
         ) : (
-          <div className="flex-1 min-h-0 bg-panel-bg">
+          <div className="flex-1 min-h-0 bg-surface-1">
             <RightPane notebookId={notebookId} mode={mode} onModeChange={setMode} />
           </div>
         )}
