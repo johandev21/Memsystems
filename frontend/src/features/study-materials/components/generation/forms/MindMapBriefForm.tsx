@@ -2,20 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
-  Check,
   ChevronDown,
   Cpu,
   FileText,
-  GitBranch,
   Globe,
   Search,
-  Sparkles,
-  Wand2,
 } from "lucide-react";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/shared/api/sources";
 import type { ModelOption } from "@/shared/api/models";
-import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Label } from "@/shared/ui/label";
@@ -23,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Textarea } from "@/shared/ui/textarea";
 import { cn } from "@/shared/lib/utils";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
 
 type NodeCount = number;
 
@@ -91,29 +87,11 @@ export function MindMapBriefForm({
     : `${nodeCount} nodes${nodeCount >= MAX_NODE_COUNT ? " (max 100)" : ""}`;
 
   return (
-    <div className="flex w-full flex-col gap-5 font-sans text-foreground">
-      <section className="rounded-2xl border border-border bg-muted p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <GitBranch className="size-4 text-primary" />
-              <h3 className="text-sm font-semibold">A clear path through the topic</h3>
-            </div>
-            <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-              Generate an expandable hierarchy you can explore one branch at a time.
-            </p>
-          </div>
-          <Badge variant="outline" className="shrink-0 gap-1 text-xs">
-            <GitBranch className="size-3" /> Tree view
-          </Badge>
-        </div>
-        <TreePreview />
-      </section>
-
+    <div className="flex w-full flex-col gap-5 font-sans text-text-tertiary">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Label className="text-sm font-medium">Map size</Label>
-          <span className="text-xs font-medium text-muted-foreground">{mapSizeLabel}</span>
+          <span className="text-xs font-medium text-text-faint">{mapSizeLabel}</span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <button
@@ -125,13 +103,12 @@ export function MindMapBriefForm({
               setNodeCount(0);
             }}
             className={cn(
-              "flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-xl border text-xs font-medium transition-colors",
-              isAutoMode
-                ? "border-primary bg-primary font-semibold text-primary-foreground"
-                : "border-border bg-muted text-muted-foreground hover:bg-muted hover:text-foreground",
+              optionRowClass(isAutoMode),
+              "flex h-9 items-center justify-center gap-1.5 text-xs",
+              isAutoMode ? "font-semibold" : "font-medium",
             )}
           >
-            <Wand2 className="size-3.5" /> Auto
+            Auto
           </button>
 
           {NODE_PRESETS.map((count) => {
@@ -147,13 +124,11 @@ export function MindMapBriefForm({
                   setNodeCount(count);
                 }}
                 className={cn(
-                  "flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-xl border text-xs font-medium transition-colors",
-                  selected
-                    ? "border-primary bg-primary font-semibold text-primary-foreground"
-                    : "border-border bg-muted text-muted-foreground hover:bg-muted hover:text-foreground",
+                  optionRowClass(selected),
+                  "flex h-9 items-center justify-center gap-1.5 text-xs",
+                  selected ? "font-semibold" : "font-medium",
                 )}
               >
-                {selected && <Check className="size-3" />}
                 {count}
               </button>
             );
@@ -169,7 +144,7 @@ export function MindMapBriefForm({
               onBlur={handleCustomBlur}
               placeholder="1-100"
               aria-label="Custom node count"
-              className="h-9 w-full rounded-xl border border-primary bg-card px-2 text-center text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-primary/40"
+              className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-xs font-semibold text-text-primary outline-none focus:ring-1 focus:ring-surface-border-strong"
               autoFocus
             />
           ) : (
@@ -182,7 +157,10 @@ export function MindMapBriefForm({
                   Math.min(MAX_NODE_COUNT, Math.max(1, Number.parseInt(customValue, 10) || 40)),
                 );
               }}
-              className="flex h-9 cursor-pointer items-center justify-center rounded-xl border border-border bg-muted text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className={cn(
+                optionRowClass(false),
+                "flex h-9 items-center justify-center text-xs font-medium",
+              )}
             >
               Custom
             </button>
@@ -192,7 +170,7 @@ export function MindMapBriefForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="brief-mindmap" className="text-sm font-medium">
+          <Label htmlFor="brief-mindmap" className="text-sm font-medium text-text-primary">
             What should this map explain?
             {!hasSources && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
@@ -208,7 +186,7 @@ export function MindMapBriefForm({
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label className="text-sm font-medium">
+          <Label className="text-sm font-medium text-text-primary">
             Knowledge sources
             {!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
@@ -220,7 +198,7 @@ export function MindMapBriefForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Destination folder</Label>
+          <Label className="text-xs font-medium text-text-tertiary">Destination folder</Label>
           <FolderPicker
             notebookId={notebookId}
             value={value.folderId}
@@ -229,7 +207,7 @@ export function MindMapBriefForm({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">AI model</Label>
+          <Label className="text-xs font-medium text-text-tertiary">AI model</Label>
           <MindMapModelPopover
             models={models}
             selectedModel={value.model}
@@ -241,45 +219,15 @@ export function MindMapBriefForm({
 
       <Button
         type="button"
-        className="h-10 w-full gap-2 rounded-full border border-border/80 bg-panel-header-bg text-foreground text-sm font-medium shadow-md transition-colors hover:bg-muted disabled:bg-muted disabled:text-foreground disabled:opacity-100"
+        className={cn(
+          "h-10 w-full gap-2 rounded-full text-sm font-medium transition-colors",
+          CTA_BUTTON_CLASS,
+        )}
         disabled={!canSubmit}
         onClick={onSubmit}
       >
-        <Sparkles className="size-4" />
         {submitLabel}
       </Button>
-    </div>
-  );
-}
-
-function TreePreview() {
-  return (
-    <div className="mt-5 overflow-hidden rounded-xl border border-border bg-card px-3 py-5 sm:px-8">
-      <div className="flex min-w-[420px] items-center justify-center gap-4">
-        <div className="relative flex h-12 w-32 items-center justify-center rounded-full bg-primary px-3 text-center text-xs font-semibold text-primary-foreground shadow-sm">
-          Core concept
-          <span className="absolute -right-5 h-px w-5 bg-border" />
-        </div>
-        <div className="relative flex flex-col gap-3">
-          <span className="absolute -left-4 top-6 h-12 w-px bg-border" />
-          {[
-            ["Main idea", "Key detail"],
-            ["Related idea", "Example"],
-            ["Practical use", "Takeaway"],
-          ].map(([title, detail]) => (
-            <div key={title} className="relative flex items-center gap-2">
-              <span className="absolute -left-4 h-px w-4 bg-border" />
-              <div className="flex h-9 w-28 items-center rounded-lg border border-border bg-background px-2.5 text-xs font-semibold">
-                {title}
-              </div>
-              <span className="h-px w-4 bg-border" />
-              <div className="flex h-8 w-24 items-center rounded-lg border border-border bg-muted px-2 text-xs text-muted-foreground">
-                {detail}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
@@ -322,7 +270,7 @@ function MindMapSourcePopover({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 w-full justify-between gap-2 rounded-2xl bg-card px-3.5 text-xs font-medium hover:bg-muted"
+            className="h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary px-3.5 text-xs font-medium hover:bg-surface-3 hover:text-text-secondary"
           >
             <span className="flex min-w-0 items-center gap-2 truncate">
               <BookOpen className="size-4 shrink-0 text-primary" />
@@ -332,32 +280,32 @@ function MindMapSourcePopover({
                   : `${selectedIds.length} source${selectedIds.length === 1 ? "" : "s"} selected`}
               </span>
             </span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            <ChevronDown className="size-4 shrink-0 text-text-faint" />
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-[320px] overflow-hidden rounded-2xl p-0 shadow-xl">
-        <div className="flex items-center justify-between bg-muted px-3.5 py-2.5">
+      <PopoverContent align="start" className="w-[320px] overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl">
+        <div className="flex items-center justify-between bg-surface-2 px-3.5 py-2.5">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <Search className="size-4 shrink-0 text-text-faint" />
             <input
               type="text"
               placeholder="Search sources..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint"
             />
           </div>
           <button
             type="button"
             onClick={toggleAll}
-            className="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-xs text-muted-foreground"
+            className="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-xs text-text-tertiary"
           >
             Select all <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
           </button>
         </div>
         {sources.length === 0 ? (
-          <div className="p-4 text-center text-xs text-muted-foreground">
+          <div className="p-4 text-center text-xs text-text-faint">
             No sources in notebook. General knowledge will be used.
           </div>
         ) : (
@@ -371,7 +319,9 @@ function MindMapSourcePopover({
                   onClick={() => toggleOne(source.id)}
                   className={cn(
                     "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-left text-xs",
-                    checked ? "bg-muted font-medium" : "text-muted-foreground hover:bg-muted",
+                    checked
+                      ? "bg-surface-3 font-medium text-text-secondary"
+                      : "text-text-tertiary hover:bg-surface-2",
                   )}
                 >
                   <span className="flex min-w-0 items-center gap-2 truncate pr-2">
@@ -390,7 +340,7 @@ function MindMapSourcePopover({
             })}
           </div>
         )}
-        <div className="bg-muted p-2.5 text-xs text-muted-foreground">
+        <div className="bg-surface-2 p-2.5 text-xs text-text-faint">
           {selectedIds.length} selected
         </div>
       </PopoverContent>
@@ -419,7 +369,7 @@ export function MindMapModelPopover({
             variant="outline"
             size="sm"
             disabled={disabled}
-            className="h-9 w-full justify-between gap-2 rounded-2xl bg-card px-3.5 text-xs font-medium hover:bg-muted"
+            className="h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary px-3.5 text-xs font-medium hover:bg-surface-3 hover:text-text-secondary"
           >
             <span className="flex min-w-0 items-center gap-2 truncate">
               <Cpu className="size-4 shrink-0 text-primary" />
@@ -427,12 +377,12 @@ export function MindMapModelPopover({
                 {selected?.displayName || selectedModel || "Select model"}
               </span>
             </span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            <ChevronDown className="size-4 shrink-0 text-text-faint" />
           </Button>
         }
       />
-      <PopoverContent align="end" className="w-[280px] rounded-2xl p-2 shadow-xl">
-        <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Select model</div>
+      <PopoverContent align="end" className="w-[280px] rounded-2xl border border-surface-border bg-surface-1 p-2 shadow-xl">
+        <div className="px-2 py-1 text-xs font-medium text-text-faint">Select model</div>
         <div className="mt-1 space-y-1">
           {models.map((model) => {
             const isSelected = model.id === selectedModel;
@@ -443,14 +393,15 @@ export function MindMapModelPopover({
                 onClick={() => onModelChange(model.id)}
                 className={cn(
                   "flex w-full cursor-pointer items-center justify-between rounded-xl p-2.5 text-left text-xs",
-                  isSelected ? "bg-muted font-semibold" : "text-muted-foreground hover:bg-muted/50",
+                  isSelected
+                    ? "bg-surface-3 font-semibold text-text-secondary"
+                    : "text-text-tertiary hover:bg-surface-2",
                 )}
               >
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate">{model.displayName}</span>
-                  <span className="text-xs font-normal text-muted-foreground">{model.id}</span>
+                  <span className="text-xs font-normal text-text-faint">{model.id}</span>
                 </span>
-                {isSelected && <Check className="size-4 shrink-0 text-primary" />}
               </button>
             );
           })}

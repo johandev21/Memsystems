@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Check,
   ChevronDown,
   Search,
   Cpu,
@@ -22,6 +21,7 @@ import type { ModelOption } from "@/shared/api/models";
 import { sourcesQueryOptions } from "@/shared/api/sources";
 import { cn } from "@/shared/lib/utils";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
 
 // ============================================================================
 // Module Constants
@@ -125,7 +125,7 @@ export function QuizBriefForm({
           />
 
           <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-foreground">
+            <Label className="text-sm font-medium text-text-primary">
               3. Knowledge Sources
               {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
             </Label>
@@ -138,11 +138,14 @@ export function QuizBriefForm({
         </div>
 
         <div className="flex justify-between items-center pt-2 border-t border-transparent">
-          <span className="text-xs text-muted-foreground">Configure custom instructions next</span>
+          <span className="text-xs text-text-faint">Configure custom instructions next</span>
           <Button
             type="button"
             onClick={() => setStep(2)}
-            className="h-9 px-5 rounded-full border border-border/80 bg-panel-header-bg text-foreground text-sm font-medium gap-1.5 cursor-pointer hover:bg-muted transition-colors disabled:bg-muted disabled:text-foreground disabled:opacity-100"
+            className={cn(
+              "h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors",
+              CTA_BUTTON_CLASS,
+            )}
           >
             Next Step
             <ArrowRight className="size-4" />
@@ -157,7 +160,7 @@ export function QuizBriefForm({
       <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="brief-quiz" className="text-sm font-medium text-foreground">
+            <Label htmlFor="brief-quiz" className="text-sm font-medium text-text-primary">
               Custom Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
             </Label>
             <Textarea
@@ -173,7 +176,7 @@ export function QuizBriefForm({
 
           <div className="grid grid-cols-2 gap-4 items-center">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">
+              <Label className="text-xs font-medium text-text-tertiary">
                 Destination Folder
               </Label>
               <FolderPicker
@@ -185,7 +188,7 @@ export function QuizBriefForm({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">
+              <Label className="text-xs font-medium text-text-tertiary">
                 AI Intelligence Model
               </Label>
               <QuizModelPopover
@@ -203,7 +206,7 @@ export function QuizBriefForm({
             type="button"
             variant="ghost"
             onClick={() => setStep(1)}
-            className="h-9 px-4 text-sm text-muted-foreground hover:text-foreground gap-1.5 cursor-pointer"
+            className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
           >
             <ArrowLeft className="size-4" />
             Back
@@ -211,7 +214,10 @@ export function QuizBriefForm({
 
           <Button
             type="button"
-            className="h-10 px-6 rounded-full border border-border/80 bg-panel-header-bg text-foreground font-medium text-sm shadow-md gap-2 cursor-pointer hover:bg-muted transition-colors disabled:bg-muted disabled:text-foreground disabled:opacity-100"
+            className={cn(
+              "h-10 px-6 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors",
+              CTA_BUTTON_CLASS,
+            )}
             disabled={!canSubmit}
             onClick={onSubmit}
           >
@@ -223,7 +229,7 @@ export function QuizBriefForm({
   }
 
   return (
-    <div className="flex flex-col gap-5 font-sans text-foreground">
+    <div className="flex flex-col gap-5 font-sans text-text-tertiary">
       <WizardHeader step={step} onStepChange={setStep} />
       {step === 1 ? renderStepOne() : renderStepTwo()}
     </div>
@@ -269,20 +275,20 @@ function QuizSourcePopover({
 
   function renderHeader() {
     return (
-      <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted/30">
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-surface-2">
         <div className="flex items-center gap-2 flex-1">
-          <Search className="size-4 text-muted-foreground shrink-0" />
+          <Search className="size-4 text-text-faint shrink-0" />
           <input
             type="text"
             placeholder="Search sources..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
+            className="bg-transparent text-sm text-text-tertiary placeholder:text-text-faint outline-none w-full"
           />
         </div>
         <div className="flex items-center gap-2 pl-2">
           <span
-            className="text-xs text-muted-foreground cursor-pointer select-none"
+            className="text-xs text-text-tertiary cursor-pointer select-none"
             onClick={toggleAll}
           >
             Select all
@@ -296,7 +302,7 @@ function QuizSourcePopover({
   function renderSourceList() {
     if (sources.length === 0) {
       return (
-        <div className="p-4 text-center text-xs text-muted-foreground">
+        <div className="p-4 text-center text-xs text-text-faint">
           No sources in notebook. Quiz will generate using general knowledge.
         </div>
       );
@@ -313,8 +319,8 @@ function QuizSourcePopover({
               className={cn(
                 "flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors",
                 checked
-                  ? "bg-muted/70 text-foreground font-medium"
-                  : "hover:bg-muted/40 text-muted-foreground",
+                  ? "bg-surface-3 text-text-secondary font-medium"
+                  : "hover:bg-surface-2 text-text-tertiary",
               )}
             >
               <div className="flex items-center gap-2 truncate pr-2">
@@ -337,7 +343,7 @@ function QuizSourcePopover({
 
   function renderFooter() {
     return (
-      <div className="p-2.5 bg-muted/20 flex justify-between items-center text-xs text-muted-foreground">
+      <div className="p-2.5 bg-surface-2 flex justify-between items-center text-xs text-text-faint">
         <span>{selectedIds.length} selected</span>
       </div>
     );
@@ -350,7 +356,7 @@ function QuizSourcePopover({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 rounded-2xl border-border bg-card hover:bg-muted text-xs font-medium gap-2 px-3.5 justify-between w-full"
+            className="h-9 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3 hover:text-text-secondary text-xs font-medium gap-2 px-3.5 justify-between w-full"
           >
             <div className="flex items-center gap-2 truncate">
               <BookOpen className="size-4 text-primary shrink-0" />
@@ -360,13 +366,13 @@ function QuizSourcePopover({
                   : `${selectedIds.length} source${selectedIds.length !== 1 ? "s" : ""} selected`}
               </span>
             </div>
-            <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="size-4 text-text-faint shrink-0" />
           </Button>
         }
       />
       <PopoverContent
         align="start"
-        className="w-[320px] p-0 bg-popover border-border shadow-xl rounded-2xl overflow-hidden"
+        className="w-[320px] p-0 bg-surface-1 border-surface-border shadow-xl rounded-2xl overflow-hidden"
       >
         {renderHeader()}
         {renderSourceList()}
@@ -402,15 +408,14 @@ export function QuizModelPopover({
         className={cn(
           "flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-colors",
           isSelected
-            ? "bg-muted text-foreground font-semibold"
-            : "hover:bg-muted/50 text-muted-foreground",
+            ? "bg-surface-3 text-text-secondary font-semibold"
+            : "hover:bg-surface-2 text-text-tertiary",
         )}
       >
         <div className="flex flex-col min-w-0">
           <span className="truncate">{m.displayName}</span>
-          <span className="text-xs text-muted-foreground font-normal">{m.id}</span>
+          <span className="text-xs text-text-faint font-normal">{m.id}</span>
         </div>
-        {isSelected && <Check className="size-4 text-primary shrink-0" />}
       </div>
     );
   }
@@ -423,7 +428,7 @@ export function QuizModelPopover({
             variant="outline"
             size="sm"
             disabled={disabled}
-            className="h-9 rounded-2xl border-border bg-card hover:bg-muted text-xs font-medium gap-2 px-3.5 justify-between w-full"
+            className="h-9 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3 hover:text-text-secondary text-xs font-medium gap-2 px-3.5 justify-between w-full"
           >
             <div className="flex items-center gap-2 truncate">
               <Cpu className="size-4 text-primary shrink-0" />
@@ -431,15 +436,15 @@ export function QuizModelPopover({
                 {selected?.displayName || selectedModel || "Select Model"}
               </span>
             </div>
-            <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="size-4 text-text-faint shrink-0" />
           </Button>
         }
       />
       <PopoverContent
         align="end"
-        className="w-[280px] p-2 bg-popover border-border shadow-xl rounded-2xl"
+        className="w-[280px] p-2 bg-surface-1 border-surface-border shadow-xl rounded-2xl"
       >
-        <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Select Model</div>
+        <div className="px-2 py-1 text-xs font-medium text-text-faint">Select Model</div>
         <div className="space-y-1 mt-1">{models.map(renderModelRow)}</div>
       </PopoverContent>
     </Popover>
@@ -460,7 +465,7 @@ function WizardHeader({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 font-medium text-foreground">
+        <div className="flex items-center gap-2 font-medium text-text-primary">
           <span className="text-sm font-semibold">Quiz Setup</span>
         </div>
         <Badge variant="outline" className="text-xs font-normal">
@@ -472,14 +477,14 @@ function WizardHeader({
           onClick={() => onStepChange(1)}
           className={cn(
             "h-1.5 rounded-full transition-all cursor-pointer",
-            step >= 1 ? "bg-primary" : "bg-muted",
+            step >= 1 ? "bg-primary" : "bg-surface-4",
           )}
         />
         <div
           onClick={() => onStepChange(2)}
           className={cn(
             "h-1.5 rounded-full transition-all cursor-pointer",
-            step === 2 ? "bg-primary" : "bg-muted",
+            step === 2 ? "bg-primary" : "bg-surface-4",
           )}
         />
       </div>
@@ -496,24 +501,28 @@ function DifficultySelector({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-sm font-medium text-foreground">1. Target Difficulty</Label>
+      <Label className="text-sm font-medium text-text-primary">1. Target Difficulty</Label>
       <div className="grid grid-cols-3 gap-3">
         {DIFFICULTIES.map((d) => (
           <div
             key={d.id}
             onClick={() => onChange(d.id)}
             className={cn(
-              "p-3 rounded-2xl border bg-card cursor-pointer transition-all flex flex-col justify-between gap-1.5",
-              value === d.id
-                ? "border-primary bg-muted/40 ring-1 ring-primary/30"
-                : "border-border hover:bg-muted/30",
+              optionRowClass(value === d.id),
+              "p-3 flex flex-col justify-between gap-1.5",
             )}
           >
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground">{d.title}</span>
-              {value === d.id && <Check className="size-3.5 text-primary" />}
+              <span
+                className={cn(
+                  "text-sm font-semibold",
+                  value === d.id ? "text-text-secondary" : "text-text-tertiary",
+                )}
+              >
+                {d.title}
+              </span>
             </div>
-            <span className="text-xs text-muted-foreground leading-tight">{d.description}</span>
+            <span className="text-xs text-text-faint leading-tight">{d.description}</span>
           </div>
         ))}
       </div>
@@ -543,7 +552,7 @@ function QuestionSelector({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <Label className="text-sm font-medium text-foreground">2. Number of Questions</Label>
+        <Label className="text-sm font-medium text-text-primary">2. Number of Questions</Label>
         <span className="text-xs font-medium text-primary">{questionLabel}</span>
       </div>
 
@@ -556,13 +565,11 @@ function QuestionSelector({
               type="button"
               onClick={() => onSelectPreset(cnt)}
               className={cn(
-                "h-9 rounded-xl text-sm font-medium border transition-all text-center cursor-pointer flex items-center justify-center gap-1.5",
-                selected
-                  ? "bg-primary text-primary-foreground border-primary font-semibold shadow-2xs"
-                  : "bg-muted/40 border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                optionRowClass(selected),
+                "h-9 text-sm text-center flex items-center justify-center gap-1.5",
+                selected ? "font-semibold" : "font-medium",
               )}
             >
-              {selected && <Check className="size-3.5 text-primary-foreground shrink-0" />}
               {cnt} Qs
             </button>
           );
@@ -578,7 +585,7 @@ function QuestionSelector({
               onChange={(e) => onCustomChange(e.target.value)}
               onBlur={onCustomBlur}
               placeholder="1-50"
-              className="w-full h-9 px-2 text-center text-sm font-semibold bg-card border border-primary text-foreground rounded-xl outline-none focus:ring-1 focus:ring-primary/40 shadow-2xs"
+              className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
               autoFocus
             />
           </div>
@@ -586,7 +593,10 @@ function QuestionSelector({
           <button
             type="button"
             onClick={onEnableCustom}
-            className="h-9 rounded-xl text-sm font-medium border border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted transition-all text-center cursor-pointer flex items-center justify-center gap-1.5"
+            className={cn(
+              optionRowClass(false),
+              "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
+            )}
           >
             Custom
           </button>

@@ -99,13 +99,14 @@ export function GenerateBriefDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className={cn(
+          "bg-surface-1 border border-surface-border generate-material-dialog",
           "sm:max-w-md",
           (kind === "quiz" || kind === "simple_flashcard") && "sm:max-w-2xl",
           (kind === "roadmap" || kind === "mind_map") && "sm:max-w-3xl",
         )}
       >
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-foreground">
+          <DialogTitle className="text-lg font-semibold text-text-primary">
             Generate {label}
           </DialogTitle>
         </DialogHeader>

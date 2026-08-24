@@ -1,16 +1,12 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Check,
   ChevronDown,
   Search,
   Cpu,
   BookOpen,
   Globe,
   FileText,
-  Lightbulb,
-  Brain,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
@@ -22,6 +18,7 @@ import type { ModelOption } from "@/shared/api/models";
 import { sourcesQueryOptions } from "@/shared/api/sources";
 import { cn } from "@/shared/lib/utils";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
 
 // ============================================================================
 // Module Constants
@@ -30,9 +27,9 @@ import type { BaseMaterialFormProps, BriefFormData } from "./types";
 const CARD_COUNT_PRESETS = [10, 15, 20] as const;
 
 const DIFFICULTIES = [
-  { id: "easy", title: "Basic", description: "Simple definitions & recall", icon: Lightbulb },
-  { id: "medium", title: "Standard", description: "Conceptual understanding", icon: Brain },
-  { id: "hard", title: "Advanced", description: "Deep analysis & application", icon: Sparkles },
+  { id: "easy", title: "Basic", description: "Simple definitions & recall" },
+  { id: "medium", title: "Standard", description: "Conceptual understanding" },
+  { id: "hard", title: "Advanced", description: "Deep analysis & application" },
 ] as const;
 
 type DifficultyId = (typeof DIFFICULTIES)[number]["id"];
@@ -113,10 +110,10 @@ export function FlashcardBriefForm({
   };
 
   return (
-    <div className="flex flex-col gap-4 font-sans text-foreground animate-in fade-in duration-150">
+    <div className="flex flex-col gap-4 font-sans text-text-tertiary animate-in fade-in duration-150">
       {/* Card Style Toggle */}
       <div className="flex flex-col gap-2">
-        <Label className="text-sm font-medium text-foreground">Card Format</Label>
+        <Label className="text-sm font-medium text-text-primary">Card Format</Label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {CARD_STYLES.map((style) => {
             const selected = cardStyle === style.id;
@@ -126,13 +123,11 @@ export function FlashcardBriefForm({
                 type="button"
                 onClick={() => setCardStyle(style.id)}
                 className={cn(
-                  "h-9 rounded-xl text-xs font-medium border transition-all text-center cursor-pointer flex items-center justify-center gap-1.5",
-                  selected
-                    ? "bg-primary text-primary-foreground border-primary font-semibold shadow-2xs"
-                    : "bg-muted border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                  optionRowClass(selected),
+                  "h-9 text-xs text-center flex items-center justify-center gap-1.5",
+                  selected ? "font-semibold" : "font-medium",
                 )}
               >
-                {selected && <Check className="size-3.5 text-primary-foreground shrink-0" />}
                 {style.title}
               </button>
             );
@@ -143,7 +138,7 @@ export function FlashcardBriefForm({
       {/* Difficulty + Card Count in one row */}
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <Label className="text-sm font-medium text-foreground">Difficulty</Label>
+          <Label className="text-sm font-medium text-text-primary">Difficulty</Label>
           <div className="flex gap-2">
             {DIFFICULTIES.map((d) => {
               const selected = difficulty === d.id;
@@ -153,10 +148,9 @@ export function FlashcardBriefForm({
                   type="button"
                   onClick={() => setDifficulty(d.id)}
                   className={cn(
-                    "flex-1 h-9 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center justify-center gap-1",
-                    selected
-                      ? "bg-primary text-primary-foreground border-primary font-semibold"
-                      : "bg-muted border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                    optionRowClass(selected),
+                    "flex-1 h-9 text-xs cursor-pointer flex items-center justify-center gap-1",
+                    selected ? "font-semibold" : "font-medium",
                   )}
                 >
                   {d.title}
@@ -187,7 +181,7 @@ export function FlashcardBriefForm({
 
       {/* Instructions */}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="brief-flashcards" className="text-sm font-medium text-foreground">
+        <Label htmlFor="brief-flashcards" className="text-sm font-medium text-text-primary">
           Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
         </Label>
         <Textarea
@@ -203,7 +197,7 @@ export function FlashcardBriefForm({
 
       {/* Sources */}
       <div className="flex flex-col gap-2">
-        <Label className="text-sm font-medium text-foreground">
+        <Label className="text-sm font-medium text-text-primary">
           Sources{!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
         </Label>
         <FlashcardSourcePopover
@@ -216,7 +210,7 @@ export function FlashcardBriefForm({
       {/* Folder + Model */}
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Folder</Label>
+          <Label className="text-xs font-medium text-text-tertiary">Folder</Label>
           <FolderPicker
             notebookId={notebookId}
             value={value.folderId}
@@ -225,7 +219,7 @@ export function FlashcardBriefForm({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Model</Label>
+          <Label className="text-xs font-medium text-text-tertiary">Model</Label>
           <FlashcardModelPopover
             models={models}
             selectedModel={value.model}
@@ -238,7 +232,10 @@ export function FlashcardBriefForm({
       {/* Submit */}
       <Button
         type="button"
-        className="w-full h-10 rounded-full border border-border/80 bg-panel-header-bg text-foreground font-medium text-sm shadow-md gap-2 cursor-pointer hover:bg-muted transition-colors disabled:bg-muted disabled:text-foreground disabled:opacity-100"
+        className={cn(
+          "w-full h-10 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors",
+          CTA_BUTTON_CLASS,
+        )}
         disabled={!canSubmit}
         onClick={onSubmit}
       >
@@ -287,20 +284,20 @@ function FlashcardSourcePopover({
 
   function renderHeader() {
     return (
-      <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted">
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-surface-2">
         <div className="flex items-center gap-2 flex-1">
-          <Search className="size-4 text-muted-foreground shrink-0" />
+          <Search className="size-4 text-text-faint shrink-0" />
           <input
             type="text"
             placeholder="Search sources..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
+            className="bg-transparent text-sm text-text-tertiary placeholder:text-text-faint outline-none w-full"
           />
         </div>
         <div className="flex items-center gap-2 pl-2">
           <span
-            className="text-xs text-muted-foreground cursor-pointer select-none"
+            className="text-xs text-text-tertiary cursor-pointer select-none"
             onClick={toggleAll}
           >
             Select all
@@ -314,7 +311,7 @@ function FlashcardSourcePopover({
   function renderSourceList() {
     if (sources.length === 0) {
       return (
-        <div className="p-4 text-center text-xs text-muted-foreground">
+        <div className="p-4 text-center text-xs text-text-faint">
           No sources in notebook. Flashcards will generate using general knowledge.
         </div>
       );
@@ -331,8 +328,8 @@ function FlashcardSourcePopover({
               className={cn(
                 "flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors",
                 checked
-                  ? "bg-muted text-foreground font-medium"
-                  : "hover:bg-muted text-muted-foreground",
+                  ? "bg-surface-3 text-text-secondary font-medium"
+                  : "hover:bg-surface-2 text-text-tertiary",
               )}
             >
               <div className="flex items-center gap-2 truncate pr-2">
@@ -355,7 +352,7 @@ function FlashcardSourcePopover({
 
   function renderFooter() {
     return (
-      <div className="p-2.5 bg-muted flex justify-between items-center text-xs text-muted-foreground">
+      <div className="p-2.5 bg-surface-2 flex justify-between items-center text-xs text-text-faint">
         <span>{selectedIds.length} selected</span>
       </div>
     );
@@ -368,7 +365,7 @@ function FlashcardSourcePopover({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 rounded-2xl border-border bg-card hover:bg-muted text-xs font-medium gap-2 px-3.5 justify-between w-full"
+            className="h-9 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3 hover:text-text-secondary text-xs font-medium gap-2 px-3.5 justify-between w-full"
           >
             <div className="flex items-center gap-2 truncate">
               <BookOpen className="size-4 text-primary shrink-0" />
@@ -378,13 +375,13 @@ function FlashcardSourcePopover({
                   : `${selectedIds.length} source${selectedIds.length !== 1 ? "s" : ""} selected`}
               </span>
             </div>
-            <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="size-4 text-text-faint shrink-0" />
           </Button>
         }
       />
       <PopoverContent
         align="start"
-        className="w-[320px] p-0 bg-popover border-border shadow-xl rounded-2xl overflow-hidden"
+        className="w-[320px] p-0 bg-surface-1 border-surface-border shadow-xl rounded-2xl overflow-hidden"
       >
         {renderHeader()}
         {renderSourceList()}
@@ -419,16 +416,15 @@ export function FlashcardModelPopover({
         onClick={() => onModelChange(m.id)}
         className={cn(
           "flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-colors",
-          isSelected
-            ? "bg-muted text-foreground font-semibold"
-            : "hover:bg-muted text-muted-foreground",
-        )}
-      >
-        <div className="flex flex-col min-w-0">
-          <span className="truncate">{m.displayName}</span>
-          <span className="text-xs text-muted-foreground font-normal">{m.id}</span>
+            isSelected
+              ? "bg-surface-3 text-text-secondary font-semibold"
+              : "hover:bg-surface-2 text-text-tertiary",
+          )}
+        >
+          <div className="flex flex-col min-w-0">
+            <span className="truncate">{m.displayName}</span>
+            <span className="text-xs text-text-faint font-normal">{m.id}</span>
         </div>
-        {isSelected && <Check className="size-4 text-primary shrink-0" />}
       </div>
     );
   }
@@ -441,7 +437,7 @@ export function FlashcardModelPopover({
             variant="outline"
             size="sm"
             disabled={disabled}
-            className="h-9 rounded-2xl border-border bg-card hover:bg-muted text-xs font-medium gap-2 px-3.5 justify-between w-full"
+            className="h-9 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3 hover:text-text-secondary text-xs font-medium gap-2 px-3.5 justify-between w-full"
           >
             <div className="flex items-center gap-2 truncate">
               <Cpu className="size-4 text-primary shrink-0" />
@@ -449,15 +445,15 @@ export function FlashcardModelPopover({
                 {selected?.displayName || selectedModel || "Select Model"}
               </span>
             </div>
-            <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="size-4 text-text-faint shrink-0" />
           </Button>
         }
       />
       <PopoverContent
         align="end"
-        className="w-[280px] p-2 bg-popover border-border shadow-xl rounded-2xl"
+        className="w-[280px] p-2 bg-surface-1 border-surface-border shadow-xl rounded-2xl"
       >
-        <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Select Model</div>
+        <div className="px-2 py-1 text-xs font-medium text-text-faint">Select Model</div>
         <div className="space-y-1 mt-1">{models.map(renderModelRow)}</div>
       </PopoverContent>
     </Popover>
@@ -490,7 +486,7 @@ function CardCountSelector({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <Label className="text-sm font-medium text-foreground">Cards</Label>
+        <Label className="text-sm font-medium text-text-primary">Cards</Label>
         <span className="text-xs font-medium text-primary">{cardLabel}</span>
       </div>
 
@@ -503,13 +499,11 @@ function CardCountSelector({
               type="button"
               onClick={() => onSelectPreset(cnt)}
               className={cn(
-                "h-9 rounded-xl text-sm font-medium border transition-all text-center cursor-pointer flex items-center justify-center gap-1.5",
-                selected
-                  ? "bg-primary text-primary-foreground border-primary font-semibold shadow-2xs"
-                  : "bg-muted border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                optionRowClass(selected),
+                "h-9 text-sm text-center flex items-center justify-center gap-1.5",
+                selected ? "font-semibold" : "font-medium",
               )}
             >
-              {selected && <Check className="size-3.5 text-primary-foreground shrink-0" />}
               {cnt}
             </button>
           );
@@ -525,7 +519,7 @@ function CardCountSelector({
               onChange={(e) => onCustomChange(e.target.value)}
               onBlur={onCustomBlur}
               placeholder="1-50"
-              className="w-full h-9 px-2 text-center text-sm font-semibold bg-card border border-primary text-foreground rounded-xl outline-none focus:ring-1 focus:ring-primary/40 shadow-2xs"
+              className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
               autoFocus
             />
           </div>
@@ -533,7 +527,10 @@ function CardCountSelector({
           <button
             type="button"
             onClick={onEnableCustom}
-            className="h-9 rounded-xl text-sm font-medium border border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-muted transition-all text-center cursor-pointer flex items-center justify-center gap-1.5"
+            className={cn(
+              optionRowClass(false),
+              "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
+            )}
           >
             Custom
           </button>

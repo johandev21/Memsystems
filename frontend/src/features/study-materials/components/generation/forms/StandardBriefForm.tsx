@@ -44,7 +44,7 @@ export function StandardBriefForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-muted-foreground">Knowledge Sources</Label>
+        <Label className="text-xs font-medium text-text-tertiary">Knowledge Sources</Label>
         <SourceMultiSelect
           notebookId={notebookId}
           value={value.sourceIds}
@@ -54,7 +54,7 @@ export function StandardBriefForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-muted-foreground">Destination Folder</Label>
+        <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
         <FolderPicker
           notebookId={notebookId}
           value={value.folderId}
@@ -64,7 +64,7 @@ export function StandardBriefForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-muted-foreground">AI Model</Label>
+        <Label className="text-xs font-medium text-text-tertiary">AI Model</Label>
         <QuizModelPopover
           models={models}
           selectedModel={value.model}
