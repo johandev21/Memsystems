@@ -194,20 +194,20 @@ export function StudyMaterialsTree({
                     </ContextMenuGroup>
                   </ContextMenuContent>
                   <ContextMenuTrigger className="block h-full">
-                    <ScrollArea className="h-full">
-                      {controller.tree.length === 0 ? (
-                        <EmptyState
-                          data-slot="study-materials-tree-empty-state"
-                          className="py-20"
-                          icon={<Folder className="size-5 text-muted-foreground" />}
-                          title="No study materials"
-                          description={
-                            isPrototype
-                              ? "Create a folder to begin the in-memory prototype."
-                              : "Create a folder to begin."
-                          }
-                        />
-                      ) : (
+                    {controller.tree.length === 0 ? (
+                      <EmptyState
+                        data-slot="study-materials-tree-empty-state"
+                        className="h-full py-6"
+                        icon={<Folder className="size-5 text-muted-foreground" />}
+                        title="No study materials"
+                        description={
+                          isPrototype
+                            ? "Create a folder to begin the in-memory prototype."
+                            : "Create a folder to begin."
+                        }
+                      />
+                    ) : (
+                      <ScrollArea className="h-full">
                         <div
                           data-slot="study-materials-tree-content"
                           role="tree"
@@ -218,8 +218,8 @@ export function StudyMaterialsTree({
                             <Branch key={node.id} node={node} depth={0} />
                           ))}
                         </div>
-                      )}
-                    </ScrollArea>
+                      </ScrollArea>
+                    )}
                   </ContextMenuTrigger>
                 </ContextMenu>
               </CardContent>
