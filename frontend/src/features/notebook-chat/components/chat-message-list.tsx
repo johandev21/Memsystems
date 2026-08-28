@@ -1,6 +1,8 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
 import type { CitedSourceDTO } from "@/shared/api";
+import { MessageScrollerItem } from "@/shared/ui/message-scroller";
 import { AssistantMessage } from "./assistant-message";
 import { UserMessage } from "./user-message";
 
@@ -19,27 +21,39 @@ export function ChatMessageList({
   onCopy,
   onRegenerate,
 }: ChatMessageListProps) {
+  const lastUserMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]?.role === "user") {
+        return messages[i].id;
+      }
+    }
+    return null;
+  }, [messages]);
+
   return (
     <>
-      {messages.map((message, index) => {
-        const isLast = index === messages.length - 1;
-        const citedSources = citedSourcesMap.get(message.id) ?? [];
-        return (
+      {messages.map((message, index) => (
+        <MessageScrollerItem
+          key={message.id}
+          messageId={message.id}
+          scrollAnchor={message.id === lastUserMessageId}
+        >
           <MessageBubble
-            key={message.id}
             message={message}
-            citedSources={citedSources}
+            citedSources={citedSourcesMap.get(message.id) ?? []}
             onCopy={onCopy}
             onRegenerate={onRegenerate}
-            isLast={isLast}
+            isLast={index === messages.length - 1}
           />
-        );
-      })}
+        </MessageScrollerItem>
+      ))}
       {isThinking && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Thinking...</span>
-        </div>
+        <MessageScrollerItem messageId="thinking-indicator">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Thinking...</span>
+          </div>
+        </MessageScrollerItem>
       )}
     </>
   );

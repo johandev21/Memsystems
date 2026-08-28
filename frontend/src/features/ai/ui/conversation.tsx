@@ -1,28 +1,54 @@
 import type { UIMessage } from "ai";
-import { ArrowDownIcon, DownloadIcon } from "lucide-react";
+import { DownloadIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/shared/ui/message-scroller";
+import { Button } from "@/shared/ui/button";
 
-export type ConversationProps = ComponentProps<typeof StickToBottom>;
+export type ConversationProps = ComponentProps<typeof MessageScrollerProvider> & {
+  className?: string;
+};
 
-export const Conversation = ({ className, ...props }: ConversationProps) => (
-  <StickToBottom
-    className={cn("relative flex-1 overflow-y-hidden", className)}
-    initial="smooth"
-    resize="smooth"
-    role="log"
+export const Conversation = ({
+  className,
+  children,
+  autoScroll = false,
+  defaultScrollPosition = "last-anchor",
+  scrollPreviousItemPeek = 64,
+  ...props
+}: ConversationProps) => (
+  <MessageScrollerProvider
+    autoScroll={autoScroll}
+    defaultScrollPosition={defaultScrollPosition}
+    scrollPreviousItemPeek={scrollPreviousItemPeek}
     {...props}
-  />
+  >
+    <MessageScroller className={cn("relative flex-1", className)}>
+      {children}
+    </MessageScroller>
+  </MessageScrollerProvider>
 );
 
-export type ConversationContentProps = ComponentProps<typeof StickToBottom.Content>;
+export type ConversationContentProps = ComponentProps<typeof MessageScrollerContent>;
 
-export const ConversationContent = ({ className, ...props }: ConversationContentProps) => (
-  <StickToBottom.Content className={cn("flex flex-col gap-8 p-4", className)} {...props} />
+export const ConversationContent = ({ className, children, ...props }: ConversationContentProps) => (
+  <MessageScrollerViewport>
+    <MessageScrollerContent className={cn("flex flex-col gap-8 p-4", className)} {...props}>
+      {children}
+    </MessageScrollerContent>
+  </MessageScrollerViewport>
 );
+
+export type ConversationItemProps = ComponentProps<typeof MessageScrollerItem>;
+export const ConversationItem = MessageScrollerItem;
 
 export type ConversationEmptyStateProps = ComponentProps<"div"> & {
   title?: string;
@@ -57,34 +83,24 @@ export const ConversationEmptyState = ({
   </div>
 );
 
-export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
+export type ConversationScrollButtonProps = ComponentProps<typeof MessageScrollerButton>;
 
 export const ConversationScrollButton = ({
   className,
+  variant = "outline",
+  size = "icon",
   ...props
 }: ConversationScrollButtonProps) => {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
-
   return (
-    !isAtBottom && (
-      <Button
-        className={cn(
-          "liquid-glass absolute bottom-4 left-[50%] z-floating-control translate-x-[-50%] cursor-pointer rounded-full border-white/35 bg-background/55 shadow-[var(--composer-glow),0_4px_16px_rgb(0_0_0/0.12)] transition-[background-color,box-shadow,transform] hover:bg-background/75 hover:shadow-[var(--composer-glow),0_6px_20px_rgb(0_0_0/0.14)] dark:!border-white/10 dark:!bg-background/38 dark:hover:!bg-white/8",
-          className,
-        )}
-        onClick={handleScrollToBottom}
-        size="icon"
-        type="button"
-        variant="outline"
-        {...props}
-      >
-        <ArrowDownIcon className="size-4" />
-      </Button>
-    )
+    <MessageScrollerButton
+      className={cn(
+        "liquid-glass absolute bottom-4 left-[50%] z-floating-control translate-x-[-50%] cursor-pointer rounded-full border-white/35 bg-background/85 shadow-[var(--composer-glow),0_4px_16px_rgb(0_0_0/0.12)] transition-[background-color,box-shadow,transform] hover:bg-background/95 hover:shadow-[var(--composer-glow),0_6px_20px_rgb(0_0_0/0.14)] dark:!border-white/10 dark:!bg-background/85 dark:hover:!bg-background/95",
+        className,
+      )}
+      size={size}
+      variant={variant}
+      {...props}
+    />
   );
 };
 

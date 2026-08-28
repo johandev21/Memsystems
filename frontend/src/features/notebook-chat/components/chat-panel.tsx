@@ -7,6 +7,7 @@ import {
 import { NotebookBanner } from "@/features/notebooks";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks";
 import { useEffect, useLayoutEffect, useRef } from "react";
+import { MessageScrollerItem } from "@/shared/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
 import { ChatEmptyState } from "./chat-empty-state";
 import { ChatMessageList } from "./chat-message-list";
@@ -94,37 +95,53 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
         className="relative flex w-full min-h-0 flex-1 flex-col"
         style={{ ["--composer-height" as string]: "96px" } as React.CSSProperties}
       >
-        <Conversation className="flex-1 min-h-0">
+        <Conversation key={notebookId} className="flex-1 min-h-0">
           <ConversationContent
             className="mx-auto w-full max-w-4xl pb-32"
-            style={{ paddingBottom: "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties}
+            aria-busy={isLoading}
+            style={
+              { paddingBottom: "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties
+            }
           >
             {notebook && (
-              <NotebookBanner
-                notebookId={notebook.id}
-                title={notebook.title}
-                description={notebook.description}
-                icon={notebook.icon ?? undefined}
-                bannerUrl={notebook.bannerUrl}
-                bannerFocalPoint={notebook.bannerFocalPoint}
-                updatedAt={notebook.updatedAt}
-                isUntitled={showBannerAsUntitled}
-              />
+              <MessageScrollerItem messageId="notebook-banner">
+                <NotebookBanner
+                  notebookId={notebook.id}
+                  title={notebook.title}
+                  description={notebook.description}
+                  icon={notebook.icon ?? undefined}
+                  bannerUrl={notebook.bannerUrl}
+                  bannerFocalPoint={notebook.bannerFocalPoint}
+                  updatedAt={notebook.updatedAt}
+                  isUntitled={showBannerAsUntitled}
+                />
+                {!hasMessages && (
+                  <ChatEmptyState
+                    notebookTitle={notebookTitle}
+                    description={notebook?.description ?? null}
+                    isUntitled={isUntitled}
+                  />
+                )}
+              </MessageScrollerItem>
             )}
 
-            {hasMessages ? (
+            {!notebook && !hasMessages && (
+              <MessageScrollerItem messageId="chat-empty-state">
+                <ChatEmptyState
+                  notebookTitle={notebookTitle}
+                  description={null}
+                  isUntitled={isUntitled}
+                />
+              </MessageScrollerItem>
+            )}
+
+            {hasMessages && (
               <ChatMessageList
                 messages={messages}
                 citedSourcesMap={citedSourcesMap}
                 isThinking={status === "submitted"}
                 onCopy={handleCopy}
                 onRegenerate={handleRegenerate}
-              />
-            ) : (
-              <ChatEmptyState
-                notebookTitle={notebookTitle}
-                description={notebook?.description ?? null}
-                isUntitled={isUntitled}
               />
             )}
           </ConversationContent>
