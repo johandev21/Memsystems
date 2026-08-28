@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider, useTheme } from "next-themes";
 import { Toaster } from "sonner";
+import { PaletteProvider } from "@/features/theme";
 
 function isEditableTarget(target: EventTarget | null) {
   return (
@@ -73,11 +74,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <ThemeKeyboardShortcut />
-        {children}
-        <Toaster position="top-right" />
-      </ThemeProvider>
+      <PaletteProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange storageKey="memsystems-scheme">
+          <ThemeKeyboardShortcut />
+          {children}
+          <Toaster position="top-right" />
+        </ThemeProvider>
+      </PaletteProvider>
     </QueryClientProvider>
   );
 }

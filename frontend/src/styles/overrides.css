@@ -1,9 +1,12 @@
 /* overrides.css — contextual dark-mode overrides for specific surfaces */
 
 /* Dialogs contain denser forms than the surrounding workspace. Keep their
-   dark-mode controls distinct without changing the light theme or global dark surfaces. */
-.dark [data-slot="dialog-content"],
-.dark [data-slot="alert-dialog-content"] {
+   dark-mode controls distinct without changing the light theme or global dark surfaces.
+   Scoped to default theme so custom palettes preserve their tinted dialog colors. */
+html:not([data-theme]) .dark [data-slot="dialog-content"],
+html:not([data-theme]) .dark [data-slot="alert-dialog-content"],
+html[data-theme="default"] .dark [data-slot="dialog-content"],
+html[data-theme="default"] .dark [data-slot="alert-dialog-content"] {
   --card: oklch(0.23 0 0);
   --muted: oklch(0.31 0 0);
   --muted-foreground: oklch(0.82 0 0);

@@ -9,17 +9,14 @@ import {
   Eye,
   EyeOff,
   KeyRound,
-  Monitor,
-  Moon,
   RefreshCw,
   ShieldCheck,
-  Sun,
   Trash2,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
+import { SchemeSelector, ThemeGrid } from "@/features/theme";
 import { AppHeader } from "@/shared/ui/layout";
 import {
   AlertDialog,
@@ -88,7 +85,7 @@ function ProviderMark({ provider }: { provider: Provider }) {
 
   const monochromeClass =
     provider.id === "deepseek" || provider.id === "kimi" ? "" : "brightness-0 dark:invert";
-  const kimiClass = provider.id === "kimi" ? "text-[#171717]" : "";
+  const kimiClass = provider.id === "kimi" ? "text-foreground" : "";
 
   return <Icon className={`size-7 shrink-0 ${monochromeClass} ${kimiClass}`} aria-hidden="true" />;
 }
@@ -384,7 +381,6 @@ function ProviderRow({ provider }: { provider: Provider }) {
 }
 
 export function SettingsPage() {
-  const { theme, setTheme } = useTheme();
   const { isPending: _isPending } = useConnectionStatus();
   const queryClient = useQueryClient();
   const [_testing, _setTesting] = useState(false);
@@ -443,7 +439,7 @@ export function SettingsPage() {
           </div>
         </section>
 
-        <section className="mt-10 grid gap-5 md:grid-cols-[1.1fr_0.9fr]">
+        <section className="mt-10">
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-[0_8px_30px_rgb(15_23_42/0.025)] sm:p-6">
             <div className="flex items-start gap-3">
               <div>
@@ -455,37 +451,21 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-[0_8px_30px_rgb(15_23_42/0.025)] sm:p-6">
-            <h2 className="text-sm font-semibold">Appearance</h2>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              Choose how Memsystems looks for you.
+        </section>
+
+        <section className="mt-8" aria-labelledby="appearance-heading">
+          <div className="mb-3 px-1">
+            <h2 id="appearance-heading" className="text-base font-semibold tracking-[-0.02em]">
+              Appearance
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Choose how Memsystems looks. Theme sets the palette, color scheme sets light or dark.
             </p>
-            <div
-              className="mt-4 flex gap-1 rounded-xl bg-muted/70 p-1"
-              role="radiogroup"
-              aria-label="Theme preference"
-            >
-              {[
-                { value: "light", icon: Sun, name: "Light" },
-                { value: "dark", icon: Moon, name: "Dark" },
-                { value: "system", icon: Monitor, name: "System" },
-              ].map((item) => {
-                const Icon = item.icon;
-                const selected = (theme ?? "system") === item.value;
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => setTheme(item.value)}
-                    className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all ${selected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    <Icon className="size-3.5" />
-                    {item.name}
-                  </button>
-                );
-              })}
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-[0_8px_30px_rgb(15_23_42/0.025)] sm:p-6">
+            <div className="space-y-8">
+              <SchemeSelector />
+              <ThemeGrid />
             </div>
           </div>
         </section>

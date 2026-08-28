@@ -45,14 +45,14 @@
   /* Workspace + studio surfaces */
   --panel-bg: oklch(0.99 0 0);
   --panel-header-bg: oklch(0.97 0 0);
-  --study-materials-panel: oklch(0.99 0 0);
+  --study-materials-panel: var(--panel-bg);
   --studio-resource: oklch(0.97 0 0);
   --studio-resource-hover: oklch(0.922 0 0);
   --studio-resource-foreground: oklch(0.145 0 0);
   --studio-resource-icon: oklch(0.556 0 0);
 
   /* Composer (frosted glass) */
-  --composer-bg: oklch(0.99 0 0 / 0.6);
+  --composer-bg: oklch(0.99 0 0 / 0.85);
   --composer-bg-solid: oklch(0.985 0 0);
   --composer-border: oklch(0.72 0 0 / 0.28);
   --composer-highlight: oklch(1 0 0 / 0.5);
@@ -98,13 +98,13 @@
   --popover-selected: oklch(0.371 0 0);
   --panel-bg: oklch(0.205 0 0);
   --panel-header-bg: oklch(0.269 0 0);
-  --study-materials-panel: oklch(21.779% 0.00002 271.152);
+  --study-materials-panel: var(--panel-bg);
   --studio-resource: oklch(0.269 0 0);
   --studio-resource-hover: oklch(0.325 0 0);
   --studio-resource-foreground: oklch(0.985 0 0);
   --studio-resource-icon: oklch(0.708 0 0);
-  --composer-bg: oklch(0.235 0 0 / 0.78);
-  --composer-bg-solid: oklch(0.235 0 0);
+  --composer-bg: var(--panel-header-bg);
+  --composer-bg-solid: var(--panel-header-bg);
   --composer-border: oklch(0.72 0 0 / 0.12);
   --composer-highlight: oklch(0.985 0 0 / 0.06);
   --composer-shadow: oklch(0.05 0 0 / 0.26);

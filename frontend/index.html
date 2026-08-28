@@ -9,6 +9,12 @@
     <meta property="og:description" content="A notebook for making sense of things." />
     <meta property="og:type" content="website" />
     <title>Memsystems | Think with your sources</title>
+    <script>
+      try {
+        var t = localStorage.getItem("memsystems-theme");
+        if (t && t !== "default") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
     <link href="/src/globals.css" rel="stylesheet">
   </head>
   <body>
