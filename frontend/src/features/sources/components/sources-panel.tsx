@@ -8,7 +8,7 @@ import {
   type Source,
   type SourceKind,
   sourcesQueryOptions,
-} from "@/shared/api/sources";
+} from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 import { useUploadStore } from "../model/upload-store";
 import { AddSourceDialog } from "./add-source-dialog";
@@ -63,36 +63,15 @@ export function SourcesPanel({
           <PendingUploadRow key={upload.id} upload={upload} onCancel={cancelPendingUpload} />
         ))}
 
-        {isPending && (
-          <div className="flex items-center justify-center py-10 text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-          </div>
-        )}
-        {isError && (
-          <div
-            role="alert"
-            className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive"
-          >
-            <AlertTriangle className="size-3.5 shrink-0" />
-            <span>Failed to load sources</span>
-          </div>
-        )}
-        {hasNoSources && (
-          <p className="px-2 py-10 text-center text-xs text-muted-foreground">
-            No sources added yet
-          </p>
-        )}
-        {!isPending &&
-          !isError &&
-          sources?.map((source) => (
-            <SourceRow
-              key={source.id}
-              source={source}
-              onClick={() => onSelectSource(source.id)}
-              onDelete={() => setSourceToDelete({ id: source.id, title: source.title })}
-              deleting={deleteMutation.isPending && deleteMutation.variables === source.id}
-            />
-          ))}
+        <SourcesList
+          sources={sources}
+          isPending={isPending}
+          isError={isError}
+          hasNoSources={hasNoSources}
+          onSelectSource={onSelectSource}
+          onDelete={(source) => setSourceToDelete({ id: source.id, title: source.title })}
+          deletingId={deleteMutation.isPending ? deleteMutation.variables : undefined}
+        />
       </div>
 
       <div className="p-2">
@@ -105,21 +84,63 @@ export function SourcesPanel({
 
       <ConfirmDeleteDialog
         open={sourceToDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) setSourceToDelete(null);
-        }}
+        onOpenChange={(open) => !open && setSourceToDelete(null)}
         title="Delete Source"
         description={`Are you sure you want to delete "${sourceToDelete?.title ?? ""}"?`}
         onConfirm={() => {
-          if (sourceToDelete) {
-            deleteMutation.mutate(sourceToDelete.id);
-            setSourceToDelete(null);
-          }
+          if (!sourceToDelete) return;
+          deleteMutation.mutate(sourceToDelete.id);
+          setSourceToDelete(null);
         }}
         isLoading={deleteMutation.isPending}
       />
     </div>
   );
+}
+
+function SourcesList({
+  sources,
+  isPending,
+  isError,
+  hasNoSources,
+  onSelectSource,
+  onDelete,
+  deletingId,
+}: {
+  sources?: Source[];
+  isPending: boolean;
+  isError: boolean;
+  hasNoSources: boolean;
+  onSelectSource: (id: string) => void;
+  onDelete: (source: Source) => void;
+  deletingId?: string;
+}) {
+  if (isPending)
+    return <Loader2 className="mx-auto my-10 size-4 animate-spin text-muted-foreground" />;
+  if (isError) {
+    return (
+      <div
+        role="alert"
+        className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+      >
+        <AlertTriangle className="size-3.5 shrink-0" />
+        <span>Failed to load sources</span>
+      </div>
+    );
+  }
+  if (hasNoSources)
+    return (
+      <p className="px-2 py-10 text-center text-xs text-muted-foreground">No sources added yet</p>
+    );
+  return sources?.map((source) => (
+    <SourceRow
+      key={source.id}
+      source={source}
+      onClick={() => onSelectSource(source.id)}
+      onDelete={() => onDelete(source)}
+      deleting={deletingId === source.id}
+    />
+  ));
 }
 
 function SourceRow({

@@ -23,9 +23,7 @@ export function StudyMaterialsTreeError({
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium text-foreground">{message}</p>
-        <p className="text-xs text-muted-foreground">
-          Please check your connection and try again.
-        </p>
+        <p className="text-xs text-muted-foreground">Please check your connection and try again.</p>
       </div>
       {onRetry && (
         <Button

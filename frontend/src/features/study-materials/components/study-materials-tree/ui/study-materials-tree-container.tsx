@@ -71,25 +71,11 @@ export function StudyMaterialsTreeContainer({
   }
 
   // hasData: render tree, retain last good during background refetch
-  const contentHeight =
-    variant === "desktop"
-      ? "h-[250px]"
-      : variant === "mobile"
-        ? "max-h-[38dvh] min-h-[240px] h-auto overflow-y-auto overscroll-contain"
-        : "h-[400px]";
+  const contentHeight = getTreeContentHeight(variant);
 
   return (
     <div data-slot="study-materials-tree-container" className={className}>
-      {isFetching && hasData && (
-        <div
-          data-slot="study-materials-tree-updating"
-          className="h-1 w-full overflow-hidden bg-muted"
-          aria-label="Updating study materials"
-          aria-busy="true"
-        >
-          <div className="h-full w-1/3 animate-pulse bg-primary/40" />
-        </div>
-      )}
+      {isFetching && hasData && <TreeUpdatingIndicator />}
       <StudyMaterialsTree
         folders={folders}
         materials={materials}
@@ -102,11 +88,40 @@ export function StudyMaterialsTreeContainer({
         onPanelToggle={() => setIsPanelExpanded((v) => !v)}
         contentClassName={contentHeight}
       />
-      {isError && hasData && (
-        <div className="p-2 text-xs text-destructive">
-          Failed to refresh. <button onClick={handleRetry} className="underline">Retry</button>
-        </div>
-      )}
+      {isError && hasData && <TreeRefreshError onRetry={handleRetry} />}
+    </div>
+  );
+}
+
+function getTreeContentHeight(variant: StudyMaterialsTreeContainerProps["variant"]): string {
+  const heights = {
+    desktop: "h-[250px]",
+    mobile: "max-h-[38dvh] min-h-[240px] h-auto overflow-y-auto overscroll-contain",
+    standalone: "h-[400px]",
+  } as const;
+  return heights[variant ?? "standalone"];
+}
+
+function TreeUpdatingIndicator() {
+  return (
+    <div
+      data-slot="study-materials-tree-updating"
+      className="h-1 w-full overflow-hidden bg-muted"
+      aria-label="Updating study materials"
+      aria-busy="true"
+    >
+      <div className="h-full w-1/3 animate-pulse bg-primary/40" />
+    </div>
+  );
+}
+
+function TreeRefreshError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="p-2 text-xs text-destructive">
+      Failed to refresh.{" "}
+      <button onClick={onRetry} className="underline">
+        Retry
+      </button>
     </div>
   );
 }

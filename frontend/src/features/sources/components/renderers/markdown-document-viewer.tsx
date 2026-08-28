@@ -126,33 +126,59 @@ export function MarkdownDocumentViewer({ content, scrollElement }: MarkdownDocum
   const chunks = useMemo(() => splitTextIntoChunks(content || ""), [content]);
 
   if (!content?.trim()) {
-    return (
-      <div className="py-12 text-center text-xs text-muted-foreground">
-        Empty markdown document.
-      </div>
-    );
+    return <EmptyMarkdownState />;
   }
 
   if (chunks.length > 20 && scrollElement !== undefined) {
-    return (
-      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed font-sans">
-        <VirtualizedDocumentContainer
-          items={chunks}
-          scrollElement={scrollElement}
-          estimateSize={() => 80}
-          overscan={5}
-          getItemKey={(_, idx) => idx}
-          renderItem={(chunk) => (
-            <MarkdownRenderer components={markdownComponents}>{chunk}</MarkdownRenderer>
-          )}
-        />
-      </div>
-    );
+    return <VirtualizedMarkdownDocument chunks={chunks} scrollElement={scrollElement} />;
   }
 
+  return <StaticMarkdownDocument content={content} />;
+}
+
+function EmptyMarkdownState() {
+  return (
+    <div className="py-12 text-center text-xs text-muted-foreground">Empty markdown document.</div>
+  );
+}
+
+function VirtualizedMarkdownDocument({
+  chunks,
+  scrollElement,
+}: {
+  chunks: string[];
+  scrollElement: HTMLDivElement | null;
+}) {
+  return (
+    <MarkdownDocumentShell>
+      <VirtualizedDocumentContainer
+        items={chunks}
+        scrollElement={scrollElement}
+        estimateSize={() => 80}
+        overscan={5}
+        getItemKey={(_, index) => index}
+        renderItem={(chunk) => <MarkdownChunk chunk={chunk} />}
+      />
+    </MarkdownDocumentShell>
+  );
+}
+
+function StaticMarkdownDocument({ content }: { content: string }) {
+  return (
+    <MarkdownDocumentShell>
+      <MarkdownRenderer components={markdownComponents}>{content}</MarkdownRenderer>
+    </MarkdownDocumentShell>
+  );
+}
+
+function MarkdownChunk({ chunk }: { chunk: string }) {
+  return <MarkdownRenderer components={markdownComponents}>{chunk}</MarkdownRenderer>;
+}
+
+function MarkdownDocumentShell({ children }: { children: ReactNode }) {
   return (
     <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed font-sans">
-      <MarkdownRenderer components={markdownComponents}>{content}</MarkdownRenderer>
+      {children}
     </div>
   );
 }

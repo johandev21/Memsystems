@@ -1,12 +1,12 @@
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createFolder, updateFolder } from "@/shared/api/folders";
+import { createFolder, updateFolder } from "@/shared/api";
 import {
   duplicateStudyMaterial,
   moveStudyMaterial,
   updateStudyMaterial,
-} from "@/shared/api/study-materials";
+} from "@/shared/api";
 import { getDescendantFolderIds } from "./tree";
 import type { FolderDTO } from "@/entities/folder";
 import type { StudyMaterialDTO } from "@/entities/study-material";
@@ -87,40 +87,53 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
             if (folderExists) {
               // Optimistic update
               const snapshot = getFolderCache();
-              queryClient.setQueryData<FolderDTO[]>(["study-material-folders", notebookId], (old) => {
-                if (!old) return old;
-                return old.map((f) => (f.id === command.id ? { ...f, name: trimmed } : f));
-              });
+              queryClient.setQueryData<FolderDTO[]>(
+                ["study-material-folders", notebookId],
+                (old) => {
+                  if (!old) return old;
+                  return old.map((f) => (f.id === command.id ? { ...f, name: trimmed } : f));
+                },
+              );
 
               try {
                 const updated = await updateFolder(command.id, { name: trimmed });
                 // Reconcile with server response
-                queryClient.setQueryData<FolderDTO[]>(["study-material-folders", notebookId], (old) => {
-                  if (!old) return [updated];
-                  return old.map((f) => (f.id === command.id ? updated : f));
-                });
+                queryClient.setQueryData<FolderDTO[]>(
+                  ["study-material-folders", notebookId],
+                  (old) => {
+                    if (!old) return [updated];
+                    return old.map((f) => (f.id === command.id ? updated : f));
+                  },
+                );
                 void refetchTree();
                 return { ok: true };
               } catch (err) {
                 // Rollback
-                if (snapshot) queryClient.setQueryData(["study-material-folders", notebookId], snapshot);
+                if (snapshot)
+                  queryClient.setQueryData(["study-material-folders", notebookId], snapshot);
                 const message = err instanceof Error ? err.message : "Failed to rename folder";
                 toast.error(message);
                 return { ok: false, error: message };
               }
             } else if (materialExists) {
               const snapshot = getMaterialCache();
-              queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                if (!old) return old;
-                return old.map((m) => (m.id === command.id ? { ...m, title: trimmed } : m));
-              });
+              queryClient.setQueryData<StudyMaterialDTO[]>(
+                ["study-materials", notebookId],
+                (old) => {
+                  if (!old) return old;
+                  return old.map((m) => (m.id === command.id ? { ...m, title: trimmed } : m));
+                },
+              );
 
               try {
                 const updated = await updateStudyMaterial(command.id, { title: trimmed });
-                queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                  if (!old) return [updated];
-                  return old.map((m) => (m.id === command.id ? updated : m));
-                });
+                queryClient.setQueryData<StudyMaterialDTO[]>(
+                  ["study-materials", notebookId],
+                  (old) => {
+                    if (!old) return [updated];
+                    return old.map((m) => (m.id === command.id ? updated : m));
+                  },
+                );
                 void refetchTree();
                 return { ok: true };
               } catch (err) {
@@ -134,22 +147,32 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
               // Fallback: try folder update, if fails try material
               try {
                 const updated = await updateFolder(command.id, { name: trimmed });
-                queryClient.setQueryData<FolderDTO[]>(["study-material-folders", notebookId], (old) => {
-                  if (!old) return [updated];
-                  // If folder not in cache, add it? But should be in cache if it exists
-                  const exists = old.some((f) => f.id === command.id);
-                  return exists ? old.map((f) => (f.id === command.id ? updated : f)) : [...old, updated];
-                });
+                queryClient.setQueryData<FolderDTO[]>(
+                  ["study-material-folders", notebookId],
+                  (old) => {
+                    if (!old) return [updated];
+                    // If folder not in cache, add it? But should be in cache if it exists
+                    const exists = old.some((f) => f.id === command.id);
+                    return exists
+                      ? old.map((f) => (f.id === command.id ? updated : f))
+                      : [...old, updated];
+                  },
+                );
                 void refetchTree();
                 return { ok: true };
               } catch {
                 try {
                   const updated = await updateStudyMaterial(command.id, { title: trimmed });
-                  queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                    if (!old) return [updated];
-                    const exists = old.some((m) => m.id === command.id);
-                    return exists ? old.map((m) => (m.id === command.id ? updated : m)) : [...old, updated];
-                  });
+                  queryClient.setQueryData<StudyMaterialDTO[]>(
+                    ["study-materials", notebookId],
+                    (old) => {
+                      if (!old) return [updated];
+                      const exists = old.some((m) => m.id === command.id);
+                      return exists
+                        ? old.map((m) => (m.id === command.id ? updated : m))
+                        : [...old, updated];
+                    },
+                  );
                   void refetchTree();
                   return { ok: true };
                 } catch (err) {
@@ -173,34 +196,43 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
               const currentFolders = getFolderCache() ?? [];
               const descendantSet = getDescendantFolderIds(currentFolders, command.id);
               descendantSet.add(command.id);
-              queryClient.setQueryData<FolderDTO[]>(["study-material-folders", notebookId], (old) => {
-                if (!old) return old;
-                return old.filter((f) => !descendantSet.has(f.id));
-              });
+              queryClient.setQueryData<FolderDTO[]>(
+                ["study-material-folders", notebookId],
+                (old) => {
+                  if (!old) return old;
+                  return old.filter((f) => !descendantSet.has(f.id));
+                },
+              );
               try {
-                const { deleteFolder } = await import("@/shared/api/folders");
+                const { deleteFolder } = await import("@/shared/api");
                 await deleteFolder(command.id);
                 void refetchTree();
                 return { ok: true };
               } catch (err) {
-                if (folderSnapshot) queryClient.setQueryData(["study-material-folders", notebookId], folderSnapshot);
-                if (materialSnapshot) queryClient.setQueryData(["study-materials", notebookId], materialSnapshot);
+                if (folderSnapshot)
+                  queryClient.setQueryData(["study-material-folders", notebookId], folderSnapshot);
+                if (materialSnapshot)
+                  queryClient.setQueryData(["study-materials", notebookId], materialSnapshot);
                 const message = err instanceof Error ? err.message : "Failed to delete folder";
                 toast.error(message);
                 return { ok: false, error: message };
               }
             } else if (materialExists) {
-              queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                if (!old) return old;
-                return old.filter((m) => m.id !== command.id);
-              });
+              queryClient.setQueryData<StudyMaterialDTO[]>(
+                ["study-materials", notebookId],
+                (old) => {
+                  if (!old) return old;
+                  return old.filter((m) => m.id !== command.id);
+                },
+              );
               try {
-                const { deleteStudyMaterial } = await import("@/shared/api/study-materials");
+                const { deleteStudyMaterial } = await import("@/shared/api");
                 await deleteStudyMaterial(command.id);
                 void refetchTree();
                 return { ok: true };
               } catch (err) {
-                if (materialSnapshot) queryClient.setQueryData(["study-materials", notebookId], materialSnapshot);
+                if (materialSnapshot)
+                  queryClient.setQueryData(["study-materials", notebookId], materialSnapshot);
                 const message = err instanceof Error ? err.message : "Failed to delete material";
                 toast.error(message);
                 return { ok: false, error: message };
@@ -208,13 +240,13 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
             } else {
               // Unknown — try both
               try {
-                const { deleteFolder } = await import("@/shared/api/folders");
+                const { deleteFolder } = await import("@/shared/api");
                 await deleteFolder(command.id);
                 void refetchTree();
                 return { ok: true };
               } catch {
                 try {
-                  const { deleteStudyMaterial } = await import("@/shared/api/study-materials");
+                  const { deleteStudyMaterial } = await import("@/shared/api");
                   await deleteStudyMaterial(command.id);
                   void refetchTree();
                   return { ok: true };
@@ -229,11 +261,14 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
           case "duplicateMaterial": {
             try {
               const result = await duplicateStudyMaterial(command.id);
-              queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                const list = old ?? [];
-                if (list.some((m) => m.id === result.id)) return list;
-                return [...list, result];
-              });
+              queryClient.setQueryData<StudyMaterialDTO[]>(
+                ["study-materials", notebookId],
+                (old) => {
+                  const list = old ?? [];
+                  if (list.some((m) => m.id === result.id)) return list;
+                  return [...list, result];
+                },
+              );
               void refetchTree();
               return { ok: true, newId: result.id };
             } catch (err) {
@@ -250,61 +285,93 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
             const materialSnapshot = getMaterialCache();
 
             if (folderExists) {
-              queryClient.setQueryData<FolderDTO[]>(["study-material-folders", notebookId], (old) => {
-                if (!old) return old;
-                return old.map((f) => (f.id === command.id ? { ...f, parentId: targetFolderId } : f));
-              });
+              queryClient.setQueryData<FolderDTO[]>(
+                ["study-material-folders", notebookId],
+                (old) => {
+                  if (!old) return old;
+                  return old.map((f) =>
+                    f.id === command.id ? { ...f, parentId: targetFolderId } : f,
+                  );
+                },
+              );
             } else if (materialExists) {
-              queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                if (!old) return old;
-                return old.map((m) => (m.id === command.id ? { ...m, folderId: targetFolderId } : m));
-              });
+              queryClient.setQueryData<StudyMaterialDTO[]>(
+                ["study-materials", notebookId],
+                (old) => {
+                  if (!old) return old;
+                  return old.map((m) =>
+                    m.id === command.id ? { ...m, folderId: targetFolderId } : m,
+                  );
+                },
+              );
             }
 
             try {
               if (folderExists) {
                 const updated = await updateFolder(command.id, { parentId: targetFolderId });
-                queryClient.setQueryData<FolderDTO[]>(["study-material-folders", notebookId], (old) => {
-                  if (!old) return [updated];
-                  const exists = old.some((f) => f.id === command.id);
-                  return exists ? old.map((f) => (f.id === command.id ? updated : f)) : [...old, updated];
-                });
+                queryClient.setQueryData<FolderDTO[]>(
+                  ["study-material-folders", notebookId],
+                  (old) => {
+                    if (!old) return [updated];
+                    const exists = old.some((f) => f.id === command.id);
+                    return exists
+                      ? old.map((f) => (f.id === command.id ? updated : f))
+                      : [...old, updated];
+                  },
+                );
                 void refetchTree();
                 return { ok: true };
               } else if (materialExists) {
                 const updated = await moveStudyMaterial(command.id, targetFolderId);
-                queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                  if (!old) return [updated];
-                  const exists = old.some((m) => m.id === command.id);
-                  return exists ? old.map((m) => (m.id === command.id ? updated : m)) : [...old, updated];
-                });
+                queryClient.setQueryData<StudyMaterialDTO[]>(
+                  ["study-materials", notebookId],
+                  (old) => {
+                    if (!old) return [updated];
+                    const exists = old.some((m) => m.id === command.id);
+                    return exists
+                      ? old.map((m) => (m.id === command.id ? updated : m))
+                      : [...old, updated];
+                  },
+                );
                 void refetchTree();
                 return { ok: true };
               } else {
                 // Unknown id — try folder then material
                 try {
                   const updated = await updateFolder(command.id, { parentId: targetFolderId });
-                  queryClient.setQueryData<FolderDTO[]>(["study-material-folders", notebookId], (old) => {
-                    if (!old) return [updated];
-                    const exists = old.some((f) => f.id === command.id);
-                    return exists ? old.map((f) => (f.id === command.id ? updated : f)) : [...old, updated];
-                  });
+                  queryClient.setQueryData<FolderDTO[]>(
+                    ["study-material-folders", notebookId],
+                    (old) => {
+                      if (!old) return [updated];
+                      const exists = old.some((f) => f.id === command.id);
+                      return exists
+                        ? old.map((f) => (f.id === command.id ? updated : f))
+                        : [...old, updated];
+                    },
+                  );
                   void refetchTree();
                   return { ok: true };
                 } catch {
                   const updated = await moveStudyMaterial(command.id, targetFolderId);
-                  queryClient.setQueryData<StudyMaterialDTO[]>(["study-materials", notebookId], (old) => {
-                    if (!old) return [updated];
-                    const exists = old.some((m) => m.id === command.id);
-                    return exists ? old.map((m) => (m.id === command.id ? updated : m)) : [...old, updated];
-                  });
+                  queryClient.setQueryData<StudyMaterialDTO[]>(
+                    ["study-materials", notebookId],
+                    (old) => {
+                      if (!old) return [updated];
+                      const exists = old.some((m) => m.id === command.id);
+                      return exists
+                        ? old.map((m) => (m.id === command.id ? updated : m))
+                        : [...old, updated];
+                    },
+                  );
                   void refetchTree();
                   return { ok: true };
                 }
               }
             } catch (err) {
-              if (folderSnapshot) queryClient.setQueryData(["study-material-folders", notebookId], folderSnapshot);
-              if (materialSnapshot) queryClient.setQueryData(["study-materials", notebookId], materialSnapshot);
+              if (folderSnapshot)
+                queryClient.setQueryData(["study-material-folders", notebookId], folderSnapshot);
+              if (materialSnapshot)
+                queryClient.setQueryData(["study-materials", notebookId], materialSnapshot);
               const message = err instanceof Error ? err.message : "Failed to move item";
               toast.error(message);
               return { ok: false, error: message };

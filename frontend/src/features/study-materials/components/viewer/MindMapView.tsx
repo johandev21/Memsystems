@@ -70,7 +70,8 @@ function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
     <div
       className={cn(
         "group relative min-w-[150px] max-w-[190px] sm:min-w-[190px] sm:max-w-[230px] rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200",
-        isRoot && "min-w-[170px] sm:min-w-[210px] rounded-full border-surface-border bg-surface-3 text-text-primary",
+        isRoot &&
+          "min-w-[170px] sm:min-w-[210px] rounded-full border-surface-border bg-surface-3 text-text-primary",
         data.selected && !isRoot && "bg-surface-3 border-surface-border",
         !data.selected && !isRoot && "hover:bg-surface-3 hover:border-surface-border",
       )}
@@ -116,6 +117,58 @@ function HighlightEdge(props: EdgeProps<Edge>) {
 
 const nodeTypes = { mindMap: MindMapNode };
 const edgeTypes = { highlight: HighlightEdge };
+
+function EmptyMindMap() {
+  return (
+    <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-surface-border-subtle bg-surface-2 text-sm text-text-tertiary">
+      This mind map has no connected nodes yet.
+    </div>
+  );
+}
+
+function MindMapControls({
+  onZoomIn,
+  onZoomOut,
+  onCenter,
+}: {
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onCenter: () => void;
+}) {
+  return (
+    <div className="absolute bottom-4 right-4 sm:bottom-auto sm:top-4 flex flex-row sm:flex-col gap-1.5 rounded-xl border border-surface-border bg-surface-2 p-1.5">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onZoomIn}
+        className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
+        aria-label="Zoom in"
+      >
+        <Plus className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onZoomOut}
+        className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
+        aria-label="Zoom out"
+      >
+        <Minus className="size-4" />
+      </Button>
+      <div className="mx-1 h-px bg-surface-border hidden sm:block" />
+      <div className="mx-1 w-px bg-surface-border sm:hidden" />
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onCenter}
+        className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
+        aria-label="Center selected node"
+      >
+        <Crosshair className="size-4" />
+      </Button>
+    </div>
+  );
+}
 
 function createTree(content: MindMapViewProps["content"]): {
   root: MapItem | null;
@@ -330,7 +383,7 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
     return () => window.clearTimeout(timeout);
   }, [fitView, graph.edges, graph.nodes, viewportFocus]);
 
-  const centerSelected = () => {
+  const handleCenterSelected = () => {
     const node = nodes.find((candidate) => candidate.id === selectedId);
     if (node) {
       setCenter(node.position.x + 100, node.position.y + 40, { zoom: 1.05, duration: 500 });
@@ -340,11 +393,7 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
   };
 
   if (!root) {
-    return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-surface-border-subtle bg-surface-2 text-sm text-text-tertiary">
-        This mind map has no connected nodes yet.
-      </div>
-    );
+    return <EmptyMindMap />;
   }
 
   return (
@@ -374,41 +423,15 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
         />
       </ReactFlow>
 
-      <div className="absolute bottom-4 right-4 sm:bottom-auto sm:top-4 flex flex-row sm:flex-col gap-1.5 rounded-xl border border-surface-border bg-surface-2 p-1.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => zoomIn({ duration: 300 })}
-          className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
-          aria-label="Zoom in"
-        >
-          <Plus className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => zoomOut({ duration: 300 })}
-          className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
-          aria-label="Zoom out"
-        >
-          <Minus className="size-4" />
-        </Button>
-        <div className="mx-1 h-px bg-surface-border hidden sm:block" />
-        <div className="mx-1 w-px bg-surface-border sm:hidden" />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={centerSelected}
-          className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3"
-          aria-label="Center selected node"
-        >
-          <Crosshair className="size-4" />
-        </Button>
-      </div>
+      <MindMapControls
+        onZoomIn={() => zoomIn({ duration: 300 })}
+        onZoomOut={() => zoomOut({ duration: 300 })}
+        onCenter={handleCenterSelected}
+      />
 
       <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-surface-border-subtle bg-surface-2 px-3 py-2 text-xs text-text-faint sm:flex">
-        <span className="size-1.5 rounded-full bg-surface-border-strong" /> Drag to pan · Scroll to zoom · Click a
-        node to explore
+        <span className="size-1.5 rounded-full bg-surface-border-strong" /> Drag to pan · Scroll to
+        zoom · Click a node to explore
       </div>
     </div>
   );

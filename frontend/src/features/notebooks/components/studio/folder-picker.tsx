@@ -11,7 +11,7 @@ import {
   createFolder,
   type FolderDTO,
   foldersQueryOptions,
-} from "@/shared/api/folders";
+} from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 
 export interface FolderPickerProps {

@@ -21,7 +21,11 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
   const isValidRootTarget = Boolean(activeData && controller.canMove(activeData.itemId, null));
 
   return (
-    <CardHeader data-slot="study-materials-tree-header" data-size={controller.size} className="p-0 !rounded-t-2xl overflow-hidden">
+    <CardHeader
+      data-slot="study-materials-tree-header"
+      data-size={controller.size}
+      className="p-0 !rounded-t-2xl overflow-hidden"
+    >
       <div
         ref={setNodeRef}
         data-slot="study-materials-tree-header-drop-target"
@@ -96,7 +100,11 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
               onClick={onPanelToggle}
               className="ml-1"
             >
-              {isPanelExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              {isPanelExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
             </Button>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { useState, useId, useEffect } from "react";
+import { useState, useId, useEffect, type KeyboardEvent } from "react";
 import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -9,6 +9,35 @@ export interface ClozeInteractiveProps {
   front: string;
   back: string;
   onAnswerChecked?: (isCorrect: boolean) => void;
+}
+
+function ClozeFeedback({
+  status,
+  expected,
+}: {
+  status: "idle" | "correct" | "incorrect";
+  expected: string;
+}) {
+  if (status === "correct") {
+    return (
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold text-success-foreground bg-success border border-success animate-in fade-in zoom-in-95 duration-150">
+        <CheckCircle2 className="size-4 shrink-0" /> Correct answer!
+      </div>
+    );
+  }
+
+  if (status !== "incorrect") return null;
+
+  return (
+    <div className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl text-xs bg-destructive border border-destructive text-destructive-foreground animate-in fade-in zoom-in-95 duration-150 w-full max-w-sm mx-auto">
+      <div className="flex items-center gap-1.5 font-semibold text-destructive">
+        <XCircle className="size-4 shrink-0" /> Incorrect
+      </div>
+      <p className="text-destructive-foreground text-xs font-medium">
+        Correct Answer: <span className="font-bold text-success">{expected}</span>
+      </p>
+    </div>
+  );
 }
 
 export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteractiveProps) {
@@ -24,7 +53,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
 
   const parsed = parseClozeCard(front, back);
 
-  const handleCheck = () => {
+  const handleCheckAnswer = () => {
     const userClean = inputVal.trim().toLowerCase();
     const expectedClean = parsed.expected.trim().toLowerCase();
 
@@ -33,6 +62,18 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
     const isMatch = userClean === expectedClean || expectedClean.includes(userClean);
     setStatus(isMatch ? "correct" : "incorrect");
     onAnswerChecked?.(isMatch);
+  };
+
+  const handleInputChange = (value: string) => {
+    setInputVal(value);
+    if (status !== "idle") setStatus("idle");
+  };
+
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleCheckAnswer();
+    }
   };
 
   return (
@@ -52,16 +93,8 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
           id={inputId}
           type="text"
           value={inputVal}
-          onChange={(e) => {
-            setInputVal(e.target.value);
-            if (status !== "idle") setStatus("idle");
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleCheck();
-            }
-          }}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onKeyDown={handleInputKeyDown}
           placeholder="Type missing word..."
           className={cn(
             "h-10 text-sm rounded-2xl text-center font-medium transition-all shadow-2xs border-surface-border-strong focus-visible:ring-surface-border-strong",
@@ -74,7 +107,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
         <Button
           type="button"
           size="sm"
-          onClick={handleCheck}
+          onClick={handleCheckAnswer}
           disabled={!inputVal.trim()}
           className="h-10 px-4 text-xs font-semibold rounded-2xl gap-1.5 cursor-pointer shrink-0 transition-all shadow-xs"
         >
@@ -83,21 +116,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
       </div>
 
       {/* Visual Feedback Banner */}
-      {status === "correct" && (
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold text-success-foreground bg-success border border-success animate-in fade-in zoom-in-95 duration-150">
-          <CheckCircle2 className="size-4 shrink-0" /> Correct answer!
-        </div>
-      )}
-      {status === "incorrect" && (
-        <div className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl text-xs bg-destructive border border-destructive text-destructive-foreground animate-in fade-in zoom-in-95 duration-150 w-full max-w-sm mx-auto">
-          <div className="flex items-center gap-1.5 font-semibold text-destructive">
-            <XCircle className="size-4 shrink-0" /> Incorrect
-          </div>
-          <p className="text-destructive-foreground text-xs font-medium">
-            Correct Answer: <span className="font-bold text-success">{parsed.expected}</span>
-          </p>
-        </div>
-      )}
+      <ClozeFeedback status={status} expected={parsed.expected} />
     </div>
   );
 }

@@ -75,7 +75,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <PaletteProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange storageKey="memsystems-scheme">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+          storageKey="memsystems-scheme"
+        >
           <ThemeKeyboardShortcut />
           {children}
           <Toaster position="top-right" />

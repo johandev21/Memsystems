@@ -6,3 +6,4 @@ export * from "./study-materials";
 export * from "./folders";
 export * from "./generation";
 export * from "./models";
+export * from "./web-search";

@@ -75,16 +75,26 @@ function ThemeCard({ label, description, preview, selected, onSelect }: ThemeCar
       <ThemePreviewIcon {...preview} />
       <span className="flex items-center justify-between gap-2 px-0.5">
         <span className="min-w-0">
-          <span className={`block truncate text-sm font-medium ${selected ? "text-foreground" : "text-foreground"}`}>{label}</span>
+          <span
+            className={`block truncate text-sm font-medium ${selected ? "text-foreground" : "text-foreground"}`}
+          >
+            {label}
+          </span>
           <span className="block truncate text-xs text-muted-foreground">{description}</span>
         </span>
         <span
           className={`ml-auto flex size-6 shrink-0 items-center justify-center rounded-full border text-[10px] transition-colors ${
-            selected ? "border-primary bg-primary text-primary-foreground" : "border-transparent bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-transparent bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
           }`}
           aria-hidden="true"
         >
-          {selected ? <Check className="size-3.5" /> : <span className="size-1.5 rounded-full bg-muted-foreground/40" />}
+          {selected ? (
+            <Check className="size-3.5" />
+          ) : (
+            <span className="size-1.5 rounded-full bg-muted-foreground/40" />
+          )}
         </span>
       </span>
     </button>
@@ -101,9 +111,15 @@ export function ThemeGrid() {
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
         <h3 className="text-sm font-semibold tracking-[-0.01em]">Themes</h3>
-        <span className="text-xs text-muted-foreground">6 palettes · each has light &amp; dark</span>
+        <span className="text-xs text-muted-foreground">
+          6 palettes · each has light &amp; dark
+        </span>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Theme">
+      <div
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        role="radiogroup"
+        aria-label="Theme"
+      >
         {list.map((t) => (
           <ThemeCard
             key={t.id}

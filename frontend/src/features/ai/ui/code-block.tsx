@@ -10,10 +10,15 @@ import {
   useRef,
   useState,
 } from "react";
-import type { BundledLanguage, BundledTheme, HighlighterGeneric, ThemedToken } from "shiki";
-import { createHighlighter } from "shiki";
+import type { BundledLanguage, ThemedToken } from "shiki";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import {
+  addKeysToTokens,
+  createRawTokens,
+  highlightCode,
+  type TokenizedCode,
+} from "../lib/code-highlighting";
 
 const isItalic = (fontStyle: number | undefined) => fontStyle && fontStyle & 1;
 const isBold = (fontStyle: number | undefined) => fontStyle && fontStyle & 2;
@@ -27,15 +32,6 @@ interface KeyedLine {
   tokens: KeyedToken[];
   key: string;
 }
-
-const addKeysToTokens = (lines: ThemedToken[][]): KeyedLine[] =>
-  lines.map((line, lineIdx) => ({
-    key: `line-${lineIdx}`,
-    tokens: line.map((token, tokenIdx) => ({
-      key: `line-${lineIdx}-${tokenIdx}`,
-      token,
-    })),
-  }));
 
 const TokenSpan = ({ token }: { token: ThemedToken }) => (
   <span
@@ -88,12 +84,6 @@ type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   showLineNumbers?: boolean;
 };
 
-interface TokenizedCode {
-  tokens: ThemedToken[][];
-  fg: string;
-  bg: string;
-}
-
 interface CodeBlockContextType {
   code: string;
 }
@@ -102,102 +92,7 @@ const CodeBlockContext = createContext<CodeBlockContextType>({
   code: "",
 });
 
-let highlighterPromise: Promise<HighlighterGeneric<BundledLanguage, BundledTheme>> | null = null;
-
-const tokensCache = new Map<string, TokenizedCode>();
-const subscribers = new Map<string, Set<(result: TokenizedCode) => void>>();
-
-const getTokensCacheKey = (code: string, language: BundledLanguage) => {
-  const start = code.slice(0, 100);
-  const end = code.length > 100 ? code.slice(-100) : "";
-  return `${language}:${code.length}:${start}:${end}`;
-};
-
-const getHighlighter = (): Promise<HighlighterGeneric<BundledLanguage, BundledTheme>> => {
-  if (highlighterPromise) return highlighterPromise;
-
-  highlighterPromise = createHighlighter({
-    langs: ["text"],
-    themes: ["github-light", "github-dark"],
-  });
-
-  return highlighterPromise;
-};
-
-const createRawTokens = (code: string): TokenizedCode => ({
-  bg: "transparent",
-  fg: "inherit",
-  tokens: code.split("\n").map((line) =>
-    line === ""
-      ? []
-      : [
-          {
-            color: "inherit",
-            content: line,
-          } as ThemedToken,
-        ],
-  ),
-});
-
-export const highlightCode = (
-  code: string,
-  language: BundledLanguage,
-  callback?: (result: TokenizedCode) => void,
-): TokenizedCode | null => {
-  const tokensCacheKey = getTokensCacheKey(code, language);
-
-  const cached = tokensCache.get(tokensCacheKey);
-  if (cached) return cached;
-
-  if (callback) {
-    if (!subscribers.has(tokensCacheKey)) {
-      subscribers.set(tokensCacheKey, new Set());
-    }
-    subscribers.get(tokensCacheKey)?.add(callback);
-  }
-
-  getHighlighter()
-    .then(async (highlighter) => {
-      let langToUse: BundledLanguage | "text" = "text";
-
-      try {
-        await highlighter.loadLanguage(language);
-        langToUse = language;
-      } catch {
-        // Unknown language identifiers fall back to plain text.
-      }
-
-      const result = highlighter.codeToTokens(code, {
-        lang: langToUse,
-        themes: {
-          dark: "github-dark",
-          light: "github-light",
-        },
-      });
-
-      const tokenized: TokenizedCode = {
-        bg: result.bg ?? "transparent",
-        fg: result.fg ?? "inherit",
-        tokens: result.tokens,
-      };
-
-      tokensCache.set(tokensCacheKey, tokenized);
-
-      const subs = subscribers.get(tokensCacheKey);
-      if (subs) {
-        for (const sub of subs) {
-          sub(tokenized);
-        }
-        subscribers.delete(tokensCacheKey);
-      }
-    })
-    .catch((error) => {
-      console.error("Failed to highlight code:", error);
-      subscribers.delete(tokensCacheKey);
-    });
-
-  return null;
-};
+export { highlightCode };
 
 const CodeBlockBody = memo(
   ({

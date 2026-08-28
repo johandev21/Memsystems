@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { StudyMaterialKind } from "@/features/study-materials";
-import { modelsQueryOptions } from "@/shared/api/models";
+import { modelsQueryOptions } from "@/shared/api";
 
 export function useStudioDialogs() {
   const [generateKind, setGenerateKind] = useState<StudyMaterialKind | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [studyMaterialsDialogOpen, setStudyMaterialsDialogOpen] = useState(false);
   const [selectedStudyMaterialId, setSelectedStudyMaterialId] = useState<string | null>(null);
 
   const models = useQuery(modelsQueryOptions);
@@ -20,18 +19,15 @@ export function useStudioDialogs() {
     setDialogOpen(false);
     setGenerateKind(null);
     setSelectedStudyMaterialId(materialId);
-    setStudyMaterialsDialogOpen(false);
   };
 
   return {
     generateKind,
     dialogOpen,
-    studyMaterialsDialogOpen,
     selectedStudyMaterialId,
     models: models.data ?? [],
     handleGenerate,
     setDialogOpen,
-    setStudyMaterialsDialogOpen,
     setSelectedStudyMaterialId,
     handleGenerateComplete,
   };

@@ -24,6 +24,11 @@ export function ClearHistoryDialog({
   onConfirm,
   isClearing,
 }: ClearHistoryDialogProps) {
+  const handleConfirmedClear = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    onConfirm();
+  };
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent size="sm">
@@ -42,10 +47,7 @@ export function ClearHistoryDialog({
           </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            onClick={(event) => {
-              event.preventDefault();
-              onConfirm();
-            }}
+            onClick={handleConfirmedClear}
             disabled={isClearing}
             className="cursor-pointer"
           >

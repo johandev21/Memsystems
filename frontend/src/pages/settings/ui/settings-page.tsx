@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Anthropic, Deepseek, GoogleGemini, Kimi, Openai } from "@thesvg/react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   Check,
@@ -30,6 +30,10 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Button } from "@/shared/ui/button";
 import { fetchApi } from "@/shared/lib/utils";
+
+export function SettingsPage() {
+  return <SettingsContent />;
+}
 
 const MASKED_KEY = "••••••••••••••••••••••••••••••••";
 
@@ -130,7 +134,7 @@ function StatusBadge({
   );
 }
 
-function ProviderRow({ provider }: { provider: Provider }) {
+function ProviderKeyRow({ provider }: { provider: Provider }) {
   const { data: connection, isPending } = useConnectionStatus();
   const queryClient = useQueryClient();
   const providerStatus = connection?.providers?.[provider.id];
@@ -380,28 +384,7 @@ function ProviderRow({ provider }: { provider: Provider }) {
   );
 }
 
-export function SettingsPage() {
-  const { isPending: _isPending } = useConnectionStatus();
-  const queryClient = useQueryClient();
-  const [_testing, _setTesting] = useState(false);
-
-  const _handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["connection-status"] });
-    queryClient.invalidateQueries({ queryKey: ["models"] });
-  };
-
-  const _handleTestAll = async () => {
-    _setTesting(true);
-    await queryClient.invalidateQueries({ queryKey: ["connection-status"] });
-    _setTesting(false);
-    toast.success("Connection checks complete");
-  };
-
-  void _isPending;
-  void _testing;
-  void _handleRefresh;
-  void _handleTestAll;
-
+function SettingsContent() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
@@ -434,7 +417,7 @@ export function SettingsPage() {
           </div>
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_8px_30px_rgb(15_23_42/0.035)] divide-y divide-border/60">
             {providerConfig.map((provider) => (
-              <ProviderRow key={provider.id} provider={provider} />
+              <ProviderKeyRow key={provider.id} provider={provider} />
             ))}
           </div>
         </section>

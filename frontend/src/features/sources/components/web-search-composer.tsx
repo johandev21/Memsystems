@@ -3,13 +3,13 @@ import { AlertTriangle, Check, ExternalLink, Loader2, Send, X } from "lucide-rea
 import { useMemo, useState } from "react";
 import { ModelSelectorLogo } from "@/features/ai";
 import { useModelPersistence } from "@/features/notebooks";
-import { modelsQueryOptions } from "@/shared/api/models";
+import { modelsQueryOptions, type WebSearchImportResultItem } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { cn } from "@/shared/lib/utils";
 import { useWebSearch } from "../model/use-web-search";
-import type { WebSearchImportResultItem } from "@/shared/api/web-search";
+import { useWebSearchModel } from "../model/use-web-search-model";
 
 function getHostname(url: string): string {
   try {
@@ -24,23 +24,14 @@ export function WebSearchComposer({ notebookId }: { notebookId: string }) {
   const { model: persistedModel } = useModelPersistence(notebookId);
   const webSearch = useWebSearch(notebookId);
   const [expanded, setExpanded] = useState(false);
-  const [chosenModel, setChosenModel] = useState<string | null>(null);
-
-  const capableModels = useMemo(() => (models ?? []).filter((m) => m.supportsWebSearch), [models]);
-
-  const defaultModel = useMemo(() => {
-    if (capableModels.some((m) => m.id === persistedModel)) {
-      return persistedModel as string;
-    }
-    return capableModels[0]?.id ?? null;
-  }, [capableModels, persistedModel]);
-
-  const activeModel = chosenModel ?? defaultModel;
-  const activeProvider = activeModel?.split("/")[0] || "openai";
-
-  const autoSwitched = persistedModel && defaultModel && persistedModel !== defaultModel;
-
-  const hasCapableModel = capableModels.length > 0;
+  const {
+    capableModels,
+    activeModel,
+    activeProvider,
+    autoSwitched,
+    hasCapableModel,
+    setChosenModel,
+  } = useWebSearchModel(models, persistedModel);
 
   const handleSubmit = () => {
     if (!activeModel) return;
@@ -307,11 +298,7 @@ export function WebSearchComposer({ notebookId }: { notebookId: string }) {
                 onClick={() => activeModel && webSearch.importSelected(activeModel)}
                 disabled={selectedCount === 0 || webSearch.importing}
               >
-                {webSearch.importing ? (
-                  <Loader2 className="size-3 animate-spin" />
-                ) : (
-                  "Import"
-                )}
+                {webSearch.importing ? <Loader2 className="size-3 animate-spin" /> : "Import"}
               </Button>
             </div>
           </div>

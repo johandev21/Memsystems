@@ -5,7 +5,7 @@ import { Textarea } from "@/shared/ui/textarea";
 import { FolderPicker, SourceMultiSelect } from "@/features/notebooks";
 import { KIND_LABELS } from "@/features/study-materials";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import { QuizModelPopover } from "./QuizBriefForm";
+import { GenerationModelPopover } from "./generation-model-popover";
 
 export function StandardBriefForm({
   notebookId,
@@ -65,7 +65,7 @@ export function StandardBriefForm({
 
       <div className="space-y-1.5">
         <Label className="text-xs font-medium text-text-tertiary">AI Model</Label>
-        <QuizModelPopover
+        <GenerationModelPopover
           models={models}
           selectedModel={value.model}
           onModelChange={(model) => update({ model })}

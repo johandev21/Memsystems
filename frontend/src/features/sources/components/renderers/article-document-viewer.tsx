@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import { cn } from "@/shared/lib/utils";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
@@ -12,6 +12,92 @@ interface ArticleBlock {
   level?: number;
   text: string;
   id?: string;
+}
+
+export function ArticleDocumentViewer({ content, scrollElement }: ArticleDocumentViewerProps) {
+  const blocks = useMemo(() => parseArticleBlocks(content || ""), [content]);
+
+  if (blocks.length === 0) {
+    return <EmptyArticleState />;
+  }
+
+  if (blocks.length > 20 && scrollElement !== undefined) {
+    return <VirtualizedArticleDocument blocks={blocks} scrollElement={scrollElement} />;
+  }
+
+  return <StaticArticleDocument blocks={blocks} />;
+}
+
+function EmptyArticleState() {
+  return (
+    <div className="py-12 text-center text-xs text-muted-foreground">
+      No article content available.
+    </div>
+  );
+}
+
+function VirtualizedArticleDocument({
+  blocks,
+  scrollElement,
+}: {
+  blocks: ArticleBlock[];
+  scrollElement: HTMLDivElement | null;
+}) {
+  return (
+    <ArticleDocumentShell>
+      <VirtualizedDocumentContainer
+        items={blocks}
+        scrollElement={scrollElement}
+        estimateSize={() => 60}
+        overscan={5}
+        getItemKey={(block, index) => block.id || `block-${index}`}
+        renderItem={(block) => <ArticleBlockView block={block} />}
+      />
+    </ArticleDocumentShell>
+  );
+}
+
+function StaticArticleDocument({ blocks }: { blocks: ArticleBlock[] }) {
+  return (
+    <ArticleDocumentShell>
+      {blocks.map((block, index) => (
+        <ArticleBlockView key={block.id || index} block={block} />
+      ))}
+    </ArticleDocumentShell>
+  );
+}
+
+function ArticleDocumentShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed font-sans">
+      {children}
+    </div>
+  );
+}
+
+function ArticleBlockView({ block }: { block: ArticleBlock }) {
+  if (block.type === "paragraph") {
+    return <p className="text-foreground/90 leading-relaxed font-sans my-2.5">{block.text}</p>;
+  }
+
+  const HeadingTag = getHeadingTag(block.level);
+  return (
+    <HeadingTag
+      id={block.id}
+      className={cn(
+        "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3",
+        block.level === 1 && "text-xl",
+        block.level === 2 && "text-lg",
+        block.level === 3 && "text-base",
+      )}
+    >
+      {block.text}
+    </HeadingTag>
+  );
+}
+
+function getHeadingTag(level?: number) {
+  return level === 1 ? "h1" : level === 2 ? "h2" : "h3";
 }
 
 function parseArticleBlocks(rawText: string): ArticleBlock[] {
@@ -81,82 +167,4 @@ function parseArticleBlocks(rawText: string): ArticleBlock[] {
 
   flushParagraph();
   return blocks;
-}
-
-export function ArticleDocumentViewer({ content, scrollElement }: ArticleDocumentViewerProps) {
-  const blocks = useMemo(() => parseArticleBlocks(content || ""), [content]);
-
-  if (blocks.length === 0) {
-    return (
-      <div className="py-12 text-center text-xs text-muted-foreground">
-        No article content available.
-      </div>
-    );
-  }
-
-  if (blocks.length > 20 && scrollElement !== undefined) {
-    return (
-      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed font-sans">
-        <VirtualizedDocumentContainer
-          items={blocks}
-          scrollElement={scrollElement}
-          estimateSize={() => 60}
-          overscan={5}
-          getItemKey={(block, idx) => block.id || `block-${idx}`}
-          renderItem={(block) => {
-            if (block.type === "heading") {
-              const HeadingTag = block.level === 1 ? "h1" : block.level === 2 ? "h2" : "h3";
-              return (
-                <HeadingTag
-                  id={block.id}
-                  className={cn(
-                    "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3",
-                    block.level === 1 && "text-xl",
-                    block.level === 2 && "text-lg",
-                    block.level === 3 && "text-base",
-                  )}
-                >
-                  {block.text}
-                </HeadingTag>
-              );
-            }
-
-            return (
-              <p className="text-foreground/90 leading-relaxed font-sans my-2.5">{block.text}</p>
-            );
-          }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <article className="prose dark:prose-invert max-w-none text-sm leading-relaxed font-sans">
-      {blocks.map((block, idx) => {
-        if (block.type === "heading") {
-          const HeadingTag = block.level === 1 ? "h1" : block.level === 2 ? "h2" : "h3";
-          return (
-            <HeadingTag
-              key={block.id || idx}
-              id={block.id}
-              className={cn(
-                "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3",
-                block.level === 1 && "text-xl",
-                block.level === 2 && "text-lg",
-                block.level === 3 && "text-base",
-              )}
-            >
-              {block.text}
-            </HeadingTag>
-          );
-        }
-
-        return (
-          <p key={idx} className="text-foreground/90 leading-relaxed font-sans my-2.5">
-            {block.text}
-          </p>
-        );
-      })}
-    </article>
-  );
 }

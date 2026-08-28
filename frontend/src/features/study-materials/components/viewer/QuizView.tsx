@@ -51,6 +51,15 @@ export interface QuizViewProps {
 
 type ViewMode = "active" | "summary" | "review";
 
+function EmptyQuizState() {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 text-center text-text-tertiary">
+      <AlertCircle className="size-8 mb-2 text-warning" />
+      <p>No quiz questions available.</p>
+    </div>
+  );
+}
+
 // -----------------------------------------------------------------------------
 // 2. Helper Functions
 // -----------------------------------------------------------------------------
@@ -150,9 +159,7 @@ function ScoreDonut({
             <span className="text-xl font-extrabold text-text-primary leading-none">
               {correctCount}/{totalQuestions}
             </span>
-            <span className="text-xs font-semibold text-success mt-1">
-              {percent}%
-            </span>
+            <span className="text-xs font-semibold text-success mt-1">{percent}%</span>
           </div>
         </div>
 
@@ -160,9 +167,7 @@ function ScoreDonut({
           <div className="flex items-center gap-3">
             <span className="size-2.5 rounded-full bg-success shrink-0" />
             <span className="text-text-tertiary font-medium">Right</span>
-            <span className="font-bold text-success ml-4">
-              {correctCount}
-            </span>
+            <span className="font-bold text-success ml-4">{correctCount}</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="size-2.5 rounded-full bg-destructive shrink-0" />
@@ -393,9 +398,7 @@ function QuizQuestionStepper({
                 <span
                   className={cn(
                     "flex size-8 shrink-0 items-center justify-center rounded-full border border-surface-border-strong text-[16px] font-semibold transition-all",
-                    isCurrentSelected
-                      ? "text-text-primary"
-                      : "text-text-secondary",
+                    isCurrentSelected ? "text-text-primary" : "text-text-secondary",
                   )}
                 >
                   {String.fromCharCode(65 + oi)}
@@ -406,8 +409,7 @@ function QuizQuestionStepper({
 
               if (isChecked) {
                 if (isCurrentCorrect) {
-                  optionStyle =
-                    "border-success bg-success/10 text-success font-medium";
+                  optionStyle = "border-success bg-success/10 text-success font-medium";
                   explanationStyle = "text-success";
                   badge = (
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-success bg-success/10 text-success">
@@ -420,8 +422,7 @@ function QuizQuestionStepper({
                     </span>
                   );
                 } else if (isCurrentSelected && !isCorrect) {
-                  optionStyle =
-                    "border-destructive bg-destructive/10 text-destructive font-medium";
+                  optionStyle = "border-destructive bg-destructive/10 text-destructive font-medium";
                   explanationStyle = "text-destructive";
                   badge = (
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/10 text-destructive">
@@ -695,12 +696,7 @@ export function QuizView({ content }: QuizViewProps) {
   ]);
 
   if (totalQuestions === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center text-text-tertiary">
-        <AlertCircle className="size-8 mb-2 text-warning" />
-        <p>No quiz questions available.</p>
-      </div>
-    );
+    return <EmptyQuizState />;
   }
 
   return (

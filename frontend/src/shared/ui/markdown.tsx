@@ -20,10 +20,7 @@ type RemarkPlugins = NonNullable<ComponentProps<typeof ReactMarkdown>["remarkPlu
 type RehypePlugins = NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlugins"]>;
 
 const defaultRemarkPlugins: RemarkPlugins = [remarkGfm, remarkMath];
-const defaultRehypePlugins: RehypePlugins = [
-  [rehypeSanitize, markdownSanitizeSchema],
-  rehypeKatex,
-];
+const defaultRehypePlugins: RehypePlugins = [[rehypeSanitize, markdownSanitizeSchema], rehypeKatex];
 
 export type MarkdownRendererProps = Omit<
   ComponentProps<typeof ReactMarkdown>,

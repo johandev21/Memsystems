@@ -54,23 +54,7 @@ export function DesktopLayout({
   const isReviewingStudyMaterial = Boolean(dialogs.selectedStudyMaterialId);
   const panelGroupRef = useRef<HTMLDivElement>(null);
   const panelGroupApiRef = useRef<GroupImperativeHandle>(null);
-  const [panelGroupWidth, setPanelGroupWidth] = useState(0);
-  const responsiveChatMinSize = `${Math.min(
-    CHAT_PANEL_MAX_MIN_SIZE,
-    Math.max(CHAT_PANEL_MIN_SIZE, Math.round(panelGroupWidth * CHAT_PANEL_MIN_WIDTH_RATIO)),
-  )}px`;
-
-  useEffect(() => {
-    const panelGroup = panelGroupRef.current;
-    if (!panelGroup) return;
-
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setPanelGroupWidth(Math.round(entry.contentRect.width));
-    });
-
-    observer.observe(panelGroup);
-    return () => observer.disconnect();
-  }, []);
+  const responsiveChatMinSize = useResponsiveChatMinimum(panelGroupRef);
 
   const exitStudyMaterialReview = () => {
     dialogs.setSelectedStudyMaterialId(null);
@@ -159,11 +143,7 @@ export function DesktopLayout({
             )}
           </div>
         </ResizablePanel>
-        <ResizableHandle
-          disabled={isReviewingStudyMaterial}
-          withHandle
-          className="w-2.5 bg-transparent hover:bg-border/20 active:bg-border/40 transition-colors my-[48px] rounded-xl"
-        />
+        <WorkspaceResizeHandle disabled={isReviewingStudyMaterial} />
         <ResizablePanel
           id="chat"
           minSize={isReviewingStudyMaterial ? `${CHAT_PANEL_MIN_SIZE}px` : responsiveChatMinSize}
@@ -178,11 +158,7 @@ export function DesktopLayout({
             </div>
           </div>
         </ResizablePanel>
-        <ResizableHandle
-          disabled={isReviewingStudyMaterial}
-          withHandle
-          className="w-2.5 bg-transparent hover:bg-border/20 active:bg-border/40 transition-colors my-[48px] rounded-xl"
-        />
+        <WorkspaceResizeHandle disabled={isReviewingStudyMaterial} />
         <ResizablePanel
           id="studio"
           collapsible
@@ -228,9 +204,6 @@ export function DesktopLayout({
                   <div className="p-1.5 pt-0">
                     <StudyMaterialsPanel
                       notebookId={notebookId}
-                      open={dialogs.studyMaterialsDialogOpen}
-                      onOpenChange={dialogs.setStudyMaterialsDialogOpen}
-                      selectedMaterialId={dialogs.selectedStudyMaterialId}
                       onSelectMaterial={dialogs.setSelectedStudyMaterialId}
                     />
                   </div>
@@ -251,5 +224,34 @@ export function DesktopLayout({
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
+  );
+}
+
+function useResponsiveChatMinimum(panelGroupRef: RefObject<HTMLDivElement | null>) {
+  const [panelGroupWidth, setPanelGroupWidth] = useState(0);
+
+  useEffect(() => {
+    const panelGroup = panelGroupRef.current;
+    if (!panelGroup) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setPanelGroupWidth(Math.round(entry.contentRect.width));
+    });
+    observer.observe(panelGroup);
+    return () => observer.disconnect();
+  }, [panelGroupRef]);
+
+  return `${Math.min(
+    CHAT_PANEL_MAX_MIN_SIZE,
+    Math.max(CHAT_PANEL_MIN_SIZE, Math.round(panelGroupWidth * CHAT_PANEL_MIN_WIDTH_RATIO)),
+  )}px`;
+}
+
+function WorkspaceResizeHandle({ disabled }: { disabled: boolean }) {
+  return (
+    <ResizableHandle
+      disabled={disabled}
+      withHandle
+      className="w-2.5 bg-transparent hover:bg-border/20 active:bg-border/40 transition-colors my-[48px] rounded-xl"
+    />
   );
 }

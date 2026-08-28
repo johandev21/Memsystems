@@ -19,7 +19,9 @@ function makeFolder(overrides: Partial<FolderDTO> & Pick<FolderDTO, "id" | "name
   };
 }
 
-function makeMaterial(overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">): StudyMaterialDTO {
+function makeMaterial(
+  overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">,
+): StudyMaterialDTO {
   return {
     notebookId,
     kind: "quiz",
@@ -200,7 +202,10 @@ describe("StudyMaterialsTreeContainer — query composition & view states", () =
   });
 
   it("does not leak expansion between notebooks and prunes stale", async () => {
-    const foldersA = [makeFolder({ id: "f-a1", name: "A1" }), makeFolder({ id: "f-a2", name: "A2" })];
+    const foldersA = [
+      makeFolder({ id: "f-a1", name: "A1" }),
+      makeFolder({ id: "f-a2", name: "A2" }),
+    ];
     const foldersB = [makeFolder({ id: "f-b1", name: "B1" })];
     // Persist expansion for notebook A: only f-a1 expanded
     localStorage.setItem(`study-materials-tree:expanded:${notebookId}`, JSON.stringify(["f-a1"]));
@@ -217,15 +222,19 @@ describe("StudyMaterialsTreeContainer — query composition & view states", () =
     );
     await screen.findByRole("tree", { name: "Study materials" });
     // Should have pruned if any stale? Here no stale, should retain f-a1.
-    expect(JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!)).toContain("f-a1");
+    expect(
+      JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!),
+    ).toContain("f-a1");
     unmount();
 
     // Render B should not contain A's expansion
     vi.restoreAllMocks();
     const mockB = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url.includes(`/api/notebooks/${nb2}/folders`)) return new Response(JSON.stringify(foldersB), { status: 200 });
-      if (url.includes(`/api/notebooks/${nb2}/study-materials`)) return new Response(JSON.stringify([]), { status: 200 });
+      if (url.includes(`/api/notebooks/${nb2}/folders`))
+        return new Response(JSON.stringify(foldersB), { status: 200 });
+      if (url.includes(`/api/notebooks/${nb2}/study-materials`))
+        return new Response(JSON.stringify([]), { status: 200 });
       return new Response(JSON.stringify([]), { status: 200 });
     });
     vi.spyOn(globalThis, "fetch").mockImplementation(mockB as never);
@@ -236,8 +245,12 @@ describe("StudyMaterialsTreeContainer — query composition & view states", () =
       </QueryClientProvider>,
     );
     await screen.findByRole("tree", { name: "Study materials" });
-    expect(JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${nb2}`)!)).toContain("f-b1");
-    expect(JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!)).not.toContain("f-b1");
+    expect(JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${nb2}`)!)).toContain(
+      "f-b1",
+    );
+    expect(
+      JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!),
+    ).not.toContain("f-b1");
   });
 
   it("expands newly encountered top-level folders by default", async () => {
@@ -251,16 +264,23 @@ describe("StudyMaterialsTreeContainer — query composition & view states", () =
     );
     await screen.findByRole("tree", { name: "Study materials" });
     // Initially, f1 should be expanded (top-level default)
-    expect(JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!)).toContain("f1");
+    expect(
+      JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!),
+    ).toContain("f1");
     unmount();
 
     // Add new top-level folder f2
-    const newFolders = [...initialFolders, makeFolder({ id: "f2", name: "Root2", createdAt: "2026-08-11T09:05:00.000Z" })];
+    const newFolders = [
+      ...initialFolders,
+      makeFolder({ id: "f2", name: "Root2", createdAt: "2026-08-11T09:05:00.000Z" }),
+    ];
     vi.restoreAllMocks();
     const mock2 = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url.includes("/folders")) return new Response(JSON.stringify(newFolders), { status: 200 });
-      if (url.includes("/study-materials")) return new Response(JSON.stringify([]), { status: 200 });
+      if (url.includes("/folders"))
+        return new Response(JSON.stringify(newFolders), { status: 200 });
+      if (url.includes("/study-materials"))
+        return new Response(JSON.stringify([]), { status: 200 });
       return new Response(JSON.stringify([]), { status: 200 });
     });
     vi.spyOn(globalThis, "fetch").mockImplementation(mock2 as never);
@@ -271,7 +291,9 @@ describe("StudyMaterialsTreeContainer — query composition & view states", () =
       </QueryClientProvider>,
     );
     await screen.findByRole("tree", { name: "Study materials" });
-    const expanded = JSON.parse(localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!);
+    const expanded = JSON.parse(
+      localStorage.getItem(`study-materials-tree:expanded:${notebookId}`)!,
+    );
     expect(expanded).toContain("f1");
     expect(expanded).toContain("f2");
   });
@@ -288,7 +310,9 @@ describe("StudyMaterialsTreeContainer — query composition & view states", () =
       </QueryClientProvider>,
     );
     const tree = await screen.findByRole("tree", { name: "Study materials" });
-    const materialRow = within(tree).getByText("Epistemology").closest('[role="treeitem"]') as HTMLElement;
+    const materialRow = within(tree)
+      .getByText("Epistemology")
+      .closest('[role="treeitem"]') as HTMLElement;
     // pointerDown should not activate
     // We simulate pointer down via fireEvent
     const { fireEvent } = await import("@testing-library/react");

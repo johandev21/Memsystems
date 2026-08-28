@@ -1,11 +1,12 @@
 import { ImageIcon, Move, Trash2, Upload } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { Button } from "@/shared/ui/button";
 import { IconPicker } from "@/shared/ui/icon-picker";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
 import { cn } from "@/shared/lib/utils";
+import { useBannerFocalPointDrag } from "../../model/use-banner-focal-point-drag";
 
 export interface NotebookCardPreviewProps {
   title: string;
@@ -38,17 +39,6 @@ export function NotebookCardPreview({
   onRemoveBanner,
   className,
 }: NotebookCardPreviewProps) {
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-  const bannerContainerRef = useRef<HTMLDivElement>(null);
-
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{
-    mouseX: number;
-    mouseY: number;
-    initialX: number;
-    initialY: number;
-  } | null>(null);
-
   const formattedDate = useMemo(() => {
     const date = createdAt ? new Date(createdAt) : new Date();
     return date.toLocaleDateString("en-US", {
@@ -58,34 +48,12 @@ export function NotebookCardPreview({
     });
   }, [createdAt]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!bannerPreviewUrl) return;
-    setIsDragging(true);
-    dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      initialX: focalPoint.x,
-      initialY: focalPoint.y,
-    };
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !dragStartRef.current || !bannerContainerRef.current) return;
-    const rect = bannerContainerRef.current.getBoundingClientRect();
-
-    const deltaX = (e.clientX - dragStartRef.current.mouseX) / rect.width;
-    const deltaY = (e.clientY - dragStartRef.current.mouseY) / rect.height;
-
-    const newX = Math.max(0, Math.min(1, dragStartRef.current.initialX - deltaX));
-    const newY = Math.max(0, Math.min(1, dragStartRef.current.initialY - deltaY));
-
-    setFocalPoint({ x: newX, y: newY });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    dragStartRef.current = null;
-  };
+  const focalPointDrag = useBannerFocalPointDrag({
+    enabled: !!bannerPreviewUrl,
+    focalPoint,
+    onChange: setFocalPoint,
+  });
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   return (
     <div
@@ -95,14 +63,18 @@ export function NotebookCardPreview({
       )}
     >
       <div
-        ref={bannerContainerRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        ref={focalPointDrag.containerRef}
+        onMouseDown={focalPointDrag.handleMouseDown}
+        onMouseMove={focalPointDrag.handleMouseMove}
+        onMouseUp={focalPointDrag.stopDragging}
+        onMouseLeave={focalPointDrag.stopDragging}
         className={cn(
           "group relative h-52 sm:h-60 w-full overflow-hidden rounded-2xl border border-border bg-muted/60 select-none",
-          bannerPreviewUrl ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default",
+          bannerPreviewUrl
+            ? focalPointDrag.isDragging
+              ? "cursor-grabbing"
+              : "cursor-grab"
+            : "cursor-default",
         )}
       >
         {bannerPreviewUrl ? (

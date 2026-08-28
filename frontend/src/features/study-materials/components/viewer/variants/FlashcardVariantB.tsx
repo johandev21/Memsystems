@@ -90,10 +90,7 @@ export function FlashcardVariantB({
       <div className="flex items-center justify-between px-6 py-3.5 border-b border-surface-border-subtle bg-surface-2">
         <div className="flex items-center gap-3">
           <h2 className="text-base font-bold text-text-primary truncate">{deckTitle}</h2>
-          <Badge
-            variant="outline"
-            className="rounded-full text-xs px-2.5 py-0.5 font-normal gap-1"
-          >
+          <Badge variant="outline" className="rounded-full text-xs px-2.5 py-0.5 font-normal gap-1">
             <BookOpen className="size-3 text-text-tertiary" /> {sourceCount} sources
           </Badge>
         </div>
@@ -141,9 +138,7 @@ export function FlashcardVariantB({
                       : "bg-surface-2 border-surface-border-subtle hover:bg-surface-3 text-text-tertiary hover:text-text-secondary",
                   )}
                 >
-                  <span className="text-xs text-text-faint block">
-                    #{c.originalIndex + 1}
-                  </span>
+                  <span className="text-xs text-text-faint block">#{c.originalIndex + 1}</span>
                   <p className="line-clamp-2 leading-relaxed">{c.front}</p>
                 </div>
               );

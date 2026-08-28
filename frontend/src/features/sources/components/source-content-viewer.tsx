@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
-import { sourceQueryOptions, type SourceWithContent } from "@/shared/api/sources";
+import { sourceQueryOptions, type SourceWithContent } from "@/shared/api";
 import { cn, fetchApi } from "@/shared/lib/utils";
 import {
   ArticleDocumentViewer,
@@ -107,24 +107,64 @@ export function SourceContentViewer({
   forceFullscreen,
 }: SourceContentViewerProps) {
   const { data: source, isPending, isError } = useQuery(sourceQueryOptions(sourceId));
+  const readerControls = useSourceReaderControls({
+    defaultFullscreen,
+    forceFullscreen,
+    onClose,
+    source,
+  });
 
+  if (isPending) {
+    return <SourceReaderLoading />;
+  }
+
+  if (isError || !source) {
+    return <SourceReaderError onClose={onClose} />;
+  }
+
+  return (
+    <div
+      className={
+        readerControls.isEffectivelyFullscreen
+          ? "fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
+          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden"
+      }
+    >
+      <SourceReaderHeader
+        source={source}
+        controls={readerControls}
+        forceFullscreen={forceFullscreen}
+        onClose={onClose}
+      />
+      <SourceDocument source={source} controls={readerControls} />
+    </div>
+  );
+}
+
+function useSourceReaderControls({
+  defaultFullscreen,
+  forceFullscreen,
+  onClose,
+  source,
+}: {
+  defaultFullscreen?: boolean;
+  forceFullscreen?: boolean;
+  onClose: () => void;
+  source?: SourceWithContent;
+}) {
   const [downloading, setDownloading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(() =>
     Boolean(defaultFullscreen || forceFullscreen),
   );
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
-  const isEffectivelyFullscreen = forceFullscreen || isFullscreen;
+  const isEffectivelyFullscreen = Boolean(forceFullscreen || isFullscreen);
 
   useEffect(() => {
     if (!isEffectivelyFullscreen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (forceFullscreen) {
-          onClose();
-        } else {
-          setIsFullscreen(false);
-        }
-      }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (forceFullscreen) onClose();
+      else setIsFullscreen(false);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -134,9 +174,9 @@ export function SourceContentViewer({
     if (!source || source.kind !== "file") return;
     setDownloading(true);
     try {
-      const res = await fetchApi(`/api/sources/${source.id}/download`);
-      if (!res.ok) throw new Error("Failed to retrieve download link");
-      const { url } = await res.json();
+      const response = await fetchApi(`/api/sources/${source.id}/download`);
+      if (!response.ok) throw new Error("Failed to retrieve download link");
+      const { url } = await response.json();
       window.open(url, "_blank");
       toast.success("Download started");
     } catch {
@@ -146,40 +186,57 @@ export function SourceContentViewer({
     }
   };
 
-  if (isPending) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-muted-foreground animate-pulse">
-        <Loader2 className="size-8 animate-spin text-primary" />
-        <p className="text-sm font-medium">Loading document reader...</p>
+  return {
+    downloading,
+    handleDownload,
+    isEffectivelyFullscreen,
+    isFullscreen,
+    scrollElement,
+    setScrollElement,
+    toggleFullscreen: () => setIsFullscreen((value) => !value),
+  };
+}
+
+function SourceReaderLoading() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-muted-foreground animate-pulse">
+      <Loader2 className="size-8 animate-spin text-primary" />
+      <p className="text-sm font-medium">Loading document reader...</p>
+    </div>
+  );
+}
+
+function SourceReaderError({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
+      <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+        <File className="size-6" />
       </div>
-    );
-  }
+      <h2 className="text-lg font-bold">Failed to load document</h2>
+      <p className="max-w-xs text-xs text-muted-foreground">
+        Unable to load source details. Please try again.
+      </p>
+      <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
+        Back to Sources
+      </Button>
+    </div>
+  );
+}
 
-  if (isError || !source) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
-          <File className="size-6" />
-        </div>
-        <h2 className="text-lg font-bold">Failed to load document</h2>
-        <p className="max-w-xs text-xs text-muted-foreground">
-          Unable to load source details. Please try again.
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onClose}
-          className="mt-2 cursor-pointer text-xs"
-        >
-          Back to Sources
-        </Button>
-      </div>
-    );
-  }
+type ReaderControls = ReturnType<typeof useSourceReaderControls>;
 
-  const docType = detectDocumentType(source);
-
-  const header = (
+function SourceReaderHeader({
+  source,
+  controls,
+  forceFullscreen,
+  onClose,
+}: {
+  source: SourceWithContent;
+  controls: ReaderControls;
+  forceFullscreen?: boolean;
+  onClose: () => void;
+}) {
+  return (
     <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Button
@@ -197,27 +254,30 @@ export function SourceContentViewer({
           {source.title}
         </h3>
       </div>
-
       <div className="flex items-center gap-1">
         <ReaderMoreMenu
           source={source}
-          downloading={downloading}
-          onDownload={handleDownload}
-          isFullscreen={isEffectivelyFullscreen}
+          downloading={controls.downloading}
+          onDownload={controls.handleDownload}
+          isFullscreen={controls.isEffectivelyFullscreen}
         />
         {!forceFullscreen && (
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setIsFullscreen((v) => !v)}
+            onClick={controls.toggleFullscreen}
             className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
-            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Mode"}
+            title={controls.isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Mode"}
           >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            {controls.isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
           </Button>
         )}
-        {isEffectivelyFullscreen && (
+        {controls.isEffectivelyFullscreen && (
           <Button
             type="button"
             variant="ghost"
@@ -232,46 +292,48 @@ export function SourceContentViewer({
       </div>
     </div>
   );
+}
 
-  const body = (
+function SourceDocument({
+  source,
+  controls,
+}: {
+  source: SourceWithContent;
+  controls: ReaderControls;
+}) {
+  const documentType = detectDocumentType(source);
+  return (
     <div className="flex-1 min-h-0 overflow-hidden">
-      <div ref={setScrollElement} className="h-full w-full overflow-y-auto overscroll-contain">
+      <div
+        ref={controls.setScrollElement}
+        className="h-full w-full overflow-y-auto overscroll-contain"
+      >
         <div
           className={cn(
             "w-full flex flex-col",
-            isEffectivelyFullscreen
+            controls.isEffectivelyFullscreen
               ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
               : "p-3 sm:p-4",
           )}
         >
-          {docType === "markdown" && (
-            <MarkdownDocumentViewer content={source.rawText} scrollElement={scrollElement} />
+          {documentType === "markdown" && (
+            <MarkdownDocumentViewer
+              content={source.rawText}
+              scrollElement={controls.scrollElement}
+            />
           )}
-
-          {docType === "code" && (
+          {documentType === "code" && (
             <CodeDocumentViewer title={source.title} content={source.rawText} />
           )}
-
-          {docType === "article" && (
-            <ArticleDocumentViewer content={source.rawText} scrollElement={scrollElement} />
+          {documentType === "article" && (
+            <ArticleDocumentViewer
+              content={source.rawText}
+              scrollElement={controls.scrollElement}
+            />
           )}
-
-          {docType === "plaintext" && <PlainTextDocumentViewer content={source.rawText} />}
+          {documentType === "plaintext" && <PlainTextDocumentViewer content={source.rawText} />}
         </div>
       </div>
-    </div>
-  );
-
-  return (
-    <div
-      className={
-        isEffectivelyFullscreen
-          ? "fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
-          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden"
-      }
-    >
-      {header}
-      {body}
     </div>
   );
 }

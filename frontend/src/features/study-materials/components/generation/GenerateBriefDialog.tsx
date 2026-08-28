@@ -35,18 +35,24 @@ export function GenerateBriefDialog({
   const setCollapsed = useGenerationStore((s) => s.setCollapsed);
   const { data: connection } = useConnectionStatus();
 
-  const [brief, setBrief] = useState("");
-  const [sourceIds, setSourceIds] = useState<string[]>([]);
-  const [folderId, setFolderId] = useState<string | null>(null);
-  const [questionCount, setQuestionCount] = useState<number | undefined>(10);
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard" | undefined>("medium");
-  const [cardStyle, setCardStyle] = useState<
-    "qa" | "definition" | "cloze" | "mixed" | undefined
-  >(undefined);
-  const [roadmapOptions, setRoadmapOptions] = useState<RoadmapOptions | undefined>(undefined);
-  const [mindMapOptions, setMindMapOptions] = useState<MindMapOptions | undefined>(undefined);
+  const { value, updateBriefForm, resetAfterSubmit } = useGenerationBriefState();
+  const {
+    brief,
+    sourceIds,
+    folderId,
+    questionCount,
+    difficulty,
+    cardStyle,
+    roadmapOptions,
+    mindMapOptions,
+  } = value;
   const { model: persistedModel, setModel: setPersistedModel } = useModelPersistence(notebookId);
   const model = persistedModel ?? "";
+
+  const handleFormChange = (next: typeof value) => {
+    updateBriefForm(next);
+    if (next.model !== model) setPersistedModel(next.model);
+  };
 
   const [prevModels, setPrevModels] = useState<ModelOption[] | null>(null);
   if (models !== prevModels) {
@@ -86,9 +92,7 @@ export function GenerateBriefDialog({
 
     setCollapsed(false);
     onOpenChange(false);
-    setBrief("");
-    setRoadmapOptions(undefined);
-    setMindMapOptions(undefined);
+    resetAfterSubmit();
   };
 
   if (kind === null) return null;
@@ -116,30 +120,8 @@ export function GenerateBriefDialog({
             kind={kind}
             models={models}
             defaultModel={models[0]?.id}
-            value={{
-              brief,
-              sourceIds,
-              folderId,
-              model,
-              questionCount,
-              difficulty,
-              cardStyle,
-              roadmapOptions,
-              mindMapOptions,
-            }}
-            onChange={(next) => {
-              setBrief(next.brief);
-              setSourceIds(next.sourceIds);
-              setFolderId(next.folderId);
-              setQuestionCount(next.questionCount);
-              setDifficulty(next.difficulty);
-              setCardStyle(next.cardStyle);
-              setRoadmapOptions(next.roadmapOptions);
-              setMindMapOptions(next.mindMapOptions);
-              if (next.model !== model) {
-                setPersistedModel(next.model);
-              }
-            }}
+            value={{ ...value, model }}
+            onChange={handleFormChange}
             onSubmit={handleSubmit}
             submitLabel="Generate"
             disabled={false}
@@ -150,4 +132,36 @@ export function GenerateBriefDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function useGenerationBriefState() {
+  const [value, setValue] = useState<{
+    brief: string;
+    sourceIds: string[];
+    folderId: string | null;
+    model: string;
+    questionCount?: number;
+    difficulty?: "easy" | "medium" | "hard";
+    cardStyle?: "qa" | "definition" | "cloze" | "mixed";
+    roadmapOptions?: RoadmapOptions;
+    mindMapOptions?: MindMapOptions;
+  }>({
+    brief: "",
+    sourceIds: [],
+    folderId: null,
+    model: "",
+    questionCount: 10,
+    difficulty: "medium",
+  });
+
+  const updateBriefForm = (next: typeof value) => setValue((current) => ({ ...current, ...next }));
+  const resetAfterSubmit = () =>
+    setValue((current) => ({
+      ...current,
+      brief: "",
+      roadmapOptions: undefined,
+      mindMapOptions: undefined,
+    }));
+
+  return { value, updateBriefForm, resetAfterSubmit };
 }

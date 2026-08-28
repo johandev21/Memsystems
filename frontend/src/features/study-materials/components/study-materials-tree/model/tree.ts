@@ -275,9 +275,7 @@ function addToMap<T>(map: Map<string | null, T[]>, key: string | null, value: T)
   map.set(key, values);
 }
 
-function byCreatedAtThenId<
-  T extends { createdAt: string; id: string },
->(first: T, second: T) {
+function byCreatedAtThenId<T extends { createdAt: string; id: string }>(first: T, second: T) {
   const timeCompare = first.createdAt.localeCompare(second.createdAt);
   if (timeCompare !== 0) return timeCompare;
   return first.id.localeCompare(second.id);

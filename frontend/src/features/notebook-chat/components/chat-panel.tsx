@@ -42,6 +42,8 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
     chatAnnouncement,
   } = useChatPanel(notebookId, panelRef);
 
+  useComposerHeight(conversationWrapperRef, composerWrapperRef);
+
   useEffect(() => {
     const handleClearRequest = (event: Event) => {
       const detail = (event as CustomEvent<{ notebookId?: string }>).detail;
@@ -58,32 +60,14 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
     return () => window.removeEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
   }, [isLoading, messageCount, notebookId, panelRef, setIsClearDialogOpen]);
 
-  useLayoutEffect(() => {
-    const parent = conversationWrapperRef.current;
-    const composer = composerWrapperRef.current;
-    if (!parent || !composer) return;
-
-    const update = () => {
-      parent.style.setProperty("--composer-height", `${composer.offsetHeight}px`);
-    };
-
-    update();
-
-    const ro = new ResizeObserver(update);
-    ro.observe(composer);
-
-    // Re-measure on font load / window resize as fallback
-    window.addEventListener("resize", update);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-
   const notebookTitle = notebook?.title ?? "Notebook";
   const isUntitled = notebookTitle.toLowerCase() === "untitled";
   const showBannerAsUntitled = isUntitled && messageCount === 0;
   const hasMessages = messageCount > 0;
+  const handleClearDialogChange = (open: boolean) => {
+    if (!clearHistoryMutation.isPending) setIsClearDialogOpen(open);
+  };
+  const handleClearHistory = () => clearHistoryMutation.mutate();
 
   return (
     <div ref={panelRef} className="flex flex-1 h-full w-full flex-col min-h-0">
@@ -161,12 +145,8 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
           <div className="mx-auto w-full max-w-4xl">
             <ClearHistoryDialog
               open={isClearDialogOpen}
-              onOpenChange={(open) => {
-                if (!clearHistoryMutation.isPending) {
-                  setIsClearDialogOpen(open);
-                }
-              }}
-              onConfirm={() => clearHistoryMutation.mutate()}
+              onOpenChange={handleClearDialogChange}
+              onConfirm={handleClearHistory}
               isClearing={clearHistoryMutation.isPending}
             />
             {connection?.ok !== false ? (
@@ -196,4 +176,25 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
       </div>
     </div>
   );
+}
+
+function useComposerHeight(
+  conversationRef: React.RefObject<HTMLDivElement | null>,
+  composerRef: React.RefObject<HTMLDivElement | null>,
+) {
+  useLayoutEffect(() => {
+    const parent = conversationRef.current;
+    const composer = composerRef.current;
+    if (!parent || !composer) return;
+    const updateHeight = () =>
+      parent.style.setProperty("--composer-height", `${composer.offsetHeight}px`);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(composer);
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [conversationRef, composerRef]);
 }

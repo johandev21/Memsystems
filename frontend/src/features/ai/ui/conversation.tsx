@@ -31,15 +31,17 @@ export const Conversation = ({
     scrollPreviousItemPeek={scrollPreviousItemPeek}
     {...props}
   >
-    <MessageScroller className={cn("relative flex-1", className)}>
-      {children}
-    </MessageScroller>
+    <MessageScroller className={cn("relative flex-1", className)}>{children}</MessageScroller>
   </MessageScrollerProvider>
 );
 
 export type ConversationContentProps = ComponentProps<typeof MessageScrollerContent>;
 
-export const ConversationContent = ({ className, children, ...props }: ConversationContentProps) => (
+export const ConversationContent = ({
+  className,
+  children,
+  ...props
+}: ConversationContentProps) => (
   <MessageScrollerViewport>
     <MessageScrollerContent className={cn("flex flex-col gap-8 p-4", className)} {...props}>
       {children}

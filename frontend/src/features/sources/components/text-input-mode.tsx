@@ -25,14 +25,13 @@ export function TextInputMode({
   isPending,
   busy,
 }: TextInputModeProps) {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (textTitle.trim() && textBody.trim()) onSubmit();
+  };
+
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (textTitle.trim() && textBody.trim()) onSubmit();
-      }}
-    >
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <button
         type="button"
         onClick={onBack}

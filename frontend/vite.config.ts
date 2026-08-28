@@ -22,6 +22,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['@base-ui/react', '@base-ui/react/alert-dialog', 'react', 'react-dom'],
+  },
+  esbuild: {
+    target: 'es2022',
+  },
+  build: {
+    target: 'esnext',
+  },
   server: {
     host: process.env.VITE_HOST || '127.0.0.1',
     port: 3000,

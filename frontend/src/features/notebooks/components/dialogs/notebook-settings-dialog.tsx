@@ -44,6 +44,13 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
     setOpen(false);
   };
 
+  const handleEdit = () => dispatchNotebookAction(EDIT_NOTEBOOK_EVENT);
+  const handleClearChat = () => dispatchNotebookAction(CLEAR_NOTEBOOK_CHAT_EVENT);
+  const handleOpenDelete = () => {
+    setOpen(false);
+    setDeleteDialogOpen(true);
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -83,7 +90,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
             <Button
               variant="ghost"
               className="justify-start hover:!bg-popover-hover focus-visible:!bg-popover-hover"
-              onClick={() => dispatchNotebookAction(EDIT_NOTEBOOK_EVENT)}
+              onClick={handleEdit}
             >
               <Pencil data-icon="inline-start" />
               Edit notebook
@@ -91,7 +98,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
             <Button
               variant="ghost"
               className="justify-start hover:!bg-popover-hover focus-visible:!bg-popover-hover"
-              onClick={() => dispatchNotebookAction(CLEAR_NOTEBOOK_CHAT_EVENT)}
+              onClick={handleClearChat}
             >
               <Eraser data-icon="inline-start" />
               Clear chat
@@ -99,10 +106,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
             <Button
               variant="ghost"
               className="justify-start text-destructive hover:!bg-popover-hover hover:!text-destructive focus-visible:!bg-popover-hover"
-              onClick={() => {
-                setOpen(false);
-                setDeleteDialogOpen(true);
-              }}
+              onClick={handleOpenDelete}
             >
               <Trash2 data-icon="inline-start" />
               Delete notebook

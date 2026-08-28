@@ -1,7 +1,6 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Brain,
-  Ellipsis,
   FileQuestion,
   Folder,
   FolderOpen,
@@ -61,7 +60,9 @@ export function Row({ node, depth }: RowProps) {
   const isFocused = controller.isFocused(node.id);
   const isCoarse = useIsCoarsePointer();
 
-  const pendingMoveForDrag = controller.pendingKeys.has(getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }));
+  const pendingMoveForDrag = controller.pendingKeys.has(
+    getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }),
+  );
   const {
     attributes,
     isDragging,
@@ -103,10 +104,18 @@ export function Row({ node, depth }: RowProps) {
 
   const Icon = getTreeIcon(node, isOpen);
 
-  const pendingRename = controller.pendingKeys.has(getCommandPendingKey({ type: "renameItem", id: node.id, name: "" }));
-  const pendingDuplicate = controller.pendingKeys.has(getCommandPendingKey({ type: "duplicateMaterial", id: node.id }));
-  const pendingMove = controller.pendingKeys.has(getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }));
-  const pendingDelete = controller.pendingKeys.has(getCommandPendingKey({ type: "deleteItem", id: node.id }));
+  const pendingRename = controller.pendingKeys.has(
+    getCommandPendingKey({ type: "renameItem", id: node.id, name: "" }),
+  );
+  const pendingDuplicate = controller.pendingKeys.has(
+    getCommandPendingKey({ type: "duplicateMaterial", id: node.id }),
+  );
+  const pendingMove = controller.pendingKeys.has(
+    getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }),
+  );
+  const pendingDelete = controller.pendingKeys.has(
+    getCommandPendingKey({ type: "deleteItem", id: node.id }),
+  );
   const isPending = pendingRename || pendingDuplicate || pendingMove || pendingDelete;
 
   const rowDragProps = isCoarse ? {} : { ...attributes, ...listeners };
@@ -141,16 +150,19 @@ export function Row({ node, depth }: RowProps) {
         isOver && canAcceptDrop && "bg-accent/60 text-accent-foreground",
         (isDragging || isActiveItem) && "opacity-35",
         isRenaming && "cursor-text",
-        !isRenaming && !isDragging && !isActiveItem && (isCoarse ? "cursor-default" : "cursor-pointer"),
+        !isRenaming &&
+          !isDragging &&
+          !isActiveItem &&
+          (isCoarse ? "cursor-default" : "cursor-pointer"),
         !isRenaming && (isDragging || isActiveItem) && "cursor-grabbing",
       )}
       onPointerDown={(event) => {
         if (isCoarse) {
           // On coarse pointer, drag starts only from handle; row pointer down only selects
         } else {
-          (listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void })?.onPointerDown?.(
-            event as unknown as React.PointerEvent,
-          );
+          (
+            listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void }
+          )?.onPointerDown?.(event as unknown as React.PointerEvent);
         }
         if (event.button !== 0) return;
         if (isRenaming) return;
@@ -161,7 +173,10 @@ export function Row({ node, depth }: RowProps) {
         if (isRenaming) return;
         // Prevent activation when clicking handle or trailing button
         const target = event.target as HTMLElement;
-        if (target.closest('[data-slot="study-materials-tree-drag-handle"]') || target.closest('[data-slot="study-materials-tree-row-actions"]')) {
+        if (
+          target.closest('[data-slot="study-materials-tree-drag-handle"]') ||
+          target.closest('[data-slot="study-materials-tree-row-actions"]')
+        ) {
           return;
         }
         event.currentTarget.focus();
@@ -171,115 +186,25 @@ export function Row({ node, depth }: RowProps) {
       onFocus={() => controller.select(node)}
       onKeyDown={(event) => controller.handleKeyDown(event, node)}
     >
-      {/* Drag handle - coarse pointer only (phones) */}
-      {!isRenaming && (
-        <button
-          type="button"
-          data-slot="study-materials-tree-drag-handle"
-          aria-label="Drag to move"
-          tabIndex={-1}
-          disabled={pendingMoveForDrag}
-          className={cn(
-            "shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none disabled:opacity-50",
-            "hidden [@media(pointer:coarse)]:flex",
-            // On coarse, ensure touch manipulation doesn't scroll
-            "touch-manipulation select-none",
-            isDragging && "opacity-50",
-          )}
-          {...handleDragProps}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            // Also trigger select on handle pointer down for coarse
-            if (isCoarse) {
-              (e.currentTarget.closest('[role="treeitem"]') as HTMLElement | null)?.focus();
-              controller.select(node);
-            }
-            // Call dnd-kit's pointer down if handle has listeners
-            (handleDragProps as unknown as { onPointerDown?: (e: React.PointerEvent) => void })?.onPointerDown?.(
-              e as unknown as React.PointerEvent,
-            );
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="size-3.5" />
-        </button>
-      )}
+      <TreeRowDragHandle
+        visible={!isRenaming}
+        disabled={pendingMoveForDrag}
+        isDragging={isDragging}
+        isCoarse={isCoarse}
+        dragProps={handleDragProps}
+        onSelect={() => controller.select(node)}
+      />
       <Icon className="size-[var(--tree-icon-size)] shrink-0" strokeWidth={1.7} />
-      {isRenaming ? (
-        <InlineRename
-          initialValue={node.name}
-          onCancel={() => controller.cancelRename(node.id, node.name)}
-          onCommit={(value) => controller.commitRename(node.id, value)}
-        />
-      ) : (
-        <span className="min-w-0 flex-1 truncate leading-none" title={node.name}>
-          {node.name}
-        </span>
-      )}
-      {/* Trailing actions - coarse pointer only (phones) */}
-      {!isRenaming && (
-        <span
-          data-slot="study-materials-tree-row-actions"
-          className="ml-auto hidden shrink-0 items-center [@media(pointer:coarse)]:flex"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`Actions for ${node.name}`}
-                  className={cn(
-                    "size-6 shrink-0 rounded-md",
-                    "hover:bg-accent hover:text-accent-foreground",
-                  )}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Ellipsis className="size-3.5" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" side="bottom" className="min-w-52">
-              <DropdownMenuGroup>
-                {isFolder && (
-                  <DropdownMenuItem onClick={() => controller.createFolder(node.id)} disabled={isPending}>
-                    New folder
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => controller.beginRename(node.id)} disabled={pendingRename}>
-                  Rename
-                </DropdownMenuItem>
-                {node.type === "material" && (
-                  <DropdownMenuItem onClick={() => controller.duplicateMaterial(node.id)} disabled={pendingDuplicate}>
-                    Duplicate
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => controller.moveToRoot(node.id)} disabled={node.parentId === null || pendingMove}>
-                  Move to Study Materials
-                </DropdownMenuItem>
-                {isFolder && (
-                  <>
-                    <DropdownMenuItem onClick={controller.expandAll}>Expand all</DropdownMenuItem>
-                    <DropdownMenuItem onClick={controller.collapseAll}>Collapse all</DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem variant="destructive" onClick={() => controller.requestDelete(node)} disabled={pendingDelete}>
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </span>
-      )}
+      <TreeRowLabel node={node} isRenaming={isRenaming} />
+      <MobileTreeRowActions
+        node={node}
+        visible={!isRenaming}
+        isPending={isPending}
+        pendingRename={pendingRename}
+        pendingDuplicate={pendingDuplicate}
+        pendingMove={pendingMove}
+        pendingDelete={pendingDelete}
+      />
     </div>
   );
 
@@ -288,6 +213,171 @@ export function Row({ node, depth }: RowProps) {
       <ContextMenuTrigger data-slot="study-materials-tree-row-trigger" render={row} />
       <RowMenu node={node} />
     </ContextMenu>
+  );
+}
+
+type TreeRowDragHandleProps = {
+  visible: boolean;
+  disabled: boolean;
+  isDragging: boolean;
+  isCoarse: boolean;
+  dragProps: Record<string, unknown>;
+  onSelect: () => void;
+};
+
+function TreeRowDragHandle({
+  visible,
+  disabled,
+  isDragging,
+  isCoarse,
+  dragProps,
+  onSelect,
+}: TreeRowDragHandleProps) {
+  if (!visible) return null;
+  const handlePointerDown = dragProps.onPointerDown as
+    | ((event: React.PointerEvent) => void)
+    | undefined;
+  return (
+    <button
+      type="button"
+      data-slot="study-materials-tree-drag-handle"
+      aria-label="Drag to move"
+      tabIndex={-1}
+      disabled={disabled}
+      className={cn(
+        "shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none disabled:opacity-50",
+        "hidden [@media(pointer:coarse)]:flex touch-manipulation select-none",
+        isDragging && "opacity-50",
+      )}
+      {...dragProps}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        if (isCoarse) {
+          (event.currentTarget.closest('[role="treeitem"]') as HTMLElement | null)?.focus();
+          onSelect();
+        }
+        handlePointerDown?.(event);
+      }}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <GripVertical className="size-3.5" />
+    </button>
+  );
+}
+
+function TreeRowLabel({ node, isRenaming }: { node: TreeNode; isRenaming: boolean }) {
+  const controller = useTreeControllerContext();
+  if (isRenaming) {
+    return (
+      <InlineRename
+        initialValue={node.name}
+        onCancel={() => controller.cancelRename(node.id, node.name)}
+        onCommit={(value) => controller.commitRename(node.id, value)}
+      />
+    );
+  }
+  return (
+    <span className="min-w-0 flex-1 truncate leading-none" title={node.name}>
+      {node.name}
+    </span>
+  );
+}
+
+type MobileTreeRowActionsProps = {
+  node: TreeNode;
+  visible: boolean;
+  isPending: boolean;
+  pendingRename: boolean;
+  pendingDuplicate: boolean;
+  pendingMove: boolean;
+  pendingDelete: boolean;
+};
+
+function MobileTreeRowActions({
+  node,
+  visible,
+  isPending,
+  pendingRename,
+  pendingDuplicate,
+  pendingMove,
+  pendingDelete,
+}: MobileTreeRowActionsProps) {
+  const controller = useTreeControllerContext();
+  if (!visible) return null;
+  const isFolder = node.type === "folder";
+  return (
+    <span
+      data-slot="study-materials-tree-row-actions"
+      className="ml-auto hidden shrink-0 items-center [@media(pointer:coarse)]:flex"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={`Actions for ${node.name}`}
+              className="size-6 shrink-0 rounded-md hover:bg-accent hover:text-accent-foreground"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            />
+          }
+        />
+        <DropdownMenuContent align="end" side="bottom" className="min-w-52">
+          <DropdownMenuGroup>
+            {isFolder && (
+              <DropdownMenuItem
+                onClick={() => controller.createFolder(node.id)}
+                disabled={isPending}
+              >
+                New folder
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={() => controller.beginRename(node.id)}
+              disabled={pendingRename}
+            >
+              Rename
+            </DropdownMenuItem>
+            {node.type === "material" && (
+              <DropdownMenuItem
+                onClick={() => controller.duplicateMaterial(node.id)}
+                disabled={pendingDuplicate}
+              >
+                Duplicate
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={() => controller.moveToRoot(node.id)}
+              disabled={node.parentId === null || pendingMove}
+            >
+              Move to Study Materials
+            </DropdownMenuItem>
+            {isFolder && (
+              <>
+                <DropdownMenuItem onClick={controller.expandAll}>Expand all</DropdownMenuItem>
+                <DropdownMenuItem onClick={controller.collapseAll}>Collapse all</DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => controller.requestDelete(node)}
+              disabled={pendingDelete}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </span>
   );
 }
 

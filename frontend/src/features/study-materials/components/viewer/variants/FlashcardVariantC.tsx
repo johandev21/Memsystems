@@ -110,7 +110,9 @@ export function FlashcardVariantC({
           onClick={onFlip}
           className={cn(
             "w-full rounded-3xl border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm cursor-pointer hover:border-primary/40 select-none transition-all duration-300 ease-out",
-            !isFlipped ? "bg-surface-2 border-surface-border" : "bg-surface-3 border-surface-border",
+            !isFlipped
+              ? "bg-surface-2 border-surface-border"
+              : "bg-surface-3 border-surface-border",
             swipeState === "correct" && "translate-x-20 rotate-6 opacity-0",
             swipeState === "incorrect" && "-translate-x-20 -rotate-6 opacity-0",
           )}
@@ -230,7 +232,8 @@ export function FlashcardVariantC({
             onClick={() => setFeedback(feedback === "good" ? null : "good")}
             className={cn(
               "rounded-full h-8 px-3 text-xs gap-1.5 border-surface-border-subtle cursor-pointer transition-all",
-              feedback === "good" && "bg-surface-3 text-text-secondary border-surface-border font-medium",
+              feedback === "good" &&
+                "bg-surface-3 text-text-secondary border-surface-border font-medium",
             )}
           >
             <ThumbsUp className="size-3.5" /> Good content
@@ -243,7 +246,8 @@ export function FlashcardVariantC({
             onClick={() => setFeedback(feedback === "bad" ? null : "bad")}
             className={cn(
               "rounded-full h-8 px-3 text-xs gap-1.5 border-surface-border-subtle cursor-pointer transition-all",
-              feedback === "bad" && "bg-surface-3 text-text-secondary border-surface-border font-medium",
+              feedback === "bad" &&
+                "bg-surface-3 text-text-secondary border-surface-border font-medium",
             )}
           >
             <ThumbsDown className="size-3.5" /> Bad content

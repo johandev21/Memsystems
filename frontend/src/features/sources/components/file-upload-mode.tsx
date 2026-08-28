@@ -55,6 +55,13 @@ export function FileUploadMode({
     setIsDragging(true);
   };
 
+  const handleDragEnter = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const openFileDialog = () => fileInputRef.current?.click();
+
   const handleDragLeave = (e: React.DragEvent<HTMLElement>) => {
     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setIsDragging(false);
@@ -82,10 +89,7 @@ export function FileUploadMode({
       }`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
-      onDragEnter={(e) => {
-        e.preventDefault();
-        setIsDragging(true);
-      }}
+      onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
     >
       <input
@@ -115,7 +119,7 @@ export function FileUploadMode({
           type="button"
           variant="outline"
           className="h-10 cursor-pointer bg-background px-5 transition-none active:translate-y-0 hover:bg-muted/50"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={openFileDialog}
           disabled={busy}
         >
           <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -146,7 +150,7 @@ export function FileUploadMode({
       <button
         type="button"
         aria-label="Upload a file"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={openFileDialog}
         disabled={busy}
         className="absolute inset-0 z-0 cursor-pointer disabled:cursor-progress"
       />

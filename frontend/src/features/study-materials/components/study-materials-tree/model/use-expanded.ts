@@ -30,6 +30,36 @@ function persist(notebookId: string, ids: Set<string>) {
   }
 }
 
+export function getActiveFolderIds(folders: readonly FolderDTO[]): Set<string> {
+  return new Set(folders.filter((folder) => !folder.deletedAt).map((folder) => folder.id));
+}
+
+export function getInitialExpandedIds(
+  folders: readonly FolderDTO[],
+  persisted: Set<string> | null,
+): Set<string> {
+  const activeIds = getActiveFolderIds(folders);
+  if (persisted) return new Set([...persisted].filter((id) => activeIds.has(id)));
+  return new Set(
+    folders
+      .filter((folder) => folder.parentId === null && !folder.deletedAt)
+      .map((folder) => folder.id),
+  );
+}
+
+export function reconcileExpandedIds(
+  folders: readonly FolderDTO[],
+  expandedIds: Set<string>,
+  previousFolderIds: Set<string>,
+): Set<string> {
+  const next = new Set([...expandedIds].filter((id) => getActiveFolderIds(folders).has(id)));
+  for (const folder of folders) {
+    if (folder.parentId === null && !folder.deletedAt && !previousFolderIds.has(folder.id))
+      next.add(folder.id);
+  }
+  return next;
+}
+
 /**
  * Persists expanded folder IDs per notebook, prunes stale IDs,
  * and expands newly encountered top-level folders by default.
@@ -51,12 +81,10 @@ export function usePersistentExpandedFolders(
       return pruned;
     }
     // No persisted: expand top-level folders by default
-    return new Set(
-      folders.filter((f) => f.parentId === null && !f.deletedAt).map((f) => f.id),
-    );
+    return new Set(folders.filter((f) => f.parentId === null && !f.deletedAt).map((f) => f.id));
   });
 
-  const prevFolderIdsRef = useRef<Set<string>>(new Set(folders.filter((f) => !f.deletedAt).map((f) => f.id)));
+  const prevFolderIdsRef = useRef<Set<string>>(getActiveFolderIds(folders));
   const prevNotebookIdRef = useRef<string>(notebookId);
 
   // When notebookId changes, load persisted for new notebook
@@ -70,23 +98,27 @@ export function usePersistentExpandedFolders(
         // Expand newly encountered top-level for new notebook if persisted empty? Actually if persisted null, expand top-level.
         if (pruned.size === 0 && !persisted.size) {
           // no persisted, expand top-level
-          const topLevel = folders.filter((f) => f.parentId === null && !f.deletedAt).map((f) => f.id);
+          const topLevel = folders
+            .filter((f) => f.parentId === null && !f.deletedAt)
+            .map((f) => f.id);
           setOpenIds(new Set(topLevel));
         } else {
           setOpenIds(pruned);
         }
       } else {
-        const topLevel = folders.filter((f) => f.parentId === null && !f.deletedAt).map((f) => f.id);
+        const topLevel = folders
+          .filter((f) => f.parentId === null && !f.deletedAt)
+          .map((f) => f.id);
         setOpenIds(new Set(topLevel));
       }
-      prevFolderIdsRef.current = new Set(folders.filter((f) => !f.deletedAt).map((f) => f.id));
+      prevFolderIdsRef.current = getActiveFolderIds(folders);
       return;
     }
   }, [notebookId, folders, storageKey]);
 
   // Handle folder list changes: prune stale and expand newly encountered top-level
   useEffect(() => {
-    const currentIds = new Set(folders.filter((f) => !f.deletedAt).map((f) => f.id));
+    const currentIds = getActiveFolderIds(folders);
     const prevIds = prevFolderIdsRef.current;
 
     // Detect newly encountered top-level folders (IDs that weren't in prev set)
@@ -123,7 +155,8 @@ export function usePersistentExpandedFolders(
   const setOpenIdsWrapper = useCallback(
     (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
       setOpenIds((prev) => {
-        const value = typeof next === "function" ? (next as (prev: Set<string>) => Set<string>)(prev) : next;
+        const value =
+          typeof next === "function" ? (next as (prev: Set<string>) => Set<string>)(prev) : next;
         return new Set(value);
       });
     },

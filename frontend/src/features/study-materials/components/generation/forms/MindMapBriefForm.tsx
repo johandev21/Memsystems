@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  BookOpen,
-  ChevronDown,
-  Cpu,
-  FileText,
-  Globe,
-  Search,
-} from "lucide-react";
+import { BookOpen, ChevronDown, Cpu, FileText, Globe, Search } from "lucide-react";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/shared/api/sources";
 import type { ModelOption } from "@/shared/api/models";
@@ -284,7 +277,10 @@ function MindMapSourcePopover({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-[320px] overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl">
+      <PopoverContent
+        align="start"
+        className="w-[320px] overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl"
+      >
         <div className="flex items-center justify-between bg-surface-2 px-3.5 py-2.5">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Search className="size-4 shrink-0 text-text-faint" />
@@ -381,7 +377,10 @@ export function MindMapModelPopover({
           </Button>
         }
       />
-      <PopoverContent align="end" className="w-[280px] rounded-2xl border border-surface-border bg-surface-1 p-2 shadow-xl">
+      <PopoverContent
+        align="end"
+        className="w-[280px] rounded-2xl border border-surface-border bg-surface-1 p-2 shadow-xl"
+      >
         <div className="px-2 py-1 text-xs font-medium text-text-faint">Select model</div>
         <div className="mt-1 space-y-1">
           {models.map((model) => {

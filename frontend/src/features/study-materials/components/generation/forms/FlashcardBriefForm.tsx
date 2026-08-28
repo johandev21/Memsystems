@@ -1,13 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChevronDown,
-  Search,
-  Cpu,
-  BookOpen,
-  Globe,
-  FileText,
-} from "lucide-react";
+import { ChevronDown, Search, Cpu, BookOpen, Globe, FileText } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
@@ -19,6 +12,8 @@ import { sourcesQueryOptions } from "@/shared/api/sources";
 import { cn } from "@/shared/lib/utils";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { GenerationModelPopover } from "./generation-model-popover";
+import { GenerationSourcePopover } from "./generation-source-popover";
 
 // ============================================================================
 // Module Constants
@@ -200,10 +195,11 @@ export function FlashcardBriefForm({
         <Label className="text-sm font-medium text-text-primary">
           Sources{!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
         </Label>
-        <FlashcardSourcePopover
+        <GenerationSourcePopover
           sources={sources}
           selectedIds={value.sourceIds}
           onChange={(sourceIds) => update({ sourceIds })}
+          emptyMessage="No sources in notebook. Flashcards will generate using general knowledge."
         />
       </div>
 
@@ -220,7 +216,7 @@ export function FlashcardBriefForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs font-medium text-text-tertiary">Model</Label>
-          <FlashcardModelPopover
+          <GenerationModelPopover
             models={models}
             selectedModel={value.model}
             onModelChange={(model) => update({ model })}
@@ -249,7 +245,7 @@ export function FlashcardBriefForm({
 // Flashcard Source Popover Component
 // ============================================================================
 
-function FlashcardSourcePopover({
+export function FlashcardSourcePopover({
   sources,
   selectedIds,
   onChange,
@@ -416,14 +412,14 @@ export function FlashcardModelPopover({
         onClick={() => onModelChange(m.id)}
         className={cn(
           "flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-colors",
-            isSelected
-              ? "bg-surface-3 text-text-secondary font-semibold"
-              : "hover:bg-surface-2 text-text-tertiary",
-          )}
-        >
-          <div className="flex flex-col min-w-0">
-            <span className="truncate">{m.displayName}</span>
-            <span className="text-xs text-text-faint font-normal">{m.id}</span>
+          isSelected
+            ? "bg-surface-3 text-text-secondary font-semibold"
+            : "hover:bg-surface-2 text-text-tertiary",
+        )}
+      >
+        <div className="flex flex-col min-w-0">
+          <span className="truncate">{m.displayName}</span>
+          <span className="text-xs text-text-faint font-normal">{m.id}</span>
         </div>
       </div>
     );

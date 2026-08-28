@@ -115,7 +115,9 @@ export function FlashcardVariantA({
         <div
           className={cn(
             "relative w-full rounded-[28px] border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-[300px] transition-all duration-300 ease-out select-none",
-            !isFlipped ? "bg-surface-2 border-surface-border" : "bg-surface-3 border-surface-border",
+            !isFlipped
+              ? "bg-surface-2 border-surface-border"
+              : "bg-surface-3 border-surface-border",
             swipeState === "correct" && "translate-x-24 rotate-6 opacity-0 scale-95",
             swipeState === "incorrect" && "-translate-x-24 -rotate-6 opacity-0 scale-95",
           )}
@@ -291,8 +293,7 @@ export function FlashcardVariantA({
         <div className="w-full rounded-2xl border border-surface-border-subtle bg-surface-2 p-5 shadow-lg space-y-3 animate-in fade-in duration-150">
           <div className="flex items-center justify-between border-b border-surface-border-subtle pb-2">
             <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-              <MessageSquare className="size-4 text-text-tertiary" /> Static Explain Prompt
-              Preview
+              <MessageSquare className="size-4 text-text-tertiary" /> Static Explain Prompt Preview
             </span>
             <Button
               type="button"
@@ -311,11 +312,15 @@ export function FlashcardVariantA({
             </p>
             <p>
               On the front it reads:{" "}
-              <span className="text-text-secondary font-semibold">&quot;{currentCard.front}&quot;</span>
+              <span className="text-text-secondary font-semibold">
+                &quot;{currentCard.front}&quot;
+              </span>
             </p>
             <p>
               The answer on the back reads:{" "}
-              <span className="text-text-secondary font-semibold">&quot;{currentCard.back}&quot;</span>
+              <span className="text-text-secondary font-semibold">
+                &quot;{currentCard.back}&quot;
+              </span>
             </p>
             <p className="text-text-faint">Explain this topic in more detail.&quot;</p>
           </div>

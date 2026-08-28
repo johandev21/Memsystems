@@ -1,13 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChevronDown,
-  Search,
-  Cpu,
-  BookOpen,
-  Globe,
-  FileText,
-} from "lucide-react";
+import { ChevronDown, Search, Cpu, BookOpen, Globe, FileText } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
@@ -19,6 +12,8 @@ import { sourcesQueryOptions } from "@/shared/api/sources";
 import { cn } from "@/shared/lib/utils";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { GenerationModelPopover } from "./generation-model-popover";
+import { GenerationSourcePopover } from "./generation-source-popover";
 
 // ============================================================================
 // Module Constants
@@ -207,10 +202,7 @@ export function RoadmapBriefForm({
               <div
                 key={opt.id}
                 onClick={() => setDetailLevel(opt.id)}
-                className={cn(
-                  optionRowClass(selected),
-                  "p-3 flex items-start gap-3",
-                )}
+                className={cn(optionRowClass(selected), "p-3 flex items-start gap-3")}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -223,9 +215,7 @@ export function RoadmapBriefForm({
                       {opt.title}
                     </span>
                   </div>
-                  <span className="text-xs text-text-faint leading-tight">
-                    {opt.desc}
-                  </span>
+                  <span className="text-xs text-text-faint leading-tight">{opt.desc}</span>
                 </div>
               </div>
             );
@@ -238,10 +228,11 @@ export function RoadmapBriefForm({
         <Label className="text-sm font-medium text-text-primary">
           Knowledge Sources{!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
         </Label>
-        <RoadmapSourcePopover
+        <GenerationSourcePopover
           sources={sources}
           selectedIds={value.sourceIds}
           onChange={(sourceIds) => update({ sourceIds })}
+          emptyMessage="No sources in notebook. Roadmap will generate using general knowledge."
         />
       </div>
 
@@ -275,7 +266,7 @@ export function RoadmapBriefForm({
 
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs font-medium text-text-tertiary">AI Intelligence Model</Label>
-          <RoadmapModelPopover
+          <GenerationModelPopover
             models={models}
             selectedModel={value.model}
             onModelChange={(model) => update({ model })}
@@ -304,7 +295,7 @@ export function RoadmapBriefForm({
 // Roadmap Source Popover Component
 // ============================================================================
 
-function RoadmapSourcePopover({
+export function RoadmapSourcePopover({
   sources,
   selectedIds,
   onChange,
@@ -430,7 +421,7 @@ function RoadmapSourcePopover({
 // Roadmap Model Popover Component
 // ============================================================================
 
-function RoadmapModelPopover({
+export function RoadmapModelPopover({
   models,
   selectedModel,
   onModelChange,

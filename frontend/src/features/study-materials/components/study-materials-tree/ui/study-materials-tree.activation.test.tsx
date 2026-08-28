@@ -61,7 +61,6 @@ function getTreeItem(text: string) {
 }
 
 describe("StudyMaterialsTree activation separation (production)", () => {
-
   it("does not activate on pointerDown, focus, or contextMenu, but activates on click", async () => {
     const user = userEvent.setup();
     const onActivate = vi.fn();

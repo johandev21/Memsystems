@@ -44,6 +44,12 @@ interface RoadmapSpineProps {
   onStudyPhase: (phase: RoadmapPhase, phaseIndex: number) => void;
 }
 
+interface RoadmapPhaseSectionProps {
+  phase: RoadmapPhase;
+  phaseIndex: number;
+  onStudyPhase: (phase: RoadmapPhase, phaseIndex: number) => void;
+}
+
 // =============================================================================
 // Constants
 // =============================================================================
@@ -266,23 +272,26 @@ function RoadmapSpine({ phases, onStudyPhase }: RoadmapSpineProps) {
       <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-surface-4 -translate-x-1/2 z-0" />
 
       {phases.map((phase, phaseIndex) => (
-        <div
+        <RoadmapPhaseSection
           key={phase.id}
-          className="relative z-10 w-full flex flex-col items-center gap-4 @sm:gap-6 @3xl:gap-8"
-        >
-          <PhaseMilestoneCard phase={phase} phaseIndex={phaseIndex} onStudyPhase={onStudyPhase} />
-
-          <div className="grid grid-cols-1 @3xl:grid-cols-2 gap-4 @sm:gap-6 @3xl:gap-8 w-full px-1 @sm:px-4">
-            {phase.topics.map((topic, topicIndex) => (
-              <TopicCard
-                key={topic.id}
-                topic={topic}
-                isLeft={isLeftPosition(topicIndex)}
-              />
-            ))}
-          </div>
-        </div>
+          phase={phase}
+          phaseIndex={phaseIndex}
+          onStudyPhase={onStudyPhase}
+        />
       ))}
+    </div>
+  );
+}
+
+function RoadmapPhaseSection({ phase, phaseIndex, onStudyPhase }: RoadmapPhaseSectionProps) {
+  return (
+    <div className="relative z-10 w-full flex flex-col items-center gap-4 @sm:gap-6 @3xl:gap-8">
+      <PhaseMilestoneCard phase={phase} phaseIndex={phaseIndex} onStudyPhase={onStudyPhase} />
+      <div className="grid grid-cols-1 @3xl:grid-cols-2 gap-4 @sm:gap-6 @3xl:gap-8 w-full px-1 @sm:px-4">
+        {phase.topics.map((topic, topicIndex) => (
+          <TopicCard key={topic.id} topic={topic} isLeft={isLeftPosition(topicIndex)} />
+        ))}
+      </div>
     </div>
   );
 }

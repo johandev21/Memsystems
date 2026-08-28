@@ -7,7 +7,7 @@ import {
   webSearchJobQueryOptions,
   type WebSearchCandidate,
   type WebSearchImportResultItem,
-} from "@/shared/api/web-search";
+} from "@/shared/api";
 
 export type WebSearchPhase = "idle" | "searching" | "done" | "failed";
 
@@ -29,9 +29,9 @@ export function useWebSearch(notebookId: string) {
 
   const [queryDraft, setQueryDraft] = useState("");
   const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
-  const [importResults, setImportResults] = useState<
-    Map<string, WebSearchImportResultItem>
-  >(new Map());
+  const [importResults, setImportResults] = useState<Map<string, WebSearchImportResultItem>>(
+    new Map(),
+  );
   const [importing, setImporting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -45,8 +45,7 @@ export function useWebSearch(notebookId: string) {
 
   const phase: WebSearchPhase = useMemo(() => {
     if (!job) return "idle";
-    if (job.status === "pending" || job.status === "processing")
-      return "searching";
+    if (job.status === "pending" || job.status === "processing") return "searching";
     if (job.status === "failed") return "failed";
     return "done";
   }, [job]);
@@ -54,9 +53,7 @@ export function useWebSearch(notebookId: string) {
   const candidates = useMemo(() => job?.candidates ?? [], [job]);
 
   const searchError =
-    job?.status === "failed"
-      ? (job.lastError ?? "Web search failed")
-      : localError;
+    job?.status === "failed" ? (job.lastError ?? "Web search failed") : localError;
 
   const runSearch = useCallback(
     async (modelId: string) => {
@@ -65,10 +62,7 @@ export function useWebSearch(notebookId: string) {
       setLocalError(null);
       try {
         const job = await startWebSearchJob(notebookId, { query, modelId });
-        queryClient.setQueryData(
-          webSearchJobQueryOptions(notebookId).queryKey,
-          job,
-        );
+        queryClient.setQueryData(webSearchJobQueryOptions(notebookId).queryKey, job);
       } catch (err) {
         setLocalError(err instanceof Error ? err.message : "Web search failed");
       }
@@ -153,14 +147,7 @@ export function useWebSearch(notebookId: string) {
         setImporting(false);
       }
     },
-    [
-      candidates,
-      importResults,
-      importing,
-      job?.query,
-      notebookId,
-      queryClient,
-    ],
+    [candidates, importResults, importing, job?.query, notebookId, queryClient],
   );
 
   const clearResults = useCallback(async () => {

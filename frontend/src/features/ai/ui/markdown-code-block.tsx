@@ -17,17 +17,6 @@ export interface MarkdownCodeBlockProps {
   showLineNumbers?: boolean;
 }
 
-function getRawText(node: ReactNode): string {
-  if (!node) return "";
-  if (typeof node === "string") return node;
-  if (typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(getRawText).join("");
-  if (typeof node === "object" && node && "props" in node) {
-    return getRawText((node.props as { children?: ReactNode }).children);
-  }
-  return "";
-}
-
 export function MarkdownCodeBlock({
   className,
   containerClassName,
@@ -64,4 +53,14 @@ export function MarkdownCodeBlock({
       </CodeBlockHeader>
     </CodeBlock>
   );
+}
+
+function getRawText(node: ReactNode): string {
+  if (!node) return "";
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(getRawText).join("");
+  if (typeof node === "object" && node && "props" in node)
+    return getRawText((node.props as { children?: ReactNode }).children);
+  return "";
 }

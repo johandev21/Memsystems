@@ -1,12 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   buildStudyMaterialTree,
@@ -26,6 +18,11 @@ import {
   type TreeCommand,
   type TreeCommandExecutor,
 } from "../model/commands";
+import {
+  useControllableFolderExpansion,
+  usePendingTreeCommands,
+  useTreeFocusRegistry,
+} from "./controller-hooks";
 
 export const ROOT_DROP_ID = "study-materials-root";
 export const DRAG_ID_PREFIX = "study-materials-drag:";
@@ -140,43 +137,25 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     [folders, materials],
   );
 
-  const [internalOpenIds, setInternalOpenIds] = useState<Set<string>>(
-    () => new Set(effectiveState.folders.map((folder) => folder.id)),
-  );
-  const isControlled = expandedIds !== undefined;
-  const openFolderIds = isControlled ? expandedIds! : internalOpenIds;
-  const setOpenFolderIds = useCallback(
-    (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
-      if (isControlled) {
-        const next = typeof updater === "function" ? (updater as (prev: Set<string>) => Set<string>)(openFolderIds) : (updater as Set<string>);
-        onExpandedChange?.(new Set(next));
-      } else {
-        setInternalOpenIds(updater as Set<string> | ((prev: Set<string>) => Set<string>));
-      }
-    },
-    [isControlled, onExpandedChange, openFolderIds],
+  const { openFolderIds, setOpenFolderIds } = useControllableFolderExpansion(
+    effectiveState.folders.map((folder) => folder.id),
+    expandedIds,
+    onExpandedChange,
   );
   const [focusedItemId, setFocusedItemId] = useState<string | null>(selectedId ?? null);
   const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [activeDragItemId, setActiveDragItemId] = useState<string | null>(null);
-  const [treeHasFocus, setTreeHasFocus] = useState(true);
-  const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set());
-  const pendingByKey = useRef(new Map<string, boolean>());
-  const treeSurfaceElement = useRef<HTMLDivElement | null>(null);
-  const nodeElements = useRef(new Map<string, HTMLElement>());
+  const { pendingKeys, isPending, setPending, runPendingCommand } =
+    usePendingTreeCommands(onCommand);
+  const { treeHasFocus, registerTreeSurface, registerNode, focus } =
+    useTreeFocusRegistry(setFocusedItemId);
 
   const tree = useMemo(() => buildStudyMaterialTree(effectiveState), [effectiveState]);
   const visibleItems = useMemo(
     () => flattenVisibleTree(tree, openFolderIds),
     [openFolderIds, tree],
   );
-
-  const setPending = useCallback((key: string, pending: boolean) => {
-    if (pending) pendingByKey.current.set(key, true);
-    else pendingByKey.current.delete(key);
-    setPendingKeys(new Set(pendingByKey.current.keys()));
-  }, []);
 
   useEffect(() => {
     if (selectedId !== undefined && selectedId !== focusedItemId) {
@@ -186,7 +165,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
 
   useEffect(() => {
     if (selectedId == null) return;
-    if (pendingByKey.current.size > 0) return;
+    if (pendingKeys.size > 0) return;
     const exists =
       effectiveState.folders.some((f) => f.id === selectedId) ||
       effectiveState.materials.some((m) => m.id === selectedId);
@@ -196,50 +175,23 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     }
   }, [effectiveState.folders, effectiveState.materials, pendingKeys, selectedId, setSelectedId]);
 
-  const registerTreeSurface = useCallback((el: HTMLDivElement | null) => {
-    treeSurfaceElement.current = el;
-  }, []);
-
-  useEffect(() => {
-    const isTreeRow = (target: EventTarget | null) =>
-      target instanceof Element &&
-      Boolean(
-        treeSurfaceElement.current?.contains(target as Node) &&
-          (target as Element).closest('[role="treeitem"]'),
-      );
-    const handleFocusIn = (event: FocusEvent) => setTreeHasFocus(isTreeRow(event.target));
-    const handlePointerDown = (event: PointerEvent) => setTreeHasFocus(isTreeRow(event.target));
-    document.addEventListener("focusin", handleFocusIn);
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      document.removeEventListener("focusin", handleFocusIn);
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, []);
-
   const canMove = useCallback(
-    (itemId: string, targetFolderId: string | null) => canMoveItem(effectiveState, itemId, targetFolderId),
+    (itemId: string, targetFolderId: string | null) =>
+      canMoveItem(effectiveState, itemId, targetFolderId),
     [effectiveState],
   );
 
-  const registerNode = useCallback((id: string, element: HTMLElement | null) => {
-    if (element) nodeElements.current.set(id, element);
-    else nodeElements.current.delete(id);
-  }, []);
-
-  const focus = useCallback((id: string) => {
-    setFocusedItemId(id);
-    requestAnimationFrame(() => nodeElements.current.get(id)?.focus());
-  }, []);
-
-  const setFolderOpen = useCallback((folderId: string, open: boolean) => {
-    setOpenFolderIds((prev) => {
-      const next = new Set(prev);
-      if (open) next.add(folderId);
-      else next.delete(folderId);
-      return next;
-    });
-  }, [setOpenFolderIds]);
+  const setFolderOpen = useCallback(
+    (folderId: string, open: boolean) => {
+      setOpenFolderIds((prev) => {
+        const next = new Set(prev);
+        if (open) next.add(folderId);
+        else next.delete(folderId);
+        return next;
+      });
+    },
+    [setOpenFolderIds],
+  );
 
   const select = useCallback(
     (node: TreeNode) => {
@@ -296,26 +248,21 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       if (onCommand) {
         const command: TreeCommand = { type: "renameItem", id: itemId, name: nextName };
         const key = getCommandPendingKey(command);
-        if (pendingByKey.current.has(key)) return;
-        setPending(key, true);
-        try {
-          const result = await onCommand(command);
-          if (!result.ok) {
-            focus(itemId);
-            return;
-          }
-          const exists =
-            effectiveState.folders.some((f) => f.id === itemId) ||
-            effectiveState.materials.some((m) => m.id === itemId);
-          if (!exists) {
-            setRenamingItemId(null);
-            return;
-          }
-          setRenamingItemId(null);
+        const result = await runPendingCommand(key, command);
+        if (!result) return;
+        if (!result.ok) {
           focus(itemId);
-        } finally {
-          setPending(key, false);
+          return;
         }
+        const exists =
+          effectiveState.folders.some((f) => f.id === itemId) ||
+          effectiveState.materials.some((m) => m.id === itemId);
+        if (!exists) {
+          setRenamingItemId(null);
+          return;
+        }
+        setRenamingItemId(null);
+        focus(itemId);
         return;
       }
       setRenamingItemId(null);
@@ -324,7 +271,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       setLastAction?.(`Renamed ${previousName} to ${nextName}.`);
       focus(itemId);
     },
-    [effectiveState, focus, onCommand, onInternalStateChange, setLastAction, setPending],
+    [effectiveState, focus, onCommand, onInternalStateChange, runPendingCommand, setLastAction],
   );
 
   const cancelRename = useCallback(
@@ -341,7 +288,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       if (onCommand) {
         const command: TreeCommand = { type: "createFolder", parentId };
         const key = getCommandPendingKey(command);
-        if (pendingByKey.current.has(key)) return;
+        if (isPending(key)) return;
         setPending(key, true);
         try {
           const result = await onCommand(command);
@@ -369,7 +316,10 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       const folder = createFolder(parentId, id, now);
       const notebookId = effectiveState.folders[0]?.notebookId ?? "notebook-placeholder";
       const folderWithNotebook = { ...folder, notebookId };
-      onInternalStateChange?.((prev) => ({ ...prev, folders: [...prev.folders, folderWithNotebook] }));
+      onInternalStateChange?.((prev) => ({
+        ...prev,
+        folders: [...prev.folders, folderWithNotebook],
+      }));
       if (parentId) setFolderOpen(parentId, true);
       setSelectedId(folderWithNotebook.id);
       setFocusedItemId(folderWithNotebook.id);
@@ -379,6 +329,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     [
       effectiveState.folders,
       focus,
+      isPending,
       onCommand,
       onInternalStateChange,
       setFolderOpen,
@@ -394,7 +345,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       if (onCommand) {
         const command: TreeCommand = { type: "duplicateMaterial", id };
         const key = getCommandPendingKey(command);
-        if (pendingByKey.current.has(key)) return;
+        if (isPending(key)) return;
         setPending(key, true);
         try {
           const result = await onCommand(command);
@@ -411,7 +362,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       onInternalStateChange?.((prev) => duplicateMaterial(prev, id, newId, now));
       setLastAction?.(`Duplicated ${name}.`);
     },
-    [effectiveState, onCommand, onInternalStateChange, setLastAction, setPending],
+    [effectiveState, isPending, onCommand, onInternalStateChange, setLastAction, setPending],
   );
 
   const moveToRoot = useCallback(
@@ -421,7 +372,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       if (onCommand) {
         const command: TreeCommand = { type: "moveItem", id, targetFolderId: null };
         const key = getCommandPendingKey(command);
-        if (pendingByKey.current.has(key)) return;
+        if (isPending(key)) return;
         setPending(key, true);
         try {
           const result = await onCommand(command);
@@ -443,7 +394,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       onInternalStateChange?.((prev) => moveItem(prev, id, null, now));
       setLastAction?.(`Moved ${name} to Study Materials.`);
     },
-    [effectiveState, focus, onCommand, onInternalStateChange, setLastAction, setPending],
+    [effectiveState, focus, isPending, onCommand, onInternalStateChange, setLastAction, setPending],
   );
 
   const requestDelete = useCallback((node: TreeNode) => {
@@ -457,7 +408,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     if (onCommand) {
       const command: TreeCommand = { type: "deleteItem", id: deleteId };
       const key = getCommandPendingKey(command);
-      if (pendingByKey.current.has(key)) return;
+      if (isPending(key)) return;
       setPending(key, true);
       try {
         const result = await onCommand(command);
@@ -488,7 +439,17 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     setRenamingItemId(null);
     setLastAction?.(`Deleted ${pending.name} from the local prototype.`);
     setPendingDelete(null);
-  }, [effectiveState, focus, onCommand, pendingDelete, setPending, setSelectedId]);
+  }, [
+    effectiveState,
+    focus,
+    isPending,
+    onCommand,
+    onInternalStateChange,
+    pendingDelete,
+    setLastAction,
+    setPending,
+    setSelectedId,
+  ]);
 
   const cancelDelete = useCallback(() => setPendingDelete(null), []);
 
@@ -510,13 +471,11 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       if (!dragId || !canMoveItem(effectiveState, dragId, dropId)) return;
       const itemName = getItemName(effectiveState, dragId) ?? "Item";
       const targetName =
-        dropId === null
-          ? "Study Materials"
-          : (getItemName(effectiveState, dropId) ?? "folder");
+        dropId === null ? "Study Materials" : (getItemName(effectiveState, dropId) ?? "folder");
       if (onCommand) {
         const command: TreeCommand = { type: "moveItem", id: dragId, targetFolderId: dropId };
         const key = getCommandPendingKey(command);
-        if (pendingByKey.current.has(key)) return;
+        if (isPending(key)) return;
         setPending(key, true);
         try {
           const result = await onCommand(command);
@@ -544,6 +503,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     [
       effectiveState,
       focus,
+      isPending,
       onCommand,
       onInternalStateChange,
       setFolderOpen,
@@ -674,10 +634,7 @@ export function getTreeDropData(data: unknown): TreeDropData | null {
   return null;
 }
 
-export function findTreeNode(
-  nodes: readonly TreeNode[],
-  id: string | null,
-): TreeNode | null {
+export function findTreeNode(nodes: readonly TreeNode[], id: string | null): TreeNode | null {
   if (!id) return null;
   for (const node of nodes) {
     if (node.id === id) return node;

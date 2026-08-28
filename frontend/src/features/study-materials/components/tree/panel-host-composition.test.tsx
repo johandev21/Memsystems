@@ -19,7 +19,9 @@ function makeFolder(overrides: Partial<FolderDTO> & Pick<FolderDTO, "id" | "name
     ...overrides,
   };
 }
-function makeMaterial(overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">): StudyMaterialDTO {
+function makeMaterial(
+  overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">,
+): StudyMaterialDTO {
   return {
     notebookId,
     kind: "quiz",
@@ -50,7 +52,8 @@ describe("StudyMaterials host composition — desktop and mobile share productio
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/folders")) return new Response(JSON.stringify(folders), { status: 200 });
-      if (url.includes("/study-materials")) return new Response(JSON.stringify(materials), { status: 200 });
+      if (url.includes("/study-materials"))
+        return new Response(JSON.stringify(materials), { status: 200 });
       return new Response(JSON.stringify([]), { status: 200 });
     });
     vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock as never);
@@ -67,7 +70,9 @@ describe("StudyMaterials host composition — desktop and mobile share productio
     // material should be visible (folder expanded by default top-level)
     expect(screen.getByText("Epistemology")).toBeTruthy();
 
-    const materialRow = screen.getByText("Epistemology").closest('[role="treeitem"]') as HTMLElement;
+    const materialRow = screen
+      .getByText("Epistemology")
+      .closest('[role="treeitem"]') as HTMLElement;
     // pointerDown should not activate viewer
     const { fireEvent } = await import("@testing-library/react");
     fireEvent.pointerDown(materialRow);
@@ -84,7 +89,8 @@ describe("StudyMaterials host composition — desktop and mobile share productio
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/folders")) return new Response(JSON.stringify(folders), { status: 200 });
-      if (url.includes("/study-materials")) return new Response(JSON.stringify(materials), { status: 200 });
+      if (url.includes("/study-materials"))
+        return new Response(JSON.stringify(materials), { status: 200 });
       return new Response(JSON.stringify([]), { status: 200 });
     });
     vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock as never);

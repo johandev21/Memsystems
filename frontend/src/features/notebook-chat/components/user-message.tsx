@@ -8,14 +8,13 @@ const isTextPart = (
 };
 
 export function UserMessage({ message }: { message: UIMessage }) {
+  const textParts = message.parts.filter(isTextPart);
   return (
     <Message from="user">
       <MessageContent>
-        {message.parts.map((part, index) =>
-          isTextPart(part) ? (
-            <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
-          ) : null,
-        )}
+        {textParts.map((part, index) => (
+          <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+        ))}
       </MessageContent>
     </Message>
   );

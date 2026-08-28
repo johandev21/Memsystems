@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, ImagePlus, Move, Pencil, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ImageUploadDialog } from "../dialogs/image-upload-dialog";
 import { EDIT_NOTEBOOK_EVENT } from "../dialogs/notebook-settings-dialog";
@@ -10,6 +10,7 @@ import { Button } from "@/shared/ui/button";
 import { IconPicker } from "@/shared/ui/icon-picker";
 import { Input } from "@/shared/ui/input";
 import { NotebookIcon } from "@/shared/ui/notebook-icon";
+import { useBannerFocalPointDrag } from "../../model/use-banner-focal-point-drag";
 
 export interface NotebookBannerProps {
   notebookId: string;
@@ -35,16 +36,8 @@ export function NotebookBanner({
   isUntitled,
 }: NotebookBannerProps) {
   const queryClient = useQueryClient();
-  const bannerRef = useRef<HTMLDivElement>(null);
-  const dragStartRef = useRef<{
-    mouseX: number;
-    mouseY: number;
-    initialX: number;
-    initialY: number;
-  } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
@@ -99,47 +92,11 @@ export function NotebookBanner({
 
   const visibleBannerUrl = bannerRemoved ? null : (previewUrl ?? bannerUrl);
   const visibleFocalPoint = isEditing ? draftFocalPoint : (bannerFocalPoint ?? DEFAULT_FOCAL_POINT);
-
-  const handleMouseDown = (event: React.MouseEvent) => {
-    if (!isEditing || !visibleBannerUrl || (event.target as HTMLElement).closest("button, input")) {
-      return;
-    }
-    setIsDragging(true);
-    dragStartRef.current = {
-      mouseX: event.clientX,
-      mouseY: event.clientY,
-      initialX: draftFocalPoint.x,
-      initialY: draftFocalPoint.y,
-    };
-  };
-
-  const handleMouseMove = (event: React.MouseEvent) => {
-    if (!isDragging || !dragStartRef.current || !bannerRef.current) return;
-    const rect = bannerRef.current.getBoundingClientRect();
-    setDraftFocalPoint({
-      x: Math.max(
-        0,
-        Math.min(
-          1,
-          dragStartRef.current.initialX -
-            (event.clientX - dragStartRef.current.mouseX) / rect.width,
-        ),
-      ),
-      y: Math.max(
-        0,
-        Math.min(
-          1,
-          dragStartRef.current.initialY -
-            (event.clientY - dragStartRef.current.mouseY) / rect.height,
-        ),
-      ),
-    });
-  };
-
-  const stopDragging = () => {
-    setIsDragging(false);
-    dragStartRef.current = null;
-  };
+  const focalPointDrag = useBannerFocalPointDrag({
+    enabled: isEditing && !!visibleBannerUrl,
+    focalPoint: draftFocalPoint,
+    onChange: setDraftFocalPoint,
+  });
 
   const handleSelectFile = (file: File) => {
     if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
@@ -244,15 +201,17 @@ export function NotebookBanner({
   return (
     <div className="group/header mb-6 flex flex-col gap-3">
       <div
-        ref={bannerRef}
+        ref={focalPointDrag.containerRef}
         tabIndex={0}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={stopDragging}
-        onMouseLeave={stopDragging}
+        onMouseDown={focalPointDrag.handleMouseDown}
+        onMouseMove={focalPointDrag.handleMouseMove}
+        onMouseUp={focalPointDrag.stopDragging}
+        onMouseLeave={focalPointDrag.stopDragging}
         className={cn(
           "relative aspect-3/1 w-full overflow-hidden rounded-4xl border border-border bg-muted select-none outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          isEditing && visibleBannerUrl && (isDragging ? "cursor-grabbing" : "cursor-grab"),
+          isEditing &&
+            visibleBannerUrl &&
+            (focalPointDrag.isDragging ? "cursor-grabbing" : "cursor-grab"),
         )}
       >
         {visibleBannerUrl && !imageError ? (

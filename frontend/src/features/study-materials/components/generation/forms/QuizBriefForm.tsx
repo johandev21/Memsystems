@@ -22,6 +22,8 @@ import { sourcesQueryOptions } from "@/shared/api/sources";
 import { cn } from "@/shared/lib/utils";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { GenerationModelPopover } from "./generation-model-popover";
+import { GenerationSourcePopover } from "./generation-source-popover";
 
 // ============================================================================
 // Module Constants
@@ -129,10 +131,11 @@ export function QuizBriefForm({
               3. Knowledge Sources
               {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
             </Label>
-            <QuizSourcePopover
+            <GenerationSourcePopover
               sources={sources}
               selectedIds={value.sourceIds}
               onChange={(sourceIds) => update({ sourceIds })}
+              emptyMessage="No sources in notebook. Quiz will generate using general knowledge."
             />
           </div>
         </div>
@@ -176,9 +179,7 @@ export function QuizBriefForm({
 
           <div className="grid grid-cols-2 gap-4 items-center">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-text-tertiary">
-                Destination Folder
-              </Label>
+              <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
               <FolderPicker
                 notebookId={notebookId}
                 value={value.folderId}
@@ -191,7 +192,7 @@ export function QuizBriefForm({
               <Label className="text-xs font-medium text-text-tertiary">
                 AI Intelligence Model
               </Label>
-              <QuizModelPopover
+              <GenerationModelPopover
                 models={models}
                 selectedModel={value.model}
                 onModelChange={(model) => update({ model })}
@@ -240,7 +241,7 @@ export function QuizBriefForm({
 // Quiz Source Popover Component
 // ============================================================================
 
-function QuizSourcePopover({
+export function QuizSourcePopover({
   sources,
   selectedIds,
   onChange,

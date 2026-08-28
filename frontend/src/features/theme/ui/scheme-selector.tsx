@@ -122,11 +122,15 @@ function SchemePreview({ scheme }: { scheme: string }) {
       <div className="mb-1.5 flex gap-1">
         <div
           className="h-1.5 w-8 rounded-full"
-          style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${accent} ${isDark ? "35%" : "25%"})` }}
+          style={{
+            backgroundColor: `color-mix(in oklch, ${bg}, ${accent} ${isDark ? "35%" : "25%"})`,
+          }}
         />
         <div
           className="h-1.5 flex-1 rounded-full"
-          style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "10%" : "6%"})` }}
+          style={{
+            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "10%" : "6%"})`,
+          }}
         />
       </div>
       <div className="flex flex-1 gap-1.5" style={{ height: "48px" }}>
@@ -140,15 +144,21 @@ function SchemePreview({ scheme }: { scheme: string }) {
         <div className="flex flex-1 flex-col gap-1">
           <div
             className="h-2 rounded"
-            style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` }}
+            style={{
+              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
+            }}
           />
           <div
             className="h-2 w-3/4 rounded"
-            style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` }}
+            style={{
+              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
+            }}
           />
           <div
             className="mt-1 h-2 w-5/6 rounded"
-            style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "8%" : "5%"})` }}
+            style={{
+              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "8%" : "5%"})`,
+            }}
           />
         </div>
         <div
@@ -162,7 +172,9 @@ function SchemePreview({ scheme }: { scheme: string }) {
       <div className="mt-1.5 flex justify-center">
         <div
           className="h-2 w-16 rounded-full"
-          style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` }}
+          style={{
+            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
+          }}
         />
       </div>
     </div>
@@ -179,7 +191,11 @@ export function SchemeSelector() {
         <h3 className="text-sm font-semibold tracking-[-0.01em]">Color scheme</h3>
         <span className="text-xs text-muted-foreground">Light / Dark / System</span>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Color scheme">
+      <div
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+        role="radiogroup"
+        aria-label="Color scheme"
+      >
         {SCHEME_OPTIONS.map((opt) => {
           const Icon = opt.icon;
           const selected = current === opt.value;
@@ -202,7 +218,9 @@ export function SchemeSelector() {
               >
                 <Icon className="size-3.5" aria-hidden="true" />
                 {opt.label}
-                {selected ? <span className="ml-auto size-1.5 rounded-full bg-primary" aria-hidden="true" /> : null}
+                {selected ? (
+                  <span className="ml-auto size-1.5 rounded-full bg-primary" aria-hidden="true" />
+                ) : null}
               </span>
             </button>
           );

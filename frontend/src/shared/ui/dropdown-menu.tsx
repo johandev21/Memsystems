@@ -24,7 +24,7 @@ function DropdownMenuContent({
   className,
   layerClassName,
   ...props
-  }: MenuPrimitive.Popup.Props &
+}: MenuPrimitive.Popup.Props &
   Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
     layerClassName?: string;
   }) {

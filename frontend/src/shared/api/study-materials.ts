@@ -37,7 +37,13 @@ export const deleteStudyMaterial = (materialId: string) =>
   apiDelete(`/api/study-materials/${materialId}`);
 
 export const duplicateStudyMaterial = (materialId: string) =>
-  apiPost<Record<string, never>, StudyMaterialDTO>(`/api/study-materials/${materialId}/duplicate`, {});
+  apiPost<Record<string, never>, StudyMaterialDTO>(
+    `/api/study-materials/${materialId}/duplicate`,
+    {},
+  );
 
 export const moveStudyMaterial = (materialId: string, folderId: string | null) =>
-  apiPatch<{ folderId: string | null }, StudyMaterialDTO>(`/api/study-materials/${materialId}/move`, { folderId });
+  apiPatch<{ folderId: string | null }, StudyMaterialDTO>(
+    `/api/study-materials/${materialId}/move`,
+    { folderId },
+  );

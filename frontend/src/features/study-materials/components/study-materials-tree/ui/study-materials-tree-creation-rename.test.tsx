@@ -18,7 +18,9 @@ function makeFolder(overrides: Partial<FolderDTO> & Pick<FolderDTO, "id" | "name
     ...overrides,
   };
 }
-function makeMaterial(overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">): StudyMaterialDTO {
+function makeMaterial(
+  overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">,
+): StudyMaterialDTO {
   return {
     notebookId,
     kind: "quiz",
@@ -113,7 +115,10 @@ describe("StudyMaterialsTree — folder creation and inline rename (production)"
     // Should have called PATCH for rename
     await waitFor(() => {
       const patchCalls = fetchMock.mock.calls.filter(
-        ([url, init]) => typeof url === "string" && url.includes("/api/folders/folder-server-1") && (init as RequestInit)?.method === "PATCH",
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.includes("/api/folders/folder-server-1") &&
+          (init as RequestInit)?.method === "PATCH",
       );
       expect(patchCalls.length).toBe(1);
       const body = JSON.parse((patchCalls[0][1] as RequestInit).body as string);
@@ -210,7 +215,9 @@ describe("StudyMaterialsTree — folder creation and inline rename (production)"
     await screen.findByLabelText("Item name");
     await user.keyboard("{Enter}");
     expect(screen.queryByLabelText("Item name")).toBeNull();
-    const patchCalls = fetchMock.mock.calls.filter(([, init]) => (init as RequestInit)?.method === "PATCH");
+    const patchCalls = fetchMock.mock.calls.filter(
+      ([, init]) => (init as RequestInit)?.method === "PATCH",
+    );
     expect(patchCalls.length).toBe(0);
   });
 

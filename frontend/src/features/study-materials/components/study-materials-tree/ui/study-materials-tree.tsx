@@ -34,14 +34,15 @@ import {
   getTreeDragData,
   getTreeDropData,
   TreeControllerProvider,
+  useTreeControllerContext,
   useStudyMaterialsTreeController,
 } from "./controller";
 import { Branch } from "./tree/branch";
 import { DragPreview } from "./tree/drag-preview";
 import { TreeHeader } from "./tree/header";
-import { studyMaterialsTreeVariants } from "./tree/variants";
+import { studyMaterialsTreeVariants, type StudyMaterialsTreeSize } from "./tree/variants";
 
-export type StudyMaterialsTreeSize = "sm" | "default" | "lg";
+export type { StudyMaterialsTreeSize } from "./tree/variants";
 
 export interface ProductionStudyMaterialsTreeProps {
   folders: readonly FolderDTO[];
@@ -169,80 +170,128 @@ export function StudyMaterialsTree({
             data-size={size}
             className={cn(studyMaterialsTreeVariants({ size }), className)}
           >
-            <Card size="sm" className="gap-0 overflow-hidden !rounded-2xl bg-study-materials-panel py-0 shadow-none">
+            <Card
+              size="sm"
+              className="gap-0 overflow-hidden !rounded-2xl bg-study-materials-panel py-0 shadow-none"
+            >
               <TreeHeader isPanelExpanded={isPanelExpanded} onPanelToggle={onPanelToggle} />
               {(isPanelExpanded === undefined || isPanelExpanded) && (
-                <CardContent className={cn("min-h-0 p-0 !rounded-b-2xl overflow-hidden", contentClassName ?? "h-[400px]")}>
-                <ContextMenu>
-                  <ContextMenuContent className="min-w-52">
-                    <ContextMenuGroup>
-                      <ContextMenuItem onClick={() => controller.createFolder(null)}>
-                        <FolderPlus />
-                        New folder
-                      </ContextMenuItem>
-                    </ContextMenuGroup>
-                    <ContextMenuSeparator />
-                    <ContextMenuGroup>
-                      <ContextMenuItem onClick={controller.expandAll}>
-                        <FolderOpen />
-                        Expand all
-                      </ContextMenuItem>
-                      <ContextMenuItem onClick={controller.collapseAll}>
-                        <ChevronsUpDown />
-                        Collapse all
-                      </ContextMenuItem>
-                    </ContextMenuGroup>
-                  </ContextMenuContent>
-                  <ContextMenuTrigger className="block h-full">
-                    {controller.tree.length === 0 ? (
-                      <EmptyState
-                        data-slot="study-materials-tree-empty-state"
-                        className="h-full py-6"
-                        icon={<Folder className="size-5 text-muted-foreground" />}
-                        title="No study materials"
-                        description={
-                          isPrototype
-                            ? "Create a folder to begin the in-memory prototype."
-                            : "Create a folder to begin."
-                        }
-                      />
-                    ) : (
-                      <ScrollArea className="h-full">
-                        <div
-                          data-slot="study-materials-tree-content"
-                          role="tree"
-                          aria-label="Study materials"
-                          className="min-h-full min-w-0 py-1"
-                        >
-                          {controller.tree.map((node) => (
-                            <Branch key={node.id} node={node} depth={0} />
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </ContextMenuTrigger>
-                </ContextMenu>
-              </CardContent>
+                <CardContent
+                  className={cn(
+                    "min-h-0 p-0 !rounded-b-2xl overflow-hidden",
+                    contentClassName ?? "h-[400px]",
+                  )}
+                >
+                  <TreeContent isPrototype={isPrototype} />
+                </CardContent>
               )}
             </Card>
           </div>
-          <DragOverlay dropAnimation={null}>{activeDragNode ? <DragPreview node={activeDragNode} /> : null}</DragOverlay>
+          <DragOverlay dropAnimation={null}>
+            {activeDragNode ? <DragPreview node={activeDragNode} /> : null}
+          </DragOverlay>
         </TreeControllerProvider>
       </DndContext>
-      <ConfirmDeleteDialog
-        open={controller.pendingDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) controller.cancelDelete();
-        }}
-        title={`Delete ${controller.pendingDelete?.type === "folder" ? "folder" : "study material"}`}
-        description={
-          isPrototype
-            ? `Delete "${controller.pendingDelete?.name ?? ""}" from this in-memory prototype?`
-            : `Delete "${controller.pendingDelete?.name ?? ""}"?`
-        }
-        onConfirm={controller.confirmDelete}
-      />
+      <DeleteTreeItemDialog controller={controller} isPrototype={isPrototype} />
     </TooltipProvider>
+  );
+}
+
+function TreeContent({ isPrototype }: { isPrototype: boolean }) {
+  const controller = useTreeControllerContext();
+  return (
+    <ContextMenu>
+      <TreeRootMenu />
+      <ContextMenuTrigger className="block h-full">
+        {controller.tree.length === 0 ? (
+          <TreeEmptyState isPrototype={isPrototype} />
+        ) : (
+          <ScrollArea className="h-full">
+            <TreeBranchList />
+          </ScrollArea>
+        )}
+      </ContextMenuTrigger>
+    </ContextMenu>
+  );
+}
+
+function TreeRootMenu() {
+  const controller = useTreeControllerContext();
+  return (
+    <ContextMenuContent className="min-w-52">
+      <ContextMenuGroup>
+        <ContextMenuItem onClick={() => controller.createFolder(null)}>
+          <FolderPlus /> New folder
+        </ContextMenuItem>
+      </ContextMenuGroup>
+      <ContextMenuSeparator />
+      <ContextMenuGroup>
+        <ContextMenuItem onClick={controller.expandAll}>
+          <FolderOpen /> Expand all
+        </ContextMenuItem>
+        <ContextMenuItem onClick={controller.collapseAll}>
+          <ChevronsUpDown /> Collapse all
+        </ContextMenuItem>
+      </ContextMenuGroup>
+    </ContextMenuContent>
+  );
+}
+
+function TreeBranchList() {
+  const { tree } = useTreeControllerContext();
+  return (
+    <div
+      data-slot="study-materials-tree-content"
+      role="tree"
+      aria-label="Study materials"
+      className="min-h-full min-w-0 py-1"
+    >
+      {tree.map((node) => (
+        <Branch key={node.id} node={node} depth={0} />
+      ))}
+    </div>
+  );
+}
+
+function TreeEmptyState({ isPrototype }: { isPrototype: boolean }) {
+  return (
+    <EmptyState
+      data-slot="study-materials-tree-empty-state"
+      className="h-full py-6"
+      icon={<Folder className="size-5 text-muted-foreground" />}
+      title="No study materials"
+      description={
+        isPrototype
+          ? "Create a folder to begin the in-memory prototype."
+          : "Create a folder to begin."
+      }
+    />
+  );
+}
+
+function DeleteTreeItemDialog({
+  controller,
+  isPrototype,
+}: {
+  controller: ReturnType<typeof useStudyMaterialsTreeController>;
+  isPrototype: boolean;
+}) {
+  const pending = controller.pendingDelete;
+  const handleOpenChange = (open: boolean) => {
+    if (!open) controller.cancelDelete();
+  };
+  return (
+    <ConfirmDeleteDialog
+      open={pending !== null}
+      onOpenChange={handleOpenChange}
+      title={`Delete ${pending?.type === "folder" ? "folder" : "study material"}`}
+      description={
+        isPrototype
+          ? `Delete "${pending?.name ?? ""}" from this in-memory prototype?`
+          : `Delete "${pending?.name ?? ""}"?`
+      }
+      onConfirm={controller.confirmDelete}
+    />
   );
 }
 

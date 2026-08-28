@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildStudyMaterialTree, canMoveItem, getDescendantFolderIds } from "./tree";
+import { getActiveFolderIds, getInitialExpandedIds, reconcileExpandedIds } from "./use-expanded";
 import type { FolderDTO } from "@/entities/folder";
 import type { StudyMaterialDTO } from "@/entities/study-material";
 
@@ -14,7 +15,9 @@ function folder(overrides: Partial<FolderDTO> & Pick<FolderDTO, "id" | "name">):
   };
 }
 
-function material(overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">): StudyMaterialDTO {
+function material(
+  overrides: Partial<StudyMaterialDTO> & Pick<StudyMaterialDTO, "id" | "title">,
+): StudyMaterialDTO {
   return {
     notebookId: "nb-1",
     kind: "quiz",
@@ -112,5 +115,21 @@ describe("production study-material-tree model", () => {
     ];
     expect(getDescendantFolderIds(folders, "a")).toEqual(new Set(["b", "c"]));
     expect(getDescendantFolderIds(folders, "d")).toEqual(new Set());
+  });
+
+  it("derives and reconciles persisted folder expansion without stale IDs", () => {
+    const folders = [
+      folder({ id: "root", name: "Root" }),
+      folder({ id: "child", name: "Child", parentId: "root" }),
+      folder({ id: "deleted", name: "Deleted", deletedAt: "2026-08-12T09:00:00.000Z" }),
+    ];
+    expect(getActiveFolderIds(folders)).toEqual(new Set(["root", "child"]));
+    expect(getInitialExpandedIds(folders, null)).toEqual(new Set(["root"]));
+    expect(getInitialExpandedIds(folders, new Set(["deleted", "child"]))).toEqual(
+      new Set(["child"]),
+    );
+    expect(reconcileExpandedIds(folders, new Set(["deleted"]), new Set())).toEqual(
+      new Set(["root"]),
+    );
   });
 });

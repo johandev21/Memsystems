@@ -5,7 +5,7 @@ import { Button } from "@/shared/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import type { ModelOption } from "@/shared/api/models";
+import type { ModelOption } from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 
 export interface ModelSelectorProps {
@@ -69,9 +69,7 @@ export function ModelSelector({ models, selectedModel, onModelChange }: ModelSel
         <ScrollArea className="h-[200px]">
           <div className="space-y-0.5 pr-2">
             {filteredModels.length === 0 ? (
-              <div className="text-xs text-muted-foreground text-center py-8">
-                No models found
-              </div>
+              <div className="text-xs text-muted-foreground text-center py-8">No models found</div>
             ) : (
               filteredModels.map((model) => (
                 <ModelRow
@@ -112,7 +110,7 @@ function ModelRow({ model, selectedModel, onSelectModel }: ModelRowProps) {
       onClick={() => onSelectModel(model.id)}
       onKeyDown={handleKeyDown}
       className={cn(
-          "group/row flex cursor-pointer items-center rounded-xl p-2 transition-colors",
+        "group/row flex cursor-pointer items-center rounded-xl p-2 transition-colors",
         isSelected
           ? "bg-popover-selected text-foreground"
           : "text-muted-foreground hover:bg-popover-hover hover:text-foreground",

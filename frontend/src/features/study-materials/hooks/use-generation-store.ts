@@ -42,13 +42,32 @@ interface GenerationState {
   cancelBackgroundGeneration: (notebookId: string, id: string) => Promise<void>;
 }
 
+function createTempGenerationId(): string {
+  return `temp-${Math.random().toString(36).substring(7)}-${Date.now()}`;
+}
+
+function removeGeneration(generations: Record<string, ActiveGeneration>, id: string) {
+  const next = { ...generations };
+  delete next[id];
+  return next;
+}
+
+function updateGenerationError(
+  generations: Record<string, ActiveGeneration>,
+  id: string,
+  error: string,
+) {
+  if (!generations[id]) return generations;
+  return { ...generations, [id]: { ...generations[id], status: "error" as const, error } };
+}
+
 export const useGenerationStore = create<GenerationState>((set, get) => ({
   generations: {},
   isCollapsed: false,
   setCollapsed: (collapsed) => set({ isCollapsed: collapsed }),
 
   startBackgroundGeneration: async (notebookId, input, queryClient, onComplete) => {
-    const tempId = `temp-${Math.random().toString(36).substring(7)}-${Date.now()}`;
+    const tempId = createTempGenerationId();
 
     set((state) => ({
       generations: {
@@ -77,11 +96,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
       const msg = err instanceof Error ? err.message : String(err);
 
       set((state) => {
-        const next = { ...state.generations };
-        if (next[tempId]) {
-          next[tempId] = { ...next[tempId], status: "error", error: msg };
-        }
-        return { generations: next };
+        return { generations: updateGenerationError(state.generations, tempId, msg) };
       });
       toast.error(`Generation failed: ${msg}`);
       return;
@@ -97,8 +112,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
     }
 
     set((state) => {
-      const next = { ...state.generations };
-      delete next[tempId];
+      const next = removeGeneration(state.generations, tempId);
       next[requestId] = {
         id: requestId,
         notebookId,
@@ -155,9 +169,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
             }
 
             set((state) => {
-              const next = { ...state.generations };
-              delete next[requestId];
-              return { generations: next };
+              return { generations: removeGeneration(state.generations, requestId) };
             });
 
             const label = kindLabel(input.kind);
@@ -179,17 +191,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
         const message = err instanceof Error ? err.message : String(err);
 
         set((state) => {
-          if (!state.generations[requestId]) return state;
-          return {
-            generations: {
-              ...state.generations,
-              [requestId]: {
-                ...state.generations[requestId],
-                status: "error",
-                error: message,
-              },
-            },
-          };
+          return { generations: updateGenerationError(state.generations, requestId, message) };
         });
 
         toast.error(`Failed to generate ${kindLabel(input.kind)}: ${message}`);
@@ -201,9 +203,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
     const isTemp = id.startsWith("temp-");
 
     set((state) => {
-      const next = { ...state.generations };
-      delete next[id];
-      return { generations: next };
+      return { generations: removeGeneration(state.generations, id) };
     });
 
     if (!isTemp) {

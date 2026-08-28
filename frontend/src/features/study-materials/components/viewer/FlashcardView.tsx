@@ -38,6 +38,23 @@ export interface FlashcardViewProps {
 
 type RatingSwipeState = "idle" | "correct" | "incorrect";
 
+function SwipeRatingBadge({ rating, visible }: { rating: "know" | "practice"; visible: boolean }) {
+  if (!visible) return null;
+  const isKnow = rating === "know";
+  return (
+    <div
+      className={cn(
+        "absolute top-4 z-20 px-4 py-1.5 rounded-xl border-2 font-bold text-sm tracking-wider uppercase pointer-events-none animate-in fade-in duration-100",
+        isKnow
+          ? "left-4 border-success bg-success/20 text-success rotate-[-12deg]"
+          : "right-4 border-destructive bg-destructive/10 text-destructive rotate-[12deg]",
+      )}
+    >
+      {isKnow ? "KNOW" : "NEED PRACTICE"}
+    </div>
+  );
+}
+
 // -----------------------------------------------------------------------------
 // 4. Main Component
 // -----------------------------------------------------------------------------
@@ -139,6 +156,25 @@ export function FlashcardView({
     handlePrev();
   }, [ratingSwipeState, setIsFlipped, handlePrev]);
 
+  const handleCardDrag = (_event: unknown, info: { offset: { x: number } }) => {
+    if (canDrag) setDragXOffset(info.offset.x);
+  };
+
+  const handleCardDragEnd = (
+    _event: unknown,
+    info: { offset: { x: number }; velocity: { x: number } },
+  ) => {
+    if (!canDrag || ratingSwipeState !== "idle") return;
+    if (info.offset.x > SWIPE_THRESHOLD || info.velocity.x > 300) handleRateCard("correct");
+    else if (info.offset.x < -SWIPE_THRESHOLD || info.velocity.x < -300)
+      handleRateCard("incorrect");
+    else setDragXOffset(0);
+  };
+
+  const handleCardClick = () => {
+    if (!isFlipped && activeCardFormat !== "cloze") handleToggleFlipCard();
+  };
+
   // Keyboard Shortcuts: Space (Flip), Left Arrow (Prev), Right Arrow (Next)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -173,7 +209,7 @@ export function FlashcardView({
   // Render helpers
   // ---------------------------------------------------------------------------
 
-  const renderCardFront = () => (
+  const FlashcardFront = () => (
     <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
       <div className="flex items-center justify-between text-xs text-text-faint">
         <span className="font-semibold text-text-faint">
@@ -205,23 +241,19 @@ export function FlashcardView({
 
       {activeCardFormat !== "cloze" && (
         <div className="flex items-center justify-center pt-2">
-          <span className="text-xs text-text-faint font-medium">
-            Click card to flip
-          </span>
+          <span className="text-xs text-text-faint font-medium">Click card to flip</span>
         </div>
       )}
     </div>
   );
 
-  const renderCardBack = () => (
+  const FlashcardBack = () => (
     <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
       <div className="flex items-center justify-between text-xs text-text-faint">
         <span className="font-semibold text-text-faint">
           {currentCardIndex + 1} / {totalCardsCount}
         </span>
-        <span className="text-xs uppercase font-semibold text-success tracking-wider">
-          Answer
-        </span>
+        <span className="text-xs uppercase font-semibold text-success tracking-wider">Answer</span>
       </div>
 
       <div className="py-2 flex flex-col justify-center my-auto space-y-4 text-center max-w-lg mx-auto">
@@ -264,7 +296,7 @@ export function FlashcardView({
     </div>
   );
 
-  const renderCardContainer = () => (
+  const FlashcardStage = () => (
     <div className="relative w-full touch-none select-none">
       <motion.div
         drag={canDrag && ratingSwipeState === "idle" ? "x" : false}
@@ -278,26 +310,9 @@ export function FlashcardView({
               : { x: 0, rotate: 0, opacity: 1, scale: 1 }
         }
         transition={{ duration: 0.25, ease: "easeOut" }}
-        onDrag={(_e, info) => {
-          if (canDrag) {
-            setDragXOffset(info.offset.x);
-          }
-        }}
-        onDragEnd={(_e, info) => {
-          if (!canDrag || ratingSwipeState !== "idle") return;
-          if (info.offset.x > SWIPE_THRESHOLD || info.velocity.x > 300) {
-            handleRateCard("correct");
-          } else if (info.offset.x < -SWIPE_THRESHOLD || info.velocity.x < -300) {
-            handleRateCard("incorrect");
-          } else {
-            setDragXOffset(0);
-          }
-        }}
-        onClick={() => {
-          if (!isFlipped && activeCardFormat !== "cloze") {
-            handleToggleFlipCard();
-          }
-        }}
+        onDrag={handleCardDrag}
+        onDragEnd={handleCardDragEnd}
+        onClick={handleCardClick}
         className={cn(
           "relative w-full rounded-[28px] border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-[300px]",
           canDrag && ratingSwipeState === "idle" && "cursor-grab active:cursor-grabbing",
@@ -306,34 +321,32 @@ export function FlashcardView({
         )}
       >
         {/* Tinder Swipe Badge Indicator Overlay (only on back when dragging) */}
-        {canDrag && dragXOffset > 25 && ratingSwipeState === "idle" && (
-          <div className="absolute top-4 left-4 z-20 px-4 py-1.5 rounded-xl border-2 border-success bg-success/20 text-success font-bold text-sm tracking-wider uppercase rotate-[-12deg] pointer-events-none animate-in fade-in duration-100">
-            KNOW
-          </div>
-        )}
-        {canDrag && dragXOffset < -25 && ratingSwipeState === "idle" && (
-          <div className="absolute top-4 right-4 z-20 px-4 py-1.5 rounded-xl border-2 border-destructive bg-destructive/10 text-destructive font-bold text-sm tracking-wider uppercase rotate-[12deg] pointer-events-none animate-in fade-in duration-100">
-            NEED PRACTICE
-          </div>
-        )}
+        <SwipeRatingBadge
+          rating="know"
+          visible={canDrag && dragXOffset > 25 && ratingSwipeState === "idle"}
+        />
+        <SwipeRatingBadge
+          rating="practice"
+          visible={canDrag && dragXOffset < -25 && ratingSwipeState === "idle"}
+        />
 
-        {!isFlipped ? renderCardFront() : renderCardBack()}
+        {!isFlipped ? <FlashcardFront /> : <FlashcardBack />}
       </motion.div>
     </div>
   );
 
-  const renderNavigationToolbar = () => (
+  const FlashcardNavigation = () => (
     <div className="flex items-center justify-center gap-3 w-full py-1 select-none">
       <Button
         type="button"
         variant="secondary"
         onClick={handlePrevCard}
         disabled={totalCardsCount <= 1}
-          aria-label="Previous Card"
-          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
-        >
-          <ChevronLeft className="size-5" />
-        </Button>
+        aria-label="Previous Card"
+        className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
+      >
+        <ChevronLeft className="size-5" />
+      </Button>
 
       {showRatingButtons && (
         <>
@@ -364,18 +377,18 @@ export function FlashcardView({
         variant="secondary"
         onClick={handleNextCard}
         disabled={totalCardsCount <= 1}
-          aria-label="Next Card"
-          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
-        >
-          <ChevronRight className="size-5" />
+        aria-label="Next Card"
+        className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
+      >
+        <ChevronRight className="size-5" />
       </Button>
     </div>
   );
 
   return (
     <div className="flex flex-col items-center w-full max-w-2xl mx-auto gap-6 animate-in fade-in duration-200">
-      {renderCardContainer()}
-      {renderNavigationToolbar()}
+      <FlashcardStage />
+      <FlashcardNavigation />
     </div>
   );
 }

@@ -8,19 +8,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/ui/dialog";
-import {
-  createFileSource,
-  createTextSource,
-  createUrlSource,
-  SOURCE_LIMIT,
-  sourcesQueryOptions,
-} from "@/shared/api/sources";
+import { SOURCE_LIMIT, sourcesQueryOptions } from "@/shared/api";
 import { useUploadStore } from "../model/upload-store";
+import { useAddSourceDialogState } from "../model/use-add-source-dialog-state";
+import { startFileUpload, startTextUpload, startUrlUpload } from "../model/source-upload-actions";
 import { FileUploadMode } from "./file-upload-mode";
 import { TextInputMode } from "./text-input-mode";
 import { UrlInputMode } from "./url-input-mode";
-
-type Mode = "menu" | "url" | "text";
 
 function deriveTitleFromUrl(rawUrl: string): string {
   try {
@@ -45,22 +39,23 @@ export function AddSourceDialog({
   const removePendingUpload = useUploadStore((state) => state.removePendingUpload);
 
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>("menu");
-  const [urlValue, setUrlValue] = useState("");
-  const [urlTitle, setUrlTitle] = useState("");
-  const [textTitle, setTextTitle] = useState("");
-  const [textBody, setTextBody] = useState("");
+  const sourceState = useAddSourceDialogState();
+  const {
+    mode,
+    setMode,
+    urlValue,
+    setUrlValue,
+    urlTitle,
+    setUrlTitle,
+    textTitle,
+    setTextTitle,
+    textBody,
+    setTextBody,
+    reset,
+  } = sourceState;
 
   const count = sources?.length ?? 0;
   const usedPercent = Math.min((count / SOURCE_LIMIT) * 100, 100);
-
-  const reset = () => {
-    setMode("menu");
-    setUrlValue("");
-    setUrlTitle("");
-    setTextTitle("");
-    setTextBody("");
-  };
 
   const handleCloseAndReset = () => {
     setOpen(false);
@@ -116,11 +111,11 @@ export function AddSourceDialog({
     updatePendingUpload(uploadId, { timerId });
 
     // 4. Trigger backend mutation
-    createUrlSource(notebookId, {
-      url: targetUrl,
-      title: urlTitle.trim() || undefined,
-    })
-      .then(() => {
+    startUrlUpload(notebookId, targetUrl, urlTitle.trim() || undefined, {
+      notebookId,
+      uploadId,
+      timerId,
+      onSuccess: () => {
         clearInterval(timerId);
         updatePendingUpload(uploadId, {
           progress: 100,
@@ -134,19 +129,20 @@ export function AddSourceDialog({
         setTimeout(() => {
           removePendingUpload(uploadId);
         }, 400);
-      })
-      .catch((err: Error) => {
+      },
+      onAbort: () => {
         clearInterval(timerId);
-        if (err.name === "AbortError") {
-          removePendingUpload(uploadId);
-          return;
-        }
+        removePendingUpload(uploadId);
+      },
+      onError: (err) => {
+        clearInterval(timerId);
         updatePendingUpload(uploadId, {
           status: "error",
           errorMessage: err.message || "Failed to extract website",
         });
         toast.error(err.message || "Failed to add website source");
-      });
+      },
+    });
   };
 
   const handleStartFileUpload = (file: File) => {
@@ -184,8 +180,11 @@ export function AddSourceDialog({
 
     updatePendingUpload(uploadId, { timerId });
 
-    createFileSource(notebookId, file)
-      .then(() => {
+    startFileUpload(notebookId, file, {
+      notebookId,
+      uploadId,
+      timerId,
+      onSuccess: () => {
         clearInterval(timerId);
         updatePendingUpload(uploadId, {
           progress: 100,
@@ -199,19 +198,20 @@ export function AddSourceDialog({
         setTimeout(() => {
           removePendingUpload(uploadId);
         }, 400);
-      })
-      .catch((err: Error) => {
+      },
+      onAbort: () => {
         clearInterval(timerId);
-        if (err.name === "AbortError") {
-          removePendingUpload(uploadId);
-          return;
-        }
+        removePendingUpload(uploadId);
+      },
+      onError: (err) => {
+        clearInterval(timerId);
         updatePendingUpload(uploadId, {
           status: "error",
           errorMessage: err.message || "Failed to upload file",
         });
         toast.error(err.message || "Failed to upload file");
-      });
+      },
+    });
   };
 
   const handleStartTextUpload = () => {
@@ -231,8 +231,10 @@ export function AddSourceDialog({
       initialStatusText: "Saving text source...",
     });
 
-    createTextSource(notebookId, { title, rawText: textBody })
-      .then(() => {
+    startTextUpload(notebookId, title, textBody, {
+      notebookId,
+      uploadId,
+      onSuccess: () => {
         updatePendingUpload(uploadId, {
           progress: 100,
           status: "completed",
@@ -245,18 +247,16 @@ export function AddSourceDialog({
         setTimeout(() => {
           removePendingUpload(uploadId);
         }, 400);
-      })
-      .catch((err: Error) => {
-        if (err.name === "AbortError") {
-          removePendingUpload(uploadId);
-          return;
-        }
+      },
+      onAbort: () => removePendingUpload(uploadId),
+      onError: (err) => {
         updatePendingUpload(uploadId, {
           status: "error",
           errorMessage: err.message || "Failed to add text source",
         });
         toast.error(err.message || "Failed to add text source");
-      });
+      },
+    });
   };
 
   const isNativeButton = children.type === "button";
@@ -317,22 +317,25 @@ export function AddSourceDialog({
             />
           )}
 
-          <div className="flex flex-col gap-2 px-2">
-            <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-              <span>Sources Limit</span>
-              <span className="text-foreground">
-                {count} / {SOURCE_LIMIT}
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-muted overflow-hidden rounded-full">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${usedPercent}%` }}
-              />
-            </div>
-          </div>
+          <SourceLimitMeter count={count} usedPercent={usedPercent} />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SourceLimitMeter({ count, usedPercent }: { count: number; usedPercent: number }) {
+  return (
+    <div className="flex flex-col gap-2 px-2">
+      <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+        <span>Sources Limit</span>
+        <span className="text-foreground">
+          {count} / {SOURCE_LIMIT}
+        </span>
+      </div>
+      <div className="h-1.5 w-full bg-muted overflow-hidden rounded-full">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${usedPercent}%` }} />
+      </div>
+    </div>
   );
 }

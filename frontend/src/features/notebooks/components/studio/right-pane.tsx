@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { MaterialViewer } from "@/features/study-materials";
-import { type StudyMaterialDTO, studyMaterialQueryOptions } from "@/shared/api/study-materials";
+import { type StudyMaterialDTO, studyMaterialQueryOptions } from "@/shared/api";
 
 export type RightPaneMode =
   | { kind: "select" }
@@ -32,7 +32,7 @@ export function RightPane({
       );
     case "viewer":
       return (
-        <RightPaneViewerWrapper
+        <StudyMaterialPane
           materialId={mode.materialId}
           initialMaterial={mode.initialMaterial}
           onClose={() => onModeChange({ kind: "select" })}
@@ -43,7 +43,7 @@ export function RightPane({
   }
 }
 
-function RightPaneViewerWrapper({
+function StudyMaterialPane({
   materialId,
   initialMaterial,
   onClose,
@@ -66,28 +66,11 @@ function RightPaneViewerWrapper({
   });
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-      </div>
-    );
+    return <StudyMaterialLoading />;
   }
 
   if (error || !material) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center p-8 text-center gap-4">
-        <p className="text-sm text-destructive">
-          {error?.message || "Failed to load study material"}
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-xs text-primary hover:underline cursor-pointer"
-        >
-          Go back
-        </button>
-      </div>
-    );
+    return <StudyMaterialError message={error?.message} onClose={onClose} />;
   }
 
   return (
@@ -97,5 +80,28 @@ function RightPaneViewerWrapper({
       forceFullscreen={forceFullscreen}
       defaultFullscreen={defaultFullscreen}
     />
+  );
+}
+
+function StudyMaterialLoading() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+    </div>
+  );
+}
+
+function StudyMaterialError({ message, onClose }: { message?: string; onClose: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center p-8 text-center gap-4">
+      <p className="text-sm text-destructive">{message || "Failed to load study material"}</p>
+      <button
+        type="button"
+        onClick={onClose}
+        className="text-xs text-primary hover:underline cursor-pointer"
+      >
+        Go back
+      </button>
+    </div>
   );
 }

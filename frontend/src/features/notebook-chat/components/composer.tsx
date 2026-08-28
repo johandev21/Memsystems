@@ -19,7 +19,7 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/features/ai";
-import type { ModelOption } from "@/shared/api/models";
+import type { ModelOption } from "@/shared/api";
 
 export interface ComposerProps {
   input: string;
@@ -65,47 +65,7 @@ export function Composer({
     }
   };
 
-  const safeModels = useMemo<ModelOption[]>(() => {
-    if (Array.isArray(models)) return models;
-    if (
-      models &&
-      typeof models === "object" &&
-      "models" in models &&
-      Array.isArray((models as { models: unknown }).models)
-    ) {
-      return (models as { models: ModelOption[] }).models;
-    }
-    return [];
-  }, [models]);
-
-  const filteredModels = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return safeModels;
-    return safeModels.filter(
-      (m) => m.displayName.toLowerCase().includes(query) || m.id.toLowerCase().includes(query),
-    );
-  }, [safeModels, search]);
-
-  const groupedModels = useMemo(() => {
-    const groups: Record<string, ModelOption[]> = {};
-    for (const m of filteredModels) {
-      const provider = m.id.split("/")[0] || "openai";
-      if (!groups[provider]) {
-        groups[provider] = [];
-      }
-      groups[provider].push(m);
-    }
-    return groups;
-  }, [filteredModels]);
-
-  const activeModelDetails = useMemo(
-    () => safeModels.find((m) => m.id === selectedModel),
-    [safeModels, selectedModel],
-  );
-
-  const activeProvider = useMemo(() => {
-    return selectedModel.split("/")[0] || "openai";
-  }, [selectedModel]);
+  const modelState = useComposerModels(models, selectedModel, search);
 
   return (
     <PromptInput
@@ -129,9 +89,12 @@ export function Composer({
             <ModelSelectorTrigger
               render={
                 <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-7rem))] cursor-pointer items-center gap-1.5 rounded-xl px-2 text-xs font-medium text-muted-foreground transition-[background-color,color] duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground [@media(pointer:coarse)]:h-9">
-                  <ModelSelectorLogo provider={activeProvider} className="size-4 opacity-80" />
+                  <ModelSelectorLogo
+                    provider={modelState.activeProvider}
+                    className="size-4 opacity-80"
+                  />
                   <ModelSelectorName className="min-w-0">
-                    {activeModelDetails?.displayName || selectedModel}
+                    {modelState.activeModel?.displayName || selectedModel}
                   </ModelSelectorName>
                   <ChevronDownIcon
                     aria-hidden="true"
@@ -146,36 +109,14 @@ export function Composer({
                 value={search}
                 onValueChange={setSearch}
               />
-              <ModelSelectorList>
-                <ModelSelectorEmpty>No models found</ModelSelectorEmpty>
-                {Object.entries(groupedModels).map(([provider, providerModels]) => {
-                  const providerName =
-                    providerNames[provider] || provider.charAt(0).toUpperCase() + provider.slice(1);
-                  return (
-                    <ModelSelectorGroup heading={providerName} key={provider}>
-                      {providerModels.map((m) => (
-                        <ModelSelectorItem
-                          key={m.id}
-                          value={m.id}
-                          onSelect={() => {
-                            onModelChange(m.id);
-                            setModelSelectorOpen(false);
-                          }}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          <ModelSelectorLogo provider={provider} />
-                          <ModelSelectorName>{m.displayName}</ModelSelectorName>
-                          {selectedModel === m.id ? (
-                            <CheckIcon className="ml-auto size-4" />
-                          ) : (
-                            <div className="ml-auto size-4" />
-                          )}
-                        </ModelSelectorItem>
-                      ))}
-                    </ModelSelectorGroup>
-                  );
-                })}
-              </ModelSelectorList>
+              <ComposerModelList
+                groups={modelState.groups}
+                selectedModel={selectedModel}
+                onSelect={(model) => {
+                  onModelChange(model);
+                  setModelSelectorOpen(false);
+                }}
+              />
             </ModelSelectorContent>
           </ModelSelector>
         </PromptInputTools>
@@ -191,5 +132,119 @@ export function Composer({
         />
       </PromptInputFooter>
     </PromptInput>
+  );
+}
+
+function normalizeModels(models: ModelOption[] | unknown): ModelOption[] {
+  if (Array.isArray(models)) return models;
+  if (models && typeof models === "object" && "models" in models && Array.isArray(models.models))
+    return models.models as ModelOption[];
+  return [];
+}
+
+function filterModels(models: ModelOption[], search: string) {
+  const query = search.trim().toLowerCase();
+  return query
+    ? models.filter(
+        (model) =>
+          model.displayName.toLowerCase().includes(query) || model.id.toLowerCase().includes(query),
+      )
+    : models;
+}
+
+function groupModels(models: ModelOption[]) {
+  return models.reduce<Record<string, ModelOption[]>>((groups, model) => {
+    const provider = model.id.split("/")[0] || "openai";
+    (groups[provider] ??= []).push(model);
+    return groups;
+  }, {});
+}
+
+function getProviderName(provider: string) {
+  return providerNames[provider] || provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+function useComposerModels(models: ModelOption[] | unknown, selectedModel: string, search: string) {
+  const safeModels = useMemo(() => normalizeModels(models), [models]);
+  const groups = useMemo(() => groupModels(filterModels(safeModels, search)), [safeModels, search]);
+  return {
+    activeModel: safeModels.find((model) => model.id === selectedModel),
+    activeProvider: selectedModel.split("/")[0] || "openai",
+    groups,
+  };
+}
+
+function ComposerModelList({
+  groups,
+  selectedModel,
+  onSelect,
+}: {
+  groups: Record<string, ModelOption[]>;
+  selectedModel: string;
+  onSelect: (model: string) => void;
+}) {
+  return (
+    <ModelSelectorList>
+      <ModelSelectorEmpty>No models found</ModelSelectorEmpty>
+      {Object.entries(groups).map(([provider, models]) => (
+        <ModelGroup
+          key={provider}
+          provider={provider}
+          models={models}
+          selectedModel={selectedModel}
+          onSelect={onSelect}
+        />
+      ))}
+    </ModelSelectorList>
+  );
+}
+
+function ModelGroup({
+  provider,
+  models,
+  selectedModel,
+  onSelect,
+}: {
+  provider: string;
+  models: ModelOption[];
+  selectedModel: string;
+  onSelect: (model: string) => void;
+}) {
+  return (
+    <ModelSelectorGroup heading={getProviderName(provider)}>
+      {models.map((model) => (
+        <ModelOption
+          key={model.id}
+          model={model}
+          provider={provider}
+          selected={selectedModel === model.id}
+          onSelect={onSelect}
+        />
+      ))}
+    </ModelSelectorGroup>
+  );
+}
+
+function ModelOption({
+  model,
+  provider,
+  selected,
+  onSelect,
+}: {
+  model: ModelOption;
+  provider: string;
+  selected: boolean;
+  onSelect: (model: string) => void;
+}) {
+  return (
+    <ModelSelectorItem
+      value={model.id}
+      onSelect={() => onSelect(model.id)}
+      className="flex items-center gap-2 cursor-pointer"
+    >
+      <ModelSelectorLogo provider={provider} />
+      <ModelSelectorName>{model.displayName}</ModelSelectorName>
+      {selected ? <CheckIcon className="ml-auto size-4" /> : <div className="ml-auto size-4" />}
+    </ModelSelectorItem>
   );
 }

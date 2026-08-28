@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useId } from "react";
 import { Button } from "@/shared/ui/button";
 import { Textarea } from "@/shared/ui/textarea";
 import { cn } from "@/shared/lib/utils";
+import { useDescriptionOverflow } from "../../model/use-description-overflow";
 
 interface NotebookDescriptionProps {
   description: string;
@@ -17,29 +18,8 @@ export function NotebookDescription({
   onCancel,
 }: NotebookDescriptionProps) {
   const descriptionId = useId();
-  const captionRef = useRef<HTMLParagraphElement>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  const measureOverflow = useCallback(() => {
-    const caption = captionRef.current;
-    if (!caption) return;
-    setIsOverflowing(caption.scrollHeight > caption.clientHeight + 1);
-  }, []);
-
-  useEffect(() => {
-    setIsExpanded(false);
-  }, [description]);
-
-  useEffect(() => {
-    const caption = captionRef.current;
-    if (!caption || isExpanded) return;
-
-    measureOverflow();
-    const observer = new ResizeObserver(measureOverflow);
-    observer.observe(caption);
-    return () => observer.disconnect();
-  }, [description, isExpanded, measureOverflow]);
+  const { captionRef, isExpanded, isOverflowing, setIsExpanded } =
+    useDescriptionOverflow(description);
 
   if (isEditing) {
     const showCharacterCount = description.length >= 400;

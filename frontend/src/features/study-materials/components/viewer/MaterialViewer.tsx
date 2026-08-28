@@ -5,8 +5,8 @@ import type {
   FlashcardEditorContentType,
   QuizEditorContentType,
   RoadmapEditorContentType,
-} from "@/features/study-materials/editor-schemas";
-import type { MindMapContentType } from "@/features/study-materials";
+} from "../../editor-schemas";
+import type { MindMapContentType } from "../../shapes";
 import type { StudyMaterialDTO } from "@/shared/api/study-materials";
 import { FlashcardView } from "./FlashcardView";
 import { MindMapView } from "./MindMapView";
@@ -21,13 +21,11 @@ export interface MaterialViewerProps {
   forceFullscreen?: boolean;
 }
 
-export function MaterialViewer({
-  material,
-  onClose,
-  showHeader = true,
-  defaultFullscreen,
-  forceFullscreen,
-}: MaterialViewerProps) {
+function useMaterialViewerFullscreen(
+  forceFullscreen: boolean | undefined,
+  defaultFullscreen: boolean | undefined,
+  onClose: () => void,
+) {
   const [isFullscreen, setIsFullscreen] = useState(() =>
     Boolean(defaultFullscreen || forceFullscreen),
   );
@@ -35,13 +33,10 @@ export function MaterialViewer({
   const isEffectivelyFullscreen = forceFullscreen || isFullscreen;
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isEffectivelyFullscreen) {
-        if (forceFullscreen) {
-          onClose();
-        } else {
-          setIsFullscreen(false);
-        }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isEffectivelyFullscreen) {
+        if (forceFullscreen) onClose();
+        else setIsFullscreen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -52,23 +47,21 @@ export function MaterialViewer({
     let exitTimer: number | undefined;
     const handleChatNavigation = (event: Event) => {
       const detail = (event as CustomEvent<{ focusChat?: boolean }>).detail;
-      if (detail?.focusChat && isEffectivelyFullscreen) {
-        if (forceFullscreen) {
-          onClose();
-          return;
-        }
-        setIsExitingFullscreen(true);
-        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        exitTimer = window.setTimeout(
-          () => {
-            setIsFullscreen(false);
-            setIsExitingFullscreen(false);
-          },
-          reducedMotion ? 0 : 150,
-        );
+      if (!detail?.focusChat || !isEffectivelyFullscreen) return;
+      if (forceFullscreen) {
+        onClose();
+        return;
       }
+      setIsExitingFullscreen(true);
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      exitTimer = window.setTimeout(
+        () => {
+          setIsFullscreen(false);
+          setIsExitingFullscreen(false);
+        },
+        reducedMotion ? 0 : 150,
+      );
     };
-
     window.addEventListener("send-chat-prompt", handleChatNavigation);
     return () => {
       window.removeEventListener("send-chat-prompt", handleChatNavigation);
@@ -76,7 +69,20 @@ export function MaterialViewer({
     };
   }, [isEffectivelyFullscreen, forceFullscreen, onClose]);
 
-  const renderContent = () => {
+  return { isFullscreen, setIsFullscreen, isExitingFullscreen, isEffectivelyFullscreen };
+}
+
+export function MaterialViewer({
+  material,
+  onClose,
+  showHeader = true,
+  defaultFullscreen,
+  forceFullscreen,
+}: MaterialViewerProps) {
+  const { isFullscreen, setIsFullscreen, isExitingFullscreen, isEffectivelyFullscreen } =
+    useMaterialViewerFullscreen(forceFullscreen, defaultFullscreen, onClose);
+
+  const renderMaterialContent = () => {
     switch (material.kind) {
       case "quiz":
         return <QuizView content={material.content as QuizEditorContentType} />;
@@ -104,13 +110,11 @@ export function MaterialViewer({
           />
         );
       default:
-        return (
-          <div className="p-8 text-center text-text-tertiary">Unsupported material type</div>
-        );
+        return <div className="p-8 text-center text-text-tertiary">Unsupported material type</div>;
     }
   };
 
-  const header = (
+  const viewerHeader = (
     <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Button
@@ -166,9 +170,9 @@ export function MaterialViewer({
             : "animate-in fade-in duration-150"
         }`}
       >
-        {header}
+        {viewerHeader}
         <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-8 max-w-7xl mx-auto w-full">
-          {renderContent()}
+          {renderMaterialContent()}
         </div>
       </div>
     );
@@ -176,9 +180,9 @@ export function MaterialViewer({
 
   return (
     <div className="flex h-full flex-col bg-surface-1 text-text-primary overflow-hidden">
-      {showHeader && header}
+      {showHeader && viewerHeader}
       <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-6">
-        {renderContent()}
+        {renderMaterialContent()}
       </div>
     </div>
   );

@@ -75,6 +75,27 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const openFileDialog = () => fileInputRef.current?.click();
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openFileDialog();
+    }
+  };
+
   const handleFileSelect = async (file: File) => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       toast.error(`Unsupported image format (${file.type}). Use JPG, PNG, or WebP.`);
@@ -105,24 +126,11 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
         <div
           role="button"
           tabIndex={0}
-          onDrop={(e) => {
-            e.preventDefault();
-            setIsDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) handleFileSelect(file);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
           onDragLeave={() => setIsDragging(false)}
-          onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              fileInputRef.current?.click();
-            }
-          }}
+          onClick={openFileDialog}
+          onKeyDown={handleKeyDown}
           className={cn(
             "relative flex h-48 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed transition-all bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring",
             isDragging

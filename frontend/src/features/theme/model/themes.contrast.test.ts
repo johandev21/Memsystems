@@ -4,9 +4,7 @@ declare const process: { cwd: () => string };
 
 function oklchToLuminance(oklchStr: string): number {
   if (!oklchStr) throw new Error(`Missing oklch string: received ${oklchStr}`);
-  const m = oklchStr.match(
-    /oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*[\d.]+%?)?\s*\)/,
-  );
+  const m = oklchStr.match(/oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*[\d.]+%?)?\s*\)/);
   if (!m) throw new Error(`Invalid oklch string: ${oklchStr}`);
 
   const L = m[1].endsWith("%") ? parseFloat(m[1]) / 100 : parseFloat(m[1]);

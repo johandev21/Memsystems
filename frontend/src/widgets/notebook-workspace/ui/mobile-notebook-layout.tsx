@@ -21,50 +21,8 @@ export function MobileNotebookLayout({
   selectedSourceId,
   onSelectSource,
 }: MobileNotebookLayoutProps) {
-  const [activeTab, setActiveTab] = useState("chat");
-  const [pendingChatPrompt, setPendingChatPrompt] = useState<{
-    prompt: string;
-    autoSend?: boolean;
-    focusChat?: boolean;
-    concept?: string;
-    chatNavigationRetry?: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    const handleChatNavigation = (event: Event) => {
-      if (!window.matchMedia("(max-width: 1023px)").matches) return;
-      const detail = (event as CustomEvent<typeof pendingChatPrompt>).detail;
-      if (!detail?.focusChat || detail.chatNavigationRetry) return;
-      setPendingChatPrompt(detail);
-      setActiveTab("chat");
-    };
-
-    window.addEventListener("send-chat-prompt", handleChatNavigation);
-    return () => window.removeEventListener("send-chat-prompt", handleChatNavigation);
-  }, []);
-
-  useEffect(() => {
-    if (activeTab !== "chat" || !pendingChatPrompt) return;
-    const detail = pendingChatPrompt;
-    setPendingChatPrompt(null);
-    window.dispatchEvent(
-      new CustomEvent("send-chat-prompt", {
-        detail: { ...detail, chatNavigationRetry: true },
-      }),
-    );
-  }, [activeTab, pendingChatPrompt]);
-
-  // Mobile fullscreen overlays — lock body scroll while a viewer is open
-  useEffect(() => {
-    const hasOverlay = Boolean(selectedSourceId || dialogs.selectedStudyMaterialId);
-    if (!hasOverlay) return;
-    if (!window.matchMedia("(max-width: 1023px)").matches) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [selectedSourceId, dialogs.selectedStudyMaterialId]);
+  const [activeTab, setActiveTab] = useMobileChatNavigation();
+  useMobileOverlayScrollLock(Boolean(selectedSourceId || dialogs.selectedStudyMaterialId));
 
   return (
     <div className="lg:hidden h-full flex flex-col">
@@ -89,9 +47,6 @@ export function MobileNotebookLayout({
               />
               <MobileStudyMaterialsPanel
                 notebookId={notebookId}
-                open={dialogs.studyMaterialsDialogOpen}
-                onOpenChange={dialogs.setStudyMaterialsDialogOpen}
-                selectedMaterialId={dialogs.selectedStudyMaterialId}
                 onSelectMaterial={dialogs.setSelectedStudyMaterialId}
               />
             </div>
@@ -134,4 +89,49 @@ export function MobileNotebookLayout({
       )}
     </div>
   );
+}
+
+function useMobileChatNavigation() {
+  const [activeTab, setActiveTab] = useState("chat");
+  const [pendingChatPrompt, setPendingChatPrompt] = useState<{
+    prompt: string;
+    autoSend?: boolean;
+    focusChat?: boolean;
+    concept?: string;
+    chatNavigationRetry?: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleChatNavigation = (event: Event) => {
+      if (!window.matchMedia("(max-width: 1023px)").matches) return;
+      const detail = (event as CustomEvent<typeof pendingChatPrompt>).detail;
+      if (!detail?.focusChat || detail.chatNavigationRetry) return;
+      setPendingChatPrompt(detail);
+      setActiveTab("chat");
+    };
+    window.addEventListener("send-chat-prompt", handleChatNavigation);
+    return () => window.removeEventListener("send-chat-prompt", handleChatNavigation);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "chat" || !pendingChatPrompt) return;
+    const detail = pendingChatPrompt;
+    setPendingChatPrompt(null);
+    window.dispatchEvent(
+      new CustomEvent("send-chat-prompt", { detail: { ...detail, chatNavigationRetry: true } }),
+    );
+  }, [activeTab, pendingChatPrompt]);
+
+  return [activeTab, setActiveTab] as const;
+}
+
+function useMobileOverlayScrollLock(hasOverlay: boolean) {
+  useEffect(() => {
+    if (!hasOverlay || !window.matchMedia("(max-width: 1023px)").matches) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [hasOverlay]);
 }

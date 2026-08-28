@@ -23,11 +23,7 @@ export interface WebSearchJob {
   completedAt: string | null;
 }
 
-export type WebSearchImportResultStatus =
-  | "added"
-  | "duplicate"
-  | "limit_reached"
-  | "scrape_failed";
+export type WebSearchImportResultStatus = "added" | "duplicate" | "limit_reached" | "scrape_failed";
 
 export interface WebSearchImportResultItem {
   url: string;
@@ -59,10 +55,7 @@ export function webSearchJobQueryOptions(notebookId: string) {
   });
 }
 
-export const startWebSearchJob = (
-  notebookId: string,
-  input: { query: string; modelId: string },
-) =>
+export const startWebSearchJob = (notebookId: string, input: { query: string; modelId: string }) =>
   apiPost<{ query: string; modelId: string }, WebSearchJob>(
     `/api/notebooks/${notebookId}/sources/web-search`,
     input,

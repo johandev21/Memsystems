@@ -38,20 +38,28 @@ function getReasoningText(parts: UIMessage["parts"]): string {
 type MessageComponents = NonNullable<MessageResponseProps["components"]>;
 
 export function AssistantMessage({ message, citedSources }: AssistantMessageProps) {
+  const content = useAssistantMessageContent(message, citedSources);
+  if (content.isEmpty) return <EmptyAssistantMessage />;
+
+  return (
+    <Message from="assistant">
+      <MessageContent>
+        <AssistantReasoning content={content} />
+        <AssistantResponses messageId={message.id} content={content} />
+        {!content.isStreaming && <MessageReferences references={content.remainingReferences} />}
+      </MessageContent>
+    </Message>
+  );
+}
+
+function useAssistantMessageContent(message: UIMessage, citedSources: CitedSourceDTO[]) {
   const isStreaming = message.parts.some((part) => isTextPart(part) && part.state === "streaming");
-
   const reasoningText = getReasoningText(message.parts);
-  const hasReasoning = reasoningText.length > 0;
-
-  const lastPart = message.parts.at(-1);
-  const isReasoningStreaming = isStreaming && lastPart?.type === "reasoning";
-
   const textParts = message.parts.filter(isTextPart);
   const referencesByKey = useMemo(
     () => new Map(citedSources.map((source) => [source.citationKey.toUpperCase(), source])),
     [citedSources],
   );
-
   const messageComponents = useMemo<MessageComponents>(
     () => ({
       a: ({ href, children, ...props }) => {
@@ -59,11 +67,7 @@ export function AssistantMessage({ message, citedSources }: AssistantMessageProp
         const reference = referenceKey
           ? referencesByKey.get(referenceKey.toUpperCase())
           : undefined;
-
-        if (reference) {
-          return <ReferencePopover reference={reference}>{children}</ReferencePopover>;
-        }
-
+        if (reference) return <ReferencePopover reference={reference}>{children}</ReferencePopover>;
         return (
           <a
             {...props}
@@ -79,48 +83,60 @@ export function AssistantMessage({ message, citedSources }: AssistantMessageProp
     }),
     [referencesByKey],
   );
-
   const preparedParts = textParts.map((part) =>
-    prepareReferenceMessage(part.text ?? "", citedSources, isStreaming),
+    prepareReferenceMessage(part.text, citedSources, isStreaming),
   );
   const inlineCitationKeys = new Set(preparedParts.flatMap((part) => [...part.inlineCitationKeys]));
-  const remainingReferences = citedSources.filter(
-    (source) => !inlineCitationKeys.has(source.citationKey),
+  return {
+    isEmpty: textParts.length === 0 && reasoningText.length === 0,
+    isReasoningStreaming: isStreaming && message.parts.at(-1)?.type === "reasoning",
+    isStreaming,
+    messageComponents,
+    preparedParts,
+    reasoningText,
+    remainingReferences: citedSources.filter(
+      (source) => !inlineCitationKeys.has(source.citationKey),
+    ),
+  };
+}
+
+function AssistantReasoning({
+  content,
+}: {
+  content: ReturnType<typeof useAssistantMessageContent>;
+}) {
+  if (!content.reasoningText) return null;
+  return (
+    <Reasoning isStreaming={content.isReasoningStreaming}>
+      <ReasoningTrigger />
+      <ReasoningContent>{content.reasoningText}</ReasoningContent>
+    </Reasoning>
   );
+}
 
-  const isEmpty = textParts.length === 0 && !hasReasoning;
+function AssistantResponses({
+  messageId,
+  content,
+}: {
+  messageId: string;
+  content: ReturnType<typeof useAssistantMessageContent>;
+}) {
+  return content.preparedParts.map((part, index) => (
+    <MessageResponse
+      key={`${messageId}-${index}`}
+      components={content.messageComponents}
+      isStreaming={content.isStreaming}
+    >
+      {part.markdown}
+    </MessageResponse>
+  ));
+}
 
-  if (isEmpty) {
-    return (
-      <Message from="assistant">
-        <MessageContent>
-          <MessageResponse> </MessageResponse>
-        </MessageContent>
-      </Message>
-    );
-  }
-
+function EmptyAssistantMessage() {
   return (
     <Message from="assistant">
       <MessageContent>
-        {hasReasoning && (
-          <Reasoning isStreaming={isReasoningStreaming}>
-            <ReasoningTrigger />
-            <ReasoningContent>{reasoningText}</ReasoningContent>
-          </Reasoning>
-        )}
-
-        {preparedParts.map((part, index) => (
-          <MessageResponse
-            key={`${message.id}-${index}`}
-            components={messageComponents}
-            isStreaming={isStreaming}
-          >
-            {part.markdown}
-          </MessageResponse>
-        ))}
-
-        {!isStreaming && <MessageReferences references={remainingReferences} />}
+        <MessageResponse> </MessageResponse>
       </MessageContent>
     </Message>
   );
