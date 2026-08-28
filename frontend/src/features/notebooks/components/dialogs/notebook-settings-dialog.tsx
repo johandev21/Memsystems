@@ -12,9 +12,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
-import { deleteNotebook, notebookQueryOptions } from "@/shared/api";
-import { Button } from "@/shared/ui/button";
+} from "@/components/ui/alert-dialog";
+import { deleteNotebook, notebookQueryOptions } from "../../api/notebooks";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -22,7 +22,7 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@/shared/ui/popover";
+} from "@/components/ui/popover";
 
 export const EDIT_NOTEBOOK_EVENT = "edit-notebook";
 export const CLEAR_NOTEBOOK_CHAT_EVENT = "clear-notebook-chat";

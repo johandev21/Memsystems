@@ -7,11 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/shared/ui/dialog";
-import { SOURCE_LIMIT, sourcesQueryOptions } from "@/shared/api";
-import { useUploadStore } from "../model/upload-store";
-import { useAddSourceDialogState } from "../model/use-add-source-dialog-state";
-import { startFileUpload, startTextUpload, startUrlUpload } from "../model/source-upload-actions";
+} from "@/components/ui/dialog";
+import { SOURCE_LIMIT, sourcesQueryOptions } from "../api/sources";
+import { useUploadStore } from "../hooks/use-upload-store";
+import { useAddSourceDialogState } from "../hooks/use-add-source-dialog-state";
+import { startFileUpload, startTextUpload, startUrlUpload } from "../utils/source-upload-actions";
 import { FileUploadMode } from "./file-upload-mode";
 import { TextInputMode } from "./text-input-mode";
 import { UrlInputMode } from "./url-input-mode";

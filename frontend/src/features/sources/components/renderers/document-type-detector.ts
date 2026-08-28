@@ -1,4 +1,4 @@
-import type { SourceWithContent } from "@/shared/api";
+import type { SourceWithContent } from "../../types";
 
 export type DocumentType = "markdown" | "code" | "article" | "plaintext";
 

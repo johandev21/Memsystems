@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { MaterialViewer } from "@/features/study-materials";
-import { type StudyMaterialDTO, studyMaterialQueryOptions } from "@/shared/api";
+import { MaterialViewer } from "@/features/study-material-viewer";
+import { type StudyMaterialDTO, studyMaterialQueryOptions } from "@/features/study-material-viewer";
 
 export type RightPaneMode =
   | { kind: "select" }

@@ -1,3 +1,3 @@
-export * from "./ui/settings-layout";
-export * from "./ui/settings-page";
-export * from "./ui/connection-page";
+export { SettingsPage } from "./settings-page";
+export { ConnectionPage } from "./connection-page";
+export { SettingsLayout } from "./settings-layout";

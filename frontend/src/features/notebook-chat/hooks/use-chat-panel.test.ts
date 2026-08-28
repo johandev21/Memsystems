@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import type { RefObject } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChatMessageDTO } from "@/shared/api";
+import type { ChatMessageDTO } from "../api/chat";
 
 const mocks = vi.hoisted(() => ({
   sendMessage: vi.fn(),
@@ -52,13 +52,23 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/ai", () => ({
-  useConnectionStatus: () => ({ data: { ok: true } }),
-}));
+vi.mock("@/features/ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/ai")>();
+  return {
+    ...actual,
+    useConnectionStatus: () => ({ data: { ok: true } }),
+    modelsQueryOptions: { queryKey: ["models"], queryFn: vi.fn() },
+  };
+});
 
-vi.mock("@/features/notebooks", () => ({
-  useModelPersistence: () => ({ model: null, setModel: vi.fn() }),
-}));
+vi.mock("@/features/notebooks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/notebooks")>();
+  return {
+    ...actual,
+    useModelPersistence: () => ({ model: null, setModel: vi.fn() }),
+    notebookQueryOptions: vi.fn((id: string) => ({ queryKey: ["notebooks", id], queryFn: vi.fn() })),
+  };
+});
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },

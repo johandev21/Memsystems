@@ -3,13 +3,14 @@ import { AlertTriangle, Check, ExternalLink, Loader2, Send, X } from "lucide-rea
 import { useMemo, useState } from "react";
 import { ModelSelectorLogo } from "@/features/ai";
 import { useModelPersistence } from "@/features/notebooks";
-import { modelsQueryOptions, type WebSearchImportResultItem } from "@/shared/api";
-import { Button } from "@/shared/ui/button";
-import { Checkbox } from "@/shared/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { cn } from "@/shared/lib/utils";
-import { useWebSearch } from "../model/use-web-search";
-import { useWebSearchModel } from "../model/use-web-search-model";
+import { modelsQueryOptions } from "@/features/ai";
+import type { WebSearchImportResultItem } from "../api/web-search";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/shared/utils/cn";
+import { useWebSearch } from "../hooks/use-web-search";
+import { useWebSearchModel } from "../hooks/use-web-search-model";
 
 function getHostname(url: string): string {
   try {

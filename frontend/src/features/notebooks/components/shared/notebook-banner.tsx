@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import { ImageUploadDialog } from "../dialogs/image-upload-dialog";
 import { EDIT_NOTEBOOK_EVENT } from "../dialogs/notebook-settings-dialog";
 import { NotebookDescription } from "./notebook-description";
-import { fetchApi, cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { IconPicker } from "@/shared/ui/icon-picker";
-import { Input } from "@/shared/ui/input";
-import { NotebookIcon } from "@/shared/ui/notebook-icon";
-import { useBannerFocalPointDrag } from "../../model/use-banner-focal-point-drag";
+import { fetchApi } from "@/shared/api";
+import { cn } from "@/shared/utils/cn";
+import { Button } from "@/components/ui/button";
+import { IconPicker } from "@/components/ui/icon-picker";
+import { Input } from "@/components/ui/input";
+import { NotebookIcon } from "../notebook-icon";
+import { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
 
 export interface NotebookBannerProps {
   notebookId: string;
@@ -139,7 +140,7 @@ export function NotebookBanner({
               icon: draftIcon,
               bannerFocalPoint: draftFocalPoint,
             }),
-          }).then((response) => {
+          }).then((response: Response) => {
             if (!response.ok) throw new Error("Failed to update notebook");
           }),
         );
@@ -153,7 +154,7 @@ export function NotebookBanner({
               description: draftDescription,
               icon: draftIcon,
             }),
-          }).then((response) => {
+          }).then((response: Response) => {
             if (!response.ok) throw new Error("Failed to update notebook");
           }),
         );
@@ -168,14 +169,14 @@ export function NotebookBanner({
         body.append("focalPoint", JSON.stringify(draftFocalPoint));
         requests.push(
           fetchApi(`/api/notebooks/${notebookId}/banner`, { method: "POST", body }).then(
-            (response) => {
+            (response: Response) => {
               if (!response.ok) throw new Error("Failed to upload banner");
             },
           ),
         );
       } else if (bannerRemoved && bannerUrl) {
         requests.push(
-          fetchApi(`/api/notebooks/${notebookId}/banner`, { method: "DELETE" }).then((response) => {
+          fetchApi(`/api/notebooks/${notebookId}/banner`, { method: "DELETE" }).then((response: Response) => {
             if (!response.ok) throw new Error("Failed to remove banner");
           }),
         );

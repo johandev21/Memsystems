@@ -1,8 +1,8 @@
 import { useId } from "react";
-import { Button } from "@/shared/ui/button";
-import { Textarea } from "@/shared/ui/textarea";
-import { cn } from "@/shared/lib/utils";
-import { useDescriptionOverflow } from "../../model/use-description-overflow";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/shared/utils/cn";
+import { useDescriptionOverflow } from "../../hooks/use-description-overflow";
 
 interface NotebookDescriptionProps {
   description: string;

@@ -12,15 +12,17 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/shared/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
-import { sourceQueryOptions, type SourceWithContent } from "@/shared/api";
-import { cn, fetchApi } from "@/shared/lib/utils";
+} from "@/components/ui/dropdown-menu";
+import { sourceQueryOptions } from "../api/sources";
+import type { SourceWithContent } from "../types";
+import { cn } from "@/shared/utils/cn";
+import { fetchApi } from "@/shared/api";
 import {
   ArticleDocumentViewer,
   CodeDocumentViewer,

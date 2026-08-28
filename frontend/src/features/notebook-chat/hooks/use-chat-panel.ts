@@ -10,9 +10,9 @@ import {
   type CitedSourceDTO,
   chatMessagesQueryOptions,
   clearChatHistory,
-  modelsQueryOptions,
-  notebookQueryOptions,
-} from "@/shared/api";
+} from "../api/chat";
+import { modelsQueryOptions } from "@/features/ai";
+import { notebookQueryOptions } from "@/features/notebooks";
 
 const DEFAULT_MODEL_ID = "openai/gpt-5.6-sol";
 

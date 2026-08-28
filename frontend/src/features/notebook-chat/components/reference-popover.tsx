@@ -1,9 +1,9 @@
 import { ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/shared/lib/utils";
-import type { CitedSourceDTO } from "@/shared/api";
-import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
+import { cn } from "@/shared/utils/cn";
+import type { CitedSourceDTO } from "../api/chat";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -11,8 +11,8 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@/shared/ui/popover";
-import { getReferenceExcerpt, getSafeReferenceUrl } from "../model/message-reference";
+} from "@/components/ui/popover";
+import { getReferenceExcerpt, getSafeReferenceUrl } from "../types/message-reference.types";
 
 interface ReferencePopoverProps {
   reference: CitedSourceDTO;

@@ -1,92 +1,23 @@
-import { useEffect, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider, useTheme } from "next-themes";
+import type { ReactNode } from "react";
 import { Toaster } from "sonner";
-import { PaletteProvider } from "@/features/theme";
-
-function isEditableTarget(target: EventTarget | null) {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable ||
-      target.closest("input, textarea, select, [contenteditable='true']") !== null)
-  );
-}
-
-function ThemeKeyboardShortcut() {
-  const { resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.repeat ||
-        event.isComposing ||
-        event.key.toLowerCase() !== "d" ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.altKey ||
-        isEditableTarget(event.target)
-      ) {
-        return;
-      }
-
-      // Do not toggle theme while a quiz is actively being taken — bare "d"
-      // is consumed by the quiz viewer to select answer D.
-      if (document.querySelector('[data-quiz-active="true"]')) {
-        return;
-      }
-
-      setTheme(resolvedTheme === "dark" ? "light" : "dark");
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [resolvedTheme, setTheme]);
-
-  return null;
-}
-
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 30_000,
-        refetchOnWindowFocus: false,
-      },
-    },
-  });
-}
-
-let browserQueryClient: QueryClient | undefined;
-
-function getQueryClient() {
-  if (typeof window === "undefined") {
-    return makeQueryClient();
-  }
-  if (!browserQueryClient) {
-    browserQueryClient = makeQueryClient();
-  }
-  return browserQueryClient;
-}
+import { QueryProvider } from "./query-provider";
+import { AppThemeProvider } from "./theme-provider";
+import { AuthProvider } from "./auth-provider";
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  const queryClient = getQueryClient();
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <PaletteProvider>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          storageKey="memsystems-scheme"
-        >
-          <ThemeKeyboardShortcut />
+    <QueryProvider>
+      <AppThemeProvider>
+        <AuthProvider>
           {children}
           <Toaster position="top-right" />
-        </ThemeProvider>
-      </PaletteProvider>
-    </QueryClientProvider>
+        </AuthProvider>
+      </AppThemeProvider>
+    </QueryProvider>
   );
 }
+
+export * from "./query-provider";
+export * from "./auth-provider";
+export * from "./theme-provider";
+export * from "./use-theme-keyboard-shortcut";

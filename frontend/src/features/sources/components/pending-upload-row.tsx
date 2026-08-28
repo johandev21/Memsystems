@@ -1,7 +1,7 @@
 import { File, FileText, Globe, Loader2, X, AlertCircle } from "lucide-react";
-import type { SourceKind } from "@/entities/source";
-import { cn } from "@/shared/lib/utils";
-import type { PendingSourceUpload } from "../model/upload-store";
+import type { SourceKind } from "@/features/sources";
+import { cn } from "@/shared/utils/cn";
+import type { PendingSourceUpload } from "../hooks/use-upload-store";
 
 function getKindIcon(kind: SourceKind) {
   switch (kind) {

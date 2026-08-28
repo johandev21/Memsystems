@@ -2,7 +2,7 @@ import type { UIMessage } from "@ai-sdk/react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { CitedSourceDTO } from "@/shared/api";
+import type { CitedSourceDTO } from "../api/chat";
 import { AssistantMessage } from "./assistant-message";
 
 const citedSource: CitedSourceDTO = {

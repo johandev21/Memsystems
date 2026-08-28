@@ -31,7 +31,7 @@ pnpm workspace: `frontend/` (Vite + React 19) + `backend/` (NestJS 11). Turborep
 - [Architecture](docs/architecture.md) — package structure, entrypoints, key patterns
 - [Testing](docs/testing.md) — backend test setup, fixtures, DB lifecycle
 - [Database](docs/database.md) — schema, drizzle-kit, connections
-- [FSD Conventions](docs/fsd-conventions.md) — feature-sliced design rules for frontend
+- [Frontend Architecture](docs/frontend-architecture.md) — feature-first design rules for frontend
 
 ## Skills
 

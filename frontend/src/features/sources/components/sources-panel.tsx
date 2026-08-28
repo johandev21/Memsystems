@@ -2,15 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, File, FileText, Link2, Loader2, Trash2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { ConfirmDeleteDialog } from "@/shared/ui/confirm-delete-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   deleteSource,
   type Source,
   type SourceKind,
   sourcesQueryOptions,
-} from "@/shared/api";
-import { cn } from "@/shared/lib/utils";
-import { useUploadStore } from "../model/upload-store";
+} from "../api/sources";
+import { cn } from "@/shared/utils/cn";
+import { useUploadStore } from "../hooks/use-upload-store";
 import { AddSourceDialog } from "./add-source-dialog";
 import { PendingUploadRow } from "./pending-upload-row";
 import { WebSearchComposer } from "./web-search-composer";

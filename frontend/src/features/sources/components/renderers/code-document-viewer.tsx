@@ -6,7 +6,7 @@ import {
   CodeBlockFilename,
   CodeBlockHeader,
   CodeBlockTitle,
-} from "@/features/ai/ui/code-block";
+} from "@/features/ai";
 import { getLanguageFromTitle } from "./document-type-detector";
 
 interface CodeDocumentViewerProps {

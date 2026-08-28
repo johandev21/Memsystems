@@ -19,7 +19,7 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/features/ai";
-import type { ModelOption } from "@/shared/api";
+import type { ModelOption } from "@/features/ai";
 
 export interface ComposerProps {
   input: string;

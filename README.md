@@ -238,7 +238,7 @@ La arquitectura detallada está disponible en [docs/architecture.md](docs/archit
 - [Arquitectura](docs/architecture.md)
 - [Base de datos](docs/database.md)
 - [Pruebas](docs/testing.md)
-- [Convenciones de Feature-Sliced Design](docs/fsd-conventions.md)
+- [Arquitectura Frontend](docs/frontend-architecture.md)
 
 ## Estado del proyecto
 

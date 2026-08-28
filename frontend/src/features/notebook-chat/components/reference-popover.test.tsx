@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import type { CitedSourceDTO } from "@/shared/api";
+import type { CitedSourceDTO } from "../api/chat";
 import { ReferencePopover } from "./reference-popover";
 
 function reference(overrides: Partial<CitedSourceDTO> = {}): CitedSourceDTO {

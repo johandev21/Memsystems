@@ -8,12 +8,12 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
-import { Button } from "@/shared/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
-import { useGenerationStore } from "@/features/study-materials";
-import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-materials";
-import { sourcesQueryOptions } from "@/shared/api";
-import { cn } from "@/shared/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useGenerationStore } from "@/features/study-material-generation";
+import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-material-viewer";
+import { sourcesQueryOptions } from "@/features/sources";
+import { cn } from "@/shared/utils/cn";
 
 type ResourceConfig = {
   key: string;

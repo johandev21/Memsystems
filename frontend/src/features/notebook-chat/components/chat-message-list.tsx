@@ -1,8 +1,8 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import type { CitedSourceDTO } from "@/shared/api";
-import { MessageScrollerItem } from "@/shared/ui/message-scroller";
+import type { CitedSourceDTO } from "../api/chat";
+import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { AssistantMessage } from "./assistant-message";
 import { UserMessage } from "./user-message";
 

@@ -1,13 +1,14 @@
 export { useConnectionStatus } from "./hooks/use-connection-status";
 export type { ConnectionStatus, ProviderStatus } from "./hooks/use-connection-status";
-
-export * from "./ui/code-block";
-export * from "./ui/conversation";
-export * from "./ui/message";
-export * from "./ui/markdown-code-block";
-export * from "./ui/model-selector";
-export * from "./ui/openai-key-prompt";
-export * from "./ui/prompt-input";
-export * from "./ui/reasoning";
-export * from "./ui/shimmer";
-export * from "./ui/sources";
+export * from "./components/code-block";
+export * from "./components/conversation";
+export * from "./components/message";
+export * from "./components/markdown-code-block";
+export * from "./components/model-selector";
+export * from "./components/openai-key-prompt";
+export * from "./components/prompt-input";
+export * from "./components/reasoning";
+export * from "./components/shimmer";
+export * from "./components/sources";
+export * from "./types";
+export * from "./api";

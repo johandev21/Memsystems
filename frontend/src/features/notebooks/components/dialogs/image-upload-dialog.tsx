@@ -1,15 +1,15 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/shared/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/shared/ui/dialog";
-import { cn } from "@/shared/lib/utils";
+} from "@/components/ui/dialog";
+import { cn } from "@/shared/utils/cn";
 
 const MAX_BANNER_BYTES = 2 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];

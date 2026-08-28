@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
+} from "@/components/ui/alert-dialog";
 
 interface ClearHistoryDialogProps {
   open: boolean;

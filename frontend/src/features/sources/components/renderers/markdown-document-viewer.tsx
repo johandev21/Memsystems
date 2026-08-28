@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo } from "react";
-import { cn } from "@/shared/lib/utils";
-import { MarkdownRenderer } from "@/shared/ui/markdown";
+import { cn } from "@/shared/utils/cn";
+import { MarkdownRenderer } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "@/features/ai";
 import { splitTextIntoChunks } from "./document-type-detector";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";

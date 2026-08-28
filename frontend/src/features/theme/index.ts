@@ -1,17 +1,5 @@
-export {
-  PaletteProvider,
-  PaletteContext,
-  type PaletteContextValue,
-} from "./model/palette-provider";
-export { usePalette, usePaletteOptional } from "./model/use-palette";
-export {
-  THEMES,
-  THEME_NAMES,
-  THEME_STORAGE_KEY,
-  isThemeName,
-  getThemeMeta,
-  type ThemeMeta,
-  type ThemeName,
-} from "./model/themes";
-export { ThemeGrid } from "./ui/theme-grid";
-export { SchemeSelector } from "./ui/scheme-selector";
+export * from "./components/palette-provider";
+export * from "./components/scheme-selector";
+export * from "./components/theme-grid";
+export * from "./hooks/use-palette";
+export * from "./utils/themes";

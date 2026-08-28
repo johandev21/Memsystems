@@ -9,8 +9,8 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/features/ai";
-import type { CitedSourceDTO } from "@/shared/api";
-import { getReferenceKeyFromHref, prepareReferenceMessage } from "../model/message-reference";
+import type { CitedSourceDTO } from "../api/chat";
+import { getReferenceKeyFromHref, prepareReferenceMessage } from "../types/message-reference.types";
 import { MessageReferences, ReferencePopover } from "./reference-popover";
 
 interface AssistantMessageProps {

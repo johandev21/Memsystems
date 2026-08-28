@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo } from "react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/utils/cn";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
 interface ArticleDocumentViewerProps {

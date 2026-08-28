@@ -7,7 +7,7 @@ import {
 import { NotebookBanner } from "@/features/notebooks";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks";
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { MessageScrollerItem } from "@/shared/ui/message-scroller";
+import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
 import { ChatEmptyState } from "./chat-empty-state";
 import { ChatMessageList } from "./chat-message-list";

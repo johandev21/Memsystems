@@ -6,7 +6,7 @@ import {
   MessageScrollerContent,
   MessageScrollerProvider,
   MessageScrollerViewport,
-} from "@/shared/ui/message-scroller";
+} from "@/components/ui/message-scroller";
 import { ChatMessageList } from "./chat-message-list";
 
 function userMessage(id: string, text: string): UIMessage {

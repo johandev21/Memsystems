@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { NotebookHeader } from "@/shared/ui/layout/notebook-header";
-import { NotebookWorkspaceContainer } from "@/widgets/notebook-workspace";
-import { requireAuth } from "@/shared/auth";
+import { NotebookHeader } from "@/features/notebooks";
+import { NotebookWorkspaceContainer } from "@/features/notebooks/components/notebook-workspace";
+import { requireAuth } from "@/app/router/guards";
 
 export const Route = createFileRoute("/notebooks/$notebookId")({
   beforeLoad: requireAuth,

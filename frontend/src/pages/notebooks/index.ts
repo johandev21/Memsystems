@@ -1,1 +1,2 @@
-export * from "./ui/notebooks-page";
+export { NotebooksPage } from "./notebooks-page";
+export { NotebookPage } from "./notebook-page";

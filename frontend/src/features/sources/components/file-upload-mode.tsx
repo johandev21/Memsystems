@@ -1,7 +1,7 @@
 import { FileUp, Link as LinkIcon, Loader2, Type, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/shared/ui/button";
+import { Button } from "@/components/ui/button";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt", ".md", ".markdown"];
 const ACCEPTED_MIME_TYPES = [
