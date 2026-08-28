@@ -1,8 +1,9 @@
+import { Logo } from "@/shared/ui/logo";
 import { Check } from "lucide-react";
 import { THEMES, type ThemeName } from "../model/themes";
 import { usePalette } from "../model/use-palette";
 
-function ThemePreviewOrbs({
+function ThemePreviewIcon({
   light,
   dark,
   accentLight,
@@ -15,31 +16,31 @@ function ThemePreviewOrbs({
 }) {
   return (
     <div className="relative flex h-20 w-full items-center justify-center overflow-hidden rounded-xl bg-muted/20 p-2">
+      {/* ambient glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-75"
+        style={{
+          background: `radial-gradient(circle at 50% 50%, color-mix(in oklch, ${accentLight} 25%, transparent) 0%, transparent 70%)`,
+        }}
+        aria-hidden="true"
+      />
       {/* canvas */}
       <div className="relative h-11 w-20">
-        {/* dark orb — back */}
-        <div
-          className="absolute right-0 top-1/2 size-11 -translate-y-1/2 rounded-full ring-1 ring-black/10 transition-transform duration-300 group-hover:scale-105 dark:ring-white/15"
+        {/* dark icon — back */}
+        <Logo
+          className="absolute right-0 top-1/2 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105"
           style={{
-            background: `
-              radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 32%),
-              radial-gradient(circle at 35% 35%, ${accentDark} 0%, color-mix(in oklch, ${accentDark} 45%, ${dark}) 45%, ${dark} 85%, color-mix(in oklch, ${dark}, black 25%) 100%)
-            `,
-            boxShadow:
-              "inset 0 1px 1.5px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3)",
+            background: `linear-gradient(135deg, ${accentDark} 0%, color-mix(in oklch, ${accentDark} 40%, ${dark}) 50%, ${dark} 100%)`,
+            filter: "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4))",
           }}
           aria-hidden="true"
         />
-        {/* light orb — front overlapping */}
-        <div
-          className="absolute left-0 top-1/2 z-10 size-11 -translate-y-1/2 rounded-full ring-1 ring-black/10 transition-transform duration-300 group-hover:scale-105 dark:ring-white/20"
+        {/* light icon — front overlapping */}
+        <Logo
+          className="absolute left-0 top-1/2 z-10 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105"
           style={{
-            background: `
-              radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 35%),
-              radial-gradient(circle at 35% 35%, ${accentLight} 0%, color-mix(in oklch, ${accentLight} 35%, ${light}) 42%, ${light} 82%, color-mix(in oklch, ${light}, black 12%) 100%)
-            `,
-            boxShadow:
-              "inset 0 1.5px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.25)",
+            background: `linear-gradient(135deg, ${light} 0%, ${accentLight} 55%, color-mix(in oklch, ${accentLight} 70%, black) 100%)`,
+            filter: "drop-shadow(0 3px 8px rgba(0, 0, 0, 0.22))",
           }}
           aria-hidden="true"
         />
@@ -71,7 +72,7 @@ function ThemeCard({ label, description, preview, selected, onSelect }: ThemeCar
           : "border-border bg-card hover:border-border/80 hover:bg-muted/10"
       }`}
     >
-      <ThemePreviewOrbs {...preview} />
+      <ThemePreviewIcon {...preview} />
       <span className="flex items-center justify-between gap-2 px-0.5">
         <span className="min-w-0">
           <span className={`block truncate text-sm font-medium ${selected ? "text-foreground" : "text-foreground"}`}>{label}</span>

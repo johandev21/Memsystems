@@ -269,7 +269,7 @@ function LandingPage() {
             className="flex items-center gap-2.5 transition-transform active:scale-[0.98]"
             onClick={closeMenu}
           >
-            <Logo className="size-7 text-primary" />
+            <Logo className="size-7 text-foreground" />
             <span className="text-sm font-semibold tracking-[-0.02em]">Memsystems</span>
           </a>
 
@@ -619,7 +619,7 @@ function LandingPage() {
             href="#top"
             className="flex items-center gap-2 text-foreground transition-transform active:scale-[0.98]"
           >
-            <Logo className="size-5 text-primary" />
+            <Logo className="size-5 text-foreground" />
             <span className="font-semibold">Memsystems</span>
           </a>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
