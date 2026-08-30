@@ -2,7 +2,6 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Output, parsePartialJson, streamText, type LanguageModel } from 'ai';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { z } from 'zod';
-import * as authSchema from '../../database/auth-schema';
 import * as appSchema from '../../database/schema';
 import { studyMaterials } from '../../database/schema';
 import { AiService } from '../ai/ai.service';
@@ -36,7 +35,7 @@ export class StreamHandler {
 
   constructor(
     @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof authSchema & typeof appSchema>,
+    private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly aiService: AiService,
   ) {}
 

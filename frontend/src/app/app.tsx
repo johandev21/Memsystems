@@ -1,22 +1,16 @@
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "@/app/router/router";
 import { AppProviders } from "@/app/providers";
-import { authClient } from "@/features/auth";
+import { useAuth } from "@/shared/auth";
 
 function AppRouter() {
-  const { data: sessionData, isPending } = authClient.useSession();
-  const user = sessionData?.user ?? null;
-  const session = sessionData?.session ?? null;
+  const auth = useAuth();
 
   return (
     <RouterProvider
       router={router}
       context={{
-        auth: {
-          session,
-          user,
-          isPending,
-        },
+        auth,
       }}
     />
   );
@@ -31,3 +25,4 @@ export function App() {
 }
 
 export default App;
+

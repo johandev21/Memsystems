@@ -1,9 +1,11 @@
 CREATE TYPE "public"."chat_role" AS ENUM('user', 'assistant');--> statement-breakpoint
 CREATE TYPE "public"."generation_status" AS ENUM('streaming', 'completed', 'failed', 'cancelled');--> statement-breakpoint
+CREATE TYPE "public"."job_status" AS ENUM('pending', 'processing', 'ready', 'failed', 'cancelled');--> statement-breakpoint
 CREATE TYPE "public"."source_added_via" AS ENUM('manual', 'ai_search');--> statement-breakpoint
 CREATE TYPE "public"."source_index_job_status" AS ENUM('pending', 'processing', 'ready', 'failed', 'cancelled');--> statement-breakpoint
 CREATE TYPE "public"."source_kind" AS ENUM('text', 'url', 'file');--> statement-breakpoint
 CREATE TYPE "public"."study_material_kind" AS ENUM('quiz', 'simple_flashcard', 'roadmap', 'mind_map');--> statement-breakpoint
+CREATE TYPE "public"."web_search_job_status" AS ENUM('pending', 'processing', 'ready', 'failed');--> statement-breakpoint
 CREATE TABLE "generation_requests" (
 	"id" varchar PRIMARY KEY NOT NULL,
 	"notebook_id" varchar NOT NULL,
@@ -14,6 +16,24 @@ CREATE TABLE "generation_requests" (
 	"status" "generation_status" DEFAULT 'streaming' NOT NULL,
 	"started_at" timestamp DEFAULT now() NOT NULL,
 	"completed_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE "jobs" (
+	"id" varchar PRIMARY KEY NOT NULL,
+	"type" varchar(100) NOT NULL,
+	"group_key" varchar(255),
+	"payload" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"status" "job_status" DEFAULT 'pending' NOT NULL,
+	"result" jsonb,
+	"last_error" text,
+	"attempt_count" integer DEFAULT 0 NOT NULL,
+	"max_attempts" integer DEFAULT 3 NOT NULL,
+	"backoff_base_ms" integer DEFAULT 5000 NOT NULL,
+	"next_attempt_at" timestamp,
+	"started_at" timestamp,
+	"completed_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "notebook_chat_messages" (
@@ -128,50 +148,18 @@ CREATE TABLE "user_settings" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "account" (
-	"id" text PRIMARY KEY NOT NULL,
-	"account_id" text NOT NULL,
-	"provider_id" text NOT NULL,
+CREATE TABLE "web_search_jobs" (
+	"id" varchar PRIMARY KEY NOT NULL,
+	"notebook_id" varchar NOT NULL,
 	"user_id" text NOT NULL,
-	"access_token" text,
-	"refresh_token" text,
-	"id_token" text,
-	"access_token_expires_at" timestamp,
-	"refresh_token_expires_at" timestamp,
-	"scope" text,
-	"password" text,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "session" (
-	"id" text PRIMARY KEY NOT NULL,
-	"expires_at" timestamp NOT NULL,
-	"token" text NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp NOT NULL,
-	"ip_address" text,
-	"user_agent" text,
-	"user_id" text NOT NULL,
-	CONSTRAINT "session_token_unique" UNIQUE("token")
-);
---> statement-breakpoint
-CREATE TABLE "user" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"email" text NOT NULL,
-	"email_verified" boolean DEFAULT false NOT NULL,
-	"image" text,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "user_email_unique" UNIQUE("email")
-);
---> statement-breakpoint
-CREATE TABLE "verification" (
-	"id" text PRIMARY KEY NOT NULL,
-	"identifier" text NOT NULL,
-	"value" text NOT NULL,
-	"expires_at" timestamp NOT NULL,
+	"query" varchar(500) NOT NULL,
+	"model_id" varchar(200) NOT NULL,
+	"status" "web_search_job_status" DEFAULT 'pending' NOT NULL,
+	"summary" text,
+	"candidates" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"last_error" text,
+	"started_at" timestamp,
+	"completed_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -179,7 +167,6 @@ CREATE TABLE "verification" (
 ALTER TABLE "generation_requests" ADD CONSTRAINT "generation_requests_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "public"."notebooks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "generation_requests" ADD CONSTRAINT "generation_requests_target_folder_id_study_material_folders_id_fk" FOREIGN KEY ("target_folder_id") REFERENCES "public"."study_material_folders"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notebook_chat_messages" ADD CONSTRAINT "notebook_chat_messages_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "public"."notebooks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "notebooks" ADD CONSTRAINT "notebooks_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "source_chunks" ADD CONSTRAINT "source_chunks_source_id_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "source_chunks" ADD CONSTRAINT "source_chunks_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "public"."notebooks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "source_index_jobs" ADD CONSTRAINT "source_index_jobs_source_id_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -189,11 +176,12 @@ ALTER TABLE "study_material_folders" ADD CONSTRAINT "study_material_folders_note
 ALTER TABLE "study_material_folders" ADD CONSTRAINT "study_material_folders_parent_id_study_material_folders_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."study_material_folders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "study_materials" ADD CONSTRAINT "study_materials_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "public"."notebooks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "study_materials" ADD CONSTRAINT "study_materials_folder_id_study_material_folders_id_fk" FOREIGN KEY ("folder_id") REFERENCES "public"."study_material_folders"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "web_search_jobs" ADD CONSTRAINT "web_search_jobs_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "public"."notebooks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "generation_requests_notebook_id_idx" ON "generation_requests" USING btree ("notebook_id");--> statement-breakpoint
 CREATE INDEX "generation_requests_target_folder_id_idx" ON "generation_requests" USING btree ("target_folder_id");--> statement-breakpoint
+CREATE INDEX "jobs_status_next_attempt_at_idx" ON "jobs" USING btree ("status","next_attempt_at");--> statement-breakpoint
+CREATE INDEX "jobs_group_key_idx" ON "jobs" USING btree ("group_key");--> statement-breakpoint
+CREATE INDEX "jobs_type_idx" ON "jobs" USING btree ("type");--> statement-breakpoint
 CREATE INDEX "notebook_chat_messages_notebook_id_idx" ON "notebook_chat_messages" USING btree ("notebook_id");--> statement-breakpoint
 CREATE INDEX "notebook_chat_messages_created_at_idx" ON "notebook_chat_messages" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "notebooks_user_id_idx" ON "notebooks" USING btree ("user_id");--> statement-breakpoint
@@ -214,6 +202,6 @@ CREATE INDEX "study_materials_kind_idx" ON "study_materials" USING btree ("kind"
 CREATE INDEX "study_materials_title_idx" ON "study_materials" USING btree ("title");--> statement-breakpoint
 CREATE INDEX "study_materials_folder_id_idx" ON "study_materials" USING btree ("folder_id");--> statement-breakpoint
 CREATE INDEX "study_materials_deleted_at_idx" ON "study_materials" USING btree ("deleted_at");--> statement-breakpoint
-CREATE INDEX "account_userId_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");
+CREATE INDEX "web_search_jobs_notebook_id_idx" ON "web_search_jobs" USING btree ("notebook_id");--> statement-breakpoint
+CREATE INDEX "web_search_jobs_user_id_idx" ON "web_search_jobs" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "web_search_jobs_status_idx" ON "web_search_jobs" USING btree ("status");

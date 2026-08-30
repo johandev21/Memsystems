@@ -13,6 +13,10 @@ trustPolicyExclude:
 allowBuilds:
   esbuild: true
   msw: true
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+  bufferutil: true
+  core-js: true
+  utf-8-validate: true
+  sharp: true
+  unrs-resolver: true
+
+

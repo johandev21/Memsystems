@@ -1,97 +1,98 @@
-# Graph Report - memsystems-ai  (2026-08-28)
+# Graph Report - memsystems-ai  (2026-08-29)
 
 ## Corpus Check
-- 548 files · ~287,333 words
+- 593 files · ~295,577 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4567 nodes · 7958 edges · 378 communities (273 shown, 105 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 175 edges (avg confidence: 0.81)
+- 4731 nodes · 8257 edges · 378 communities (279 shown, 99 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 178 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6adfb03d`
+- Built from commit: `1e409031`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- stream-handler.ts
-- CurrentUser
-- cn
-- prompt-input.tsx
-- QuizBriefForm.tsx
-- source-jobs.service.test.ts
+- content-normalizer.ts
+- StudyMaterialsController
+- source-content-viewer.tsx
+- prompt-input-files.ts
+- cn.ts
+- StorageService
 - schema.ts
-- auth.guard.ts
-- shapes/index.ts
-- desktop-layout.tsx
+- AuthService
+- prompt-input.tsx
+- fetchApi
 - .assertNotebookOwner
-- react
+- icon-picker.tsx
 - devDependencies
-- sources.module.ts
+- app.module.ts
 - Invocation
-- database.module.ts
-- notebooks-page.tsx
-- api/index.ts
+- domain-error.ts
+- cn
+- react
 - JobQueueService
 - code-block.tsx
-- StudyMaterialDTO
+- study-materials-tree-container.tsx
 - Refine Frontend UI
 - NotebooksService
-- settings-page.tsx
+- landing-page.tsx
 - Execution Control
 - dependencies
 - devDependencies
 - compilerOptions
 - Issue tracker: GitHub
-- right-pane.tsx
-- tree.ts
-- sources-panel.tsx
-- connection.service.ts
+- desktop-layout.tsx
 - study-materials-tree.tsx
+- settings-page.tsx
+- ConnectionService
+- button.tsx
 - Triage
-- source-policy.service.ts
-- message.tsx
+- email-auth-forms.tsx
+- controller.tsx
 - routeTree.gen.ts
 - State Management: TanStack Query (React Query)
 - scripts
-- chat.controller.ts
+- study-materials.controller.ts
 - conversation.tsx
 - assistant-message.tsx
 - Process
 - document-normalizer.service.ts
-- ui/model-selector.tsx
+- composer.tsx
 - Feature-Sliced Design (FSD) v2.1
 - teach/SKILL.md
-- markdown-document-viewer.tsx
+- article-document-viewer.tsx
 - Next.js
 - Creating Internal Packages
-- model-catalog.ts
-- use-generation-store.ts
+- registry.ts
+- add-source-dialog.tsx
 - Dependency Management
 - What You Must Do When Invoked
 - tasks
 - Codebase Design
-- notebooks.service.ts
-- ChatController
+- connection.service.ts
+- chat-message-list.tsx
 - reasoning.tsx
 - Monorepo Best Practices
 - compilerOptions
-- RoadmapView.tsx
+- components/model-selector.tsx
 - During the session
 - Layer Structure Reference
 - chat.service.ts
 - components.json
 - Part 2: Custom architecture → FSD
 - Repository Structure
-- context-menu.tsx
+- notebooks-page.tsx
 - Cross-Import Resolution Patterns
 - HTML Report Format
 - Critical Anti-Patterns
-- web-search.ts
+- RoadmapView.tsx
 - compilerOptions
 - Better Auth Integration Guide
-- http-fetcher.service.ts
+- turborepo/SKILL.md
+- markdown-code-block.tsx
 - Debugging Cache Issues
 - source-extraction.service.ts
 - Quick Reference
@@ -99,15 +100,15 @@
 - Global Options Reference
 - Task Configuration Reference
 - Other Filter Types
-- sources.controller.ts
+- message.tsx
 - Configuration Gotchas
-- fetchApi
-- study-materials-tree-container.tsx
+- MaterialViewer.tsx
+- study-materials.ts
 - tasteskill: Anti-Slop Frontend Skill
 - Appendix B - Canonical Sources (read these before reinventing)
 - scripts/package.json
-- shimmer.tsx
-- layout/index.ts
+- NotebooksController
+- guards.ts
 - Diagnosing Bugs
 - How to keep entities clean
 - shadcn/SKILL.md
@@ -115,7 +116,7 @@
 - Common Filter Patterns
 - scripts
 - exclude
-- MaterialViewer.tsx
+- AI SDK opportunities for a better learning chat
 - Vercel AI SDK Codex harness research
 - build-agents.ts
 - Component Composition
@@ -135,8 +136,8 @@
 - EmbeddingService
 - Study Materials — Surface Ladder Design Spec
 - Frontend Readable React Refactor Plan
-- theme/index.ts
-- auth/index.ts
+- palette-provider.tsx
+- shared/api/index.ts
 - Asset Handling
 - shadcn/ui
 - Remote Caching
@@ -152,7 +153,7 @@
 - Reference Index
 - backend/README.md
 - Architecture
-- landing-page.tsx
+- context-menu.tsx
 - IntersectionObserver
 - Design Engineering
 - Registry Authoring and Addresses
@@ -162,11 +163,11 @@
 - Tags
 - Environment Variable Gotchas
 - Environment Modes
-- notebook-workspace-container.tsx
-- source-acquisition.service.ts
+- markdown-document-viewer.tsx
+- AiService
 - Source Ingestion Refactor Sequence
 - plugins
-- SourcesController
+- CurrentUser
 - graphify reference: extra exports and benchmark
 - Memsystems-AI
 - Process
@@ -176,7 +177,7 @@
 - Forms & Inputs
 - Critical Rules
 - Backend (Vitest + real PostgreSQL)
-- App.tsx
+- auth/index.ts
 - Funcionalidades
 - docker.mjs
 - conventional-commit/SKILL.md
@@ -188,8 +189,9 @@
 - 1. Architecture
 - 2. Dependency Injection
 - Workflow
-- FSD v2.1 Conventions
+- use-generation-store.ts
 - Overlay layering research
+- frontend-architecture.md
 - The Animation Decision Framework
 - clip-path for Animation
 - Performance Rules
@@ -197,12 +199,12 @@
 - 4. Security
 - nest-cli.json
 - backend/package.json
-- MindMapView.tsx
+- web-search.ts
 - Packet 1 — Application shell and pages
 - Packet 4 — Notebooks and sources
 - StudyMaterialFolderService
-- domain-exception.filter.ts
-- content-normalizer.ts
+- GenerationRequestManager
+- MindMapView.tsx
 - Decisions
 - graphify reference: query, path, explain
 - memsystems - Agent Instructions
@@ -223,11 +225,11 @@
 - Packet 3 — Notebook chat after PromptInput stabilizes
 - Packet 5 — Study-material generation
 - Packet 6 — Study-material viewers
-- turbo run
-- mobile-notebook-layout.tsx
-- TrashService
+- main.ts
+- ai/index.ts
+- alert.tsx
 - Phase 3: Preserve raw artifacts and processing versions
-- prompt-input-files.ts
+- scripts
 - sources.service.ts
 - frontend/tsconfig.json
 - Docker
@@ -262,10 +264,10 @@
 - graphify reference: incremental update and cluster-only
 - Implement Health Checks for Microservices
 - Scope and non-goals
-- RobotsTxt
+- sources.module.ts
 - themes.contrast.test.ts
-- add-source-dialog.tsx
-- @eslint/eslintrc
+- source-upload-actions.ts
+- Find Skills
 - graphify.js
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
@@ -310,210 +312,213 @@
 - test-mock-external-services.md
 - test-use-testing-module.md
 - build.sh
-- @ai-sdk/deepseek
-- ansi-to-react
+- login.tsx
+- providers/index.tsx
 - better-auth
-- mammoth
-- @paralleldrive/cuid2
+- tree.test.ts
+- .checkHealth
 - rxjs
-- zod
+- sources-panel.tsx
 - @eslint/js
 - supertest
-- @types/jsdom
+- useOverlayLayer
 - StudyMaterialService
-- typescript-eslint
-- ai/index.ts
-- clsx
+- renderers/document-type-detector.ts
+- use-chat-panel.ts
+- FlashcardSourcePopover
 - cmdk
 - date-fns
 - @dnd-kit/core
 - agents/triage-labels.md
 - embla-carousel-react
+- utils/document-type-detector.ts
 - @fontsource/poppins
-- @fontsource-variable/geist-mono
 - @fontsource-variable/space-grotesk
-- ai
-- better-auth
-- katex
 - lucide-react
 - media-chrome
+- Dependency Direction & Rules
+- @ai-sdk/google
+- @ai-sdk/react
 - motion
 - nanoid
 - next-themes
 - @radix-ui/react-use-controllable-state
 - react
-- react-dom
-- react-markdown
-- react-resizable-panels
-- rehype-katex
-- remark-gfm
-- remark-math
-- shadcn
-- @shadcn/react
 - shiki
+- @tanstack/react-form
+- react-resizable-panels
+- @aws-sdk/client-s3
+- remark-gfm
+- tw-animate-css
+- @aws-sdk/s3-request-presigner
+- dotenv
 - sonner
 - tailwind-merge
-- tailwindcss
 - Turborepo Skill
 - @tanstack/react-query
 - @tanstack/react-router
 - @tanstack/react-virtual
-- @tanstack/router-plugin
+- jsdom
 - @thesvg/react
-- tw-animate-css
+- react-email
 - @xyflow/react
 - zustand
 - frontend/vitest.config.ts
 - mcp.json
 - extraction-spec.md
-- { useSession, signIn, signOut, signUp }
-- sources-panel-header.tsx
+- globals
+- ts-node
+- @types/node
 - @base-ui/react
-- file-upload-mode.tsx
-- settings/index.ts
-- vitest
+- @types/pdf-parse
+- rehype-sanitize
+- @tailwindcss/vite
+- zod
+- { useSession, signIn, signOut, signUp }
 
 ## God Nodes (most connected - your core abstractions)
-1. `cn()` - 312 edges
-2. `react` - 110 edges
+1. `cn()` - 333 edges
+2. `react` - 120 edges
 3. `CurrentUser` - 53 edges
-4. `Button()` - 51 edges
+4. `Button()` - 53 edges
 5. `NotebooksService` - 37 edges
-6. `JobQueueService` - 27 edges
-7. `fetchApi()` - 27 edges
+6. `fetchApi()` - 29 edges
+7. `JobQueueService` - 27 edges
 8. `StudyMaterialsController` - 25 edges
 9. `StorageService` - 24 edges
-10. `SourcesService` - 22 edges
+10. `compilerOptions` - 23 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `CreateStudyMaterialInput` --references--> `StudyMaterialKind`  [EXTRACTED]
-  backend/src/modules/study-materials/study-material.service.ts → backend/src/modules/study-materials/shapes.ts
-- `ActiveGeneration` --references--> `StudyMaterialKind`  [EXTRACTED]
-  frontend/src/features/study-materials/hooks/use-generation-store.ts → frontend/src/entities/study-material/types.ts
-- `StartGenerationInput` --references--> `StudyMaterialKind`  [EXTRACTED]
-  frontend/src/shared/api/generation.ts → frontend/src/entities/study-material/types.ts
-- `MaterialViewerProps` --references--> `StudyMaterialDTO`  [EXTRACTED]
-  frontend/src/features/study-materials/components/viewer/MaterialViewer.tsx → frontend/src/entities/study-material/types.ts
-- `CodeBlockContainer()` --calls--> `cn()`  [EXTRACTED]
-  frontend/src/features/ai/ui/code-block.tsx → frontend/src/shared/lib/utils.ts
+- `AlertDialogOverlay()` --calls--> `cn()`  [EXTRACTED]
+  frontend/src/components/ui/alert-dialog.tsx → frontend/src/shared/utils/cn.ts
+- `AlertAction()` --calls--> `cn()`  [EXTRACTED]
+  frontend/src/components/ui/alert.tsx → frontend/src/shared/utils/cn.ts
+- `CardAction()` --calls--> `cn()`  [EXTRACTED]
+  frontend/src/components/ui/card.tsx → frontend/src/shared/utils/cn.ts
+- `CardFooter()` --calls--> `cn()`  [EXTRACTED]
+  frontend/src/components/ui/card.tsx → frontend/src/shared/utils/cn.ts
+- `ContextMenuLabel()` --calls--> `cn()`  [EXTRACTED]
+  frontend/src/components/ui/context-menu.tsx → frontend/src/shared/utils/cn.ts
 
 ## Import Cycles
-- 2-file cycle: `frontend/src/features/study-materials/shapes/index.ts -> frontend/src/features/study-materials/shapes/kind-labels.ts -> frontend/src/features/study-materials/shapes/index.ts`
-- 3-file cycle: `frontend/src/app/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/__root.tsx -> frontend/src/app/router.ts`
-- 3-file cycle: `frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/forms/types.ts -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx`
-- 4-file cycle: `frontend/src/features/study-materials/components/generation/BriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/StandardBriefForm.tsx -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/BriefForm.tsx`
-- 4-file cycle: `frontend/src/features/notebooks/components/shared/studio-resources.tsx -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/shared/studio-resources.tsx`
-- 4-file cycle: `frontend/src/features/notebooks/components/studio/right-pane.tsx -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/studio/right-pane.tsx`
-- 4-file cycle: `frontend/src/features/notebooks/hooks/use-studio-dialogs.ts -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/hooks/use-studio-dialogs.ts`
-- 4-file cycle: `frontend/src/features/study-materials/components/generation/BriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/index.tsx -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/BriefForm.tsx`
-- 4-file cycle: `frontend/src/features/study-materials/components/generation/BriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/types.ts -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/BriefForm.tsx`
-- 5-file cycle: `frontend/src/app/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/home.tsx -> frontend/src/shared/auth/index.ts -> frontend/src/shared/auth/guard.ts -> frontend/src/app/router.ts`
-- 5-file cycle: `frontend/src/app/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/login.tsx -> frontend/src/shared/auth/index.ts -> frontend/src/shared/auth/guard.ts -> frontend/src/app/router.ts`
-- 5-file cycle: `frontend/src/app/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/notebooks.index.tsx -> frontend/src/shared/auth/index.ts -> frontend/src/shared/auth/guard.ts -> frontend/src/app/router.ts`
-- 5-file cycle: `frontend/src/app/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/notebooks.$notebookId.tsx -> frontend/src/shared/auth/index.ts -> frontend/src/shared/auth/guard.ts -> frontend/src/app/router.ts`
-- 5-file cycle: `frontend/src/app/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/settings.tsx -> frontend/src/shared/auth/index.ts -> frontend/src/shared/auth/guard.ts -> frontend/src/app/router.ts`
-- 5-file cycle: `frontend/src/features/study-materials/components/generation/BriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/StandardBriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/types.ts -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/BriefForm.tsx`
-- 5-file cycle: `frontend/src/features/study-materials/components/generation/BriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/index.tsx -> frontend/src/features/study-materials/components/generation/forms/StandardBriefForm.tsx -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/BriefForm.tsx`
-- 5-file cycle: `frontend/src/features/study-materials/components/generation/BriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/index.tsx -> frontend/src/features/study-materials/components/generation/forms/types.ts -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/BriefForm.tsx`
-- 5-file cycle: `frontend/src/features/study-materials/components/generation/BriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/QuizBriefForm.tsx -> frontend/src/features/study-materials/components/generation/forms/types.ts -> frontend/src/features/study-materials/index.ts -> frontend/src/features/study-materials/components/generation/GenerateBriefDialog.tsx -> frontend/src/features/study-materials/components/generation/BriefForm.tsx`
+- 3-file cycle: `frontend/src/components/ui/icon-picker.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/shared/notebook-banner.tsx -> frontend/src/components/ui/icon-picker.tsx`
+- 3-file cycle: `frontend/src/features/notebooks/components/notebook-workspace/index.ts -> frontend/src/features/notebooks/components/notebook-workspace/notebook-workspace-container.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/notebook-workspace/index.ts`
+- 3-file cycle: `frontend/src/features/notebooks/components/notebook-workspace/index.ts -> frontend/src/features/notebooks/components/notebook-workspace/mobile-tabs-header.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/notebook-workspace/index.ts`
+- 3-file cycle: `frontend/src/components/ui/icon-picker.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/shared/notebook-card-preview.tsx -> frontend/src/components/ui/icon-picker.tsx`
+- 3-file cycle: `frontend/src/features/study-material-tree/components/model/production-adapter.ts -> frontend/src/features/study-material-tree/index.ts -> frontend/src/features/study-material-tree/components/ui/study-materials-tree-container.tsx -> frontend/src/features/study-material-tree/components/model/production-adapter.ts`
+- 3-file cycle: `frontend/src/features/study-material-tree/components/model/use-expanded.ts -> frontend/src/features/study-material-tree/index.ts -> frontend/src/features/study-material-tree/components/ui/study-materials-tree-container.tsx -> frontend/src/features/study-material-tree/components/model/use-expanded.ts`
+- 3-file cycle: `frontend/src/features/study-material-tree/components/model/tree.ts -> frontend/src/features/study-material-tree/index.ts -> frontend/src/features/study-material-tree/components/ui/study-materials-tree.tsx -> frontend/src/features/study-material-tree/components/model/tree.ts`
+- 4-file cycle: `frontend/src/app/router/guards.ts -> frontend/src/app/router/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/notebooks.$notebookId.tsx -> frontend/src/app/router/guards.ts`
+- 4-file cycle: `frontend/src/app/router/guards.ts -> frontend/src/app/router/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/notebooks.index.tsx -> frontend/src/app/router/guards.ts`
+- 4-file cycle: `frontend/src/app/router/guards.ts -> frontend/src/app/router/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/home.tsx -> frontend/src/app/router/guards.ts`
+- 4-file cycle: `frontend/src/app/router/guards.ts -> frontend/src/app/router/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/login.tsx -> frontend/src/app/router/guards.ts`
+- 4-file cycle: `frontend/src/app/router/index.ts -> frontend/src/app/router/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/__root.tsx -> frontend/src/app/router/index.ts`
+- 4-file cycle: `frontend/src/app/router/guards.ts -> frontend/src/app/router/router.ts -> frontend/src/routeTree.gen.ts -> frontend/src/routes/settings.tsx -> frontend/src/app/router/guards.ts`
+- 4-file cycle: `frontend/src/features/study-material-tree/components/model/tree.ts -> frontend/src/features/study-material-tree/index.ts -> frontend/src/features/study-material-tree/components/ui/study-materials-tree.tsx -> frontend/src/features/study-material-tree/components/ui/tree/branch.tsx -> frontend/src/features/study-material-tree/components/model/tree.ts`
+- 4-file cycle: `frontend/src/features/study-material-generation/components/GenerateBriefDialog.tsx -> frontend/src/features/study-material-viewer/index.ts -> frontend/src/features/study-material-viewer/components/MaterialViewer.tsx -> frontend/src/features/study-material-generation/index.ts -> frontend/src/features/study-material-generation/components/GenerateBriefDialog.tsx`
+- 4-file cycle: `frontend/src/features/study-material-generation/components/forms/index.tsx -> frontend/src/features/study-material-viewer/index.ts -> frontend/src/features/study-material-viewer/components/MaterialViewer.tsx -> frontend/src/features/study-material-generation/index.ts -> frontend/src/features/study-material-generation/components/forms/index.tsx`
+- 4-file cycle: `frontend/src/features/study-material-generation/hooks/use-generation-store.ts -> frontend/src/features/study-material-viewer/index.ts -> frontend/src/features/study-material-viewer/components/MaterialViewer.tsx -> frontend/src/features/study-material-generation/index.ts -> frontend/src/features/study-material-generation/hooks/use-generation-store.ts`
+- 4-file cycle: `frontend/src/features/notebooks/components/studio/source-multi-select.tsx -> frontend/src/features/sources/index.ts -> frontend/src/features/sources/components/web-search-composer.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/studio/source-multi-select.tsx`
+- 4-file cycle: `frontend/src/features/notebooks/components/shared/studio-resources.tsx -> frontend/src/features/study-material-generation/index.ts -> frontend/src/features/study-material-generation/components/GenerateBriefDialog.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/shared/studio-resources.tsx`
+- 4-file cycle: `frontend/src/features/notebooks/components/shared/studio-resources.tsx -> frontend/src/features/sources/index.ts -> frontend/src/features/sources/components/web-search-composer.tsx -> frontend/src/features/notebooks/index.ts -> frontend/src/features/notebooks/components/shared/studio-resources.tsx`
 
-## Communities (378 total, 105 thin omitted)
+## Communities (378 total, 99 thin omitted)
 
-### Community 0 - "stream-handler.ts"
-Cohesion: 0.05
-Nodes (41): generationRequests, extractJson(), GenerationRequestManager, StartGenerationInput, Inject, Injectable, GenerationService, MODELS_BY_KIND (+33 more)
-
-### Community 1 - "CurrentUser"
-Cohesion: 0.18
-Nodes (13): CurrentUser, StudyMaterialsController, Body, Controller, Delete, Get, Param, Patch (+5 more)
-
-### Community 2 - "cn"
-Cohesion: 0.04
-Nodes (60): FolderRow(), detectDocumentType(), ReaderControls, SourceContentViewerProps, SourceDocument(), FlashcardModelPopover(), renderModelRow(), FlashcardSourcePopover() (+52 more)
-
-### Community 3 - "prompt-input.tsx"
-Cohesion: 0.03
-Nodes (77): usePromptInputDropTarget(), capturePromptInputScreenshot(), AttachmentsContext, LocalAttachmentsContext, LocalReferencedSourcesContext, PromptInput(), PromptInputActionAddAttachments(), PromptInputActionAddAttachmentsProps (+69 more)
-
-### Community 4 - "QuizBriefForm.tsx"
+### Community 0 - "content-normalizer.ts"
 Cohesion: 0.06
-Nodes (62): StudyMaterialKind, StudioResourcesProps, buildTree(), FolderPicker(), SourceMultiSelect(), SourceMultiSelectProps, useModelPersistence(), SourceContentViewer() (+54 more)
+Nodes (58): NotFoundError, DRIZZLE, arrayLength(), extractJson(), generateTitle(), isRecord(), normalizeContent(), NormalizedFlashcard (+50 more)
 
-### Community 5 - "source-jobs.service.test.ts"
-Cohesion: 0.08
-Nodes (31): createDatabaseConnection(), fullSchema, sourceChunks, sources, UploadInput, { db }, ensureTestDatabase(), resetDatabase() (+23 more)
+### Community 1 - "StudyMaterialsController"
+Cohesion: 0.16
+Nodes (12): StudyMaterialsController, Body, Controller, Delete, Get, Param, Patch, Post (+4 more)
+
+### Community 2 - "source-content-viewer.tsx"
+Cohesion: 0.16
+Nodes (8): detectDocumentType(), PlainTextDocumentViewer(), PlainTextDocumentViewerProps, ReaderControls, SourceContentViewer(), SourceContentViewerProps, SourceDocument(), useSourceReaderControls()
+
+### Community 3 - "prompt-input-files.ts"
+Cohesion: 0.13
+Nodes (14): PromptInput(), PromptInputActionAddAttachments(), PromptInputActionAddScreenshot(), PromptInputTextarea(), useOptionalPromptInputController(), useOptionalProviderAttachments(), usePromptInputAttachments(), usePromptInputDropTarget() (+6 more)
+
+### Community 4 - "cn.ts"
+Cohesion: 0.09
+Nodes (44): Checkbox(), Label(), Popover(), PopoverContent(), PopoverDescription(), PopoverHeader(), PopoverTitle(), PopoverTrigger() (+36 more)
+
+### Community 5 - "StorageService"
+Cohesion: 0.07
+Nodes (32): createDatabaseConnection(), fullSchema, DevStorageController, Controller, Get, Param, Query, Res (+24 more)
 
 ### Community 6 - "schema.ts"
-Cohesion: 0.06
-Nodes (39): chatRoleEnum, generationRequestsRelations, generationStatusEnum, jobs, jobStatusEnum, notebookChatMessages, notebookChatMessagesRelations, notebooksRelations (+31 more)
+Cohesion: 0.05
+Nodes (44): ForbiddenError, account, accountRelations, session, sessionRelations, user, userRelations, verification (+36 more)
 
-### Community 7 - "auth.guard.ts"
+### Community 7 - "AuthService"
 Cohesion: 0.08
-Nodes (19): All, AuthController, Controller, Res, AuthenticatedRequest, AuthGuard, Injectable, AuthModule (+11 more)
+Nodes (20): All, AuthController, Controller, Res, AuthModule, Global, Module, AuthService (+12 more)
 
-### Community 8 - "shapes/index.ts"
-Cohesion: 0.11
-Nodes (19): contentSchemas, MindMapContent, MindMapContentType, MindMapEdge, MindMapNode, QuizContent, QuizContentData, QuizContentType (+11 more)
+### Community 8 - "prompt-input.tsx"
+Cohesion: 0.03
+Nodes (68): InputGroup(), InputGroupAddon(), InputGroupButton(), InputGroupTextarea(), AttachmentsContext, LocalAttachmentsContext, LocalReferencedSourcesContext, PromptInputActionAddAttachmentsProps (+60 more)
 
-### Community 9 - "desktop-layout.tsx"
-Cohesion: 0.15
-Nodes (12): ChatPanelHeader(), ChatPanelHeaderProps, NotebookSettingsDialog(), StudioResources(), ResizableHandle(), ResizablePanel(), ResizablePanelGroup(), DEFAULT_WORKSPACE_LAYOUT (+4 more)
+### Community 9 - "fetchApi"
+Cohesion: 0.17
+Nodes (14): allNotebooksQueryOptions(), deleteNotebook(), fetchNotebooks(), notebookQueryOptions(), notebooksQueryOptions, NotebookSettingsDialog(), EditableNotebookTitle(), NotebooksResponse (+6 more)
 
 ### Community 10 - ".assertNotebookOwner"
-Cohesion: 0.14
-Nodes (5): formatSourceJob(), SourcesService, Injectable, Injectable, WebSearchService
+Cohesion: 0.07
+Nodes (14): formatSourceJob(), SourceJobsService, Inject, Injectable, SourcesService, Inject, Injectable, Injectable (+6 more)
 
-### Community 11 - "react"
-Cohesion: 0.06
-Nodes (57): OpenAIKeyPrompt, ProviderKeyPrompt(), ProviderKeyPromptProps, useProviderKeyForm(), EDIT_NOTEBOOK_EVENT, DEFAULT_FOCAL_POINT, NotebookBanner(), NotebookBannerProps (+49 more)
+### Community 11 - "icon-picker.tsx"
+Cohesion: 0.29
+Nodes (7): ALL_ICON_NAMES, CURATED_CATEGORIES, formatIconLabel(), IconItem, IconItemProps, IconPicker(), IconPickerProps
 
 ### Community 12 - "devDependencies"
-Cohesion: 0.04
-Nodes (46): @feature-sliced/steiger-plugin, devDependencies, @feature-sliced/steiger-plugin, jsdom, oxfmt, oxlint, steiger, @testing-library/dom (+38 more)
+Cohesion: 0.07
+Nodes (27): devDependencies, jsdom, oxfmt, oxlint, @testing-library/dom, @testing-library/react, @testing-library/user-event, @types/node (+19 more)
 
-### Community 13 - "sources.module.ts"
-Cohesion: 0.08
-Nodes (25): AppController, Controller, Get, AppService, Injectable, AiModule, Global, Module (+17 more)
+### Community 13 - "app.module.ts"
+Cohesion: 0.10
+Nodes (21): AppController, Controller, Get, AppService, Injectable, ChatModule, Module, DatabaseModule (+13 more)
 
 ### Community 14 - "Invocation"
 Cohesion: 0.05
 Nodes (40): Branch, Co-location, Cognitive Load, Completion Criterion, Context Load, Context Pointer, Description, Duplication (+32 more)
 
-### Community 15 - "database.module.ts"
-Cohesion: 0.09
-Nodes (24): userSettings, applyOverlap(), ChunkingService, ChunkInput, ChunkOptions, ChunkOutput, splitOnBoundaries(), Injectable (+16 more)
+### Community 15 - "domain-error.ts"
+Cohesion: 0.06
+Nodes (32): BadRequestError, DomainError, DomainErrorOptions, InternalError, ServiceUnavailableError, sourceChunks, sources, applyOverlap() (+24 more)
 
-### Community 16 - "notebooks-page.tsx"
-Cohesion: 0.10
-Nodes (13): Notebook, NotebooksResponse, formatUpdatedAt(), RecentNotebookGrid(), SectionHeader(), SectionHeaderProps, EmptyState(), EmptyStateProps (+5 more)
+### Community 16 - "cn"
+Cohesion: 0.04
+Nodes (65): EmptyState(), EmptyStateProps, Spinner(), UserMenu(), Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup() (+57 more)
 
-### Community 17 - "api/index.ts"
-Cohesion: 0.11
-Nodes (19): ModelOption, ModelsResponse, ComposerProps, DialogModelSelectorProps, ModelRow(), ModelRowProps, ModelSelectorProps, useWebSearchModel() (+11 more)
+### Community 17 - "react"
+Cohesion: 0.12
+Nodes (18): SelectContent(), SelectGroup(), SelectItem(), SelectLabel(), SelectScrollDownButton(), SelectScrollUpButton(), SelectSeparator(), SelectTrigger() (+10 more)
 
 ### Community 18 - "JobQueueService"
-Cohesion: 0.13
-Nodes (10): EnqueueOptions, Job, JobRow, JobQueueService, Inject, Injectable, Optional, SourceJobsService (+2 more)
+Cohesion: 0.08
+Nodes (24): jobs, WebSearchResult, EnqueueOptions, Job, JobHandler, JobRow, JobStatus, OnConflictPolicy (+16 more)
 
 ### Community 19 - "code-block.tsx"
-Cohesion: 0.09
-Nodes (34): addKeysToTokens(), createRawTokens(), getHighlighter(), getTokensCacheKey(), highlightCode(), KeyedLine, KeyedToken, subscribers (+26 more)
-
-### Community 20 - "StudyMaterialDTO"
 Cohesion: 0.11
-Nodes (14): CreateFolderInput, FolderDTO, CreateStudyMaterialInput, StudyMaterialDTO, FolderTreeNode, getActiveFolderIds(), getInitialExpandedIds(), getStorageKey() (+6 more)
+Nodes (24): CodeBlockBody, CodeBlockContainer(), CodeBlockContent(), CodeBlockContext, CodeBlockContextType, CodeBlockCopyButtonProps, CodeBlockProps, isBold() (+16 more)
+
+### Community 20 - "study-materials-tree-container.tsx"
+Cohesion: 0.08
+Nodes (18): FolderTreeNode, MobileStudyMaterialsPanel(), MobileStudyMaterialsPanelProps, StudyMaterialsPanel(), StudyMaterialsPanelProps, TreeController, folders, materials (+10 more)
 
 ### Community 21 - "Refine Frontend UI"
 Cohesion: 0.05
 Nodes (35): Adapt to the existing stack, Bespoke CSS, Component libraries, CSS-in-JS or styled systems, CSS modules or scoped CSS, Detect before changing, Framework adaptation, General implementation rules (+27 more)
 
 ### Community 22 - "NotebooksService"
-Cohesion: 0.06
-Nodes (29): notebooks, createNotebookSchema, NotebooksController, Body, Controller, Delete, Get, Param (+21 more)
+Cohesion: 0.19
+Nodes (4): NotebooksService, toResponse(), Inject, Injectable
 
-### Community 23 - "settings-page.tsx"
-Cohesion: 0.17
-Nodes (17): ClearHistoryDialogProps, NotebookSettingsDialogProps, keyLooksValid(), Provider, providerConfig, ProviderKeyRow(), AlertDialog(), AlertDialogAction() (+9 more)
+### Community 23 - "landing-page.tsx"
+Cohesion: 0.13
+Nodes (9): Logo(), benefits, EASE_OUT, faqs, LandingPage(), MOBILE_NAV_ITEMS, NAV_ITEM_TRANSITION, workflows (+1 more)
 
 ### Community 24 - "Execution Control"
 Cohesion: 0.05
@@ -521,55 +526,55 @@ Nodes (36): `--affected`, Basic Usage, `--cache`, Cache Control, CI Integration 
 
 ### Community 25 - "dependencies"
 Cohesion: 0.05
-Nodes (37): @ai-sdk/anthropic, @ai-sdk/google, @ai-sdk/openai, @ai-sdk/openai-compatible, @aws-sdk/client-s3, @aws-sdk/s3-request-presigner, dependencies, ai (+29 more)
+Nodes (39): @ai-sdk/anthropic, @ai-sdk/deepseek, @ai-sdk/openai, @ai-sdk/openai-compatible, dependencies, ai, @ai-sdk/anthropic, @ai-sdk/deepseek (+31 more)
 
 ### Community 26 - "devDependencies"
 Cohesion: 0.05
-Nodes (37): devDependencies, eslint, eslint-config-prettier, eslint-plugin-prettier, globals, @nestjs/cli, @nestjs/schematics, @nestjs/testing (+29 more)
+Nodes (41): devDependencies, eslint, eslint-config-prettier, @eslint/eslintrc, eslint-plugin-prettier, @nestjs/cli, @nestjs/schematics, @nestjs/testing (+33 more)
 
 ### Community 27 - "compilerOptions"
-Cohesion: 0.05
-Nodes (36): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+28 more)
+Cohesion: 0.06
+Nodes (34): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+26 more)
 
 ### Community 28 - "Issue tracker: GitHub"
 Cohesion: 0.06
 Nodes (30): Before exploring, read these, Domain Docs, File structure, Flag ADR conflicts, Use the glossary's vocabulary, Conventions, Issue tracker: GitHub, Pull requests as a triage surface (+22 more)
 
-### Community 29 - "right-pane.tsx"
-Cohesion: 0.29
-Nodes (5): RightPane(), RightPaneMode, RightPaneProps, StudyMaterialPane(), studyMaterialQueryOptions()
+### Community 29 - "desktop-layout.tsx"
+Cohesion: 0.06
+Nodes (34): buttonVariants, ResizableHandle(), ResizablePanel(), ResizablePanelGroup(), ChatPanelHeader(), ChatPanelHeaderProps, DEFAULT_WORKSPACE_LAYOUT, DesktopLayout() (+26 more)
 
-### Community 30 - "tree.ts"
-Cohesion: 0.17
-Nodes (23): LocalTreeAdapter, useLocalTreeAdapter(), CommandResult, TreeCommand, addToMap(), buildStudyMaterialTree(), byCreatedAtThenId(), canMoveItem() (+15 more)
+### Community 30 - "study-materials-tree.tsx"
+Cohesion: 0.12
+Nodes (27): TreeNode, findTreeNode(), getTreeDragData(), getTreeDropData(), useTreeControllerContext(), StudyMaterialsTree(), TreeBranchList(), TreeContent() (+19 more)
 
-### Community 31 - "sources-panel.tsx"
-Cohesion: 0.19
-Nodes (16): Source, SourceKind, SourceWithContent, getKindIcon(), PendingUploadRow(), PendingUploadRowProps, getIcon(), SourceRow() (+8 more)
+### Community 31 - "settings-page.tsx"
+Cohesion: 0.16
+Nodes (18): ConfirmDeleteDialogProps, AlertDialog(), AlertDialogAction(), AlertDialogCancel(), AlertDialogContent(), AlertDialogDescription(), AlertDialogFooter(), AlertDialogHeader() (+10 more)
 
-### Community 32 - "connection.service.ts"
-Cohesion: 0.08
-Nodes (18): AiController, Body, Controller, Delete, Get, Post, UseGuards, UsePipes (+10 more)
+### Community 32 - "ConnectionService"
+Cohesion: 0.11
+Nodes (14): AiController, Body, Controller, Delete, Get, Post, UseGuards, UsePipes (+6 more)
 
-### Community 33 - "study-materials-tree.tsx"
-Cohesion: 0.09
-Nodes (39): TreeNode, ControllerParams, DRAG_ID_PREFIX, findTreeNode(), FOLDER_DROP_ID_PREFIX, getTreeDragData(), getTreeDropData(), PendingDelete (+31 more)
+### Community 33 - "button.tsx"
+Cohesion: 0.06
+Nodes (43): Badge(), badgeVariants, Button(), buttonVariants, Input(), OpenAIKeyPrompt, ProviderKeyPrompt(), ProviderKeyPromptProps (+35 more)
 
 ### Community 34 - "Triage"
 Cohesion: 0.06
 Nodes (29): Bad agent brief, Behavioral, not procedural, Complete acceptance criteria, Durability over precision, Examples, Explicit scope boundaries, Good agent brief (bug), Good agent brief (enhancement) (+21 more)
 
-### Community 35 - "source-policy.service.ts"
-Cohesion: 0.13
-Nodes (17): DEFAULT_SOURCE_FETCH_CONFIG, defaultResolver, expandIpv6(), HostnameResolver, isPrivateAddress(), isPrivateIpv4(), isPrivateIpv6(), loadSourceFetchConfig() (+9 more)
+### Community 35 - "email-auth-forms.tsx"
+Cohesion: 0.16
+Nodes (17): email, getAuthErrorMessage(), isUnverifiedEmailError(), password, signInSchema, SignInValues, signUpSchema, SignUpValues (+9 more)
 
-### Community 36 - "message.tsx"
-Cohesion: 0.07
-Nodes (30): MessageActionProps, MessageActions(), MessageActionsProps, MessageBranch(), MessageBranchContent(), MessageBranchContentProps, MessageBranchContext, MessageBranchContextType (+22 more)
+### Community 36 - "controller.tsx"
+Cohesion: 0.13
+Nodes (34): LocalTreeAdapter, useLocalTreeAdapter(), CommandResult, getCommandPendingKey(), TreeCommand, TreeCommandExecutor, addToMap(), buildStudyMaterialTree() (+26 more)
 
 ### Community 37 - "routeTree.gen.ts"
 Cohesion: 0.09
-Nodes (24): ConnectionPage(), SettingsPage(), Route, Route, Route, Route, Route, FileRoutesByFullPath (+16 more)
+Nodes (26): ConnectionPage(), SettingsLayout(), SettingsPage(), Route, Route, Route, Route, Route (+18 more)
 
 ### Community 38 - "State Management: TanStack Query (React Query)"
 Cohesion: 0.06
@@ -579,29 +584,29 @@ Nodes (30): API Request Handling, Auth data: `shared/auth/` or `shared/api/`, Au
 Cohesion: 0.06
 Nodes (30): drizzle-kit, devDependencies, drizzle-kit, turbo, turbo, name, packageManager, private (+22 more)
 
-### Community 40 - "chat.controller.ts"
-Cohesion: 0.10
-Nodes (12): BadRequestError, DomainError, InternalError, ServiceUnavailableError, ZodValidationPipe, chatRequestSchema, messagePartSchema, messageSchema (+4 more)
+### Community 40 - "study-materials.controller.ts"
+Cohesion: 0.07
+Nodes (27): ZodValidationPipe, AuthenticatedRequest, AuthGuard, Injectable, AuthInstance, AuthSession, AuthUser, CurrentSession (+19 more)
 
 ### Community 41 - "conversation.tsx"
 Cohesion: 0.09
-Nodes (28): Conversation(), ConversationContent(), ConversationContentProps, ConversationDownload(), ConversationDownloadProps, ConversationEmptyState(), ConversationEmptyStateProps, ConversationItem (+20 more)
+Nodes (27): MessageScroller(), MessageScrollerButton(), MessageScrollerContent(), MessageScrollerItem(), MessageScrollerProvider(), MessageScrollerViewport(), Conversation(), ConversationContent() (+19 more)
 
 ### Community 42 - "assistant-message.tsx"
-Cohesion: 0.08
-Nodes (28): Message(), MessageContent(), MessageResponseProps, AssistantMessage(), AssistantMessageProps, getReasoningText(), isTextPart(), MessageComponents (+20 more)
+Cohesion: 0.11
+Nodes (19): MessageResponseProps, AssistantMessage(), AssistantMessageProps, getReasoningText(), isTextPart(), MessageComponents, citedSource, TextPart (+11 more)
 
 ### Community 43 - "Process"
 Cohesion: 0.07
 Nodes (27): 1. State the question, 2. Pick the language, 3. Isolate the logic in a portable module, 4. Build the smallest TUI that exposes the state, 5. Make it runnable in one command, 6. Hand it over, 7. Capture the answer and the prototype, Anti-patterns (+19 more)
 
 ### Community 44 - "document-normalizer.service.ts"
-Cohesion: 0.14
-Nodes (22): containsHeading(), contentHashOf(), detectMarkdown(), DocumentNormalizerService, DocumentSection, ExtractionMethod, EXTRACTOR_VERSION, FileDocumentInput (+14 more)
+Cohesion: 0.09
+Nodes (31): containsHeading(), contentHashOf(), detectMarkdown(), DocumentNormalizerService, DocumentSection, ExtractionMethod, FileDocumentInput, HEADING_LEVELS (+23 more)
 
-### Community 45 - "ui/model-selector.tsx"
-Cohesion: 0.04
-Nodes (70): ModelSelector(), ModelSelectorContent(), ModelSelectorContentProps, ModelSelectorDialogProps, ModelSelectorEmpty(), ModelSelectorEmptyProps, ModelSelectorGroup(), ModelSelectorGroupProps (+62 more)
+### Community 45 - "composer.tsx"
+Cohesion: 0.09
+Nodes (23): ModelSelector(), ModelSelectorContent(), ModelSelectorEmpty(), ModelSelectorGroup(), ModelSelectorInput(), ModelSelectorItem(), ModelSelectorList(), ModelSelectorTrigger() (+15 more)
 
 ### Community 46 - "Feature-Sliced Design (FSD) v2.1"
 Cohesion: 0.07
@@ -611,9 +616,9 @@ Nodes (28): 10. Quick Reference, 11. Conditional References, 1. Core Philosophy 
 Cohesion: 0.07
 Nodes (25): Learning Record Format, Numbering, Optional sections, Supersession, Template, What does _not_ qualify, When to write a learning record, MISSION.md Format (+17 more)
 
-### Community 48 - "markdown-document-viewer.tsx"
-Cohesion: 0.08
-Nodes (20): ArticleBlock, ArticleBlockView(), ArticleDocumentViewer(), ArticleDocumentViewerProps, getHeadingTag(), parseArticleBlocks(), CODE_EXTENSIONS, DocumentType (+12 more)
+### Community 48 - "article-document-viewer.tsx"
+Cohesion: 0.18
+Nodes (8): ArticleBlock, ArticleBlockView(), ArticleDocumentViewer(), ArticleDocumentViewerProps, getHeadingTag(), parseArticleBlocks(), VirtualizedDocumentContainer(), VirtualizedDocumentContainerProps
 
 ### Community 49 - "Next.js"
 Cohesion: 0.07
@@ -623,13 +628,13 @@ Nodes (27): App Router, Astro, Create React App (CRA), Database access, Director
 Cohesion: 0.07
 Nodes (28): Add to Consuming Package, Avoid Mega-Packages, Avoid TypeScript Project References, Common Mistakes, Compiled, Conditional Exports (Compiled), Config Packages, Creating Internal Packages (+20 more)
 
-### Community 51 - "model-catalog.ts"
+### Community 51 - "registry.ts"
 Cohesion: 0.23
-Nodes (13): createAnthropicProvider(), createDeepseekProvider(), createGoogleProvider(), createKimiProvider(), nativeModelId(), PROVIDER_DEFAULT_MODELS, PROVIDER_MODELS, checkHealth() (+5 more)
+Nodes (12): createAnthropicProvider(), createDeepseekProvider(), createGoogleProvider(), createKimiProvider(), nativeModelId(), PROVIDER_DEFAULT_MODELS, PROVIDER_MODELS, checkHealth() (+4 more)
 
-### Community 52 - "use-generation-store.ts"
-Cohesion: 0.19
-Nodes (17): ActiveGeneration, createTempGenerationId(), GenerationState, kindLabel(), removeGeneration(), updateGenerationError(), useGenerationStore, cancelGeneration() (+9 more)
+### Community 52 - "add-source-dialog.tsx"
+Cohesion: 0.07
+Nodes (32): Dialog(), DialogContent(), DialogDescription(), DialogFooter(), DialogHeader(), DialogOverlay(), DialogTitle(), DialogTrigger() (+24 more)
 
 ### Community 53 - "Dependency Management"
 Cohesion: 0.08
@@ -647,29 +652,29 @@ Nodes (24): ^build, dependsOn, description, outputs, cache, description, persist
 Cohesion: 0.09
 Nodes (21): 1. In-process, 2. Local-substitutable, 3. Remote but owned (Ports & Adapters), 4. True external (Mock), Deepening, Dependency categories, Seam discipline, Testing strategy: replace, don't layer (+13 more)
 
-### Community 57 - "notebooks.service.ts"
-Cohesion: 0.09
-Nodes (25): DomainErrorOptions, ForbiddenError, NotFoundError, account, accountRelations, session, sessionRelations, user (+17 more)
+### Community 57 - "connection.service.ts"
+Cohesion: 0.20
+Nodes (11): updateSettingsSchema, AiModule, Global, Module, ProviderHealth, PROVIDER_IDS, PROVIDER_NAMES, providerIdFromModel() (+3 more)
 
-### Community 58 - "ChatController"
-Cohesion: 0.14
-Nodes (10): ChatController, Body, Controller, Delete, Get, Param, Post, Res (+2 more)
+### Community 58 - "chat-message-list.tsx"
+Cohesion: 0.17
+Nodes (10): Message(), MessageContent(), CitedSourceDTO, ChatMessageList(), ChatMessageListProps, MessageBubbleProps, MessageReferencesProps, ReferencePopoverProps (+2 more)
 
 ### Community 59 - "reasoning.tsx"
-Cohesion: 0.09
-Nodes (24): ReasoningLifecycleOptions, useReasoningLifecycle(), getRawText(), MarkdownCodeBlock(), MessageResponse, Reasoning, ReasoningContent, ReasoningContentProps (+16 more)
+Cohesion: 0.08
+Nodes (27): Collapsible(), CollapsibleContent(), CollapsibleTrigger(), Reasoning, ReasoningContent, ReasoningContentProps, ReasoningContext, ReasoningContextValue (+19 more)
 
 ### Community 60 - "Monorepo Best Practices"
 Cohesion: 0.09
 Nodes (23): Accessing Files Across Package Boundaries, Application Packages (`apps/`), Avoid Barrel Files, Common Anti-Patterns, Compiled (Recommended for Libraries), Dependency Management, Exports Best Practices, Install Where Used (+15 more)
 
 ### Community 61 - "compilerOptions"
-Cohesion: 0.09
-Nodes (22): compilerOptions, allowSyntheticDefaultImports, baseUrl, declaration, emitDecoratorMetadata, esModuleInterop, experimentalDecorators, forceConsistentCasingInFileNames (+14 more)
+Cohesion: 0.08
+Nodes (23): compilerOptions, allowSyntheticDefaultImports, baseUrl, declaration, emitDecoratorMetadata, esModuleInterop, experimentalDecorators, forceConsistentCasingInFileNames (+15 more)
 
-### Community 62 - "RoadmapView.tsx"
-Cohesion: 0.15
-Nodes (22): buildPhaseStudyPrompt(), buildTopicCopyText(), dispatchChatPrompt(), formatMilestoneLabel(), formatTopicSummary(), isLeftPosition(), PhaseMilestoneCard(), PhaseMilestoneCardProps (+14 more)
+### Community 62 - "components/model-selector.tsx"
+Cohesion: 0.09
+Nodes (25): Command(), CommandDialog(), CommandEmpty(), CommandGroup(), CommandInput(), CommandItem(), CommandList(), CommandSeparator() (+17 more)
 
 ### Community 63 - "During the session"
 Cohesion: 0.09
@@ -680,8 +685,8 @@ Cohesion: 0.09
 Nodes (21): Anti-patterns, App Layer, Domain-based file naming, Entities Layer, Example: grouping payment-related entities, Features Layer, Features: use with caution, Group by what it is *for*, not by what it *is* (+13 more)
 
 ### Community 65 - "chat.service.ts"
-Cohesion: 0.13
-Nodes (22): DEFAULT_TOP_K, RetrievalService, RetrievedChunk, Injectable, CITATION_SCHEMA_VERSION, CitationEvidence, CitedSourceEntry, createCitationEvidence() (+14 more)
+Cohesion: 0.07
+Nodes (33): notebookChatMessages, DEFAULT_TOP_K, RetrievalService, RetrievedChunk, Injectable, CITATION_SCHEMA_VERSION, CitationEvidence, CitedSourceEntry (+25 more)
 
 ### Community 66 - "components.json"
 Cohesion: 0.09
@@ -695,9 +700,9 @@ Nodes (20): Before you start, Common pitfalls during migration, Migrating from F
 Cohesion: 0.10
 Nodes (21): Always Prefer Package Tasks, Directory Organization, ESLint Configuration, Extending in Packages, Grouping Packages, Lockfile, Minimum Required Files, No Root tsconfig.json (+13 more)
 
-### Community 69 - "context-menu.tsx"
-Cohesion: 0.13
-Nodes (14): RowMenuProps, ContextMenu(), ContextMenuCheckboxItem(), ContextMenuContent(), ContextMenuGroup(), ContextMenuItem(), ContextMenuLabel(), ContextMenuRadioItem() (+6 more)
+### Community 69 - "notebooks-page.tsx"
+Cohesion: 0.09
+Nodes (14): AppHeader(), EmptyState(), EmptyStateProps, Skeleton(), Spinner(), NotebookCard(), NotebookCardProps, NotebookIcon() (+6 more)
 
 ### Community 70 - "Cross-Import Resolution Patterns"
 Cohesion: 0.10
@@ -711,9 +716,9 @@ Nodes (18): Call-graph collapse, Candidate card, Cross-section (good for layered
 Cohesion: 0.10
 Nodes (20): Accessing Files Across Package Boundaries, `^build` vs `build` Confusion, Critical Anti-Patterns, `.env` Files Not in Inputs, Environment Variables Not Hashed, Missing `outputs` for File-Producing Tasks, NOT an Anti-Pattern: Large `env` Arrays, Overly Broad `globalDependencies` (+12 more)
 
-### Community 73 - "web-search.ts"
-Cohesion: 0.22
-Nodes (14): useWebSearch(), WebSearchPhase, WebSearchState, dismissWebSearchJob(), importWebSources(), POLL_INTERVAL_MS, startWebSearchJob(), WebSearchCandidate (+6 more)
+### Community 73 - "RoadmapView.tsx"
+Cohesion: 0.07
+Nodes (35): buildPhaseStudyPrompt(), buildTopicCopyText(), dispatchChatPrompt(), formatMilestoneLabel(), formatTopicSummary(), isLeftPosition(), PhaseMilestoneCard(), PhaseMilestoneCardProps (+27 more)
 
 ### Community 74 - "compilerOptions"
 Cohesion: 0.10
@@ -723,9 +728,13 @@ Nodes (19): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib
 Cohesion: 0.11
 Nodes (18): Better Auth Integration Guide, CLI Commands, Client, Common Gotchas, Core Config Options, Database, Email Flows, Environment Variables (+10 more)
 
-### Community 77 - "http-fetcher.service.ts"
+### Community 76 - "turborepo/SKILL.md"
 Cohesion: 0.15
-Nodes (12): FetchedHtml, HttpFetcherService, isHtmlContentType(), readBoundedBody(), REDIRECT_STATUSES, Inject, Injectable, Optional (+4 more)
+Nodes (7): Basic Usage, Package Selection, Passing Arguments to Scripts, Quick Reference, Running Tasks, turbo run, When to Use `turbo run` vs `turbo`
+
+### Community 77 - "markdown-code-block.tsx"
+Cohesion: 0.26
+Nodes (10): CodeBlock(), CodeBlockActions(), CodeBlockCopyButton(), CodeBlockFilename(), CodeBlockHeader(), CodeBlockTitle(), MarkdownCodeBlockProps, CodeDocumentViewer() (+2 more)
 
 ### Community 78 - "Debugging Cache Issues"
 Cohesion: 0.11
@@ -755,21 +764,21 @@ Nodes (16): cache, dependsOn, description, env, extends (Package Configuration o
 Cohesion: 0.12
 Nodes (16): Basic Syntax, By Dependencies/Dependents, By Directory, By Package Name, Combining Filters, Common CI Pattern, Comparison Syntax, Customizing --affected (+8 more)
 
-### Community 85 - "sources.controller.ts"
-Cohesion: 0.17
-Nodes (8): textSourceSchema, urlSourceSchema, webSearchImportCandidateSchema, webSearchImportSchema, webSearchSchema, formatWebSearchJob(), Injectable, WebSearchJobsService
+### Community 85 - "message.tsx"
+Cohesion: 0.07
+Nodes (33): defaultRehypePlugins, defaultRemarkPlugins, MarkdownComponents, MarkdownRenderer(), MarkdownRendererProps, markdownSanitizeSchema, RehypePlugins, RemarkPlugins (+25 more)
 
 ### Community 86 - "Configuration Gotchas"
 Cohesion: 0.12
 Nodes (16): #1 Root Scripts Not Using `turbo run`, #2 Using `&&` to Chain Turbo Tasks, #3 Overly Broad globalDependencies, #4 Repetitive Task Configuration, #5 Using `../` to Traverse Out of Package in `inputs`, #6 MOST COMMON MISTAKE: Creating Root Tasks, #7 Tasks That Need Parallel Execution + Cache Invalidation, Caching Tasks with Side Effects (+8 more)
 
-### Community 87 - "fetchApi"
-Cohesion: 0.13
-Nodes (28): getCommandPendingKey(), useProductionTreeAdapter(), getVisiblePages(), NotebooksPage(), handleCreateNotebook(), handlePageSelection(), CitedSourceEntry, apiDelete() (+20 more)
+### Community 87 - "MaterialViewer.tsx"
+Cohesion: 0.09
+Nodes (21): createEmptyStudyMaterial(), cuid, FlashcardEditorContent, FlashcardEditorContentType, makeId(), QuizEditorContent, QuizEditorContentType, QuizOptionInput (+13 more)
 
-### Community 88 - "study-materials-tree-container.tsx"
-Cohesion: 0.13
-Nodes (15): TreeCommandExecutor, TreeController, getTreeContentHeight(), StudyMaterialsTreeContainer(), StudyMaterialsTreeContainerProps, StudyMaterialsTreeError(), StudyMaterialsTreeErrorProps, ProductionStudyMaterialsTreeProps (+7 more)
+### Community 88 - "study-materials.ts"
+Cohesion: 0.16
+Nodes (15): deleteFolder(), updateFolder(), UpdateFolderInput, useProductionTreeAdapter(), CreateFolderInput, createStudyMaterial(), deleteStudyMaterial(), duplicateStudyMaterial() (+7 more)
 
 ### Community 89 - "tasteskill: Anti-Slop Frontend Skill"
 Cohesion: 0.13
@@ -783,13 +792,13 @@ Nodes (15): Appendix B - Canonical Sources (read these before reinventing), Appl
 Cohesion: 0.13
 Nodes (14): description, devDependencies, ts-node, @types/node, typescript, ts-node, @types/node, typescript (+6 more)
 
-### Community 92 - "shimmer.tsx"
-Cohesion: 0.33
-Nodes (6): getMotionComponent(), motionComponentCache, MotionHTMLProps, Shimmer, ShimmerComponent(), TextShimmerProps
+### Community 92 - "NotebooksController"
+Cohesion: 0.13
+Nodes (13): NotebooksController, Body, Controller, Delete, Get, Param, Patch, Post (+5 more)
 
-### Community 93 - "layout/index.ts"
-Cohesion: 0.19
-Nodes (9): HomePage(), NotebooksSection(), handleCreateNotebook(), Route, AppHeader(), EditableNotebookTitle(), NotebookHeader(), UserMenu() (+1 more)
+### Community 93 - "guards.ts"
+Cohesion: 0.13
+Nodes (11): requireAuth(), NotebookHeader(), HomePage(), NotebooksSection(), handleCreateNotebook(), NotebookPage(), getVisiblePages(), NotebooksPage() (+3 more)
 
 ### Community 94 - "Diagnosing Bugs"
 Cohesion: 0.14
@@ -819,9 +828,9 @@ Nodes (14): scripts, build, db:migrate, dev, format, lint, start, start:debug (+
 Cohesion: 0.14
 Nodes (13): compilerOptions, incremental, rootDir, exclude, extends, dist, drizzle.config.ts, node_modules (+5 more)
 
-### Community 101 - "MaterialViewer.tsx"
-Cohesion: 0.13
-Nodes (17): MaterialViewer(), MaterialViewerProps, useMaterialViewerFullscreen(), MindMapView(), createEmptyStudyMaterial(), cuid, FlashcardEditorContent, FlashcardEditorContentType (+9 more)
+### Community 101 - "AI SDK opportunities for a better learning chat"
+Cohesion: 0.09
+Nodes (21): 1. One message can contain more than text, 2. Voice can enter as text, and answers can play as audio, 3. Tools can turn a reply into a study action, 4. Structured output can make reliable cards and previews, 5. Sources can be first-class message parts, 6. Image generation is available, but it is not the first priority, 7. Chat streams can be saved and, with extra storage, resumed, 8. Testing and monitoring can make model changes safer (+13 more)
 
 ### Community 102 - "Vercel AI SDK Codex harness research"
 Cohesion: 0.14
@@ -884,11 +893,11 @@ Cohesion: 0.17
 Nodes (11): Chart the map, Fog of war, Invocation, Out of scope, Plan, don't do, Refer by name, The Map, The map body (+3 more)
 
 ### Community 117 - "ai.service.ts"
-Cohesion: 0.12
-Nodes (18): AiService, BLOCKED_DOMAINS, ConvertInput, deriveTitle(), extractWebSearchUrls(), isBlockedDomain(), normalizeUrl(), ParsedSearchOutput (+10 more)
+Cohesion: 0.19
+Nodes (13): BLOCKED_DOMAINS, ConvertInput, deriveTitle(), extractWebSearchUrls(), isBlockedDomain(), normalizeUrl(), ParsedSearchOutput, parseSearchJson() (+5 more)
 
 ### Community 118 - "EmbeddingService"
-Cohesion: 0.24
+Cohesion: 0.32
 Nodes (3): EmbeddingService, Injectable, Inject
 
 ### Community 119 - "Study Materials — Surface Ladder Design Spec"
@@ -899,13 +908,13 @@ Nodes (11): 1. Context → ladder mapping (authoritative), 2. Component recipes 
 Cohesion: 0.17
 Nodes (11): Baseline, Definition of done, Dependency and parallelization map, Frontend Readable React Refactor Plan, FSD placement rules for this refactor, Implementation protocol, Mandatory Readable React contract, Outcome (+3 more)
 
-### Community 121 - "theme/index.ts"
-Cohesion: 0.13
-Nodes (25): AppProviders(), getQueryClient(), isEditableTarget(), makeQueryClient(), ThemeKeyboardShortcut(), applyThemeAttribute(), getInitialTheme(), PaletteContext (+17 more)
+### Community 121 - "palette-provider.tsx"
+Cohesion: 0.14
+Nodes (20): applyThemeAttribute(), getInitialTheme(), PaletteContext, PaletteContextValue, PaletteProvider(), SCHEME_OPTIONS, SchemeOption, SchemePreview() (+12 more)
 
-### Community 122 - "auth/index.ts"
-Cohesion: 0.27
-Nodes (5): Route, Route, authClient, redirectIfAuthenticated(), requireAuth()
+### Community 122 - "shared/api/index.ts"
+Cohesion: 0.24
+Nodes (7): ConnectionStatus, fetchConnection(), ProviderStatus, getApiUrl(), ApiError, ApiErrorResponse, createApiErrorMessage()
 
 ### Community 123 - "Asset Handling"
 Cohesion: 0.18
@@ -928,16 +937,16 @@ Cohesion: 0.18
 Nodes (11): "Environment variables aren't working", "How should I structure my monorepo?", "I need to configure a task", "I need to create/structure a package", "I need to set up CI", "I want to enforce architectural boundaries", "I want to filter packages", "I want to run only changed packages" (+3 more)
 
 ### Community 128 - "dependencies"
-Cohesion: 0.18
-Nodes (11): @ai-sdk/react, class-variance-authority, dependencies, @ai-sdk/react, class-variance-authority, rehype-sanitize, @tailwindcss/vite, zod (+3 more)
+Cohesion: 0.06
+Nodes (31): ansi-to-react, class-variance-authority, clsx, @fontsource-variable/geist-mono, dependencies, ai, ansi-to-react, better-auth (+23 more)
 
 ### Community 129 - "studio-resources.tsx"
-Cohesion: 0.17
-Nodes (11): ActiveGenerationCard(), Generation, getGenerationSubtitle(), isInScope(), ResourceButton(), ResourceConfig, RESOURCES, Tooltip() (+3 more)
+Cohesion: 0.15
+Nodes (14): Tooltip(), TooltipContent(), TooltipProvider(), TooltipTrigger(), ActiveGenerationCard(), Generation, getGenerationSubtitle(), isInScope() (+6 more)
 
 ### Community 130 - "login-page.tsx"
-Cohesion: 0.28
-Nodes (8): LoginPage(), Card(), CardAction(), CardContent(), CardDescription(), CardFooter(), CardHeader(), CardTitle()
+Cohesion: 0.16
+Nodes (17): Card(), CardAction(), CardContent(), CardDescription(), CardFooter(), CardHeader(), CardTitle(), Tabs() (+9 more)
 
 ### Community 131 - "Ask Matt"
 Cohesion: 0.20
@@ -967,9 +976,9 @@ Nodes (9): Compile and run the project, Deployment, Description, License, Projec
 Cohesion: 0.20
 Nodes (10): Architecture, Backend, Docker, Entrypoints, Entrypoints, Frontend, Key patterns, Key patterns (+2 more)
 
-### Community 138 - "landing-page.tsx"
-Cohesion: 0.14
-Nodes (8): benefits, EASE_OUT, faqs, LandingPage(), MOBILE_NAV_ITEMS, NAV_ITEM_TRANSITION, workflows, Route
+### Community 138 - "context-menu.tsx"
+Cohesion: 0.12
+Nodes (15): ContextMenu(), ContextMenuCheckboxItem(), ContextMenuContent(), ContextMenuGroup(), ContextMenuItem(), ContextMenuLabel(), ContextMenuRadioItem(), ContextMenuSeparator() (+7 more)
 
 ### Community 140 - "Design Engineering"
 Cohesion: 0.22
@@ -1003,13 +1012,13 @@ Nodes (8): Complete Next.js Example, Different .env Files for Different Environm
 Cohesion: 0.22
 Nodes (8): Checking Environment Mode, Disabling Framework Inference, Environment Modes, Framework Inference (Automatic), Inferred Variables by Framework, Loose Mode, Strict Mode (Default), Why Disable?
 
-### Community 148 - "notebook-workspace-container.tsx"
-Cohesion: 0.24
-Nodes (8): useNotebookPanels(), UseNotebookPanelsReturn, useSourcesPanel(), UseSourcesPanelReturn, useStudioDialogs(), REVIEW_STUDIO_SIZE, NotebookWorkspaceContainer(), NotebookWorkspaceContainerProps
+### Community 148 - "markdown-document-viewer.tsx"
+Cohesion: 0.19
+Nodes (7): splitTextIntoChunks(), createSlug(), getRawText(), HeadingWithId(), markdownComponents, MarkdownDocumentViewer(), MarkdownDocumentViewerProps
 
-### Community 149 - "source-acquisition.service.ts"
-Cohesion: 0.18
-Nodes (10): NormalizedDocument, AcquiredUrlDocument, SourceAcquisitionService, Injectable, cleanDomNoise(), deriveTitleFromHtml(), NOISE_SELECTORS, normalizeBasicText() (+2 more)
+### Community 149 - "AiService"
+Cohesion: 0.31
+Nodes (3): AiService, Injectable, Inject
 
 ### Community 150 - "Source Ingestion Refactor Sequence"
 Cohesion: 0.22
@@ -1019,9 +1028,9 @@ Nodes (8): Current Baseline, Database Migration Strategy, Proposed Implementatio
 Cohesion: 0.22
 Nodes (8): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema, oxc, typescript, warn
 
-### Community 152 - "SourcesController"
-Cohesion: 0.18
-Nodes (11): SourcesController, Body, Controller, Delete, Get, Param, Post, UploadedFile (+3 more)
+### Community 152 - "CurrentUser"
+Cohesion: 0.22
+Nodes (12): CurrentUser, SourcesController, Body, Controller, Delete, Get, Param, Post (+4 more)
 
 ### Community 153 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
@@ -1059,9 +1068,9 @@ Nodes (8): Chat & Messaging → [chat.md](./rules/chat.md), CLI, Component Struc
 Cohesion: 0.25
 Nodes (8): Backend (Vitest + real PostgreSQL), Configuration, Fixtures, How to run, Mocks, Prerequisites, Setup lifecycle, Testing
 
-### Community 162 - "App.tsx"
-Cohesion: 0.19
-Nodes (7): App(), AuthContext, Register, router, RouterContext, @tanstack/react-router, routeTree
+### Community 162 - "auth/index.ts"
+Cohesion: 0.16
+Nodes (9): App(), AppProviders(), Register, router, RouterContext, @tanstack/react-router, authClient, AuthContext (+1 more)
 
 ### Community 163 - "Funcionalidades"
 Cohesion: 0.25
@@ -1107,13 +1116,17 @@ Nodes (7): 2.1 Avoid Service Locator Anti-Pattern, 2.2 Apply Interface Segregati
 Cohesion: 0.29
 Nodes (6): Step 1: Load turborepo skill, Step 2: Identify task type from user request, Step 3: Read relevant reference files, Step 4: Execute task, Step 5: Summarize, Workflow
 
-### Community 174 - "FSD v2.1 Conventions"
-Cohesion: 0.29
-Nodes (7): Barrel Files, Code Organization, FSD v2.1 Conventions, Import Rules, Layer Structure, Path Aliases, Validation
+### Community 174 - "use-generation-store.ts"
+Cohesion: 0.20
+Nodes (16): cancelGeneration(), GenerationEvent, iteratorFrom(), MindMapGenerationOptions, parseLine(), RoadmapGenerationOptions, startGeneration(), StartGenerationInput (+8 more)
 
 ### Community 175 - "Overlay layering research"
 Cohesion: 0.29
 Nodes (6): Conclusion, Decision, Evidence, Local diagnosis, Overlay layering research, Recommendation for this app
+
+### Community 176 - "frontend-architecture.md"
+Cohesion: 0.29
+Nodes (4): Component & File Responsibilities, Directory Structure, Feature Public API, Feature Structure
 
 ### Community 177 - "The Animation Decision Framework"
 Cohesion: 0.33
@@ -1143,9 +1156,9 @@ Nodes (5): collection, compilerOptions, deleteOutDir, $schema, sourceRoot
 Cohesion: 0.33
 Nodes (5): description, license, name, private, version
 
-### Community 184 - "MindMapView.tsx"
-Cohesion: 0.14
-Nodes (12): buildGraph(), createTree(), edgeTypes, MapItem, MindMapEdgeData, MindMapFlow(), MindMapFlowNode, MindMapNode() (+4 more)
+### Community 184 - "web-search.ts"
+Cohesion: 0.21
+Nodes (14): dismissWebSearchJob(), importWebSources(), POLL_INTERVAL_MS, startWebSearchJob(), WebSearchCandidate, WebSearchImportResponse, WebSearchImportResultItem, WebSearchImportResultStatus (+6 more)
 
 ### Community 185 - "Packet 1 — Application shell and pages"
 Cohesion: 0.33
@@ -1156,16 +1169,16 @@ Cohesion: 0.33
 Nodes (6): 4.1 Shared banner interaction, then banner/card, 4.2 Source ingestion dialog, 4.3 Web search composer, 4.4 Source readers and panel, 4.5 Remaining notebook components, Packet 4 — Notebooks and sources
 
 ### Community 187 - "StudyMaterialFolderService"
-Cohesion: 0.26
+Cohesion: 0.21
 Nodes (3): StudyMaterialFolderService, Inject, Injectable
 
-### Community 188 - "domain-exception.filter.ts"
-Cohesion: 0.28
-Nodes (5): AppModule, Module, DomainExceptionFilter, redactSensitiveDetails(), Catch
+### Community 188 - "GenerationRequestManager"
+Cohesion: 0.11
+Nodes (9): GenerationRequestManager, Inject, Injectable, GenerationService, Inject, Injectable, TrashService, Inject (+1 more)
 
-### Community 189 - "content-normalizer.ts"
-Cohesion: 0.16
-Nodes (22): arrayLength(), generateTitle(), isRecord(), normalizeContent(), NormalizedFlashcard, NormalizedFlashcardContent, NormalizedMindMapContent, NormalizedMindMapEdge (+14 more)
+### Community 189 - "MindMapView.tsx"
+Cohesion: 0.13
+Nodes (13): buildGraph(), createTree(), edgeTypes, MapItem, MindMapEdgeData, MindMapFlow(), MindMapFlowNode, MindMapNode() (+5 more)
 
 ### Community 190 - "Decisions"
 Cohesion: 0.33
@@ -1247,29 +1260,29 @@ Nodes (5): 5.1 Lock form behavior, 5.2 One owner extracts only genuine picker du
 Cohesion: 0.40
 Nodes (5): 6.1 Quiz viewer — highest priority, 6.2 Flashcard viewer, 6.3 Mind map, 6.4 Supporting viewers, Packet 6 — Study-material viewers
 
-### Community 210 - "turbo run"
+### Community 210 - "main.ts"
 Cohesion: 0.25
-Nodes (7): Basic Usage, Package Selection, Passing Arguments to Scripts, Quick Reference, Running Tasks, turbo run, When to Use `turbo run` vs `turbo`
+Nodes (5): AppModule, Module, DomainExceptionFilter, redactSensitiveDetails(), Catch
 
-### Community 211 - "mobile-notebook-layout.tsx"
-Cohesion: 0.20
-Nodes (13): UseStudioDialogsReturn, Tabs(), TabsContent(), TabsList(), tabsListVariants, TabsTrigger(), DesktopLayoutProps, MobileNotebookLayout() (+5 more)
+### Community 211 - "ai/index.ts"
+Cohesion: 0.11
+Nodes (24): modelsQueryOptions, useConnectionStatus(), ModelOption, ModelsResponse, DialogModelSelectorProps, ModelRowProps, ModelSelectorProps, GenerationModelPopoverProps (+16 more)
 
-### Community 212 - "TrashService"
-Cohesion: 0.28
-Nodes (3): TrashService, Inject, Injectable
+### Community 212 - "alert.tsx"
+Cohesion: 0.48
+Nodes (5): Alert(), AlertAction(), AlertDescription(), AlertTitle(), alertVariants
 
 ### Community 213 - "Phase 3: Preserve raw artifacts and processing versions"
 Cohesion: 0.40
 Nodes (5): Exit criteria, Goals, Phase 3: Preserve raw artifacts and processing versions, Recommended model direction, Work
 
-### Community 214 - "prompt-input-files.ts"
-Cohesion: 0.38
-Nodes (5): convertBlobUrlToDataUrl(), convertFilePartsForSubmit(), matchesAccept(), PromptInputFileError, validateIncomingFiles()
+### Community 214 - "scripts"
+Cohesion: 0.13
+Nodes (14): name, private, scripts, build, dev, format, format:check, lint (+6 more)
 
 ### Community 215 - "sources.service.ts"
-Cohesion: 0.12
-Nodes (18): SourceMetadata, buildS3Key(), CreateTextSourceInput, CreateUrlSourceInput, DownloadInfo, looksLikeUrlTitle(), pickExtension(), resolveSourceTitle() (+10 more)
+Cohesion: 0.11
+Nodes (19): SourceMetadata, EXTRACTOR_VERSION, buildS3Key(), CreateTextSourceInput, CreateUrlSourceInput, DownloadInfo, looksLikeUrlTitle(), pickExtension() (+11 more)
 
 ### Community 216 - "frontend/tsconfig.json"
 Cohesion: 0.40
@@ -1399,53 +1412,81 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 Cohesion: 0.67
 Nodes (3): In scope, Out of scope, Scope and non-goals
 
-### Community 249 - "RobotsTxt"
-Cohesion: 0.33
-Nodes (3): globToRegex(), readBoundedText(), RobotsTxt
+### Community 249 - "sources.module.ts"
+Cohesion: 0.07
+Nodes (32): FetchedHtml, HttpFetcherService, isHtmlContentType(), readBoundedBody(), REDIRECT_STATUSES, Inject, Injectable, Optional (+24 more)
 
-### Community 251 - "add-source-dialog.tsx"
-Cohesion: 0.18
-Nodes (15): AddSourceDialog(), deriveTitleFromUrl(), TextInputMode(), UrlInputMode(), runUpload(), startFileUpload(), startTextUpload(), startUrlUpload() (+7 more)
+### Community 251 - "source-upload-actions.ts"
+Cohesion: 0.29
+Nodes (10): createFileSource(), createTextSource(), createUrlSource(), AddSourceDialog(), deriveTitleFromUrl(), runUpload(), startFileUpload(), startTextUpload() (+2 more)
+
+### Community 252 - "Find Skills"
+Cohesion: 0.14
+Nodes (13): Common Skill Categories, Find Skills, How to Help Users Find Skills, Step 1: Understand What They Need, Step 2: Check the Leaderboard First, Step 3: Search for Skills, Step 4: Verify Quality Before Recommending, Step 5: Present Options to the User (+5 more)
+
+### Community 297 - "login.tsx"
+Cohesion: 0.33
+Nodes (4): redirectIfAuthenticated(), LoginPage(), authMocks, Route
+
+### Community 298 - "providers/index.tsx"
+Cohesion: 0.27
+Nodes (7): AuthProvider(), getQueryClient(), makeQueryClient(), QueryProvider(), AppThemeProvider(), ThemeShortcutListener(), useThemeKeyboardShortcut()
+
+### Community 300 - "tree.test.ts"
+Cohesion: 0.38
+Nodes (7): getActiveFolderIds(), getInitialExpandedIds(), getStorageKey(), loadPersisted(), persist(), reconcileExpandedIds(), usePersistentExpandedFolders()
+
+### Community 303 - "sources-panel.tsx"
+Cohesion: 0.21
+Nodes (12): ConfirmDeleteDialog(), deleteSource(), getKindIcon(), PendingUploadRow(), PendingUploadRowProps, getIcon(), SourceRow(), SourcesPanel() (+4 more)
+
+### Community 306 - "useOverlayLayer"
+Cohesion: 0.40
+Nodes (5): DropdownMenuContent(), HoverCard(), HoverCardContent(), HoverCardTrigger(), useOverlayLayer()
 
 ### Community 307 - "StudyMaterialService"
-Cohesion: 0.17
-Nodes (5): shuffleQuizOptions(), validateContent(), StudyMaterialService, Inject, Injectable
-
-### Community 309 - "ai/index.ts"
 Cohesion: 0.20
-Nodes (12): ConnectionStatus, fetchConnection(), ProviderStatus, useConnectionStatus(), formatChatMessages(), SendChatPromptDetail, mocks, useChatPanel() (+4 more)
+Nodes (3): StudyMaterialService, Inject, Injectable
+
+### Community 308 - "renderers/document-type-detector.ts"
+Cohesion: 0.15
+Nodes (8): CODE_EXTENSIONS, DocumentType, MARKDOWN_EXTENSIONS, Source, SourceWithContent, CODE_EXTENSIONS, DocumentType, MARKDOWN_EXTENSIONS
+
+### Community 309 - "use-chat-panel.ts"
+Cohesion: 0.22
+Nodes (8): ChatMessageDTO, chatMessagesQueryOptions(), CitedSourceEntry, clearChatHistory(), formatChatMessages(), SendChatPromptDetail, mocks, useChatPanel()
+
+### Community 317 - "utils/document-type-detector.ts"
+Cohesion: 0.29
+Nodes (3): CODE_EXTENSIONS, DocumentType, MARKDOWN_EXTENSIONS
+
+### Community 322 - "Dependency Direction & Rules"
+Cohesion: 0.67
+Nodes (3): Allowed Imports, Dependency Direction & Rules, Disallowed Imports
 
 ### Community 342 - "Turborepo Skill"
 Cohesion: 0.22
 Nodes (9): Common Task Configurations, Dev Task with `^dev` Pattern (for `turbo watch`), IMPORTANT: Package Tasks, Not Root Tasks, Secondary Rule: `turbo run` vs `turbo`, Source Documentation, Standard Build Pipeline, Transit Nodes for Parallel Tasks with Cache Invalidation, Turborepo Skill (+1 more)
 
-### Community 373 - "sources-panel-header.tsx"
-Cohesion: 0.60
-Nodes (3): buttonVariants, SourcesPanelHeader(), SourcesPanelHeaderProps
-
-### Community 375 - "file-upload-mode.tsx"
-Cohesion: 0.40
-Nodes (5): ACCEPTED_EXTENSIONS, ACCEPTED_MIME_TYPES, FileUploadMode(), FileUploadModeProps, isClientSupportedFile()
-
 ## Knowledge Gaps
-- **2087 isolated node(s):** `__filename`, `__dirname`, `CATEGORIES`, `RuleFrontmatter`, `Rule` (+2082 more)
+- **2142 isolated node(s):** `__filename`, `__dirname`, `CATEGORIES`, `RuleFrontmatter`, `Rule` (+2137 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **105 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **99 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `NotebooksPage()` connect `fetchApi` to `notebooks-page.tsx`, `routeTree.gen.ts`?**
-  _High betweenness centrality (0.135) - this node is a cross-community bridge._
-- **Why does `handlePageSelection()` connect `fetchApi` to `.assertNotebookOwner`?**
-  _High betweenness centrality (0.135) - this node is a cross-community bridge._
-- **Why does `react` connect `react` to `cn`, `prompt-input.tsx`, `QuizBriefForm.tsx`, `login-page.tsx`, `desktop-layout.tsx`, `landing-page.tsx`, `notebooks-page.tsx`, `api/index.ts`, `code-block.tsx`, `notebook-workspace-container.tsx`, `StudyMaterialDTO`, `settings-page.tsx`, `plugins`, `tree.ts`, `sources-panel.tsx`, `study-materials-tree.tsx`, `App.tsx`, `message.tsx`, `conversation.tsx`, `assistant-message.tsx`, `ui/model-selector.tsx`, `markdown-document-viewer.tsx`, `ai/index.ts`, `MindMapView.tsx`, `reasoning.tsx`, `RoadmapView.tsx`, `context-menu.tsx`, `web-search.ts`, `mobile-notebook-layout.tsx`, `fetchApi`, `study-materials-tree-container.tsx`, `shimmer.tsx`, `layout/index.ts`, `MaterialViewer.tsx`, `file-upload-mode.tsx`, `theme/index.ts`, `add-source-dialog.tsx`?**
-  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `login-page.tsx`, `prompt-input-files.ts`, `cn.ts`, `source-content-viewer.tsx`, `AuthService`, `prompt-input.tsx`, `fetchApi`, `context-menu.tsx`, `icon-picker.tsx`, `cn`, `code-block.tsx`, `markdown-document-viewer.tsx`, `study-materials-tree-container.tsx`, `landing-page.tsx`, `plugins`, `desktop-layout.tsx`, `study-materials-tree.tsx`, `settings-page.tsx`, `button.tsx`, `auth/index.ts`, `email-auth-forms.tsx`, `controller.tsx`, `conversation.tsx`, `providers/index.tsx`, `assistant-message.tsx`, `tree.test.ts`, `composer.tsx`, `sources-panel.tsx`, `article-document-viewer.tsx`, `add-source-dialog.tsx`, `use-chat-panel.ts`, `web-search.ts`, `chat-message-list.tsx`, `reasoning.tsx`, `MindMapView.tsx`, `components/model-selector.tsx`, `notebooks-page.tsx`, `RoadmapView.tsx`, `markdown-code-block.tsx`, `ai/index.ts`, `alert.tsx`, `message.tsx`, `MaterialViewer.tsx`, `palette-provider.tsx`?**
+  _High betweenness centrality (0.172) - this node is a cross-community bridge._
+- **Why does `cn()` connect `cn` to `studio-resources.tsx`, `login-page.tsx`, `prompt-input-files.ts`, `cn.ts`, `source-content-viewer.tsx`, `prompt-input.tsx`, `context-menu.tsx`, `icon-picker.tsx`, `react`, `code-block.tsx`, `markdown-document-viewer.tsx`, `study-materials-tree-container.tsx`, `landing-page.tsx`, `desktop-layout.tsx`, `study-materials-tree.tsx`, `settings-page.tsx`, `button.tsx`, `conversation.tsx`, `assistant-message.tsx`, `composer.tsx`, `sources-panel.tsx`, `article-document-viewer.tsx`, `useOverlayLayer`, `add-source-dialog.tsx`, `FlashcardSourcePopover`, `chat-message-list.tsx`, `reasoning.tsx`, `MindMapView.tsx`, `components/model-selector.tsx`, `notebooks-page.tsx`, `RoadmapView.tsx`, `markdown-code-block.tsx`, `ai/index.ts`, `alert.tsx`, `message.tsx`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Why does `DRIZZLE` connect `content-normalizer.ts` to `chat.service.ts`, `schema.ts`, `study-materials.controller.ts`, `app.module.ts`, `domain-error.ts`, `JobQueueService`, `sources.service.ts`, `connection.service.ts`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **What connects `__filename`, `__dirname`, `CATEGORIES` to the rest of the system?**
-  _2087 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `stream-handler.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05367231638418079 - nodes in this community are weakly interconnected._
-- **Should `cn` be split into smaller, more focused modules?**
-  _Cohesion score 0.04396266184884071 - nodes in this community are weakly interconnected._
-- **Should `prompt-input.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.025396825396825397 - nodes in this community are weakly interconnected._
+  _2142 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `content-normalizer.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.056314699792960665 - nodes in this community are weakly interconnected._
+- **Should `prompt-input-files.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.1286549707602339 - nodes in this community are weakly interconnected._
+- **Should `cn.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.08951048951048951 - nodes in this community are weakly interconnected._

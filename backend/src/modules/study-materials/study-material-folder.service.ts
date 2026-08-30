@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as authSchema from '../../database/auth-schema';
 import * as appSchema from '../../database/schema';
 import { studyMaterialFolders, studyMaterials } from '../../database/schema';
 import {
@@ -26,7 +25,7 @@ export interface UpdateFolderInput {
 export class StudyMaterialFolderService {
   constructor(
     @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof authSchema & typeof appSchema>,
+    private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly notebooksService: NotebooksService,
   ) {}
 

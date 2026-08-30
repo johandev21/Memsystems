@@ -3,13 +3,13 @@
 **PostgreSQL** + **Drizzle ORM** (node-postgres `Pool`, timezone UTC).
 
 ## Schema
-Two files at identical paths in both packages (shared schema):
-- `src/database/schema.ts` — application tables
-- `src/database/auth-schema.ts` — Better Auth tables (`user`, `session`, `account`, `verification`)
+Application schema is defined in:
+- `src/database/schema.ts` — application tables with direct Clerk `user_id` text columns
 
-## Pushing schema changes
+## Migrations
 ```bash
-pnpm exec drizzle-kit push
+pnpm exec drizzle-kit generate
+pnpm exec drizzle-kit migrate
 ```
 Reads `.env.local` for the connection string.
 

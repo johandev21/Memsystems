@@ -1,5 +1,4 @@
 import { createId } from '@paralleldrive/cuid2';
-import { user } from '../src/database/auth-schema';
 import {
   chatRoleEnum,
   notebookChatMessages,
@@ -21,11 +20,7 @@ export async function seedUser(
   const id = overrides.id ?? createId();
   const email = overrides.email ?? `test-${id}@example.com`;
   const name = overrides.name ?? 'Test User';
-  const [row] = await db
-    .insert(user)
-    .values({ id, email, name, emailVerified: false })
-    .returning();
-  return { id: row.id, email: row.email, name: row.name };
+  return { id, email, name };
 }
 
 export async function seedNotebook(
@@ -105,11 +100,7 @@ export async function seedStudyMaterial(
   notebookId: string,
   input: {
     id?: string;
-    kind:
-      | 'quiz'
-      | 'simple_flashcard'
-      | 'roadmap'
-      | 'mind_map';
+    kind: 'quiz' | 'simple_flashcard' | 'roadmap' | 'mind_map';
     title: string;
     content?: unknown;
     folderId?: string | null;

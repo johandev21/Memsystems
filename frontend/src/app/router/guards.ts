@@ -8,7 +8,7 @@ export function requireAuth({
   context: RouterContext;
   location: { href: string };
 }) {
-  if (!context.auth.isPending && !context.auth.session) {
+  if (context.auth.status === "signed-out") {
     throw redirect({
       to: "/login",
       search: {
@@ -19,9 +19,10 @@ export function requireAuth({
 }
 
 export function redirectIfAuthenticated({ context }: { context: RouterContext }) {
-  if (!context.auth.isPending && context.auth.session) {
+  if (context.auth.status === "signed-in") {
     throw redirect({
       to: "/home",
     });
   }
 }
+

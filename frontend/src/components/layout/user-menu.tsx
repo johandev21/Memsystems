@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,19 +13,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { authClient } from "@/features/auth";
+import { Spinner } from "@/components/feedback/spinner";
+import { useClerk, useUser } from "@clerk/react";
+import { toast } from "sonner";
 
 export function UserMenu() {
   const navigate = useNavigate();
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
-  const user = session?.user;
+  const { user, isLoaded } = useUser();
+  const { signOut, openUserProfile } = useClerk();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   async function handleLogout() {
-    await authClient.signOut();
-    await router.navigate({ to: "/" });
-    await router.invalidate();
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    const toastId = toast.loading("Signing out...");
+    try {
+      await signOut();
+      await router.navigate({ to: "/" });
+      await router.invalidate();
+      toast.dismiss(toastId);
+    } catch {
+      toast.error("Failed to sign out. Please try again.", { id: toastId });
+      setIsLoggingOut(false);
+    }
   }
+
+  const displayName =
+    user?.fullName || user?.firstName || user?.username || "Account";
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
   return (
     <DropdownMenu>
@@ -32,12 +49,14 @@ export function UserMenu() {
         render={<Button variant="ghost" size="icon" className="cursor-pointer" />}
       >
         <div className="size-6 flex items-center justify-center">
-          {isPending ? (
+          {!isLoaded ? (
             <Skeleton className="size-6 rounded-full" />
           ) : (
             <Avatar size="sm">
-              <AvatarImage src={user?.image ?? undefined} alt={user?.name ?? undefined} />
-              <AvatarFallback>{user?.name?.charAt(0)?.toUpperCase() ?? "U"}</AvatarFallback>
+              <AvatarImage src={user?.imageUrl} alt={displayName} />
+              <AvatarFallback>
+                {displayName.charAt(0)?.toUpperCase() || "U"}
+              </AvatarFallback>
             </Avatar>
           )}
         </div>
@@ -46,22 +65,43 @@ export function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <p className="text-sm font-medium">{displayName}</p>
+              {primaryEmail ? (
+                <p className="text-xs text-muted-foreground">{primaryEmail}</p>
+              ) : null}
             </div>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
+        <DropdownMenuItem
+          onClick={() => openUserProfile()}
+          className="cursor-pointer"
+        >
+          <UserIcon className="mr-2 size-4" />
+          <span>Manage Account</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => navigate({ to: "/settings" })}
+          className="cursor-pointer"
+        >
           <Settings className="mr-2 size-4" />
           <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-          <LogOut className="mr-2 size-4" />
-          <span>Logout</span>
+        <DropdownMenuItem
+          onClick={() => void handleLogout()}
+          disabled={isLoggingOut}
+          className="cursor-pointer"
+        >
+          {isLoggingOut ? (
+            <Spinner className="mr-2 size-4 text-text-tertiary" />
+          ) : (
+            <LogOut className="mr-2 size-4" />
+          )}
+          <span>{isLoggingOut ? "Signing out..." : "Logout"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
+

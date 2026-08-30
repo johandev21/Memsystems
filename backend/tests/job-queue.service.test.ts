@@ -20,7 +20,10 @@ describe('JobQueueService', () => {
 
   beforeEach(async () => {
     await resetDatabase();
-    queue = new JobQueueService(db as any, { ...TEST_CONFIG, autoStart: false });
+    queue = new JobQueueService(db as any, {
+      ...TEST_CONFIG,
+      autoStart: false,
+    });
   });
 
   it('enqueues a job with pending status and default attempt counters', async () => {
@@ -41,9 +44,11 @@ describe('JobQueueService', () => {
   it('executes a registered handler and records the result on success', async () => {
     const handler: JobHandler<{ value: number }, { doubled: number }> = {
       type: 'double_task',
-      process: vi.fn().mockImplementation(async (job: Job<{ value: number }>) => {
-        return { doubled: job.payload.value * 2 };
-      }),
+      process: vi
+        .fn()
+        .mockImplementation(async (job: Job<{ value: number }>) => {
+          return { doubled: job.payload.value * 2 };
+        }),
     };
 
     queue.registerHandler(handler);
@@ -102,7 +107,10 @@ describe('JobQueueService', () => {
     // First attempt fails -> becomes pending with nextAttemptAt scheduled
     await queue.drain();
 
-    const [afterFirst] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+    const [afterFirst] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, job.id));
     expect(afterFirst.status).toBe('pending');
     expect(afterFirst.attemptCount).toBe(1);
     expect(afterFirst.lastError).toContain('transient network failure');
@@ -117,7 +125,10 @@ describe('JobQueueService', () => {
     // Second attempt succeeds
     await queue.drain();
 
-    const [afterSecond] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+    const [afterSecond] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, job.id));
     expect(afterSecond.status).toBe('ready');
     expect(afterSecond.attemptCount).toBe(2);
     expect(afterSecond.result).toEqual({ success: true });
@@ -133,7 +144,11 @@ describe('JobQueueService', () => {
 
     queue.registerHandler(handler);
 
-    const job = await queue.enqueue('failing_task', { data: 'test' }, { maxAttempts: 2 });
+    const job = await queue.enqueue(
+      'failing_task',
+      { data: 'test' },
+      { maxAttempts: 2 },
+    );
 
     // Attempt 1
     await queue.drain();

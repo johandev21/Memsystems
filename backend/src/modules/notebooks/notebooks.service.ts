@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as authSchema from '../../database/auth-schema';
 import * as appSchema from '../../database/schema';
 import { notebooks } from '../../database/schema';
 import {
@@ -43,6 +42,12 @@ export interface NotebookResponse {
   updatedAt: Date;
 }
 
+export interface BannerUploadResponse {
+  s3Key: string;
+  uploadUrl: string;
+  bannerUrl: string;
+}
+
 function toResponse(nb: typeof notebooks.$inferSelect): NotebookResponse {
   return {
     id: nb.id,
@@ -68,7 +73,7 @@ function pickExtension(originalName: string): string {
 export class NotebooksService {
   constructor(
     @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof authSchema & typeof appSchema>,
+    private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly storageService: StorageService,
   ) {}
 

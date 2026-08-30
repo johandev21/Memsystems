@@ -32,6 +32,13 @@ export class NotFoundError extends DomainError {
   }
 }
 
+export class UnauthorizedError extends DomainError {
+  constructor(message = 'Unauthorized') {
+    super(message, 401, 'unauthorized');
+    this.name = 'UnauthorizedError';
+  }
+}
+
 export class ForbiddenError extends DomainError {
   constructor(message = 'Forbidden') {
     super(message, 403, 'forbidden');

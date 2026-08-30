@@ -12,8 +12,6 @@ import {
   vector,
 } from 'drizzle-orm/pg-core';
 
-import { user } from './auth-schema';
-
 export const sourceKindEnum = pgEnum('source_kind', ['text', 'url', 'file']);
 
 export const sourceAddedViaEnum = pgEnum('source_added_via', [
@@ -79,9 +77,7 @@ export const notebooks = pgTable(
     id: varchar('id')
       .$defaultFn(() => createId())
       .primaryKey(),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
     title: varchar('title', { length: 200 }).notNull(),
     description: varchar('description', { length: 500 }).default('').notNull(),
     icon: varchar('icon', { length: 50 }).default('notebook').notNull(),
@@ -183,9 +179,7 @@ export const webSearchJobs = pgTable(
     notebookId: varchar('notebook_id')
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
     query: varchar('query', { length: 500 }).notNull(),
     modelId: varchar('model_id', { length: 200 }).notNull(),
     status: webSearchJobStatusEnum('status').notNull().default('pending'),
@@ -205,6 +199,7 @@ export const webSearchJobs = pgTable(
   },
   (table) => [
     index('web_search_jobs_notebook_id_idx').on(table.notebookId),
+    index('web_search_jobs_user_id_idx').on(table.userId),
     index('web_search_jobs_status_idx').on(table.status),
   ],
 );
@@ -498,9 +493,7 @@ export const notebookChatMessagesRelations = relations(
 );
 
 export const userSettings = pgTable('user_settings', {
-  userId: text('user_id')
-    .primaryKey()
-    .references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id').primaryKey(),
   openaiApiKey: text('openai_api_key'),
   deepseekApiKey: text('deepseek_api_key'),
   anthropicApiKey: text('anthropic_api_key'),
@@ -512,13 +505,6 @@ export const userSettings = pgTable('user_settings', {
     .$onUpdate(() => new Date())
     .notNull(),
 });
-
-export const userSettingsRelations = relations(userSettings, ({ one }) => ({
-  user: one(user, {
-    fields: [userSettings.userId],
-    references: [user.id],
-  }),
-}));
 
 export const table = {
   notebooks,

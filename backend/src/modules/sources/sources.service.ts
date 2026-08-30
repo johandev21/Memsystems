@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { count, desc, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as authSchema from '../../database/auth-schema';
 import * as appSchema from '../../database/schema';
 import { SourceMetadata, sources } from '../../database/schema';
 import {
@@ -86,7 +85,7 @@ function resolveSourceTitle(
 export class SourcesService {
   constructor(
     @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof authSchema & typeof appSchema>,
+    private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly notebooksService: NotebooksService,
     private readonly storageService: StorageService,
     private readonly acquisitionService: SourceAcquisitionService,

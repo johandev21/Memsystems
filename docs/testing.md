@@ -22,11 +22,11 @@ cmd /c "cd /d backend && pnpm run test"  # PowerShell workaround
 ### Setup lifecycle
 - **`beforeAll`** (`tests/setup.ts`): `ensureTestDatabase()` — connects to `postgres`, creates DB if missing, runs `CREATE EXTENSION IF NOT EXISTS vector`.
 - **`beforeEach`**: `resetDatabase()` — `TRUNCATE ... RESTART IDENTITY CASCADE` on all tables.
-- Tables truncated: `notebook_chat_messages`, `generation_requests`, `source_chunks`, `source_index_jobs`, `study_materials`, `study_material_folders`, `sources`, `notebooks`, `user_settings`, `verification`, `account`, `session`, `user`.
+- Tables truncated: `notebook_chat_messages`, `generation_requests`, `source_chunks`, `source_index_jobs`, `web_search_jobs`, `jobs`, `study_materials`, `study_material_folders`, `sources`, `notebooks`, `user_settings`.
 
 ### Fixtures
 `tests/fixtures.ts` provides:
-- `seedUser(overrides?)` — inserts `user` row
+- `seedUser(overrides?)` — returns an in-memory user identity
 - `seedNotebook(userId, overrides?)` — inserts `notebooks` row
 - `seedChatMessage(notebookId, {role, content, ...})` — inserts message
 - `seedSource(notebookId, {kind, title, rawText, ...})` — inserts source
@@ -35,4 +35,4 @@ cmd /c "cd /d backend && pnpm run test"  # PowerShell workaround
 Import `db` from `tests/db.ts` for raw queries.
 
 ### Mocks
-Only external services are mocked: S3, auth, LLM, scraper, fetch. Never mock the DB.
+Only external services are mocked: S3, auth (via `RequestAuthenticator`), LLM, scraper, fetch. Never mock the DB.

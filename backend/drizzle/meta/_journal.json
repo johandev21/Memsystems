@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1785880244147,
-      "tag": "0000_old_malcolm_colcord",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1785880800000,
-      "tag": "0001_add_provider_api_keys",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1786915200000,
-      "tag": "0002_add_web_search_jobs",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1787438236825,
-      "tag": "0003_add_jobs_table",
+      "when": 1788112744368,
+      "tag": "0000_warm_guardian",
       "breakpoints": true
     }
   ]

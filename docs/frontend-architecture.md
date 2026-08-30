@@ -1,4 +1,4 @@
-﻿# Frontend Architecture
+# Frontend Architecture
 
 This document describes the architecture and engineering conventions for the `frontend/` package in `memsystems-ai`.
 
@@ -29,7 +29,6 @@ frontend/src/
 │   └── feedback/              # Generic status UI (empty-state, spinner, confirm-delete-dialog)
 │
 ├── features/                  # Domain business modules
-│   ├── auth/                  # Better Auth integration & session management
 │   ├── ai/                    # AI prompt input, reasoning, model selector
 │   ├── notebook-chat/         # Notebook chat panel, messages, streaming, history
 │   ├── notebooks/             # Notebooks CRUD, cards, banners, workspace layouts
@@ -56,6 +55,7 @@ frontend/src/
 │   └── settings.*.tsx
 │
 ├── shared/                    # Truly domain-neutral utilities and base infrastructure
+│   ├── auth/                  # Clerk authentication wrapper & types
 │   ├── api/                   # Base fetch client, query options factory, error handling
 │   │   ├── api-client.ts
 │   │   └── api-error.ts

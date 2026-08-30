@@ -4,7 +4,10 @@ import { createDatabaseConnection } from '../src/database/connection';
 import { jobs, sourceChunks, sources } from '../src/database/schema';
 import { ChunkingService } from '../src/modules/ai/chunking.service';
 import { IndexingService } from '../src/modules/ai/indexing.service';
-import { JobQueueConfig, JobQueueService } from '../src/modules/jobs/job-queue.service';
+import {
+  JobQueueConfig,
+  JobQueueService,
+} from '../src/modules/jobs/job-queue.service';
 import { SourceIndexingHandler } from '../src/modules/sources/source-indexing.handler';
 import { SourceJobsService } from '../src/modules/sources/source-jobs.service';
 import { seedNotebook, seedSource, seedUser } from './fixtures';

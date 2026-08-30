@@ -1,18 +1,16 @@
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "../../routeTree.gen";
-import type { AuthContext } from "@/features/auth";
+import type { AuthState } from "@/shared/auth";
 
 export interface RouterContext {
-  auth: AuthContext;
+  auth: AuthState;
 }
 
 export const router = createRouter({
   routeTree,
   context: {
     auth: {
-      session: null,
-      user: null,
-      isPending: true,
+      status: "loading",
     },
   },
 });
@@ -22,3 +20,4 @@ declare module "@tanstack/react-router" {
     router: typeof router;
   }
 }
+

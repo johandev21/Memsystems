@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as authSchema from '../../database/auth-schema';
 import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
 import { EmbeddingService } from './embedding.service';
@@ -23,7 +22,7 @@ export const DEFAULT_TOP_K = 8;
 export class RetrievalService {
   constructor(
     @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof authSchema & typeof appSchema>,
+    private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly embeddingService: EmbeddingService,
   ) {}
 

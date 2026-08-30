@@ -3,7 +3,7 @@ import type { MotionValue } from "motion/react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useMemo, useRef, useState } from "react";
 import { Logo } from "@/components/layout";
-import { authClient } from "@/features/auth";
+import { useAuth } from "@/shared/auth";
 import { Button } from "@/components/ui/button";
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
@@ -226,12 +226,12 @@ function FaqAccordionItem({
 }
 
 export function LandingPage() {
-  const { isPending } = authClient.useSession();
+  const auth = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const shouldReduceMotion = useReducedMotion();
 
-  if (isPending) {
+  if (auth.status === "loading") {
     return <div className="min-h-screen bg-background" />;
   }
 

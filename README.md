@@ -74,7 +74,7 @@ Las claves pueden configurarse mediante variables de entorno o, cuando correspon
 
 ### Cuenta y almacenamiento
 
-- Autenticación y sesiones mediante Better Auth.
+- Autenticación y sesiones gestionadas mediante Clerk.
 - Configuración de claves de IA por usuario.
 - Almacenamiento local para desarrollo.
 - Compatibilidad con almacenamiento S3, R2 o MinIO mediante una interfaz compatible con S3.
@@ -95,11 +95,10 @@ Desde la raíz del repositorio:
 pnpm install
 ```
 
-Copia `backend/.env.example` a `backend/.env.local` y completa los valores necesarios. Como mínimo, configura:
+Copia `backend/.env.example` a `backend/.env.local` y `frontend/.env.example` a `frontend/.env.local` y completa los valores necesarios. Como mínimo, configura:
 
 - `DATABASE_URL`: conexión a PostgreSQL.
-- `BETTER_AUTH_SECRET`: secreto para la autenticación.
-- `BETTER_AUTH_URL`: URL de la aplicación, normalmente `http://localhost:3000`.
+- `CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY`: credenciales de Clerk.
 
 Para el desarrollo local se puede usar el almacenamiento en disco incluido en el proyecto. La configuración correspondiente está en `backend/.env.example`.
 
@@ -176,7 +175,7 @@ Genera tres valores independientes ejecutando este comando tres veces:
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-Usa uno como `POSTGRES_PASSWORD`, otro como `BETTER_AUTH_SECRET` y el tercero como `DEV_STORAGE_TOKEN_SECRET`. Los valores hexadecimales son seguros dentro del `DATABASE_URL` que construye Compose. Para uso local puedes conservar `APP_PORT=3000` y `APP_ORIGIN=http://localhost:3000`; en un despliegue, `APP_ORIGIN` debe ser el origen HTTPS exacto que abre el navegador, sin barra final. `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` son opcionales.
+Usa uno como `POSTGRES_PASSWORD` y el otro como `DEV_STORAGE_TOKEN_SECRET`. Los valores hexadecimales son seguros dentro del `DATABASE_URL` que construye Compose. Configura también `CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY`. Para uso local puedes conservar `APP_PORT=3000` y `APP_ORIGIN=http://localhost:3000`; en un despliegue, `APP_ORIGIN` debe ser el origen HTTPS exacto que abre el navegador, sin barra final.
 
 Después ejecuta:
 
@@ -199,7 +198,7 @@ La aplicación queda disponible en `APP_ORIGIN` (`http://localhost:3000` por def
 
 ### Configuración
 
-El backend recibe un único `APP_ORIGIN`, que Compose utiliza para `CLIENT_URL`, `BETTER_AUTH_URL` y `DEV_STORAGE_PUBLIC_URL`. Así, las imágenes y descargas siempre usan el mismo origen que abre el navegador. Las direcciones internas continúan usando los nombres de servicio `backend` y `db`.
+El backend recibe un único `APP_ORIGIN`, que Compose utiliza para `CLIENT_URL` y `DEV_STORAGE_PUBLIC_URL`. Así, las imágenes y descargas siempre usan el mismo origen que abre el navegador. Las direcciones internas continúan usando los nombres de servicio `backend` y `db`.
 
 Los comandos Docker cargan explícitamente `.env.docker.dev` o `.env.docker.prod`; el `.env` antiguo de la raíz ya no configura Docker. El desarrollo nativo continúa usando `backend/.env.local`.
 

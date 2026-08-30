@@ -18,10 +18,6 @@ const TABLES = [
   'sources',
   'notebooks',
   'user_settings',
-  'verification',
-  'account',
-  'session',
-  'user',
 ];
 
 export async function resetDatabase(): Promise<void> {
@@ -63,6 +59,19 @@ export async function ensureTestDatabase(): Promise<void> {
     await pgClient.connect();
     await pgClient.query('CREATE EXTENSION IF NOT EXISTS vector');
     await pgClient.query(
+      'ALTER TABLE IF EXISTS "notebooks" DROP CONSTRAINT IF EXISTS "notebooks_user_id_user_id_fk"',
+    );
+    await pgClient.query(
+      'ALTER TABLE IF EXISTS "user_settings" DROP CONSTRAINT IF EXISTS "user_settings_user_id_user_id_fk"',
+    );
+    await pgClient.query(
+      'ALTER TABLE IF EXISTS "web_search_jobs" DROP CONSTRAINT IF EXISTS "web_search_jobs_user_id_user_id_fk"',
+    );
+    await pgClient.query('DROP TABLE IF EXISTS "verification" CASCADE');
+    await pgClient.query('DROP TABLE IF EXISTS "account" CASCADE');
+    await pgClient.query('DROP TABLE IF EXISTS "session" CASCADE');
+    await pgClient.query('DROP TABLE IF EXISTS "user" CASCADE');
+    await pgClient.query(
       'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "deepseek_api_key" text',
     );
     await pgClient.query(
@@ -93,11 +102,13 @@ export async function ensureTestDatabase(): Promise<void> {
       "completed_at" timestamp,
       "created_at" timestamp DEFAULT now() NOT NULL,
       "updated_at" timestamp DEFAULT now() NOT NULL,
-      CONSTRAINT "web_search_jobs_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "notebooks"("id") ON DELETE CASCADE,
-      CONSTRAINT "web_search_jobs_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE
+      CONSTRAINT "web_search_jobs_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "notebooks"("id") ON DELETE CASCADE
     )`);
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "web_search_jobs_notebook_id_idx" ON "web_search_jobs" ("notebook_id")',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "web_search_jobs_user_id_idx" ON "web_search_jobs" ("user_id")',
     );
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "web_search_jobs_status_idx" ON "web_search_jobs" ("status")',

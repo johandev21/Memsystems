@@ -38,3 +38,102 @@ html[data-theme="default"] .dark [data-slot="alert-dialog-content"] {
   [data-slot="button"].text-destructive:is(:hover, :focus-visible) {
   color: var(--destructive) !important;
 }
+
+/* Clerk surface ladder mapping */
+.cl-rootBox {
+  font-family: var(--font-sans);
+}
+
+.cl-card {
+  background-color: var(--surface-1) !important;
+  border: 1px solid var(--surface-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: none !important;
+  color: var(--text-primary) !important;
+}
+
+.cl-headerTitle {
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.cl-headerSubtitle {
+  color: var(--text-secondary) !important;
+}
+
+.cl-formFieldLabel {
+  color: var(--text-primary) !important;
+}
+
+.cl-formFieldInput {
+  background-color: var(--surface-2) !important;
+  border: 1px solid var(--surface-border-strong) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.cl-formFieldInput:focus-visible {
+  border-color: var(--surface-border-strong) !important;
+  outline: 2px solid var(--surface-border-strong) !important;
+  outline-offset: 1px;
+}
+
+.cl-socialButtonsBlockButton {
+  background-color: var(--surface-2) !important;
+  border: 1px solid var(--surface-border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.cl-socialButtonsBlockButton:hover {
+  background-color: var(--surface-3) !important;
+}
+
+.cl-socialButtonsBlockButton:active {
+  background-color: var(--surface-4) !important;
+}
+
+.cl-formButtonPrimary {
+  box-shadow: none !important;
+}
+
+.cl-footerActionText,
+.cl-footerActionLink {
+  color: var(--text-secondary) !important;
+}
+
+.cl-footerActionLink:hover {
+  color: var(--text-primary) !important;
+}
+
+.cl-dividerLine {
+  background-color: var(--surface-border-subtle) !important;
+}
+
+.cl-dividerText {
+  color: var(--text-faint) !important;
+}
+
+.cl-footer {
+  background-color: var(--surface-1) !important;
+  border-top: 1px solid var(--surface-border-subtle) !important;
+}
+
+/* Smooth route navigation top progress indicator */
+@keyframes route-progress {
+  0% {
+    transform: translateX(-100%) scaleX(0.2);
+  }
+  50% {
+    transform: translateX(0%) scaleX(0.6);
+  }
+  100% {
+    transform: translateX(100%) scaleX(0.2);
+  }
+}
+
+.animate-route-progress {
+  animation: route-progress 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+

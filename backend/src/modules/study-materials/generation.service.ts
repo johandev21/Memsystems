@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as authSchema from '../../database/auth-schema';
 import * as appSchema from '../../database/schema';
 import { sources } from '../../database/schema';
 import { NotFoundError } from '../../common/errors/domain-error';
@@ -26,7 +25,7 @@ const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
 export class GenerationService {
   constructor(
     @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof authSchema & typeof appSchema>,
+    private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly notebooksService: NotebooksService,
     private readonly connectionService: ConnectionService,
     private readonly requestManager: GenerationRequestManager,

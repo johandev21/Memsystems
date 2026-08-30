@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { authClient } from "@/features/auth";
+import { useAuth } from "@/shared/auth";
 import { getApiUrl } from "@/shared/api";
 
 export interface ProviderStatus {
@@ -51,13 +51,15 @@ async function fetchConnection(): Promise<ConnectionStatus> {
 }
 
 export function useConnectionStatus() {
-  const { data: session } = authClient.useSession();
+  const auth = useAuth();
+  const userId = auth.status === "signed-in" ? auth.userId : undefined;
 
   return useQuery({
-    queryKey: ["connection-status", session?.user.id],
+    queryKey: ["connection-status", userId],
     queryFn: fetchConnection,
     refetchInterval: 15_000,
     retry: 1,
-    enabled: !!session,
+    enabled: auth.status === "signed-in",
   });
 }
+

@@ -239,7 +239,7 @@ describe('WebSearchService', () => {
       .where(eq(sources.url, 'https://example.com/provenance'));
     expect(row.addedVia).toBe('ai_search');
     expect(row.metadata?.searchQuery).toBe('philosophy');
-      expect(row.metadata?.modelId).toBe('openai/gpt-5.6-sol');
+    expect(row.metadata?.modelId).toBe('openai/gpt-5.6-sol');
     expect(row.metadata?.searchedAt).toBeDefined();
   });
 });

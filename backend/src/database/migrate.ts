@@ -16,6 +16,19 @@ async function main() {
   const db = drizzle(pool);
 
   await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
+  await pool.query(
+    'ALTER TABLE IF EXISTS "notebooks" DROP CONSTRAINT IF EXISTS "notebooks_user_id_user_id_fk"',
+  );
+  await pool.query(
+    'ALTER TABLE IF EXISTS "user_settings" DROP CONSTRAINT IF EXISTS "user_settings_user_id_user_id_fk"',
+  );
+  await pool.query(
+    'ALTER TABLE IF EXISTS "web_search_jobs" DROP CONSTRAINT IF EXISTS "web_search_jobs_user_id_user_id_fk"',
+  );
+  await pool.query('DROP TABLE IF EXISTS "verification" CASCADE');
+  await pool.query('DROP TABLE IF EXISTS "account" CASCADE');
+  await pool.query('DROP TABLE IF EXISTS "session" CASCADE');
+  await pool.query('DROP TABLE IF EXISTS "user" CASCADE');
 
   await migrate(db, { migrationsFolder: 'drizzle' });
   await pool.end();
