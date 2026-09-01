@@ -5,12 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { FolderPicker, SourceMultiSelect } from "@/features/notebooks";
 import { KIND_LABELS } from "@/features/study-material-viewer";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import { GenerationModelPopover } from "./generation-model-popover";
 
 export function StandardBriefForm({
   notebookId,
   kind,
-  models,
   value,
   onChange,
   onSubmit,
@@ -20,7 +18,7 @@ export function StandardBriefForm({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const update = (patch: Partial<BriefFormData>) => {
-    onChange({ ...value, ...patch });
+    onChange(patch);
   };
 
   const label = KIND_LABELS[kind] || kind;
@@ -59,16 +57,6 @@ export function StandardBriefForm({
           notebookId={notebookId}
           value={value.folderId}
           onChange={(folderId) => update({ folderId })}
-          disabled={disabled}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-text-tertiary">AI Model</Label>
-        <GenerationModelPopover
-          models={models}
-          selectedModel={value.model}
-          onModelChange={(model) => update({ model })}
           disabled={disabled}
         />
       </div>

@@ -1,25 +1,35 @@
-import { useCallback, useState } from "react";
-
-const STORAGE_KEY = "memsystems-selected-model";
+import { useCallback, useContext, useState } from "react";
+import {
+  NotebookModelContext,
+  getPersistedModel,
+  setPersistedModel,
+} from "../context/notebook-model-context";
 
 export function useModelPersistence(notebookId: string) {
-  const [model, setModel] = useState<string | undefined>(() => {
-    if (typeof window === "undefined") return undefined;
-    return (
-      localStorage.getItem(`${STORAGE_KEY}-${notebookId}`) ??
-      localStorage.getItem("memsystems:selected-model") ??
-      undefined
-    );
-  });
+  const context = useContext(NotebookModelContext);
+  const [localModel, setLocalModel] = useState<string>(() => getPersistedModel(notebookId));
 
   const persistModel = useCallback(
     (id: string) => {
-      localStorage.setItem(`${STORAGE_KEY}-${notebookId}`, id);
-      localStorage.setItem("memsystems:selected-model", id);
-      setModel(id);
+      setPersistedModel(notebookId, id);
+      setLocalModel(id);
     },
     [notebookId],
   );
 
-  return { model, setModel: persistModel };
+  if (context) {
+    return {
+      model: context.selectedModel,
+      setModel: context.setSelectedModel,
+      selectedModel: context.selectedModel,
+      setSelectedModel: context.setSelectedModel,
+    };
+  }
+
+  return {
+    model: localModel,
+    setModel: persistModel,
+    selectedModel: localModel,
+    setSelectedModel: persistModel,
+  };
 }

@@ -1,18 +1,16 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Search, Cpu, BookOpen, Globe, FileText } from "lucide-react";
+import { ChevronDown, Search, BookOpen, Globe, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FolderPicker } from "@/features/notebooks";
-import type { ModelOption } from "@/features/ai";
 import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
-import { GenerationModelPopover } from "./generation-model-popover";
 import { GenerationSourcePopover } from "./generation-source-popover";
 
 // ============================================================================
@@ -48,7 +46,6 @@ type CardStyleId = (typeof CARD_STYLES)[number]["id"];
 
 export function FlashcardBriefForm({
   notebookId,
-  models,
   value,
   onChange,
   onSubmit,
@@ -79,7 +76,7 @@ export function FlashcardBriefForm({
 
   // Handlers
   const update = (patch: Partial<BriefFormData>) => {
-    onChange({ ...value, ...patch });
+    onChange(patch);
   };
 
   // Sync internal state to parent brief form values
@@ -203,26 +200,15 @@ export function FlashcardBriefForm({
         />
       </div>
 
-      {/* Folder + Model */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-text-tertiary">Folder</Label>
-          <FolderPicker
-            notebookId={notebookId}
-            value={value.folderId}
-            onChange={(folderId) => update({ folderId })}
-            disabled={disabled}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-text-tertiary">Model</Label>
-          <GenerationModelPopover
-            models={models}
-            selectedModel={value.model}
-            onModelChange={(model) => update({ model })}
-            disabled={disabled}
-          />
-        </div>
+      {/* Folder */}
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs font-medium text-text-tertiary">Folder</Label>
+        <FolderPicker
+          notebookId={notebookId}
+          value={value.folderId}
+          onChange={(folderId) => update({ folderId })}
+          disabled={disabled}
+        />
       </div>
 
       {/* Submit */}
@@ -391,70 +377,6 @@ export function FlashcardSourcePopover({
 // Flashcard Model Popover Component
 // ============================================================================
 
-export function FlashcardModelPopover({
-  models,
-  selectedModel,
-  onModelChange,
-  disabled,
-}: {
-  models: ModelOption[];
-  selectedModel: string;
-  onModelChange: (model: string) => void;
-  disabled?: boolean;
-}) {
-  const selected = models.find((m) => m.id === selectedModel) ?? models[0];
-
-  function renderModelRow(m: ModelOption) {
-    const isSelected = m.id === selectedModel;
-    return (
-      <div
-        key={m.id}
-        onClick={() => onModelChange(m.id)}
-        className={cn(
-          "flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-colors",
-          isSelected
-            ? "bg-surface-3 text-text-secondary font-semibold"
-            : "hover:bg-surface-2 text-text-tertiary",
-        )}
-      >
-        <div className="flex flex-col min-w-0">
-          <span className="truncate">{m.displayName}</span>
-          <span className="text-xs text-text-faint font-normal">{m.id}</span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            className="h-9 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3 hover:text-text-secondary text-xs font-medium gap-2 px-3.5 justify-between w-full"
-          >
-            <div className="flex items-center gap-2 truncate">
-              <Cpu className="size-4 text-primary shrink-0" />
-              <span className="truncate">
-                {selected?.displayName || selectedModel || "Select Model"}
-              </span>
-            </div>
-            <ChevronDown className="size-4 text-text-faint shrink-0" />
-          </Button>
-        }
-      />
-      <PopoverContent
-        align="end"
-        className="w-[280px] p-2 bg-surface-1 border-surface-border shadow-xl rounded-2xl"
-      >
-        <div className="px-2 py-1 text-xs font-medium text-text-faint">Select Model</div>
-        <div className="space-y-1 mt-1">{models.map(renderModelRow)}</div>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 // ============================================================================
 // Small Local Helper Components

@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useModelPersistence } from "@/features/notebooks";
 import { useGenerationStore } from "../hooks/use-generation-store";
 import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-material-viewer";
-import type { ModelOption } from "@/features/ai";
 import type { RoadmapOptions, MindMapOptions } from "./forms/types";
 import { BriefForm } from "./BriefForm";
 import { cn } from "@/shared/utils/cn";
@@ -13,7 +12,6 @@ import { cn } from "@/shared/utils/cn";
 export interface GenerateBriefDialogProps {
   notebookId: string;
   kind: StudyMaterialKind | null;
-  models: ModelOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: (materialId: string) => void;
@@ -22,7 +20,6 @@ export interface GenerateBriefDialogProps {
 export function GenerateBriefDialog({
   notebookId,
   kind,
-  models,
   open,
   onOpenChange,
   onComplete,
@@ -43,24 +40,7 @@ export function GenerateBriefDialog({
     roadmapOptions,
     mindMapOptions,
   } = value;
-  const { model: persistedModel, setModel: setPersistedModel } = useModelPersistence(notebookId);
-  const model = persistedModel ?? "";
-
-  const handleFormChange = (next: typeof value) => {
-    updateBriefForm(next);
-    if (next.model !== model) setPersistedModel(next.model);
-  };
-
-  const [prevModels, setPrevModels] = useState<ModelOption[] | null>(null);
-  if (models !== prevModels) {
-    setPrevModels(models);
-    if (models && models.length > 0) {
-      const exists = models.some((m) => m.id === model);
-      if (!exists) {
-        setPersistedModel(models[0].id);
-      }
-    }
-  }
+  const { model: selectedModel } = useModelPersistence(notebookId);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -76,7 +56,7 @@ export function GenerateBriefDialog({
         brief,
         sourceIds,
         folderId,
-        model,
+        model: selectedModel,
         questionCount,
         difficulty,
         cardStyle,
@@ -115,10 +95,8 @@ export function GenerateBriefDialog({
           <BriefForm
             notebookId={notebookId}
             kind={kind}
-            models={models}
-            defaultModel={models[0]?.id}
-            value={{ ...value, model }}
-            onChange={handleFormChange}
+            value={value}
+            onChange={updateBriefForm}
             onSubmit={handleSubmit}
             submitLabel="Generate"
             disabled={false}
@@ -136,7 +114,6 @@ function useGenerationBriefState() {
     brief: string;
     sourceIds: string[];
     folderId: string | null;
-    model: string;
     questionCount?: number;
     difficulty?: "easy" | "medium" | "hard";
     cardStyle?: "qa" | "definition" | "cloze" | "mixed";
@@ -146,12 +123,12 @@ function useGenerationBriefState() {
     brief: "",
     sourceIds: [],
     folderId: null,
-    model: "",
     questionCount: 10,
     difficulty: "medium",
   });
 
-  const updateBriefForm = (next: typeof value) => setValue((current) => ({ ...current, ...next }));
+  const updateBriefForm = (next: Partial<typeof value>) =>
+    setValue((current) => ({ ...current, ...next }));
   const resetAfterSubmit = () =>
     setValue((current) => ({
       ...current,

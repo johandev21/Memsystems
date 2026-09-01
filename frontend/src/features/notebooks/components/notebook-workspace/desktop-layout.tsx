@@ -221,7 +221,6 @@ export function DesktopLayout({
             <GenerateBriefDialog
               notebookId={notebookId}
               kind={dialogs.generateKind}
-              models={dialogs.models}
               open={dialogs.dialogOpen}
               onOpenChange={dialogs.setDialogOpen}
               onComplete={dialogs.handleGenerateComplete}

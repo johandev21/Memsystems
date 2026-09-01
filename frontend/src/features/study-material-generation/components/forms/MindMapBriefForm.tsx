@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, ChevronDown, Cpu, FileText, Globe, Search } from "lucide-react";
+import { BookOpen, ChevronDown, FileText, Globe, Search } from "lucide-react";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/features/sources";
-import type { ModelOption } from "@/features/ai";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -20,7 +19,6 @@ const MAX_NODE_COUNT = 100;
 
 export function MindMapBriefForm({
   notebookId,
-  models,
   value,
   onChange,
   onSubmit,
@@ -45,7 +43,7 @@ export function MindMapBriefForm({
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  const update = (patch: Partial<BriefFormData>) => onChange({ ...value, ...patch });
+  const update = (patch: Partial<BriefFormData>) => onChange(patch);
 
   useEffect(() => {
     // The viewer is intentionally a tree. Keep the API payload explicit while
@@ -190,21 +188,12 @@ export function MindMapBriefForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label className="text-xs font-medium text-text-tertiary">Destination folder</Label>
           <FolderPicker
             notebookId={notebookId}
             value={value.folderId}
             onChange={(folderId) => update({ folderId })}
-            disabled={disabled}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-text-tertiary">AI model</Label>
-          <MindMapModelPopover
-            models={models}
-            selectedModel={value.model}
-            onModelChange={(model) => update({ model })}
             disabled={disabled}
           />
         </div>
@@ -344,68 +333,4 @@ function MindMapSourcePopover({
   );
 }
 
-export function MindMapModelPopover({
-  models,
-  selectedModel,
-  onModelChange,
-  disabled,
-}: {
-  models: ModelOption[];
-  selectedModel: string;
-  onModelChange: (model: string) => void;
-  disabled?: boolean;
-}) {
-  const selected = models.find((model) => model.id === selectedModel) ?? models[0];
 
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            className="h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary px-3.5 text-xs font-medium hover:bg-surface-3 hover:text-text-secondary"
-          >
-            <span className="flex min-w-0 items-center gap-2 truncate">
-              <Cpu className="size-4 shrink-0 text-primary" />
-              <span className="truncate">
-                {selected?.displayName || selectedModel || "Select model"}
-              </span>
-            </span>
-            <ChevronDown className="size-4 shrink-0 text-text-faint" />
-          </Button>
-        }
-      />
-      <PopoverContent
-        align="end"
-        className="w-[280px] rounded-2xl border border-surface-border bg-surface-1 p-2 shadow-xl"
-      >
-        <div className="px-2 py-1 text-xs font-medium text-text-faint">Select model</div>
-        <div className="mt-1 space-y-1">
-          {models.map((model) => {
-            const isSelected = model.id === selectedModel;
-            return (
-              <button
-                key={model.id}
-                type="button"
-                onClick={() => onModelChange(model.id)}
-                className={cn(
-                  "flex w-full cursor-pointer items-center justify-between rounded-xl p-2.5 text-left text-xs",
-                  isSelected
-                    ? "bg-surface-3 font-semibold text-text-secondary"
-                    : "text-text-tertiary hover:bg-surface-2",
-                )}
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate">{model.displayName}</span>
-                  <span className="text-xs font-normal text-text-faint">{model.id}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
