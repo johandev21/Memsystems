@@ -6,6 +6,8 @@ export function useAddSourceDialogState() {
   const [mode, setMode] = useState<AddSourceMode>("menu");
   const [urlValue, setUrlValue] = useState("");
   const [urlTitle, setUrlTitle] = useState("");
+  const [captionText, setCaptionText] = useState("");
+  const [oauthToken, setOauthToken] = useState("");
   const [textTitle, setTextTitle] = useState("");
   const [textBody, setTextBody] = useState("");
 
@@ -13,6 +15,8 @@ export function useAddSourceDialogState() {
     setMode("menu");
     setUrlValue("");
     setUrlTitle("");
+    setCaptionText("");
+    setOauthToken("");
     setTextTitle("");
     setTextBody("");
   };
@@ -24,6 +28,10 @@ export function useAddSourceDialogState() {
     setUrlValue,
     urlTitle,
     setUrlTitle,
+    captionText,
+    setCaptionText,
+    oauthToken,
+    setOauthToken,
     textTitle,
     setTextTitle,
     textBody,

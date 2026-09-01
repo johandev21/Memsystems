@@ -9,6 +9,9 @@ export { db };
 const TABLES = [
   'notebook_chat_messages',
   'generation_requests',
+  'source_segments',
+  'source_versions',
+  'source_upload_intents',
   'source_chunks',
   'source_index_jobs',
   'web_search_jobs',
@@ -144,6 +147,38 @@ export async function ensureTestDatabase(): Promise<void> {
     );
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "jobs_type_idx" ON "jobs" ("type")',
+    );
+
+    await pgClient.query(`DO $$ BEGIN
+      CREATE TYPE "source_upload_intent_status" AS ENUM('pending', 'uploaded', 'consuming', 'consumed', 'expired');
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;`);
+    await pgClient.query(`CREATE TABLE IF NOT EXISTS "source_upload_intents" (
+      "id" varchar PRIMARY KEY,
+      "user_id" text NOT NULL,
+      "notebook_id" varchar NOT NULL,
+      "storage_key" varchar(1000) NOT NULL,
+      "filename" varchar(500) NOT NULL,
+      "content_type" varchar(200) NOT NULL,
+      "expected_bytes" integer NOT NULL,
+      "expected_sha256" varchar(64),
+      "uploaded_bytes" integer,
+      "uploaded_sha256" varchar(64),
+      "status" "source_upload_intent_status" DEFAULT 'pending' NOT NULL,
+      "expires_at" timestamp NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      "consumed_at" timestamp,
+      CONSTRAINT "source_upload_intents_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "notebooks"("id") ON DELETE CASCADE
+    )`);
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "source_upload_intents_user_id_idx" ON "source_upload_intents" ("user_id")',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "source_upload_intents_notebook_id_idx" ON "source_upload_intents" ("notebook_id")',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "source_upload_intents_status_expires_at_idx" ON "source_upload_intents" ("status", "expires_at")',
     );
   } finally {
     await pgClient.end();

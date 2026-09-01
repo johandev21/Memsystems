@@ -1,9 +1,20 @@
 import type { LanguageModel, Tool } from 'ai';
 
+export interface ModelCapabilities {
+  imageInput?: boolean;
+  fileInput?: boolean;
+  audioInput?: boolean;
+  tools?: boolean;
+  structuredOutput?: boolean;
+  reasoning?: boolean;
+  webSearch?: boolean;
+}
+
 export interface ProviderModel {
   id: string;
   displayName: string;
   supportsWebSearch: boolean;
+  capabilities?: ModelCapabilities;
 }
 
 export interface HealthCheckResult {

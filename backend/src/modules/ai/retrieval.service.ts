@@ -5,6 +5,26 @@ import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
 import { EmbeddingService } from './embedding.service';
 
+/** Location metadata carried from a source segment into an index chunk. */
+export interface CitationLocator {
+  pageNumber?: number;
+  slideNumber?: number;
+  startOffsetMs?: number;
+  endOffsetMs?: number;
+  speaker?: string;
+  sheetName?: string;
+  cellRange?: string;
+  symbol?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  imageRegion?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
 export interface RetrievedChunk {
   chunkId: string;
   chunkIndex: number;
@@ -14,6 +34,8 @@ export interface RetrievedChunk {
   score: number;
   url: string | null;
   kind: string;
+  sourceVersionId: string | null;
+  locator: CitationLocator | null;
 }
 
 export const DEFAULT_TOP_K = 8;
@@ -48,6 +70,8 @@ export class RetrievalService {
           s.title,
           s.url,
           s.kind,
+          sc.source_version_id,
+          sc.locator,
           sc.content,
           1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score
         FROM source_chunks sc
@@ -65,6 +89,8 @@ export class RetrievalService {
       title: string;
       url: string | null;
       kind: string;
+      source_version_id: string | null;
+      locator: CitationLocator | null;
       content: string;
       score: number;
     }[];
@@ -76,6 +102,8 @@ export class RetrievalService {
       title: row.title,
       url: row.url,
       kind: row.kind,
+      sourceVersionId: row.source_version_id ?? null,
+      locator: row.locator ?? null,
       content: row.content,
       score: Number(row.score),
     }));

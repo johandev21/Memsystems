@@ -1,11 +1,32 @@
 import { apiDelete, createQueryOptions } from "@/shared/api";
 
+export interface CitationLocator {
+  pageNumber?: number;
+  slideNumber?: number;
+  startOffsetMs?: number;
+  endOffsetMs?: number;
+  speaker?: string;
+  sheetName?: string;
+  cellRange?: string;
+  symbol?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  imageRegion?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
 export interface CitedSourceDTO {
   id: string;
   schemaVersion: number;
   citationKey: string;
   chunkId: string | null;
   chunkIndex: number | null;
+  sourceVersionId?: string | null;
+  locator?: CitationLocator | null;
   number: number;
   title: string;
   kind: string;
@@ -21,6 +42,8 @@ export interface CitedSourceEntry {
   sourceId: string;
   chunkId: string | null;
   chunkIndex: number | null;
+  sourceVersionId?: string | null;
+  locator?: CitationLocator | null;
   number: number;
   title: string | null;
   kind: string | null;
@@ -34,6 +57,13 @@ export interface ChatMessageDTO {
   role: "user" | "assistant";
   content: string;
   reasoning?: string | null;
+  parts?: Array<
+    | { type: "text"; text: string; state?: "streaming" | "done" }
+    | { type: "reasoning"; text: string; state?: "streaming" | "done" }
+    | { type: "file"; mediaType: string; url: string; filename?: string }
+    | { type: string; [key: string]: unknown }
+  > | null;
+  metadata?: Record<string, unknown> | null;
   citedSourceIds: CitedSourceEntry[] | null;
   citedSources: CitedSourceDTO[];
   createdAt: string;

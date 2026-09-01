@@ -8,12 +8,14 @@ import { MobileStudyMaterialsPanel } from "@/features/study-material-tree";
 import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
 import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
+import type { SourceSegmentLocator } from "@/features/sources";
 import { MobileTabsHeader } from "./mobile-tabs-header";
 
 export interface MobileNotebookLayoutProps {
   notebookId: string;
   dialogs: UseStudioDialogsReturn;
   selectedSourceId: string | null;
+  selectedLocator?: SourceSegmentLocator | null;
   onSelectSource: (id: string | null) => void;
 }
 
@@ -21,6 +23,7 @@ export function MobileNotebookLayout({
   notebookId,
   dialogs,
   selectedSourceId,
+  selectedLocator,
   onSelectSource,
 }: MobileNotebookLayoutProps) {
   const [activeTab, setActiveTab] = useMobileChatNavigation();
@@ -60,6 +63,7 @@ export function MobileNotebookLayout({
       {selectedSourceId && (
         <SourceContentViewer
           sourceId={selectedSourceId}
+          selectedLocator={selectedLocator}
           onClose={() => onSelectSource(null)}
           forceFullscreen
         />

@@ -7,10 +7,10 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --transparent: transparent;
 
-  /* Overlay hierarchy: content popovers < composer < floating controls < viewer < modal */
-  --layer-popover: 50;
-  --layer-composer: 60;
-  --layer-floating-control: 70;
+  /* Overlay hierarchy: composer < floating controls < popovers / dropdowns / tooltips < viewer < modal */
+  --layer-composer: 40;
+  --layer-floating-control: 45;
+  --layer-popover: 60;
   --layer-viewer: 80;
   --layer-viewer-popover: 85;
   --layer-modal-backdrop: 90;

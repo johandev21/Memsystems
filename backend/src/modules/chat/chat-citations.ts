@@ -1,6 +1,8 @@
-import type { RetrievedChunk } from '../ai/retrieval.service';
+import type { CitationLocator, RetrievedChunk } from '../ai/retrieval.service';
 
-export const CITATION_SCHEMA_VERSION = 1;
+export { type CitationLocator } from '../ai/retrieval.service';
+
+export const CITATION_SCHEMA_VERSION = 2;
 export const MAX_CITATION_EXCERPT_LENGTH = 500;
 
 export interface CitationEvidence extends RetrievedChunk {
@@ -14,6 +16,8 @@ export interface CitedSourceEntry {
   sourceId: string;
   chunkId: string | null;
   chunkIndex: number | null;
+  sourceVersionId: string | null;
+  locator: CitationLocator | null;
   number: number;
   title: string | null;
   kind: string | null;
@@ -73,6 +77,8 @@ export function extractCitationEntries(
       sourceId: item.sourceId,
       chunkId: item.chunkId,
       chunkIndex: item.chunkIndex,
+      sourceVersionId: item.sourceVersionId ?? null,
+      locator: normalizeCitationLocator(item.locator),
       number: entries.length + 1,
       title: item.title,
       kind: item.kind,
@@ -96,6 +102,8 @@ export function normalizeStoredCitation(
       sourceId: entry,
       chunkId: null,
       chunkIndex: null,
+      sourceVersionId: null,
+      locator: null,
       number: index + 1,
       title: null,
       kind: null,
@@ -111,6 +119,8 @@ export function normalizeStoredCitation(
     sourceId: entry.sourceId,
     chunkId: entry.chunkId ?? null,
     chunkIndex: entry.chunkIndex ?? null,
+    sourceVersionId: entry.sourceVersionId ?? null,
+    locator: normalizeCitationLocator(entry.locator),
     number: entry.number && entry.number > 0 ? entry.number : index + 1,
     title: entry.title ?? null,
     kind: entry.kind ?? null,
@@ -131,6 +141,70 @@ export function sanitizeReferenceUrl(url: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+/** Keep only the location fields understood by the citation contract. */
+export function normalizeCitationLocator(
+  locator: unknown,
+): CitationLocator | null {
+  if (!locator || typeof locator !== 'object' || Array.isArray(locator)) {
+    return null;
+  }
+
+  const value = locator as Record<string, unknown>;
+  const normalized: CitationLocator = {};
+  const numericFields = [
+    'pageNumber',
+    'slideNumber',
+    'startOffsetMs',
+    'endOffsetMs',
+    'lineStart',
+    'lineEnd',
+  ] as const;
+
+  for (const field of numericFields) {
+    const fieldValue = value[field];
+    if (typeof fieldValue === 'number' && Number.isFinite(fieldValue)) {
+      normalized[field] = fieldValue;
+    }
+  }
+
+  for (const field of [
+    'speaker',
+    'sheetName',
+    'cellRange',
+    'symbol',
+  ] as const) {
+    const fieldValue = value[field];
+    if (typeof fieldValue === 'string' && fieldValue.trim()) {
+      normalized[field] = fieldValue;
+    }
+  }
+
+  const imageRegion = value.imageRegion;
+  if (
+    imageRegion &&
+    typeof imageRegion === 'object' &&
+    !Array.isArray(imageRegion)
+  ) {
+    const region = imageRegion as Record<string, unknown>;
+    const coordinates = ['x', 'y', 'width', 'height'] as const;
+    if (
+      coordinates.every(
+        (field) =>
+          typeof region[field] === 'number' && Number.isFinite(region[field]),
+      )
+    ) {
+      normalized.imageRegion = {
+        x: region.x as number,
+        y: region.y as number,
+        width: region.width as number,
+        height: region.height as number,
+      };
+    }
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : null;
 }
 
 function normalizeExcerpt(content: string): string | null {

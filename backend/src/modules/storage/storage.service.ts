@@ -3,18 +3,35 @@ import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { createHmac, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createWriteStream } from 'node:fs';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { once } from 'node:events';
 import { dirname, resolve, sep } from 'node:path';
+import type { Readable } from 'node:stream';
 
 export interface UploadInput {
   key: string;
   body: Uint8Array | Buffer;
   contentType: string;
+}
+
+export interface StoredObjectMetadata {
+  contentLength: number;
+  metadata: Record<string, string>;
+}
+
+export interface StreamUploadInput {
+  key: string;
+  body: Readable;
+  contentType: string;
+  expectedLength?: number;
+  maxBytes: number;
 }
 
 @Injectable()
@@ -76,6 +93,92 @@ export class StorageService {
         ContentType: input.contentType,
       }),
     );
+  }
+
+  /**
+   * Writes an upload incrementally in local mode. This is intentionally kept
+   * separate from putObject: callers must opt into the bounded stream API and
+   * can never accidentally turn a large request into an in-memory Buffer.
+   */
+  async putObjectStream(input: StreamUploadInput): Promise<{
+    contentLength: number;
+    sha256: string;
+  }> {
+    if (!this.isLocalStorage()) {
+      throw new Error(
+        'Streaming upload endpoint is only available in local storage mode',
+      );
+    }
+
+    const path = this.safeJoin(input.key);
+    await mkdir(dirname(path), { recursive: true });
+    const output = createWriteStream(path, { flags: 'wx' });
+    const hash = createHash('sha256');
+    let total = 0;
+    try {
+      for await (const chunk of input.body) {
+        const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        total += bytes.length;
+        if (total > input.maxBytes) {
+          throw new Error(
+            `Upload exceeds maximum size of ${input.maxBytes} bytes`,
+          );
+        }
+        hash.update(bytes);
+        if (!output.write(bytes)) await once(output, 'drain');
+      }
+      if (
+        input.expectedLength !== undefined &&
+        total !== input.expectedLength
+      ) {
+        throw new Error('Upload size does not match the upload target');
+      }
+      output.end();
+      await once(output, 'finish');
+      return { contentLength: total, sha256: hash.digest('hex') };
+    } catch (error) {
+      output.destroy();
+      await rm(path, { force: true }).catch(() => {});
+      throw error;
+    }
+  }
+
+  async objectMetadata(key: string): Promise<StoredObjectMetadata> {
+    if (this.isLocalStorage()) {
+      const file = await stat(this.safeJoin(key));
+      return { contentLength: file.size, metadata: {} };
+    }
+    const result = await this.s3Client!.send(
+      new HeadObjectCommand({ Bucket: this.s3Bucket!, Key: key }),
+    );
+    return {
+      contentLength: result.ContentLength ?? 0,
+      metadata: result.Metadata ?? {},
+    };
+  }
+
+  async presignUpload(
+    key: string,
+    expiresInSeconds: number,
+    contentType: string,
+    contentLength?: number,
+    sha256?: string,
+  ): Promise<string> {
+    if (this.isLocalStorage()) {
+      throw new Error(
+        'Presigned S3 uploads are unavailable in local storage mode',
+      );
+    }
+    const command = new PutObjectCommand({
+      Bucket: this.s3Bucket!,
+      Key: key,
+      ContentType: contentType,
+      ...(contentLength === undefined ? {} : { ContentLength: contentLength }),
+      ...(sha256 ? { Metadata: { sha256 } } : {}),
+    });
+    return getSignedUrl(this.s3Client!, command, {
+      expiresIn: expiresInSeconds,
+    });
   }
 
   async deleteObject(key: string): Promise<void> {

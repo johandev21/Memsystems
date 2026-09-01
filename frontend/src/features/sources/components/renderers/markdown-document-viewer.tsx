@@ -1,12 +1,14 @@
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "@/features/ai";
+import type { SourceSegmentLocator } from "../../types";
 import { splitTextIntoChunks } from "./document-type-detector";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
-interface MarkdownDocumentViewerProps {
+export interface MarkdownDocumentViewerProps {
   content: string;
+  selectedLocator?: SourceSegmentLocator | null;
   scrollElement?: HTMLDivElement | null;
 }
 
@@ -45,12 +47,14 @@ const HeadingWithId = ({
   return (
     <HeadingTag
       id={id}
+      data-heading-level={level}
       className={cn(
-        "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3 wrap-break-words",
-        level === 1 && "text-lg sm:text-2xl pt-4 sm:pt-6 my-3 sm:my-4",
-        level === 2 && "text-base sm:text-xl pt-4 sm:pt-5 my-3 sm:my-3.5",
-        level === 3 && "text-base sm:text-lg pt-3 sm:pt-4 my-2.5 sm:my-3",
-        level >= 4 && "text-sm sm:text-base font-semibold pt-3 my-2",
+        "font-bold text-foreground tracking-tight scroll-mt-6 wrap-break-words",
+        level === 1 && "text-xl sm:text-2xl pt-6 pb-2 my-3 border-b border-border/30",
+        level === 2 && "text-lg sm:text-xl pt-5 pb-1.5 my-3 border-b border-border/20",
+        level === 3 && "text-base sm:text-lg pt-4 my-2.5",
+        level === 4 && "text-sm sm:text-base font-semibold pt-3 my-2",
+        level >= 5 && "text-sm font-semibold pt-2 my-1.5 text-foreground/80",
       )}
     >
       {children}
@@ -78,9 +82,14 @@ const markdownComponents = {
     <HeadingWithId level={6}>{children}</HeadingWithId>
   ),
   p: ({ children }: { children?: ReactNode }) => (
-    <p className="text-foreground/90 leading-relaxed font-sans my-2.5 wrap-break-words">
+    <p className="text-foreground/90 leading-relaxed font-sans my-3 wrap-break-words text-sm sm:text-base select-text">
       {children}
     </p>
+  ),
+  blockquote: ({ children }: { children?: ReactNode }) => (
+    <blockquote className="border-l-4 border-primary/60 bg-muted/30 px-4 py-2.5 my-4 rounded-r-lg text-foreground/85 italic">
+      {children}
+    </blockquote>
   ),
   ul: ({ children }: { children?: ReactNode }) => (
     <ul className="list-disc pl-6 my-3 space-y-1.5 text-foreground/90">{children}</ul>
@@ -91,25 +100,28 @@ const markdownComponents = {
   li: ({ children }: { children?: ReactNode }) => (
     <li className="leading-relaxed font-sans pl-1">{children}</li>
   ),
+  hr: () => <hr className="my-6 border-t border-border/40" />,
   table: ({ children }: { children?: ReactNode }) => (
-    <div className="my-4 overflow-x-auto overscroll-x-contain -mx-3 sm:mx-0 px-3 sm:px-0">
-      <table className="w-full text-left text-sm border-collapse min-w-[480px] sm:min-w-0">
+    <div className="my-4 overflow-x-auto overscroll-x-contain rounded-lg border border-border/40 shadow-xs">
+      <table className="w-full text-left text-sm border-collapse min-w-[500px]">
         {children}
       </table>
     </div>
   ),
   thead: ({ children }: { children?: ReactNode }) => (
-    <thead className="border-b border-border/40 bg-muted/20 font-semibold text-foreground">
+    <thead className="border-b border-border/40 bg-muted/40 font-semibold text-foreground">
       {children}
     </thead>
   ),
   th: ({ children }: { children?: ReactNode }) => (
-    <th className="px-4 py-2 text-xs font-semibold text-foreground/90 border-b border-border/30">
+    <th className="px-4 py-2.5 text-xs font-semibold text-foreground border-b border-border/30">
       {children}
     </th>
   ),
   td: ({ children }: { children?: ReactNode }) => (
-    <td className="px-4 py-2 text-xs text-foreground/80 border-b border-border/20">{children}</td>
+    <td className="px-4 py-2 text-xs text-foreground/85 border-b border-border/20 last:border-b-0">
+      {children}
+    </td>
   ),
   code: ({ className, children }: { className?: string; children?: ReactNode }) => (
     <MarkdownCodeBlock
@@ -122,23 +134,87 @@ const markdownComponents = {
   ),
 };
 
-export function MarkdownDocumentViewer({ content, scrollElement }: MarkdownDocumentViewerProps) {
+export function MarkdownDocumentViewer({
+  content,
+  selectedLocator,
+  scrollElement,
+}: MarkdownDocumentViewerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const chunks = useMemo(() => splitTextIntoChunks(content || ""), [content]);
+
+  // Handle citation scrolling and highlighting
+  useEffect(() => {
+    if (!selectedLocator) return;
+
+    const root = scrollElement || containerRef.current;
+    if (!root) return;
+
+    // 1. Try finding heading by symbol
+    let targetElement: HTMLElement | null = null;
+    if (selectedLocator.symbol) {
+      const slug = createSlug(selectedLocator.symbol);
+      targetElement =
+        root.querySelector(`#heading-${slug}`) ||
+        root.querySelector(`[id*="${slug}"]`);
+    }
+
+    // 2. If not found by symbol, search text paragraphs
+    if (!targetElement && selectedLocator.pageNumber) {
+      const paragraphs = root.querySelectorAll("p, h1, h2, h3, h4, blockquote");
+      const targetIdx = Math.min(selectedLocator.pageNumber - 1, paragraphs.length - 1);
+      if (targetIdx >= 0 && paragraphs[targetIdx]) {
+        targetElement = paragraphs[targetIdx] as HTMLElement;
+      }
+    }
+
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetElement.classList.add(
+        "bg-primary/15",
+        "ring-2",
+        "ring-primary/30",
+        "rounded-md",
+        "p-1",
+        "transition-all",
+        "duration-500",
+      );
+      const timer = setTimeout(() => {
+        targetElement?.classList.remove(
+          "bg-primary/15",
+          "ring-2",
+          "ring-primary/30",
+          "rounded-md",
+          "p-1",
+        );
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedLocator, scrollElement]);
 
   if (!content?.trim()) {
     return <EmptyMarkdownState />;
   }
 
-  if (chunks.length > 20 && scrollElement !== undefined) {
-    return <VirtualizedMarkdownDocument chunks={chunks} scrollElement={scrollElement} />;
+  if (chunks.length > 25 && scrollElement !== undefined) {
+    return (
+      <div ref={containerRef} className="w-full">
+        <VirtualizedMarkdownDocument chunks={chunks} scrollElement={scrollElement} />
+      </div>
+    );
   }
 
-  return <StaticMarkdownDocument content={content} />;
+  return (
+    <div ref={containerRef} className="w-full">
+      <StaticMarkdownDocument content={content} />
+    </div>
+  );
 }
 
 function EmptyMarkdownState() {
   return (
-    <div className="py-12 text-center text-xs text-muted-foreground">Empty markdown document.</div>
+    <div className="py-12 text-center text-xs text-muted-foreground">
+      No text content available.
+    </div>
   );
 }
 
@@ -177,7 +253,7 @@ function MarkdownChunk({ chunk }: { chunk: string }) {
 
 function MarkdownDocumentShell({ children }: { children: ReactNode }) {
   return (
-    <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed font-sans">
+    <div className="prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed font-sans text-foreground">
       {children}
     </div>
   );

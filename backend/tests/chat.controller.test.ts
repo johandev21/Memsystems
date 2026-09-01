@@ -28,6 +28,9 @@ class DisconnectingResponse extends EventEmitter {
 
 describe('ChatController streaming lifecycle', () => {
   const extractUserMessageContent = vi.fn(() => 'Explain Plato');
+  const extractUserMessageParts = vi.fn(() => [
+    { type: 'text', text: 'Explain Plato' },
+  ]);
   const sendMessage = vi.fn();
   let controller: ChatController;
 
@@ -39,7 +42,11 @@ describe('ChatController streaming lifecycle', () => {
       providers: [
         {
           provide: ChatService,
-          useValue: { extractUserMessageContent, sendMessage },
+          useValue: {
+            extractUserMessageContent,
+            extractUserMessageParts,
+            sendMessage,
+          },
         },
       ],
     })

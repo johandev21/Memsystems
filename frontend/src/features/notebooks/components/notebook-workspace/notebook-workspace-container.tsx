@@ -39,12 +39,14 @@ export function NotebookWorkspaceContainer({ notebookId }: NotebookWorkspaceCont
         onSyncStudio={panels.syncStudio}
         dialogs={dialogs}
         selectedSourceId={sources.selectedSourceId}
+        selectedLocator={sources.selectedLocator}
         onSelectSource={sources.setSelectedSourceId}
       />
       <MobileNotebookLayout
         notebookId={notebookId}
         dialogs={dialogs}
         selectedSourceId={sources.selectedSourceId}
+        selectedLocator={sources.selectedLocator}
         onSelectSource={sources.setSelectedSourceId}
       />
     </>

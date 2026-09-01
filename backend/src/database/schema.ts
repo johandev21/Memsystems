@@ -1,6 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { relations } from 'drizzle-orm';
 import {
+  AnyPgColumn,
   index,
   integer,
   jsonb,
@@ -13,6 +14,48 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const sourceKindEnum = pgEnum('source_kind', ['text', 'url', 'file']);
+
+export const sourceModalityEnum = pgEnum('source_modality', [
+  'document',
+  'image',
+  'audio',
+  'video',
+  'code',
+  'dataset',
+  'slides',
+  'ebook',
+]);
+
+export const sourceProcessingStatusEnum = pgEnum('source_processing_status', [
+  'pending',
+  'processing',
+  'ready',
+  'failed',
+  'cancelled',
+]);
+
+export const sourceProcessingStageEnum = pgEnum('source_processing_stage', [
+  'uploading',
+  'extracting',
+  'transcribing',
+  'analyzing_visuals',
+  'indexing',
+]);
+
+export const sourceUploadIntentStatusEnum = pgEnum(
+  'source_upload_intent_status',
+  ['pending', 'uploaded', 'consuming', 'consumed', 'expired'],
+);
+
+export const sourceSegmentKindEnum = pgEnum('source_segment_kind', [
+  'text',
+  'heading',
+  'code',
+  'table',
+  'formula',
+  'visual_description',
+  'transcript',
+]);
 
 export const sourceAddedViaEnum = pgEnum('source_added_via', [
   'manual',
@@ -48,6 +91,27 @@ export interface SourceMetadata {
   searchedAt?: string;
   description?: string | null;
 }
+
+export interface SourceSegmentLocator {
+  pageNumber?: number;
+  slideNumber?: number;
+  startOffsetMs?: number;
+  endOffsetMs?: number;
+  speaker?: string;
+  sheetName?: string;
+  cellRange?: string;
+  symbol?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  imageRegion?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+export type SourceSegmentMetadata = Record<string, unknown>;
 
 export interface WebSearchCandidateRow {
   title: string;
@@ -105,6 +169,17 @@ export const sources = pgTable(
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
     kind: sourceKindEnum('kind').notNull(),
+    modality: sourceModalityEnum('modality'),
+    processingStatus: sourceProcessingStatusEnum('processing_status')
+      .default('pending')
+      .notNull(),
+    processingStage: sourceProcessingStageEnum('processing_stage'),
+    currentVersionId: varchar('current_version_id').references(
+      (): AnyPgColumn => sourceVersions.id,
+      { onDelete: 'set null' },
+    ),
+    processingErrorCode: varchar('processing_error_code', { length: 100 }),
+    processingErrorMessage: text('processing_error_message'),
     addedVia: sourceAddedViaEnum('added_via').default('manual').notNull(),
     metadata: jsonb('metadata').$type<SourceMetadata | null>(),
     title: varchar('title', { length: 500 }).notNull(),
@@ -130,7 +205,68 @@ export const sources = pgTable(
   (table) => [
     index('sources_notebook_id_idx').on(table.notebookId),
     index('sources_kind_idx').on(table.kind),
+    index('sources_modality_idx').on(table.modality),
+    index('sources_processing_status_idx').on(table.processingStatus),
     index('sources_content_hash_idx').on(table.contentHash),
+  ],
+);
+
+export const sourceVersions = pgTable(
+  'source_versions',
+  {
+    id: varchar('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    sourceId: varchar('source_id')
+      .notNull()
+      .references(() => sources.id, { onDelete: 'cascade' }),
+    artifactKey: varchar('artifact_key', { length: 1000 }),
+    contentHash: varchar('content_hash', { length: 64 }).notNull(),
+    extractorId: varchar('extractor_id', { length: 200 }).notNull(),
+    extractorVersion: varchar('extractor_version', { length: 50 }).notNull(),
+    normalizationVersion: integer('normalization_version').notNull(),
+    modelProvider: varchar('model_provider', { length: 100 }),
+    modelId: varchar('model_id', { length: 200 }),
+    status: sourceProcessingStatusEnum('status').default('pending').notNull(),
+    errorCode: varchar('error_code', { length: 100 }),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('source_versions_source_id_idx').on(table.sourceId),
+    index('source_versions_status_idx').on(table.status),
+    index('source_versions_content_hash_idx').on(table.contentHash),
+  ],
+);
+
+export const sourceSegments = pgTable(
+  'source_segments',
+  {
+    id: varchar('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    sourceVersionId: varchar('source_version_id')
+      .notNull()
+      .references(() => sourceVersions.id, { onDelete: 'cascade' }),
+    ordinal: integer('ordinal').notNull(),
+    kind: sourceSegmentKindEnum('kind').notNull(),
+    content: text('content').notNull(),
+    locator: jsonb('locator')
+      .$type<SourceSegmentLocator>()
+      .notNull()
+      .default({}),
+    metadata: jsonb('metadata')
+      .$type<SourceSegmentMetadata>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('source_segments_source_version_id_idx').on(table.sourceVersionId),
+    index('source_segments_source_version_ordinal_idx').on(
+      table.sourceVersionId,
+      table.ordinal,
+    ),
   ],
 );
 
@@ -336,6 +472,8 @@ export const notebookChatMessages = pgTable(
     role: chatRoleEnum('role').notNull(),
     content: text('content').notNull(),
     reasoning: text('reasoning'),
+    parts: jsonb('parts').$type<Record<string, unknown>[] | null>(),
+    metadata: jsonb('metadata').$type<Record<string, unknown> | null>(),
     citedSourceIds: jsonb('cited_source_ids').$type<
       (
         | string
@@ -375,6 +513,14 @@ export const sourceChunks = pgTable(
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
     chunkIndex: integer('chunk_index').notNull(),
+    sourceVersionId: varchar('source_version_id').references(
+      () => sourceVersions.id,
+      { onDelete: 'set null' },
+    ),
+    segmentIds: jsonb('segment_ids').$type<string[] | null>(),
+    locator: jsonb('locator').$type<SourceSegmentLocator | null>(),
+    chunkingVersion: integer('chunking_version'),
+    contentHash: varchar('content_hash', { length: 64 }),
     content: text('content').notNull(),
     embedding: vector('embedding', { dimensions: 1536 }).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -401,6 +547,7 @@ export const notebooksRelations = relations(notebooks, ({ many }) => ({
   studyMaterialFolders: many(studyMaterialFolders),
   chatMessages: many(notebookChatMessages),
   generationRequests: many(generationRequests),
+  sourceUploadIntents: many(sourceUploadIntents),
 }));
 
 export const sourcesRelations = relations(sources, ({ one, many }) => ({
@@ -410,7 +557,63 @@ export const sourcesRelations = relations(sources, ({ one, many }) => ({
   }),
   chunks: many(sourceChunks),
   indexJobs: many(sourceIndexJobs),
+  versions: many(sourceVersions, { relationName: 'sourceVersions' }),
+  currentVersion: one(sourceVersions, {
+    fields: [sources.currentVersionId],
+    references: [sourceVersions.id],
+    relationName: 'sourceCurrentVersion',
+  }),
 }));
+
+export const sourceVersionsRelations = relations(
+  sourceVersions,
+  ({ one, many }) => ({
+    source: one(sources, {
+      fields: [sourceVersions.sourceId],
+      references: [sources.id],
+      relationName: 'sourceVersions',
+    }),
+    segments: many(sourceSegments),
+    chunks: many(sourceChunks),
+  }),
+);
+
+export const sourceSegmentsRelations = relations(sourceSegments, ({ one }) => ({
+  sourceVersion: one(sourceVersions, {
+    fields: [sourceSegments.sourceVersionId],
+    references: [sourceVersions.id],
+  }),
+}));
+
+export const sourceUploadIntents = pgTable(
+  'source_upload_intents',
+  {
+    id: varchar('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    notebookId: varchar('notebook_id')
+      .notNull()
+      .references(() => notebooks.id, { onDelete: 'cascade' }),
+    storageKey: varchar('storage_key', { length: 1000 }).notNull(),
+    filename: varchar('filename', { length: 500 }).notNull(),
+    contentType: varchar('content_type', { length: 200 }).notNull(),
+    expectedBytes: integer('expected_bytes').notNull(),
+    expectedSha256: varchar('expected_sha256', { length: 64 }),
+    uploadedBytes: integer('uploaded_bytes'),
+    uploadedSha256: varchar('uploaded_sha256', { length: 64 }),
+    status: sourceUploadIntentStatusEnum('status').default('pending').notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    consumedAt: timestamp('consumed_at'),
+  },
+  (table) => [
+    index('source_upload_intents_user_id_idx').on(table.userId),
+    index('source_upload_intents_notebook_id_idx').on(table.notebookId),
+    index('source_upload_intents_status_expires_at_idx').on(
+      table.status,
+      table.expiresAt,
+    ),
+  ],
+);
 
 export const sourceIndexJobsRelations = relations(
   sourceIndexJobs,
@@ -441,6 +644,10 @@ export const sourceChunksRelations = relations(sourceChunks, ({ one }) => ({
   notebook: one(notebooks, {
     fields: [sourceChunks.notebookId],
     references: [notebooks.id],
+  }),
+  sourceVersion: one(sourceVersions, {
+    fields: [sourceChunks.sourceVersionId],
+    references: [sourceVersions.id],
   }),
 }));
 
@@ -506,9 +713,22 @@ export const userSettings = pgTable('user_settings', {
     .notNull(),
 });
 
+export const sourceUploadIntentsRelations = relations(
+  sourceUploadIntents,
+  ({ one }) => ({
+    notebook: one(notebooks, {
+      fields: [sourceUploadIntents.notebookId],
+      references: [notebooks.id],
+    }),
+  }),
+);
+
 export const table = {
   notebooks,
   sources,
+  sourceVersions,
+  sourceSegments,
+  sourceUploadIntents,
   sourceChunks,
   sourceIndexJobs,
   webSearchJobs,

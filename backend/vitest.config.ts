@@ -12,5 +12,6 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     pool: "forks",
     fileParallelism: false,
+    maxWorkers: 1,
   },
 });

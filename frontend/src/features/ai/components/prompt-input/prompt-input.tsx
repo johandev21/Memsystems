@@ -256,6 +256,7 @@ export type PromptInputActionAddAttachmentsProps = ComponentProps<typeof Dropdow
 
 export const PromptInputActionAddAttachments = ({
   label = "Add photos or files",
+  className,
   ...props
 }: PromptInputActionAddAttachmentsProps) => {
   const attachments = usePromptInputAttachments();
@@ -269,8 +270,12 @@ export const PromptInputActionAddAttachments = ({
   );
 
   return (
-    <DropdownMenuItem {...props} onSelect={handleSelect}>
-      <ImageIcon className="mr-2 size-4" /> {label}
+    <DropdownMenuItem
+      className={cn("whitespace-nowrap cursor-pointer", className)}
+      {...props}
+      onSelect={handleSelect}
+    >
+      <ImageIcon className="mr-2 size-4 shrink-0" /> {label}
     </DropdownMenuItem>
   );
 };
@@ -857,9 +862,18 @@ export const PromptInputActionMenuTrigger = ({
 export type PromptInputActionMenuContentProps = ComponentProps<typeof DropdownMenuContent>;
 export const PromptInputActionMenuContent = ({
   className,
+  align = "start",
+  side = "top",
+  sideOffset = 8,
   ...props
 }: PromptInputActionMenuContentProps) => (
-  <DropdownMenuContent align="start" className={cn(className)} {...props} />
+  <DropdownMenuContent
+    align={align}
+    side={side}
+    sideOffset={sideOffset}
+    className={cn("w-auto min-w-max", className)}
+    {...props}
+  />
 );
 
 export type PromptInputActionMenuItemProps = ComponentProps<typeof DropdownMenuItem>;

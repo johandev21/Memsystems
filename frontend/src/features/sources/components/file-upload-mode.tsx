@@ -1,23 +1,14 @@
-import { FileUp, Link as LinkIcon, Loader2, Type, Upload } from "lucide-react";
+import { FileText, FileUp, Headphones, ImageIcon, Link as LinkIcon, Loader2, Presentation, Type, Upload, Video } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt", ".md", ".markdown"];
-const ACCEPTED_MIME_TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-  "text/markdown",
-  "text/x-markdown",
-  "application/markdown",
-];
-
-function isClientSupportedFile(file: File): boolean {
-  if (ACCEPTED_MIME_TYPES.includes(file.type)) return true;
-  const name = file.name.toLowerCase();
-  return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
-}
+import {
+  ACCEPTED_SOURCE_EXTENSIONS,
+  ACCEPTED_SOURCE_MIME_TYPES,
+  isClientSupportedSourceFile,
+} from "../utils";
 
 interface FileUploadModeProps {
   onSelectUrlMode: () => void;
@@ -42,8 +33,8 @@ export function FileUploadMode({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      if (!isClientSupportedFile(file)) {
-        toast.error("Unsupported file type. Please upload a PDF, DOCX, TXT, or Markdown file.");
+      if (!isClientSupportedSourceFile(file)) {
+        toast.error("Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.");
         return;
       }
       onUploadFile(file);
@@ -70,8 +61,8 @@ export function FileUploadMode({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!isClientSupportedFile(file)) {
-        toast.error("Unsupported file type");
+      if (!isClientSupportedSourceFile(file)) {
+        toast.error("Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.");
         e.target.value = "";
         return;
       }
@@ -82,7 +73,7 @@ export function FileUploadMode({
 
   return (
     <div
-      className={`relative flex flex-col items-center justify-center border border-dashed py-12 px-6 rounded-xl ${
+      className={`relative flex flex-col items-center justify-center border border-dashed py-10 px-6 rounded-xl ${
         isDragging
           ? "border-primary bg-primary/5"
           : "border-border/60 bg-muted/20 hover:bg-primary/5 hover:border-primary/40"
@@ -95,14 +86,14 @@ export function FileUploadMode({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown,application/markdown"
+        accept={ACCEPTED_SOURCE_EXTENSIONS.join(",") + "," + ACCEPTED_SOURCE_MIME_TYPES.join(",")}
         className="hidden"
         onChange={handleFileChange}
       />
 
       <div className="mb-4 rounded-xl border border-border/50 bg-background p-4">
         {isUploading ? (
-          <Loader2 className="h-6 w-6 text-primary" strokeWidth={2} />
+          <Loader2 className="h-6 w-6 text-primary animate-spin" strokeWidth={2} />
         ) : (
           <FileUp className="h-6 w-6 text-primary" strokeWidth={2} />
         )}
@@ -110,8 +101,8 @@ export function FileUploadMode({
       <h3 className="mb-1.5 text-lg font-medium text-foreground">
         {isUploading ? "Uploading file..." : "Drop your files here"}
       </h3>
-      <p className="text-sm text-muted-foreground mb-8 text-center max-w-[280px]">
-        Supports PDF, DOCX, TXT, and Markdown files
+      <p className="text-xs text-muted-foreground mb-4 text-center max-w-[340px]">
+        Supports PDF, DOCX, TXT, Markdown, Images, Audio, Video, Presentations, eBooks, LaTeX, and BibTeX.
       </p>
 
       <div className="flex flex-wrap justify-center gap-2.5 w-full relative z-10">

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UploadedFile,
   UseGuards,
@@ -12,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { z } from 'zod';
+import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -25,8 +27,20 @@ const textSourceSchema = z.object({
 });
 
 const urlSourceSchema = z.object({
-  url: z.string().url('Must be a valid URL'),
+  url: z.string().min(1, 'URL or identifier is required').max(2048),
   title: z.string().max(500).optional(),
+  oauthToken: z.string().max(2048).optional(),
+  captionText: z
+    .string()
+    .max(1024 * 1024)
+    .optional(),
+  captionFormat: z
+    .enum(['vtt', 'srt', 'json3', 'xml', 'plain', 'auto'])
+    .optional(),
+});
+
+const updateSpeakerLabelsSchema = z.object({
+  speakerMap: z.record(z.string().min(1), z.string().min(1)),
 });
 
 const webSearchSchema = z.object({
@@ -87,7 +101,11 @@ export class SourcesController {
   }
 
   @Post('notebooks/:notebookId/sources/file')
-  @UseInterceptors(FileInterceptor('file'))
+  // Keep this compatibility endpoint bounded while larger files use the
+  // direct target/stream flow. Multer rejects before exposing file.buffer.
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
+  )
   async createFileSource(
     @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
@@ -95,7 +113,7 @@ export class SourcesController {
     @Body('title') title?: string,
   ) {
     if (!file) {
-      throw new Error('File is required');
+      throw new BadRequestError('File is required');
     }
     return this.sourcesService.createFile(
       userId,
@@ -120,6 +138,22 @@ export class SourcesController {
     return this.sourcesService.reindex(userId, id);
   }
 
+  @Post('sources/:id/retry')
+  async retrySource(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.sourcesService.retry(userId, id);
+  }
+
+  @Post('sources/:id/cancel')
+  async cancelSource(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    await this.sourcesService.cancel(userId, id);
+  }
+
   @Delete('sources/:id')
   async deleteSource(
     @CurrentUser('id') userId: string,
@@ -136,8 +170,26 @@ export class SourcesController {
     return this.sourcesService.getDownload(userId, id);
   }
 
+  @Patch('sources/:id/speakers')
+  @UsePipes(new ZodValidationPipe(updateSpeakerLabelsSchema))
+  async updateSpeakerLabels(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() body: z.infer<typeof updateSpeakerLabelsSchema>,
+  ) {
+    return this.sourcesService.updateSpeakerLabels(userId, id, body.speakerMap);
+  }
+
   @Post('notebooks/:notebookId/sources/reindex')
   async reindexNotebook(
+    @CurrentUser('id') userId: string,
+    @Param('notebookId') notebookId: string,
+  ) {
+    return this.sourcesService.reindexNotebook(userId, notebookId);
+  }
+
+  @Post('notebooks/:notebookId/sources/reindex-all')
+  async reindexAllSources(
     @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
   ) {

@@ -75,6 +75,48 @@ export function getReferenceExcerpt(reference: CitedSourceDTO): string {
   );
 }
 
+/** Returns a human-readable location without changing the source URL action. */
+export function getReferenceLocatorLabel(reference: CitedSourceDTO): string | null {
+  const locator = reference.locator;
+  if (!locator) return null;
+
+  const labels: string[] = [];
+  if (isPositiveNumber(locator.pageNumber)) labels.push(`Page ${locator.pageNumber}`);
+  if (isPositiveNumber(locator.slideNumber)) labels.push(`Slide ${locator.slideNumber}`);
+
+  if (isNonNegativeNumber(locator.startOffsetMs) || isNonNegativeNumber(locator.endOffsetMs)) {
+    const start = isNonNegativeNumber(locator.startOffsetMs)
+      ? formatTimestamp(locator.startOffsetMs)
+      : null;
+    const end = isNonNegativeNumber(locator.endOffsetMs)
+      ? formatTimestamp(locator.endOffsetMs)
+      : null;
+    labels.push(start && end ? `${start}–${end}` : (start ?? end ?? "Timestamp"));
+  }
+
+  if (locator.sheetName || locator.cellRange) {
+    labels.push(
+      [locator.sheetName ? `Sheet "${locator.sheetName}"` : null, locator.cellRange]
+        .filter(Boolean)
+        .join(" · "),
+    );
+  }
+
+  if (locator.symbol || isPositiveNumber(locator.lineStart) || isPositiveNumber(locator.lineEnd)) {
+    const lines =
+      isPositiveNumber(locator.lineStart) || isPositiveNumber(locator.lineEnd)
+        ? `Lines ${locator.lineStart ?? locator.lineEnd}${locator.lineStart != null && locator.lineEnd != null ? `–${locator.lineEnd}` : ""}`
+        : null;
+    labels.push([locator.symbol, lines].filter(Boolean).join(" · "));
+  }
+
+  if (locator.imageRegion) {
+    labels.push("Visual region");
+  }
+
+  return labels.length > 0 ? labels.join(" · ") : null;
+}
+
 export function getSafeReferenceUrl(url: string | null): string | null {
   if (!url) return null;
 
@@ -88,4 +130,23 @@ export function getSafeReferenceUrl(url: string | null): string | null {
 
 function escapeMarkdownLabel(label: string): string {
   return label.replace(/([\\[\]])/g, "\\$1");
+}
+
+function isPositiveNumber(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function isNonNegativeNumber(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function formatTimestamp(offsetMs: number): string {
+  const totalSeconds = Math.floor(offsetMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }

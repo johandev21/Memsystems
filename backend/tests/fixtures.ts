@@ -72,6 +72,29 @@ export async function seedSource(
     rawText: string;
     contentHash?: string | null;
     url?: string | null;
+    s3Key?: string | null;
+    contentType?: string | null;
+    modality?:
+      | 'document'
+      | 'image'
+      | 'audio'
+      | 'video'
+      | 'code'
+      | 'dataset'
+      | 'slides'
+      | 'ebook'
+      | null;
+    fileSize?: number | null;
+    processingStatus?:
+      'pending' | 'processing' | 'ready' | 'failed' | 'cancelled';
+    processingStage?:
+      | 'uploading'
+      | 'extracting'
+      | 'transcribing'
+      | 'analyzing_visuals'
+      | 'indexing'
+      | null;
+    currentVersionId?: string | null;
     createdAt?: Date;
   },
 ): Promise<{ id: string; notebookId: string; kind: string; title: string }> {
@@ -83,8 +106,15 @@ export async function seedSource(
       kind: input.kind,
       title: input.title,
       rawText: input.rawText,
-      contentHash: (input as any).contentHash ?? null,
+      contentHash: input.contentHash ?? null,
       url: input.url ?? null,
+      s3Key: input.s3Key ?? null,
+      contentType: input.contentType ?? null,
+      modality: input.modality ?? null,
+      fileSize: input.fileSize ?? null,
+      processingStatus: input.processingStatus ?? 'pending',
+      processingStage: input.processingStage ?? null,
+      currentVersionId: input.currentVersionId ?? null,
       createdAt: input.createdAt ?? new Date(),
     })
     .returning();

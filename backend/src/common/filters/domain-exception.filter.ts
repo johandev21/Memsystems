@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { MulterError } from 'multer';
 import { DomainError } from '../errors/domain-error';
 
 @Catch()
@@ -31,6 +32,16 @@ export class DomainExceptionFilter implements ExceptionFilter {
       return response.status(exception.status).json({
         error: exception.message,
         code: exception.code,
+      });
+    }
+
+    if (exception instanceof MulterError) {
+      const isTooLarge = exception.code === 'LIMIT_FILE_SIZE';
+      return response.status(isTooLarge ? 413 : 400).json({
+        error: isTooLarge
+          ? 'Uploaded file exceeds the maximum size of 50 MB'
+          : 'Invalid file upload',
+        code: isTooLarge ? 'upload_too_large' : 'upload_invalid',
       });
     }
 

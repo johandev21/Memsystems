@@ -21,21 +21,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { sourceQueryOptions } from "../api/sources";
 import type { SourceWithContent } from "../types";
+import {
+  isSourceProcessing,
+  processingStageLabel,
+  sourceProcessingError,
+  sourceProcessingStatus,
+  SOURCE_POLL_INTERVAL_MS,
+} from "../utils/source-processing";
 import { cn } from "@/shared/utils/cn";
 import { fetchApi } from "@/shared/api";
 import {
-  ArticleDocumentViewer,
-  CodeDocumentViewer,
+  AudioDocumentViewer,
   detectDocumentType,
+  ImageDocumentViewer,
   MarkdownDocumentViewer,
-  PlainTextDocumentViewer,
+  PptxDocumentViewer,
+  TabularDocumentViewer,
+  VideoDocumentViewer,
 } from "./renderers";
+import type { SourceSegmentLocator } from "../types";
 
 interface SourceContentViewerProps {
   sourceId: string;
   onClose: () => void;
   defaultFullscreen?: boolean;
   forceFullscreen?: boolean;
+  selectedLocator?: SourceSegmentLocator | null;
 }
 
 function ReaderMoreMenu({
@@ -107,8 +118,20 @@ export function SourceContentViewer({
   onClose,
   defaultFullscreen,
   forceFullscreen,
+  selectedLocator,
 }: SourceContentViewerProps) {
-  const { data: source, isPending, isError } = useQuery(sourceQueryOptions(sourceId));
+  const {
+    data: source,
+    isPending,
+    isError,
+  } = useQuery({
+    ...sourceQueryOptions(sourceId),
+    staleTime: 0,
+    refetchInterval: (query) => {
+      const current = query.state.data as SourceWithContent | undefined;
+      return current && isSourceProcessing(current) ? SOURCE_POLL_INTERVAL_MS : false;
+    },
+  });
   const readerControls = useSourceReaderControls({
     defaultFullscreen,
     forceFullscreen,
@@ -122,6 +145,11 @@ export function SourceContentViewer({
 
   if (isError || !source) {
     return <SourceReaderError onClose={onClose} />;
+  }
+
+  const status = sourceProcessingStatus(source);
+  if (status !== "ready") {
+    return <SourceProcessingState source={source} onClose={onClose} />;
   }
 
   return (
@@ -138,7 +166,44 @@ export function SourceContentViewer({
         forceFullscreen={forceFullscreen}
         onClose={onClose}
       />
-      <SourceDocument source={source} controls={readerControls} />
+      <SourceDocument
+        source={source}
+        controls={readerControls}
+        selectedLocator={selectedLocator}
+      />
+    </div>
+  );
+}
+
+function SourceProcessingState({
+  source,
+  onClose,
+}: {
+  source: SourceWithContent;
+  onClose: () => void;
+}) {
+  const status = sourceProcessingStatus(source);
+  const active = isSourceProcessing(source);
+  const error = sourceProcessingError(source);
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+      <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+        {active ? <Loader2 className="size-6 animate-spin" /> : <File className="size-6" />}
+      </div>
+      <h2 className="text-lg font-bold">
+        {active
+          ? processingStageLabel(status, source.processingStage)
+          : processingStageLabel(status)}
+      </h2>
+      <p className="max-w-sm text-xs text-muted-foreground">
+        {active
+          ? "This source will become available here when processing finishes."
+          : error || "This source is not available for reading."}
+      </p>
+      <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
+        Back to Sources
+      </Button>
     </div>
   );
 }
@@ -299,43 +364,80 @@ function SourceReaderHeader({
 function SourceDocument({
   source,
   controls,
+  selectedLocator,
 }: {
   source: SourceWithContent;
   controls: ReaderControls;
+  selectedLocator?: SourceSegmentLocator | null;
 }) {
   const documentType = detectDocumentType(source);
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
-      <div
-        ref={controls.setScrollElement}
-        className="h-full w-full overflow-y-auto overscroll-contain"
-      >
+      {documentType === "image" ? (
+        <ImageDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      ) : documentType === "audio" ? (
+        <AudioDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      ) : documentType === "video" ? (
+        <VideoDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      ) : documentType === "slides" ? (
+        <PptxDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      ) : documentType === "dataset" ? (
         <div
-          className={cn(
-            "w-full flex flex-col",
-            controls.isEffectivelyFullscreen
-              ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
-              : "p-3 sm:p-4",
-          )}
+          ref={controls.setScrollElement}
+          className="h-full w-full overflow-y-auto overscroll-contain"
         >
-          {documentType === "markdown" && (
+          <div
+            className={cn(
+              "w-full flex flex-col",
+              controls.isEffectivelyFullscreen
+                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-5xl mx-auto gap-4"
+                : "p-3 sm:p-4",
+            )}
+          >
+            <TabularDocumentViewer
+              source={source}
+              selectedLocator={selectedLocator}
+              scrollElement={controls.scrollElement}
+            />
+          </div>
+        </div>
+      ) : (
+        <div
+          ref={controls.setScrollElement}
+          className="h-full w-full overflow-y-auto overscroll-contain"
+        >
+          <div
+            className={cn(
+              "w-full flex flex-col",
+              controls.isEffectivelyFullscreen
+                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
+                : "p-3 sm:p-4",
+            )}
+          >
             <MarkdownDocumentViewer
               content={source.rawText}
+              selectedLocator={selectedLocator}
               scrollElement={controls.scrollElement}
             />
-          )}
-          {documentType === "code" && (
-            <CodeDocumentViewer title={source.title} content={source.rawText} />
-          )}
-          {documentType === "article" && (
-            <ArticleDocumentViewer
-              content={source.rawText}
-              scrollElement={controls.scrollElement}
-            />
-          )}
-          {documentType === "plaintext" && <PlainTextDocumentViewer content={source.rawText} />}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

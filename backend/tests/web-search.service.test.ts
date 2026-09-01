@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
-import { createDatabaseConnection } from '../src/database/connection';
 import { sources } from '../src/database/schema';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
@@ -9,9 +8,9 @@ import { SourceExtractionService } from '../src/modules/sources/source-extractio
 import { SourcesService } from '../src/modules/sources/sources.service';
 import { WebSearchService } from '../src/modules/sources/web-search.service';
 import { seedNotebook, seedSource, seedUser } from './fixtures';
+import { db } from './db';
 
 function createSourcesService() {
-  const { db } = createDatabaseConnection(process.env.DATABASE_URL);
   const mockConfigService = {
     get: (key: string) => {
       if (key === 'DEV_STORAGE_TOKEN_SECRET') return 'dev-storage-secret-test';

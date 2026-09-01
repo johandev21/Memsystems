@@ -157,11 +157,88 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
     return this.mapJob<TPayload, TResult>(row);
   }
 
+  /** Enqueue a child only while its parent remains in processing state. */
+  async enqueueIfActive<TPayload, TResult = unknown>(
+    parentJobId: string,
+    type: string,
+    payload: TPayload,
+    options?: EnqueueOptions,
+  ): Promise<Job<TPayload, TResult> | null> {
+    const handler = this.handlers.get(type);
+    const maxAttempts =
+      options?.maxAttempts ??
+      handler?.maxAttempts ??
+      this.config.defaultMaxAttempts;
+    const backoffBaseMs =
+      options?.backoffBaseMs ??
+      handler?.backoffBaseMs ??
+      this.config.defaultBackoffBaseMs;
+    const groupKey = options?.groupKey ?? null;
+    const [row] = await this.db.transaction(async (tx) => {
+      const [parent] = await tx
+        .select({ status: jobs.status })
+        .from(jobs)
+        .where(eq(jobs.id, parentJobId))
+        .for('update');
+      if (!parent || parent.status !== 'processing') return [];
+
+      if (groupKey && options?.onConflict === 'cancel_existing') {
+        await tx
+          .update(jobs)
+          .set({ status: 'cancelled' })
+          .where(
+            and(
+              eq(jobs.groupKey, groupKey),
+              inArray(jobs.status, [...ACTIVE_STATUSES]),
+            ),
+          );
+      } else if (groupKey && options?.onConflict === 'replace') {
+        await tx
+          .update(jobs)
+          .set({ status: 'cancelled' })
+          .where(
+            and(eq(jobs.groupKey, groupKey), eq(jobs.status, 'processing')),
+          );
+        await tx
+          .delete(jobs)
+          .where(
+            and(
+              eq(jobs.groupKey, groupKey),
+              inArray(jobs.status, ['pending', 'ready', 'failed']),
+            ),
+          );
+      }
+
+      return tx
+        .insert(jobs)
+        .values({
+          type,
+          groupKey,
+          payload: payload as any,
+          status: 'pending',
+          maxAttempts,
+          backoffBaseMs,
+        })
+        .returning();
+    });
+    if (!row) return null;
+    if (this.config.autoStart !== false) void this.drain();
+    return this.mapJob<TPayload, TResult>(row);
+  }
+
   async getJob<TPayload = unknown, TResult = unknown>(
     id: string,
   ): Promise<Job<TPayload, TResult> | null> {
     const [row] = await this.db.select().from(jobs).where(eq(jobs.id, id));
     return row ? this.mapJob<TPayload, TResult>(row) : null;
+  }
+
+  async isActive(id: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ status: jobs.status })
+      .from(jobs)
+      .where(eq(jobs.id, id));
+    return row?.status === 'processing';
   }
 
   async getLatestByGroup<TPayload = unknown, TResult = unknown>(
@@ -189,7 +266,22 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async deleteByGroup(groupKey: string): Promise<void> {
-    await this.db.delete(jobs).where(eq(jobs.groupKey, groupKey));
+    await this.db.transaction(async (tx) => {
+      // Keep cancelled in-flight rows until their handlers return, so a
+      // handler cannot mistake a deleted row for an active one.
+      await tx
+        .update(jobs)
+        .set({ status: 'cancelled' })
+        .where(and(eq(jobs.groupKey, groupKey), eq(jobs.status, 'processing')));
+      await tx
+        .delete(jobs)
+        .where(
+          and(
+            eq(jobs.groupKey, groupKey),
+            inArray(jobs.status, ['pending', 'ready', 'failed']),
+          ),
+        );
+    });
   }
 
   drain(): Promise<void> {
@@ -226,45 +318,61 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async claimNext(limit: number): Promise<JobRow[]> {
-    const registeredTypes = Array.from(this.handlers.keys());
-    if (registeredTypes.length === 0) return [];
-
     return this.db.transaction(async (tx) => {
-      const candidates = await tx
-        .select({ id: jobs.id })
-        .from(jobs)
-        .where(
-          and(
-            eq(jobs.status, 'pending'),
-            inArray(jobs.type, registeredTypes),
-            or(isNull(jobs.nextAttemptAt), lte(jobs.nextAttemptAt, new Date())),
-          ),
-        )
-        .orderBy(asc(jobs.createdAt))
-        .limit(limit)
-        .for('update', { skipLocked: true });
+      const claimed: JobRow[] = [];
+      let remaining = limit;
+      for (const [type, handler] of this.handlers) {
+        if (remaining <= 0) break;
+        const configured = handler.concurrency ?? this.config.concurrency;
+        const active = this.activePerHandler.get(type) ?? 0;
+        const perHandlerLimit = Math.min(
+          remaining,
+          Math.max(0, configured - active),
+        );
+        if (perHandlerLimit <= 0) continue;
 
-      if (candidates.length === 0) return [];
+        const candidates = await tx
+          .select({ id: jobs.id })
+          .from(jobs)
+          .where(
+            and(
+              eq(jobs.status, 'pending'),
+              eq(jobs.type, type),
+              or(
+                isNull(jobs.nextAttemptAt),
+                lte(jobs.nextAttemptAt, new Date()),
+              ),
+            ),
+          )
+          .orderBy(asc(jobs.createdAt))
+          .limit(perHandlerLimit)
+          .for('update', { skipLocked: true });
+        if (candidates.length === 0) continue;
 
-      return tx
-        .update(jobs)
-        .set({
-          status: 'processing',
-          startedAt: new Date(),
-          nextAttemptAt: null,
-          attemptCount: sql`${jobs.attemptCount} + 1`,
-        })
-        .where(
-          inArray(
-            jobs.id,
-            candidates.map((c) => c.id),
-          ),
-        )
-        .returning();
+        const rows = await tx
+          .update(jobs)
+          .set({
+            status: 'processing',
+            startedAt: new Date(),
+            nextAttemptAt: null,
+            attemptCount: sql`${jobs.attemptCount} + 1`,
+          })
+          .where(
+            inArray(
+              jobs.id,
+              candidates.map((c) => c.id),
+            ),
+          )
+          .returning();
+        claimed.push(...rows);
+        remaining -= rows.length;
+      }
+      return claimed;
     });
   }
 
   private async execute(jobRow: JobRow): Promise<void> {
+    if (!(await this.isActive(jobRow.id))) return;
     const handler = this.handlers.get(jobRow.type);
     if (!handler) {
       this.logger.error(`No handler registered for job type '${jobRow.type}'`);
@@ -275,7 +383,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
           lastError: `No handler registered for job type '${jobRow.type}'`,
           completedAt: new Date(),
         })
-        .where(eq(jobs.id, jobRow.id));
+        .where(and(eq(jobs.id, jobRow.id), eq(jobs.status, 'processing')));
       return;
     }
 
@@ -296,7 +404,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
               lastError: null,
               completedAt: new Date(),
             })
-            .where(eq(jobs.id, jobRow.id));
+            .where(and(eq(jobs.id, jobRow.id), eq(jobs.status, 'processing')));
           return;
         }
       }
@@ -310,7 +418,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
           lastError: null,
           completedAt: new Date(),
         })
-        .where(eq(jobs.id, jobRow.id));
+        .where(and(eq(jobs.id, jobRow.id), eq(jobs.status, 'processing')));
     } catch (err) {
       await this.handleFailure(jobRow, err);
     } finally {
@@ -339,7 +447,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
           lastError: message,
           completedAt: new Date(),
         })
-        .where(eq(jobs.id, jobRow.id));
+        .where(and(eq(jobs.id, jobRow.id), eq(jobs.status, 'processing')));
       return;
     }
 
@@ -351,7 +459,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
         lastError: message,
         nextAttemptAt: new Date(Date.now() + backoffMs),
       })
-      .where(eq(jobs.id, jobRow.id));
+      .where(and(eq(jobs.id, jobRow.id), eq(jobs.status, 'processing')));
   }
 
   private mapJob<TPayload, TResult>(row: JobRow): Job<TPayload, TResult> {

@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createDatabaseConnection } from '../src/database/connection';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import { seedNotebook, seedUser } from './fixtures';
+import { db } from './db';
 
 describe('NotebooksService Integration Tests', () => {
-  const { db } = createDatabaseConnection(process.env.DATABASE_URL);
   const mockConfigService = {
     get: (key: string) => {
       if (key === 'DEV_STORAGE_TOKEN_SECRET') return 'dev-storage-secret-test';

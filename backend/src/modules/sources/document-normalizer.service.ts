@@ -2,14 +2,64 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { JSDOM } from 'jsdom';
 import { ScrapedPage } from './web-scraper.service';
+import type { VisionExtractionResult } from './vision-extraction.port';
+import type { TranscriptionResult } from './transcription.port';
+import type { YouTubeAcquisitionResult } from './youtube-acquisition.service';
+import type { PptxParseResult } from './pptx-parser.service';
+import type { EpubParseResult } from './epub-parser.service';
+import type { ParsedTabularResult } from './tabular-parser.service';
+import type { VideoKeyframe } from './video-inspector.service';
 
-export type ExtractionMethod = 'text' | 'file' | 'readability' | 'playwright';
+export type ExtractionMethod =
+  | 'text'
+  | 'file'
+  | 'readability'
+  | 'playwright'
+  | 'vision'
+  | 'audio'
+  | 'transcription'
+  | 'video'
+  | 'youtube'
+  | 'tabular'
+  | 'parser';
+
+export type DocumentSectionKind =
+  | 'text'
+  | 'heading'
+  | 'code'
+  | 'table'
+  | 'formula'
+  | 'visual_description'
+  | 'transcript';
+
+export interface DocumentSectionLocator {
+  pageNumber?: number;
+  slideNumber?: number;
+  startOffsetMs?: number;
+  endOffsetMs?: number;
+  speaker?: string;
+  sheetName?: string;
+  cellRange?: string;
+  symbol?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  imageRegion?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  [key: string]: unknown;
+}
 
 export interface DocumentSection {
   headingPath: string[];
   content: string;
   ordinal: number;
   pageNumber?: number;
+  kind?: DocumentSectionKind;
+  locator?: DocumentSectionLocator;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -308,6 +358,480 @@ export class DocumentNormalizerService {
       sections,
     };
   }
+
+  /** Vision extraction: maps structured visual/text segments into sections with kind & imageRegion locator. */
+  fromImageResult(
+    result: VisionExtractionResult,
+    options: ImageDocumentOptions = {},
+  ): NormalizedDocument {
+    const title =
+      options.title ??
+      result.title ??
+      options.filename ??
+      options.fileName ??
+      'Image Document';
+
+    const normalizedRawText = normalizeProse(result.rawText || '');
+
+    let currentHeadingPath: string[] = [];
+    const sections: DocumentSection[] = (result.segments || []).map(
+      (segment, index) => {
+        const content = normalizeProse(segment.content);
+        if (segment.kind === 'heading') {
+          currentHeadingPath = [content];
+        }
+
+        return {
+          headingPath: [...currentHeadingPath],
+          content,
+          ordinal: index,
+          kind: segment.kind,
+          locator: segment.imageRegion
+            ? { imageRegion: segment.imageRegion }
+            : {},
+          metadata: {
+            ...(segment.confidence !== undefined
+              ? { confidence: segment.confidence }
+              : {}),
+          },
+        };
+      },
+    );
+
+    const finalSections =
+      sections.length > 0
+        ? sections
+        : singleSection(normalizedRawText || 'Image Document');
+
+    const text =
+      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
+
+    return {
+      title,
+      text,
+      extractionMethod: 'vision',
+      contentType: options.contentType,
+      sourceUrl: options.sourceUrl,
+      contentHash: contentHashOf(text),
+      sections: finalSections,
+    };
+  }
+
+  /** Transcription extraction: maps structured transcript segments into sections with kind 'transcript' & start/end offset locator. */
+  fromAudioResult(
+    result: TranscriptionResult,
+    options: AudioDocumentOptions = {},
+  ): NormalizedDocument {
+    const title =
+      options.title ??
+      result.title ??
+      options.filename ??
+      options.fileName ??
+      'Audio Document';
+
+    const normalizedRawText = normalizeProse(result.rawText || '');
+
+    const sections: DocumentSection[] = (result.segments || []).map(
+      (segment, index) => {
+        const content = normalizeProse(segment.content);
+        const headingPath = segment.speaker ? [segment.speaker] : [];
+
+        return {
+          headingPath,
+          content,
+          ordinal: index,
+          kind: 'transcript' as const,
+          locator: {
+            startOffsetMs: segment.startOffsetMs,
+            endOffsetMs: segment.endOffsetMs,
+            ...(segment.speaker ? { speaker: segment.speaker } : {}),
+          },
+          metadata: {
+            ...(segment.confidence !== undefined
+              ? { confidence: segment.confidence }
+              : {}),
+            ...(result.durationMs !== undefined
+              ? { durationMs: result.durationMs }
+              : result.durationSeconds !== undefined
+                ? { durationMs: Math.round(result.durationSeconds * 1000) }
+                : {}),
+          },
+        };
+      },
+    );
+
+    const finalSections =
+      sections.length > 0
+        ? sections
+        : singleSection(normalizedRawText || 'Audio Document');
+
+    const text =
+      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
+
+    return {
+      title,
+      text,
+      language: result.language ?? options.language,
+      extractionMethod: 'transcription',
+      contentType: options.contentType,
+      sourceUrl: options.sourceUrl,
+      contentHash: contentHashOf(text),
+      sections: finalSections,
+    };
+  }
+
+  /** Video transcription & visual keyframes extraction: maps structured transcript and visual segments into sections with timestamps and imageRegion locators. */
+  fromVideoResult(
+    result: TranscriptionResult,
+    options: VideoDocumentOptions = {},
+  ): NormalizedDocument {
+    const title =
+      options.title ??
+      result.title ??
+      options.filename ??
+      options.fileName ??
+      'Video Document';
+
+    const normalizedRawText = normalizeProse(result.rawText || '');
+
+    const transcriptSections: DocumentSection[] = (result.segments || []).map(
+      (segment, index) => {
+        const content = normalizeProse(segment.content);
+        const headingPath = segment.speaker ? [segment.speaker] : [];
+
+        return {
+          headingPath,
+          content,
+          ordinal: index,
+          kind: 'transcript' as const,
+          locator: {
+            startOffsetMs: segment.startOffsetMs,
+            endOffsetMs: segment.endOffsetMs,
+            ...(segment.speaker ? { speaker: segment.speaker } : {}),
+          },
+          metadata: {
+            ...(segment.confidence !== undefined
+              ? { confidence: segment.confidence }
+              : {}),
+            ...(result.durationMs !== undefined
+              ? { durationMs: result.durationMs }
+              : result.durationSeconds !== undefined
+                ? { durationMs: Math.round(result.durationSeconds * 1000) }
+                : {}),
+          },
+        };
+      },
+    );
+
+    const visualSections: DocumentSection[] = [];
+    if (options.visualResults && options.visualResults.length > 0) {
+      for (const { keyframe, result: visResult } of options.visualResults) {
+        const startOffsetMs = keyframe.timestampMs;
+        const endOffsetMs =
+          keyframe.timestampMs + (keyframe.durationMs ?? 5000);
+
+        for (const seg of visResult.segments || []) {
+          const content = normalizeProse(seg.content);
+          if (!content) continue;
+
+          visualSections.push({
+            headingPath: seg.kind === 'heading' ? [content] : ['Visual Scene'],
+            content,
+            ordinal: 0,
+            kind: seg.kind,
+            locator: {
+              startOffsetMs,
+              endOffsetMs,
+              ...(seg.imageRegion ? { imageRegion: seg.imageRegion } : {}),
+            },
+            metadata: {
+              visualKeyframe: true,
+              isKeyframe: true,
+              ...(seg.confidence !== undefined
+                ? { confidence: seg.confidence }
+                : {}),
+            },
+          });
+        }
+      }
+    }
+
+    // Merge all sections and sort chronologically by startOffsetMs
+    const allSections = [...transcriptSections, ...visualSections].sort(
+      (a, b) =>
+        (a.locator?.startOffsetMs ?? 0) - (b.locator?.startOffsetMs ?? 0),
+    );
+
+    const indexedSections = allSections.map((sec, idx) => ({
+      ...sec,
+      ordinal: idx,
+    }));
+
+    const finalSections =
+      indexedSections.length > 0
+        ? indexedSections
+        : singleSection(normalizedRawText || 'Video Document');
+
+    const text =
+      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
+
+    return {
+      title,
+      text,
+      language: result.language ?? options.language,
+      extractionMethod: visualSections.length > 0 ? 'video' : 'transcription',
+      contentType: options.contentType,
+      sourceUrl: options.sourceUrl,
+      contentHash: contentHashOf(text),
+      sections: finalSections,
+    };
+  }
+
+  /** YouTube acquisition: maps YouTube transcript/metadata into structured sections with kind 'transcript'. */
+  fromYouTubeResult(
+    result: YouTubeAcquisitionResult,
+    options: YouTubeDocumentOptions = {},
+  ): NormalizedDocument {
+    const title =
+      options.title ?? result.title ?? `YouTube Video (${result.videoId})`;
+
+    const normalizedRawText = normalizeProse(result.rawText || title);
+
+    const sections: DocumentSection[] = (result.segments || []).map(
+      (segment, index) => {
+        const content = normalizeProse(segment.content);
+        const headingPath = segment.speaker ? [segment.speaker] : [];
+
+        return {
+          headingPath,
+          content,
+          ordinal: index,
+          kind: 'transcript' as const,
+          locator: {
+            startOffsetMs: segment.startOffsetMs,
+            endOffsetMs: segment.endOffsetMs,
+            ...(segment.speaker ? { speaker: segment.speaker } : {}),
+          },
+          metadata: {
+            ...(result.durationMs !== undefined
+              ? { durationMs: result.durationMs }
+              : {}),
+          },
+        };
+      },
+    );
+
+    const finalSections =
+      sections.length > 0
+        ? sections
+        : singleSection(normalizedRawText || title);
+
+    const text =
+      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
+
+    const defaultUrl = result.videoId
+      ? `https://www.youtube.com/watch?v=${result.videoId}`
+      : undefined;
+
+    return {
+      title,
+      text,
+      siteName: 'YouTube',
+      author: options.author ?? result.author,
+      extractionMethod: 'youtube',
+      contentType: options.contentType ?? 'text/html',
+      sourceUrl: options.sourceUrl ?? defaultUrl,
+      canonicalUrl: options.canonicalUrl ?? defaultUrl,
+      contentHash: contentHashOf(text),
+      sections: finalSections,
+    };
+  }
+
+  fromPptxResult(
+    result: PptxParseResult,
+    options: PptxDocumentOptions = {},
+  ): NormalizedDocument {
+    const title =
+      options.title ?? options.filename ?? options.fileName ?? 'PPTX Document';
+    // Build sections: each slide -> heading+text, notes -> separate transcript-like text
+    const sections: DocumentSection[] = [];
+    let ordinal = 0;
+    for (const slide of result.slides) {
+      const joined = slide.texts.join('\n\n');
+      const content = normalizeProse(
+        joined || slide.title || `Slide ${slide.slideNumber}`,
+      );
+      const isTitleSlide = slide.slideNumber === 1 && slide.texts.length === 1;
+      sections.push({
+        headingPath: slide.title ? [slide.title] : [],
+        content,
+        ordinal: ordinal++,
+        kind: isTitleSlide ? 'heading' : 'text',
+        locator: { slideNumber: slide.slideNumber },
+        metadata: { hasNotes: !!slide.notes },
+      });
+      if (slide.notes) {
+        const notesContent = normalizeProse(slide.notes);
+        if (notesContent) {
+          sections.push({
+            headingPath: slide.title ? [slide.title, 'Notes'] : ['Notes'],
+            content: notesContent,
+            ordinal: ordinal++,
+            kind: 'text',
+            locator: { slideNumber: slide.slideNumber },
+            metadata: { isSpeakerNotes: true },
+          });
+        }
+      }
+    }
+    const rawText = sections.map((s) => s.content).join('\n\n');
+    const normalizedRawText = normalizeProse(rawText || title);
+    const finalSections =
+      sections.length > 0 ? sections : singleSection(normalizedRawText);
+    const text =
+      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
+    return {
+      title,
+      text,
+      extractionMethod: 'parser',
+      contentType:
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      contentHash: contentHashOf(text),
+      sections: finalSections,
+    };
+  }
+
+  fromEpubResult(
+    result: EpubParseResult,
+    options: EpubDocumentOptions = {},
+  ): NormalizedDocument {
+    const title =
+      options.title ?? options.filename ?? options.fileName ?? 'EPUB Document';
+    const sections: DocumentSection[] = result.chapters.map((chapter, idx) => ({
+      headingPath: [chapter.title],
+      content: normalizeProse(chapter.textContent || chapter.title),
+      ordinal: idx,
+      kind: 'text',
+      locator: {
+        pageNumber: chapter.ordinal,
+        ...({
+          chapterNumber: chapter.ordinal,
+        } as unknown as DocumentSectionLocator),
+      },
+      metadata: { href: chapter.href },
+    }));
+    const rawText = sections.map((s) => s.content).join('\n\n');
+    const normalizedRawText = normalizeProse(rawText || title);
+    const finalSections =
+      sections.length > 0 ? sections : singleSection(normalizedRawText);
+    const text =
+      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
+    return {
+      title,
+      text,
+      extractionMethod: 'parser',
+      contentType: 'application/epub+zip',
+      contentHash: contentHashOf(text),
+      sections: finalSections,
+    };
+  }
+
+  fromTabularResult(
+    result: ParsedTabularResult,
+    options: TabularDocumentOptions = {},
+  ): NormalizedDocument {
+    const title = options.title ?? result.title;
+    const text = result.rawText;
+
+    const sections: DocumentSection[] = result.sheets.map((sheet, idx) => ({
+      headingPath: [title, sheet.sheetName],
+      content: sheet.rawText,
+      ordinal: idx,
+      kind: 'table',
+      locator: {
+        sheetName: sheet.sheetName,
+        cellRange: sheet.cellRange,
+        lineStart: 1,
+        lineEnd: sheet.rowCount,
+      },
+      metadata: {
+        rowCount: sheet.rowCount,
+        columnCount: sheet.columnCount,
+        headers: sheet.headers,
+        columns: sheet.columns,
+      },
+    }));
+
+    return {
+      title,
+      text,
+      extractionMethod: 'tabular',
+      contentType:
+        result.format === 'xlsx'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : result.format === 'tsv'
+            ? 'text/tab-separated-values'
+            : 'text/csv',
+      contentHash: contentHashOf(text),
+      sections: sections.length > 0 ? sections : singleSection(text),
+    };
+  }
+}
+
+export interface TabularDocumentOptions {
+  title?: string;
+}
+
+export interface ImageDocumentOptions {
+  title?: string;
+  fileName?: string;
+  filename?: string;
+  contentType?: string;
+  sourceUrl?: string;
+}
+
+export interface AudioDocumentOptions {
+  title?: string;
+  fileName?: string;
+  filename?: string;
+  contentType?: string;
+  sourceUrl?: string;
+  language?: string;
+}
+
+export interface VideoDocumentOptions {
+  title?: string;
+  fileName?: string;
+  filename?: string;
+  contentType?: string;
+  sourceUrl?: string;
+  language?: string;
+  visualResults?: Array<{
+    keyframe: VideoKeyframe;
+    result: VisionExtractionResult;
+  }>;
+}
+
+export interface YouTubeDocumentOptions {
+  title?: string;
+  author?: string;
+  sourceUrl?: string;
+  canonicalUrl?: string;
+  contentType?: string;
+}
+
+export interface PptxDocumentOptions {
+  title?: string;
+  filename?: string;
+  fileName?: string;
+  userId?: string;
+}
+
+export interface EpubDocumentOptions {
+  title?: string;
+  filename?: string;
+  fileName?: string;
+  userId?: string;
 }
 
 function detectMarkdown(contentType: string, fileName?: string): boolean {

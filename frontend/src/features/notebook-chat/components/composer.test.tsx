@@ -18,7 +18,7 @@ function ComposerHarness({
 }: {
   isLoading?: boolean;
   onStop?: () => void;
-  onSubmit?: (text: string) => void;
+  onSubmit?: (submission: { text: string; files?: unknown[] } | string) => void;
 }) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -58,7 +58,9 @@ describe("Composer", () => {
 
     await user.click(submit);
 
-    expect(onSubmit).toHaveBeenCalledWith("Explain this source");
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Explain this source" }),
+    );
   });
 
   it("exposes the streaming stop state without requiring input", async () => {

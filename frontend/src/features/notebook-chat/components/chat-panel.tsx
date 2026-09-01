@@ -28,6 +28,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
     citedSourcesMap,
     status,
     isLoading,
+    error,
     messageCount,
     input,
     setInput,
@@ -124,6 +125,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
                 messages={messages}
                 citedSourcesMap={citedSourcesMap}
                 isThinking={status === "submitted"}
+                error={error}
                 onCopy={handleCopy}
                 onRegenerate={handleRegenerate}
               />

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { createDatabaseConnection } from '../src/database/connection';
 import { StudyMaterialFolderService } from '../src/modules/study-materials/study-material-folder.service';
 import { StudyMaterialService } from '../src/modules/study-materials/study-material.service';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
@@ -10,7 +9,6 @@ import { studyMaterialFolders } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 
 describe('Study Materials Tree — folder creation and rename (backend)', () => {
-  const { db: rawDb } = createDatabaseConnection(process.env.DATABASE_URL);
   const mockConfig = {
     get: (key: string) =>
       key === 'DEV_STORAGE_TOKEN_SECRET'
@@ -18,15 +16,12 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
         : undefined,
   } as any;
   const storageService = new StorageService(mockConfig);
-  const notebooksService = new NotebooksService(rawDb as any, storageService);
+  const notebooksService = new NotebooksService(db as any, storageService);
   const folderService = new StudyMaterialFolderService(
-    rawDb as any,
+    db as any,
     notebooksService,
   );
-  const materialService = new StudyMaterialService(
-    rawDb as any,
-    notebooksService,
-  );
+  const materialService = new StudyMaterialService(db as any, notebooksService);
 
   it('creates root folder with server ID and Untitled folder name', async () => {
     const user = await seedUser();

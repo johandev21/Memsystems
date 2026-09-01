@@ -65,6 +65,66 @@ describe('JobQueueService', () => {
     expect(stored.lastError).toBeNull();
   });
 
+  it('does not resurrect an in-flight job after cancellation', async () => {
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const handler: JobHandler<void, { ok: boolean }> = {
+      type: 'cancel_race_task',
+      process: vi.fn().mockImplementation(async () => {
+        await started;
+        return { ok: true };
+      }),
+    };
+    queue.registerHandler(handler);
+
+    const job = await queue.enqueue('cancel_race_task', undefined, {
+      groupKey: 'cancel-race',
+    });
+    const draining = queue.drain();
+    while (!(await queue.isActive(job.id))) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    await queue.cancelByGroup(job.groupKey ?? '');
+    release();
+    await draining;
+
+    const [stored] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+    expect(stored.status).toBe('cancelled');
+    expect(stored.result).toBeNull();
+  });
+
+  it('honors each handler concurrency independently', async () => {
+    const active = new Map<string, number>();
+    const maxObserved = new Map<string, number>();
+    const makeHandler = (type: string): JobHandler<void, void> => ({
+      type,
+      concurrency: 1,
+      process: vi.fn().mockImplementation(async () => {
+        const count = (active.get(type) ?? 0) + 1;
+        active.set(type, count);
+        maxObserved.set(type, Math.max(maxObserved.get(type) ?? 0, count));
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        active.set(type, count - 1);
+      }),
+    });
+    const first = makeHandler('one_at_a_time_a');
+    const second = makeHandler('one_at_a_time_b');
+    queue.registerHandler(first);
+    queue.registerHandler(second);
+    for (let i = 0; i < 3; i++) {
+      await queue.enqueue(first.type, undefined);
+      await queue.enqueue(second.type, undefined);
+    }
+
+    await queue.drain();
+    expect(maxObserved.get(first.type)).toBe(1);
+    expect(maxObserved.get(second.type)).toBe(1);
+    expect(first.process).toHaveBeenCalledTimes(3);
+    expect(second.process).toHaveBeenCalledTimes(3);
+  });
+
   it('handles idempotency fast-path via shouldSkip hook', async () => {
     const handler: JobHandler<{ key: string }, { cached: boolean }> = {
       type: 'cache_task',

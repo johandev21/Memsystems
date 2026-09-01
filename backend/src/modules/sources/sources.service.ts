@@ -1,9 +1,14 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { count, desc, eq } from 'drizzle-orm';
+import { asc, and, count, desc, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { SourceMetadata, sources } from '../../database/schema';
+import {
+  SourceMetadata,
+  sourceChunks,
+  sourceSegments,
+  sources,
+} from '../../database/schema';
 import {
   BadRequestError,
   NotFoundError,
@@ -16,10 +21,17 @@ import {
   NormalizedDocument,
   NORMALIZATION_VERSION,
 } from './document-normalizer.service';
+import { isImageFile, MAX_IMAGE_BYTES } from './image-inspector.service';
+import { isAudioFile, MAX_AUDIO_BYTES } from './audio-inspector.service';
+import { isVideoFile, MAX_VIDEO_BYTES } from './video-inspector.service';
+import { isPptxFile, MAX_PPTX_BYTES } from './pptx-inspector.service';
+import { isEpubFile, MAX_EPUB_BYTES } from './epub-inspector.service';
+import { isTabularFile, MAX_TABULAR_BYTES } from './tabular-inspector.service';
 import { SourceAcquisitionService } from './source-acquisition.service';
 import { SourceExtractionService } from './source-extraction.service';
 import { SourceJobsService } from './source-jobs.service';
 import { WebScrapeError } from './source-errors';
+import { SourceVersionService } from './source-version.service';
 
 export type SourceKind = 'text' | 'url' | 'file';
 
@@ -32,10 +44,22 @@ export interface CreateUrlSourceInput {
   url: string;
   title?: string;
   minTextLength?: number;
+  oauthToken?: string;
+  captionText?: string;
+  captionFormat?: 'vtt' | 'srt' | 'json3' | 'xml' | 'plain' | 'auto';
   provenance?: {
     addedVia: 'ai_search';
     metadata: SourceMetadata;
   };
+}
+
+export interface CreateFileArtifactInput {
+  artifactKey: string;
+  filename: string;
+  contentType: string;
+  fileSize: number;
+  sha256?: string;
+  title?: string;
 }
 
 export interface DownloadInfo {
@@ -47,6 +71,27 @@ export const SOURCE_LIMIT = 300;
 
 const MAX_RAW_TEXT_BYTES = 5 * 1024 * 1024;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+function lifecycleValues(
+  modality:
+    | 'document'
+    | 'audio'
+    | 'video'
+    | 'image'
+    | 'slides'
+    | 'ebook'
+    | 'code'
+    | 'dataset',
+  stage: 'uploading' | 'extracting' | 'indexing',
+): Record<string, unknown> {
+  return {
+    modality,
+    processingStatus: 'pending',
+    processingStage: stage,
+    processingErrorCode: null,
+    processingErrorMessage: null,
+  };
+}
 
 function buildS3Key(
   _notebookId: string,
@@ -91,6 +136,7 @@ export class SourcesService {
     private readonly acquisitionService: SourceAcquisitionService,
     private readonly sourceJobsService: SourceJobsService,
     private readonly sourceExtractionService: SourceExtractionService,
+    @Optional() private readonly sourceVersionService?: SourceVersionService,
   ) {}
 
   async list(userId: string, notebookId: string) {
@@ -104,6 +150,11 @@ export class SourcesService {
         url: sources.url,
         contentType: sources.contentType,
         fileSize: sources.fileSize,
+        modality: sources.modality,
+        processingStatus: sources.processingStatus,
+        processingStage: sources.processingStage,
+        processingErrorCode: sources.processingErrorCode,
+        processingErrorMessage: sources.processingErrorMessage,
         createdAt: sources.createdAt,
       })
       .from(sources)
@@ -114,7 +165,15 @@ export class SourcesService {
   async get(userId: string, id: string) {
     const source = await this.fetchOwned(userId, id);
     const indexingStatus = await this.sourceJobsService.latestForSource(id);
-    return { ...source, indexingStatus };
+    let segments: (typeof sourceSegments.$inferSelect)[] = [];
+    if (source.currentVersionId) {
+      segments = await this.db
+        .select()
+        .from(sourceSegments)
+        .where(eq(sourceSegments.sourceVersionId, source.currentVersionId))
+        .orderBy(asc(sourceSegments.ordinal));
+    }
+    return { ...source, indexingStatus, segments };
   }
 
   async createText(
@@ -138,6 +197,7 @@ export class SourcesService {
     const [row] = await this.db
       .insert(sources)
       .values({
+        ...lifecycleValues('document', 'indexing'),
         notebookId,
         kind: 'text',
         title: document.title.slice(0, 500),
@@ -149,6 +209,7 @@ export class SourcesService {
       })
       .returning();
 
+    await this.persistVersion(row.id, document);
     await this.sourceJobsService.enqueue(row.id);
     return row;
   }
@@ -159,7 +220,11 @@ export class SourcesService {
     input: CreateUrlSourceInput,
   ) {
     await this.notebooksService.assertNotebookOwner(userId, notebookId);
-    const document = await this.acquisitionService.acquireUrl(input.url);
+    const document = await this.acquisitionService.acquireUrl(input.url, {
+      oauthToken: input.oauthToken,
+      captionText: input.captionText,
+      captionFormat: input.captionFormat,
+    });
 
     const scrapedText = document.text.trim();
     if (input.minTextLength && scrapedText.length < input.minTextLength) {
@@ -169,10 +234,13 @@ export class SourcesService {
       );
     }
 
+    const isYouTube = this.sourceExtractionService.isYouTubeUrl(input.url);
+    const modality = isYouTube ? 'video' : 'document';
     const title = resolveSourceTitle(input.title, document.title);
     const [row] = await this.db
       .insert(sources)
       .values({
+        ...lifecycleValues(modality, 'indexing'),
         notebookId,
         kind: 'url',
         addedVia: input.provenance?.addedVia ?? 'manual',
@@ -195,6 +263,7 @@ export class SourcesService {
       })
       .returning();
 
+    await this.persistVersion(row.id, document);
     await this.sourceJobsService.enqueue(row.id);
     return row;
   }
@@ -232,9 +301,28 @@ export class SourcesService {
     if (fileBuffer.length === 0) {
       throw new BadRequestError('Uploaded file is empty');
     }
-    if (fileBuffer.length > MAX_FILE_BYTES) {
+    const isAudio = isAudioFile(fileType, fileName);
+    const isImage = isImageFile(fileType, fileName);
+    const isVideo = isVideoFile(fileType, fileName);
+    const isPptx = isPptxFile(fileType, fileName);
+    const isEpub = isEpubFile(fileType, fileName);
+    const isTabular = isTabularFile(fileType, fileName);
+    const maxBytes = isVideo
+      ? MAX_VIDEO_BYTES
+      : isAudio
+        ? MAX_AUDIO_BYTES
+        : isImage
+          ? MAX_IMAGE_BYTES
+          : isPptx
+            ? MAX_PPTX_BYTES
+            : isEpub
+              ? MAX_EPUB_BYTES
+              : isTabular
+                ? MAX_TABULAR_BYTES
+                : MAX_FILE_BYTES;
+    if (fileBuffer.length > maxBytes) {
       throw new BadRequestError(
-        `File exceeds maximum size of ${MAX_FILE_BYTES} bytes`,
+        `File exceeds maximum size of ${maxBytes} bytes`,
       );
     }
     if (!this.sourceExtractionService.isSupportedFile(fileType, fileName)) {
@@ -252,39 +340,143 @@ export class SourcesService {
       contentType: fileType || 'application/octet-stream',
     });
 
-    let document: NormalizedDocument;
-    try {
-      document = await this.acquisitionService.acquireFile(
-        fileBuffer,
-        fileType,
-        fileName,
-      );
-    } catch (err) {
-      await this.storageService.deleteObject(s3Key).catch(() => {});
-      throw err;
-    }
-
     const title = (customTitle?.trim() || fileName).slice(0, 500);
+    // PPTX -> slides, EPUB -> ebook, CSV/TSV/XLSX -> dataset
+    const modality = isVideo
+      ? 'video'
+      : isAudio
+        ? 'audio'
+        : isImage
+          ? 'image'
+          : isPptx
+            ? 'slides'
+            : isEpub
+              ? 'ebook'
+              : isTabular
+                ? 'dataset'
+                : 'document';
 
     const [row] = await this.db
       .insert(sources)
       .values({
+        ...lifecycleValues(modality, 'uploading'),
         notebookId,
         kind: 'file',
         title,
-        rawText: document.text,
+        // File extraction is deliberately deferred to source_processing. Keep
+        // this compatibility projection empty until the worker succeeds.
+        rawText: '',
         s3Key,
         contentType: fileType || null,
         fileSize: fileBuffer.length,
         sha256,
-        contentHash: document.contentHash,
-        extractionMethod: document.extractionMethod,
-        extractorVersion: EXTRACTOR_VERSION,
-        normalizationVersion: NORMALIZATION_VERSION,
       })
       .returning();
 
-    await this.sourceJobsService.enqueue(row.id);
+    if (this.sourceJobsService.enqueueProcessing) {
+      await this.sourceJobsService.enqueueProcessing(row.id);
+    } else {
+      // Characterization-test adapters from the pre-queue contract only know
+      // about enqueue(sourceId); retain that seam during migration.
+      await this.sourceJobsService.enqueue(row.id);
+    }
+    return row;
+  }
+
+  /** Create a source after a direct upload has already persisted its artifact. */
+  async createFileFromArtifact(
+    userId: string,
+    notebookId: string,
+    input: CreateFileArtifactInput,
+  ) {
+    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+    if (!input.artifactKey.startsWith('pending-sources/')) {
+      throw new BadRequestError('Invalid source artifact key');
+    }
+    if (!Number.isSafeInteger(input.fileSize) || input.fileSize <= 0) {
+      throw new BadRequestError('Invalid source artifact size');
+    }
+    const isAudio = isAudioFile(input.contentType, input.filename);
+    const isImage = isImageFile(input.contentType, input.filename);
+    const isVideo = isVideoFile(input.contentType, input.filename);
+    const isPptx = isPptxFile(input.contentType, input.filename);
+    const isEpub = isEpubFile(input.contentType, input.filename);
+    const isTabular = isTabularFile(input.contentType, input.filename);
+    const maxBytes = isVideo
+      ? MAX_VIDEO_BYTES
+      : isAudio
+        ? MAX_AUDIO_BYTES
+        : isImage
+          ? MAX_IMAGE_BYTES
+          : isPptx
+            ? MAX_PPTX_BYTES
+            : isEpub
+              ? MAX_EPUB_BYTES
+              : isTabular
+                ? MAX_TABULAR_BYTES
+                : MAX_FILE_BYTES;
+    if (input.fileSize > maxBytes) {
+      throw new BadRequestError(
+        `File exceeds maximum size of ${maxBytes} bytes`,
+      );
+    }
+    if (
+      !this.sourceExtractionService.isSupportedFile(
+        input.contentType,
+        input.filename,
+      )
+    ) {
+      throw new BadRequestError(
+        `Unsupported file type: ${input.contentType || 'unknown'} (${input.filename})`,
+      );
+    }
+    let storedSize: number;
+    try {
+      storedSize = (await this.storageService.objectMetadata(input.artifactKey))
+        .contentLength;
+    } catch {
+      throw new BadRequestError('Source artifact is unavailable');
+    }
+    if (storedSize !== input.fileSize) {
+      throw new BadRequestError(
+        'Source artifact size does not match upload metadata',
+      );
+    }
+
+    const modality = isVideo
+      ? 'video'
+      : isAudio
+        ? 'audio'
+        : isImage
+          ? 'image'
+          : isPptx
+            ? 'slides'
+            : isEpub
+              ? 'ebook'
+              : isTabular
+                ? 'dataset'
+                : 'document';
+
+    const [row] = await this.db
+      .insert(sources)
+      .values({
+        ...lifecycleValues(modality, 'uploading'),
+        notebookId,
+        kind: 'file',
+        title: (input.title?.trim() || input.filename).slice(0, 500),
+        rawText: '',
+        s3Key: input.artifactKey,
+        contentType: input.contentType || null,
+        fileSize: input.fileSize,
+        sha256: input.sha256 ?? null,
+      })
+      .returning();
+
+    if (this.sourceJobsService.enqueueProcessing) {
+      await this.sourceJobsService.enqueueProcessing(row.id);
+    } else {
+      await this.sourceJobsService.enqueue(row.id);
+    }
     return row;
   }
 
@@ -306,6 +498,37 @@ export class SourcesService {
     await this.fetchOwned(userId, id);
     const job = await this.sourceJobsService.enqueue(id);
     return job;
+  }
+
+  /** Retry extraction for artifacts, or indexing for already-normalized sources. */
+  async retry(userId: string, id: string) {
+    const source = await this.fetchOwned(userId, id);
+    await this.db
+      .update(sources)
+      .set({
+        processingStatus: 'pending',
+        processingStage: source.kind === 'file' ? 'uploading' : 'indexing',
+        processingErrorCode: null,
+        processingErrorMessage: null,
+      })
+      .where(eq(sources.id, id));
+
+    if (source.kind === 'file' && source.s3Key) {
+      return this.sourceJobsService.enqueueProcessing(id);
+    }
+    return this.sourceJobsService.enqueue(id);
+  }
+
+  async cancel(userId: string, id: string): Promise<void> {
+    await this.fetchOwned(userId, id);
+    await this.sourceJobsService.cancelForSource(id);
+    await this.db
+      .update(sources)
+      .set({
+        processingStatus: 'cancelled',
+        processingStage: null,
+      })
+      .where(eq(sources.id, id));
   }
 
   async reindexNotebook(userId: string, notebookId: string) {
@@ -331,6 +554,76 @@ export class SourcesService {
     return { url, expiresIn: expiresInSeconds };
   }
 
+  async updateSpeakerLabels(
+    userId: string,
+    sourceId: string,
+    speakerMap: Record<string, string>,
+  ) {
+    const source = await this.fetchOwned(userId, sourceId);
+    if (!source.currentVersionId) {
+      throw new BadRequestError('Source has no current version to update');
+    }
+    if (!speakerMap || Object.keys(speakerMap).length === 0) {
+      throw new BadRequestError('Speaker map must not be empty');
+    }
+
+    return this.db.transaction(async (tx) => {
+      const segments = await tx
+        .select()
+        .from(sourceSegments)
+        .where(eq(sourceSegments.sourceVersionId, source.currentVersionId!))
+        .orderBy(asc(sourceSegments.ordinal));
+
+      for (const segment of segments) {
+        const currentSpeaker = segment.locator?.speaker;
+        if (currentSpeaker && speakerMap[currentSpeaker] !== undefined) {
+          const newSpeaker = speakerMap[currentSpeaker];
+          await tx
+            .update(sourceSegments)
+            .set({
+              locator: {
+                ...segment.locator,
+                speaker: newSpeaker,
+              },
+            })
+            .where(eq(sourceSegments.id, segment.id));
+        }
+      }
+
+      const chunks = await tx
+        .select()
+        .from(sourceChunks)
+        .where(
+          and(
+            eq(sourceChunks.sourceId, sourceId),
+            eq(sourceChunks.sourceVersionId, source.currentVersionId!),
+          ),
+        );
+
+      for (const chunk of chunks) {
+        const currentSpeaker = chunk.locator?.speaker;
+        if (currentSpeaker && speakerMap[currentSpeaker] !== undefined) {
+          const newSpeaker = speakerMap[currentSpeaker];
+          await tx
+            .update(sourceChunks)
+            .set({
+              locator: {
+                ...(chunk.locator ?? {}),
+                speaker: newSpeaker,
+              },
+            })
+            .where(eq(sourceChunks.id, chunk.id));
+        }
+      }
+
+      return tx
+        .select()
+        .from(sourceSegments)
+        .where(eq(sourceSegments.sourceVersionId, source.currentVersionId!))
+        .orderBy(asc(sourceSegments.ordinal));
+    });
+  }
+
   private async fetchOwned(userId: string, id: string) {
     const [source] = await this.db
       .select()
@@ -341,5 +634,16 @@ export class SourcesService {
     }
     await this.notebooksService.assertNotebookOwner(userId, source.notebookId);
     return source;
+  }
+
+  private async persistVersion(
+    sourceId: string,
+    document: NormalizedDocument,
+  ): Promise<void> {
+    // Optional keeps old unit-test adapters and pre-0A deployments usable;
+    // the application module always provides this persistence seam.
+    if (this.sourceVersionService) {
+      await this.sourceVersionService.persist(sourceId, document);
+    }
   }
 }

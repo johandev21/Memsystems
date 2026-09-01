@@ -12,7 +12,11 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getReferenceExcerpt, getSafeReferenceUrl } from "../types/message-reference.types";
+import {
+  getReferenceExcerpt,
+  getReferenceLocatorLabel,
+  getSafeReferenceUrl,
+} from "../types/message-reference.types";
 
 interface ReferencePopoverProps {
   reference: CitedSourceDTO;
@@ -23,6 +27,7 @@ interface ReferencePopoverProps {
 export function ReferencePopover({ reference, children, compact = false }: ReferencePopoverProps) {
   const safeUrl = getSafeReferenceUrl(reference.url);
   const kindLabel = reference.kind === "unknown" ? "Source" : capitalize(reference.kind);
+  const locatorLabel = getReferenceLocatorLabel(reference);
 
   return (
     <Popover>
@@ -54,12 +59,43 @@ export function ReferencePopover({ reference, children, compact = false }: Refer
             {!reference.isAvailable && <Badge variant="outline">Source unavailable</Badge>}
           </div>
           <PopoverTitle>{reference.title}</PopoverTitle>
+          {locatorLabel && (
+            <div className="text-xs font-medium text-muted-foreground">{locatorLabel}</div>
+          )}
           <PopoverDescription className="max-h-48 overflow-y-auto leading-relaxed">
             {getReferenceExcerpt(reference)}
           </PopoverDescription>
         </PopoverHeader>
 
-        {safeUrl && reference.isAvailable && (
+        {reference.isAvailable &&
+        (reference.locator?.imageRegion ||
+          typeof reference.locator?.startOffsetMs === "number" ||
+          typeof reference.locator?.slideNumber === "number" ||
+          reference.locator?.symbol ||
+          reference.locator?.cellRange ||
+          reference.locator?.sheetName ||
+          !safeUrl) &&
+        reference.id ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="cursor-pointer"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("open-source-viewer", {
+                  detail: {
+                    sourceId: reference.id,
+                    locator: reference.locator,
+                  },
+                }),
+              );
+            }}
+          >
+            Open source
+            <ExternalLinkIcon data-icon="inline-end" />
+          </Button>
+        ) : safeUrl && reference.isAvailable ? (
           <Button
             render={<a href={safeUrl} target="_blank" rel="noopener noreferrer" />}
             nativeButton={false}
@@ -69,7 +105,27 @@ export function ReferencePopover({ reference, children, compact = false }: Refer
             Open source
             <ExternalLinkIcon data-icon="inline-end" />
           </Button>
-        )}
+        ) : reference.isAvailable && reference.id ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="cursor-pointer"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("open-source-viewer", {
+                  detail: {
+                    sourceId: reference.id,
+                    locator: reference.locator,
+                  },
+                }),
+              );
+            }}
+          >
+            Open source
+            <ExternalLinkIcon data-icon="inline-end" />
+          </Button>
+        ) : null}
       </PopoverContent>
     </Popover>
   );

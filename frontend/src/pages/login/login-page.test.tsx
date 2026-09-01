@@ -13,10 +13,9 @@ vi.mock("@clerk/react", () => ({
 }));
 
 describe("LoginPage", () => {
-  it("renders branding and Clerk SignIn with hash routing", () => {
+  it("renders Clerk SignIn with hash routing", () => {
     render(<LoginPage />);
 
-    expect(screen.getByText("Memsystems")).toBeDefined();
     const signIn = screen.getByTestId("clerk-sign-in");
     expect(signIn).toBeDefined();
     expect(signIn.getAttribute("data-routing")).toBe("hash");

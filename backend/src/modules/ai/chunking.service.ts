@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 
 export interface ChunkOptions {
   chunkSize?: number;
@@ -10,6 +11,20 @@ export interface ChunkInput {
   notebookId: string;
   title: string;
   rawText: string;
+  sourceVersionId?: string | null;
+  segments?: SourceSegmentInput[];
+}
+
+export interface SourceSegmentInput {
+  id: string;
+  content: string;
+  locator?: Record<string, unknown> | null;
+}
+
+interface ChunkPiece {
+  content: string;
+  segmentIds: string[];
+  locator: Record<string, unknown>;
 }
 
 export interface ChunkOutput {
@@ -17,7 +32,14 @@ export interface ChunkOutput {
   notebookId: string;
   chunkIndex: number;
   content: string;
+  sourceVersionId?: string | null;
+  locator: Record<string, unknown>;
+  segmentIds: string[];
+  chunkingVersion: number;
+  contentHash: string;
 }
+
+export const CHUNKING_VERSION = 1;
 
 function splitOnBoundaries(text: string, chunkSize: number): string[] {
   if (text.length <= chunkSize) return [text];
@@ -101,13 +123,36 @@ export class ChunkingService {
   }
 
   chunkSource(input: ChunkInput): ChunkOutput[] {
-    const chunks = this.chunkText(input.rawText);
+    const segments: SourceSegmentInput[] =
+      input.segments?.filter((segment) => segment.content.trim()) ?? [];
+    const pieces: ChunkPiece[] =
+      segments.length > 0
+        ? segments.flatMap((segment) =>
+            this.chunkText(segment.content).map((content) => ({
+              content,
+              segmentIds: [segment.id],
+              locator: segment.locator ?? {},
+            })),
+          )
+        : this.chunkText(input.rawText).map((content) => ({
+            content,
+            segmentIds: [],
+            locator: {},
+          }));
 
-    return chunks.map((content, index) => ({
-      sourceId: input.id,
-      notebookId: input.notebookId,
-      chunkIndex: index,
-      content: `Source: "${input.title}"\n${content}`,
-    }));
+    return pieces.map((piece, index) => {
+      const content = `Source: "${input.title}"\n${piece.content}`;
+      return {
+        sourceId: input.id,
+        notebookId: input.notebookId,
+        chunkIndex: index,
+        content,
+        sourceVersionId: input.sourceVersionId ?? null,
+        locator: piece.locator,
+        segmentIds: piece.segmentIds,
+        chunkingVersion: CHUNKING_VERSION,
+        contentHash: createHash('sha256').update(content, 'utf8').digest('hex'),
+      };
+    });
   }
 }

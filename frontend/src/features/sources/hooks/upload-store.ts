@@ -1,28 +1,23 @@
 import { create } from "zustand";
-import type { SourceKind } from "../types";
+import type { SourceKind, SourceModality, SourceProcessingStage, SourceProcessingStatus } from "../types";
 
 export interface PendingSourceUpload {
   id: string;
   notebookId: string;
   kind: SourceKind;
+  modality?: SourceModality | null;
   title: string;
   url?: string;
-  progress: number;
-  statusText: string;
-  status: "fetching" | "extracting" | "processing" | "completed" | "error";
+  sourceId?: string;
+  processingStage?: SourceProcessingStage | null;
+  status: "uploading" | SourceProcessingStatus;
   errorMessage?: string;
   abortController?: AbortController;
-  timerId?: ReturnType<typeof setInterval>;
 }
 
 interface UploadStoreState {
   pendingUploads: PendingSourceUpload[];
-  addPendingUpload: (
-    upload: Omit<PendingSourceUpload, "id" | "progress" | "status" | "statusText"> & {
-      initialProgress?: number;
-      initialStatusText?: string;
-    },
-  ) => string;
+  addPendingUpload: (upload: Omit<PendingSourceUpload, "id" | "status">) => string;
   updatePendingUpload: (
     id: string,
     update:
@@ -41,9 +36,7 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
     const newItem: PendingSourceUpload = {
       ...upload,
       id,
-      progress: upload.initialProgress ?? 10,
-      status: "fetching",
-      statusText: upload.initialStatusText ?? "Connecting to website...",
+      status: "uploading",
     };
 
     set((state) => ({
@@ -64,10 +57,6 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
   },
 
   removePendingUpload: (id) => {
-    const item = get().pendingUploads.find((u) => u.id === id);
-    if (item?.timerId) {
-      clearInterval(item.timerId);
-    }
     set((state) => ({
       pendingUploads: state.pendingUploads.filter((item) => item.id !== id),
     }));
@@ -77,9 +66,6 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
     const item = get().pendingUploads.find((u) => u.id === id);
     if (item?.abortController) {
       item.abortController.abort();
-    }
-    if (item?.timerId) {
-      clearInterval(item.timerId);
     }
     set((state) => ({
       pendingUploads: state.pendingUploads.filter((item) => item.id !== id),

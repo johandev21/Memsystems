@@ -1,3 +1,4 @@
+import type { FileUIPart } from "ai";
 import { type UIMessage, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
@@ -33,11 +34,24 @@ export function formatChatMessages(history?: ChatMessageDTO[]): UIMessage[] {
     if (!msg.id || seenIds.has(msg.id)) continue;
     seenIds.add(msg.id);
 
+    let parts: UIMessage["parts"] = [];
+    if (msg.parts && Array.isArray(msg.parts) && msg.parts.length > 0) {
+      parts = msg.parts as UIMessage["parts"];
+    } else {
+      if (msg.reasoning && msg.reasoning.trim()) {
+        parts.push({ type: "reasoning", text: msg.reasoning });
+      }
+      if (msg.content) {
+        parts.push({ type: "text", text: msg.content });
+      }
+    }
+
     formatted.push({
       id: msg.id,
       role: msg.role as "user" | "assistant",
-      parts: [{ type: "text" as const, text: msg.content ?? "" }],
-    });
+      parts,
+      metadata: msg.metadata ?? undefined,
+    } as UIMessage);
   }
 
   return formatted;
@@ -86,7 +100,8 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
             messages: messages.map((m) => ({
               id: m.id,
               role: m.role,
-              parts: m.parts.filter((p) => p.type === "text"),
+              parts: m.parts,
+              metadata: m.metadata,
             })),
           },
         };
@@ -118,7 +133,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     queryClient.invalidateQueries({ queryKey: ["notebooks", "all"] });
   }, [queryClient, notebookId]);
 
-  const { messages, sendMessage, regenerate, setMessages, status, stop } = useChat({
+  const { messages, sendMessage, regenerate, setMessages, status, stop, error } = useChat({
     id: notebookId,
     transport,
     messages: initialMessages,
@@ -186,17 +201,43 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   });
 
   const handleSubmit = useCallback(
-    (text: string) => {
-      if (!text.trim() || isLoading) return;
+    (submission: string | { text: string; files?: FileUIPart[] }) => {
+      const text = typeof submission === "string" ? submission : submission.text;
+      const files = typeof submission === "string" ? undefined : submission.files;
+      const trimmed = text.trim();
+      const hasFiles = Boolean(files && files.length > 0);
+
+      if ((!trimmed && !hasFiles) || isLoading) return;
       abortedMessagesRef.current = null;
       setInput("");
-      sendMessage({ text });
+
+      if (hasFiles && files) {
+        const parts: UIMessage["parts"] = [];
+        for (const file of files) {
+          parts.push({
+            type: "file",
+            mediaType: file.mediaType,
+            url: file.url,
+            filename: file.filename,
+          });
+        }
+        if (trimmed) {
+          parts.push({ type: "text", text: trimmed });
+        }
+        sendMessage({
+          role: "user",
+          parts,
+        });
+      } else {
+        sendMessage({ text: trimmed });
+      }
     },
     [isLoading, sendMessage],
   );
 
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
   }, []);
 
   const handleRegenerate = useCallback(() => {
@@ -255,6 +296,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     citedSourcesMap,
     status,
     isLoading,
+    error,
     messageCount,
     input,
     setInput,
@@ -269,3 +311,4 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     chatAnnouncement,
   };
 }
+

@@ -19,6 +19,7 @@ vi.mock('ai', async (importOriginal) => {
 describe('ChatService streaming lifecycle', () => {
   let service: ChatService;
   let insertedValues: Record<string, unknown>[];
+  let retrieveRelevantChunks: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -38,9 +39,13 @@ describe('ChatService streaming lifecycle', () => {
           return {
             returning: vi.fn().mockResolvedValue([
               {
-                id: 'user-message-1',
-                role: 'user',
-                content: 'Explain Plato',
+                id: (values.id as string) || 'user-message-1',
+                role: values.role || 'user',
+                content:
+                  typeof values.content === 'string'
+                    ? values.content
+                    : 'Explain Plato',
+                parts: values.parts || null,
                 citedSourceIds: null,
                 createdAt: new Date('2026-08-22T10:00:00.000Z'),
               },
@@ -59,6 +64,8 @@ describe('ChatService streaming lifecycle', () => {
     mocks.streamText.mockReturnValue({
       toUIMessageStreamResponse: vi.fn(() => new Response()),
     });
+
+    retrieveRelevantChunks = vi.fn().mockResolvedValue([]);
 
     const module = await Test.createTestingModule({
       providers: [
@@ -82,7 +89,7 @@ describe('ChatService streaming lifecycle', () => {
         },
         {
           provide: RetrievalService,
-          useValue: { retrieveRelevantChunks: vi.fn().mockResolvedValue([]) },
+          useValue: { retrieveRelevantChunks },
         },
       ],
     }).compile();
@@ -154,5 +161,112 @@ describe('ChatService streaming lifecycle', () => {
       generateMessageId: () => string;
     };
     expect(responseOptions.generateMessageId()).toBe(assistantInsert?.id);
+  });
+
+  it('persists message parts, reasoning, and usage metadata on finish', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain the cave allegory',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      onFinish: (event: {
+        text: string;
+        reasoning?: string;
+        usage?: {
+          promptTokens: number;
+          completionTokens: number;
+          totalTokens: number;
+        };
+        finishReason?: string;
+      }) => Promise<void>;
+    };
+
+    await streamOptions.onFinish({
+      text: 'The cave represents human perception...',
+      reasoning: 'Analyzing Plato Book VII...',
+      usage: { inputTokens: 15, outputTokens: 40, totalTokens: 55 } as any,
+      finishReason: 'stop',
+    });
+
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+
+    expect(assistantInsert).toMatchObject({
+      content: 'The cave represents human perception...',
+      reasoning: 'Analyzing Plato Book VII...',
+      parts: [
+        { type: 'reasoning', text: 'Analyzing Plato Book VII...' },
+        { type: 'text', text: 'The cave represents human perception...' },
+      ],
+      metadata: expect.objectContaining({
+        modelId: 'openai/gpt-5.6-sol',
+        finishReason: 'stop',
+        usage: { inputTokens: 15, outputTokens: 40, totalTokens: 55 },
+      }),
+    });
+  });
+
+  it('handles multimodal image parts in user messages', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'What is shown in this chart?',
+      parts: [
+        {
+          type: 'file',
+          mediaType: 'image/png',
+          url: 'data:image/png;base64,iVBORw0KGgo=',
+        },
+        { type: 'text', text: 'What is shown in this chart?' },
+      ],
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(mocks.streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: expect.arrayContaining([
+              { type: 'text', text: 'What is shown in this chart?' },
+              { type: 'image', image: 'data:image/png;base64,iVBORw0KGgo=' },
+            ]),
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it('sends image-only input without embedding an empty retrieval query', async () => {
+    await expect(
+      service.sendMessage('user-1', 'notebook-1', {
+        content: '',
+        parts: [
+          {
+            type: 'file',
+            mediaType: 'image/png',
+            url: 'data:image/png;base64,iVBORw0KGgo=',
+          },
+        ],
+        model: 'openai/gpt-5.6-sol',
+      }),
+    ).resolves.toMatchObject({ userMessageId: expect.any(String) });
+
+    expect(retrieveRelevantChunks).not.toHaveBeenCalled();
+    expect(
+      insertedValues.find((values) => values.role === 'user'),
+    ).toMatchObject({ content: '', parts: [{ type: 'file' }] });
+    expect(mocks.streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: [
+              { type: 'image', image: 'data:image/png;base64,iVBORw0KGgo=' },
+            ],
+          }),
+        ]),
+      }),
+    );
   });
 });

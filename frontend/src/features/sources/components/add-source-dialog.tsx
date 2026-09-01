@@ -8,10 +8,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { SOURCE_LIMIT, sourcesQueryOptions } from "../api/sources";
+import { SOURCE_LIMIT, sourcesQueryOptions, type Source } from "../api/sources";
 import { useUploadStore } from "../hooks/use-upload-store";
 import { useAddSourceDialogState } from "../hooks/use-add-source-dialog-state";
 import { startFileUpload, startTextUpload, startUrlUpload } from "../utils/source-upload-actions";
+import { isYouTubeUrl } from "../utils/detect-document-type";
 import { FileUploadMode } from "./file-upload-mode";
 import { TextInputMode } from "./text-input-mode";
 import { UrlInputMode } from "./url-input-mode";
@@ -47,6 +48,10 @@ export function AddSourceDialog({
     setUrlValue,
     urlTitle,
     setUrlTitle,
+    captionText,
+    setCaptionText,
+    oauthToken,
+    setOauthToken,
     textTitle,
     setTextTitle,
     textBody,
@@ -62,7 +67,24 @@ export function AddSourceDialog({
     reset();
   };
 
-  // --- Background Upload Handlers (Non-Blocking) ---
+  const handleSourceCreated = (uploadId: string, source: Source, successMessage: string) => {
+    // Put the server receipt in the list immediately. The list query then
+    // polls the source's real processing state until it reaches a terminal state.
+    queryClient.setQueryData<Source[]>(["sources", notebookId], (current) => {
+      const existing = current ?? [];
+      return [source, ...existing.filter((item) => item.id !== source.id)];
+    });
+    removePendingUpload(uploadId);
+    toast.success(successMessage);
+  };
+
+  const handleUploadError = (uploadId: string, message: string, error: Error) => {
+    updatePendingUpload(uploadId, {
+      status: "failed",
+      errorMessage: error.message || message,
+    });
+    toast.error(error.message || message);
+  };
 
   const handleStartUrlUpload = () => {
     if (!urlValue.trim()) return;
@@ -70,147 +92,141 @@ export function AddSourceDialog({
     const targetUrl = urlValue.trim();
     const title = urlTitle.trim() || deriveTitleFromUrl(targetUrl);
     const abortController = new AbortController();
-
-    // 1. Close dialog immediately so UI is not blocked
     handleCloseAndReset();
 
-    // 2. Add optimistic pending item to upload store
+    const isYouTube = isYouTubeUrl(targetUrl);
     const uploadId = addPendingUpload({
       notebookId,
       kind: "url",
+      modality: isYouTube ? "video" : undefined,
       title,
       url: targetUrl,
       abortController,
-      initialProgress: 15,
-      initialStatusText: "Connecting & fetching webpage...",
     });
 
-    // 3. Smooth progress simulation interval while network call completes
-    const timerId = setInterval(() => {
-      useUploadStore.getState().updatePendingUpload(uploadId, (prev) => {
-        if (!prev || prev.status === "completed" || prev.status === "error") {
-          return {};
-        }
-        let nextProgress = prev.progress + Math.floor(Math.random() * 15) + 10;
-        let statusText = prev.statusText;
-        let status = prev.status;
-
-        if (nextProgress >= 90) {
-          nextProgress = 90;
-          statusText = "Processing & indexing source...";
-          status = "processing";
-        } else if (nextProgress >= 55) {
-          statusText = "Extracting article content & cleaning text...";
-          status = "extracting";
-        }
-
-        return { progress: nextProgress, statusText, status };
-      });
-    }, 600);
-
-    updatePendingUpload(uploadId, { timerId });
-
-    // 4. Trigger backend mutation
-    startUrlUpload(notebookId, targetUrl, urlTitle.trim() || undefined, {
+    startUrlUpload(
       notebookId,
-      uploadId,
-      timerId,
-      onSuccess: () => {
-        clearInterval(timerId);
-        updatePendingUpload(uploadId, {
-          progress: 100,
-          status: "completed",
-          statusText: "Ready",
-        });
-
-        queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-        toast.success("Website source added successfully");
-
-        setTimeout(() => {
-          removePendingUpload(uploadId);
-        }, 400);
+      targetUrl,
+      urlTitle.trim() || undefined,
+      {
+        notebookId,
+        uploadId,
+        abortController,
+        onSuccess: (source) =>
+          handleSourceCreated(
+            uploadId,
+            source,
+            isYouTube
+              ? "YouTube video source added"
+              : "URL source added",
+          ),
+        onAbort: () => removePendingUpload(uploadId),
+        onError: (error) =>
+          handleUploadError(
+            uploadId,
+            isYouTube
+              ? "Failed to add YouTube video source"
+              : "Failed to add URL source",
+            error,
+          ),
       },
-      onAbort: () => {
-        clearInterval(timerId);
-        removePendingUpload(uploadId);
+      {
+        captionText: captionText.trim() || undefined,
+        oauthToken: oauthToken.trim() || undefined,
       },
-      onError: (err) => {
-        clearInterval(timerId);
-        updatePendingUpload(uploadId, {
-          status: "error",
-          errorMessage: err.message || "Failed to extract website",
-        });
-        toast.error(err.message || "Failed to add website source");
-      },
-    });
+    );
   };
 
   const handleStartFileUpload = (file: File) => {
     const abortController = new AbortController();
-
     handleCloseAndReset();
+
+    const isVideo =
+      file.type.startsWith("video/") ||
+      /\.(mp4|webm|mov|mkv)$/i.test(file.name);
+    const isAudio =
+      !isVideo &&
+      (file.type.startsWith("audio/") ||
+       /\.(mp3|m4a|wav|webm|aac|ogg)$/i.test(file.name));
+    const isImage =
+      file.type.startsWith("image/") ||
+      /\.(png|jpe?g|webp|heic|heif|gif|svg|bmp)$/i.test(file.name);
+    const isSlides =
+      file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      /\.pptx$/i.test(file.name);
+    const isEbook =
+      file.type === "application/epub+zip" || /\.epub$/i.test(file.name);
+    const isTex = file.type === "application/x-tex" || /\.tex$/i.test(file.name);
+    const isBib =
+      file.type === "text/x-bibtex" ||
+      file.type === "application/x-bibtex" ||
+      /\.bib$/i.test(file.name);
+
+    const modality: Source["modality"] = isVideo
+      ? "video"
+      : isAudio
+        ? "audio"
+        : isImage
+          ? "image"
+          : isSlides
+            ? "slides"
+            : isEbook
+              ? "ebook"
+              : "document";
 
     const uploadId = addPendingUpload({
       notebookId,
       kind: "file",
+      modality,
       title: file.name,
       abortController,
-      initialProgress: 20,
-      initialStatusText: "Uploading file...",
     });
-
-    const timerId = setInterval(() => {
-      useUploadStore.getState().updatePendingUpload(uploadId, (prev) => {
-        if (!prev || prev.status === "completed" || prev.status === "error") {
-          return {};
-        }
-        let nextProgress = prev.progress + Math.floor(Math.random() * 20) + 15;
-        let statusText = prev.statusText;
-
-        if (nextProgress >= 90) {
-          nextProgress = 90;
-          statusText = "Parsing document content...";
-        } else if (nextProgress >= 50) {
-          statusText = "Extracting text from file...";
-        }
-
-        return { progress: nextProgress, statusText };
-      });
-    }, 500);
-
-    updatePendingUpload(uploadId, { timerId });
 
     startFileUpload(notebookId, file, {
       notebookId,
       uploadId,
-      timerId,
-      onSuccess: () => {
-        clearInterval(timerId);
-        updatePendingUpload(uploadId, {
-          progress: 100,
-          status: "completed",
-          statusText: "Ready",
-        });
-
-        queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-        toast.success("File added successfully");
-
-        setTimeout(() => {
-          removePendingUpload(uploadId);
-        }, 400);
-      },
-      onAbort: () => {
-        clearInterval(timerId);
-        removePendingUpload(uploadId);
-      },
-      onError: (err) => {
-        clearInterval(timerId);
-        updatePendingUpload(uploadId, {
-          status: "error",
-          errorMessage: err.message || "Failed to upload file",
-        });
-        toast.error(err.message || "Failed to upload file");
-      },
+      abortController,
+      onSuccess: (source) =>
+        handleSourceCreated(
+          uploadId,
+          source,
+          isVideo
+            ? "Video source added"
+            : isAudio
+              ? "Audio source added"
+              : isImage
+                ? "Image source added"
+                : isSlides
+                  ? "Presentation source added"
+                  : isEbook
+                    ? "eBook source added"
+                    : isTex
+                      ? "LaTeX source added"
+                      : isBib
+                        ? "BibTeX source added"
+                        : "File source added",
+        ),
+      onAbort: () => removePendingUpload(uploadId),
+      onError: (error) =>
+        handleUploadError(
+          uploadId,
+          isVideo
+            ? "Failed to upload video"
+            : isAudio
+              ? "Failed to upload audio"
+              : isImage
+                ? "Failed to upload image"
+                : isSlides
+                  ? "Failed to upload presentation"
+                  : isEbook
+                    ? "Failed to upload eBook"
+                    : isTex
+                      ? "Failed to upload LaTeX file"
+                      : isBib
+                        ? "Failed to upload BibTeX file"
+                        : "Failed to upload file",
+          error,
+        ),
     });
   };
 
@@ -219,7 +235,6 @@ export function AddSourceDialog({
 
     const title = textTitle.trim() || "Pasted text";
     const abortController = new AbortController();
-
     handleCloseAndReset();
 
     const uploadId = addPendingUpload({
@@ -227,35 +242,15 @@ export function AddSourceDialog({
       kind: "text",
       title,
       abortController,
-      initialProgress: 30,
-      initialStatusText: "Saving text source...",
     });
 
     startTextUpload(notebookId, title, textBody, {
       notebookId,
       uploadId,
-      onSuccess: () => {
-        updatePendingUpload(uploadId, {
-          progress: 100,
-          status: "completed",
-          statusText: "Ready",
-        });
-
-        queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-        toast.success("Text source added successfully");
-
-        setTimeout(() => {
-          removePendingUpload(uploadId);
-        }, 400);
-      },
+      abortController,
+      onSuccess: (source) => handleSourceCreated(uploadId, source, "Text source added"),
       onAbort: () => removePendingUpload(uploadId),
-      onError: (err) => {
-        updatePendingUpload(uploadId, {
-          status: "error",
-          errorMessage: err.message || "Failed to add text source",
-        });
-        toast.error(err.message || "Failed to add text source");
-      },
+      onError: (error) => handleUploadError(uploadId, "Failed to add text source", error),
     });
   };
 
@@ -264,23 +259,23 @@ export function AddSourceDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(v) => {
-        setOpen(v);
-        if (!v) reset();
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) reset();
       }}
     >
       <DialogTrigger render={children} nativeButton={isNativeButton} />
       <DialogContent
         motion={false}
-        className="sm:max-w-[550px] p-0 overflow-hidden border-border/60 bg-card shadow-2xl rounded-[min(var(--radius-4xl),24px)]"
+        className="sm:max-w-[550px] overflow-hidden rounded-[min(var(--radius-4xl),24px)] border-border/60 bg-card p-0 shadow-2xl"
       >
-        <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle className="text-xl font-semibold text-center text-foreground">
+        <DialogHeader className="px-6 pb-2 pt-6">
+          <DialogTitle className="text-center text-xl font-semibold text-foreground">
             Add Knowledge Sources
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 pt-2 flex flex-col gap-6">
+        <div className="flex flex-col gap-6 px-6 pb-6 pt-2">
           {mode === "menu" && (
             <FileUploadMode
               onSelectUrlMode={() => setMode("url")}
@@ -297,6 +292,10 @@ export function AddSourceDialog({
               onUrlValueChange={setUrlValue}
               urlTitle={urlTitle}
               onUrlTitleChange={setUrlTitle}
+              captionText={captionText}
+              onCaptionTextChange={setCaptionText}
+              oauthToken={oauthToken}
+              onOauthTokenChange={setOauthToken}
               onSubmit={handleStartUrlUpload}
               onBack={() => setMode("menu")}
               isPending={false}
@@ -333,7 +332,7 @@ function SourceLimitMeter({ count, usedPercent }: { count: number; usedPercent: 
           {count} / {SOURCE_LIMIT}
         </span>
       </div>
-      <div className="h-1.5 w-full bg-muted overflow-hidden rounded-full">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary" style={{ width: `${usedPercent}%` }} />
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
 } from '../src/modules/jobs/job-queue.service';
 import { SourceIndexingHandler } from '../src/modules/sources/source-indexing.handler';
 import { SourceJobsService } from '../src/modules/sources/source-jobs.service';
+import { SourceVersionService } from '../src/modules/sources/source-version.service';
 import { seedNotebook, seedSource, seedUser } from './fixtures';
 
 const LONG_TEXT = Array.from(
@@ -247,6 +248,111 @@ describe('SourceJobsService', () => {
     expect(stored2.status).toBe('pending');
   });
 
+  it('keeps valid chunks when cancellation wins after embeddings begin', async () => {
+    let releaseEmbeddings!: () => void;
+    let embeddingsStarted!: () => void;
+    const embeddingsReleased = new Promise<void>((resolve) => {
+      releaseEmbeddings = resolve;
+    });
+    const embeddingStarted = new Promise<void>((resolve) => {
+      embeddingsStarted = resolve;
+    });
+    const embedding = {
+      generateEmbeddings: vi.fn(async (texts: string[]) => {
+        embeddingsStarted();
+        await embeddingsReleased;
+        return texts.map(() => makeVector(1536));
+      }),
+    } as any;
+
+    const user = await seedUser();
+    const notebook = await seedNotebook(user.id);
+    const source = await seedSource(notebook.id, {
+      title: 'Cancellation fence',
+      rawText: LONG_TEXT,
+      kind: 'text',
+    });
+    const chunking = new ChunkingService();
+    const initialIndexing = new IndexingService(
+      db as any,
+      chunking,
+      fakeEmbeddingService(),
+    );
+    await initialIndexing.indexSource(source.id);
+    const before = await db
+      .select({ content: sourceChunks.content })
+      .from(sourceChunks)
+      .where(eq(sourceChunks.sourceId, source.id))
+      .orderBy(sourceChunks.chunkIndex);
+
+    const indexing = new IndexingService(db as any, chunking, embedding);
+    const queue = new JobQueueService(db as any, {
+      concurrency: 1,
+      pollIntervalMs: 60_000,
+      defaultBackoffBaseMs: 1_000,
+      defaultMaxAttempts: 3,
+      autoStart: false,
+    });
+    const handler = new SourceIndexingHandler(
+      db as any,
+      indexing,
+      new SourceVersionService(db as any),
+    );
+    const pending = await queue.enqueue<
+      {
+        sourceId: string;
+        notebookId: string;
+        sourceVersionId: string | null;
+        contentHash: string | null;
+      },
+      any
+    >(
+      'source_indexing',
+      {
+        sourceId: source.id,
+        notebookId: notebook.id,
+        sourceVersionId: null,
+        contentHash: null,
+      },
+      { groupKey: `source:${source.id}` },
+    );
+    await db
+      .update(jobs)
+      .set({ status: 'processing', attemptCount: 1 })
+      .where(eq(jobs.id, pending.id));
+    const activeJob = await queue.getJob(pending.id);
+    expect(activeJob).not.toBeNull();
+
+    const processing = handler.process(activeJob! as any);
+    await embeddingStarted;
+
+    await db
+      .update(jobs)
+      .set({ status: 'cancelled' })
+      .where(eq(jobs.id, pending.id));
+    await db
+      .update(sources)
+      .set({ processingStatus: 'cancelled' })
+      .where(eq(sources.id, source.id));
+    releaseEmbeddings();
+
+    const result = await processing;
+    expect(result.skipped).toBe(true);
+    expect(result.cancelled).toBe(true);
+    expect(
+      await db
+        .select({ content: sourceChunks.content })
+        .from(sourceChunks)
+        .where(eq(sourceChunks.sourceId, source.id))
+        .orderBy(sourceChunks.chunkIndex),
+    ).toEqual(before);
+    const [sourceAfter] = await db
+      .select({ processingStatus: sources.processingStatus })
+      .from(sources)
+      .where(eq(sources.id, source.id));
+    expect(sourceAfter.processingStatus).toBe('cancelled');
+  });
+
   it('cancels active jobs for a deleted source', async () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service } = makeJobsService(embedding);
@@ -287,5 +393,30 @@ describe('SourceJobsService', () => {
       .from(jobs)
       .where(eq(jobs.type, 'source_indexing'));
     expect(rows.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('routes an unextracted file to processing during notebook reindex', async () => {
+    const embedding = fakeEmbeddingService();
+    const { jobs: service } = makeJobsService(embedding);
+    const user = await seedUser();
+    const notebook = await seedNotebook(user.id);
+    const source = await seedSource(notebook.id, {
+      title: 'Pending upload',
+      rawText: '',
+      kind: 'file',
+    });
+    await db
+      .update(sources)
+      .set({ s3Key: 'sources/pending.pdf', processingStatus: 'pending' })
+      .where(eq(sources.id, source.id));
+
+    const count = await service.reindexNotebook(notebook.id);
+    expect(count).toBe(1);
+    const [job] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.groupKey, `source:${source.id}:processing`));
+    expect(job.type).toBe('source_processing');
+    expect(job.status).toBe('pending');
   });
 });

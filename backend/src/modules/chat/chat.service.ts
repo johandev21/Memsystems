@@ -12,6 +12,7 @@ import {
 import { AiService } from '../ai/ai.service';
 import { ConnectionService } from '../ai/connection.service';
 import { RetrievalService } from '../ai/retrieval.service';
+import type { CitationLocator } from '../ai/retrieval.service';
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {
@@ -27,7 +28,7 @@ import {
 const MAX_HISTORY_MESSAGES = 6;
 const MAX_SOURCE_TEXT = 80000;
 
-const SYSTEM_PROMPT = `You are a knowledgeable tutor and research assistant. Help the user understand their topics of interest using the provided source passages or your general knowledge.
+const SYSTEM_PROMPT = `You are a knowledgeable tutor and research assistant. Help the user master their topics of interest using the provided source passages or your general knowledge.
 
 GROUNDING & CITATION RULES:
 - If provided passages lack sufficient info, state this clearly and offer general knowledge.
@@ -37,16 +38,19 @@ GROUNDING & CITATION RULES:
 - Use only evidence keys that were provided. Never invent a key or put source titles inside citation markers.
 - Do not discuss retrieval mechanics (e.g., source counts, indexing, loaded documents).
 
-CRITICAL OUTPUT BOUNDARIES:
-- Respond ONLY to the most recent user message. Do not simulate a multi-turn conversation or fabricate user labels (e.g., "User:", "Q:").
-- Produce a single assistant response.
-- Do not ask follow-up questions or invite the user to keep talking unless explicitly required. If necessary, ask a maximum of one short clarifying question at the very end.`;
+TUTORING & ENGAGEMENT:
+- Deliver clear, well-structured, insightful explanations grounded in the sources.
+- Foster active learning and retention: when explaining concepts, ask the learner to recall or explain key principles, or ask at most one focused reflective question at the end to check understanding.
+- When an image or document is provided, thoroughly analyze its visual content, diagrams, or handwritten steps in connection with the user question.
+- CRITICAL: Produce a single assistant response. Respond ONLY to the user. Do not simulate a multi-turn conversation or fabricate user labels (e.g., "User:", "Q:").`;
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   reasoning?: string | null;
+  parts?: Record<string, unknown>[] | null;
+  metadata?: Record<string, unknown> | null;
   citedSourceIds: CitedSourceEntry[] | null;
   citedSources: CitedSourceMeta[];
   createdAt: Date;
@@ -58,6 +62,8 @@ interface CitedSourceMeta {
   citationKey: string;
   chunkId: string | null;
   chunkIndex: number | null;
+  sourceVersionId: string | null;
+  locator: CitationLocator | null;
   number: number;
   title: string;
   kind: string;
@@ -69,6 +75,9 @@ interface CitedSourceMeta {
 
 export interface SendInput {
   content: string;
+  parts?: Record<string, unknown>[];
+  messageId?: string;
+  regenerateMessageId?: string;
   model: string;
   abortSignal?: AbortSignal;
 }
@@ -130,6 +139,8 @@ export class ChatService {
           citationKey: '',
           chunkId: null,
           chunkIndex: null,
+          sourceVersionId: null,
+          locator: null,
           number: 0,
           title: src.title,
           kind: src.kind,
@@ -153,6 +164,8 @@ export class ChatService {
           citationKey: e.citationKey,
           chunkId: e.chunkId,
           chunkIndex: e.chunkIndex,
+          sourceVersionId: e.sourceVersionId,
+          locator: e.locator,
           number: e.number,
           title: e.title ?? meta?.title ?? 'Unavailable reference',
           kind: e.kind ?? meta?.kind ?? 'unknown',
@@ -162,11 +175,25 @@ export class ChatService {
           isAvailable: !!meta,
         };
       });
+
+      let parts = r.parts;
+      if (!parts || parts.length === 0) {
+        parts = [];
+        if (r.reasoning && r.reasoning.trim()) {
+          parts.push({ type: 'reasoning', text: r.reasoning });
+        }
+        if (r.content) {
+          parts.push({ type: 'text', text: r.content });
+        }
+      }
+
       return {
         id: r.id,
         role: r.role,
         content: r.content,
         reasoning: r.reasoning,
+        parts,
+        metadata: r.metadata,
         citedSourceIds: entries,
         citedSources,
         createdAt: r.createdAt,
@@ -175,7 +202,7 @@ export class ChatService {
   }
 
   extractUserMessageContent(
-    messages: { role: string; parts: { type: string; text: string }[] }[],
+    messages: { role: string; parts: { type: string; text?: string }[] }[],
   ): string {
     const lastUserMessage = [...messages]
       .reverse()
@@ -184,16 +211,30 @@ export class ChatService {
     return textPart?.text ?? '';
   }
 
+  extractUserMessageParts(
+    messages: { role: string; parts: Record<string, unknown>[] }[],
+  ): Record<string, unknown>[] {
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((m) => m.role === 'user');
+    return lastUserMessage?.parts ?? [];
+  }
+
   async sendMessage(userId: string, notebookId: string, input: SendInput) {
     await this.notebooksService.assertNotebookOwner(userId, notebookId);
     await this.connectionService.requireConnected(userId, input.model);
 
-    const retrievedChunks = await this.retrievalService.retrieveRelevantChunks(
-      notebookId,
-      input.content,
-      userId,
-      8,
-    );
+    // An image/file-only message has no text to embed. Retrieval is optional
+    // for multimodal turns, so let the model inspect the supplied parts
+    // directly instead of passing an empty query to the embedding provider.
+    const retrievedChunks = input.content.trim()
+      ? await this.retrievalService.retrieveRelevantChunks(
+          notebookId,
+          input.content,
+          userId,
+          8,
+        )
+      : [];
     const citationEvidence = createCitationEvidence(retrievedChunks);
 
     const sourceContext = formatCitationContext(citationEvidence).slice(
@@ -201,24 +242,73 @@ export class ChatService {
       MAX_SOURCE_TEXT,
     );
 
+    // When regenerating, previous assistant versions are preserved in history as separate versions
+
+    let userMessage: {
+      id: string;
+      role: 'user';
+      content: string;
+      parts: Record<string, unknown>[] | null;
+      createdAt: Date;
+    };
+
+    const existingUserRows = input.messageId
+      ? await this.db
+          .select()
+          .from(notebookChatMessages)
+          .where(
+            and(
+              eq(notebookChatMessages.id, input.messageId),
+              eq(notebookChatMessages.notebookId, notebookId),
+            ),
+          )
+      : [];
+
+    if (existingUserRows.length > 0) {
+      userMessage = {
+        id: existingUserRows[0].id,
+        role: 'user',
+        content: existingUserRows[0].content,
+        parts: existingUserRows[0].parts,
+        createdAt: existingUserRows[0].createdAt,
+      };
+    } else {
+      const userParts =
+        input.parts && input.parts.length > 0
+          ? input.parts
+          : [{ type: 'text', text: input.content }];
+
+      const [inserted] = await this.db
+        .insert(notebookChatMessages)
+        .values({
+          id: input.messageId || createId(),
+          notebookId,
+          role: 'user',
+          content: input.content,
+          parts: userParts,
+          metadata: { modelId: input.model },
+        })
+        .returning();
+
+      userMessage = {
+        id: inserted.id,
+        role: 'user',
+        content: inserted.content,
+        parts: inserted.parts,
+        createdAt: inserted.createdAt,
+      };
+
+      await this.db
+        .update(notebooks)
+        .set({ updatedAt: new Date() })
+        .where(eq(notebooks.id, notebookId));
+    }
+
     const priorHistory = await this.getRecentHistory(
       notebookId,
       MAX_HISTORY_MESSAGES,
+      userMessage.id,
     );
-
-    const [userMessage] = await this.db
-      .insert(notebookChatMessages)
-      .values({
-        notebookId,
-        role: 'user',
-        content: input.content,
-      })
-      .returning();
-
-    await this.db
-      .update(notebooks)
-      .set({ updatedAt: new Date() })
-      .where(eq(notebooks.id, notebookId));
 
     const history = [
       ...priorHistory,
@@ -226,6 +316,7 @@ export class ChatService {
         id: userMessage.id,
         role: 'user' as const,
         content: userMessage.content,
+        parts: userMessage.parts,
         citedSourceIds: null,
         createdAt: userMessage.createdAt,
       },
@@ -242,12 +333,50 @@ export class ChatService {
         ? `${SYSTEM_PROMPT}\n\n---\n\nRELEVANT SOURCE PASSAGES:\n\n${sourceContext}`
         : SYSTEM_PROMPT;
 
-    const messagesForLlm = history.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const messagesForLlm = history.map((m) => {
+      const parts =
+        (m.parts as Array<{
+          type: string;
+          text?: string;
+          mediaType?: string;
+          url?: string;
+        }>) || [];
+      const hasImage = parts.some(
+        (p) => p.type === 'file' && p.mediaType?.startsWith('image/'),
+      );
+
+      if (m.role === 'user' && hasImage) {
+        const contentParts: Array<
+          { type: 'text'; text: string } | { type: 'image'; image: string }
+        > = [];
+        for (const p of parts) {
+          if (p.type === 'text' && p.text) {
+            contentParts.push({ type: 'text', text: p.text });
+          } else if (
+            p.type === 'file' &&
+            p.url &&
+            p.mediaType?.startsWith('image/')
+          ) {
+            contentParts.push({ type: 'image', image: p.url });
+          }
+        }
+        if (contentParts.length === 0) {
+          contentParts.push({ type: 'text', text: m.content });
+        }
+        return {
+          role: 'user' as const,
+          content: contentParts,
+        };
+      }
+
+      return {
+        role: m.role,
+        content: m.content,
+      };
+    });
 
     const assistantMessageId = createId();
+    const startTime = new Date();
     let streamedText = '';
     let streamedReasoning = '';
     let assistantMessagePersisted = false;
@@ -255,11 +384,27 @@ export class ChatService {
     const persistAssistantMessage = async (
       text: string,
       reasoning: string | null,
+      customMetadata?: Record<string, unknown>,
     ) => {
       if (assistantMessagePersisted || !text.trim()) return;
       assistantMessagePersisted = true;
 
       const citedEntries = extractCitationEntries(text, citationEvidence);
+
+      const parts: Record<string, unknown>[] = [];
+      if (reasoning && reasoning.trim()) {
+        parts.push({ type: 'reasoning', text: reasoning });
+      }
+      if (text) {
+        parts.push({ type: 'text', text });
+      }
+
+      const metadata: Record<string, unknown> = {
+        modelId,
+        createdAt: startTime.toISOString(),
+        completedAt: new Date().toISOString(),
+        ...customMetadata,
+      };
 
       try {
         await this.db.insert(notebookChatMessages).values({
@@ -268,6 +413,8 @@ export class ChatService {
           role: 'assistant',
           content: text,
           reasoning,
+          parts,
+          metadata,
           citedSourceIds: citedEntries,
         });
       } catch (dbError) {
@@ -293,7 +440,7 @@ export class ChatService {
             error: error instanceof Error ? error.message : String(error),
           });
         },
-        onFinish: async ({ text, reasoning }) => {
+        onFinish: async ({ text, reasoning, usage, finishReason }) => {
           const reasoningString = reasoning
             ? typeof reasoning === 'string'
               ? reasoning
@@ -308,12 +455,32 @@ export class ChatService {
                 : null
             : null;
 
-          await persistAssistantMessage(text, reasoningString);
+          const rawUsage = usage as Record<string, unknown> | undefined;
+          const inputTokens =
+            rawUsage?.inputTokens ?? rawUsage?.promptTokens ?? undefined;
+          const outputTokens =
+            rawUsage?.outputTokens ?? rawUsage?.completionTokens ?? undefined;
+          const totalTokens = rawUsage?.totalTokens ?? undefined;
+
+          await persistAssistantMessage(text, reasoningString, {
+            finishReason: String(finishReason),
+            usage: rawUsage
+              ? {
+                  inputTokens:
+                    typeof inputTokens === 'number' ? inputTokens : undefined,
+                  outputTokens:
+                    typeof outputTokens === 'number' ? outputTokens : undefined,
+                  totalTokens:
+                    typeof totalTokens === 'number' ? totalTokens : undefined,
+                }
+              : undefined,
+          });
         },
         onAbort: async () => {
           await persistAssistantMessage(
             streamedText,
             streamedReasoning || null,
+            { finishReason: 'cancelled' },
           );
         },
       });
@@ -326,6 +493,15 @@ export class ChatService {
       streamResponse: result.toUIMessageStreamResponse({
         generateMessageId: () => assistantMessageId,
         sendReasoning: true,
+        messageMetadata: ({ part }) => {
+          if (part.type === 'finish') {
+            return {
+              modelId,
+              finishReason: part.finishReason,
+              totalUsage: part.totalUsage,
+            };
+          }
+        },
       }),
       userMessageId: userMessage.id,
     };
@@ -338,13 +514,21 @@ export class ChatService {
       .where(eq(notebookChatMessages.notebookId, notebookId));
   }
 
-  private async getRecentHistory(notebookId: string, limit: number) {
+  private async getRecentHistory(
+    notebookId: string,
+    limit: number,
+    excludeMessageId?: string,
+  ) {
     const rows = await this.db
       .select()
       .from(notebookChatMessages)
       .where(eq(notebookChatMessages.notebookId, notebookId))
       .orderBy(asc(notebookChatMessages.createdAt));
 
-    return rows.slice(-limit);
+    const filtered = excludeMessageId
+      ? rows.filter((r) => r.id !== excludeMessageId)
+      : rows;
+
+    return filtered.slice(-limit);
   }
 }

@@ -1,4 +1,5 @@
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import type { FileUIPart } from "ai";
+import { CheckIcon, ChevronDownIcon, ImageIcon, XIcon } from "lucide-react";
 import { type RefObject, useMemo, useState } from "react";
 import {
   ModelSelector,
@@ -12,19 +13,24 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
   PromptInput,
+  PromptInputActionAddAttachments,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuTrigger,
   PromptInputBody,
   PromptInputButton,
   PromptInputFooter,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
+  usePromptInputAttachments,
 } from "@/features/ai";
 import type { ModelOption } from "@/features/ai";
 
 export interface ComposerProps {
   input: string;
   onInputChange: (value: string) => void;
-  onSubmit: (text: string) => void;
+  onSubmit: (submission: { text: string; files?: FileUIPart[] } | string) => void;
   isLoading: boolean;
   onStop: () => void;
   models: ModelOption[];
@@ -59,9 +65,9 @@ export function Composer({
 
   const hasInput = input.trim().length > 0;
 
-  const handleSubmit = ({ text }: { text: string }) => {
-    if (text.trim()) {
-      onSubmit(text);
+  const handleSubmit = (message: { text: string; files: FileUIPart[] }) => {
+    if (message.text.trim() || message.files.length > 0) {
+      onSubmit(message);
     }
   };
 
@@ -71,9 +77,12 @@ export function Composer({
     <PromptInput
       data-slot="notebook-chat-composer"
       data-composer-state={isLoading ? "streaming" : hasInput ? "ready" : "empty"}
+      accept="image/jpeg,image/png,image/webp,image/gif"
+      maxFileSize={10 * 1024 * 1024}
       onSubmit={handleSubmit}
       className="w-full [&_[data-slot=input-group]]:flex-col [&_[data-slot=input-group]]:items-stretch [&_[data-slot=input-group]]:border-composer-border [&_[data-slot=input-group]]:bg-composer-bg [&_[data-slot=input-group]]:p-2 [&_[data-slot=input-group]]:pb-1.5 [&_[data-slot=input-group]]:shadow-[var(--composer-glow),inset_0_1px_0_var(--composer-highlight),0_16px_44px_-28px_var(--composer-shadow)] [&_[data-slot=input-group]]:transition-[background-color,border-color,box-shadow] [&_[data-slot=input-group]]:duration-200 [&_[data-slot=input-group]]:focus-within:border-ring/60 [&_[data-slot=input-group]]:focus-within:shadow-[var(--composer-glow),inset_0_1px_0_var(--composer-highlight),0_18px_48px_-26px_var(--composer-shadow)] [&_[data-slot=input-group]]:focus-within:ring-2 [&_[data-slot=input-group]]:focus-within:ring-ring/15"
     >
+      <ComposerAttachmentList />
       <PromptInputBody>
         <PromptInputTextarea
           ref={textareaRef}
@@ -119,6 +128,18 @@ export function Composer({
               />
             </ModelSelectorContent>
           </ModelSelector>
+          {modelState.supportsImages && (
+            <PromptInputActionMenu>
+              <PromptInputActionMenuTrigger
+                className="size-8 rounded-xl"
+                tooltip="Attach photo"
+                aria-label="Attach photo"
+              />
+              <PromptInputActionMenuContent>
+                <PromptInputActionAddAttachments label="Attach photo" />
+              </PromptInputActionMenuContent>
+            </PromptInputActionMenu>
+          )}
         </PromptInputTools>
         <PromptInputSubmit
           status={isLoading ? "streaming" : "ready"}
@@ -132,6 +153,41 @@ export function Composer({
         />
       </PromptInputFooter>
     </PromptInput>
+  );
+}
+
+function ComposerAttachmentList() {
+  const attachments = usePromptInputAttachments();
+  if (attachments.files.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 px-3 pt-2 pb-1">
+      {attachments.files.map((file) => (
+        <div
+          key={file.id}
+          className="group relative flex items-center gap-2 rounded-lg border border-surface-border bg-surface-2 p-1.5 text-xs text-foreground shadow-xs"
+        >
+          {file.mediaType?.startsWith("image/") ? (
+            <img
+              src={file.url}
+              alt={file.filename || "Attachment"}
+              className="size-7 rounded object-cover"
+            />
+          ) : (
+            <ImageIcon className="size-4 text-muted-foreground" />
+          )}
+          <span className="max-w-[120px] truncate text-xs">{file.filename || "Image"}</span>
+          <button
+            type="button"
+            onClick={() => attachments.remove(file.id)}
+            className="ml-1 rounded-full p-0.5 text-muted-foreground hover:bg-surface-3 hover:text-foreground cursor-pointer"
+            aria-label="Remove attachment"
+          >
+            <XIcon className="size-3.5" />
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -167,10 +223,13 @@ function getProviderName(provider: string) {
 function useComposerModels(models: ModelOption[] | unknown, selectedModel: string, search: string) {
   const safeModels = useMemo(() => normalizeModels(models), [models]);
   const groups = useMemo(() => groupModels(filterModels(safeModels, search)), [safeModels, search]);
+  const activeModel = safeModels.find((model) => model.id === selectedModel);
+  const supportsImages = activeModel?.capabilities?.imageInput !== false;
   return {
-    activeModel: safeModels.find((model) => model.id === selectedModel),
+    activeModel,
     activeProvider: selectedModel.split("/")[0] || "openai",
     groups,
+    supportsImages,
   };
 }
 

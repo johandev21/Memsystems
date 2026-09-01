@@ -3,7 +3,13 @@ import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { notebooks, sourceChunks, sources } from '../../database/schema';
+import {
+  jobs,
+  notebooks,
+  sourceChunks,
+  sourceSegments,
+  sources,
+} from '../../database/schema';
 import { InternalError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { ChunkingService } from './chunking.service';
@@ -22,10 +28,13 @@ export interface IndexResult {
   chunksCount: number;
   /** True when the source was missing or produced no chunks. */
   skipped: boolean;
+  /** True when a cancellation/supersession invalidated the indexing attempt. */
+  cancelled: boolean;
   contentHash: string | null;
   processingVersion: number;
   embeddingModel: string;
   embeddingDimensions: number;
+  sourceVersionId?: string | null;
 }
 
 @Injectable()
@@ -42,7 +51,11 @@ export class IndexingService {
    * previous chunk set. The old chunks remain untouched until new embeddings
    * have been generated successfully.
    */
-  async indexSource(sourceId: string): Promise<IndexResult> {
+  async indexSource(
+    sourceId: string,
+    requestedVersionId?: string,
+    jobId?: string,
+  ): Promise<IndexResult> {
     const [source] = await this.db
       .select({
         id: sources.id,
@@ -50,6 +63,7 @@ export class IndexingService {
         title: sources.title,
         rawText: sources.rawText,
         contentHash: sources.contentHash,
+        currentVersionId: sources.currentVersionId,
         userId: notebooks.userId,
       })
       .from(sources)
@@ -57,12 +71,43 @@ export class IndexingService {
       .where(eq(sources.id, sourceId));
 
     if (!source) {
-      return this.emptyResult(null);
+      return this.emptyResult(null, null);
     }
 
-    const chunks = this.chunkingService.chunkSource(source);
+    const sourceVersionId =
+      requestedVersionId ?? source.currentVersionId ?? null;
+    let segments: {
+      id: string;
+      content: string;
+      locator?: Record<string, unknown> | null;
+    }[] = [];
+    if (sourceVersionId) {
+      const rows = await this.db
+        .select({
+          id: sourceSegments.id,
+          content: sourceSegments.content,
+          locator: sourceSegments.locator,
+        })
+        .from(sourceSegments)
+        .where(eq(sourceSegments.sourceVersionId, sourceVersionId))
+        .orderBy(sourceSegments.ordinal);
+      segments = rows.map((segment) => ({
+        id: segment.id,
+        content: segment.content,
+        locator: segment.locator as Record<string, unknown>,
+      }));
+    }
+
+    const chunks = this.chunkingService.chunkSource({
+      id: source.id,
+      notebookId: source.notebookId,
+      title: source.title,
+      rawText: source.rawText,
+      sourceVersionId,
+      segments,
+    });
     if (chunks.length === 0) {
-      return this.emptyResult(source.contentHash ?? null);
+      return this.emptyResult(source.contentHash ?? null, sourceVersionId);
     }
 
     const contents = chunks.map((c) => c.content);
@@ -77,7 +122,44 @@ export class IndexingService {
       );
     }
 
-    await this.db.transaction(async (tx) => {
+    const replaced = await this.db.transaction(async (tx) => {
+      // Cancellation and supersession update the job before the source. Keep
+      // the same lock order here so a cancellation that committed before this
+      // transaction began is observed before any old chunks are removed.
+      if (jobId) {
+        const [job] = await tx
+          .select({ status: jobs.status })
+          .from(jobs)
+          .where(eq(jobs.id, jobId))
+          .for('update');
+        if (!job || job.status !== 'processing') return false;
+      }
+
+      const [currentSource] = await tx
+        .select({
+          currentVersionId: sources.currentVersionId,
+          processingStatus: sources.processingStatus,
+          rawText: sources.rawText,
+          contentHash: sources.contentHash,
+        })
+        .from(sources)
+        .where(eq(sources.id, sourceId))
+        .for('update');
+
+      // The source/version snapshot used for embedding must still be current.
+      // In particular, a raw-text job has a null version fence: a newly
+      // persisted version must invalidate it just as a changed version id
+      // invalidates a versioned job.
+      if (
+        !currentSource ||
+        currentSource.processingStatus === 'cancelled' ||
+        currentSource.currentVersionId !== sourceVersionId ||
+        currentSource.contentHash !== source.contentHash ||
+        currentSource.rawText !== source.rawText
+      ) {
+        return false;
+      }
+
       await tx.delete(sourceChunks).where(eq(sourceChunks.sourceId, sourceId));
 
       for (
@@ -88,26 +170,44 @@ export class IndexingService {
         const batch = chunks.slice(offset, offset + CHUNK_INSERT_BATCH);
         const rows = batch.map((chunk, i) => {
           const embedding = embeddings[offset + i];
-          return {
+          const row = {
             id: createId(),
             sourceId: chunk.sourceId,
             notebookId: chunk.notebookId,
             chunkIndex: chunk.chunkIndex,
             content: chunk.content,
             embedding,
+            sourceVersionId: chunk.sourceVersionId,
+            locator: chunk.locator,
+            segmentIds: chunk.segmentIds,
+            chunkingVersion: chunk.chunkingVersion,
+            contentHash: chunk.contentHash,
           };
+          return row;
         });
         await tx.insert(sourceChunks).values(rows);
       }
+
+      return true;
     });
+
+    if (!replaced) {
+      return this.emptyResult(
+        source.contentHash ?? null,
+        sourceVersionId,
+        true,
+      );
+    }
 
     return {
       chunksCount: chunks.length,
       skipped: false,
+      cancelled: false,
       contentHash: source.contentHash ?? null,
       processingVersion: INDEX_PROCESSING_VERSION,
       embeddingModel: EMBEDDING_MODEL,
       embeddingDimensions: EMBEDDING_DIMENSIONS,
+      sourceVersionId,
     };
   }
 
@@ -117,14 +217,20 @@ export class IndexingService {
       .where(eq(sourceChunks.sourceId, sourceId));
   }
 
-  private emptyResult(contentHash: string | null): IndexResult {
+  private emptyResult(
+    contentHash: string | null,
+    sourceVersionId: string | null,
+    cancelled = false,
+  ): IndexResult {
     return {
       chunksCount: 0,
       skipped: true,
+      cancelled,
       contentHash,
       processingVersion: INDEX_PROCESSING_VERSION,
       embeddingModel: EMBEDDING_MODEL,
       embeddingDimensions: EMBEDDING_DIMENSIONS,
+      sourceVersionId,
     };
   }
 }

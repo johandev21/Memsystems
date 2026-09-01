@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createDatabaseConnection } from '../src/database/connection';
 import { JobQueueService } from '../src/modules/jobs/job-queue.service';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import { WebSearchHandler } from '../src/modules/sources/web-search.handler';
 import { WebSearchJobsService } from '../src/modules/sources/web-search-jobs.service';
 import { seedNotebook, seedUser } from './fixtures';
+import { db } from './db';
 
 function createJobsService(searchImpl: () => Promise<unknown>) {
-  const { db } = createDatabaseConnection(process.env.DATABASE_URL);
   const mockConfigService = {
     get: (key: string) => {
       if (key === 'DEV_STORAGE_TOKEN_SECRET') return 'dev-storage-secret-test';

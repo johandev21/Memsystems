@@ -10,6 +10,7 @@ import { StudyMaterialsPanel } from "@/features/study-material-tree";
 import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
 import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
+import type { SourceSegmentLocator } from "@/features/sources";
 import { SourcesPanelHeader } from "./sources-panel-header";
 import { StudioPanelHeader } from "./studio-panel-header";
 
@@ -37,6 +38,7 @@ export interface DesktopLayoutProps {
   onSyncStudio: () => void;
   dialogs: UseStudioDialogsReturn;
   selectedSourceId: string | null;
+  selectedLocator?: SourceSegmentLocator | null;
   onSelectSource: (id: string | null) => void;
 }
 
@@ -51,6 +53,7 @@ export function DesktopLayout({
   onSyncStudio,
   dialogs,
   selectedSourceId,
+  selectedLocator,
   onSelectSource,
 }: DesktopLayoutProps) {
   const isReviewingStudyMaterial = Boolean(dialogs.selectedStudyMaterialId);
@@ -125,6 +128,7 @@ export function DesktopLayout({
             {selectedSourceId ? (
               <SourceContentViewer
                 sourceId={selectedSourceId}
+                selectedLocator={selectedLocator}
                 onClose={() => onSelectSource(null)}
               />
             ) : (

@@ -176,4 +176,25 @@ describe("ChatMessageList scroll anchoring", () => {
     expect(user2Item?.getAttribute("data-scroll-anchor")).toBe("true");
     expect(thinkingItem?.getAttribute("data-scroll-anchor")).toBe("false");
   });
+
+  it("groups multiple consecutive assistant responses into a single versioned turn", () => {
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "What is on the image?"),
+      assistantMessage("msg-asst-1", "Initial response"),
+      assistantMessage("msg-asst-2", "Regenerated response"),
+    ];
+
+    const { container } = renderChatMessageList(messages);
+
+    // There should only be 1 user item and 1 assistant item in the DOM
+    const userItems = container.querySelectorAll('[data-message-id="msg-user-1"]');
+    const asstItems = container.querySelectorAll('[data-message-id="msg-asst-1"]');
+
+    expect(userItems.length).toBe(1);
+    expect(asstItems.length).toBe(1);
+
+    // The version counter "2 of 2" should be present
+    expect(container.textContent).toContain("2 of 2");
+    expect(container.textContent).toContain("Regenerated response");
+  });
 });

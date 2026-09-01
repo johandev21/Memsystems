@@ -37,4 +37,17 @@ describe('provider model catalog', () => {
     expect(providerIdFromModel('unknown/model')).toBeNull();
     expect(nativeModelId('kimi/kimi-k2.6')).toBe('kimi-k2.6');
   });
+
+  it('exposes model capability flags', () => {
+    const gptSol = PROVIDER_MODELS.openai.find(
+      (m) => m.id === 'openai/gpt-5.6-sol',
+    );
+    expect(gptSol?.capabilities?.imageInput).toBe(true);
+    expect(gptSol?.capabilities?.tools).toBe(true);
+
+    const deepseek = PROVIDER_MODELS.deepseek.find(
+      (m) => m.id === 'deepseek/deepseek-v4-flash',
+    );
+    expect(deepseek?.capabilities?.imageInput).toBe(false);
+  });
 });

@@ -148,25 +148,47 @@ describe("formatChatMessages", () => {
     expect(result[0].id).toBe("msg-valid");
   });
 
-  it("handles null or undefined content safely", () => {
+  it("restores reasoning parts when present in history", () => {
     const history: ChatMessageDTO[] = [
-      createMessage({ id: "msg-empty", role: "user", content: "" }),
-      createMessage({ id: "msg-null", role: "assistant", content: null as unknown as string }),
+      createMessage({
+        id: "msg-1",
+        role: "assistant",
+        content: "Final answer",
+        reasoning: "Thinking step by step...",
+      }),
     ];
 
     const result = formatChatMessages(history);
 
-    expect(result).toEqual([
+    expect(result).toHaveLength(1);
+    expect(result[0].parts).toEqual([
+      { type: "reasoning", text: "Thinking step by step..." },
+      { type: "text", text: "Final answer" },
+    ]);
+  });
+
+  it("preserves explicit multi-part messages including file attachments", () => {
+    const history: ChatMessageDTO[] = [
       {
-        id: "msg-empty",
+        id: "msg-img",
         role: "user",
-        parts: [{ type: "text", text: "" }],
+        content: "Analyze this image",
+        parts: [
+          { type: "file", mediaType: "image/png", url: "data:image/png;base64,123" },
+          { type: "text", text: "Analyze this image" },
+        ],
+        citedSourceIds: null,
+        citedSources: [],
+        createdAt: "2026-08-22T10:00:00.000Z",
       },
-      {
-        id: "msg-null",
-        role: "assistant",
-        parts: [{ type: "text", text: "" }],
-      },
+    ];
+
+    const result = formatChatMessages(history);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].parts).toEqual([
+      { type: "file", mediaType: "image/png", url: "data:image/png;base64,123" },
+      { type: "text", text: "Analyze this image" },
     ]);
   });
 });

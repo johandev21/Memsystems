@@ -13,6 +13,8 @@ function chunk(overrides: Partial<RetrievedChunk> = {}): RetrievedChunk {
   return {
     chunkId: 'chunk-1',
     chunkIndex: 0,
+    sourceVersionId: 'version-1',
+    locator: { pageNumber: 4 },
     sourceId: 'source-1',
     title: 'The Republic',
     content: 'Justice is examined through a conversation in the city.',
@@ -58,9 +60,12 @@ describe('chat citation mapping', () => {
     ]);
     expect(citations.map((citation) => citation.number)).toEqual([1, 2]);
     expect(citations[0]).toMatchObject({
+      schemaVersion: 2,
       sourceId: 'source-2',
       chunkId: 'chunk-2',
       chunkIndex: 4,
+      sourceVersionId: 'version-1',
+      locator: { pageNumber: 4 },
       title: 'Stanford Encyclopedia of Philosophy',
     });
   });
@@ -111,12 +116,40 @@ describe('chat citation mapping', () => {
       sourceId: 'source-1',
       chunkId: null,
       chunkIndex: null,
+      sourceVersionId: null,
+      locator: null,
       number: 3,
       title: null,
       kind: null,
       url: null,
       description: null,
       quote: null,
+    });
+  });
+
+  it('normalizes v1 entries without losing their legacy fields', () => {
+    expect(
+      normalizeStoredCitation(
+        {
+          schemaVersion: 1,
+          sourceId: 'source-1',
+          chunkId: 'chunk-1',
+          chunkIndex: 3,
+          number: 2,
+          title: 'Old source',
+          kind: 'document',
+          url: 'https://example.com/old',
+          quote: 'An older citation.',
+        },
+        0,
+      ),
+    ).toMatchObject({
+      schemaVersion: 1,
+      sourceId: 'source-1',
+      chunkId: 'chunk-1',
+      chunkIndex: 3,
+      sourceVersionId: null,
+      locator: null,
     });
   });
 });

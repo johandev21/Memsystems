@@ -3,7 +3,13 @@ import mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
 import { BadRequestError } from '../../common/errors/domain-error';
 
-export type SupportedFileKind = 'pdf' | 'markdown' | 'txt' | 'docx';
+import { isYouTubeUrl as checkIsYouTubeUrl } from './youtube-acquisition.service';
+import { isPptxFile as checkIsPptxFile } from './pptx-inspector.service';
+import { isEpubFile as checkIsEpubFile } from './epub-inspector.service';
+import { isTabularFile as checkIsTabularFile } from './tabular-inspector.service';
+
+export type SupportedFileKind =
+  'pdf' | 'markdown' | 'txt' | 'docx' | 'image' | 'audio' | 'video' | 'tabular';
 
 export interface ExtractionResult {
   text: string;
@@ -20,6 +26,43 @@ const MD_MIME_TYPES = new Set([
 const TXT_MIME_TYPES = new Set(['text/plain']);
 const DOCX_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+const IMAGE_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+]);
+const AUDIO_MIME_TYPES = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/x-m4a',
+  'audio/m4a',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/wave',
+  'audio/webm',
+  'audio/aac',
+  'audio/x-aac',
+  'audio/ogg',
+  'audio/vorbis',
+  'audio/opus',
+  'audio/flac',
+  'audio/x-flac',
+]);
+const VIDEO_MIME_TYPES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-matroska',
+  'video/mkv',
+  'video/x-m4v',
+  'video/avi',
+  'video/x-msvideo',
+  'video/mpeg',
+  'video/3gpp',
+  'video/ogg',
 ]);
 
 function normalizeText(text: string): string {
@@ -43,6 +86,10 @@ export class SourceExtractionService {
     if (MD_MIME_TYPES.has(ct)) return 'markdown';
     if (TXT_MIME_TYPES.has(ct)) return 'txt';
     if (DOCX_MIME_TYPES.has(ct)) return 'docx';
+    if (IMAGE_MIME_TYPES.has(ct)) return 'image';
+    if (AUDIO_MIME_TYPES.has(ct)) return 'audio';
+    if (VIDEO_MIME_TYPES.has(ct) || ct.startsWith('video/')) return 'video';
+    if (this.isTabularFile(contentType, filename)) return 'tabular';
 
     if (filename) {
       const lower = filename.toLowerCase();
@@ -51,6 +98,38 @@ export class SourceExtractionService {
         return 'markdown';
       if (lower.endsWith('.txt')) return 'txt';
       if (lower.endsWith('.docx')) return 'docx';
+      if (
+        lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.webp')
+      ) {
+        return 'image';
+      }
+      if (
+        lower.endsWith('.mp3') ||
+        lower.endsWith('.m4a') ||
+        lower.endsWith('.wav') ||
+        lower.endsWith('.webm') ||
+        lower.endsWith('.aac') ||
+        lower.endsWith('.ogg') ||
+        lower.endsWith('.opus') ||
+        lower.endsWith('.flac')
+      ) {
+        return 'audio';
+      }
+      if (
+        lower.endsWith('.mp4') ||
+        lower.endsWith('.webm') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.mkv') ||
+        lower.endsWith('.avi') ||
+        lower.endsWith('.m4v') ||
+        lower.endsWith('.3gp') ||
+        lower.endsWith('.ogv')
+      ) {
+        return 'video';
+      }
     }
 
     throw new BadRequestError(
@@ -58,7 +137,91 @@ export class SourceExtractionService {
     );
   }
 
+  isImageFile(contentType: string, filename?: string): boolean {
+    try {
+      return this.classifyFile(contentType, filename) === 'image';
+    } catch {
+      return false;
+    }
+  }
+
+  isAudioFile(contentType?: string | null, filename?: string | null): boolean {
+    if (contentType) {
+      const ct = contentType.toLowerCase().split(';')[0].trim();
+      if (AUDIO_MIME_TYPES.has(ct)) {
+        return true;
+      }
+    }
+    if (filename) {
+      const lower = filename.toLowerCase().split('?')[0].trim();
+      if (
+        lower.endsWith('.mp3') ||
+        lower.endsWith('.m4a') ||
+        lower.endsWith('.wav') ||
+        lower.endsWith('.aac') ||
+        lower.endsWith('.ogg') ||
+        lower.endsWith('.opus') ||
+        lower.endsWith('.flac')
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  isVideoFile(contentType?: string | null, filename?: string | null): boolean {
+    if (contentType) {
+      const ct = contentType.toLowerCase().split(';')[0].trim();
+      if (VIDEO_MIME_TYPES.has(ct) || ct.startsWith('video/')) {
+        return true;
+      }
+    }
+    if (filename) {
+      const lower = filename.toLowerCase().split('?')[0].trim();
+      if (
+        lower.endsWith('.mp4') ||
+        lower.endsWith('.webm') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.mkv') ||
+        lower.endsWith('.avi') ||
+        lower.endsWith('.m4v') ||
+        lower.endsWith('.3gp') ||
+        lower.endsWith('.ogv')
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  isYouTubeUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') return false;
+    return checkIsYouTubeUrl(url);
+  }
+
+  isPptxFile(contentType?: string | null, filename?: string | null): boolean {
+    return checkIsPptxFile(contentType, filename);
+  }
+
+  isEpubFile(contentType?: string | null, filename?: string | null): boolean {
+    return checkIsEpubFile(contentType, filename);
+  }
+
+  isTabularFile(
+    contentType?: string | null,
+    filename?: string | null,
+  ): boolean {
+    return checkIsTabularFile(contentType, filename);
+  }
+
   isSupportedFile(contentType: string, filename?: string): boolean {
+    if (
+      this.isPptxFile(contentType, filename) ||
+      this.isEpubFile(contentType, filename) ||
+      this.isTabularFile(contentType, filename)
+    ) {
+      return true;
+    }
     try {
       this.classifyFile(contentType, filename);
       return true;
@@ -113,6 +276,14 @@ export class SourceExtractionService {
         return this.extractMarkdown(buffer);
       case 'txt':
         return this.extractTxt(buffer);
+      case 'image':
+        return { text: normalizeText(`[Image: ${filename || 'image'}]`) };
+      case 'audio':
+        return { text: normalizeText(`[Audio: ${filename || 'audio'}]`) };
+      case 'video':
+        return { text: normalizeText(`[Video: ${filename || 'video'}]`) };
+      case 'tabular':
+        return { text: normalizeText(decodeUtf8(buffer)) };
     }
   }
 }
