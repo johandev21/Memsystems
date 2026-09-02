@@ -189,17 +189,38 @@ export function UrlInputMode({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="caption-text" className="text-xs">
-                  Or Paste Subtitle / Transcript Text
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="caption-text" className="text-xs">
+                    Or Paste Subtitle / Transcript Text
+                  </Label>
+                  {captionText.length > 0 && (
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                      <span>
+                        {captionText.split("\n").length.toLocaleString()}{" "}
+                        {captionText.split("\n").length === 1 ? "line" : "lines"} ·{" "}
+                        {captionText.length.toLocaleString()} chars
+                      </span>
+                      {onCaptionTextChange && (
+                        <button
+                          type="button"
+                          onClick={() => onCaptionTextChange("")}
+                          disabled={busy}
+                          className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <Textarea
                   id="caption-text"
                   placeholder="00:00:01.000 --> 00:00:04.000&#10;Speaker: Text content..."
                   value={captionText}
-                  onChange={(e) => onCaptionTextChange(e.target.value)}
+                  onChange={(e) => onCaptionTextChange?.(e.target.value)}
                   disabled={busy}
                   rows={3}
-                  className="text-xs font-mono"
+                  className="min-h-24 max-h-52 overflow-y-auto resize-y font-mono text-xs"
                 />
               </div>
 

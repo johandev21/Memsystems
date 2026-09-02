@@ -267,15 +267,15 @@ export function AddSourceDialog({
       <DialogTrigger render={children} nativeButton={isNativeButton} />
       <DialogContent
         motion={false}
-        className="sm:max-w-[550px] overflow-hidden rounded-[min(var(--radius-4xl),24px)] border-border/60 bg-card p-0 shadow-2xl"
+        className="sm:max-w-[550px] max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-[min(var(--radius-4xl),24px)] border-border/60 bg-card p-0 shadow-2xl"
       >
-        <DialogHeader className="px-6 pb-2 pt-6">
+        <DialogHeader className="shrink-0 px-6 pb-2 pt-6">
           <DialogTitle className="text-center text-xl font-semibold text-foreground">
             Add Knowledge Sources
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-6 px-6 pb-6 pt-2">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 pt-2 flex flex-col gap-6">
           {mode === "menu" && (
             <FileUploadMode
               onSelectUrlMode={() => setMode("url")}

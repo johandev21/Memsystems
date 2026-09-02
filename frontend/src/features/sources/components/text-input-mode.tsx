@@ -54,7 +54,26 @@ export function TextInputMode({
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="source-text-body">Content</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="source-text-body">Content</Label>
+          {textBody.length > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+              <span>
+                {textBody.split("\n").length.toLocaleString()}{" "}
+                {textBody.split("\n").length === 1 ? "line" : "lines"} ·{" "}
+                {textBody.length.toLocaleString()} chars
+              </span>
+              <button
+                type="button"
+                onClick={() => onTextBodyChange("")}
+                disabled={busy}
+                className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
         <Textarea
           id="source-text-body"
           placeholder="Paste your copied text here..."
@@ -63,7 +82,7 @@ export function TextInputMode({
           rows={5}
           required
           disabled={busy}
-          className="break-words"
+          className="min-h-32 max-h-64 overflow-y-auto resize-y break-words"
         />
       </div>
       <Button
