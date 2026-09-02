@@ -179,32 +179,33 @@ describe("VideoDocumentViewer", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders HTML5 video player for uploaded video with controls, video badge, and transcript segments", async () => {
-    render(
+  it("renders HTML5 video player for uploaded video with native controls and transcript segments", async () => {
+    const { container } = render(
       <QueryClientProvider client={queryClient}>
         <VideoDocumentViewer source={mockVideoSource} />
       </QueryClientProvider>,
     );
 
-    // Video badge and toolbar
-    expect(screen.getByText("Video Recording")).toBeTruthy();
-    expect(screen.getByText(/4 segments/)).toBeTruthy();
-    expect(screen.getByText("AI Transcription")).toBeTruthy();
+    // Responsive container present
+    expect(container.querySelector(".\\@container")).toBeTruthy();
 
-    // Video element present, iframe absent
-    expect(screen.getByTestId("video-element")).toBeTruthy();
+    // Native video element with controls present, iframe absent
+    const videoElement = screen.getByTestId("video-element") as HTMLVideoElement;
+    expect(videoElement).toBeTruthy();
+    expect(videoElement.hasAttribute("controls")).toBe(true);
+    expect(videoElement.hasAttribute("playsinline")).toBe(true);
     expect(screen.queryByTestId("youtube-iframe")).toBeNull();
 
-    // Video controls
-    expect(screen.getByTestId("play-pause-button")).toBeTruthy();
-    expect(screen.getByTestId("skip-backward-button")).toBeTruthy();
-    expect(screen.getByTestId("skip-forward-button")).toBeTruthy();
-    expect(screen.getByTestId("seek-slider")).toBeTruthy();
-    expect(screen.getByTestId("playback-speed-button")).toBeTruthy();
-    expect(screen.getByTestId("volume-button")).toBeTruthy();
-    expect(screen.getByTestId("fullscreen-button")).toBeTruthy();
+    // Decorative badges and custom buttons are NOT rendered
+    expect(screen.queryByText("Video Recording")).toBeNull();
+    expect(screen.queryByText(/segments ·/)).toBeNull();
+    expect(screen.queryByText("AI Transcription")).toBeNull();
+    expect(screen.queryByTestId("play-pause-button")).toBeNull();
+    expect(screen.queryByTestId("seek-slider")).toBeNull();
+    expect(screen.queryByTestId("volume-button")).toBeNull();
+    expect(screen.queryByTestId("fullscreen-button")).toBeNull();
 
-    // Transcript segments
+    // Transcript segments rendered
     expect(screen.getByText("Welcome to lecture five on neural networks.")).toBeTruthy();
     expect(screen.getByText("Today we will explore convolutional layers and attention.")).toBeTruthy();
     expect(screen.getByText("How does self-attention scale with sequence length?")).toBeTruthy();
@@ -213,122 +214,42 @@ describe("VideoDocumentViewer", () => {
     const chenBadges = screen.getAllByText("Prof. Chen");
     expect(chenBadges.length).toBe(3);
     expect(screen.getByText("Bob")).toBeTruthy();
-
-    // Video src loaded
-    const videoElement = screen.getByTestId("video-element") as HTMLVideoElement;
-    expect(videoElement).toBeTruthy();
   });
 
-  it("renders YouTube iframe for YouTube sources", async () => {
+  it("renders YouTube iframe for YouTube sources without custom controls", async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <VideoDocumentViewer source={mockYouTubeSource} />
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("YouTube Stream")).toBeTruthy();
     const iframe = screen.getByTestId("youtube-iframe") as HTMLIFrameElement;
     expect(iframe).toBeTruthy();
     expect(iframe.src).toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
     expect(iframe.src).toContain("enablejsapi=1");
     expect(screen.queryByTestId("video-element")).toBeNull();
+
+    // Custom controls and badges absent
+    expect(screen.queryByText("YouTube Stream")).toBeNull();
+    expect(screen.queryByTestId("play-pause-button")).toBeNull();
   });
 
-  it("toggles play and pause on button click", async () => {
-    const user = userEvent.setup();
-    render(
+  it("does not render ordinal badges or emojis in the simplified video view", () => {
+    const { container } = render(
       <QueryClientProvider client={queryClient}>
         <VideoDocumentViewer source={mockVideoSource} />
       </QueryClientProvider>,
     );
 
-    const playBtn = screen.getByTestId("play-pause-button");
-    const videoElement = screen.getByTestId("video-element") as HTMLVideoElement;
+    // Ordinal numbers like #1, #2 are not in segment headers
+    expect(screen.queryByText("#1")).toBeNull();
+    expect(screen.queryByText("#2")).toBeNull();
+    expect(screen.queryByText("#3")).toBeNull();
+    expect(screen.queryByText("#4")).toBeNull();
 
-    await user.click(playBtn);
-    expect(videoElement.play).toHaveBeenCalled();
-
-    fireEvent.play(videoElement);
-    expect(screen.getByLabelText("Pause")).toBeTruthy();
-
-    await user.click(screen.getByTestId("play-pause-button"));
-    expect(videoElement.pause).toHaveBeenCalled();
-  });
-
-  it("handles skipping backward and forward 10 seconds", async () => {
-    const user = userEvent.setup();
-    render(
-      <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={mockVideoSource} />
-      </QueryClientProvider>,
-    );
-
-    const videoElement = screen.getByTestId("video-element") as HTMLVideoElement;
-    videoElement.currentTime = 30;
-
-    const skipForwardBtn = screen.getByTestId("skip-forward-button");
-    await user.click(skipForwardBtn);
-    expect(videoElement.currentTime).toBe(40);
-
-    const skipBackBtn = screen.getByTestId("skip-backward-button");
-    await user.click(skipBackBtn);
-    expect(videoElement.currentTime).toBe(30);
-  });
-
-  it("handles scrubber timeline seeking", () => {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={mockVideoSource} />
-      </QueryClientProvider>,
-    );
-
-    const videoElement = screen.getByTestId("video-element") as HTMLVideoElement;
-    const seekSlider = screen.getByTestId("seek-slider") as HTMLInputElement;
-
-    fireEvent.change(seekSlider, { target: { value: "45" } });
-    fireEvent.mouseUp(seekSlider, { target: { value: "45" } });
-
-    expect(videoElement.currentTime).toBe(45);
-  });
-
-  it("handles playback rate changes", async () => {
-    const user = userEvent.setup();
-    render(
-      <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={mockVideoSource} />
-      </QueryClientProvider>,
-    );
-
-    const videoElement = screen.getByTestId("video-element") as HTMLVideoElement;
-    const speedBtn = screen.getByTestId("playback-speed-button");
-
-    expect(screen.getByText("1x")).toBeTruthy();
-
-    await user.click(speedBtn);
-    expect(videoElement.playbackRate).toBe(1.25);
-    expect(screen.getByText("1.25x")).toBeTruthy();
-
-    await user.click(speedBtn);
-    expect(videoElement.playbackRate).toBe(1.5);
-    expect(screen.getByText("1.5x")).toBeTruthy();
-  });
-
-  it("handles volume change and mute toggle", async () => {
-    const user = userEvent.setup();
-    render(
-      <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={mockVideoSource} />
-      </QueryClientProvider>,
-    );
-
-    const videoElement = screen.getByTestId("video-element") as HTMLVideoElement;
-    const muteBtn = screen.getByTestId("volume-button");
-
-    await user.click(muteBtn);
-    expect(videoElement.muted).toBe(true);
-
-    await user.click(muteBtn);
-    expect(videoElement.muted).toBe(false);
+    // Check no emoji characters exist in rendered text
+    const emojiRegex = /\p{Extended_Pictographic}/u;
+    expect(emojiRegex.test(container.textContent || "")).toBe(false);
   });
 
   it("seeks video and activates segment when clicking a transcript segment", async () => {
@@ -468,14 +389,14 @@ describe("VideoDocumentViewer", () => {
     expect(screen.getByText("Speaker 2")).toBeTruthy();
   });
 
-  it("renders volume slider and fullscreen button", () => {
+  it("renders clean transcript search input without decorative badges", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <VideoDocumentViewer source={mockVideoSource} />
       </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId("volume-slider")).toBeTruthy();
-    expect(screen.getByTestId("fullscreen-button")).toBeTruthy();
+    expect(screen.getByTestId("transcript-search-input")).toBeTruthy();
+    expect(screen.queryByText("AI Transcription")).toBeNull();
   });
 });

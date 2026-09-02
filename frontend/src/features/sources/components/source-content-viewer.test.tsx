@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import { SourceContentViewer } from "./source-content-viewer";
 import type { SourceWithContent } from "../types";
 
-function renderWithClient(ui: React.ReactElement, initialData?: { key: unknown[]; data: unknown }) {
+function renderWithClient(
+  ui: React.ReactElement,
+  initialData?: { key: unknown[]; data: unknown } | Array<{ key: unknown[]; data: unknown }>,
+) {
   const testClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -13,12 +16,148 @@ function renderWithClient(ui: React.ReactElement, initialData?: { key: unknown[]
     },
   });
   if (initialData) {
-    testClient.setQueryData(initialData.key, initialData.data);
+    const entries = Array.isArray(initialData) ? initialData : [initialData];
+    for (const entry of entries) {
+      testClient.setQueryData(entry.key, entry.data);
+    }
   }
   return render(<QueryClientProvider client={testClient}>{ui}</QueryClientProvider>);
 }
 
 describe("SourceContentViewer", () => {
+  it("renders audio skeleton with title and working back button while audio source is pending", () => {
+    const onClose = vi.fn();
+    renderWithClient(
+      <SourceContentViewer sourceId="src-audio-1" onClose={onClose} />,
+      [
+        {
+          key: ["sources", "nb-1"],
+          data: [
+            {
+              id: "src-audio-1",
+              notebookId: "nb-1",
+              kind: "file",
+              title: "lecture.mp3",
+              url: null,
+              modality: "audio",
+              contentType: "audio/mpeg",
+              fileSize: 1000,
+              createdAt: "2026-08-30T12:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    );
+
+    // Title should be visible immediately in header
+    expect(screen.getByText("lecture.mp3")).toBeTruthy();
+
+    // Audio skeleton should be rendered
+    expect(screen.getByTestId("audio-viewer-skeleton")).toBeTruthy();
+
+    // Back button should be functional
+    const backBtn = screen.getByRole("button", { name: /back to sources/i });
+    backBtn.click();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("renders video skeleton while video source is pending", () => {
+    renderWithClient(
+      <SourceContentViewer sourceId="src-video-1" onClose={vi.fn()} />,
+      [
+        {
+          key: ["sources", "nb-1"],
+          data: [
+            {
+              id: "src-video-1",
+              notebookId: "nb-1",
+              kind: "file",
+              title: "talk.mp4",
+              url: null,
+              modality: "video",
+              contentType: "video/mp4",
+              fileSize: 5000,
+              createdAt: "2026-08-30T12:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    );
+
+    expect(screen.getByText("talk.mp4")).toBeTruthy();
+    expect(screen.getByTestId("video-viewer-skeleton")).toBeTruthy();
+  });
+
+  it("renders slides skeleton while presentation source is pending", () => {
+    renderWithClient(
+      <SourceContentViewer sourceId="src-pptx-1" onClose={vi.fn()} />,
+      [
+        {
+          key: ["sources", "nb-1"],
+          data: [
+            {
+              id: "src-pptx-1",
+              notebookId: "nb-1",
+              kind: "file",
+              title: "deck.pptx",
+              url: null,
+              modality: "slides",
+              contentType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              fileSize: 5000,
+              createdAt: "2026-08-30T12:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    );
+
+    expect(screen.getByText("deck.pptx")).toBeTruthy();
+    expect(screen.getByTestId("slides-viewer-skeleton")).toBeTruthy();
+  });
+
+  it("renders image skeleton while image source is pending", () => {
+    renderWithClient(
+      <SourceContentViewer sourceId="src-img-1" onClose={vi.fn()} />,
+      [
+        {
+          key: ["sources", "nb-1"],
+          data: [
+            {
+              id: "src-img-1",
+              notebookId: "nb-1",
+              kind: "file",
+              title: "diagram.png",
+              url: null,
+              modality: "image",
+              contentType: "image/png",
+              fileSize: 5000,
+              createdAt: "2026-08-30T12:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    );
+
+    expect(screen.getByText("diagram.png")).toBeTruthy();
+    expect(screen.getByTestId("image-viewer-skeleton")).toBeTruthy();
+  });
+
+  it("renders document skeleton when source is cold pending without cached summary", () => {
+    const onClose = vi.fn();
+    renderWithClient(
+      <SourceContentViewer sourceId="unknown-src" onClose={onClose} />,
+    );
+
+    // Should mount document viewer skeleton and source-reader-skeleton
+    expect(screen.getByTestId("source-reader-skeleton")).toBeTruthy();
+    expect(screen.getByTestId("document-viewer-skeleton")).toBeTruthy();
+
+    // Back button still works
+    const backBtn = screen.getByRole("button", { name: /back to sources/i });
+    backBtn.click();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("routes plaintext source with markdown-like text to PlainTextDocumentViewer (literal rendering)", () => {
     const mockTxtSource: SourceWithContent = {
       id: "src-txt-1",

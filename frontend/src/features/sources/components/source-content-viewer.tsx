@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Download,
@@ -20,7 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { sourceQueryOptions } from "../api/sources";
-import type { SourceWithContent } from "../types";
+import type { Source, SourceWithContent } from "../types";
+import { SourceReaderSkeleton } from "./skeletons";
 import {
   isSourceProcessing,
   processingStageLabel,
@@ -115,6 +116,16 @@ function ReaderMoreMenu({
   );
 }
 
+function useCachedSourceSummary(sourceId: string): Source | undefined {
+  const queryClient = useQueryClient();
+  const allSources = queryClient.getQueriesData<Source[]>({ queryKey: ["sources"] });
+  for (const [, list] of allSources) {
+    const match = list?.find((s) => s.id === sourceId);
+    if (match) return match;
+  }
+  return undefined;
+}
+
 export function SourceContentViewer({
   sourceId,
   onClose,
@@ -122,6 +133,7 @@ export function SourceContentViewer({
   forceFullscreen,
   selectedLocator,
 }: SourceContentViewerProps) {
+  const cachedSource = useCachedSourceSummary(sourceId);
   const {
     data: source,
     isPending,
@@ -142,7 +154,16 @@ export function SourceContentViewer({
   });
 
   if (isPending) {
-    return <SourceReaderLoading />;
+    const detectedType = cachedSource ? detectDocumentType(cachedSource) : null;
+    return (
+      <SourceReaderSkeleton
+        detectedType={detectedType}
+        title={cachedSource?.title}
+        isFullscreen={readerControls.isFullscreen}
+        forceFullscreen={forceFullscreen}
+        onClose={onClose}
+      />
+    );
   }
 
   if (isError || !source) {
@@ -159,7 +180,7 @@ export function SourceContentViewer({
       className={
         readerControls.isEffectivelyFullscreen
           ? "fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
-          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden"
+          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
       }
     >
       <SourceReaderHeader
@@ -266,14 +287,6 @@ function useSourceReaderControls({
   };
 }
 
-function SourceReaderLoading() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-muted-foreground animate-pulse">
-      <Loader2 className="size-8 animate-spin text-primary" />
-      <p className="text-sm font-medium">Loading document reader...</p>
-    </div>
-  );
-}
 
 function SourceReaderError({ onClose }: { onClose: () => void }) {
   return (

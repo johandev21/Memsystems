@@ -1,4 +1,4 @@
-import type { SourceWithContent } from "../types";
+import type { Source, SourceWithContent } from "../types";
 
 export type DocumentType =
   | "markdown"
@@ -139,7 +139,7 @@ export function extractDoi(urlOrId?: string | null): string | null {
   return match ? (match[1] || match[0]) : null;
 }
 
-export function detectDocumentType(source: SourceWithContent): DocumentType {
+export function detectDocumentType(source: Source | SourceWithContent): DocumentType {
   const modality = (source.modality as string | undefined)?.toLowerCase();
   if (modality === "slides") {
     return "slides";
@@ -254,7 +254,7 @@ export function detectDocumentType(source: SourceWithContent): DocumentType {
     return "article";
   }
 
-  const text = source.rawText || "";
+  const text = ("rawText" in source ? source.rawText : "") || "";
 
   if (
     /^#{1,6}\s+/m.test(text) ||
