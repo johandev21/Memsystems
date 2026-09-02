@@ -17,10 +17,13 @@ import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import { StorageService } from '../storage/storage.service';
 import {
+  contentHashOf,
+  DocumentSection,
   EXTRACTOR_VERSION,
   NormalizedDocument,
   NORMALIZATION_VERSION,
 } from './document-normalizer.service';
+import { CaptionParserService } from './caption-parser.service';
 import { isImageFile, MAX_IMAGE_BYTES } from './image-inspector.service';
 import { isAudioFile, MAX_AUDIO_BYTES } from './audio-inspector.service';
 import { isVideoFile, MAX_VIDEO_BYTES } from './video-inspector.service';
@@ -137,6 +140,7 @@ export class SourcesService {
     private readonly sourceJobsService: SourceJobsService,
     private readonly sourceExtractionService: SourceExtractionService,
     @Optional() private readonly sourceVersionService?: SourceVersionService,
+    @Optional() private readonly captionParser?: CaptionParserService,
   ) {}
 
   async list(userId: string, notebookId: string) {
@@ -622,6 +626,61 @@ export class SourcesService {
         .where(eq(sourceSegments.sourceVersionId, source.currentVersionId!))
         .orderBy(asc(sourceSegments.ordinal));
     });
+  }
+
+  async addTranscript(
+    userId: string,
+    sourceId: string,
+    transcriptText: string,
+  ) {
+    const source = await this.fetchOwned(userId, sourceId);
+    const trimmed = transcriptText.trim();
+    if (!trimmed) {
+      throw new BadRequestError('Transcript text must not be empty');
+    }
+
+    const captionParser = this.captionParser ?? new CaptionParserService();
+    const segments = captionParser.parse(trimmed, 'auto');
+    if (segments.length === 0) {
+      throw new BadRequestError(
+        'Failed to parse transcript segments from provided text',
+      );
+    }
+
+    const isYouTube = source.url
+      ? this.sourceExtractionService.isYouTubeUrl(source.url)
+      : false;
+    const extractionMethod = isYouTube ? 'youtube' : 'transcription';
+    const text = segments.map((s) => s.content).join('\n\n');
+
+    const sections: DocumentSection[] = segments.map((seg, idx) => ({
+      headingPath: seg.speaker ? [seg.speaker] : [],
+      content: seg.content,
+      ordinal: idx,
+      kind: 'transcript' as const,
+      locator: {
+        startOffsetMs: seg.startOffsetMs,
+        endOffsetMs: seg.endOffsetMs,
+        ...(seg.speaker ? { speaker: seg.speaker } : {}),
+      },
+    }));
+
+    const doc: NormalizedDocument = {
+      title: source.title,
+      text,
+      siteName: isYouTube ? 'YouTube' : undefined,
+      extractionMethod,
+      contentType: source.contentType ?? 'text/html',
+      sourceUrl: source.url ?? undefined,
+      canonicalUrl: source.canonicalUrl ?? undefined,
+      contentHash: contentHashOf(text),
+      sections,
+    };
+
+    await this.persistVersion(source.id, doc);
+    await this.sourceJobsService.enqueue(source.id);
+
+    return this.get(userId, source.id);
   }
 
   private async fetchOwned(userId: string, id: string) {

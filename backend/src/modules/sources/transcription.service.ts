@@ -344,25 +344,17 @@ export class TranscriptionService implements TranscriptionPort {
   ): TranscriptionResult {
     const filename = input.fileName || input.filename;
     const title = this.inferTitleFromFileName(filename);
-    const content = `[Audio: ${filename || 'audio'}]`;
 
     return {
       title,
       language: input.language ?? 'en',
-      durationMs: 1000,
-      durationSeconds: 1,
-      rawText: content,
-      segments: [
-        {
-          speaker: 'Speaker A',
-          content,
-          startOffsetMs: 0,
-          endOffsetMs: 1000,
-        },
-      ],
+      durationMs: 0,
+      durationSeconds: 0,
+      rawText: '',
+      segments: [],
       warnings: [
         reason ??
-          'Audio model unavailable or not configured. Used fallback transcript.',
+          'Audio model unavailable or not configured. No automatic transcript generated.',
       ],
     };
   }

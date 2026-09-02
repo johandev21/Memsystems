@@ -43,6 +43,10 @@ const updateSpeakerLabelsSchema = z.object({
   speakerMap: z.record(z.string().min(1), z.string().min(1)),
 });
 
+const addTranscriptSchema = z.object({
+  transcriptText: z.string().min(1, 'Transcript text is required'),
+});
+
 const webSearchSchema = z.object({
   query: z.string().min(1, 'Query is required').max(500),
   modelId: z.string().min(1, 'modelId is required'),
@@ -178,6 +182,16 @@ export class SourcesController {
     @Body() body: z.infer<typeof updateSpeakerLabelsSchema>,
   ) {
     return this.sourcesService.updateSpeakerLabels(userId, id, body.speakerMap);
+  }
+
+  @Post('sources/:id/transcript')
+  @UsePipes(new ZodValidationPipe(addTranscriptSchema))
+  async addTranscript(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() body: z.infer<typeof addTranscriptSchema>,
+  ) {
+    return this.sourcesService.addTranscript(userId, id, body.transcriptText);
   }
 
   @Post('notebooks/:notebookId/sources/reindex')

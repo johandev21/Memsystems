@@ -46,8 +46,11 @@ function cleanCaptionText(raw: string): { text: string; speaker?: string } {
     text.match(/^([A-Za-z0-9 ._-]{2,30}):\s+([\s\S]+)$/);
 
   if (speakerPrefixMatch && !speaker) {
-    speaker = speakerPrefixMatch[1].trim();
-    text = speakerPrefixMatch[2];
+    const candidate = speakerPrefixMatch[1].trim();
+    if (!/^\d{1,2}:\d{2}/.test(candidate)) {
+      speaker = candidate;
+      text = speakerPrefixMatch[2];
+    }
   }
 
   // Clean whitespace & fix any space before punctuation
@@ -362,46 +365,110 @@ export class CaptionParserService {
     return segments;
   }
 
-  /** Parses plain text into pseudo-timed chunks (15s intervals) if no timestamps exist. */
+  /** Parses plain text into structured timed segments with multi-pattern timestamp support. */
   parsePlain(rawText: string): YouTubeSegment[] {
-    const paragraphs = rawText
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
+    const trimmed = rawText.trim();
+    if (!trimmed) return [];
 
-    if (paragraphs.length === 0) {
-      const single = rawText.trim();
-      if (!single) return [];
-      const { text, speaker } = cleanCaptionText(single);
-      return text
-        ? [
-            {
-              content: text,
-              startOffsetMs: 0,
-              endOffsetMs: 10_000,
-              ...(speaker ? { speaker } : {}),
-            },
-          ]
-        : [];
-    }
+    const lines = trimmed
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const timestampRegex =
+      /^\s*(?:\[|\()?(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?)(?:\s*(?:-|-->|–)\s*(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?))?(?:\]|\))?[:\s-]*(.*)$/i;
+    const speakerThenTimestampRegex =
+      /^\s*([^:\n[(]+?)\s*[:]\s*(?:\[|\()?(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?)(?:\s*(?:-|-->|–)\s*(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?))?(?:\]|\))?[:\s-]*(.*)$/i;
 
     const segments: YouTubeSegment[] = [];
-    let currentMs = 0;
-    const intervalMs = 15_000;
+    let i = 0;
+    let hasExplicitTimestamps = false;
 
-    for (const p of paragraphs) {
-      const { text, speaker } = cleanCaptionText(p);
-      if (text) {
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Check Speaker: (00:04) Content
+      const spTsMatch = line.match(speakerThenTimestampRegex);
+      if (spTsMatch) {
+        hasExplicitTimestamps = true;
+        const speaker = spTsMatch[1].trim();
+        const startMs = parseTimestampMs(spTsMatch[2]) ?? 0;
+        const endMs = spTsMatch[3] ? parseTimestampMs(spTsMatch[3]) : null;
+        let content = spTsMatch[4]?.trim() || '';
+
+        if (
+          !content &&
+          i + 1 < lines.length &&
+          !lines[i + 1].match(timestampRegex)
+        ) {
+          i++;
+          content = lines[i];
+        }
+
         segments.push({
-          content: text,
-          startOffsetMs: currentMs,
-          endOffsetMs: currentMs + intervalMs,
+          content: cleanCaptionText(content).text || content,
+          startOffsetMs: startMs,
+          endOffsetMs: endMs ?? startMs + 5000,
+          speaker: speaker || undefined,
+        });
+        i++;
+        continue;
+      }
+
+      // Check (00:04) Content or [00:04] Content or 00:04 Content
+      const tsMatch = line.match(timestampRegex);
+      if (tsMatch) {
+        hasExplicitTimestamps = true;
+        const startMs = parseTimestampMs(tsMatch[1]) ?? 0;
+        const endMs = tsMatch[2] ? parseTimestampMs(tsMatch[2]) : null;
+        let remaining = tsMatch[3]?.trim() || '';
+
+        if (
+          !remaining &&
+          i + 1 < lines.length &&
+          !lines[i + 1].match(timestampRegex)
+        ) {
+          i++;
+          remaining = lines[i];
+        }
+
+        const { text, speaker } = cleanCaptionText(remaining || line);
+        segments.push({
+          content: text || remaining || line,
+          startOffsetMs: startMs,
+          endOffsetMs: endMs ?? startMs + 5000,
           ...(speaker ? { speaker } : {}),
         });
-        currentMs += intervalMs;
+        i++;
+        continue;
+      }
+
+      // If no timestamp, fall back to sequential interval or single paragraph
+      const { text, speaker } = cleanCaptionText(line);
+      segments.push({
+        content: text || line,
+        startOffsetMs: segments.length * 15_000,
+        endOffsetMs: (segments.length + 1) * 15_000,
+        ...(speaker ? { speaker } : {}),
+      });
+      i++;
+    }
+
+    // Adjust contiguous endOffsetMs if explicit timestamps were used
+    if (hasExplicitTimestamps) {
+      for (let j = 0; j < segments.length - 1; j++) {
+        if (
+          segments[j].endOffsetMs <= segments[j].startOffsetMs ||
+          segments[j].endOffsetMs === segments[j].startOffsetMs + 5000
+        ) {
+          if (segments[j + 1].startOffsetMs > segments[j].startOffsetMs) {
+            segments[j].endOffsetMs = segments[j + 1].startOffsetMs;
+          }
+        }
       }
     }
 
-    return segments;
+    return segments.filter((s) => s.content.trim().length > 0);
   }
 }

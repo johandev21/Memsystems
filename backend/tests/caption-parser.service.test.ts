@@ -168,6 +168,41 @@ Dr. Jones: Next let's examine page tables &amp; virtual memory.
       expect(segments[2].startOffsetMs).toBe(30000);
     });
 
+    it('parses YouTube parentheses timestamp patterns (00:04) in plain text', () => {
+      const text = `(00:00) Intro to AI\n(00:04) Neural networks overview\n(00:15) Practical steps`;
+      const segments = service.parse(text, 'auto');
+      expect(segments).toHaveLength(3);
+      expect(segments[0].content).toBe('Intro to AI');
+      expect(segments[0].startOffsetMs).toBe(0);
+      expect(segments[0].endOffsetMs).toBe(4000);
+      expect(segments[1].content).toBe('Neural networks overview');
+      expect(segments[1].startOffsetMs).toBe(4000);
+      expect(segments[1].endOffsetMs).toBe(15000);
+      expect(segments[2].content).toBe('Practical steps');
+      expect(segments[2].startOffsetMs).toBe(15000);
+    });
+
+    it('parses square bracket timestamps [00:04] in plain text', () => {
+      const text = `[00:00] Part 1\n[00:10] Part 2\n[00:30] Part 3`;
+      const segments = service.parse(text, 'auto');
+      expect(segments).toHaveLength(3);
+      expect(segments[0].startOffsetMs).toBe(0);
+      expect(segments[1].startOffsetMs).toBe(10000);
+      expect(segments[2].startOffsetMs).toBe(30000);
+    });
+
+    it('parses multi-line YouTube copy format (timestamp on line 1, text on line 2)', () => {
+      const text = `0:00\nIntro text\n0:04\nSecond section\n0:20\nThird section`;
+      const segments = service.parse(text, 'auto');
+      expect(segments).toHaveLength(3);
+      expect(segments[0].content).toBe('Intro text');
+      expect(segments[0].startOffsetMs).toBe(0);
+      expect(segments[1].content).toBe('Second section');
+      expect(segments[1].startOffsetMs).toBe(4000);
+      expect(segments[2].content).toBe('Third section');
+      expect(segments[2].startOffsetMs).toBe(20000);
+    });
+
     it('returns empty array for empty inputs', () => {
       expect(service.parse('')).toEqual([]);
       expect(service.parse('   ')).toEqual([]);

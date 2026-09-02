@@ -117,7 +117,7 @@ function stripProvenCitations(text: string): string {
   return text.replace(PROVEN_CITATION_RE, '');
 }
 
-function contentHashOf(text: string): string {
+export function contentHashOf(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
@@ -567,13 +567,12 @@ export class DocumentNormalizerService {
       ordinal: idx,
     }));
 
-    const finalSections =
-      indexedSections.length > 0
-        ? indexedSections
-        : singleSection(normalizedRawText || 'Video Document');
+    const finalSections = indexedSections;
 
     const text =
-      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
+      finalSections.length > 0
+        ? finalSections.map((s) => s.content).join('\n\n')
+        : normalizedRawText || '';
 
     return {
       title,
@@ -594,8 +593,6 @@ export class DocumentNormalizerService {
   ): NormalizedDocument {
     const title =
       options.title ?? result.title ?? `YouTube Video (${result.videoId})`;
-
-    const normalizedRawText = normalizeProse(result.rawText || title);
 
     const sections: DocumentSection[] = (result.segments || []).map(
       (segment, index) => {
@@ -621,17 +618,14 @@ export class DocumentNormalizerService {
       },
     );
 
-    const finalSections =
-      sections.length > 0
-        ? sections
-        : singleSection(normalizedRawText || title);
-
-    const text =
-      normalizedRawText || finalSections.map((s) => s.content).join('\n\n');
-
     const defaultUrl = result.videoId
       ? `https://www.youtube.com/watch?v=${result.videoId}`
       : undefined;
+
+    const text =
+      sections.length > 0
+        ? sections.map((s) => s.content).join('\n\n')
+        : result.rawText || '';
 
     return {
       title,
@@ -643,7 +637,7 @@ export class DocumentNormalizerService {
       sourceUrl: options.sourceUrl ?? defaultUrl,
       canonicalUrl: options.canonicalUrl ?? defaultUrl,
       contentHash: contentHashOf(text),
-      sections: finalSections,
+      sections,
     };
   }
 

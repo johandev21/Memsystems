@@ -173,44 +173,26 @@ describe('YouTubeAcquisitionService', () => {
     });
   });
 
-  describe('Mock transcript and fallback generation', () => {
-    it('generates structured timed transcript segments for fallback', () => {
-      const result = service.generateMockTranscript(
-        'dQw4w9WgXcQ',
-        'Intro to AI Systems',
-        'Tech Channel',
-        120000,
+  describe('Video metadata acquisition without auto transcripts', () => {
+    it('returns empty segments and empty rawText when no captions are provided', async () => {
+      vi.spyOn(service, 'fetchMetadata').mockResolvedValue({
+        title: 'Rick Astley - Never Gonna Give You Up',
+        author: 'RickAstleyVEVO',
+        durationMs: 213000,
+        thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+      });
+
+      const result = await service.acquire(
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       );
 
       expect(result.videoId).toBe('dQw4w9WgXcQ');
-      expect(result.title).toBe('Intro to AI Systems');
-      expect(result.author).toBe('Tech Channel');
-      expect(result.durationMs).toBe(120000);
-      expect(result.segments.length).toBeGreaterThanOrEqual(4);
-      expect(result.segments[0].startOffsetMs).toBe(0);
-      expect(result.segments[result.segments.length - 1].endOffsetMs).toBe(
-        120000,
-      );
-      expect(result.rawText).toContain('Intro to AI Systems');
+      expect(result.title).toBe('Rick Astley - Never Gonna Give You Up');
+      expect(result.author).toBe('RickAstleyVEVO');
+      expect(result.durationMs).toBe(213000);
+      expect(result.segments).toEqual([]);
+      expect(result.rawText).toBe('');
     });
-
-    it(
-      'handles acquisition errors gracefully using fallback',
-      async () => {
-        // Acquiring an unmocked URL in tests will trigger fallback
-        const result = await service.acquire(
-          'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-          {
-            fallbackOnError: true,
-          },
-        );
-
-        expect(result.videoId).toBe('dQw4w9WgXcQ');
-        expect(result.segments.length).toBeGreaterThanOrEqual(1);
-        expect(result.rawText.length).toBeGreaterThan(0);
-      },
-      15000,
-    );
 
     it('throws BadRequestError when given an invalid URL', async () => {
       await expect(

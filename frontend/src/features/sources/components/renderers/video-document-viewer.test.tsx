@@ -117,6 +117,22 @@ const mockYouTubeSource: SourceWithContent = {
   ],
 };
 
+const mockVideoSourceWithoutTranscripts: SourceWithContent = {
+  id: "source-video-no-transcripts",
+  notebookId: "nb-1",
+  kind: "file",
+  modality: "video",
+  title: "Silent Video.mp4",
+  url: null,
+  contentType: "video/mp4",
+  fileSize: 1024 * 1024 * 50,
+  createdAt: "2026-08-30T12:00:00.000Z",
+  rawText: "",
+  s3Key: "uploads/nb-1/silent.mp4",
+  sha256: "silent123sha",
+  segments: [],
+};
+
 describe("VideoDocumentViewer", () => {
   let queryClient: QueryClient;
 
@@ -159,7 +175,7 @@ describe("VideoDocumentViewer", () => {
             json: async () => ({ url: "https://storage.example.com/neural-networks.mp4" }),
           });
         }
-        if (url.includes("/speakers")) {
+        if (url.includes("/transcript")) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -196,24 +212,17 @@ describe("VideoDocumentViewer", () => {
     expect(videoElement.hasAttribute("playsinline")).toBe(true);
     expect(screen.queryByTestId("youtube-iframe")).toBeNull();
 
-    // Decorative badges and custom buttons are NOT rendered
-    expect(screen.queryByText("Video Recording")).toBeNull();
-    expect(screen.queryByText(/segments ·/)).toBeNull();
-    expect(screen.queryByText("AI Transcription")).toBeNull();
-    expect(screen.queryByTestId("play-pause-button")).toBeNull();
-    expect(screen.queryByTestId("seek-slider")).toBeNull();
-    expect(screen.queryByTestId("volume-button")).toBeNull();
-    expect(screen.queryByTestId("fullscreen-button")).toBeNull();
-
     // Transcript segments rendered
     expect(screen.getByText("Welcome to lecture five on neural networks.")).toBeTruthy();
     expect(screen.getByText("Today we will explore convolutional layers and attention.")).toBeTruthy();
     expect(screen.getByText("How does self-attention scale with sequence length?")).toBeTruthy();
 
-    // Speaker badges
-    const chenBadges = screen.getAllByText("Prof. Chen");
-    expect(chenBadges.length).toBe(3);
-    expect(screen.getByText("Bob")).toBeTruthy();
+    // Speaker badges and editing are NOT rendered (removed per requirements)
+    expect(screen.queryByTestId("speaker-badge")).toBeNull();
+    expect(screen.queryByTestId("speaker-rename-input")).toBeNull();
+
+    // Search bar is NOT rendered (removed per requirements)
+    expect(screen.queryByTestId("transcript-search-input")).toBeNull();
   });
 
   it("renders YouTube iframe for YouTube sources without custom controls", async () => {
@@ -228,28 +237,29 @@ describe("VideoDocumentViewer", () => {
     expect(iframe.src).toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
     expect(iframe.src).toContain("enablejsapi=1");
     expect(screen.queryByTestId("video-element")).toBeNull();
-
-    // Custom controls and badges absent
-    expect(screen.queryByText("YouTube Stream")).toBeNull();
-    expect(screen.queryByTestId("play-pause-button")).toBeNull();
   });
 
-  it("does not render ordinal badges or emojis in the simplified video view", () => {
-    const { container } = render(
+  it("does not render search bar in transcript panel", () => {
+    render(
       <QueryClientProvider client={queryClient}>
         <VideoDocumentViewer source={mockVideoSource} />
       </QueryClientProvider>,
     );
 
-    // Ordinal numbers like #1, #2 are not in segment headers
-    expect(screen.queryByText("#1")).toBeNull();
-    expect(screen.queryByText("#2")).toBeNull();
-    expect(screen.queryByText("#3")).toBeNull();
-    expect(screen.queryByText("#4")).toBeNull();
+    expect(screen.queryByTestId("transcript-search-input")).toBeNull();
+    expect(screen.queryByPlaceholderText(/search transcript/i)).toBeNull();
+  });
 
-    // Check no emoji characters exist in rendered text
-    const emojiRegex = /\p{Extended_Pictographic}/u;
-    expect(emojiRegex.test(container.textContent || "")).toBe(false);
+  it("does not render editable speaker labels or buttons", () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <VideoDocumentViewer source={mockVideoSource} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByTestId("speaker-badge")).toBeNull();
+    expect(screen.queryByTestId("speaker-rename-input")).toBeNull();
+    expect(screen.queryByTestId("speaker-rename-save")).toBeNull();
   });
 
   it("seeks video and activates segment when clicking a transcript segment", async () => {
@@ -295,7 +305,6 @@ describe("VideoDocumentViewer", () => {
           selectedLocator={{
             startOffsetMs: 60_000,
             endOffsetMs: 90_000,
-            speaker: "Prof. Chen",
           }}
         />
       </QueryClientProvider>,
@@ -319,84 +328,134 @@ describe("VideoDocumentViewer", () => {
     Object.defineProperty(videoElement, "currentTime", { value: 46, writable: true });
     fireEvent.timeUpdate(videoElement);
 
-    // Active segment should have data-active attribute
-    // Allow React effect to run - check that scrollIntoView was attempted after active change
-    // The second segment render cycle may trigger scrollIntoView
-    // We verify at least one call happened via effect after currentTime change
-    // Give effect time: the activeSegmentId effect calls scrollIntoView
     expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
   });
 
-  it("supports inline speaker renaming and updates segment labels optimistically", async () => {
-    const user = userEvent.setup();
-    render(
-      <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={mockVideoSource} />
-      </QueryClientProvider>,
-    );
-
-    const bobBadge = screen.getByText("Bob");
-    await user.click(bobBadge);
-
-    const renameInput = screen.getByTestId("speaker-rename-input") as HTMLInputElement;
-    expect(renameInput.value).toBe("Bob");
-
-    await user.clear(renameInput);
-    await user.type(renameInput, "Bob Smith");
-
-    const saveBtn = screen.getByTestId("speaker-rename-save");
-    await user.click(saveBtn);
-
-    expect(screen.getByText("Bob Smith")).toBeTruthy();
-    expect(screen.queryByText("Bob")).toBeNull();
-  });
-
-  it("filters transcript segments with search input and highlights matching text", async () => {
-    const user = userEvent.setup();
-    render(
-      <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={mockVideoSource} />
-      </QueryClientProvider>,
-    );
-
-    const searchInput = screen.getByTestId("transcript-search-input");
-    await user.type(searchInput, "attention");
-
-    const marks = screen.getAllByText(/attention/i);
-    expect(marks.length).toBe(3);
-    // At least one should be MARK
-    expect(marks.some((el) => el.tagName === "MARK")).toBe(true);
-
-    expect(screen.queryByText(/Welcome to lecture five on neural networks/)).toBeNull();
-  });
-
-  it("parses rawText into segments when segments array is not provided", () => {
-    const rawTextSource: SourceWithContent = {
+  it("parses YouTube parentheses timestamp patterns (00:04) into multiple segments", () => {
+    const youtubePatternSource: SourceWithContent = {
       ...mockVideoSource,
       segments: undefined,
-      rawText: "[00:10] Speaker 1: Introductory remarks.\n[00:30] Speaker 2: Second section topic.",
+      rawText: "(00:00) First part introduction\n(00:04) Second part main topic\n(00:15) Third part conclusion",
     };
 
     render(
       <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={rawTextSource} />
+        <VideoDocumentViewer source={youtubePatternSource} />
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Introductory remarks.")).toBeTruthy();
-    expect(screen.getByText("Second section topic.")).toBeTruthy();
-    expect(screen.getByText("Speaker 1")).toBeTruthy();
-    expect(screen.getByText("Speaker 2")).toBeTruthy();
+    expect(screen.getByText("First part introduction")).toBeTruthy();
+    expect(screen.getByText("Second part main topic")).toBeTruthy();
+    expect(screen.getByText("Third part conclusion")).toBeTruthy();
+
+    const timestampBadges = screen.getAllByTestId("segment-timestamp");
+    expect(timestampBadges.length).toBe(3);
+    expect(timestampBadges[0].textContent).toContain("00:00");
+    expect(timestampBadges[1].textContent).toContain("00:04");
+    expect(timestampBadges[2].textContent).toContain("00:15");
   });
 
-  it("renders clean transcript search input without decorative badges", () => {
+  it("parses multi-line YouTube copied format (timestamp on line 1, text on line 2)", () => {
+    const multilineSource: SourceWithContent = {
+      ...mockVideoSource,
+      segments: undefined,
+      rawText: "0:00\nIntro to neural networks\n0:04\nAttention is all you need\n0:20\nTransformer architecture",
+    };
+
     render(
       <QueryClientProvider client={queryClient}>
-        <VideoDocumentViewer source={mockVideoSource} />
+        <VideoDocumentViewer source={multilineSource} />
       </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId("transcript-search-input")).toBeTruthy();
-    expect(screen.queryByText("AI Transcription")).toBeNull();
+    expect(screen.getByText("Intro to neural networks")).toBeTruthy();
+    expect(screen.getByText("Attention is all you need")).toBeTruthy();
+    expect(screen.getByText("Transformer architecture")).toBeTruthy();
+
+    const timestampBadges = screen.getAllByTestId("segment-timestamp");
+    expect(timestampBadges.length).toBe(3);
+  });
+
+  it("hides transcript section when video has no transcripts and focuses on video", () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <VideoDocumentViewer source={mockVideoSourceWithoutTranscripts} />
+      </QueryClientProvider>,
+    );
+
+    // Video element should be present
+    expect(screen.getByTestId("video-element")).toBeTruthy();
+
+    // Transcript panel should NOT be rendered
+    expect(screen.queryByTestId("transcript-segment")).toBeNull();
+    expect(screen.queryByText("Transcript", { exact: true })).toBeNull();
+
+    // Add Transcripts button should be available
+    expect(screen.getByTestId("add-transcripts-button")).toBeTruthy();
+  });
+
+  it("opens add transcript dialog when clicking add transcripts button", async () => {
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <VideoDocumentViewer source={mockVideoSourceWithoutTranscripts} />
+      </QueryClientProvider>,
+    );
+
+    const addBtn = screen.getByTestId("add-transcripts-button");
+    await user.click(addBtn);
+
+    expect(screen.getByText("Add Transcripts to Video")).toBeTruthy();
+    expect(screen.getByTestId("add-transcript-textarea")).toBeTruthy();
+    expect(screen.getByTestId("save-transcript-button")).toBeTruthy();
+  });
+
+  it("ignores obsolete mock transcript segments and treats video as having no transcripts", () => {
+    const mockTranscriptSource: SourceWithContent = {
+      ...mockVideoSource,
+      segments: [
+        {
+          id: "mock-1",
+          ordinal: 1,
+          kind: "transcript",
+          content: "Welcome back to the channel. Today we are discussing Fable 5.1.",
+          locator: { startOffsetMs: 0, endOffsetMs: 15000 },
+        },
+        {
+          id: "mock-2",
+          ordinal: 2,
+          kind: "transcript",
+          content: "In the first part of this video, we explore the core concepts and architectural foundations.",
+          locator: { startOffsetMs: 15000, endOffsetMs: 30000 },
+        },
+      ],
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <VideoDocumentViewer source={mockTranscriptSource} />
+      </QueryClientProvider>,
+    );
+
+    // Transcript panel should NOT be rendered
+    expect(screen.queryByTestId("transcript-segment")).toBeNull();
+    expect(screen.queryByText("Transcript", { exact: true })).toBeNull();
+    // Add Transcripts button should be available
+    expect(screen.getByTestId("add-transcripts-button")).toBeTruthy();
+  });
+
+  it("renders both narrow and wide add transcript buttons for responsive viewports", async () => {
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <VideoDocumentViewer source={mockVideoSourceWithoutTranscripts} />
+      </QueryClientProvider>,
+    );
+
+    const wideBtn = screen.getByTestId("add-transcripts-button-wide");
+    expect(wideBtn).toBeTruthy();
+    await user.click(wideBtn);
+
+    expect(screen.getByText("Add Transcripts to Video")).toBeTruthy();
   });
 });

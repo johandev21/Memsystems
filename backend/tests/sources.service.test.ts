@@ -10,6 +10,7 @@ import {
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import { SourceExtractionService } from '../src/modules/sources/source-extraction.service';
+import { SourceVersionService } from '../src/modules/sources/source-version.service';
 import { SourcesService } from '../src/modules/sources/sources.service';
 import { seedNotebook, seedSource, seedUser } from './fixtures';
 import { db } from './db';
@@ -52,6 +53,7 @@ function createSourcesService(
     latestForSource: vi.fn().mockResolvedValue(null),
     reindexNotebook: vi.fn().mockResolvedValue(0),
   };
+  const sourceVersionService = new SourceVersionService(db as any);
   const service = new SourcesService(
     db as any,
     notebooksService,
@@ -59,6 +61,7 @@ function createSourcesService(
     acquisition,
     jobs,
     new SourceExtractionService(),
+    sourceVersionService,
   );
   return { db, service, notebooksService, acquisition, jobs };
 }
@@ -826,5 +829,36 @@ describe.sequential('SourcesService', () => {
       .from(sourceChunks)
       .where(eq(sourceChunks.id, chunk1.id));
     expect(storedChunk1.locator?.speaker).toBe('Alice');
+  });
+
+  it('adds transcripts to a video source and creates timed segments', async () => {
+    const { service } = createSourcesService();
+    const user = await seedUser();
+    const notebook = await seedNotebook(user.id);
+    const source = await seedSource(notebook.id, {
+      kind: 'url',
+      modality: 'video',
+      title: 'YouTube Lecture',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      rawText: '',
+    });
+
+    const transcriptText = `(00:00) Welcome to the course\n(00:05) First chapter on algorithms\n(00:20) Summary and conclusion`;
+    const result = await service.addTranscript(
+      user.id,
+      source.id,
+      transcriptText,
+    );
+
+    expect(result.id).toBe(source.id);
+    expect(result.segments).toHaveLength(3);
+    expect(result.segments[0].content).toBe('Welcome to the course');
+    expect(result.segments[0].locator?.startOffsetMs).toBe(0);
+    expect(result.segments[0].locator?.endOffsetMs).toBe(5000);
+    expect(result.segments[1].content).toBe('First chapter on algorithms');
+    expect(result.segments[1].locator?.startOffsetMs).toBe(5000);
+    expect(result.segments[1].locator?.endOffsetMs).toBe(20000);
+    expect(result.segments[2].content).toBe('Summary and conclusion');
+    expect(result.segments[2].locator?.startOffsetMs).toBe(20000);
   });
 });

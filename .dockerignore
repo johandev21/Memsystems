@@ -21,8 +21,9 @@ frontend/dist
 .tanstack
 
 # Environment files (secrets must never enter the image)
-.env*
-!.env.example
+**/.env*
+!**/.env.example
+!.env.docker.*.example
 
 # Storage & temp (host-only)
 **/dev-storage

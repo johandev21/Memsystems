@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, prefer-const */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import { Injectable, Optional } from '@nestjs/common';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { CaptionFormat, CaptionParserService } from './caption-parser.service';
@@ -232,238 +232,111 @@ export class YouTubeAcquisitionService {
       }
     }
 
-    // Mode 3: Public watch page & timedtext acquisition
-    try {
-      return await this.fetchYouTubeData(videoId);
-    } catch (err) {
-      if (!fallbackOnError) {
-        if (err instanceof BadRequestError) {
-          throw err;
-        }
-        throw new BadRequestError(
-          `Failed to acquire YouTube transcript: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-
-      const fallback = this.generateMockTranscript(
-        videoId,
-        undefined,
-        undefined,
-        undefined,
-      );
-      return {
-        ...fallback,
-        warnings: [
-          `Failed to fetch YouTube data (${err instanceof Error ? err.message : String(err)}), used fallback transcript.`,
-        ],
-      };
-    }
-  }
-
-  private async fetchYouTubeData(
-    videoId: string,
-  ): Promise<YouTubeAcquisitionResult> {
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const response = await fetch(watchUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} when fetching YouTube page`);
-    }
-
-    const html = await response.text();
-
-    // Extract ytInitialPlayerResponse
-    const playerResponseMatch =
-      html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/s) ||
-      html.match(/var\s+ytInitialPlayerResponse\s*=\s*({.+?});/s);
-
-    let playerResponse: any = null;
-    if (playerResponseMatch && playerResponseMatch[1]) {
-      try {
-        playerResponse = JSON.parse(playerResponseMatch[1]);
-      } catch {
-        // Ignore parse error, fallback to regex
-      }
-    }
-
-    const videoDetails = playerResponse?.videoDetails;
-    let title =
-      videoDetails?.title ||
-      this.extractHtmlTag(html, 'title')?.replace(' - YouTube', '').trim() ||
-      `YouTube Video ${videoId}`;
-    const author =
-      videoDetails?.author ||
-      this.extractMetaContent(html, 'author') ||
-      undefined;
-    const durationSeconds = videoDetails?.lengthSeconds
-      ? parseInt(videoDetails.lengthSeconds, 10)
-      : undefined;
-    const durationMs =
-      durationSeconds && !isNaN(durationSeconds)
-        ? durationSeconds * 1000
-        : undefined;
-
-    const captionTracks =
-      playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-
-    if (!Array.isArray(captionTracks) || captionTracks.length === 0) {
-      // Try timedtext API fallback per spec before mock
-      const timedResult = await this.fetchTimedTextCaptions(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      if (timedResult) return timedResult;
-      const mock = this.generateMockTranscript(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      return {
-        ...mock,
-        warnings: [
-          'Captions unavailable via player response and timedtext, used fallback transcript.',
-        ],
-      };
-    }
-
-    // Pick English caption track or first track
-    const track =
-      captionTracks.find(
-        (t: any) => t.languageCode === 'en' || t.languageCode?.startsWith('en'),
-      ) || captionTracks[0];
-
-    if (!track?.baseUrl) {
-      const timedResult = await this.fetchTimedTextCaptions(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      if (timedResult) return timedResult;
-      const mock = this.generateMockTranscript(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      return {
-        ...mock,
-        warnings: ['Caption track URL unavailable, used fallback transcript.'],
-      };
-    }
-
-    // Fetch caption XML or JSON3
-    const captionUrl = track.baseUrl.includes('fmt=')
-      ? track.baseUrl
-      : `${track.baseUrl}&fmt=json3`;
-
-    const captionRes = await fetch(captionUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    });
-
-    if (!captionRes.ok) {
-      const timedResult = await this.fetchTimedTextCaptions(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      if (timedResult) return timedResult;
-      const mock = this.generateMockTranscript(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      return {
-        ...mock,
-        warnings: [
-          `Caption fetch failed (HTTP ${captionRes.status}), used fallback transcript.`,
-        ],
-      };
-    }
-
-    const captionData = await captionRes.text();
-    const segments = this.parseCaptionData(captionData);
-
-    if (segments.length === 0) {
-      const timedResult = await this.fetchTimedTextCaptions(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      if (timedResult) return timedResult;
-      const mock = this.generateMockTranscript(
-        videoId,
-        title,
-        author,
-        durationMs,
-      );
-      return {
-        ...mock,
-        warnings: ['Caption data empty, used fallback transcript.'],
-      };
-    }
-
-    const rawText = segments.map((s) => s.content).join('\n\n');
-
+    // Mode 3: No custom captions or OAuth token provided.
+    // We do NOT scrape captions or generate fake transcripts.
+    // Instead, we fetch video metadata (title, author, duration, thumbnail)
+    // and return an empty segments array so the video viewer is clean.
+    const meta = await this.fetchMetadata(videoId);
     return {
       videoId,
-      title,
-      author,
-      durationMs:
-        durationMs ??
-        (segments.length > 0
-          ? segments[segments.length - 1].endOffsetMs
-          : undefined),
-      segments,
-      rawText,
+      title: meta.title,
+      author: meta.author,
+      durationMs: meta.durationMs,
+      thumbnailUrl: meta.thumbnailUrl,
+      segments: [],
+      rawText: '',
     };
   }
 
-  private async fetchTimedTextCaptions(
-    videoId: string,
-    title: string,
-    author: string | undefined,
-    durationMs: number | undefined,
-  ): Promise<YouTubeAcquisitionResult | null> {
+  async fetchMetadata(videoId: string): Promise<{
+    title: string;
+    author?: string;
+    durationMs?: number;
+    thumbnailUrl?: string;
+  }> {
+    // 1. Try YouTube oEmbed first (fast, public, unauthenticated, never IP-blocked)
     try {
-      const timedUrl = `https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`;
-      const res = await fetch(timedUrl, {
+      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+      const res = await fetch(oembedUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          title?: string;
+          author_name?: string;
+          thumbnail_url?: string;
+        };
+        if (data.title) {
+          return {
+            title: data.title,
+            author: data.author_name,
+            thumbnailUrl:
+              data.thumbnail_url ||
+              `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          };
+        }
+      }
+    } catch {
+      // Fall through to watch page scraping or default
+    }
+
+    // 2. Try watch page title extraction
+    try {
+      const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const response = await fetch(watchUrl, {
         headers: {
           'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
         },
       });
-      if (!res.ok) return null;
-      const xml = await res.text();
-      const segments = this.parseXmlCaptions(xml);
-      if (segments.length === 0) return null;
-      const rawText = segments.map((s) => s.content).join('\n\n');
-      return {
-        videoId,
-        title,
-        author,
-        durationMs: durationMs ?? segments[segments.length - 1].endOffsetMs,
-        segments,
-        rawText,
-      };
+      if (response.ok) {
+        const html = await response.text();
+        const playerResponseMatch =
+          html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/s) ||
+          html.match(/var\s+ytInitialPlayerResponse\s*=\s*({.+?});/s);
+        let playerResponse: any = null;
+        if (playerResponseMatch && playerResponseMatch[1]) {
+          try {
+            playerResponse = JSON.parse(playerResponseMatch[1]);
+          } catch {
+            // ignore
+          }
+        }
+        const videoDetails = playerResponse?.videoDetails;
+        const title =
+          videoDetails?.title ||
+          this.extractHtmlTag(html, 'title')
+            ?.replace(' - YouTube', '')
+            .trim() ||
+          `YouTube Video (${videoId})`;
+        const author =
+          videoDetails?.author ||
+          this.extractMetaContent(html, 'author') ||
+          undefined;
+        const durationSeconds = videoDetails?.lengthSeconds
+          ? parseInt(videoDetails.lengthSeconds, 10)
+          : undefined;
+        const durationMs =
+          durationSeconds && !isNaN(durationSeconds)
+            ? durationSeconds * 1000
+            : undefined;
+
+        return {
+          title,
+          author,
+          durationMs,
+          thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        };
+      }
     } catch {
-      return null;
+      // Fall through
     }
+
+    return {
+      title: `YouTube Video (${videoId})`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    };
   }
 
   parseCaptionData(captionData: string): YouTubeSegment[] {
@@ -476,58 +349,6 @@ export class YouTubeAcquisitionService {
 
   parseXmlCaptions(xmlStr: string): YouTubeSegment[] {
     return this.captionParser.parseXml(xmlStr);
-  }
-
-  generateMockTranscript(
-    videoId: string,
-    title?: string,
-    author?: string,
-    durationMs?: number,
-  ): YouTubeAcquisitionResult {
-    const effectiveTitle = title || `YouTube Video (${videoId})`;
-    const effectiveAuthor = author || 'YouTube Creator';
-    const effectiveDurationMs = durationMs || 60_000;
-
-    const segCount = 4;
-    const interval = Math.floor(effectiveDurationMs / segCount);
-
-    const segments: YouTubeSegment[] = [
-      {
-        content: `Welcome back to the channel. Today we are discussing ${effectiveTitle}.`,
-        startOffsetMs: 0,
-        endOffsetMs: interval,
-        speaker: effectiveAuthor,
-      },
-      {
-        content: `In the first part of this video, we explore the core concepts and architectural foundations.`,
-        startOffsetMs: interval,
-        endOffsetMs: interval * 2,
-        speaker: effectiveAuthor,
-      },
-      {
-        content: `Next, let's take a deep dive into practical implementation steps and key takeaways.`,
-        startOffsetMs: interval * 2,
-        endOffsetMs: interval * 3,
-        speaker: effectiveAuthor,
-      },
-      {
-        content: `Thank you for watching! Be sure to like, subscribe, and leave your questions in the comments below.`,
-        startOffsetMs: interval * 3,
-        endOffsetMs: effectiveDurationMs,
-        speaker: effectiveAuthor,
-      },
-    ];
-
-    const rawText = segments.map((s) => s.content).join('\n\n');
-
-    return {
-      videoId,
-      title: effectiveTitle,
-      author: effectiveAuthor,
-      durationMs: effectiveDurationMs,
-      segments,
-      rawText,
-    };
   }
 
   private extractHtmlTag(html: string, tagName: string): string | null {

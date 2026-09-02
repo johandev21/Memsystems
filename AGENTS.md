@@ -2,6 +2,9 @@
 
 pnpm workspace: `frontend/` (Vite + React 19) + `backend/` (NestJS 11). Turborepo.
 
+Do not test until you modify some actual code or is explicitely requested by the user. 
+And when you do modify some code and add tests just test the stuff you modifed do not run the full tests. 
+
 ## Commands
 
 | Command | Purpose |
