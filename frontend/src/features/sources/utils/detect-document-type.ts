@@ -86,6 +86,8 @@ const CODE_EXTENSIONS = new Set([
 
 const MARKDOWN_EXTENSIONS = new Set(["md", "markdown", "mdown", "mkdn", "mdx"]);
 
+const TEXT_EXTENSIONS = new Set(["txt", "text", "log"]);
+
 export function isYouTubeUrl(url?: string | null): boolean {
   if (!url) return false;
   return /(?:youtube\.com\/(?:watch\?|embed\/|v\/|shorts\/)|youtu\.be\/)/i.test(url);
@@ -138,21 +140,28 @@ export function extractDoi(urlOrId?: string | null): string | null {
 }
 
 export function detectDocumentType(source: SourceWithContent): DocumentType {
-  if (source.modality === "slides") {
+  const modality = (source.modality as string | undefined)?.toLowerCase();
+  if (modality === "slides") {
     return "slides";
   }
-  if (source.modality === "ebook") {
+  if (modality === "ebook") {
     return "epub";
   }
-  if (source.modality === "dataset") {
+  if (modality === "dataset") {
     return "dataset";
+  }
+  if (modality === "plaintext") {
+    return "plaintext";
+  }
+  if (modality === "markdown") {
+    return "markdown";
   }
 
   const titleLower = (source.title || "").toLowerCase();
   const extMatch = titleLower.match(/\.([a-z0-9]+)$/);
   const extension = extMatch ? extMatch[1] : "";
 
-  if (source.modality === "code") {
+  if (modality === "code") {
     if (extension === "ipynb") return "jupyter";
     return "code";
   }
@@ -182,7 +191,7 @@ export function detectDocumentType(source: SourceWithContent): DocumentType {
     return "dataset";
   }
 
-  if (source.modality === "video") {
+  if (modality === "video") {
     return "video";
   }
 
@@ -190,7 +199,7 @@ export function detectDocumentType(source: SourceWithContent): DocumentType {
     return "video";
   }
 
-  if (source.modality === "audio") {
+  if (modality === "audio") {
     return "audio";
   }
 
@@ -198,7 +207,7 @@ export function detectDocumentType(source: SourceWithContent): DocumentType {
     return "audio";
   }
 
-  if (source.modality === "image") {
+  if (modality === "image") {
     return "image";
   }
 
@@ -229,8 +238,12 @@ export function detectDocumentType(source: SourceWithContent): DocumentType {
     return "video";
   }
 
-  if (MARKDOWN_EXTENSIONS.has(extension)) {
+  if (ct === "text/markdown" || ct === "text/x-markdown" || MARKDOWN_EXTENSIONS.has(extension)) {
     return "markdown";
+  }
+
+  if (ct === "text/plain" || TEXT_EXTENSIONS.has(extension)) {
+    return "plaintext";
   }
 
   if (CODE_EXTENSIONS.has(extension)) {

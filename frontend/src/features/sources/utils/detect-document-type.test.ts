@@ -178,5 +178,58 @@ describe("detect-document-type utilities", () => {
       };
       expect(detectDocumentType(sourceXlsx)).toBe("dataset");
     });
+
+    it("detects plaintext for .txt and .log files even if they contain Markdown syntax", () => {
+      const sourceTxt: SourceWithContent = {
+        id: "s-txt",
+        notebookId: "nb-1",
+        kind: "file",
+        title: "notes.txt",
+        url: null,
+        modality: "document",
+        contentType: "text/plain",
+        createdAt: "2026-08-30T00:00:00Z",
+        rawText: "# Heading\n\n- item 1\n- item 2\n\n`code block`",
+        s3Key: "uploads/notes.txt",
+        sha256: null,
+        fileSize: 150,
+      };
+      expect(detectDocumentType(sourceTxt)).toBe("plaintext");
+
+      const sourceLog: SourceWithContent = {
+        id: "s-log",
+        notebookId: "nb-1",
+        kind: "file",
+        title: "app.log",
+        url: null,
+        modality: "document",
+        contentType: "text/plain",
+        createdAt: "2026-08-30T00:00:00Z",
+        rawText: "2026-08-30 [INFO] Server started: #1",
+        s3Key: "uploads/app.log",
+        sha256: null,
+        fileSize: 250,
+      };
+      expect(detectDocumentType(sourceLog)).toBe("plaintext");
+    });
+
+    it("detects markdown for genuine .md and .markdown files", () => {
+      const sourceMd: SourceWithContent = {
+        id: "s-md",
+        notebookId: "nb-1",
+        kind: "file",
+        title: "README.md",
+        url: null,
+        modality: "document",
+        contentType: "text/markdown",
+        createdAt: "2026-08-30T00:00:00Z",
+        rawText: "# Project Readme\n\nWelcome to the project.",
+        s3Key: "uploads/README.md",
+        sha256: null,
+        fileSize: 300,
+      };
+      expect(detectDocumentType(sourceMd)).toBe("markdown");
+    });
   });
 });
+

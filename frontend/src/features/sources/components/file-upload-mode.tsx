@@ -1,7 +1,6 @@
-import { FileText, FileUp, Headphones, ImageIcon, Link as LinkIcon, Loader2, Presentation, Type, Upload, Video } from "lucide-react";
+import { FileUp, Link as LinkIcon, Loader2, Type, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import {

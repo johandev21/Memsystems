@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   AlertCircle,
   AlertTriangle,
@@ -16,7 +17,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
@@ -50,6 +51,7 @@ export function SourcesPanel({
   onSelectSource: (id: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const {
     data: sources,
     isPending,
@@ -109,7 +111,10 @@ export function SourcesPanel({
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2">
+      <div
+        ref={scrollContainerRef}
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
+      >
         <WebSearchComposer notebookId={notebookId} />
 
         {pendingUploads.map((upload) => (
@@ -121,6 +126,7 @@ export function SourcesPanel({
           isPending={isPending}
           isError={isError}
           hasNoSources={hasNoSources}
+          scrollElement={scrollContainerRef.current}
           onSelectSource={onSelectSource}
           onDelete={(source) => setSourceToDelete({ id: source.id, title: source.title })}
           onRetry={(source) => retryMutation.mutate(source.id)}
@@ -160,6 +166,7 @@ function SourcesList({
   isPending,
   isError,
   hasNoSources,
+  scrollElement,
   onSelectSource,
   onDelete,
   onRetry,
@@ -172,6 +179,7 @@ function SourcesList({
   isPending: boolean;
   isError: boolean;
   hasNoSources: boolean;
+  scrollElement?: HTMLDivElement | null;
   onSelectSource: (id: string) => void;
   onDelete: (source: Source) => void;
   onRetry: (source: Source) => void;
@@ -180,6 +188,18 @@ function SourcesList({
   retryingId?: string;
   cancellingId?: string;
 }) {
+  const isVirtualized = (sources?.length ?? 0) > 25 && scrollElement !== undefined;
+
+  const virtualizer = useVirtualizer({
+    count: sources?.length ?? 0,
+    getScrollElement: () => scrollElement ?? null,
+    estimateSize: () => 40,
+    overscan: 5,
+    getItemKey: (idx) => sources?.[idx]?.id ?? idx,
+    enabled: isVirtualized,
+    initialRect: { width: 800, height: 600 },
+  });
+
   if (isPending)
     return <Loader2 className="mx-auto my-10 size-4 animate-spin text-muted-foreground" />;
   if (isError) {
@@ -197,6 +217,47 @@ function SourcesList({
     return (
       <p className="px-2 py-10 text-center text-xs text-muted-foreground">No sources added yet</p>
     );
+
+  if (isVirtualized && sources) {
+    return (
+      <div
+        className="w-full relative min-w-full"
+        style={{ height: `${virtualizer.getTotalSize()}px` }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const source = sources[virtualRow.index];
+          if (!source) return null;
+
+          return (
+            <div
+              key={source.id}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <SourceRow
+                source={source}
+                onClick={() => onSelectSource(source.id)}
+                onDelete={() => onDelete(source)}
+                onRetry={() => onRetry(source)}
+                onCancel={() => onCancel(source)}
+                deleting={deletingId === source.id}
+                retrying={retryingId === source.id}
+                cancelling={cancellingId === source.id}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return sources?.map((source) => (
     <SourceRow
       key={source.id}

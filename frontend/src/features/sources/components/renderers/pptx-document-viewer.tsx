@@ -1,5 +1,6 @@
 import { AlertTriangle, Presentation, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
 import type { SourceSegmentLocator, SourceWithContent } from "../../types";
@@ -22,6 +23,7 @@ interface ParsedSlideSegment {
 export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentViewerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSlideNumber, setActiveSlideNumber] = useState<number | null>(null);
+  const segmentContainerRef = useRef<HTMLDivElement>(null);
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const slideRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -50,6 +52,24 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
 
   const totalSlides = slideNumbers.length > 0 ? Math.max(...slideNumbers) : segments.length;
 
+  const filteredSegments = useMemo(() => {
+    if (!searchQuery.trim()) return segments;
+    const q = searchQuery.toLowerCase();
+    return segments.filter((s) => s.content.toLowerCase().includes(q));
+  }, [segments, searchQuery]);
+
+  const isSegmentsVirtualized = filteredSegments.length > 25;
+
+  const segmentVirtualizer = useVirtualizer({
+    count: filteredSegments.length,
+    getScrollElement: () => segmentContainerRef.current,
+    estimateSize: () => 75,
+    overscan: 5,
+    getItemKey: (index) => filteredSegments[index]?.id ?? index,
+    enabled: isSegmentsVirtualized,
+    initialRect: { width: 800, height: 600 },
+  });
+
   // Initialize active slide
   useEffect(() => {
     if (slideNumbers.length > 0 && activeSlideNumber === null) {
@@ -62,16 +82,20 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
     if (typeof selectedLocator?.slideNumber === "number") {
       const target = selectedLocator.slideNumber;
       setActiveSlideNumber(target);
-      const el = slideRefs.current.get(target) ?? segmentRefs.current.get(target);
+      const el = slideRefs.current.get(target);
       el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [selectedLocator]);
 
-  const filteredSegments = useMemo(() => {
-    if (!searchQuery.trim()) return segments;
-    const q = searchQuery.toLowerCase();
-    return segments.filter((s) => s.content.toLowerCase().includes(q));
-  }, [segments, searchQuery]);
+      if (isSegmentsVirtualized) {
+        const segIdx = filteredSegments.findIndex((s) => s.slideNumber === target);
+        if (segIdx !== -1) {
+          segmentVirtualizer.scrollToIndex(segIdx, { align: "center", behavior: "smooth" });
+        }
+      } else {
+        const segEl = segmentRefs.current.get(target);
+        segEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [selectedLocator, isSegmentsVirtualized, filteredSegments, segmentVirtualizer]);
 
   const currentSlideSegments = useMemo(() => {
     if (activeSlideNumber === null) return filteredSegments;
@@ -268,49 +292,110 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
             <h3 className="text-xs font-semibold text-foreground">Slide Segments</h3>
             <p className="text-[11px] text-muted-foreground">{filteredSegments.length} segments</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-2">
+          <div
+            ref={segmentContainerRef}
+            className="flex-1 overflow-y-auto p-2"
+          >
             {filteredSegments.length === 0 ? (
               <p className="py-8 text-center text-xs text-muted-foreground">
                 No segments match &quot;{searchQuery}&quot;.
               </p>
-            ) : (
-              filteredSegments.map((seg) => {
-                const isActive = activeSlideNumber === seg.slideNumber;
-                const isCitation = selectedLocator?.slideNumber === seg.slideNumber;
-                return (
-                  <button
-                    key={seg.id}
-                    type="button"
-                    data-testid="pptx-segment-item"
-                    data-active={isActive ? "true" : undefined}
-                    onClick={() => handleSegmentClick(seg)}
-                    ref={(el) => {
-                      if (el) segmentRefs.current.set(seg.slideNumber, el as unknown as HTMLDivElement);
-                    }}
-                    className={cn(
-                      "w-full text-left rounded-lg border p-2.5 transition-colors cursor-pointer",
-                      isActive || isCitation
-                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                        : "border-border/60 bg-card hover:bg-muted/50",
-                    )}
-                  >
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0">
-                        Slide {seg.slideNumber} · #{seg.ordinal}
-                      </Badge>
+            ) : isSegmentsVirtualized ? (
+              <div
+                className="relative w-full"
+                style={{ height: `${segmentVirtualizer.getTotalSize()}px` }}
+              >
+                {segmentVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const seg = filteredSegments[virtualRow.index];
+                  if (!seg) return null;
+                  const isActive = activeSlideNumber === seg.slideNumber;
+                  const isCitation = selectedLocator?.slideNumber === seg.slideNumber;
+
+                  return (
+                    <div
+                      key={seg.id}
+                      data-index={virtualRow.index}
+                      ref={segmentVirtualizer.measureElement}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                      className="py-1"
+                    >
+                      <button
+                        type="button"
+                        data-testid="pptx-segment-item"
+                        data-active={isActive ? "true" : undefined}
+                        onClick={() => handleSegmentClick(seg)}
+                        className={cn(
+                          "w-full text-left rounded-lg border p-2.5 transition-colors cursor-pointer",
+                          isActive || isCitation
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border/60 bg-card hover:bg-muted/50",
+                        )}
+                      >
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0">
+                            Slide {seg.slideNumber} · #{seg.ordinal}
+                          </Badge>
+                        </div>
+                        <p className="line-clamp-3 text-xs leading-relaxed text-foreground/80">
+                          {searchQuery ? (
+                            <>
+                              ↳ <HighlightMatches text={seg.content.slice(0, 80)} query={searchQuery} />
+                            </>
+                          ) : (
+                            `↳ ${seg.content.slice(0, 80)}${seg.content.length > 80 ? "…" : ""}`
+                          )}
+                        </p>
+                      </button>
                     </div>
-                    <p className="line-clamp-3 text-xs leading-relaxed text-foreground/80">
-                      {searchQuery ? (
-                        <>
-                          ↳ <HighlightMatches text={seg.content.slice(0, 80)} query={searchQuery} />
-                        </>
-                      ) : (
-                        `↳ ${seg.content.slice(0, 80)}${seg.content.length > 80 ? "…" : ""}`
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredSegments.map((seg) => {
+                  const isActive = activeSlideNumber === seg.slideNumber;
+                  const isCitation = selectedLocator?.slideNumber === seg.slideNumber;
+                  return (
+                    <button
+                      key={seg.id}
+                      type="button"
+                      data-testid="pptx-segment-item"
+                      data-active={isActive ? "true" : undefined}
+                      onClick={() => handleSegmentClick(seg)}
+                      ref={(el) => {
+                        if (el) segmentRefs.current.set(seg.slideNumber, el as unknown as HTMLDivElement);
+                      }}
+                      className={cn(
+                        "w-full text-left rounded-lg border p-2.5 transition-colors cursor-pointer",
+                        isActive || isCitation
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                          : "border-border/60 bg-card hover:bg-muted/50",
                       )}
-                    </p>
-                  </button>
-                );
-              })
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0">
+                          Slide {seg.slideNumber} · #{seg.ordinal}
+                        </Badge>
+                      </div>
+                      <p className="line-clamp-3 text-xs leading-relaxed text-foreground/80">
+                        {searchQuery ? (
+                          <>
+                            ↳ <HighlightMatches text={seg.content.slice(0, 80)} query={searchQuery} />
+                          </>
+                        ) : (
+                          `↳ ${seg.content.slice(0, 80)}${seg.content.length > 80 ? "…" : ""}`
+                        )}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

@@ -31,10 +31,12 @@ import {
 import { cn } from "@/shared/utils/cn";
 import { fetchApi } from "@/shared/api";
 import {
+  ArticleDocumentViewer,
   AudioDocumentViewer,
   detectDocumentType,
   ImageDocumentViewer,
   MarkdownDocumentViewer,
+  PlainTextDocumentViewer,
   PptxDocumentViewer,
   TabularDocumentViewer,
   VideoDocumentViewer,
@@ -413,6 +415,45 @@ function SourceDocument({
             <TabularDocumentViewer
               source={source}
               selectedLocator={selectedLocator}
+              scrollElement={controls.scrollElement}
+            />
+          </div>
+        </div>
+      ) : documentType === "plaintext" ? (
+        <div
+          ref={controls.setScrollElement}
+          className="h-full w-full overflow-y-auto overscroll-contain"
+        >
+          <div
+            className={cn(
+              "w-full flex flex-col",
+              controls.isEffectivelyFullscreen
+                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
+                : "p-3 sm:p-4",
+            )}
+          >
+            <PlainTextDocumentViewer
+              content={source.rawText}
+              selectedLocator={selectedLocator}
+              scrollElement={controls.scrollElement}
+            />
+          </div>
+        </div>
+      ) : documentType === "article" ? (
+        <div
+          ref={controls.setScrollElement}
+          className="h-full w-full overflow-y-auto overscroll-contain"
+        >
+          <div
+            className={cn(
+              "w-full flex flex-col",
+              controls.isEffectivelyFullscreen
+                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
+                : "p-3 sm:p-4",
+            )}
+          >
+            <ArticleDocumentViewer
+              content={source.rawText}
               scrollElement={controls.scrollElement}
             />
           </div>

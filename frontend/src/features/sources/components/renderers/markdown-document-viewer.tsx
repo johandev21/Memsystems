@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "@/features/ai";
@@ -140,65 +140,99 @@ export function MarkdownDocumentViewer({
   scrollElement,
 }: MarkdownDocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const chunks = useMemo(() => splitTextIntoChunks(content || ""), [content]);
+
+  // Find target chunk index based on selected locator
+  const targetChunkIndex = useMemo(() => {
+    if (!selectedLocator || chunks.length === 0) return null;
+
+    if (selectedLocator.symbol) {
+      const slug = createSlug(selectedLocator.symbol);
+      const symLower = selectedLocator.symbol.toLowerCase().trim();
+      const foundIdx = chunks.findIndex((c) => {
+        const cSlug = createSlug(c);
+        return cSlug.includes(slug) || c.toLowerCase().includes(symLower);
+      });
+      if (foundIdx !== -1) return foundIdx;
+    }
+
+    if (typeof selectedLocator.pageNumber === "number" && selectedLocator.pageNumber > 0) {
+      return Math.min(selectedLocator.pageNumber - 1, chunks.length - 1);
+    }
+
+    return null;
+  }, [selectedLocator, chunks]);
+
+  const isVirtualized = chunks.length > 25 && scrollElement !== undefined;
 
   // Handle citation scrolling and highlighting
   useEffect(() => {
-    if (!selectedLocator) return;
+    if (targetChunkIndex === null) return;
 
-    const root = scrollElement || containerRef.current;
-    if (!root) return;
+    setHighlightedIndex(targetChunkIndex);
 
-    // 1. Try finding heading by symbol
-    let targetElement: HTMLElement | null = null;
-    if (selectedLocator.symbol) {
-      const slug = createSlug(selectedLocator.symbol);
-      targetElement =
-        root.querySelector(`#heading-${slug}`) ||
-        root.querySelector(`[id*="${slug}"]`);
-    }
-
-    // 2. If not found by symbol, search text paragraphs
-    if (!targetElement && selectedLocator.pageNumber) {
-      const paragraphs = root.querySelectorAll("p, h1, h2, h3, h4, blockquote");
-      const targetIdx = Math.min(selectedLocator.pageNumber - 1, paragraphs.length - 1);
-      if (targetIdx >= 0 && paragraphs[targetIdx]) {
-        targetElement = paragraphs[targetIdx] as HTMLElement;
+    if (!isVirtualized) {
+      const root = scrollElement || containerRef.current;
+      if (root) {
+        let targetElement: HTMLElement | null = null;
+        if (selectedLocator?.symbol) {
+          const slug = createSlug(selectedLocator.symbol);
+          targetElement =
+            root.querySelector(`#heading-${slug}`) ||
+            root.querySelector(`[id*="${slug}"]`);
+        }
+        if (!targetElement && selectedLocator?.pageNumber) {
+          const paragraphs = root.querySelectorAll("p, h1, h2, h3, h4, blockquote");
+          const targetIdx = Math.min(selectedLocator.pageNumber - 1, paragraphs.length - 1);
+          if (targetIdx >= 0 && paragraphs[targetIdx]) {
+            targetElement = paragraphs[targetIdx] as HTMLElement;
+          }
+        }
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+          targetElement.classList.add(
+            "bg-primary/15",
+            "ring-2",
+            "ring-primary/30",
+            "rounded-md",
+            "p-1",
+            "transition-all",
+            "duration-500",
+          );
+          const timer = setTimeout(() => {
+            targetElement?.classList.remove(
+              "bg-primary/15",
+              "ring-2",
+              "ring-primary/30",
+              "rounded-md",
+              "p-1",
+            );
+          }, 3000);
+          return () => clearTimeout(timer);
+        }
       }
     }
 
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
-      targetElement.classList.add(
-        "bg-primary/15",
-        "ring-2",
-        "ring-primary/30",
-        "rounded-md",
-        "p-1",
-        "transition-all",
-        "duration-500",
-      );
-      const timer = setTimeout(() => {
-        targetElement?.classList.remove(
-          "bg-primary/15",
-          "ring-2",
-          "ring-primary/30",
-          "rounded-md",
-          "p-1",
-        );
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedLocator, scrollElement]);
+    const timer = setTimeout(() => {
+      setHighlightedIndex(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [targetChunkIndex, isVirtualized, selectedLocator, scrollElement]);
 
   if (!content?.trim()) {
     return <EmptyMarkdownState />;
   }
 
-  if (chunks.length > 25 && scrollElement !== undefined) {
+  if (isVirtualized) {
     return (
       <div ref={containerRef} className="w-full">
-        <VirtualizedMarkdownDocument chunks={chunks} scrollElement={scrollElement} />
+        <VirtualizedMarkdownDocument
+          chunks={chunks}
+          scrollElement={scrollElement}
+          targetIndex={targetChunkIndex}
+          highlightedIndex={highlightedIndex}
+        />
       </div>
     );
   }
@@ -221,9 +255,13 @@ function EmptyMarkdownState() {
 function VirtualizedMarkdownDocument({
   chunks,
   scrollElement,
+  targetIndex,
+  highlightedIndex,
 }: {
   chunks: string[];
   scrollElement: HTMLDivElement | null;
+  targetIndex?: number | null;
+  highlightedIndex?: number | null;
 }) {
   return (
     <MarkdownDocumentShell>
@@ -232,8 +270,12 @@ function VirtualizedMarkdownDocument({
         scrollElement={scrollElement}
         estimateSize={() => 80}
         overscan={5}
-        getItemKey={(_, index) => index}
-        renderItem={(chunk) => <MarkdownChunk chunk={chunk} />}
+        targetIndex={targetIndex}
+        highlightedIndex={highlightedIndex}
+        getItemKey={(chunk, index) => `md-chunk-${index}-${chunk.slice(0, 20).replace(/[^a-z0-9]/gi, "_")}`}
+        renderItem={(chunk, index, isHighlighted) => (
+          <MarkdownChunk key={index} chunk={chunk} isHighlighted={isHighlighted} />
+        )}
       />
     </MarkdownDocumentShell>
   );
@@ -247,9 +289,24 @@ function StaticMarkdownDocument({ content }: { content: string }) {
   );
 }
 
-function MarkdownChunk({ chunk }: { chunk: string }) {
-  return <MarkdownRenderer components={markdownComponents}>{chunk}</MarkdownRenderer>;
-}
+const MarkdownChunk = memo(function MarkdownChunk({
+  chunk,
+  isHighlighted,
+}: {
+  chunk: string;
+  isHighlighted?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-md p-1 transition-all duration-300",
+        isHighlighted && "bg-primary/15 ring-2 ring-primary/30",
+      )}
+    >
+      <MarkdownRenderer components={markdownComponents}>{chunk}</MarkdownRenderer>
+    </div>
+  );
+});
 
 function MarkdownDocumentShell({ children }: { children: ReactNode }) {
   return (
@@ -258,3 +315,4 @@ function MarkdownDocumentShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
+

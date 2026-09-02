@@ -547,7 +547,7 @@ function QuizQuestionStepper({
 // -----------------------------------------------------------------------------
 
 export function QuizView({ content }: QuizViewProps) {
-  const questions = content?.questions || [];
+  const questions = useMemo(() => content?.questions || [], [content?.questions]);
   const totalQuestions = questions.length;
 
   const [viewMode, setViewMode] = useState<ViewMode>("active");

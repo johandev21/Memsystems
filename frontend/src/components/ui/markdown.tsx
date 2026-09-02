@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
@@ -46,6 +46,16 @@ export function MarkdownRenderer({
   trailingContent,
   ...props
 }: MarkdownRendererProps) {
+  const effectiveRemarkPlugins = useMemo(
+    () => (remarkPlugins?.length ? [...defaultRemarkPlugins, ...remarkPlugins] : defaultRemarkPlugins),
+    [remarkPlugins],
+  );
+
+  const effectiveRehypePlugins = useMemo(
+    () => (rehypePlugins?.length ? [...defaultRehypePlugins, ...rehypePlugins] : defaultRehypePlugins),
+    [rehypePlugins],
+  );
+
   if (isStreaming) {
     return (
       <div className={className}>
@@ -59,12 +69,8 @@ export function MarkdownRenderer({
     <ReactMarkdown
       {...props}
       components={components}
-      remarkPlugins={
-        remarkPlugins?.length ? [...defaultRemarkPlugins, ...remarkPlugins] : defaultRemarkPlugins
-      }
-      rehypePlugins={
-        rehypePlugins?.length ? [...defaultRehypePlugins, ...rehypePlugins] : defaultRehypePlugins
-      }
+      remarkPlugins={effectiveRemarkPlugins}
+      rehypePlugins={effectiveRehypePlugins}
     >
       {children}
     </ReactMarkdown>
@@ -79,3 +85,4 @@ export function MarkdownRenderer({
     markdown
   );
 }
+

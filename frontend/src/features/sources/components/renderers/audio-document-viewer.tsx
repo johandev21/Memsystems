@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   AlertTriangle,
   Check,
@@ -172,38 +173,6 @@ export function AudioDocumentViewer({
     }
   }, [currentTime, segments, activeSegmentId]);
 
-  // Auto-scroll to active segment if playing
-  useEffect(() => {
-    if (!activeSegmentId) return;
-    const el = segmentElementsRef.current.get(activeSegmentId);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [activeSegmentId]);
-
-  // Handle citation jumping
-  useEffect(() => {
-    if (typeof selectedLocator?.startOffsetMs !== "number") return;
-    const targetSeconds = selectedLocator.startOffsetMs / 1000;
-
-    if (audioRef.current) {
-      audioRef.current.currentTime = targetSeconds;
-      setCurrentTime(targetSeconds);
-      audioRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    }
-
-    // Match segment
-    const matched = segments.find(
-      (s) => Math.abs(s.startOffsetMs - (selectedLocator.startOffsetMs ?? 0)) < 1000,
-    );
-    if (matched) {
-      setActiveSegmentId(matched.id);
-      const el = segmentElementsRef.current.get(matched.id);
-      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [selectedLocator, segments]);
-
   // Audio element event handlers
   const handleTimeUpdate = () => {
     if (audioRef.current && !isSeeking) {
@@ -373,6 +342,62 @@ export function AudioDocumentViewer({
         s.speaker?.toLowerCase().includes(queryLower),
     );
   }, [segments, searchQuery]);
+
+  const isVirtualized = filteredSegments.length > 30;
+
+  const virtualizer = useVirtualizer({
+    count: filteredSegments.length,
+    getScrollElement: () => transcriptContainerRef.current,
+    estimateSize: () => 90,
+    overscan: 6,
+    getItemKey: (index) => filteredSegments[index]?.id ?? index,
+    enabled: isVirtualized,
+    initialRect: { width: 800, height: 600 },
+  });
+
+  // Auto-scroll to active segment if playing
+  useEffect(() => {
+    if (!activeSegmentId) return;
+    if (isVirtualized) {
+      const idx = filteredSegments.findIndex((s) => s.id === activeSegmentId);
+      if (idx !== -1) {
+        virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
+      }
+    } else {
+      const el = segmentElementsRef.current.get(activeSegmentId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [activeSegmentId, isVirtualized, filteredSegments, virtualizer]);
+
+  // Handle citation jumping
+  useEffect(() => {
+    if (typeof selectedLocator?.startOffsetMs !== "number") return;
+    const targetSeconds = selectedLocator.startOffsetMs / 1000;
+
+    if (audioRef.current) {
+      audioRef.current.currentTime = targetSeconds;
+      setCurrentTime(targetSeconds);
+      audioRef.current.play().catch(() => {});
+      setIsPlaying(true);
+    }
+
+    // Match segment
+    const matchedIdx = filteredSegments.findIndex(
+      (s) => Math.abs(s.startOffsetMs - (selectedLocator.startOffsetMs ?? 0)) < 1000,
+    );
+    if (matchedIdx !== -1) {
+      const matched = filteredSegments[matchedIdx];
+      setActiveSegmentId(matched.id);
+      if (isVirtualized) {
+        virtualizer.scrollToIndex(matchedIdx, { align: "center", behavior: "smooth" });
+      } else {
+        const el = segmentElementsRef.current.get(matched.id);
+        el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [selectedLocator, filteredSegments, isVirtualized, virtualizer]);
 
   // Unique speaker color mapper
   const getSpeakerColor = useCallback((speaker?: string) => {
@@ -602,15 +627,100 @@ export function AudioDocumentViewer({
         ref={transcriptContainerRef}
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6"
       >
-        <div className="max-w-4xl mx-auto space-y-3">
-          {filteredSegments.length === 0 ? (
-            <div className="py-16 text-center text-xs text-muted-foreground">
-              {searchQuery
-                ? `No transcript segments match "${searchQuery}".`
-                : "No transcript segments available for this audio file."}
-            </div>
-          ) : (
-            filteredSegments.map((segment) => {
+        {filteredSegments.length === 0 ? (
+          <div className="py-16 text-center text-xs text-muted-foreground">
+            {searchQuery
+              ? `No transcript segments match "${searchQuery}".`
+              : "No transcript segments available for this audio file."}
+          </div>
+        ) : isVirtualized ? (
+          <div
+            className="max-w-4xl mx-auto relative w-full"
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const segment = filteredSegments[virtualRow.index];
+              if (!segment) return null;
+              const isActive = activeSegmentId === segment.id;
+              const isSelectedCitation =
+                typeof selectedLocator?.startOffsetMs === "number" &&
+                Math.abs(segment.startOffsetMs - selectedLocator.startOffsetMs) < 1000;
+
+              return (
+                <div
+                  key={segment.id}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="py-1.5"
+                >
+                  <div
+                    data-testid="transcript-segment"
+                    data-active={isActive ? "true" : undefined}
+                    onClick={() => handleSegmentClick(segment)}
+                    className={cn(
+                      "group rounded-xl border p-3.5 transition-all cursor-pointer",
+                      isActive || isSelectedCitation
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30 shadow-xs"
+                        : "border-border/60 bg-card/40 hover:border-border hover:bg-card/70",
+                    )}
+                  >
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          data-testid="segment-timestamp"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSegmentClick(segment);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                          title="Seek audio to this timestamp"
+                        >
+                          [{formatTime(segment.startOffsetMs / 1000)}]
+                        </button>
+                        {segment.speaker && (
+                          <button
+                            type="button"
+                            data-testid="speaker-badge"
+                            onClick={(e) => handleStartRenameSpeaker(segment.speaker!, e)}
+                            className={cn(
+                              "group/speaker inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer",
+                              getSpeakerColor(segment.speaker),
+                            )}
+                            title="Click to rename speaker"
+                          >
+                            <User className="size-2.5" />
+                            <span>{segment.speaker}</span>
+                            <Edit2 className="size-2.5 opacity-0 group-hover/speaker:opacity-100 transition-opacity ml-0.5" />
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground">
+                        #{segment.ordinal}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-foreground/90 select-text">
+                      {searchQuery ? (
+                        <HighlightMatches text={segment.content} query={searchQuery} />
+                      ) : (
+                        segment.content
+                      )}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="max-w-4xl mx-auto space-y-3">
+            {filteredSegments.map((segment) => {
               const isActive = activeSegmentId === segment.id;
               const isSelectedCitation =
                 typeof selectedLocator?.startOffsetMs === "number" &&
@@ -728,9 +838,9 @@ export function AudioDocumentViewer({
                   </p>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
