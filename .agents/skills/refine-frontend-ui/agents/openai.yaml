@@ -1,4 +1,0 @@
-interface:
-  display_name: "Refine Frontend UI"
-  short_description: "Polish minimal interfaces and interactions"
-  default_prompt: "Use $refine-frontend-ui to inspect this interface, propose a restrained design direction, and refine it through the existing design system."
