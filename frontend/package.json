@@ -30,7 +30,6 @@
     "@tanstack/react-router": "^1.170.18",
     "@tanstack/react-virtual": "^3.14.8",
     "@tanstack/router-plugin": "^1.168.23",
-    "@thesvg/react": "^3.2.15",
     "@xyflow/react": "^12.11.1",
     "ai": "^6.0.206",
     "ansi-to-react": "^6.2.6",

@@ -1,11 +1,11 @@
-export { useConnectionStatus } from "./hooks/use-connection-status";
-export type { ConnectionStatus, ProviderStatus } from "./hooks/use-connection-status";
+export { isConnectionUsable, useConnectionStatus } from "./hooks/use-connection-status";
+export type { ConnectionStatus, GatewayKeyStatus } from "./hooks/use-connection-status";
 export * from "./components/code-block";
 export * from "./components/conversation";
 export * from "./components/message";
 export * from "./components/markdown-code-block";
 export * from "./components/model-selector";
-export * from "./components/openai-key-prompt";
+export * from "./components/gateway-key-prompt";
 export * from "./components/prompt-input";
 export * from "./components/reasoning";
 export * from "./components/shimmer";

@@ -12,7 +12,7 @@ vi.mock("@/features/ai", async (importOriginal) => {
   return {
     ...actual,
     useConnectionStatus: () => ({ data: { ok: true } }),
-    OpenAIKeyPrompt: () => <div>OpenAI Key Prompt</div>,
+    GatewayKeyPrompt: () => <div>Gateway Key Prompt</div>,
   };
 });
 

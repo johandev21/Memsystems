@@ -2,17 +2,23 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   convertToModelMessages,
   generateText,
-  stepCountIs,
+  isStepCount,
   streamText,
 } from 'ai';
 import { BadRequestError } from '../../common/errors/domain-error';
-import { ConnectionService } from './connection.service';
-import { createProvider } from './providers/registry';
 import {
-  providerIdFromModel,
-  PROVIDER_NAMES,
-  PROVIDER_MODELS,
-} from './providers/model-catalog';
+  EntitlementError,
+  RateLimitedError,
+} from '../../common/errors/domain-error';
+import { ConnectionService } from './connection.service';
+import { ModelSyncService } from './model-sync.service';
+import {
+  buildGatewayOptions,
+  createGatewayProvider,
+  type GatewayRequestOptions,
+} from './providers/gateway.provider';
+import { classifyGatewayError } from './providers/gateway-errors';
+import { resolveModelId } from './providers/model-catalog';
 import type { Provider } from './providers/provider';
 import { UserSettingsService } from './user-settings.service';
 
@@ -28,6 +34,23 @@ export interface WebSearchResult {
   query: string;
   summary: string | null;
   sources: WebSearchSource[];
+}
+
+function toSearchDomainError(error: unknown): Error {
+  const classified = classifyGatewayError(error);
+  if (classified.kind === 'rate_limited') {
+    return new RateLimitedError(
+      'The AI service is busy right now. Please retry in a moment.',
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (classified.kind === 'entitlement') {
+    return new EntitlementError(
+      'This model is not available on your plan. Try another model or add credits.',
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 const WEB_SEARCH_PROMPT = `You are a research assistant helping a student find high-quality learning sources.
@@ -66,34 +89,54 @@ export class AiService {
   constructor(
     private readonly userSettingsService: UserSettingsService,
     private readonly connectionService: ConnectionService,
+    private readonly modelSyncService: ModelSyncService,
   ) {}
 
   async getProviderForModel(
     modelId: string,
     userId?: string,
   ): Promise<Provider> {
-    const providerId = providerIdFromModel(modelId);
-    if (!providerId) {
+    if (!userId) {
+      throw new BadRequestError('User context required to use AI models.');
+    }
+    const resolved = resolveModelId(modelId);
+    const catalog = this.modelSyncService.getModels();
+    if (!catalog.some((model) => model.id === resolved)) {
       throw new BadRequestError(`Model ${modelId} is not supported.`);
     }
-    if (!PROVIDER_MODELS[providerId].some((model) => model.id === modelId)) {
-      throw new BadRequestError(`Model ${modelId} is not supported.`);
-    }
-    if (userId) {
-      const apiKey = await this.userSettingsService.getUserApiKey(
-        userId,
-        providerId,
+    if (!(await this.hasEffectiveAuth(userId))) {
+      throw new BadRequestError(
+        'AI Gateway is not connected. Add your AI Gateway key in Settings.',
       );
-      if (!apiKey) {
-        throw new BadRequestError(
-          `${PROVIDER_NAMES[providerId]} API key not configured. Please add it in the Connection settings.`,
-        );
-      }
-      return createProvider(providerId, apiKey);
     }
-    throw new BadRequestError(
-      `User context required for ${PROVIDER_NAMES[providerId]} provider.`,
-    );
+    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+    if (!apiKey) {
+      throw new BadRequestError(
+        'AI Gateway is not connected. Add your AI Gateway key in Settings.',
+      );
+    }
+    return createGatewayProvider({
+      apiKey,
+      getModels: () => this.modelSyncService.getModels(),
+    });
+  }
+
+  /**
+   * Per-request gateway options for a model call: the user id for spend
+   * attribution plus optional server-side fallbacks. Auth travels with the
+   * provider instance (the user's own gateway key), not the options bag.
+   */
+  getGatewayRequestOptions(
+    _modelId: string,
+    userId: string,
+    options?: { fallbacks?: string[] },
+  ): GatewayRequestOptions {
+    return buildGatewayOptions(userId, options?.fallbacks);
+  }
+
+  private async hasEffectiveAuth(userId: string): Promise<boolean> {
+    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+    return Boolean(apiKey);
   }
 
   async listModels(userId: string) {
@@ -111,11 +154,12 @@ export class AiService {
     const provider = await this.getProviderForModel(modelId, userId);
     if (!provider.supportsWebSearch(modelId)) {
       throw new BadRequestError(
-        `Model ${modelId} does not support web search. Try a model that supports it (e.g. GPT-5 Mini).`,
+        `Model ${modelId} does not support web search. Try a different chat model.`,
       );
     }
 
     const model = provider.createModel(modelId);
+    const requestOptions = this.getGatewayRequestOptions(modelId, userId);
     const webSearchTool = provider.createWebSearchTool?.();
     if (!webSearchTool) {
       throw new BadRequestError(
@@ -124,6 +168,7 @@ export class AiService {
     }
 
     let result: SearchGenerationResult;
+    let gatewayGenerationId: string | undefined;
     try {
       result = await generateText({
         model,
@@ -132,7 +177,14 @@ export class AiService {
           web_search: webSearchTool,
         },
         toolChoice: { type: 'tool', toolName: 'web_search' },
-        stopWhen: stepCountIs(2),
+        stopWhen: isStepCount(2),
+        ...requestOptions,
+        onLanguageModelCallEnd: ({ providerMetadata }) => {
+          const generationId = providerMetadata?.gateway?.generationId;
+          if (typeof generationId === 'string' && generationId) {
+            gatewayGenerationId = generationId;
+          }
+        },
       });
     } catch (err) {
       this.logger.error('generateText failed during web search', {
@@ -140,11 +192,12 @@ export class AiService {
         query,
         error: err instanceof Error ? (err.stack ?? err.message) : String(err),
       });
-      throw err;
+      throw toSearchDomainError(err);
     }
 
     this.logger.log('generateText returned', {
       modelId,
+      gatewayGenerationId,
       finishReason: result.finishReason,
       textLength: result.text?.length ?? 0,
       textPreview: (result.text ?? '').slice(0, 500),
@@ -187,8 +240,22 @@ export class AiService {
     await this.connectionService.requireConnected(userId, modelId);
     const provider = await this.getProviderForModel(modelId, userId);
     const model = provider.createModel(modelId);
+    const requestOptions = this.getGatewayRequestOptions(modelId, userId);
     const coreMessages = await convertToModelMessages(messages);
-    return streamText({ model, messages: coreMessages });
+    return streamText({
+      model,
+      messages: coreMessages,
+      ...requestOptions,
+      onLanguageModelCallEnd: ({ providerMetadata }) => {
+        const generationId = providerMetadata?.gateway?.generationId;
+        if (typeof generationId === 'string' && generationId) {
+          this.logger.debug('gateway generation completed', {
+            modelId,
+            generationId,
+          });
+        }
+      },
+    });
   }
 }
 
@@ -231,19 +298,45 @@ export function parseSearchJson(text: string): ParsedSearchOutput | null {
 function extractWebSearchUrls(
   toolResults: readonly ToolResultLike[],
 ): string[] {
-  const urls: string[] = [];
+  return extractWebSearchResults(toolResults).map((result) => result.url);
+}
+
+function extractWebSearchResults(
+  toolResults: readonly ToolResultLike[],
+): Array<{ url: string; title?: string }> {
+  const results: Array<{ url: string; title?: string }> = [];
   for (const tr of toolResults) {
     if (tr.toolName !== 'web_search' || !tr.output) continue;
     const output = tr.output as {
       action?: unknown;
       sources?: { type?: string; url?: string }[];
+      results?: Array<{ url?: string; title?: string }>;
     };
-    const sources = output.sources ?? [];
-    for (const s of sources) {
-      if (s?.type === 'url' && s.url) urls.push(s.url);
+    // Legacy OpenAI web_search shape.
+    for (const s of output.sources ?? []) {
+      if (s?.type === 'url' && s.url) results.push({ url: s.url });
+    }
+    // Gateway Perplexity search shape: { results: [{ url, title, ... }] }.
+    // Parsed defensively — unknown shapes are ignored, never trusted blindly.
+    const perplexityResults = output.results;
+    if (Array.isArray(perplexityResults)) {
+      for (const r of perplexityResults) {
+        if (
+          r &&
+          typeof r === 'object' &&
+          'url' in r &&
+          typeof (r as { url: unknown }).url === 'string'
+        ) {
+          const title =
+            'title' in r && typeof (r as { title: unknown }).title === 'string'
+              ? ((r as { title: string }).title ?? undefined)
+              : undefined;
+          results.push({ url: (r as { url: string }).url, title });
+        }
+      }
     }
   }
-  return urls;
+  return results;
 }
 
 function isBlockedDomain(url: string): boolean {
@@ -321,8 +414,10 @@ export function reconcileSearchSources(
       if (source.sourceType !== 'url' || !source.url) continue;
       addSource(source.url, source.title);
     }
-    for (const url of extractWebSearchUrls(result.toolResults ?? [])) {
-      addSource(url);
+    for (const { url, title } of extractWebSearchResults(
+      result.toolResults ?? [],
+    )) {
+      addSource(url, title);
     }
   } else {
     // Only keep sources the model explicitly chose (it curates for quality).

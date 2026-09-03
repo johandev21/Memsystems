@@ -1,10 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
+import { generateText } from 'ai';
 import { BadRequestError } from '../src/common/errors/domain-error';
 import {
   AiService,
   parseSearchJson,
   reconcileSearchSources,
 } from '../src/modules/ai/ai.service';
+
+vi.mock('ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('ai')>();
+  return { ...actual, generateText: vi.fn() };
+});
+
+const mockGenerateText = vi.mocked(generateText);
 
 describe('AiService.searchWeb', () => {
   it('rejects models that do not support web search', async () => {
@@ -13,6 +21,7 @@ describe('AiService.searchWeb', () => {
       {
         requireConnected: vi.fn().mockResolvedValue(undefined),
       } as any,
+      { getModels: () => [] } as any,
     );
     const provider = {
       id: 'openai',
@@ -23,9 +32,7 @@ describe('AiService.searchWeb', () => {
       createWebSearchTool: vi.fn(),
       health: vi.fn(),
     };
-    vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue(
-      provider as any,
-    );
+    vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue(provider);
 
     await expect(
       aiService.searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1'),
@@ -33,6 +40,141 @@ describe('AiService.searchWeb', () => {
     await expect(
       aiService.searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1'),
     ).rejects.toThrow(/does not support web search/);
+  });
+
+  it('returns curated sources and captures the gateway generation id', async () => {    const aiService = new AiService(
+      {} as any,
+      {
+        requireConnected: vi.fn().mockResolvedValue(undefined),
+      } as any,
+      { getModels: () => [] } as any,
+    );
+    const provider = {
+      id: 'gateway',
+      name: 'AI Gateway',
+      listModels: vi.fn(),
+      createModel: vi.fn(() => ({})),
+      supportsWebSearch: vi.fn().mockReturnValue(true),
+      createWebSearchTool: vi.fn(() => ({})),
+      health: vi.fn(),
+    };
+    vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue(
+      provider as any,
+    );
+    vi.spyOn(aiService, 'getGatewayRequestOptions').mockResolvedValue({
+      providerOptions: { gateway: {} },
+    });
+
+    let capturedOptions: Record<string, unknown> = {};
+    mockGenerateText.mockImplementation(async (options: any) => {
+      capturedOptions = options;
+      options.onLanguageModelCallEnd?.({
+        providerMetadata: { gateway: { generationId: 'gen_search1' } },
+      });
+      return {
+        text: JSON.stringify({
+          summary: 'Good overviews.',
+          sources: [
+            {
+              url: 'https://plato.stanford.edu/entries/epistemology/',
+              title: 'Epistemology',
+              description: 'In-depth entry.',
+            },
+          ],
+        }),
+        toolResults: [
+          {
+            toolName: 'web_search',
+            output: {
+              results: [
+                {
+                  title: 'Epistemology',
+                  url: 'https://plato.stanford.edu/entries/epistemology/',
+                },
+              ],
+            },
+          },
+        ],
+        sources: [],
+        finishReason: 'stop',
+      } as any;
+    });
+
+    const result = await aiService.searchWeb(
+      'epistemology',
+      'openai/gpt-5.6-sol',
+      'user-1',
+    );
+
+    expect(result.summary).toBe('Good overviews.');
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0].url).toBe(
+      'https://plato.stanford.edu/entries/epistemology/',
+    );
+    expect(capturedOptions.toolChoice).toEqual({
+      type: 'tool',
+      toolName: 'web_search',
+    });
+  });
+
+  it('maps gateway rate limits to a 429 domain error', async () => {
+    const aiService = new AiService(
+      {} as any,
+      {
+        requireConnected: vi.fn().mockResolvedValue(undefined),
+      } as any,
+      { getModels: () => [] } as any,
+    );
+    vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue({
+      createModel: vi.fn(() => ({})),
+      supportsWebSearch: vi.fn().mockReturnValue(true),
+      createWebSearchTool: vi.fn(() => ({})),
+    } as any);
+    vi.spyOn(aiService, 'getGatewayRequestOptions').mockResolvedValue({
+      providerOptions: { gateway: {} },
+    });
+    mockGenerateText.mockRejectedValue(
+      Object.assign(new Error('requests are rate-limited'), {
+        name: 'GatewayRateLimitError',
+        statusCode: 429,
+      }),
+    );
+
+    const failure = await aiService
+      .searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1')
+      .catch((error) => error);
+    expect(failure?.status).toBe(429);
+    expect(failure?.code).toBe('gateway_rate_limited');
+  });
+
+  it('maps gateway entitlement gaps to a 403 domain error', async () => {
+    const aiService = new AiService(
+      {} as any,
+      {
+        requireConnected: vi.fn().mockResolvedValue(undefined),
+      } as any,
+      { getModels: () => [] } as any,
+    );
+    vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue({
+      createModel: vi.fn(() => ({})),
+      supportsWebSearch: vi.fn().mockReturnValue(true),
+      createWebSearchTool: vi.fn(() => ({})),
+    } as any);
+    vi.spyOn(aiService, 'getGatewayRequestOptions').mockResolvedValue({
+      providerOptions: { gateway: {} },
+    });
+    mockGenerateText.mockRejectedValue(
+      Object.assign(new Error('Free tier users do not have access'), {
+        name: 'GatewayForbiddenError',
+        statusCode: 403,
+      }),
+    );
+
+    const failure = await aiService
+      .searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1')
+      .catch((error) => error);
+    expect(failure?.status).toBe(403);
+    expect(failure?.code).toBe('gateway_entitlement');
   });
 });
 
@@ -145,5 +287,53 @@ describe('reconcileSearchSources', () => {
         'https://en.wikipedia.org/wiki/Epistemology',
       ]),
     );
+  });
+
+  it('extracts real URLs from gateway Perplexity tool output', () => {
+    const perplexityResult = {
+      sources: [],
+      toolResults: [
+        {
+          toolName: 'web_search',
+          output: {
+            id: 'search-1',
+            results: [
+              {
+                title: 'Epistemology (Stanford Encyclopedia of Philosophy)',
+                url: 'https://plato.stanford.edu/entries/epistemology/',
+                snippet: 'Epistemology is the study of knowledge.',
+              },
+              {
+                title: 'Forum thread',
+                url: 'https://www.reddit.com/r/philosophy/',
+                snippet: 'Discussion.',
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const sources = reconcileSearchSources(perplexityResult, null);
+    // Blocked Reddit result is dropped; Stanford survives with tool title.
+    expect(sources).toHaveLength(1);
+    expect(sources[0].url).toBe(
+      'https://plato.stanford.edu/entries/epistemology/',
+    );
+    expect(sources[0].title).toBe(
+      'Epistemology (Stanford Encyclopedia of Philosophy)',
+    );
+  });
+
+  it('ignores gateway search error payloads without results', () => {
+    const errorResult = {
+      sources: [],
+      toolResults: [
+        {
+          toolName: 'web_search',
+          output: { error: 'timeout', message: 'Search timed out' },
+        },
+      ],
+    };
+    expect(reconcileSearchSources(errorResult, null)).toEqual([]);
   });
 });

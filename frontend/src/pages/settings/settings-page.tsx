@@ -1,33 +1,20 @@
-import { Anthropic, Deepseek, GoogleGemini, Kimi, Openai } from "@thesvg/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   Check,
   CheckCircle2,
-  Clipboard,
   ExternalLink,
   Eye,
   EyeOff,
   KeyRound,
   RefreshCw,
-  ShieldCheck,
-  Trash2,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
 import { SchemeSelector, ThemeGrid } from "@/features/theme";
 import { AppHeader } from "@/components/layout";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { fetchApi } from "@/shared/api";
 
@@ -35,75 +22,14 @@ export function SettingsPage() {
   return <SettingsContent />;
 }
 
-const MASKED_KEY = "••••••••••••••••••••••••••••••••";
-
-const providerConfig = [
-  {
-    id: "openai",
-    name: "OpenAI",
-    icon: Openai,
-    placeholder: "sk-proj-...",
-    keyUrl: "https://platform.openai.com/api-keys",
-  },
-  {
-    id: "deepseek",
-    name: "DeepSeek",
-    icon: Deepseek,
-    placeholder: "sk-...",
-    keyUrl: "https://platform.deepseek.com/api_keys",
-  },
-  {
-    id: "anthropic",
-    name: "Anthropic",
-    icon: Anthropic,
-    placeholder: "sk-ant-...",
-    keyUrl: "https://console.anthropic.com/settings/keys",
-  },
-  {
-    id: "google",
-    name: "Google Gemini",
-    icon: GoogleGemini,
-    placeholder: "AIza...",
-    keyUrl: "https://aistudio.google.com/app/apikey",
-  },
-  {
-    id: "kimi",
-    name: "Kimi",
-    icon: Kimi,
-    placeholder: "sk-...",
-    keyUrl: "https://platform.moonshot.ai/console/api-keys",
-  },
-] as const;
-
-type Provider = (typeof providerConfig)[number];
-
-function keyLooksValid(provider: Provider, value: string) {
-  if (!value || value === MASKED_KEY) return true;
-  if (provider.id === "anthropic") return value.startsWith("sk-ant-") && value.length > 15;
-  if (provider.id === "google") return value.startsWith("AIza") && value.length > 15;
-  return value.startsWith("sk-") && value.length > 15;
-}
-
-function ProviderMark({ provider }: { provider: Provider }) {
-  const Icon = provider.icon;
-
-  const monochromeClass =
-    provider.id === "deepseek" || provider.id === "kimi" ? "" : "brightness-0 dark:invert";
-  const kimiClass = provider.id === "kimi" ? "text-foreground" : "";
-
-  return <Icon className={`size-7 shrink-0 ${monochromeClass} ${kimiClass}`} aria-hidden="true" />;
-}
-
-function StatusBadge({
-  hasKey,
-  ok,
+function GatewayStatusBadge({
+  connected,
+  degraded,
   isPending,
-  isInvalid,
 }: {
-  hasKey: boolean;
-  ok: boolean;
+  connected: boolean;
+  degraded: boolean;
   isPending: boolean;
-  isInvalid: boolean;
 }) {
   if (isPending)
     return (
@@ -112,83 +38,108 @@ function StatusBadge({
         Checking
       </span>
     );
-  if (isInvalid || (hasKey && !ok))
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive">
-        <AlertCircle className="size-3" />
-        Invalid key
-      </span>
-    );
-  if (hasKey && ok)
+  if (connected)
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
         <CheckCircle2 className="size-3" />
         Connected
       </span>
     );
+  if (degraded)
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+        <AlertCircle className="size-3" />
+        Degraded
+      </span>
+    );
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
       <span className="size-1.5 rounded-full bg-muted-foreground/50" />
-      Not configured
+      Not connected
     </span>
   );
 }
 
-function ProviderKeyRow({ provider }: { provider: Provider }) {
-  const { data: connection, isPending } = useConnectionStatus();
+function formatCredits(value: string | null | undefined): string | null {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value;
+  return parsed.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+
+function GatewayStat({
+  label,
+  value,
+  title,
+}: {
+  label: string;
+  value: string;
+  title?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd
+        className="mt-0.5 truncate text-lg font-semibold tracking-tight"
+        title={title}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+const MASKED_GATEWAY_KEY = "••••••••••••••••••••••••••••••••";
+
+async function readSaveError(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: unknown };
+    if (body && typeof body.error === "string") return body.error;
+  } catch {
+    // Fall through to the generic message.
+  }
+  return "Could not save this key";
+}
+
+function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
   const queryClient = useQueryClient();
-  const providerStatus = connection?.providers?.[provider.id];
-  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [input, setInput] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [pasted, setPasted] = useState(false);
-  const [replaceOpen, setReplaceOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
-    setApiKeyInput(providerStatus?.hasKey ? MASKED_KEY : "");
-  }, [providerStatus?.hasKey]);
-
-  const isMasked = apiKeyInput === MASKED_KEY;
-  const isDirty = Boolean(apiKeyInput.trim()) && !isMasked;
-  const isInvalid = isDirty && !keyLooksValid(provider, apiKeyInput);
-
-  const beginReplacement = () => {
-    setApiKeyInput("");
+    setInput(hasKey ? MASKED_GATEWAY_KEY : "");
     setShowKey(false);
-    setReplaceOpen(false);
+    setConfirmRemove(false);
+  }, [hasKey]);
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["connection-status"] });
+    queryClient.invalidateQueries({ queryKey: ["models"] });
+    queryClient.invalidateQueries({ queryKey: ["gateway-credits"] });
   };
 
-  const handlePaste = async () => {
-    try {
-      const value = await navigator.clipboard.readText();
-      if (value) {
-        setApiKeyInput(value.trim());
-        setPasted(true);
-        window.setTimeout(() => setPasted(false), 1400);
-      }
-    } catch {
-      toast.error("Clipboard access is unavailable");
-    }
-  };
+  const isMasked = input === MASKED_GATEWAY_KEY;
+  const isDirty = Boolean(input.trim()) && !isMasked;
+  const busy = isSaving || isRemoving;
 
-  const handleSaveKey = async (event: FormEvent) => {
+  const handleSave = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isDirty || isInvalid) return;
+    if (!isDirty || busy) return;
     setIsSaving(true);
     try {
       const res = await fetchApi("/api/ai/connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: provider.id, apiKey: apiKeyInput }),
+        body: JSON.stringify({ gatewayApiKey: input.trim() }),
       });
-      if (!res.ok) throw new Error("Could not save this key");
+      if (!res.ok) throw new Error(await readSaveError(res));
       setSaved(true);
-      toast.success(`${provider.name} key saved`);
-      queryClient.invalidateQueries({ queryKey: ["connection-status"] });
-      queryClient.invalidateQueries({ queryKey: ["models"] });
+      toast.success("Gateway key saved");
+      invalidate();
       window.setTimeout(() => setSaved(false), 1800);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save this key");
@@ -197,189 +148,253 @@ function ProviderKeyRow({ provider }: { provider: Provider }) {
     }
   };
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
+  const handleRemove = async () => {
+    if (!confirmRemove) {
+      setConfirmRemove(true);
+      return;
+    }
+    setIsRemoving(true);
     try {
       const res = await fetchApi("/api/ai/connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: provider.id, apiKey: null }),
+        body: JSON.stringify({ gatewayApiKey: null }),
       });
-      if (!res.ok) throw new Error("Could not remove this key");
-      setApiKeyInput("");
-      setDeleteOpen(false);
-      toast.success(`${provider.name} key removed`);
-      queryClient.invalidateQueries({ queryKey: ["connection-status"] });
-      queryClient.invalidateQueries({ queryKey: ["models"] });
+      if (!res.ok) throw new Error(await readSaveError(res));
+      setInput("");
+      setConfirmRemove(false);
+      toast.success("Gateway key removed");
+      invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not remove this key");
     } finally {
-      setIsDeleting(false);
+      setIsRemoving(false);
     }
   };
 
   return (
-    <div className="group grid gap-4 px-5 py-4 transition-colors hover:bg-muted/25 md:grid-cols-[minmax(185px,0.8fr)_minmax(260px,1.45fr)_auto] md:items-center md:gap-6 lg:px-6">
-      <div className="flex min-w-0 items-center gap-3">
-        <ProviderMark provider={provider} />
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-semibold tracking-[-0.01em]">{provider.name}</h3>
-            <StatusBadge
-              hasKey={providerStatus?.hasKey ?? false}
-              ok={providerStatus?.ok ?? false}
-              isPending={isPending}
-              isInvalid={isInvalid}
-            />
-          </div>
-          <a
-            href={provider.keyUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
-          >
-            Get an API key <ExternalLink className="size-2.5" />
-          </a>
-        </div>
+    <div>
+      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <label
+          htmlFor="gateway-key-input"
+          className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+        >
+          Your gateway key
+        </label>
+        <a
+          href="https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai-gateway"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
+        >
+          Get a key <ExternalLink className="size-2.5" />
+        </a>
       </div>
-
-      <form id={`provider-form-${provider.id}`} onSubmit={handleSaveKey} className="min-w-0">
-        <div
-          className={`relative flex h-10 items-center rounded-xl border bg-background shadow-[0_1px_2px_rgb(15_23_42/0.03)] transition-all focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/10 ${isInvalid ? "border-destructive/60" : "border-border/70"}`}
-        >
-          <KeyRound className="ml-3 size-3.5 shrink-0 text-muted-foreground/70" />
-          <input
-            aria-label={`${provider.name} API key`}
-            type={showKey ? "text" : "password"}
-            placeholder={provider.placeholder}
-            value={apiKeyInput}
-            onChange={(event) => setApiKeyInput(event.target.value)}
-            readOnly={isMasked}
-            disabled={isSaving || isDeleting}
-            className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
-          />
-          {isMasked && (
-            <button
-              type="button"
-              onClick={() => setReplaceOpen(true)}
-              className="mr-1 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Replace
-            </button>
-          )}
-          {!isMasked && (
-            <button
-              type="button"
-              onClick={handlePaste}
-              className="mr-1.5 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Paste API key"
-            >
-              {pasted ? (
-                <Check className="size-3.5 text-success" />
-              ) : (
-                <Clipboard className="size-3.5" />
-              )}
-            </button>
-          )}
-          {apiKeyInput && (
-            <button
-              type="button"
-              onClick={() => setShowKey((current) => !current)}
-              className="mr-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label={showKey ? "Hide API key" : "Show API key"}
-            >
-              {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-            </button>
-          )}
-          {isDirty && (
-            <span
-              className={`mr-3 size-1.5 rounded-full ${isInvalid ? "bg-destructive" : "bg-success"}`}
-              aria-label={isInvalid ? "Invalid key format" : "Key format looks valid"}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <form id="gateway-key-form" onSubmit={handleSave} className="min-w-0 flex-1">
+          <div className="relative flex h-10 items-center rounded-xl border border-border/70 bg-background shadow-[0_1px_2px_rgb(15_23_42/0.03)] transition-all focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/10">
+            <KeyRound className="ml-3 size-3.5 shrink-0 text-muted-foreground/70" />
+            <input
+              id="gateway-key-input"
+              type={showKey ? "text" : "password"}
+              placeholder="Paste your Vercel AI Gateway key…"
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+                setConfirmRemove(false);
+              }}
+              readOnly={isMasked}
+              disabled={busy}
+              autoComplete="off"
+              className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
             />
-          )}
-        </div>
-        {isInvalid && (
-          <p className="mt-1.5 text-xs text-destructive">
-            That key format doesn&apos;t look right.
-          </p>
-        )}
-      </form>
-
-      <div className="flex items-center gap-2 md:justify-end">
-        <Button
-          type="submit"
-          form={`provider-form-${provider.id}`}
-          size="sm"
-          disabled={!isDirty || isInvalid || isSaving || isDeleting}
-          className="h-9 min-w-20 rounded-xl text-xs font-semibold shadow-sm"
-        >
-          {isSaving ? (
-            <RefreshCw className="size-3.5 animate-spin" />
-          ) : saved ? (
-            <Check className="size-3.5" />
-          ) : (
-            "Save changes"
-          )}
-        </Button>
-        {providerStatus?.hasKey && (
+            {isMasked && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInput("");
+                  setShowKey(false);
+                }}
+                className="mr-1 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Replace
+              </button>
+            )}
+            {input && !isMasked && (
+              <button
+                type="button"
+                onClick={() => setShowKey((current) => !current)}
+                className="mr-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={showKey ? "Hide gateway key" : "Show gateway key"}
+              >
+                {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </button>
+            )}
+          </div>
+        </form>
+        <div className="flex items-center gap-2">
           <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setDeleteOpen(true)}
-            disabled={isSaving || isDeleting}
-            aria-label={`Delete ${provider.name} API key`}
-            className="size-9 rounded-xl text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+            type="submit"
+            form="gateway-key-form"
+            size="sm"
+            disabled={!isDirty || busy}
+            className="h-10 rounded-xl px-4 text-xs font-semibold shadow-sm"
           >
-            {isDeleting ? (
+            {isSaving ? (
               <RefreshCw className="size-3.5 animate-spin" />
+            ) : saved ? (
+              <Check className="size-3.5" />
             ) : (
-              <Trash2 className="size-3.5" />
+              "Save key"
             )}
           </Button>
+          {hasKey && (
+            <Button
+              type="button"
+              size="sm"
+              variant={confirmRemove ? "destructive" : "outline"}
+              onClick={() => void handleRemove()}
+              disabled={busy}
+              className="h-10 rounded-xl px-4 text-xs font-semibold"
+            >
+              {isRemoving ? (
+                <RefreshCw className="size-3.5 animate-spin" />
+              ) : confirmRemove ? (
+                "Confirm remove"
+              ) : (
+                "Remove"
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+      {confirmRemove && (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Removing your key disconnects every model. Click again to confirm.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function GatewayCard() {
+  const { data: connection, isPending } = useConnectionStatus();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data: credits } = useQuery({
+    queryKey: ["gateway-credits"],
+    queryFn: async (): Promise<{ balance: string; totalUsed: string } | null> => {
+      const res = await fetchApi("/api/ai/credits");
+      if (!res.ok) return null;
+      return (await res.json()) as { balance: string; totalUsed: string };
+    },
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const connected = connection?.ok ?? false;
+  const degraded = connection?.degraded ?? false;
+  const usable = connected || degraded;
+  const modelCount = connection?.models.length ?? 0;
+  const balance = formatCredits(credits?.balance);
+  const used = formatCredits(credits?.totalUsed);
+
+  const handleRefreshModels = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetchApi("/api/ai/models/refresh", { method: "POST" });
+      if (!res.ok) throw new Error("Could not refresh the model list");
+      await queryClient.invalidateQueries({ queryKey: ["connection-status"] });
+      await queryClient.invalidateQueries({ queryKey: ["models"] });
+      toast.success("Model list refreshed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not refresh the model list");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_8px_30px_rgb(15_23_42/0.035)]">
+      <div className="flex flex-col gap-5 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Sparkles className="size-4" aria-hidden="true" />
+          </span>
+          <h3 className="text-sm font-semibold tracking-[-0.01em]">AI Gateway</h3>
+          <GatewayStatusBadge
+            connected={connected}
+            degraded={degraded}
+            isPending={isPending}
+          />
+          <div className="ms-auto">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void handleRefreshModels()}
+              disabled={isPending || isRefreshing}
+              className="h-9 min-w-20 rounded-xl text-xs font-semibold shadow-sm"
+            >
+              {isRefreshing ? (
+                <RefreshCw className="size-3.5 animate-spin" />
+              ) : (
+                "Refresh models"
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          {isPending
+            ? "Checking gateway status…"
+            : usable
+              ? `Every notebook can use ${modelCount} models through your gateway key.`
+              : (connection?.detail ??
+                "Add your AI Gateway key below to connect every model.")}
+        </p>
+
+        <GatewayKeyForm hasKey={connection?.gateway.hasKey ?? false} />
+
+        {usable && (
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <GatewayStat label="Models included" value={String(modelCount)} />
+            <GatewayStat
+              label="Balance"
+              value={balance ? `${balance} credits` : "—"}
+              title={credits?.balance ?? undefined}
+            />
+            <GatewayStat
+              label="Credits used"
+              value={used ?? "—"}
+              title={credits?.totalUsed ?? undefined}
+            />
+          </dl>
         )}
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <a
+            href="https://vercel.com/docs/ai-gateway"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 transition-colors hover:text-foreground hover:underline"
+          >
+            What is the gateway? <ExternalLink className="size-2.5" />
+          </a>
+          <span>Model list refreshes automatically every 6 hours.</span>
+          {connection?.checkedAt && (
+            <span>
+              Last checked {new Date(connection.checkedAt).toLocaleString()}
+            </span>
+          )}
+        </div>
       </div>
 
-      <AlertDialog open={replaceOpen} onOpenChange={setReplaceOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Replace {provider.name} key?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your current key will stay active until you save a replacement. You will need to paste
-              the new key on the next step.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={beginReplacement}>Replace key</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove {provider.name} key?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will disconnect {provider.name} from your account. You can add the key again at
-              any time.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault();
-                void handleDelete();
-              }}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? <RefreshCw className="size-3.5 animate-spin" /> : "Remove key"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {degraded && connection?.degradedDetail && (
+        <div className="border-t border-amber-500/30 bg-amber-500/10 px-5 py-3 text-xs leading-5 text-amber-700 sm:px-6 dark:text-amber-300">
+          {connection.degradedDetail}
+        </div>
+      )}
     </div>
   );
 }
@@ -389,51 +404,27 @@ function SettingsContent() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-[1040px] px-5 pb-16 pt-10 sm:px-8 lg:pt-14">
-        <header className="flex flex-col gap-6  pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <header className="flex flex-col gap-6 pb-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-semibold leading-none tracking-[-0.055em] sm:text-4xl">
               Settings
             </h1>
             <p className="mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
-              Connect the AI providers you trust. Keys stay private to your account and power your
-              notebooks.
+              Every notebook ships with models through the Vercel AI Gateway.
             </p>
           </div>
         </header>
 
-        <section className="mt-9" aria-labelledby="providers-heading">
-          <div className="mb-3 flex items-end justify-between px-1">
-            <div>
-              <h2 id="providers-heading" className="text-base font-semibold tracking-[-0.02em]">
-                AI providers
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Use your own keys for more control over models and usage.
-              </p>
-            </div>
-            <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-              <ShieldCheck className="size-3.5" /> Encrypted at rest
-            </span>
+        <section className="mt-9" aria-labelledby="gateway-heading">
+          <div className="mb-3 px-1">
+            <h2 id="gateway-heading" className="text-base font-semibold tracking-[-0.02em]">
+              AI Gateway
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              One gateway for every model. Bring your own key.
+            </p>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_8px_30px_rgb(15_23_42/0.035)] divide-y divide-border/60">
-            {providerConfig.map((provider) => (
-              <ProviderKeyRow key={provider.id} provider={provider} />
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-10">
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-[0_8px_30px_rgb(15_23_42/0.025)] sm:p-6">
-            <div className="flex items-start gap-3">
-              <div>
-                <h2 className="text-sm font-semibold">Your keys, your control</h2>
-                <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                  Keys are encrypted before they are stored and are only used to make requests on
-                  your behalf. They are never exposed in the client.
-                </p>
-              </div>
-            </div>
-          </div>
+          <GatewayCard />
         </section>
 
         <section className="mt-8" aria-labelledby="appearance-heading">

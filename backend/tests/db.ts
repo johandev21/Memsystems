@@ -75,6 +75,9 @@ export async function ensureTestDatabase(): Promise<void> {
     await pgClient.query('DROP TABLE IF EXISTS "session" CASCADE');
     await pgClient.query('DROP TABLE IF EXISTS "user" CASCADE');
     await pgClient.query(
+      'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "gateway_api_key" text',
+    );
+    await pgClient.query(
       'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "deepseek_api_key" text',
     );
     await pgClient.query(

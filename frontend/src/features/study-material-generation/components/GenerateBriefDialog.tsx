@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { OpenAIKeyPrompt, useConnectionStatus } from "@/features/ai";
+import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/features/ai";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useModelPersistence } from "@/features/notebooks";
 import { useGenerationStore } from "../hooks/use-generation-store";
@@ -91,7 +91,7 @@ export function GenerateBriefDialog({
             Generate {label}
           </DialogTitle>
         </DialogHeader>
-        {connection?.ok !== false ? (
+        {isConnectionUsable(connection) ? (
           <BriefForm
             notebookId={notebookId}
             kind={kind}
@@ -102,7 +102,7 @@ export function GenerateBriefDialog({
             disabled={false}
           />
         ) : (
-          <OpenAIKeyPrompt description="An API key is required to generate study materials." />
+          <GatewayKeyPrompt description="An AI Gateway key is required to generate study materials." />
         )}
       </DialogContent>
     </Dialog>

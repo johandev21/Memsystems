@@ -5,6 +5,7 @@ import { z } from 'zod';
 import * as appSchema from '../../database/schema';
 import { studyMaterials } from '../../database/schema';
 import { AiService } from '../ai/ai.service';
+import type { GatewayRequestOptions } from '../ai/providers/gateway.provider';
 import { DRIZZLE } from '../database/database.module';
 import { getPromptTemplate } from './prompts';
 import type {
@@ -67,7 +68,7 @@ export class StreamHandler {
     onError: (error: string) => void,
   ) {
     const promptTemplate = getPromptTemplate(input.kind);
-    const systemPrompt = promptTemplate.system;
+    const systemPrompt = promptTemplate.instructions;
     const concatenatedSources = sourceTexts
       .map((s) => `[${s.title}]\n${s.rawText}`)
       .join('\n\n---\n\n');
@@ -88,6 +89,9 @@ export class StreamHandler {
     const stream = new ReadableStream<Uint8Array>({
       start: async (controller) => {
         let model!: LanguageModel;
+        let requestOptions: GatewayRequestOptions = {
+          providerOptions: { gateway: {} },
+        };
         try {
           const modelId = input.model!;
           const provider = await this.aiService.getProviderForModel(
@@ -95,12 +99,17 @@ export class StreamHandler {
             userId,
           );
           model = provider.createModel(modelId);
+          requestOptions = this.aiService.getGatewayRequestOptions(
+            modelId,
+            userId,
+          );
 
           const result = streamText({
             model,
             output: Output.object({ schema }),
-            system: systemPrompt,
+            instructions: systemPrompt,
             prompt: userPrompt,
+            ...requestOptions,
           });
 
           for await (const partial of result.partialOutputStream) {
@@ -147,8 +156,9 @@ export class StreamHandler {
 
             const fallbackResult = streamText({
               model,
-              system: fallbackSystemPrompt,
+              instructions: fallbackSystemPrompt,
               prompt: userPrompt,
+              ...requestOptions,
             });
 
             let accumulatedText = '';

@@ -2,10 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/shared/auth";
 import { getApiUrl } from "@/shared/api";
 
-export interface ProviderStatus {
-  ok: boolean;
-  detail?: string;
-  models: Array<{ id: string; displayName: string }>;
+export interface GatewayKeyStatus {
   hasKey: boolean;
   checkedAt: string | null;
 }
@@ -13,11 +10,24 @@ export interface ProviderStatus {
 export interface ConnectionStatus {
   ok: boolean;
   detail?: string;
+  degraded: boolean;
+  degradedDetail?: string;
   models: Array<{ id: string; displayName: string }>;
   checkedAt: string | null;
-  providers: Record<string, ProviderStatus>;
-  opencode: ProviderStatus;
-  openai: ProviderStatus;
+  gateway: GatewayKeyStatus;
+}
+
+/**
+ * The AI backend is usable when healthy OR degraded. Degraded means auth is
+ * fine but the gateway is flaky (rate limit, entitlement gap, outage) —
+ * requests should still go through and fail per-request with an explainer,
+ * instead of locking the UI behind key prompts.
+ */
+export function isConnectionUsable(
+  status: Pick<ConnectionStatus, "ok" | "degraded"> | null | undefined,
+): boolean {
+  if (!status) return true;
+  return status.ok || status.degraded === true;
 }
 
 async function fetchConnection(): Promise<ConnectionStatus> {
@@ -28,23 +38,10 @@ async function fetchConnection(): Promise<ConnectionStatus> {
     return {
       ok: false,
       detail: "Failed to check connection",
+      degraded: false,
       models: [],
       checkedAt: null,
-      providers: {},
-      opencode: {
-        ok: false,
-        detail: "Failed to check connection",
-        models: [],
-        hasKey: false,
-        checkedAt: null,
-      },
-      openai: {
-        ok: false,
-        detail: "Failed to check connection",
-        models: [],
-        hasKey: false,
-        checkedAt: null,
-      },
+      gateway: { hasKey: false, checkedAt: null },
     };
   }
   return res.json();
@@ -62,4 +59,3 @@ export function useConnectionStatus() {
     enabled: auth.status === "signed-in",
   });
 }
-

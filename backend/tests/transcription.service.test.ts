@@ -139,6 +139,7 @@ describe('normalizeSpeakerLabel', () => {
 describe('TranscriptionService', () => {
   const mockAiService = {
     getProviderForModel: vi.fn(),
+    getGatewayRequestOptions: vi.fn().mockResolvedValue({}),
   };
   const mockConnectionService = {
     snapshot: vi.fn(),
@@ -154,7 +155,7 @@ describe('TranscriptionService', () => {
     const service = createService();
     const input: TranscriptionInput = {
       audioBuffer: Buffer.from([1, 2, 3]),
-      mimeType: 'audio/mp3' as any,
+      mimeType: 'audio/mp3',
       fileName: 'lecture_01.mp3',
     };
 

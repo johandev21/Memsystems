@@ -45,6 +45,8 @@ services:
       DEV_STORAGE_DIR: /app/dev-storage
       DEV_STORAGE_PUBLIC_URL: ${APP_ORIGIN}
       DEV_STORAGE_TOKEN_SECRET: ${DEV_STORAGE_TOKEN_SECRET:?Set DEV_STORAGE_TOKEN_SECRET in .env.docker.prod}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY:?Set CREDENTIALS_ENCRYPTION_KEY in .env.docker.prod}
     volumes:
       - storage:/app/dev-storage
     depends_on:

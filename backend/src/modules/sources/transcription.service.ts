@@ -214,6 +214,10 @@ export class TranscriptionService implements TranscriptionPort {
         input.userId,
       );
       const model = provider.createModel(modelId);
+      const requestOptions = this.aiService.getGatewayRequestOptions(
+        modelId,
+        input.userId,
+      );
 
       const promptText = input.prompt
         ? `Transcribe this audio recording. Additional instructions: ${input.prompt}`
@@ -221,7 +225,8 @@ export class TranscriptionService implements TranscriptionPort {
 
       const result = await this.generateTextFn({
         model,
-        system: TRANSCRIPTION_SYSTEM_PROMPT,
+        instructions: TRANSCRIPTION_SYSTEM_PROMPT,
+        ...requestOptions,
         messages: [
           {
             role: 'user',

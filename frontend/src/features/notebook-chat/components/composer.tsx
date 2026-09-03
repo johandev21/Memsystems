@@ -303,6 +303,11 @@ function ModelOption({
     >
       <ModelSelectorLogo provider={provider} />
       <ModelSelectorName>{model.displayName}</ModelSelectorName>
+      {model.isFreeTier && (
+        <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-semibold text-success">
+          Free
+        </span>
+      )}
       {selected ? <CheckIcon className="ml-auto size-4" /> : <div className="ml-auto size-4" />}
     </ModelSelectorItem>
   );

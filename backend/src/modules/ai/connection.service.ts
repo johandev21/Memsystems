@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ServiceUnavailableError } from '../../common/errors/domain-error';
-import { createProvider } from './providers/registry';
+import { ModelSyncService } from './model-sync.service';
 import {
-  PROVIDER_IDS,
-  PROVIDER_MODELS,
-  PROVIDER_NAMES,
-  type ProviderId,
-  providerIdFromModel,
-} from './providers/model-catalog';
+  buildGatewayOptions,
+  createGatewayProvider,
+  type GatewayRequestOptions,
+} from './providers/gateway.provider';
+import { resolveModelId } from './providers/model-catalog';
+import type { ProviderModel } from './providers/provider';
 import { UserSettingsService } from './user-settings.service';
 
 const HEALTH_TTL_MS = 60_000;
@@ -34,130 +34,132 @@ class TtlCache<T> {
   }
 }
 
-interface ProviderHealth {
+interface GatewayHealth {
   ok: boolean;
   detail?: string;
+  degraded?: boolean;
+}
+
+export interface GatewayKeyStatus {
+  hasKey: boolean;
+  checkedAt: string | null;
+}
+
+export interface ConnectionSnapshot {
+  ok: boolean;
+  detail?: string;
+  degraded: boolean;
+  degradedDetail?: string;
+  models: ProviderModel[];
+  checkedAt: string | null;
+  gateway: GatewayKeyStatus;
+}
+
+function disconnectedSnapshot(detail: string): ConnectionSnapshot {
+  return {
+    ok: false,
+    detail,
+    degraded: false,
+    degradedDetail: undefined,
+    models: [],
+    checkedAt: null,
+    gateway: { hasKey: false, checkedAt: null },
+  };
 }
 
 @Injectable()
 export class ConnectionService {
-  private readonly healthCaches = new Map<
-    string,
-    Map<ProviderId, TtlCache<ProviderHealth>>
-  >();
+  /** Gateway health probes are per user — every user has their own key. */
+  private readonly userHealth = new Map<string, TtlCache<GatewayHealth>>();
 
-  constructor(private readonly userSettingsService: UserSettingsService) {}
+  constructor(
+    private readonly userSettingsService: UserSettingsService,
+    private readonly modelSyncService: ModelSyncService,
+  ) {}
 
   private async checkHealth(
-    userId: string,
-    providerId: ProviderId,
     apiKey: string,
-  ) {
-    let userCaches = this.healthCaches.get(userId);
-    if (!userCaches) {
-      userCaches = new Map();
-      this.healthCaches.set(userId, userCaches);
-    }
-    let cache = userCaches.get(providerId);
+    options: GatewayRequestOptions,
+    userId: string,
+  ): Promise<GatewayHealth & { checkedAt: number }> {
+    let cache = this.userHealth.get(userId);
     if (!cache) {
-      cache = new TtlCache<ProviderHealth>(HEALTH_TTL_MS);
-      userCaches.set(providerId, cache);
+      cache = new TtlCache<GatewayHealth>(HEALTH_TTL_MS);
+      this.userHealth.set(userId, cache);
     }
     const cached = cache.get();
     if (cached) return { ...cached, checkedAt: cache.getTimestamp() };
 
-    const health = await createProvider(providerId, apiKey).health();
+    const health = await createGatewayProvider({
+      apiKey,
+      getModels: () => this.modelSyncService.getModels(),
+      requestOptions: options,
+    }).health();
     if (health.ok) cache.set(health);
     return { ...health, checkedAt: cache.getTimestamp() };
   }
 
   async requireConnected(userId: string, modelId: string): Promise<void> {
-    const providerId = providerIdFromModel(modelId);
-    if (!providerId)
+    const resolved = resolveModelId(modelId);
+    const catalog = this.modelSyncService.getModels();
+    if (!catalog.some((model) => model.id === resolved)) {
       throw new ServiceUnavailableError(`Model ${modelId} is not supported.`);
-    const apiKey = await this.userSettingsService.getUserApiKey(
-      userId,
-      providerId,
-    );
+    }
+    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
     if (!apiKey) {
       throw new ServiceUnavailableError(
-        `${PROVIDER_NAMES[providerId]} API key is not configured. Please add it in Connection settings.`,
+        'AI Gateway is not connected. Add your AI Gateway key in Settings.',
       );
     }
-    const health = await this.checkHealth(userId, providerId, apiKey);
-    if (!health.ok)
+    const health = await this.checkHealth(
+      apiKey,
+      buildGatewayOptions(userId),
+      userId,
+    );
+    // Degraded (rate-limited, non-entitled, upstream blip) is NOT
+    // disconnected: let the request through so it can retry, fall back,
+    // or fail with a specific, user-facing error.
+    if (!health.ok && !health.degraded)
       throw new ServiceUnavailableError(
-        health.detail ?? `${PROVIDER_NAMES[providerId]} connection failed`,
+        health.detail ?? 'AI Gateway connection failed',
       );
   }
 
-  async snapshot(userId?: string) {
-    const providers = {} as Record<
-      ProviderId,
-      {
-        ok: boolean;
-        detail?: string;
-        models: (typeof PROVIDER_MODELS)[ProviderId];
-        hasKey: boolean;
-        checkedAt: string | null;
-      }
-    >;
-    let latestCheckedAt = 0;
-
-    for (const providerId of PROVIDER_IDS) {
-      const apiKey = userId
-        ? await this.userSettingsService.getUserApiKey(userId, providerId)
-        : null;
-      const health =
-        apiKey && userId
-          ? await this.checkHealth(userId, providerId, apiKey)
-          : null;
-      if (health?.checkedAt && health.checkedAt > latestCheckedAt)
-        latestCheckedAt = health.checkedAt;
-      providers[providerId] = {
-        ok: health?.ok ?? false,
-        detail:
-          health?.detail ??
-          `${PROVIDER_NAMES[providerId]} API Key is not configured.`,
-        models: PROVIDER_MODELS[providerId],
-        hasKey: Boolean(apiKey),
-        checkedAt: health?.checkedAt
-          ? new Date(health.checkedAt).toISOString()
-          : null,
-      };
+  async snapshot(userId?: string): Promise<ConnectionSnapshot> {
+    const catalog = this.modelSyncService.getModels();
+    if (!userId) {
+      return disconnectedSnapshot('User context required.');
+    }
+    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+    if (!apiKey) {
+      return disconnectedSnapshot(
+        'No AI Gateway key configured. Add your key in Settings to use AI features.',
+      );
     }
 
-    const availableProviders = PROVIDER_IDS.filter((id) => providers[id].ok);
-    const models = availableProviders.flatMap((id) => providers[id].models);
+    const health = await this.checkHealth(
+      apiKey,
+      buildGatewayOptions(userId),
+      userId,
+    );
+    const healthy = health.ok === true;
+    const degraded = health.degraded === true && !healthy;
+    // Degraded keeps the full catalog: auth is fine, the service is flaky,
+    // and requests should still go through (retry/fallback/per-call errors).
+    const models = healthy || degraded ? catalog : [];
+    const checkedAt = new Date(health.checkedAt).toISOString();
     return {
-      ok: models.length > 0,
-      detail: models.length > 0 ? undefined : 'No AI provider is connected.',
+      ok: healthy && models.length > 0,
+      detail: healthy || degraded ? undefined : (health.detail ?? undefined),
+      degraded,
+      degradedDetail: degraded ? (health.detail ?? undefined) : undefined,
       models,
-      checkedAt: latestCheckedAt
-        ? new Date(latestCheckedAt).toISOString()
-        : null,
-      providers,
-      // Kept for existing clients while they migrate to providers.
-      openai: providers.openai,
-      opencode: {
-        ok: false,
-        detail: 'OpenCode provider is disabled.',
-        models: [],
-        hasKey: false,
-        checkedAt: null,
-      },
+      checkedAt,
+      gateway: { hasKey: true, checkedAt },
     };
   }
 
-  invalidateUserProviderCache(userId: string, providerId?: ProviderId): void {
-    if (!providerId) {
-      this.healthCaches.delete(userId);
-      return;
-    }
-    this.healthCaches.get(userId)?.delete(providerId);
-  }
-
-  invalidateUserOpenaiCache(userId: string): void {
-    this.invalidateUserProviderCache(userId, 'openai');
+  invalidateUserCache(userId: string): void {
+    this.userHealth.delete(userId);
   }
 }

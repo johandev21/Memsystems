@@ -115,6 +115,7 @@ describe('parseVisionJson', () => {
 describe('VisionExtractionService', () => {
   const mockAiService = {
     getProviderForModel: vi.fn(),
+    getGatewayRequestOptions: vi.fn().mockResolvedValue({}),
   };
   const mockConnectionService = {
     snapshot: vi.fn(),

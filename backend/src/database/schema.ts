@@ -701,6 +701,12 @@ export const notebookChatMessagesRelations = relations(
 
 export const userSettings = pgTable('user_settings', {
   userId: text('user_id').primaryKey(),
+  // Per-user Vercel AI Gateway key (AES-256-GCM encrypted, see
+  // UserSettingsService). Funds every model for that user.
+  gatewayApiKey: text('gateway_api_key'),
+  // Legacy per-provider BYOK columns (openai/deepseek/anthropic/gemini/kimi).
+  // No longer read or written; kept for data preservation until a follow-up
+  // migration drops them.
   openaiApiKey: text('openai_api_key'),
   deepseekApiKey: text('deepseek_api_key'),
   anthropicApiKey: text('anthropic_api_key'),

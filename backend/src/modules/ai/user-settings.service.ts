@@ -1,94 +1,76 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { userSettings } from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
-import type { ProviderId } from './providers/model-catalog';
-
-const apiKeyColumns = {
-  openai: userSettings.openaiApiKey,
-  deepseek: userSettings.deepseekApiKey,
-  anthropic: userSettings.anthropicApiKey,
-  google: userSettings.geminiApiKey,
-  kimi: userSettings.kimiApiKey,
-} as const;
-
-const apiKeyFields = {
-  openai: 'openaiApiKey',
-  deepseek: 'deepseekApiKey',
-  anthropic: 'anthropicApiKey',
-  google: 'geminiApiKey',
-  kimi: 'kimiApiKey',
-} as const;
+import {
+  decryptApiKey,
+  encryptApiKey,
+  isEncryptedPayload,
+} from './key-encryption';
 
 @Injectable()
 export class UserSettingsService {
+  private readonly logger = new Logger(UserSettingsService.name);
+
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
   ) {}
 
-  async getUserOpenaiApiKey(userId: string): Promise<string | null> {
-    return this.getUserApiKey(userId, 'openai');
-  }
-
-  async getUserApiKey(
-    userId: string,
-    providerId: ProviderId,
-  ): Promise<string | null> {
-    const column = apiKeyColumns[providerId];
+  /**
+   * The user's Vercel AI Gateway key, decrypted. `null` when unset or
+   * unreadable (corrupt payload / rotated encryption secret) — the latter
+   * is logged so it surfaces in server logs instead of failing silently.
+   */
+  async getGatewayApiKey(userId: string): Promise<string | null> {
     const [row] = await this.db
-      .select({ apiKey: column })
+      .select({ apiKey: userSettings.gatewayApiKey })
       .from(userSettings)
       .where(eq(userSettings.userId, userId));
-    return (
-      row?.apiKey ||
-      process.env[
-        `${providerId === 'google' ? 'GEMINI' : providerId.toUpperCase()}_API_KEY`
-      ] ||
-      (providerId === 'openai' ? process.env.PROVIDER_OPENAI_API_KEY : null) ||
-      null
-    );
+    const stored = row?.apiKey;
+    if (!stored) return null;
+    if (!isEncryptedPayload(stored)) {
+      this.logger.warn(
+        `Ignoring unencrypted gateway key payload for user ${userId}.`,
+      );
+      return null;
+    }
+    try {
+      return decryptApiKey(stored);
+    } catch (error) {
+      this.logger.warn(
+        `Could not decrypt gateway key for user ${userId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    }
   }
 
-  async setUserOpenaiApiKey(
+  async setGatewayApiKey(
     userId: string,
-    apiKey: string | null | undefined,
-  ): Promise<void> {
-    return this.setUserApiKey(userId, 'openai', apiKey);
-  }
-
-  async setUserApiKey(
-    userId: string,
-    providerId: ProviderId,
     apiKey: string | null | undefined,
   ): Promise<void> {
     if (!apiKey || !apiKey.trim()) {
-      await this.removeUserApiKey(userId, providerId);
+      await this.removeGatewayApiKey(userId);
       return;
     }
-    const trimmed = apiKey.trim();
+    const encrypted = encryptApiKey(apiKey.trim());
     await this.db
       .insert(userSettings)
-      .values({ userId, [apiKeyFields[providerId]]: trimmed })
+      .values({ userId, gatewayApiKey: encrypted })
       .onConflictDoUpdate({
         target: userSettings.userId,
-        set: { [apiKeyFields[providerId]]: trimmed, updatedAt: new Date() },
+        set: { gatewayApiKey: encrypted, updatedAt: new Date() },
       });
   }
 
-  async removeUserOpenaiApiKey(userId: string): Promise<void> {
-    return this.removeUserApiKey(userId, 'openai');
-  }
-
-  async removeUserApiKey(
-    userId: string,
-    providerId: ProviderId,
-  ): Promise<void> {
+  async removeGatewayApiKey(userId: string): Promise<void> {
     await this.db
       .update(userSettings)
-      .set({ [apiKeyFields[providerId]]: null, updatedAt: new Date() })
+      .set({ gatewayApiKey: null, updatedAt: new Date() })
       .where(eq(userSettings.userId, userId));
   }
 }

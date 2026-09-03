@@ -2,7 +2,8 @@ import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-  OpenAIKeyPrompt,
+  GatewayKeyPrompt,
+  isConnectionUsable,
 } from "@/features/ai";
 import { NotebookBanner } from "@/features/notebooks";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks";
@@ -145,13 +146,22 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
           className="absolute inset-x-0 bottom-0 z-composer p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none"
         >
           <div className="mx-auto w-full max-w-4xl">
+            {connection && !connection.ok && connection.degraded && (
+              <div
+                role="status"
+                className="mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
+              >
+                AI Gateway is busy — responses may fail. Waiting a bit and retrying usually
+                works.
+              </div>
+            )}
             <ClearHistoryDialog
               open={isClearDialogOpen}
               onOpenChange={handleClearDialogChange}
               onConfirm={handleClearHistory}
               isClearing={clearHistoryMutation.isPending}
             />
-            {connection?.ok !== false ? (
+            {isConnectionUsable(connection) ? (
               <Composer
                 input={input}
                 onInputChange={setInput}
@@ -164,14 +174,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
                 textareaRef={composerTextareaRef}
               />
             ) : (
-              <OpenAIKeyPrompt
-                provider={modelOptions.length > 0 ? selectedModel.split("/")[0] : undefined}
-                description={
-                  modelOptions.length > 0
-                    ? "An API key is required to chat with your study assistant."
-                    : undefined
-                }
-              />
+              <GatewayKeyPrompt description="An AI Gateway key is required to chat with your study assistant." />
             )}
           </div>
         </div>

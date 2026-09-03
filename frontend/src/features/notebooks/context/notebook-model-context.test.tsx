@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_MODEL_ID,
   NotebookModelProvider,
+  resolveModelId,
   useNotebookModel,
 } from "./notebook-model-context";
 import { useModelPersistence } from "../hooks/use-model-persistence";
@@ -74,5 +75,21 @@ describe("NotebookModelContext & useNotebookModel", () => {
 
     expect(result.current.selectedModel).toBe("deepseek/deepseek-chat");
     expect(localStorage.getItem("memsystems-selected-model-nb-2")).toBe("deepseek/deepseek-chat");
+  });
+
+  it("migrates stale pre-gateway model IDs from localStorage", () => {
+    expect(resolveModelId("kimi/kimi-k3")).toBe("moonshotai/kimi-k3");
+    expect(resolveModelId("kimi/kimi-k2.6")).toBe("moonshotai/kimi-k2.6");
+    expect(resolveModelId("deepseek/deepseek-v3")).toBe("deepseek/deepseek-v3.2");
+    expect(resolveModelId("openai/gpt-5.6-sol")).toBe("openai/gpt-5.6-sol");
+
+    localStorage.setItem("memsystems-selected-model-nb-1", "kimi/kimi-k3");
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <NotebookModelProvider notebookId="nb-1">{children}</NotebookModelProvider>
+    );
+
+    const { result } = renderHook(() => useNotebookModel(), { wrapper });
+    expect(result.current.selectedModel).toBe("moonshotai/kimi-k3");
   });
 });

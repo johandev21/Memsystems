@@ -8,6 +8,13 @@
       "when": 1788303405669,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788400000000,
+      "tag": "0001_add_gateway_api_key",
+      "breakpoints": true
     }
   ]
 }

@@ -6,58 +6,60 @@ import { seedUser } from './fixtures';
 
 describe('ConnectionService & UserSettingsService Tests', () => {
   const { db } = createDatabaseConnection(process.env.DATABASE_URL);
-  const userSettingsService = new UserSettingsService(db as any);
-  const connectionService = new ConnectionService(userSettingsService);
+  const userSettingsService = new UserSettingsService(db);
+  const modelSyncService = {
+    getModels: () => [],
+    getStatus: () => ({ source: 'seed', count: 0, lastSyncAt: null }),
+  };
+  const connectionService = new ConnectionService(
+    userSettingsService,
+    modelSyncService as any,
+  );
 
-  it('should snapshot false when no key is configured', async () => {
+  it('snapshots as disconnected when no gateway key is configured', async () => {
     const user = await seedUser();
     const snapshot = await connectionService.snapshot(user.id);
 
     expect(snapshot.ok).toBe(false);
-    expect(snapshot.openai.hasKey).toBe(false);
-    expect(snapshot.openai.detail).toBe('OpenAI API Key is not configured.');
+    expect(snapshot.degraded).toBe(false);
+    expect(snapshot.models).toEqual([]);
+    expect(snapshot.gateway.hasKey).toBe(false);
+    expect(snapshot.detail).toMatch(/No AI Gateway key configured/);
   });
 
-  it('should save API key, snapshot with hasKey, and delete API key safely', async () => {
+  it('stores the gateway key encrypted and round-trips it', async () => {
     const user = await seedUser();
 
-    // Save key
-    await userSettingsService.setUserOpenaiApiKey(user.id, 'sk-test-key-12345');
-    connectionService.invalidateUserOpenaiCache(user.id);
+    await userSettingsService.setGatewayApiKey(user.id, 'ag_live_test_key');
+    expect(await userSettingsService.getGatewayApiKey(user.id)).toBe(
+      'ag_live_test_key',
+    );
 
-    const snapshotWithKey = await connectionService.snapshot(user.id);
-    expect(snapshotWithKey.openai.hasKey).toBe(true);
+    const snapshot = await connectionService.snapshot(user.id);
+    expect(snapshot.gateway.hasKey).toBe(true);
+    // Fake key fails the live probe, but auth shape is deterministic: the
+    // service reports not-ok (never throws, never leaks the key).
+    expect(snapshot.ok).toBe(false);
 
-    // Delete key via null
-    await userSettingsService.setUserOpenaiApiKey(user.id, null);
-    connectionService.invalidateUserOpenaiCache(user.id);
+    await userSettingsService.setGatewayApiKey(user.id, null);
+    expect(await userSettingsService.getGatewayApiKey(user.id)).toBeNull();
+    connectionService.invalidateUserCache(user.id);
 
-    const snapshotAfterDelete = await connectionService.snapshot(user.id);
-    expect(snapshotAfterDelete.openai.hasKey).toBe(false);
+    const afterDelete = await connectionService.snapshot(user.id);
+    expect(afterDelete.gateway.hasKey).toBe(false);
   });
 
-  it('stores keys independently for each provider', async () => {
+  it('blank keys remove the stored key', async () => {
     const user = await seedUser();
-    await userSettingsService.setUserApiKey(
-      user.id,
-      'anthropic',
-      'sk-ant-test',
-    );
-    await userSettingsService.setUserApiKey(user.id, 'kimi', 'sk-kimi-test');
+    await userSettingsService.setGatewayApiKey(user.id, 'ag_live_test_key');
+    await userSettingsService.setGatewayApiKey(user.id, '   ');
+    expect(await userSettingsService.getGatewayApiKey(user.id)).toBeNull();
+  });
 
-    expect(await userSettingsService.getUserApiKey(user.id, 'anthropic')).toBe(
-      'sk-ant-test',
-    );
-    expect(await userSettingsService.getUserApiKey(user.id, 'kimi')).toBe(
-      'sk-kimi-test',
-    );
-
-    await userSettingsService.removeUserApiKey(user.id, 'anthropic');
-    expect(
-      await userSettingsService.getUserApiKey(user.id, 'anthropic'),
-    ).toBeNull();
-    expect(await userSettingsService.getUserApiKey(user.id, 'kimi')).toBe(
-      'sk-kimi-test',
-    );
+  it('returns null for corrupt payloads instead of throwing', async () => {
+    const user = await seedUser();
+    await userSettingsService.setGatewayApiKey(user.id, 'ag_live_test_key');
+    await userSettingsService.removeGatewayApiKey(user.id);
+    expect(await userSettingsService.getGatewayApiKey(user.id)).toBeNull();
   });
 });

@@ -184,12 +184,17 @@ export class VisionExtractionService implements VisionExtractionPort {
         input.userId,
       );
       const model = provider.createModel(modelId);
+      const requestOptions = this.aiService.getGatewayRequestOptions(
+        modelId,
+        input.userId,
+      );
 
       const promptText = `Analyze this image and extract its textual and semantic content. Follow all system instructions faithfully.`;
 
       const result = await this.generateTextFn({
         model,
-        system: VISION_EXTRACTION_SYSTEM_PROMPT,
+        instructions: VISION_EXTRACTION_SYSTEM_PROMPT,
+        ...requestOptions,
         messages: [
           {
             role: 'user',

@@ -13,6 +13,12 @@ export interface ModelOption {
   displayName: string;
   supportsWebSearch?: boolean;
   capabilities?: ModelCapabilities;
+  pricing?: { input: number; output: number } | null;
+  /**
+   * Best-effort free-tier marker from the gateway catalog.
+   * Entitlement is account-side and NOT guaranteed by this flag.
+   */
+  isFreeTier?: boolean;
 }
 
 export interface ModelsResponse {

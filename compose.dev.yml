@@ -52,6 +52,8 @@ services:
       DEV_STORAGE_DIR: /app/dev-storage
       DEV_STORAGE_PUBLIC_URL: ${APP_ORIGIN:-http://localhost:3000}
       DEV_STORAGE_TOKEN_SECRET: ${DEV_STORAGE_TOKEN_SECRET:-dev-only-storage-token-secret-change-me}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY:-dev-only-encryption-secret-change-me}
       TSC_WATCHFILE: PriorityPollingInterval
       TSC_WATCHDIRECTORY: DynamicPriorityPolling
     ports:

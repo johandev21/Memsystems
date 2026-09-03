@@ -81,6 +81,7 @@ describe('ChatService streaming lifecycle', () => {
           provide: AiService,
           useValue: {
             getProviderForModel: vi.fn().mockResolvedValue(provider),
+            getGatewayRequestOptions: vi.fn().mockResolvedValue({}),
           },
         },
         {
@@ -170,7 +171,7 @@ describe('ChatService streaming lifecycle', () => {
     });
 
     const streamOptions = mocks.streamText.mock.calls[0][0] as {
-      onFinish: (event: {
+      onEnd: (event: {
         text: string;
         reasoning?: string;
         usage?: {
@@ -182,7 +183,7 @@ describe('ChatService streaming lifecycle', () => {
       }) => Promise<void>;
     };
 
-    await streamOptions.onFinish({
+    await streamOptions.onEnd({
       text: 'The cave represents human perception...',
       reasoning: 'Analyzing Plato Book VII...',
       usage: { inputTokens: 15, outputTokens: 40, totalTokens: 55 } as any,
@@ -204,6 +205,40 @@ describe('ChatService streaming lifecycle', () => {
         modelId: 'openai/gpt-5.6-sol',
         finishReason: 'stop',
         usage: { inputTokens: 15, outputTokens: 40, totalTokens: 55 },
+      }),
+    });
+  });
+
+  it('persists the gateway generation id for cost lookup', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain the cave allegory',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      onLanguageModelCallEnd: (event: {
+        providerMetadata?: Record<string, Record<string, unknown>>;
+      }) => void;
+      onEnd: (event: {
+        text: string;
+        finishReason?: string;
+      }) => Promise<void>;
+    };
+
+    streamOptions.onLanguageModelCallEnd({
+      providerMetadata: { gateway: { generationId: 'gen_test123' } },
+    });
+    await streamOptions.onEnd({
+      text: 'The cave represents human perception...',
+      finishReason: 'stop',
+    });
+
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+    expect(assistantInsert).toMatchObject({
+      metadata: expect.objectContaining({
+        gatewayGenerationId: 'gen_test123',
       }),
     });
   });

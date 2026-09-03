@@ -53,7 +53,7 @@ export function WebSearchComposer({ notebookId }: { notebookId: string }) {
           <AlertTriangle />
           <AlertTitle className="text-xs">Web search unavailable</AlertTitle>
           <AlertDescription className="text-xs">
-            Connect a model that supports web search in Connection settings.
+            Connect a model that supports web search in Settings.
           </AlertDescription>
         </Alert>
       )}

@@ -59,3 +59,20 @@ export class ServiceUnavailableError extends DomainError {
     this.name = 'ServiceUnavailableError';
   }
 }
+
+export class RateLimitedError extends DomainError {
+  constructor(message = 'AI service is busy', options?: DomainErrorOptions) {
+    super(message, 429, 'gateway_rate_limited', options);
+    this.name = 'RateLimitedError';
+  }
+}
+
+export class EntitlementError extends DomainError {
+  constructor(
+    message = 'Model not available on this plan',
+    options?: DomainErrorOptions,
+  ) {
+    super(message, 403, 'gateway_entitlement', options);
+    this.name = 'EntitlementError';
+  }
+}

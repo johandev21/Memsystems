@@ -11,6 +11,7 @@ import {
 } from '../../database/schema';
 import { AiService } from '../ai/ai.service';
 import { ConnectionService } from '../ai/connection.service';
+import { GATEWAY_CHAT_FALLBACKS } from '../ai/providers/model-catalog';
 import { RetrievalService } from '../ai/retrieval.service';
 import type { CitationLocator } from '../ai/retrieval.service';
 import { DRIZZLE } from '../database/database.module';
@@ -327,6 +328,11 @@ export class ChatService {
     const modelId = input.model;
     const provider = await this.aiService.getProviderForModel(modelId, userId);
     const model = provider.createModel(modelId);
+    const requestOptions = this.aiService.getGatewayRequestOptions(
+      modelId,
+      userId,
+      { fallbacks: GATEWAY_CHAT_FALLBACKS },
+    );
 
     const systemMessage =
       retrievedChunks.length > 0
@@ -380,6 +386,7 @@ export class ChatService {
     let streamedText = '';
     let streamedReasoning = '';
     let assistantMessagePersisted = false;
+    let gatewayGenerationId: string | undefined;
 
     const persistAssistantMessage = async (
       text: string,
@@ -427,8 +434,9 @@ export class ChatService {
       result = streamText({
         model,
         abortSignal: input.abortSignal,
-        system: systemMessage,
+        instructions: systemMessage,
         messages: messagesForLlm,
+        ...requestOptions,
         onChunk: ({ chunk }) => {
           if (chunk.type === 'text-delta') streamedText += chunk.text;
           if (chunk.type === 'reasoning-delta') {
@@ -440,7 +448,19 @@ export class ChatService {
             error: error instanceof Error ? error.message : String(error),
           });
         },
-        onFinish: async ({ text, reasoning, usage, finishReason }) => {
+        onLanguageModelCallEnd: ({ providerMetadata }) => {
+          // Gateway generation id for cost/usage lookup (getGenerationInfo).
+          const generationId = providerMetadata?.gateway?.generationId;
+          if (typeof generationId === 'string' && generationId) {
+            gatewayGenerationId = generationId;
+            this.logger.debug('gateway generation completed', {
+              modelId,
+              generationId,
+              gateway: providerMetadata?.gateway ?? null,
+            });
+          }
+        },
+        onEnd: async ({ text, reasoning, usage, finishReason }) => {
           const reasoningString = reasoning
             ? typeof reasoning === 'string'
               ? reasoning
@@ -464,6 +484,7 @@ export class ChatService {
 
           await persistAssistantMessage(text, reasoningString, {
             finishReason: String(finishReason),
+            ...(gatewayGenerationId ? { gatewayGenerationId } : {}),
             usage: rawUsage
               ? {
                   inputTokens:
