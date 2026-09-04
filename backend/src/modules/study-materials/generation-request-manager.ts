@@ -25,6 +25,7 @@ export interface StartGenerationInput {
     structure: 'radial' | 'hierarchical' | 'organic';
     colorGroups: boolean;
     crossLinks: boolean;
+    detailLevel: 'basic' | 'detailed';
   };
 }
 

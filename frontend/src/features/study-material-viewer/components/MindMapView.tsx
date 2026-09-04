@@ -68,6 +68,7 @@ function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
 
   return (
     <div
+      style={data.item.color ? { borderLeftColor: data.item.color, borderLeftWidth: 4 } : undefined}
       className={cn(
         "group relative min-w-[150px] max-w-[190px] sm:min-w-[190px] sm:max-w-[230px] rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200",
         isRoot &&

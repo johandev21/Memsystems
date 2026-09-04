@@ -1,27 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, ChevronDown, FileText, Globe, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/features/sources";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/shared/utils/cn";
-import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import {
-  CTA_BUTTON_CLASS,
-  generationSourceCheckboxClass,
-  generationSourceIconClass,
-  generationSourceOptionClass,
-  optionRowClass,
-} from "./option-row";
+import type { BaseMaterialFormProps } from "./types";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { GenerationSourcePopover } from "./generation-source-popover";
 
-type NodeCount = number;
+type DetailLevel = "basic" | "detailed";
 
 const NODE_PRESETS = [10, 20, 30];
 const MAX_NODE_COUNT = 100;
+const DETAIL_OPTIONS = [
+  { id: "basic" as DetailLevel, title: "Basic", desc: "Key concepts and essential relationships" },
+  {
+    id: "detailed" as DetailLevel,
+    title: "Detailed",
+    desc: "Richer labels and explanatory connections",
+  },
+] as const;
+const COLOR_OPTIONS = [
+  { id: false, title: "Plain", desc: "Use the standard node appearance" },
+  { id: true, title: "Grouped colors", desc: "Color related concepts by theme" },
+] as const;
 
 export function MindMapBriefForm({
   notebookId,
@@ -31,9 +35,8 @@ export function MindMapBriefForm({
   submitLabel = "Generate Mind Map",
   disabled = false,
 }: BaseMaterialFormProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initialNodeCount = value.mindMapOptions?.nodeCount ?? 20;
-  const [nodeCount, setNodeCount] = useState<NodeCount>(initialNodeCount);
+  const [nodeCount, setNodeCount] = useState(initialNodeCount);
   const [isAutoMode, setIsAutoMode] = useState(initialNodeCount === 0);
   const [isCustomMode, setIsCustomMode] = useState(
     initialNodeCount > 0 && !NODE_PRESETS.includes(initialNodeCount),
@@ -43,26 +46,30 @@ export function MindMapBriefForm({
       ? String(initialNodeCount)
       : "40",
   );
+  const [detailLevel, setDetailLevel] = useState<DetailLevel>(
+    value.mindMapOptions?.detailLevel ?? "detailed",
+  );
+  const [colorGroups, setColorGroups] = useState(value.mindMapOptions?.colorGroups ?? false);
   const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
 
   const hasSources = value.sourceIds.length > 0;
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  const update = (patch: Partial<BriefFormData>) => onChange(patch);
-
   useEffect(() => {
-    // The viewer is intentionally a tree. Keep the API payload explicit while
-    // avoiding controls for layouts the viewer does not render.
-    update({
+    onChange({
       mindMapOptions: {
-        nodeCount,
+        nodeCount: isAutoMode ? 0 : nodeCount,
         structure: "hierarchical",
-        colorGroups: false,
+        colorGroups,
         crossLinks: false,
+        detailLevel,
       },
     });
-  }, [nodeCount, isAutoMode]);
+    // The dialog's update callback is recreated with each parent render.
+    // These local option values are the effect's actual dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colorGroups, detailLevel, isAutoMode, nodeCount]);
 
   const handleCustomChange = (raw: string) => {
     setCustomValue(raw);
@@ -84,133 +91,86 @@ export function MindMapBriefForm({
     : `${nodeCount} nodes${nodeCount >= MAX_NODE_COUNT ? " (max 100)" : ""}`;
 
   return (
-    <div className="flex w-full flex-col gap-5 font-sans text-text-tertiary">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Map size</Label>
-          <span className="text-xs font-medium text-text-faint">{mapSizeLabel}</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          <button
-            type="button"
-            aria-pressed={isAutoMode}
-            onClick={() => {
-              setIsAutoMode(true);
-              setIsCustomMode(false);
-              setNodeCount(0);
-            }}
-            className={cn(
-              optionRowClass(isAutoMode),
-              "flex h-9 items-center justify-center gap-1.5 text-xs",
-              isAutoMode ? "font-semibold" : "font-medium",
-            )}
-          >
-            Auto
-          </button>
+    <div className="flex w-full flex-col gap-4 font-sans text-text-tertiary">
+      <NodeCountSelector
+        nodeCount={nodeCount}
+        isAutoMode={isAutoMode}
+        isCustomMode={isCustomMode}
+        customValue={customValue}
+        label={mapSizeLabel}
+        onAuto={() => {
+          setIsAutoMode(true);
+          setIsCustomMode(false);
+          setNodeCount(0);
+        }}
+        onPreset={(count) => {
+          setIsAutoMode(false);
+          setIsCustomMode(false);
+          setNodeCount(count);
+        }}
+        onCustom={() => {
+          setIsAutoMode(false);
+          setIsCustomMode(true);
+          setNodeCount(
+            Math.min(MAX_NODE_COUNT, Math.max(1, Number.parseInt(customValue, 10) || 40)),
+          );
+        }}
+        onCustomChange={handleCustomChange}
+        onCustomBlur={handleCustomBlur}
+      />
 
-          {NODE_PRESETS.map((count) => {
-            const selected = !isAutoMode && !isCustomMode && nodeCount === count;
-            return (
-              <button
-                key={count}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => {
-                  setIsAutoMode(false);
-                  setIsCustomMode(false);
-                  setNodeCount(count);
-                }}
-                className={cn(
-                  optionRowClass(selected),
-                  "flex h-9 items-center justify-center gap-1.5 text-xs",
-                  selected ? "font-semibold" : "font-medium",
-                )}
-              >
-                {count}
-              </button>
-            );
-          })}
+      <OptionCards
+        label="Detail Level"
+        options={DETAIL_OPTIONS}
+        selectedId={detailLevel}
+        onSelect={setDetailLevel}
+      />
+      <OptionCards
+        label="Color Groups"
+        options={COLOR_OPTIONS}
+        selectedId={colorGroups}
+        onSelect={setColorGroups}
+      />
 
-          {isCustomMode ? (
-            <input
-              type="number"
-              min={1}
-              max={MAX_NODE_COUNT}
-              value={customValue}
-              onChange={(event) => handleCustomChange(event.target.value)}
-              onBlur={handleCustomBlur}
-              placeholder="1-100"
-              aria-label="Custom node count"
-              className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-xs font-semibold text-text-primary outline-none focus:ring-1 focus:ring-surface-border-strong"
-              autoFocus
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setIsAutoMode(false);
-                setIsCustomMode(true);
-                setNodeCount(
-                  Math.min(MAX_NODE_COUNT, Math.max(1, Number.parseInt(customValue, 10) || 40)),
-                );
-              }}
-              className={cn(
-                optionRowClass(false),
-                "flex h-9 items-center justify-center text-xs font-medium",
-              )}
-            >
-              Custom
-            </button>
-          )}
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-sm font-medium text-text-primary">
+          Knowledge Sources{!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
+        </Label>
+        <GenerationSourcePopover
+          sources={sources}
+          selectedIds={value.sourceIds}
+          onChange={(sourceIds) => onChange({ sourceIds })}
+          emptyMessage="No sources in notebook. Mind map will generate using general knowledge."
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="brief-mindmap" className="text-sm font-medium text-text-primary">
-            What should this map explain?
-            {!hasSources && <span className="ml-0.5 text-destructive">*</span>}
-          </Label>
-          <Textarea
-            id="brief-mindmap"
-            ref={textareaRef}
-            value={value.brief}
-            onChange={(event) => update({ brief: event.target.value })}
-            placeholder="Describe the topic, question, or connections you want to understand..."
-            className="min-h-[84px] resize-none text-xs"
-            disabled={disabled}
-          />
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="brief-mindmap" className="text-sm font-medium text-text-primary">
+          Custom Instructions{!hasSources && <span className="ml-0.5 text-destructive">*</span>}
+        </Label>
+        <Textarea
+          id="brief-mindmap"
+          value={value.brief}
+          onChange={(event) => onChange({ brief: event.target.value })}
+          placeholder="What should this map explain? Describe the topic, question, or connections..."
+          className="min-h-[70px] max-h-[180px] w-full resize-none text-xs"
+          disabled={disabled}
+        />
+      </div>
 
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label className="text-sm font-medium text-text-primary">
-            Knowledge sources
-            {!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
-          </Label>
-          <MindMapSourcePopover
-            sources={sources}
-            selectedIds={value.sourceIds}
-            onChange={(sourceIds) => update({ sourceIds })}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label className="text-xs font-medium text-text-tertiary">Destination folder</Label>
-          <FolderPicker
-            notebookId={notebookId}
-            value={value.folderId}
-            onChange={(folderId) => update({ folderId })}
-            disabled={disabled}
-          />
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+        <FolderPicker
+          notebookId={notebookId}
+          value={value.folderId}
+          onChange={(folderId) => onChange({ folderId })}
+          disabled={disabled}
+        />
       </div>
 
       <Button
         type="button"
-        className={cn(
-          "h-10 w-full gap-2 rounded-full text-sm font-medium transition-colors",
-          CTA_BUTTON_CLASS,
-        )}
+        className={cn("mt-1 h-10 w-full gap-2 rounded-full text-sm font-medium", CTA_BUTTON_CLASS)}
         disabled={!canSubmit}
         onClick={onSubmit}
       >
@@ -220,120 +180,139 @@ export function MindMapBriefForm({
   );
 }
 
-function MindMapSourcePopover({
-  sources,
-  selectedIds,
-  onChange,
+function NodeCountSelector({
+  nodeCount,
+  isAutoMode,
+  isCustomMode,
+  customValue,
+  label,
+  onAuto,
+  onPreset,
+  onCustom,
+  onCustomChange,
+  onCustomBlur,
 }: {
-  sources: Array<{ id: string; title: string; kind: string }>;
-  selectedIds: string[];
-  onChange: (ids: string[]) => void;
+  nodeCount: number;
+  isAutoMode: boolean;
+  isCustomMode: boolean;
+  customValue: string;
+  label: string;
+  onAuto: () => void;
+  onPreset: (count: number) => void;
+  onCustom: () => void;
+  onCustomChange: (value: string) => void;
+  onCustomBlur: () => void;
 }) {
-  const [search, setSearch] = useState("");
-  const filtered = sources.filter((source) =>
-    source.title.toLowerCase().includes(search.toLowerCase()),
-  );
-  const allSelected =
-    filtered.length > 0 && filtered.every((source) => selectedIds.includes(source.id));
-
-  const toggleAll = () => {
-    if (allSelected) {
-      const filteredIds = new Set(filtered.map((source) => source.id));
-      onChange(selectedIds.filter((id) => !filteredIds.has(id)));
-    } else {
-      onChange(Array.from(new Set([...selectedIds, ...filtered.map((source) => source.id)])));
-    }
-  };
-
-  const toggleOne = (id: string) => {
-    onChange(
-      selectedIds.includes(id) ? selectedIds.filter((item) => item !== id) : [...selectedIds, id],
-    );
-  };
-
   return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary px-3.5 text-xs font-medium hover:bg-surface-3 hover:text-text-secondary"
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium text-text-primary">Map Size</Label>
+        <span className="text-xs font-medium text-primary">{label}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <OptionButton selected={isAutoMode} onClick={onAuto}>
+          Auto
+        </OptionButton>
+        {NODE_PRESETS.map((count) => (
+          <OptionButton
+            key={count}
+            selected={!isAutoMode && !isCustomMode && nodeCount === count}
+            onClick={() => onPreset(count)}
           >
-            <span className="flex min-w-0 items-center gap-2 truncate">
-              <BookOpen className="size-4 shrink-0 text-primary" />
-              <span className="truncate">
-                {selectedIds.length === 0
-                  ? "General knowledge"
-                  : `${selectedIds.length} source${selectedIds.length === 1 ? "" : "s"} selected`}
-              </span>
-            </span>
-            <ChevronDown className="size-4 shrink-0 text-text-faint" />
-          </Button>
-        }
-      />
-      <PopoverContent
-        align="start"
-        className="w-[320px] overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl"
-      >
-        <div className="flex items-center justify-between bg-surface-2 px-3.5 py-2.5">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Search className="size-4 shrink-0 text-text-faint" />
-            <input
-              type="text"
-              placeholder="Search sources..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={toggleAll}
-            className="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-xs text-text-tertiary"
-          >
-            Select all <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-          </button>
-        </div>
-        {sources.length === 0 ? (
-          <div className="p-4 text-center text-xs text-text-faint">
-            No sources in notebook. General knowledge will be used.
-          </div>
+            {count}
+          </OptionButton>
+        ))}
+        {isCustomMode ? (
+          <input
+            type="number"
+            min={1}
+            max={MAX_NODE_COUNT}
+            value={customValue}
+            onChange={(event) => onCustomChange(event.target.value)}
+            onBlur={onCustomBlur}
+            placeholder="1-100"
+            aria-label="Custom node count"
+            className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-xs font-semibold text-text-primary outline-none focus:ring-1 focus:ring-surface-border-strong"
+            autoFocus
+          />
         ) : (
-          <div className="max-h-[220px] space-y-1 overflow-y-auto p-2">
-            {filtered.map((source) => {
-              const checked = selectedIds.includes(source.id);
-              return (
-                <button
-                  key={source.id}
-                  type="button"
-                  onClick={() => toggleOne(source.id)}
-                  className={generationSourceOptionClass(checked)}
-                >
-                  <span className="flex min-w-0 items-center gap-2 truncate pr-2">
-                    {source.kind === "web" ? (
-                      <Globe className={generationSourceIconClass(checked)} />
-                    ) : source.kind === "file" ? (
-                      <FileText className={generationSourceIconClass(checked)} />
-                    ) : (
-                      <BookOpen className={generationSourceIconClass(checked)} />
-                    )}
-                    <span className="truncate">{source.title}</span>
-                  </span>
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={() => toggleOne(source.id)}
-                    className={generationSourceCheckboxClass(checked)}
-                  />
-                </button>
-              );
-            })}
-          </div>
+          <OptionButton selected={false} onClick={onCustom}>
+            Custom
+          </OptionButton>
         )}
-        <div className="bg-surface-2 p-2.5 text-xs text-text-faint">
-          {selectedIds.length} selected
-        </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </div>
+  );
+}
+
+function OptionCards<T extends string | boolean>({
+  label,
+  options,
+  selectedId,
+  onSelect,
+}: {
+  label: string;
+  options: readonly { id: T; title: string; desc: string }[];
+  selectedId: T;
+  onSelect: (id: T) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label className="text-sm font-medium text-text-primary">{label}</Label>
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((option) => {
+          const selected = selectedId === option.id;
+          return (
+            <button
+              key={String(option.id)}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onSelect(option.id)}
+              className={cn(
+                optionRowClass(selected),
+                "flex min-h-[62px] items-start p-3 text-left",
+              )}
+            >
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold">{option.title}</span>
+                <span
+                  className={cn(
+                    "mt-0.5 block text-xs leading-tight",
+                    selected ? "opacity-80" : "text-text-faint",
+                  )}
+                >
+                  {option.desc}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OptionButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        optionRowClass(selected),
+        "flex h-9 items-center justify-center text-xs",
+        selected ? "font-semibold" : "font-medium",
+      )}
+    >
+      {children}
+    </button>
   );
 }

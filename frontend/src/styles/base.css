@@ -84,7 +84,8 @@
 
 /* Text selection */
 ::selection {
-  background: color-mix(in oklab, var(--primary) 22%, transparent);
+  background: var(--selection-background);
+  color: var(--selection-foreground, currentColor);
 }
 
 /* Remove Edge password reveal/clear icons */

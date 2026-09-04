@@ -4,9 +4,22 @@ import { SlidesView } from "./SlidesView";
 import type { SlidesContentType } from "../shapes/slides";
 
 const content: SlidesContentType = {
+  design: { preset: "dark" },
   slides: [
-    { id: "s1", layout: "title", title: "Opening" },
-    { id: "s2", layout: "title-bullets", title: "Ideas", bullets: ["First", "Second"] },
+    { id: "s1", role: "title", title: "Opening" },
+    {
+      id: "s2",
+      role: "comparison",
+      title: "Ideas",
+      bullets: ["First", "Second"],
+      elements: [
+        {
+          type: "comparison",
+          left: { heading: "A", points: ["First"] },
+          right: { heading: "B", points: ["Second"] },
+        },
+      ],
+    },
   ],
   previews: [
     { slideId: "s1", svg: `<svg xmlns="http://www.w3.org/2000/svg"><text>Opening</text></svg>` },
@@ -19,7 +32,7 @@ describe("SlidesView", () => {
     const { container } = render(
       <SlidesView materialId="m1" materialTitle="deck-slides" content={{ ...content }} />,
     );
-    expect(screen.getByText("Slide 1 / 2")).toBeDefined();
+    expect(container.textContent).toContain("Slide 1 / 2");
     expect(screen.getByAltText(/Preview of slide 1/)).toBeDefined();
     // Every preview image letterboxes the full 16:9 slide instead of cropping it
     const images = container.querySelectorAll("img");
@@ -31,15 +44,42 @@ describe("SlidesView", () => {
   });
 
   it("advances previews with next/previous controls", () => {
-    render(<SlidesView materialId="m1" materialTitle="deck-slides" content={{ ...content }} />);
+    const { container } = render(
+      <SlidesView materialId="m1" materialTitle="deck-slides" content={{ ...content }} />,
+    );
     fireEvent.click(screen.getByLabelText("Next slide"));
-    expect(screen.getByText("Slide 2 / 2")).toBeDefined();
+    expect(container.textContent).toContain("Slide 2 / 2");
     fireEvent.click(screen.getByLabelText("Previous slide"));
-    expect(screen.getByText("Slide 1 / 2")).toBeDefined();
+    expect(container.textContent).toContain("Slide 1 / 2");
   });
 
   it("exposes an editable pptx export action", () => {
     render(<SlidesView materialId="m1" materialTitle="deck-slides" content={{ ...content }} />);
     expect(screen.getByRole("button", { name: /Export \.pptx/ })).toBeDefined();
+  });
+
+  it("shows the active deck design and slide role", () => {
+    render(<SlidesView materialId="m1" materialTitle="deck-slides" content={{ ...content }} />);
+    expect(screen.getByLabelText("Deck design: dark")).toBeDefined();
+    expect(screen.getByText("title")).toBeDefined();
+  });
+
+  it("renders a recovery fallback when a preview is missing", () => {
+    const withoutPreviews: SlidesContentType = {
+      design: { preset: "light" },
+      slides: [
+        {
+          id: "s1",
+          role: "content",
+          title: "Ideas",
+          elements: [{ type: "bullet-list", items: ["First"] }],
+        },
+      ],
+    };
+    const { container } = render(
+      <SlidesView materialId="m1" materialTitle="deck-slides" content={withoutPreviews} />,
+    );
+    expect(container.textContent).toContain("Preview unavailable for this slide.");
+    expect(container.textContent).toContain("First");
   });
 });

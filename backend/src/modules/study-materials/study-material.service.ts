@@ -19,6 +19,7 @@ import {
 } from './shapes';
 import { normalizeContent } from './content-normalizer';
 import { buildSlidePreviews, withSlidePreviews } from './slides-preview';
+import { resolveSlideDeck } from './slides-design-resolver';
 import { SlidesBuilderService } from './slides-builder.service';
 
 export interface CreateStudyMaterialInput {
@@ -292,8 +293,10 @@ export class StudyMaterialService {
   /**
    * Previews are derived presentation images, not source of truth. Regenerate
    * them on read so decks persisted before a renderer fix (or with missing
-   * previews) self-heal without a data migration. The .pptx export path
-   * strips previews, so this never affects the editable deck.
+   * previews) self-heal without a data migration. Legacy prose decks are
+   * resolved into scenes in-memory so old rows render through the new scene
+   * model; they are persisted as v2 on the next update. The .pptx export
+   * path strips previews, so this never affects the editable deck.
    */
   private refreshDerivedContent<T extends { kind: string; content: unknown }>(
     row: T,
@@ -305,7 +308,11 @@ export class StudyMaterialService {
         : {};
     const { previews, ...deck } = record;
     void previews;
-    return { ...row, content: { ...deck, previews: buildSlidePreviews(deck) } };
+    const resolved = resolveSlideDeck(deck);
+    return {
+      ...row,
+      content: { ...resolved, previews: buildSlidePreviews(resolved) },
+    };
   }
 
   private async findAliveAncestor(folderId: string): Promise<string | null> {

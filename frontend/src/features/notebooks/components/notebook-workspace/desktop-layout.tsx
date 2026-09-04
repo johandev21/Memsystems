@@ -5,7 +5,6 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatPanel, ChatPanelHeader } from "@/features/notebook-chat";
 import { SourceContentViewer, SourcesPanel } from "@/features/sources";
-import { GenerateBriefDialog } from "@/features/study-material-generation";
 import { StudyMaterialsPanel } from "@/features/study-material-tree";
 import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
@@ -217,15 +216,6 @@ export function DesktopLayout({
               </>
             )}
           </div>
-          {dialogs.dialogOpen && (
-            <GenerateBriefDialog
-              notebookId={notebookId}
-              kind={dialogs.generateKind}
-              open={dialogs.dialogOpen}
-              onOpenChange={dialogs.setDialogOpen}
-              onComplete={dialogs.handleGenerateComplete}
-            />
-          )}
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

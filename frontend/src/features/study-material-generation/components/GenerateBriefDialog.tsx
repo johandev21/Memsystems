@@ -80,14 +80,15 @@ export function GenerateBriefDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
-        className={cn(
-          "bg-surface-1 border border-surface-border generate-material-dialog",
-          "sm:max-w-md",
-          (kind === "quiz" || kind === "simple_flashcard") && "sm:max-w-2xl",
-          (kind === "roadmap" || kind === "mind_map" || kind === "slides") && "sm:max-w-3xl",
-        )}
-      >
+        <DialogContent
+          className={cn(
+            "bg-surface-1 border border-surface-border generate-material-dialog",
+            "max-h-[calc(100dvh-2rem)] overflow-y-auto",
+            "sm:max-w-md",
+            (kind === "quiz" || kind === "simple_flashcard") && "sm:max-w-2xl",
+            (kind === "roadmap" || kind === "mind_map" || kind === "slides") && "sm:max-w-3xl",
+          )}
+        >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-text-primary">
             Generate {label}

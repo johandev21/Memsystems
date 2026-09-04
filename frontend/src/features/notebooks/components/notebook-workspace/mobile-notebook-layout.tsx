@@ -3,7 +3,6 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { ChatPanel } from "@/features/notebook-chat";
 import { SourceContentViewer, SourcesPanel } from "@/features/sources";
-import { GenerateBriefDialog } from "@/features/study-material-generation";
 import { MobileStudyMaterialsPanel } from "@/features/study-material-tree";
 import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
@@ -81,15 +80,6 @@ export function MobileNotebookLayout({
             }
           }}
           forceFullscreen
-        />
-      )}
-      {dialogs.dialogOpen && (
-        <GenerateBriefDialog
-          notebookId={notebookId}
-          kind={dialogs.generateKind}
-          open={dialogs.dialogOpen}
-          onOpenChange={dialogs.setDialogOpen}
-          onComplete={dialogs.handleGenerateComplete}
         />
       )}
     </div>

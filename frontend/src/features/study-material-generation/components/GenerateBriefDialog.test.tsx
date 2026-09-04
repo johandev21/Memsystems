@@ -19,9 +19,7 @@ vi.mock("@/features/ai", async (importOriginal) => {
 vi.mock("@/features/sources", () => ({
   sourcesQueryOptions: () => ({
     queryKey: ["sources"],
-    queryFn: () => [
-      { id: "src-1", title: "Source 1", kind: "file" },
-    ],
+    queryFn: () => [{ id: "src-1", title: "Source 1", kind: "file" }],
   }),
 }));
 
@@ -218,8 +216,11 @@ describe("GenerateBriefDialog", () => {
     expect(screen.queryByText("Select model")).toBeNull();
     expect(screen.queryByText("AI model")).toBeNull();
 
+    await user.click(screen.getByRole("button", { name: /Basic/ }));
+    await user.click(screen.getByRole("button", { name: /Grouped colors/ }));
+
     const instructions = screen.getByPlaceholderText(
-      "Describe the topic, question, or connections you want to understand...",
+      "What should this map explain? Describe the topic, question, or connections...",
     );
     await user.type(instructions, "Operating systems concepts");
 
@@ -236,6 +237,70 @@ describe("GenerateBriefDialog", () => {
         kind: "mind_map",
         brief: "Operating systems concepts",
         model: "google/gemini-2.5-flash",
+        mindMapOptions: expect.objectContaining({
+          nodeCount: 20,
+          structure: "hierarchical",
+          colorGroups: true,
+          crossLinks: false,
+          detailLevel: "basic",
+        }),
+      }),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("walks the slides wizard across two steps and submits with design options", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onComplete = vi.fn();
+
+    const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol");
+
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="slides"
+        open={true}
+        onOpenChange={onOpenChange}
+        onComplete={onComplete}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByText("Generate Slides")).toBeTruthy();
+    expect(screen.getByText("Slides Setup")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 2")).toBeTruthy();
+    // Design step is visible first; the submit action lives on step two.
+    expect(screen.getByRole("button", { name: /Dark theme/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Generate" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+    expect(screen.getByText("Step 2 of 2")).toBeTruthy();
+
+    const instructions = screen.getByPlaceholderText(
+      "What should this deck explain? Describe the topic, audience, or narrative arc...",
+    );
+    await user.type(instructions, "Photosynthesis basics");
+
+    const generateBtn = screen.getByRole("button", { name: "Generate" });
+    await waitFor(() => {
+      expect((generateBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    await user.click(generateBtn);
+
+    expect(mockStartBackgroundGeneration).toHaveBeenCalledWith(
+      "nb-1",
+      expect.objectContaining({
+        kind: "slides",
+        brief: "Photosynthesis basics",
+        model: "openai/gpt-5.6-sol",
+        slidesOptions: expect.objectContaining({
+          slideCount: 8,
+          theme: "dark",
+          detailLevel: "detailed",
+        }),
       }),
       expect.anything(),
       expect.anything(),

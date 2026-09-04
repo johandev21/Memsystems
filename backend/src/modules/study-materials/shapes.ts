@@ -134,17 +134,31 @@ export const SlidesPreview = z.object({
   svg: z.string().min(1).max(200000),
 });
 
-export const SlidesContent = z.object({
-  title: z.string().max(200),
-  theme: SlidesTheme.default({
-    background: '#0F172A',
-    accent: '#38BDF8',
-    text: '#F8FAFC',
-    muted: '#94A3B8',
-  }),
-  slides: z.array(SlidesSlide).min(1).max(20),
-  previews: z.array(SlidesPreview).max(20).default([]),
-});
+// ---------------------------------------------------------------------------
+// Structured slide IR (v2). The canonical deck schema lives in
+// `slides-design.schema.ts`; the legacy prose types above are kept so older
+// decks remain readable and convertible via the resolver.
+// ---------------------------------------------------------------------------
+export {
+  SlideDeckSchema as SlidesContentSchema,
+  SlideDesignSchema,
+  SlideElementSchema,
+  SlideSceneSchema,
+} from './slides-design.schema';
+export type {
+  SlideDeck,
+  SlideDesign,
+  SlideElement,
+  SlideRole,
+  SlideScene,
+  SupportedFont,
+} from './slides-design.types';
+export { resolveDesign, resolveSlideDeck } from './slides-design-resolver';
+
+import { SlideDeckSchema } from './slides-design.schema';
+import { resolveSlideDeck } from './slides-design-resolver';
+
+export const SlidesContent = SlideDeckSchema;
 
 const contentSchemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
   quiz: QuizContent,
@@ -157,6 +171,17 @@ const contentSchemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
 export function validateContent(kind: string, content: unknown) {
   if (!(kind in contentSchemas)) {
     throw new BadRequestError(`Invalid study material kind: ${kind}`);
+  }
+  if (kind === 'slides') {
+    // Slides accept legacy prose decks, structured scenes, and malformed
+    // partial output: the resolver always produces a complete v2 deck, and
+    // the strict schema then guarantees renderer-safe output.
+    const resolved = resolveSlideDeck(content);
+    const result = SlideDeckSchema.safeParse(resolved);
+    if (!result.success) {
+      throw new BadRequestError(`Content does not match kind "${kind}"`);
+    }
+    return result.data;
   }
   const schema = contentSchemas[kind as StudyMaterialKind];
   const result = schema.safeParse(content);

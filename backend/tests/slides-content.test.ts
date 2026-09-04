@@ -16,7 +16,7 @@ import {
 import { SlidesBuilderService } from '../src/modules/study-materials/slides-builder.service';
 
 describe('slides content', () => {
-  it('normalizes raw slides with ids, layouts, and bullet caps', () => {
+  it('normalizes legacy slides into scenes with ids, roles, and bullet caps', () => {
     const normalized = normalizeSlidesContent({
       title: 'Nietzsche Core Ideas',
       slides: [
@@ -27,10 +27,19 @@ describe('slides content', () => {
 
     expect(normalized.slides).toHaveLength(2);
     expect(normalized.slides[0].id).toBe('slide-1');
-    expect(normalized.slides[0].layout).toBe('title');
-    expect(normalized.slides[0].bullets).toHaveLength(6);
+    expect(normalized.slides[0].role).toBe('title');
+    const firstBullets = normalized.slides[0].elements.find(
+      (element) => element.type === 'bullet-list',
+    );
+    expect(firstBullets).toBeDefined();
+    if (firstBullets?.type === 'bullet-list') {
+      expect(firstBullets.items).toHaveLength(6);
+    }
     expect(normalized.slides[1].id).toBe('custom');
-    expect(normalized.slides[1].layout).toBe('title-bullets');
+    // Invalid legacy layouts fall back to a safe scene; the final slide is
+    // coerced to a closing role by the deck sequence rules.
+    expect(normalized.slides[1].role).toBe('closing');
+    expect(normalized.design.background).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
 
   it('validates through the kind registry and generates a -slides title', () => {
@@ -45,15 +54,23 @@ describe('slides content', () => {
     expect(generateTitle('slides', normalized)).toBe(
       'nietzsche-core-ideas-slides',
     );
+    // The strict schema still rejects empty decks; the resolver is what
+    // provides graceful fallbacks via validateContent/normalizeContent.
     expect(() => SlidesContent.parse({ title: 'x', slides: [] })).toThrow();
   });
 
   it('builds one SVG preview per slide in deck order', () => {
     const validated = validateContent('slides', {
       title: 'nietzsche-core-ideas-slides',
+      design: { preset: 'dark' },
       slides: [
-        { id: 's1', layout: 'title', title: 'Opening' },
-        { id: 's2', layout: 'quote', title: 'Quote', body: 'Body' },
+        { id: 's1', role: 'title', title: 'Opening', elements: [] },
+        {
+          id: 's2',
+          role: 'quote',
+          title: 'Quote',
+          elements: [{ type: 'quote', quote: 'Body' }],
+        },
       ],
     });
     const withPreviews = withSlidePreviews(
@@ -70,17 +87,24 @@ describe('slides content', () => {
     const svg = renderSlideSvg(
       {
         id: 's8',
-        layout: 'closing',
+        role: 'closing',
         title: 'A Legacy Twenty Centuries Long',
-        body,
+        elements: [{ type: 'text', text: body }],
       },
       7,
       8,
       {
         background: '#0F172A',
-        accent: '#38BDF8',
+        surface: '#1E293B',
+        primary: '#38BDF8',
+        secondary: '#818CF8',
         text: '#F8FAFC',
         muted: '#94A3B8',
+        fontHeading: 'Inter',
+        fontBody: 'Inter',
+        radius: 'small',
+        density: 'balanced',
+        decoration: 'minimal',
       },
     );
     // Wrapped: the full body must not appear as one clipped line
@@ -101,14 +125,26 @@ describe('slides content', () => {
     const bullet =
       'A towering figure of ancient Greek philosophy, Aristotle transformed nearly every field he touched from logic and biology to ethics and politics.';
     const svg = renderSlideSvg(
-      { id: 's2', layout: 'title-bullets', title: 'Ideas', bullets: [bullet] },
+      {
+        id: 's2',
+        role: 'content',
+        title: 'Ideas',
+        elements: [{ type: 'bullet-list', items: [bullet] }],
+      },
       1,
       8,
       {
         background: '#0F172A',
-        accent: '#38BDF8',
+        surface: '#1E293B',
+        primary: '#38BDF8',
+        secondary: '#818CF8',
         text: '#F8FAFC',
         muted: '#94A3B8',
+        fontHeading: 'Inter',
+        fontBody: 'Inter',
+        radius: 'small',
+        density: 'balanced',
+        decoration: 'minimal',
       },
     );
     expect(svg).toContain('<tspan');
@@ -119,30 +155,21 @@ describe('slides content', () => {
     const builder = new SlidesBuilderService();
     const buffer = await builder.buildPptxBuffer({
       title: 'nietzsche-core-ideas-slides',
-      theme: {
-        background: '#0F172A',
-        accent: '#38BDF8',
-        text: '#F8FAFC',
-        muted: '#94A3B8',
-      },
+      design: { preset: 'dark' },
       slides: [
         {
           id: 's1',
-          layout: 'title',
+          role: 'title',
           title: 'Opening',
           subtitle: 'Subtitle',
-          bullets: [],
-          body: '',
-          notes: 'Speaker notes',
+          elements: [],
+          speakerNotes: 'Speaker notes',
         },
         {
           id: 's2',
-          layout: 'title-bullets',
+          role: 'content',
           title: 'Ideas',
-          subtitle: '',
-          bullets: ['First', 'Second'],
-          body: '',
-          notes: '',
+          elements: [{ type: 'bullet-list', items: ['First', 'Second'] }],
         },
       ],
     });

@@ -13,7 +13,14 @@ export interface FlashcardGenerationOptions {
 
 export interface SlidesGenerationOptions {
   slideCount: number;
-  theme: 'dark' | 'light' | 'accent';
+  theme:
+    | 'dark'
+    | 'light'
+    | 'accent'
+    | 'editorial'
+    | 'academic'
+    | 'technical'
+    | 'warm';
   detailLevel: 'basic' | 'detailed';
 }
 
@@ -40,10 +47,18 @@ interface PromptTemplate {
         structure: 'radial' | 'hierarchical' | 'organic';
         colorGroups: boolean;
         crossLinks: boolean;
+        detailLevel: 'basic' | 'detailed';
       };
       slidesOptions?: {
         slideCount: number;
-        theme: 'dark' | 'light' | 'accent';
+        theme:
+          | 'dark'
+          | 'light'
+          | 'accent'
+          | 'editorial'
+          | 'academic'
+          | 'technical'
+          | 'warm';
         detailLevel: 'basic' | 'detailed';
       };
     },
@@ -155,7 +170,11 @@ All node labels MUST use natural Title Case capitalization with spaces.
 Generate nodes with clear labels and edges showing relationships.
 Most edges should be directed (from parent to child concept).
 Use optional colors to group related nodes.
-Identify the root node that represents the main topic.`,
+Identify the root node that represents the main topic.
+Return one JSON object with this exact shape:
+{"title":"topic-mind-map","rootId":"root-node-id","nodes":[{"id":"root-node-id","label":"Main Topic","color":"#64748b","position":{"x":0,"y":0}},{"id":"child-node-id","label":"Related Concept","color":"#64748b","position":{"x":1,"y":0}}],"edges":[{"id":"edge-1","sourceId":"root-node-id","targetId":"child-node-id","label":"relates to","directed":true}]}.
+Every node must include string "id" and "label" fields. Node "color" must be a six-digit hex color and "position" must contain numeric "x" and "y" values.
+Every edge must include string "id", "sourceId", "targetId", and "label" fields plus a boolean "directed" field. "rootId" must match the id of a node.`,
   user: (brief, sourceTexts, options) => {
     const sourceBlock = sourceTexts
       ? `Source material:\n${sourceTexts}\n\n`
@@ -176,15 +195,33 @@ Identify the root node that represents the main topic.`,
     const crossText = opts?.crossLinks
       ? 'Include cross-links between related nodes across different branches.'
       : '';
-    return `${sourceBlock}${instructionsBlock}\n\n${countText} ${structureText}\n${colorText} ${crossText}\n\nGenerate a mind map with nodes and labeled edges showing relationships.`;
+    const detailText = opts?.detailLevel
+      ? `Detail level: ${
+          opts.detailLevel === 'detailed'
+            ? 'Use descriptive labels and include meaningful relationship labels.'
+            : 'Keep labels concise and focus on the most important relationships.'
+        }.`
+      : '';
+    return `${sourceBlock}${instructionsBlock}\n\n${countText} ${structureText} ${detailText}\n${colorText} ${crossText}\n\nGenerate a mind map with nodes and labeled edges showing relationships.`;
   },
 };
 
 const slidesTemplate: PromptTemplate = {
-  instructions: `You are an expert presentation designer. Create a slide deck outline. Generate a descriptive, unique title reflecting the core topic and place it in the top-level 'title' field. Only the top-level 'title' field must be concise and formatted in kebab-case (lowercase, alphanumeric characters and hyphens only, e.g. 'nietzsche-core-ideas-slides') ending with '-slides'.
-All slide titles MUST use natural Title Case capitalization with spaces. NEVER use kebab-case for slide titles, subtitles, bullets, or body text.
-Each slide must have a unique string 'id', a 'layout' (one of 'title', 'title-bullets', 'two-column', 'quote', 'closing'), a 'title', and optionally 'subtitle', 'bullets' (3-5 concise bullets for content slides), 'body' (1-3 sentences), and 'notes' (speaker notes).
-Structure the deck with a clear narrative arc: opening title slide, 3+ content slides, and a closing slide. Vary layouts where appropriate. Do NOT include images, previews, or HTML — text content only.`,
+  instructions: `You are an expert presentation designer. Create a slide deck as structured scenes. Generate a descriptive, unique title reflecting the core topic and place it in the top-level 'title' field. Only the top-level 'title' field must be concise and formatted in kebab-case (lowercase, alphanumeric characters and hyphens only, e.g. 'nietzsche-core-ideas-slides') ending with '-slides'.
+All slide titles MUST use natural Title Case capitalization with spaces. NEVER use kebab-case for slide titles, subtitles, or element text.
+Choose ONE coherent visual direction for the entire deck via the top-level 'design' object: {"preset":"dark"|"light"|"editorial"|"academic"|"technical"|"warm","background":"#RRGGBB","surface":"#RRGGBB","primary":"#RRGGBB","secondary":"#RRGGBB","text":"#RRGGBB","muted":"#RRGGBB","fontHeading":"Inter"|"Arial"|"Helvetica"|"Georgia"|"Verdana"|"Times New Roman","fontBody":"Inter"|"Arial"|"Helvetica"|"Georgia"|"Verdana"|"Times New Roman","radius":"none"|"small"|"large"|"pill","density":"airy"|"balanced"|"dense","decoration":"minimal"|"geometric"|"editorial"|"diagrammatic"}. Prefer simply setting "preset" and letting the server resolve full tokens; only override colors with valid six-digit hex values.
+Each slide must have a unique string 'id', a 'role' (one of 'title', 'section', 'content', 'comparison', 'timeline', 'process', 'statistic', 'quote', 'cards', 'takeaways', 'closing'), a 'title', and optionally 'subtitle', 'speakerNotes', and 'elements' (max 6 per slide).
+Element types and shapes:
+- {"type":"text","text":"...","style":{"variant":"heading"|"body"|"caption","align":"left"|"center"}}
+- {"type":"bullet-list","items":["..."],"style":{"columns":1|2}}
+- {"type":"card-group","cards":[{"title":"...","body":"..."}],"columns":2|3}
+- {"type":"comparison","left":{"heading":"...","points":["..."]},"right":{"heading":"...","points":["..."]}}
+- {"type":"timeline","steps":[{"title":"...","body":"..."}]} (2-6 steps, chronology only)
+- {"type":"process","steps":[{"title":"...","body":"..."}]} (2-6 steps, sequences only)
+- {"type":"statistic","value":"...","label":"...","context":"..."} (only for quantitative facts present in the source material)
+- {"type":"quote","quote":"...","attribution":"..."} (only real quotes from the source material, or clearly marked paraphrase)
+- {"type":"shape","variant":"accent-bar"|"dots"|"ring"|"grid"|"wave"}
+Composition rules: the first slide MUST be role 'title'; the final slide MUST be 'closing' or 'takeaways'. Do NOT use more than two consecutive 'content' slides — vary roles meaningfully. Use 'comparison' for contrasts, 'timeline' for chronology, 'process' for sequences, 'statistic' for notable quantitative facts, and 'section' only for major transitions (max 3 per deck). Prefer visual hierarchy over filling empty space: limit each slide to a readable amount of content (3-5 bullets, 2-4 cards, 2-6 steps). Do NOT invent images, citations, statistics, or quotations. Preserve the learning objective and source-grounded meaning. Do NOT include images, previews, or HTML — structured JSON only.`,
   user: (brief, sourceTexts, options) => {
     const sourceBlock = sourceTexts
       ? `Source material:\n${sourceTexts}\n\n`
@@ -197,15 +234,17 @@ Structure the deck with a clear narrative arc: opening title slide, 3+ content s
       opts?.slideCount && opts.slideCount > 0
         ? `Create EXACTLY ${opts.slideCount} slides.`
         : 'Create 8-10 slides.';
-    const themeText = opts?.theme ? `Visual theme: ${opts.theme}.` : '';
+    const themeText = opts?.theme
+      ? `Visual direction: use the "${opts.theme}" design preset as the deck's coherent visual language (set design.preset to "${opts.theme === 'accent' ? 'warm' : opts.theme}").`
+      : 'Visual direction: choose the design preset (dark, light, editorial, academic, technical, warm) that best fits the subject.';
     const detailText = opts?.detailLevel
       ? `Detail level: ${
           opts.detailLevel === 'detailed'
-            ? 'Include substantive bullets and body text per slide'
-            : 'Keep bullets concise with brief body text'
+            ? 'Include substantive bullets, cards, and step bodies per slide'
+            : 'Keep bullets and bodies concise'
         }.`
       : '';
-    return `${sourceBlock}${instructionsBlock}\n\n${countText} ${themeText} ${detailText}\n\nGenerate a slide deck with ordered slides. Do not include a 'previews' field — previews are generated server-side.`;
+    return `${sourceBlock}${instructionsBlock}\n\n${countText} ${themeText} ${detailText}\n\nGenerate a slide deck with a top-level 'design' object and ordered slide scenes. Use a mixture of at least three different slide roles. Do not include a 'previews' field — previews are generated server-side.`;
   },
 };
 

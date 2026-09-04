@@ -1,4 +1,6 @@
 import { StudyMaterialKind } from './shapes';
+import { resolveSlideDeckPreservingPreviews } from './slides-design-resolver';
+import type { SlideDeck } from './slides-design.types';
 
 type NormalizedFlashcard = { front: string; back: string };
 type NormalizedFlashcardContent = {
@@ -42,46 +44,21 @@ type NormalizedRoadmapContent = {
 type NormalizedMindMapNode = {
   id: string;
   label: string;
-  color?: string;
-  position?: { x: number; y: number };
+  color: string;
+  position: { x: number; y: number };
 };
 type NormalizedMindMapEdge = {
   id: string;
   sourceId: string;
   targetId: string;
-  label?: string;
-  directed?: boolean;
+  label: string;
+  directed: boolean;
 };
 type NormalizedMindMapContent = {
-  title?: string;
-  rootId?: string;
+  title: string;
+  rootId: string;
   nodes: NormalizedMindMapNode[];
   edges: NormalizedMindMapEdge[];
-};
-
-export type SlidesLayout =
-  'title' | 'title-bullets' | 'two-column' | 'quote' | 'closing';
-
-type NormalizedSlidesSlide = {
-  id: string;
-  layout: SlidesLayout;
-  title: string;
-  subtitle?: string;
-  bullets: string[];
-  body?: string;
-  notes?: string;
-};
-
-type NormalizedSlidesContent = {
-  title?: string;
-  theme?: {
-    background?: string;
-    accent?: string;
-    text?: string;
-    muted?: string;
-  };
-  slides: NormalizedSlidesSlide[];
-  previews?: { slideId: string; svg: string }[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -422,6 +399,8 @@ export function normalizeMindMapContent(
       return {
         id: `node-${nIndex}`,
         label: stringify(n),
+        color: '#64748b',
+        position: { x: 0, y: 0 },
       };
     }
     return {
@@ -433,13 +412,13 @@ export function normalizeMindMapContent(
       color:
         typeof n.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(n.color)
           ? n.color
-          : undefined,
+          : '#64748b',
       position:
         isRecord(n.position) &&
         typeof n.position.x === 'number' &&
         typeof n.position.y === 'number'
           ? { x: n.position.x, y: n.position.y }
-          : undefined,
+          : { x: 0, y: 0 },
     };
   });
 
@@ -455,102 +434,31 @@ export function normalizeMindMapContent(
             : `edge-${eIndex}-${Math.random().toString(36).substring(7)}`,
         sourceId: stringify(e.sourceId ?? e.source ?? ''),
         targetId: stringify(e.targetId ?? e.target ?? ''),
-        label: typeof e.label === 'string' ? e.label : undefined,
-        directed: typeof e.directed === 'boolean' ? e.directed : undefined,
+        label: typeof e.label === 'string' ? e.label : '',
+        directed: typeof e.directed === 'boolean' ? e.directed : true,
       };
     })
     .filter((e): e is NormalizedMindMapEdge => e !== null);
 
   return {
     title:
-      isRecord(content) && content.title ? stringify(content.title) : undefined,
+      isRecord(content) && content.title
+        ? stringify(content.title)
+        : 'mind-map',
     rootId:
       isRecord(content) && typeof content.rootId === 'string'
         ? content.rootId
-        : undefined,
+        : (normalizedNodes[0]?.id ?? ''),
     nodes: normalizedNodes,
     edges: normalizedEdges,
   };
 }
 
-export function normalizeSlidesContent(
-  content: unknown,
-): NormalizedSlidesContent {
-  const record = isRecord(content) ? content : {};
-  const rawSlides: unknown[] = Array.isArray(record.slides)
-    ? (record.slides as unknown[])
-    : (() => {
-        const arrayKey = Object.keys(record).find((k) =>
-          Array.isArray(record[k]),
-        );
-        return arrayKey ? toArray(record[arrayKey]) : [];
-      })();
-
-  const validLayouts: SlidesLayout[] = [
-    'title',
-    'title-bullets',
-    'two-column',
-    'quote',
-    'closing',
-  ];
-
-  const normalizedSlides = rawSlides.map((s, index): NormalizedSlidesSlide => {
-    if (!isRecord(s)) {
-      return {
-        id: `slide-${index + 1}`,
-        layout: index === 0 ? 'title' : 'title-bullets',
-        title: stringify(s) || `Slide ${index + 1}`,
-        bullets: [],
-      };
-    }
-    const layout =
-      typeof s.layout === 'string' &&
-      (validLayouts as string[]).includes(s.layout)
-        ? (s.layout as SlidesLayout)
-        : index === 0
-          ? 'title'
-          : 'title-bullets';
-    const bullets = toArray(s.bullets)
-      .map((b) => stringify(b).trim())
-      .filter((b) => b.length > 0)
-      .slice(0, 6);
-    return {
-      id: typeof s.id === 'string' && s.id ? s.id : `slide-${index + 1}`,
-      layout,
-      title: stringify(s.title ?? s.heading ?? `Slide ${index + 1}`),
-      subtitle: typeof s.subtitle === 'string' ? s.subtitle : undefined,
-      bullets,
-      body: typeof s.body === 'string' ? s.body : undefined,
-      notes: typeof s.notes === 'string' ? s.notes : undefined,
-    };
-  });
-
-  const theme = isRecord(record.theme) ? record.theme : {};
-  const hexOrUndefined = (v: unknown) =>
-    typeof v === 'string' && /^#[0-9A-Fa-f]{6}$/.test(v) ? v : undefined;
-
-  return {
-    title:
-      isRecord(content) && content.title ? stringify(content.title) : undefined,
-    theme: {
-      ...(hexOrUndefined(theme.background)
-        ? { background: hexOrUndefined(theme.background) }
-        : {}),
-      ...(hexOrUndefined(theme.accent)
-        ? { accent: hexOrUndefined(theme.accent) }
-        : {}),
-      ...(hexOrUndefined(theme.text)
-        ? { text: hexOrUndefined(theme.text) }
-        : {}),
-      ...(hexOrUndefined(theme.muted)
-        ? { muted: hexOrUndefined(theme.muted) }
-        : {}),
-    },
-    slides: normalizedSlides,
-    ...(Array.isArray(record.previews)
-      ? { previews: record.previews as { slideId: string; svg: string }[] }
-      : {}),
-  };
+export function normalizeSlidesContent(content: unknown): SlideDeck {
+  // The resolver is authoritative: it accepts structured scenes, legacy
+  // prose slides, and malformed partial output, always returning a complete
+  // validated deck. Previews passthrough is handled by the caller.
+  return resolveSlideDeckPreservingPreviews(content);
 }
 
 export function normalizeContent(

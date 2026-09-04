@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { DesktopLayout, REVIEW_STUDIO_SIZE } from "./desktop-layout";
 import { MobileNotebookLayout } from "./mobile-notebook-layout";
+import { GenerateBriefDialog } from "@/features/study-material-generation";
 import {
   NotebookModelProvider,
   useNotebookPanels,
@@ -62,6 +63,17 @@ function NotebookWorkspaceInner({ notebookId }: { notebookId: string }) {
         selectedLocator={sources.selectedLocator}
         onSelectSource={sources.setSelectedSourceId}
       />
+      {/* Single instance: both layouts stay mounted (CSS-hidden), so mounting
+          the dialog here avoids duplicate stacked dialogs with divergent state. */}
+      {dialogs.dialogOpen && (
+        <GenerateBriefDialog
+          notebookId={notebookId}
+          kind={dialogs.generateKind}
+          open={dialogs.dialogOpen}
+          onOpenChange={dialogs.setDialogOpen}
+          onComplete={dialogs.handleGenerateComplete}
+        />
+      )}
     </>
   );
 }

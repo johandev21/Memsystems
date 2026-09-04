@@ -1,6 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { MaterialViewer } from "@/features/study-material-viewer";
-import { type StudyMaterialDTO, studyMaterialQueryOptions } from "@/features/study-material-viewer";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MaterialViewer, MaterialViewerSkeleton } from "@/features/study-material-viewer";
+import {
+  type StudyMaterialDTO,
+  type StudyMaterialKind,
+  studyMaterialQueryOptions,
+  studyMaterialsQueryOptions,
+} from "@/features/study-material-viewer";
 
 export type RightPaneMode =
   | { kind: "select" }
@@ -15,7 +20,7 @@ export interface RightPaneProps {
 }
 
 export function RightPane({
-  notebookId: _notebookId,
+  notebookId,
   mode,
   onModeChange,
   forceFullscreen,
@@ -33,6 +38,7 @@ export function RightPane({
     case "viewer":
       return (
         <StudyMaterialPane
+          notebookId={notebookId}
           materialId={mode.materialId}
           initialMaterial={mode.initialMaterial}
           onClose={() => onModeChange({ kind: "select" })}
@@ -44,18 +50,21 @@ export function RightPane({
 }
 
 function StudyMaterialPane({
+  notebookId,
   materialId,
   initialMaterial,
   onClose,
   forceFullscreen,
   defaultFullscreen,
 }: {
+  notebookId: string;
   materialId: string;
   initialMaterial?: StudyMaterialDTO;
   onClose: () => void;
   forceFullscreen?: boolean;
   defaultFullscreen?: boolean;
 }) {
+  const queryClient = useQueryClient();
   const {
     data: material,
     isLoading,
@@ -65,8 +74,15 @@ function StudyMaterialPane({
     initialData: initialMaterial,
   });
 
+  const cachedKind: StudyMaterialKind | null =
+    initialMaterial?.kind ??
+    queryClient
+      .getQueryData<StudyMaterialDTO[]>(studyMaterialsQueryOptions(notebookId).queryKey)
+      ?.find((item) => item.id === materialId)?.kind ??
+    null;
+
   if (isLoading) {
-    return <StudyMaterialLoading />;
+    return <MaterialViewerSkeleton kind={cachedKind} />;
   }
 
   if (error || !material) {
@@ -80,14 +96,6 @@ function StudyMaterialPane({
       forceFullscreen={forceFullscreen}
       defaultFullscreen={defaultFullscreen}
     />
-  );
-}
-
-function StudyMaterialLoading() {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-    </div>
   );
 }
 

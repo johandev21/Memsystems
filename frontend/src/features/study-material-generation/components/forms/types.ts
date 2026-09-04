@@ -10,11 +10,12 @@ export interface MindMapOptions {
   structure: "radial" | "hierarchical" | "organic";
   colorGroups: boolean;
   crossLinks: boolean;
+  detailLevel: "basic" | "detailed";
 }
 
 export interface SlidesOptions {
   slideCount: number;
-  theme: "dark" | "light" | "accent";
+  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm";
   detailLevel: "basic" | "detailed";
 }
 

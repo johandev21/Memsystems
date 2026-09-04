@@ -7,6 +7,9 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --transparent: transparent;
 
+  /* Text selection: user messages override these roles to remain legible on primary surfaces. */
+  --selection-background: color-mix(in oklab, var(--primary) 22%, transparent);
+
   /* Overlay hierarchy: composer < floating controls < popovers / dropdowns / tooltips < viewer < modal */
   --layer-composer: 40;
   --layer-floating-control: 45;

@@ -63,10 +63,18 @@ export class StreamHandler {
         structure: 'radial' | 'hierarchical' | 'organic';
         colorGroups: boolean;
         crossLinks: boolean;
+        detailLevel: 'basic' | 'detailed';
       };
       slidesOptions?: {
         slideCount: number;
-        theme: 'dark' | 'light' | 'accent';
+        theme:
+          | 'dark'
+          | 'light'
+          | 'accent'
+          | 'editorial'
+          | 'academic'
+          | 'technical'
+          | 'warm';
         detailLevel: 'basic' | 'detailed';
       };
     },
@@ -307,10 +315,18 @@ function buildOptions(input: {
     structure: 'radial' | 'hierarchical' | 'organic';
     colorGroups: boolean;
     crossLinks: boolean;
+    detailLevel: 'basic' | 'detailed';
   };
   slidesOptions?: {
     slideCount: number;
-    theme: 'dark' | 'light' | 'accent';
+    theme:
+      | 'dark'
+      | 'light'
+      | 'accent'
+      | 'editorial'
+      | 'academic'
+      | 'technical'
+      | 'warm';
     detailLevel: 'basic' | 'detailed';
   };
 }): Record<string, unknown> | null {

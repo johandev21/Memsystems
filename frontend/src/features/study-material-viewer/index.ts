@@ -1,4 +1,5 @@
 ﻿export * from "./components/MaterialViewer";
+export * from "./components/skeletons";
 export * from "./components/FlashcardView";
 export * from "./components/QuizView";
 export * from "./components/MindMapView";

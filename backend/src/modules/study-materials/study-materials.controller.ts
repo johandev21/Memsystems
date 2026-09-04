@@ -48,7 +48,7 @@ const updateFolderSchema = z.object({
   parentId: z.string().nullable().optional(),
 });
 
-const generateRequestSchema = z.object({
+export const generateRequestSchema = z.object({
   kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
   brief: z.string().default(''),
   sourceIds: z.array(z.string()).default([]),
@@ -69,12 +69,21 @@ const generateRequestSchema = z.object({
       structure: z.enum(['radial', 'hierarchical', 'organic']),
       colorGroups: z.boolean(),
       crossLinks: z.boolean(),
+      detailLevel: z.enum(['basic', 'detailed']),
     })
     .optional(),
   slidesOptions: z
     .object({
       slideCount: z.number().min(0).max(20),
-      theme: z.enum(['dark', 'light', 'accent']),
+      theme: z.enum([
+        'dark',
+        'light',
+        'accent',
+        'editorial',
+        'academic',
+        'technical',
+        'warm',
+      ]),
       detailLevel: z.enum(['basic', 'detailed']),
     })
     .optional(),

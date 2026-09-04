@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import { formatDisplayTitle } from "@/shared/utils/format-title";
 import { downloadSlidesPptx } from "../api/study-materials";
-import type { SlidesContentType } from "../shapes/slides";
+import type { SlideElementType, SlidesContentType, SlidesSlideType } from "../shapes/slides";
 
 export interface SlidesViewProps {
   materialId: string;
@@ -27,6 +27,57 @@ function dispatchChatPrompt(promptText: string): void {
   );
 }
 
+function elementText(element: SlideElementType): string[] {
+  switch (element.type) {
+    case "text":
+      return element.text ? [element.text] : [];
+    case "bullet-list":
+      return element.items ?? [];
+    case "card-group":
+      return (element.cards ?? []).flatMap((card) =>
+        card.body ? [`${card.title}: ${card.body}`] : [card.title],
+      );
+    case "comparison": {
+      const lines: string[] = [];
+      if (element.left) {
+        lines.push(`${element.left.heading}:`);
+        lines.push(...element.left.points.map((point) => `- ${point}`));
+      }
+      if (element.right) {
+        lines.push(`${element.right.heading}:`);
+        lines.push(...element.right.points.map((point) => `- ${point}`));
+      }
+      return lines;
+    }
+    case "timeline":
+    case "process":
+      return (element.steps ?? []).map((step) =>
+        step.body ? `${step.title}: ${step.body}` : step.title,
+      );
+    case "statistic": {
+      const lines = [`${element.value ?? ""} — ${element.label ?? ""}`];
+      if (element.context) lines.push(element.context);
+      return lines;
+    }
+    case "quote":
+      return element.quote
+        ? [`"${element.quote}"${element.attribution ? ` — ${element.attribution}` : ""}`]
+        : [];
+    case "shape":
+      return [];
+    default:
+      return [];
+  }
+}
+
+function slideBodyLines(slide: SlidesSlideType): string[] {
+  const lines: string[] = [];
+  for (const bullet of slide.bullets ?? []) lines.push(`• ${bullet}`);
+  if (slide.body) lines.push(slide.body);
+  for (const element of slide.elements ?? []) lines.push(...elementText(element));
+  return lines;
+}
+
 export function SlidesView({ materialId, materialTitle, content }: SlidesViewProps) {
   const slides = useMemo(() => content.slides ?? [], [content.slides]);
   const previewById = useMemo(() => {
@@ -36,6 +87,12 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
     }
     return map;
   }, [content.previews]);
+
+  const designPreset = content.design?.preset;
+  const designRole = useCallback(
+    (slide: SlidesSlideType): string => slide.role ?? slide.layout ?? "content",
+    [],
+  );
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -73,9 +130,11 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
 
   const handleStudyInChat = () => {
     if (!activeSlide) return;
+    const role = designRole(activeSlide);
+    const lines = slideBodyLines(activeSlide);
     const bullets = (activeSlide.bullets ?? []).map((b, i) => `${i + 1}. ${b}`).join("\n");
     dispatchChatPrompt(
-      `I'm studying slide ${clampedIndex + 1} ("${activeSlide.title}") from my deck "${formatDisplayTitle(materialTitle)}".\n\nSubtitle: ${activeSlide.subtitle || "N/A"}\n${bullets ? `Key points:\n${bullets}\n` : ""}${activeSlide.body ? `Body: ${activeSlide.body}\n` : ""}\nPlease act as my tutor for this slide: summarize it clearly, then ask me one check-in question.`,
+      `I'm studying slide ${clampedIndex + 1} ("${activeSlide.title}", role: ${role}) from my deck "${formatDisplayTitle(materialTitle)}".\n\nSubtitle: ${activeSlide.subtitle || "N/A"}\n${bullets ? `Key points:\n${bullets}\n` : ""}${activeSlide.body ? `Body: ${activeSlide.body}\n` : ""}${lines.length > 0 ? `Content:\n${lines.slice(0, 12).join("\n")}\n` : ""}\nPlease act as my tutor for this slide: summarize it clearly, then ask me one check-in question.`,
     );
   };
 
@@ -88,8 +147,21 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
   return (
     <div className="flex w-full max-w-4xl mx-auto flex-col gap-4 animate-in fade-in duration-300 pb-20 select-none px-3 sm:px-4">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-text-tertiary">
+        <span className="flex items-center gap-2 text-xs font-medium text-text-tertiary">
           Slide {clampedIndex + 1} / {slides.length}
+          {designPreset && (
+            <span
+              aria-label={`Deck design: ${designPreset}`}
+              className="rounded-full border border-surface-border-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary"
+            >
+              {designPreset}
+            </span>
+          )}
+          {activeSlide && (
+            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-text-tertiary">
+              {designRole(activeSlide)}
+            </span>
+          )}
         </span>
         <Button
           type="button"
@@ -118,15 +190,25 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
             draggable={false}
           />
         ) : (
-          <div className="flex aspect-video w-full flex-col justify-center gap-2 p-8">
+          <div
+            role="img"
+            aria-label={`Slide ${clampedIndex + 1} unavailable: ${activeSlide.title}`}
+            className="flex aspect-video w-full flex-col justify-center gap-2 p-8"
+          >
             <p className="text-lg font-bold text-text-primary">
               {formatDisplayTitle(activeSlide.title)}
             </p>
-            {(activeSlide.bullets ?? []).map((bullet) => (
-              <p key={bullet} className="text-sm text-text-secondary">
-                • {bullet}
-              </p>
-            ))}
+            {activeSlide.subtitle && (
+              <p className="text-sm text-text-secondary">{activeSlide.subtitle}</p>
+            )}
+            {slideBodyLines(activeSlide)
+              .slice(0, 6)
+              .map((line) => (
+                <p key={line} className="text-sm text-text-secondary">
+                  {line}
+                </p>
+              ))}
+            <p className="text-xs text-text-faint">Preview unavailable for this slide.</p>
           </div>
         )}
         <div className="absolute inset-y-0 left-0 flex items-center pl-2">
@@ -193,9 +275,9 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
         })}
       </div>
 
-      {activeSlide?.notes && (
+      {(activeSlide?.notes || activeSlide?.speakerNotes) && (
         <p className="text-xs leading-relaxed text-text-faint">
-          Speaker notes: {activeSlide.notes}
+          Speaker notes: {activeSlide.speakerNotes ?? activeSlide.notes}
         </p>
       )}
 
