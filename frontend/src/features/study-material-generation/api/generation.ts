@@ -15,6 +15,12 @@ export interface MindMapGenerationOptions {
   crossLinks: boolean;
 }
 
+export interface SlidesGenerationOptions {
+  slideCount: number;
+  theme: "dark" | "light" | "accent";
+  detailLevel: "basic" | "detailed";
+}
+
 export interface StartGenerationInput {
   kind: StudyMaterialKind;
   brief: string;
@@ -26,6 +32,7 @@ export interface StartGenerationInput {
   cardStyle?: "qa" | "definition" | "cloze" | "mixed";
   roadmapOptions?: RoadmapGenerationOptions;
   mindMapOptions?: MindMapGenerationOptions;
+  slidesOptions?: SlidesGenerationOptions;
 }
 
 export type GenerationEvent =

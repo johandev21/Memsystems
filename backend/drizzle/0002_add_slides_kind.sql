@@ -1,0 +1,1 @@
+ALTER TYPE "public"."study_material_kind" ADD VALUE 'slides';

@@ -23,7 +23,7 @@ import { StudyMaterialService } from './study-material.service';
 import { TrashService } from './trash.service';
 
 const createStudyMaterialSchema = z.object({
-  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map']),
+  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
   title: z.string().min(1, 'Title is required').max(200),
   content: z.unknown(),
   folderId: z.string().optional(),
@@ -49,7 +49,7 @@ const updateFolderSchema = z.object({
 });
 
 const generateRequestSchema = z.object({
-  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map']),
+  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
   brief: z.string().default(''),
   sourceIds: z.array(z.string()).default([]),
   folderId: z.string().nullable().optional(),
@@ -69,6 +69,13 @@ const generateRequestSchema = z.object({
       structure: z.enum(['radial', 'hierarchical', 'organic']),
       colorGroups: z.boolean(),
       crossLinks: z.boolean(),
+    })
+    .optional(),
+  slidesOptions: z
+    .object({
+      slideCount: z.number().min(0).max(20),
+      theme: z.enum(['dark', 'light', 'accent']),
+      detailLevel: z.enum(['basic', 'detailed']),
     })
     .optional(),
 });
@@ -113,6 +120,29 @@ export class StudyMaterialsController {
     @Param('id') id: string,
   ) {
     return this.studyMaterialService.get(userId, id);
+  }
+
+  @Get('study-materials/:id/export')
+  async exportSlides(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { title, buffer } = await this.studyMaterialService.buildSlidesPptx(
+      userId,
+      id,
+    );
+    const filename = `${title || 'slides'}.pptx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename.replace(/"/g, '')}"`,
+    );
+    res.setHeader('Content-Length', String(buffer.length));
+    res.send(buffer);
   }
 
   @Patch('study-materials/:id')

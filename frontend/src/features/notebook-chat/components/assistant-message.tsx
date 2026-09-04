@@ -33,10 +33,20 @@ export interface AssistantMessageProps {
 }
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
+type ReasoningPart = { type: "reasoning"; text: string; state?: "streaming" | "done" };
 
 function isTextPart(part: UIMessage["parts"][number]): part is TextPart {
   const candidate = part as unknown as TextPart;
   return candidate.type === "text" && typeof candidate.text === "string";
+}
+
+function isReasoningPart(part: UIMessage["parts"][number]): part is ReasoningPart {
+  const candidate = part as unknown as ReasoningPart;
+  return candidate.type === "reasoning" && typeof candidate.text === "string";
+}
+
+function isLivePart(part: TextPart | ReasoningPart): boolean {
+  return part.state === "streaming";
 }
 
 function getReasoningText(parts: UIMessage["parts"]): string {
@@ -195,7 +205,17 @@ function useAssistantMessageContent(
   citedSources: CitedSourceDTO[],
 ) {
   const parts = message?.parts ?? [];
-  const isStreaming = parts.some((part) => isTextPart(part) && part.state === "streaming");
+  const hasStreamingText = parts.some((part) => isTextPart(part) && isLivePart(part));
+  const hasStreamingReasoning = parts.some(
+    (part) => isReasoningPart(part) && isLivePart(part),
+  );
+  // Live = any part still streaming. Reasoning-only phases (no text yet)
+  // must count as streaming, otherwise the Reasoning header never shows its
+  // live "Thinking..." state.
+  const isStreaming = hasStreamingText || hasStreamingReasoning;
+  // Reasoning is "live" only while it streams and no answer text streams yet.
+  // Once text starts, the answer takes over and reasoning collapses to done.
+  const isReasoningStreaming = hasStreamingReasoning && !hasStreamingText;
   const reasoningText = getReasoningText(parts);
   const textParts = parts.filter(isTextPart);
   const referencesByKey = useMemo(
@@ -206,10 +226,14 @@ function useAssistantMessageContent(
     () => ({
       a: ({ href, children, ...props }) => {
         const referenceKey = getReferenceKeyFromHref(href);
-        const reference = referenceKey
-          ? referencesByKey.get(referenceKey.toUpperCase())
-          : undefined;
-        if (reference) return <ReferencePopover reference={reference}>{children}</ReferencePopover>;
+        if (referenceKey) {
+          const reference = referencesByKey.get(referenceKey.toUpperCase());
+          if (reference) return <ReferencePopover reference={reference}>{children}</ReferencePopover>;
+          // Unknown citation key (e.g. model hallucinated R9 or live message
+          // before history refetch): render plain number text instead of a
+          // dead `#reference-*` fragment link or raw markdown.
+          return <span className="font-medium text-muted-foreground">{children}</span>;
+        }
         return (
           <a
             {...props}
@@ -232,7 +256,7 @@ function useAssistantMessageContent(
   const fullPlainText = textParts.map((part) => part.text).join("\n\n");
   return {
     isEmpty: textParts.length === 0 && reasoningText.length === 0,
-    isReasoningStreaming: isStreaming && parts.at(-1)?.type === "reasoning",
+    isReasoningStreaming,
     isStreaming,
     messageComponents,
     preparedParts,

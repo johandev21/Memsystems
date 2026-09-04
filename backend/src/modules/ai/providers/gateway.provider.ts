@@ -1,6 +1,6 @@
 import { createGateway, gateway as defaultGateway } from '@ai-sdk/gateway';
 import { generateText, type JSONValue } from 'ai';
-import { GATEWAY_DEFAULT_MODEL } from './model-catalog';
+import { GATEWAY_DEFAULT_MODEL, resolveModelId } from './model-catalog';
 import { classifyGatewayError } from './gateway-errors';
 import type { HealthCheckResult, Provider, ProviderModel } from './provider';
 
@@ -27,19 +27,16 @@ export interface GatewayRequestOptions {
 }
 
 /**
- * Builds per-request gateway options: the end-user id for spend attribution
- * plus an optional server-side fallback model chain. Auth travels with the
- * provider instance (each user's own gateway key), not the options bag. The
- * bag stays plain JSON so it satisfies the AI SDK provider-options type at
- * every call site.
+ * Builds per-request gateway options: the end-user id for spend attribution.
+ * Auth travels with the provider instance (each user's own gateway key), not
+ * the options bag. The bag stays plain JSON so it satisfies the AI SDK
+ * provider-options type at every call site. Note: no fallback model chain is
+ * attached — the gateway must serve the requested model or fail, never
+ * silently substitute another model.
  */
-export function buildGatewayOptions(
-  userId?: string,
-  fallbacks?: string[],
-): GatewayRequestOptions {
+export function buildGatewayOptions(userId?: string): GatewayRequestOptions {
   const gateway: Record<string, JSONValue> = {};
   if (userId) gateway.user = userId;
-  if (fallbacks && fallbacks.length > 0) gateway.models = [...fallbacks];
   return { providerOptions: { gateway } };
 }
 
@@ -59,10 +56,15 @@ export function createGatewayProvider(deps: {
     name: 'AI Gateway',
     listModels: () => deps.getModels(),
     createModel: (modelId) => gateway(modelId),
-    // Gateway-executed search tools work with any catalog model.
-    supportsWebSearch: () => true,
+    supportsWebSearch: (modelId) => {
+      const resolved = resolveModelId(modelId);
+      const model = deps
+        .getModels()
+        .find((candidate) => candidate.id === resolved);
+      return model?.capabilities?.webSearch === true;
+    },
     createWebSearchTool: () =>
-      gateway.tools.perplexitySearch({ maxResults: 8 }),
+      gateway.tools.perplexitySearch({ maxResults: 20 }),
     health: async (requestOptions?: GatewayRequestOptions) => {
       const health = await probeGateway(
         gateway,

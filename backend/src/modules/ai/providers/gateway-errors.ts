@@ -5,7 +5,13 @@
  * wrappers ("Failed after N attempts…") are unwrapped to the last error.
  */
 export type GatewayFailureKind =
-  'auth' | 'entitlement' | 'rate_limited' | 'retired' | 'transient' | 'unknown';
+  | 'auth'
+  | 'entitlement'
+  | 'rate_limited'
+  | 'retired'
+  | 'capability'
+  | 'transient'
+  | 'unknown';
 
 export interface ClassifiedGatewayError {
   kind: GatewayFailureKind;
@@ -101,6 +107,13 @@ export function classifyGatewayError(error: unknown): ClassifiedGatewayError {
     )
   ) {
     return { kind: 'retired', retryable: false, statusCode, detail };
+  }
+  if (
+    /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool|tools? (?:are|is) not supported/i.test(
+      message,
+    )
+  ) {
+    return { kind: 'capability', retryable: false, statusCode, detail };
   }
   if (
     retryableFlag === true ||

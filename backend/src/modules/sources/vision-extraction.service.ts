@@ -185,7 +185,6 @@ export class VisionExtractionService implements VisionExtractionPort {
       );
       const model = provider.createModel(modelId);
       const requestOptions = this.aiService.getGatewayRequestOptions(
-        modelId,
         input.userId,
       );
 

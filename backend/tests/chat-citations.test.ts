@@ -109,6 +109,46 @@ describe('chat citation mapping', () => {
     );
   });
 
+  it('extracts model-emitted markdown links and backticked markers in order', () => {
+    const evidence = createCitationEvidence([
+      chunk(),
+      chunk({
+        chunkId: 'chunk-2',
+        chunkIndex: 4,
+        sourceId: 'source-2',
+        title: 'Stanford Encyclopedia of Philosophy',
+      }),
+    ]);
+
+    const citations = extractCitationEntries(
+      'First `[ref:R2]` then [9](#reference-R1) then `[3](#reference-R2)` unknown [7](#reference-R9).',
+      evidence,
+    );
+
+    expect(citations.map((citation) => citation.citationKey)).toEqual([
+      'R2',
+      'R1',
+    ]);
+    expect(citations.map((citation) => citation.number)).toEqual([1, 2]);
+  });
+
+  it('extracts clusters sharing one code span without duplicates', () => {
+    const evidence = createCitationEvidence([
+      chunk(),
+      chunk({ chunkId: 'chunk-2', chunkIndex: 1, sourceId: 'source-2' }),
+    ]);
+
+    const citations = extractCitationEntries(
+      'Cluster `[ref:R1][ref:R2]` then `[REF:R2][REF:R1]`.',
+      evidence,
+    );
+
+    expect(citations.map((citation) => citation.citationKey)).toEqual([
+      'R1',
+      'R2',
+    ]);
+  });
+
   it('normalizes legacy source ids into a safe compatibility shape', () => {
     expect(normalizeStoredCitation('source-1', 2)).toEqual({
       schemaVersion: 0,

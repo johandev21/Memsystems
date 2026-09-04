@@ -3,12 +3,10 @@ import {
   AlertCircle,
   Check,
   CheckCircle2,
-  ExternalLink,
   Eye,
   EyeOff,
   KeyRound,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -175,19 +173,13 @@ function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <label
-          htmlFor="gateway-key-input"
-          className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"
-        >
-          Your gateway key
-        </label>
         <a
           href="https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai-gateway"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
         >
-          Get a key <ExternalLink className="size-2.5" />
+          Get a key
         </a>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -318,9 +310,6 @@ function GatewayCard() {
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_8px_30px_rgb(15_23_42/0.035)]">
       <div className="flex flex-col gap-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Sparkles className="size-4" aria-hidden="true" />
-          </span>
           <h3 className="text-sm font-semibold tracking-[-0.01em]">AI Gateway</h3>
           <GatewayStatusBadge
             connected={connected}
@@ -379,7 +368,7 @@ function GatewayCard() {
             rel="noreferrer"
             className="inline-flex items-center gap-1 transition-colors hover:text-foreground hover:underline"
           >
-            What is the gateway? <ExternalLink className="size-2.5" />
+            What is the gateway?
           </a>
           <span>Model list refreshes automatically every 6 hours.</span>
           {connection?.checkedAt && (

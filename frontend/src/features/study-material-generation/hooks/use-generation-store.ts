@@ -3,8 +3,9 @@ import { toast } from "sonner";
 import { create } from "zustand";
 import { cancelGeneration, type StudyMaterialKind, startGeneration } from "../api/generation";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
-import type { RoadmapGenerationOptions, MindMapGenerationOptions } from "../api/generation";
+import type { RoadmapGenerationOptions, MindMapGenerationOptions, SlidesGenerationOptions } from "../api/generation";
 import { KIND_LABELS } from "@/features/study-material-viewer";
+import { classifyChatError } from "@/features/notebook-chat/utils/chat-error";
 
 export interface ActiveGeneration {
   id: string;
@@ -35,6 +36,7 @@ interface GenerationState {
       cardStyle?: "qa" | "definition" | "cloze" | "mixed";
       roadmapOptions?: RoadmapGenerationOptions;
       mindMapOptions?: MindMapGenerationOptions;
+      slidesOptions?: SlidesGenerationOptions;
     },
     queryClient: QueryClient,
     onComplete?: (materialId: string) => void,
@@ -188,7 +190,11 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
           }
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const rawMessage = err instanceof Error ? err.message : String(err);
+        // Generation failures arrive as `{error, code[, model]}` envelopes
+        // (or raw provider text) — classify to friendly copy so toasts never
+        // show JSON or provider jargon.
+        const message = classifyChatError(rawMessage).message;
 
         set((state) => {
           return { generations: updateGenerationError(state.generations, requestId, message) };

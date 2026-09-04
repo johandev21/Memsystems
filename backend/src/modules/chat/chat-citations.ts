@@ -63,8 +63,17 @@ export function extractCitationEntries(
   const seenKeys = new Set<string>();
   const entries: CitedSourceEntry[] = [];
 
-  for (const match of text.matchAll(/\[ref:([a-zA-Z0-9_-]+)\]/g)) {
-    const citationKey = match[1].toUpperCase();
+  // Accept both the canonical `[ref:R1]` marker and the model-emitted
+  // markdown-link shape `[1](#reference-R1)`, each optionally wrapped in
+  // backticks (which the model sometimes adds). Matches are processed in
+  // response order so display numbers follow first appearance.
+  const citationPattern =
+    /`?\[ref:([a-zA-Z0-9_-]+)\]`?|`?\[(\d+)\]\(#reference-([a-zA-Z0-9_-]+)\)`?/gi;
+
+  for (const match of text.matchAll(citationPattern)) {
+    const rawKey = match[1] ?? match[3];
+    if (!rawKey) continue;
+    const citationKey = rawKey.toUpperCase();
     if (seenKeys.has(citationKey)) continue;
 
     const item = evidenceByKey.get(citationKey);

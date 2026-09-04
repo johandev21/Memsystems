@@ -15,6 +15,13 @@
       "when": 1788400000000,
       "tag": "0001_add_gateway_api_key",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788483113124,
+      "tag": "0002_add_slides_kind",
+      "breakpoints": true
     }
   ]
 }

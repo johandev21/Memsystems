@@ -6,6 +6,10 @@ export interface UseWebSearchModelResult {
   currentModel: ModelOption | undefined;
 }
 
+function supportsWebSearch(model: ModelOption): boolean {
+  return model.supportsWebSearch === true || model.capabilities?.webSearch === true;
+}
+
 export function useWebSearchModel(
   models: ModelOption[] | undefined,
   selectedModel?: string | null,
@@ -16,7 +20,7 @@ export function useWebSearchModel(
   );
 
   const isSupported = Boolean(
-    currentModel?.supportsWebSearch || currentModel?.capabilities?.webSearch,
+    currentModel && supportsWebSearch(currentModel),
   );
 
   return {

@@ -137,12 +137,18 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
       className={cn(
         "mt-4 text-sm",
         "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-muted-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+        // Override typeset foreground so reasoning stays gray and distinct from the response.
+        "[--color-foreground:var(--color-muted-foreground)]",
         className,
       )}
       {...props}
     >
+      {/* text-sm keeps thinking visually smaller than the answer. The
+          [--typeset-size:1em] re-anchor is required: unlayered .typeset CSS
+          sets its own font-size (body * 1.125), which would otherwise override
+          the text-sm utility and render thinking at response size. */}
       <MarkdownRenderer
-        className="typeset typeset-chat max-w-[37em]"
+        className="typeset typeset-chat max-w-[37em] text-sm text-muted-foreground [--typeset-size:1em]"
         components={{ code: MarkdownCodeBlock }}
         isStreaming={isStreaming}
       >

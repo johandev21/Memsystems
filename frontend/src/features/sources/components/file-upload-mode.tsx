@@ -1,4 +1,4 @@
-import { FileUp, Link as LinkIcon, Loader2, Type, Upload } from "lucide-react";
+import { Link as LinkIcon, Loader2, Type, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export function FileUploadMode({
   const handleDrop = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
+    if (busy) return;
     const file = e.dataTransfer.files?.[0];
     if (file) {
       if (!isClientSupportedSourceFile(file)) {
@@ -72,7 +73,7 @@ export function FileUploadMode({
 
   return (
     <div
-      className={`relative flex flex-col items-center justify-center border border-dashed py-10 px-6 rounded-xl ${
+      className={`relative flex flex-col items-center justify-center border-2 border-dashed py-10 px-6 rounded-xl ${
         isDragging
           ? "border-primary bg-primary/5"
           : "border-border/60 bg-muted/20 hover:bg-primary/5 hover:border-primary/40"
@@ -90,14 +91,8 @@ export function FileUploadMode({
         onChange={handleFileChange}
       />
 
-      <div className="mb-4 rounded-xl border border-border/50 bg-background p-4">
-        {isUploading ? (
-          <Loader2 className="h-6 w-6 text-primary animate-spin" strokeWidth={2} />
-        ) : (
-          <FileUp className="h-6 w-6 text-primary" strokeWidth={2} />
-        )}
-      </div>
-      <h3 className="mb-1.5 text-lg font-medium text-foreground">
+      <h3 className="mb-1.5 flex items-center gap-2 text-lg font-medium text-foreground">
+        {isUploading && <Loader2 className="size-4 animate-spin text-primary" />}
         {isUploading ? "Uploading file..." : "Drop your files here"}
       </h3>
       <p className="text-xs text-muted-foreground mb-4 text-center max-w-[340px]">

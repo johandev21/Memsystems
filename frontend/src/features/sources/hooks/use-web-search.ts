@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   dismissWebSearchJob,
   importWebSources,
@@ -18,11 +18,13 @@ export interface WebSearchState {
   candidates: WebSearchCandidate[];
   selectedUrls: Set<string>;
   importing: boolean;
+  clearing: boolean;
   importResults: Map<string, WebSearchImportResultItem>;
   searchError: string | null;
+  clearError: string | null;
 }
 
-export function useWebSearch(notebookId: string) {
+export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIVE_INFINITY) {
   const queryClient = useQueryClient();
   const jobQuery = useQuery(webSearchJobQueryOptions(notebookId));
   const job = jobQuery.data ?? null;
@@ -33,7 +35,11 @@ export function useWebSearch(notebookId: string) {
     new Map(),
   );
   const [importing, setImporting] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const initializedSelectionForJob = useRef<string | null>(null);
+  const clearInFlight = useRef(false);
 
   // A new job invalidates previous review-session state.
   const jobId = job?.id ?? null;
@@ -41,6 +47,8 @@ export function useWebSearch(notebookId: string) {
     setSelectedUrls(new Set());
     setImportResults(new Map());
     setLocalError(null);
+    setClearError(null);
+    initializedSelectionForJob.current = null;
   }, [jobId]);
 
   const phase: WebSearchPhase = useMemo(() => {
@@ -51,6 +59,12 @@ export function useWebSearch(notebookId: string) {
   }, [job]);
 
   const candidates = useMemo(() => job?.candidates ?? [], [job]);
+
+  useEffect(() => {
+    if (!jobId || candidates.length === 0 || initializedSelectionForJob.current === jobId) return;
+    setSelectedUrls(new Set(candidates.slice(0, selectionLimit).map((candidate) => candidate.url)));
+    initializedSelectionForJob.current = jobId;
+  }, [candidates, jobId, selectionLimit]);
 
   const searchError =
     job?.status === "failed" ? (job.lastError ?? "Web search failed") : localError;
@@ -70,14 +84,25 @@ export function useWebSearch(notebookId: string) {
     [notebookId, queryClient, queryDraft],
   );
 
-  const toggleCandidate = useCallback((url: string) => {
-    setSelectedUrls((prev) => {
-      const next = new Set(prev);
-      if (next.has(url)) next.delete(url);
-      else next.add(url);
-      return next;
-    });
-  }, []);
+  const toggleCandidate = useCallback(
+    (url: string) => {
+      setSelectedUrls((prev) => {
+        const next = new Set(prev);
+        if (next.has(url)) next.delete(url);
+        else if (next.size < selectionLimit) next.add(url);
+        return next;
+      });
+    },
+    [selectionLimit],
+  );
+
+  const selectAllCandidates = useCallback(() => {
+    setSelectedUrls(
+      new Set(candidates.slice(0, selectionLimit).map((candidate) => candidate.url)),
+    );
+  }, [candidates, selectionLimit]);
+
+  const clearSelection = useCallback(() => setSelectedUrls(new Set()), []);
 
   const importSelected = useCallback(
     async (modelId: string) => {
@@ -100,6 +125,11 @@ export function useWebSearch(notebookId: string) {
           nextResults.set(r.url, r);
         }
         setImportResults(nextResults);
+        setSelectedUrls((previous) => {
+          const next = new Set(previous);
+          for (const item of result.results) next.delete(item.url);
+          return next;
+        });
         await queryClient.invalidateQueries({
           queryKey: ["sources", notebookId],
         });
@@ -150,16 +180,25 @@ export function useWebSearch(notebookId: string) {
     [candidates, importResults, importing, job?.query, notebookId, queryClient],
   );
 
-  const clearResults = useCallback(async () => {
+  const clearResults = useCallback(async (): Promise<boolean> => {
+    if (clearInFlight.current) return false;
+    clearInFlight.current = true;
+    setClearing(true);
+    setClearError(null);
     try {
       await dismissWebSearchJob(notebookId);
+      queryClient.setQueryData(webSearchJobQueryOptions(notebookId).queryKey, null);
+      setSelectedUrls(new Set());
+      setImportResults(new Map());
+      setLocalError(null);
+      return true;
     } catch {
-      // Local reset even if dismissal fails server-side.
+      setClearError("Couldn't clear these results. Try again.");
+      return false;
+    } finally {
+      clearInFlight.current = false;
+      setClearing(false);
     }
-    queryClient.setQueryData(webSearchJobQueryOptions(notebookId).queryKey, null);
-    setSelectedUrls(new Set());
-    setImportResults(new Map());
-    setLocalError(null);
   }, [notebookId, queryClient]);
 
   const state: WebSearchState = {
@@ -169,8 +208,10 @@ export function useWebSearch(notebookId: string) {
     candidates,
     selectedUrls,
     importing,
+    clearing,
     importResults,
     searchError,
+    clearError,
   };
 
   return {
@@ -178,6 +219,8 @@ export function useWebSearch(notebookId: string) {
     setQuery: setQueryDraft,
     runSearch,
     toggleCandidate,
+    selectAllCandidates,
+    clearSelection,
     importSelected,
     retryFailed,
     clearResults,

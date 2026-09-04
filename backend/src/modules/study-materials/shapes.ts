@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export type StudyMaterialKind =
-  'quiz' | 'simple_flashcard' | 'roadmap' | 'mind_map';
+  'quiz' | 'simple_flashcard' | 'roadmap' | 'mind_map' | 'slides';
 
 export const QuizQuestionOption = z.object({
   id: z.string(),
@@ -98,11 +98,60 @@ export const MindMapContent = z.object({
   edges: z.array(MindMapEdge).max(2000),
 });
 
+export const SlidesTheme = z.object({
+  background: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .default('#0F172A'),
+  accent: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .default('#38BDF8'),
+  text: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .default('#F8FAFC'),
+  muted: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .default('#94A3B8'),
+});
+
+export const SlidesSlide = z.object({
+  id: z.string(),
+  layout: z
+    .enum(['title', 'title-bullets', 'two-column', 'quote', 'closing'])
+    .default('title-bullets'),
+  title: z.string().min(1).max(200),
+  subtitle: z.string().max(500).default(''),
+  bullets: z.array(z.string().min(1).max(500)).max(6).default([]),
+  body: z.string().max(2000).default(''),
+  notes: z.string().max(2000).default(''),
+});
+
+export const SlidesPreview = z.object({
+  slideId: z.string(),
+  svg: z.string().min(1).max(200000),
+});
+
+export const SlidesContent = z.object({
+  title: z.string().max(200),
+  theme: SlidesTheme.default({
+    background: '#0F172A',
+    accent: '#38BDF8',
+    text: '#F8FAFC',
+    muted: '#94A3B8',
+  }),
+  slides: z.array(SlidesSlide).min(1).max(20),
+  previews: z.array(SlidesPreview).max(20).default([]),
+});
+
 const contentSchemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
   quiz: QuizContent,
   simple_flashcard: SimpleFlashcardContent,
   roadmap: RoadmapContent,
   mind_map: MindMapContent,
+  slides: SlidesContent,
 };
 
 export function validateContent(kind: string, content: unknown) {

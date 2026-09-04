@@ -1,4 +1,4 @@
-export type StudyMaterialKind = "quiz" | "simple_flashcard" | "roadmap" | "mind_map";
+export type StudyMaterialKind = "quiz" | "simple_flashcard" | "roadmap" | "mind_map" | "slides";
 
 export interface StudyMaterialDTO {
   id: string;

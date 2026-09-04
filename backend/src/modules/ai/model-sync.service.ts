@@ -45,6 +45,12 @@ export class ModelSyncService implements OnModuleInit {
    * Refresh the catalog. Uses the optional server key for background syncs
    * (startup/cron); callers may pass a user's gateway key instead (e.g. the
    * manual refresh button) so the catalog stays fresh without any server key.
+   *
+   * This intentionally does not probe model capabilities with inference.
+   * Tool-call probes spend user quota, add one request per model every six
+   * hours, and can misclassify support during rate limits/provider outages.
+   * Metadata refresh stays quota-free; capability knowledge is curated in
+   * model-catalog.ts and fails closed for unknown families.
    */
   async refreshModels(
     reason = 'manual',

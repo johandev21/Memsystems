@@ -94,15 +94,41 @@ describe('buildGatewayOptions', () => {
     });
   });
 
-  it('attaches a server-side fallback model chain when provided', () => {
-    expect(buildGatewayOptions('user-1', ['openai/gpt-4o-mini'])).toEqual({
+  it('never attaches a fallback model chain — the gateway must serve the requested model or fail', () => {
+    expect(buildGatewayOptions('user-1')).toEqual({
       providerOptions: {
-        gateway: { user: 'user-1', models: ['openai/gpt-4o-mini'] },
+        gateway: { user: 'user-1' },
       },
     });
   });
 
-  it('builds an empty bag without user or fallbacks', () => {
+  it('builds an empty bag without a user', () => {
     expect(buildGatewayOptions()).toEqual({ providerOptions: { gateway: {} } });
+  });
+});
+
+describe('gateway provider capabilities', () => {
+  it('reads web-search support from the synchronized catalog', () => {
+    const provider = createGatewayProvider({
+      apiKey: 'gw-test',
+      getModels: () => [
+        {
+          id: 'deepseek/deepseek-r1',
+          displayName: 'DeepSeek R1',
+          supportsWebSearch: false,
+          capabilities: { webSearch: false },
+        },
+        {
+          id: 'openai/gpt-4o-mini',
+          displayName: 'GPT-4o Mini',
+          supportsWebSearch: true,
+          capabilities: { webSearch: true },
+        },
+      ],
+    });
+
+    expect(provider.supportsWebSearch('deepseek/deepseek-r1')).toBe(false);
+    expect(provider.supportsWebSearch('openai/gpt-4o-mini')).toBe(true);
+    expect(provider.supportsWebSearch('unknown/new-model')).toBe(false);
   });
 });

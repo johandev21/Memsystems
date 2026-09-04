@@ -5,8 +5,9 @@ import {
   isStepCount,
   streamText,
 } from 'ai';
-import { BadRequestError } from '../../common/errors/domain-error';
 import {
+  BadRequestError,
+  CapabilityUnsupportedError,
   EntitlementError,
   RateLimitedError,
 } from '../../common/errors/domain-error';
@@ -19,7 +20,7 @@ import {
 } from './providers/gateway.provider';
 import { classifyGatewayError } from './providers/gateway-errors';
 import { resolveModelId } from './providers/model-catalog';
-import type { Provider } from './providers/provider';
+import type { Provider, ProviderModel } from './providers/provider';
 import { UserSettingsService } from './user-settings.service';
 
 type ConvertInput = Parameters<typeof convertToModelMessages>[0];
@@ -36,7 +37,7 @@ export interface WebSearchResult {
   sources: WebSearchSource[];
 }
 
-function toSearchDomainError(error: unknown): Error {
+function toSearchDomainError(error: unknown, modelName: string): Error {
   const classified = classifyGatewayError(error);
   if (classified.kind === 'rate_limited') {
     return new RateLimitedError(
@@ -50,37 +51,24 @@ function toSearchDomainError(error: unknown): Error {
       { cause: error instanceof Error ? error : undefined },
     );
   }
+  if (classified.kind === 'capability') {
+    return new CapabilityUnsupportedError(
+      `${modelName} doesn't support web search. Switch to a model that supports web search and try again.`,
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
   return error instanceof Error ? error : new Error(String(error));
 }
 
-const WEB_SEARCH_PROMPT = `You are a research assistant helping a student find high-quality learning sources.
+const WEB_SEARCH_PROMPT = `You are a research assistant helping a student find useful learning sources.
 Use the web_search tool to search the web about the user's topic.
-Select ONLY high-quality, substantive, primary sources. Favor: official documentation, encyclopedia entries (Wikipedia, Britannica, Stanford Encyclopedia of Philosophy, etc.), .edu and .gov pages, reputable publications, books, and university course pages.
-EXCLUDE: social media, forums (Reddit, Quora), video pages (YouTube), shopping pages, aggregators, paywalled teasers, and clickbait.
-Keep at most 8 sources — only the best ones.
+Prefer substantive, trustworthy sources (official docs, books, courses, .edu/.gov, reputable articles, encyclopedias). Avoid low-effort, clickbait, or paywalled teasers unless nothing better exists.
+You may include videos, forums, or community posts only if they are genuinely high-quality and relevant.
+Return as many high-quality sources as the topic warrants — let relevance decide, not a fixed number.
 Then write a short research summary (2-3 sentences) describing what the sources cover and why they are good starting points.
 Finally output a JSON object (and nothing else, no markdown fences) with exactly this shape:
 {"summary": string, "sources": [{"title": string, "url": string, "description": string}]}
 Use the exact url from the search results, give each source a clean, human-readable title (never the raw URL), and a one-line description.`;
-
-const BLOCKED_DOMAINS = [
-  'youtube.com',
-  'youtu.be',
-  'reddit.com',
-  'facebook.com',
-  'twitter.com',
-  'x.com',
-  'instagram.com',
-  'tiktok.com',
-  'pinterest.com',
-  'quora.com',
-  'twitch.tv',
-  'discord.com',
-  'amazon.com',
-  'ebay.com',
-  'walmart.com',
-  'aliexpress.com',
-];
 
 @Injectable()
 export class AiService {
@@ -123,15 +111,12 @@ export class AiService {
 
   /**
    * Per-request gateway options for a model call: the user id for spend
-   * attribution plus optional server-side fallbacks. Auth travels with the
-   * provider instance (the user's own gateway key), not the options bag.
+   * attribution. Auth travels with the provider instance (the user's own
+   * gateway key), not the options bag. The gateway must serve the requested
+   * model or fail — silent substitution via fallback models is not allowed.
    */
-  getGatewayRequestOptions(
-    _modelId: string,
-    userId: string,
-    options?: { fallbacks?: string[] },
-  ): GatewayRequestOptions {
-    return buildGatewayOptions(userId, options?.fallbacks);
+  getGatewayRequestOptions(userId: string): GatewayRequestOptions {
+    return buildGatewayOptions(userId);
   }
 
   private async hasEffectiveAuth(userId: string): Promise<boolean> {
@@ -141,6 +126,23 @@ export class AiService {
 
   async listModels(userId: string) {
     return (await this.connectionService.snapshot(userId)).models;
+  }
+
+  requireCapability(
+    provider: Provider,
+    modelId: string,
+    capability: keyof NonNullable<ProviderModel['capabilities']>,
+    label: string,
+  ): ProviderModel {
+    const resolved = resolveModelId(modelId);
+    const models = provider.listModels?.() ?? [];
+    const selected = models.find((model) => model.id === resolved);
+    if (selected?.capabilities?.[capability] === true) return selected;
+
+    const modelName = selected?.displayName ?? modelId;
+    throw new CapabilityUnsupportedError(
+      `${modelName} doesn't support ${label}. Switch to a model that supports ${label} and try again.`,
+    );
   }
 
   async searchWeb(
@@ -153,13 +155,11 @@ export class AiService {
     await this.connectionService.requireConnected(userId, modelId);
     const provider = await this.getProviderForModel(modelId, userId);
     if (!provider.supportsWebSearch(modelId)) {
-      throw new BadRequestError(
-        `Model ${modelId} does not support web search. Try a different chat model.`,
-      );
+      this.requireCapability(provider, modelId, 'webSearch', 'web search');
     }
 
     const model = provider.createModel(modelId);
-    const requestOptions = this.getGatewayRequestOptions(modelId, userId);
+    const requestOptions = this.getGatewayRequestOptions(userId);
     const webSearchTool = provider.createWebSearchTool?.();
     if (!webSearchTool) {
       throw new BadRequestError(
@@ -176,7 +176,9 @@ export class AiService {
         tools: {
           web_search: webSearchTool,
         },
-        toolChoice: { type: 'tool', toolName: 'web_search' },
+        // Only one tool is present, so `required` still guarantees search
+        // without forcing a provider-specific translated tool name.
+        toolChoice: 'required',
         stopWhen: isStepCount(2),
         ...requestOptions,
         onLanguageModelCallEnd: ({ providerMetadata }) => {
@@ -192,7 +194,12 @@ export class AiService {
         query,
         error: err instanceof Error ? (err.stack ?? err.message) : String(err),
       });
-      throw toSearchDomainError(err);
+      const modelName =
+        provider
+          .listModels?.()
+          .find((candidate) => candidate.id === resolveModelId(modelId))
+          ?.displayName ?? modelId;
+      throw toSearchDomainError(err, modelName);
     }
 
     this.logger.log('generateText returned', {
@@ -240,7 +247,7 @@ export class AiService {
     await this.connectionService.requireConnected(userId, modelId);
     const provider = await this.getProviderForModel(modelId, userId);
     const model = provider.createModel(modelId);
-    const requestOptions = this.getGatewayRequestOptions(modelId, userId);
+    const requestOptions = this.getGatewayRequestOptions(userId);
     const coreMessages = await convertToModelMessages(messages);
     return streamText({
       model,
@@ -339,17 +346,6 @@ function extractWebSearchResults(
   return results;
 }
 
-function isBlockedDomain(url: string): boolean {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return BLOCKED_DOMAINS.some(
-      (domain) => host === domain || host.endsWith(`.${domain}`),
-    );
-  } catch {
-    return false;
-  }
-}
-
 function normalizeUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -396,7 +392,6 @@ export function reconcileSearchSources(
     const normalized = normalizeUrl(url);
     if (!realUrls.has(normalized)) return; // never trust hallucinated URLs
     if (seen.has(normalized)) return;
-    if (isBlockedDomain(url)) return;
     seen.add(normalized);
     const realTitle = citationTitles.get(normalized);
     sources.push({

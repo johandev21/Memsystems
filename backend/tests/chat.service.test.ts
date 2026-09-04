@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../src/modules/ai/ai.service';
+import { CapabilityUnsupportedError } from '../src/common/errors/domain-error';
 import { ConnectionService } from '../src/modules/ai/connection.service';
 import { RetrievalService } from '../src/modules/ai/retrieval.service';
 import { ChatService } from '../src/modules/chat/chat.service';
@@ -20,6 +21,7 @@ describe('ChatService streaming lifecycle', () => {
   let service: ChatService;
   let insertedValues: Record<string, unknown>[];
   let retrieveRelevantChunks: ReturnType<typeof vi.fn>;
+  let requireCapability: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -66,6 +68,7 @@ describe('ChatService streaming lifecycle', () => {
     });
 
     retrieveRelevantChunks = vi.fn().mockResolvedValue([]);
+    requireCapability = vi.fn();
 
     const module = await Test.createTestingModule({
       providers: [
@@ -82,6 +85,7 @@ describe('ChatService streaming lifecycle', () => {
           useValue: {
             getProviderForModel: vi.fn().mockResolvedValue(provider),
             getGatewayRequestOptions: vi.fn().mockResolvedValue({}),
+            requireCapability,
           },
         },
         {
@@ -164,6 +168,57 @@ describe('ChatService streaming lifecycle', () => {
     expect(responseOptions.generateMessageId()).toBe(assistantInsert?.id);
   });
 
+  it('always forwards reasoning to the client, even for uncatalogued models', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain Plato',
+      model: 'some-unknown-model',
+    });
+
+    const streamResult = mocks.streamText.mock.results[0].value as {
+      toUIMessageStreamResponse: ReturnType<typeof vi.fn>;
+    };
+    const responseOptions = streamResult.toUIMessageStreamResponse.mock
+      .calls[0][0] as {
+      sendReasoning: boolean;
+    };
+    expect(responseOptions.sendReasoning).toBe(true);
+  });
+
+  it('accumulates reasoning-delta chunks for abort persist', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain Plato',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      onChunk: (event: {
+        chunk: { type: string; text?: string; textDelta?: string; id: string };
+      }) => void;
+      onAbort: () => Promise<void>;
+    };
+    streamOptions.onChunk({
+      chunk: { type: 'reasoning-delta', text: 'Analyzing ', id: 'reasoning-1' },
+    });
+    streamOptions.onChunk({
+      chunk: { type: 'reasoning-delta', text: 'the cave.', id: 'reasoning-1' },
+    });
+    streamOptions.onChunk({
+      chunk: { type: 'text-delta', text: 'The cave represents...', id: 'text-1' },
+    });
+    await streamOptions.onAbort();
+
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+    expect(assistantInsert).toMatchObject({
+      reasoning: 'Analyzing the cave.',
+      parts: [
+        { type: 'reasoning', text: 'Analyzing the cave.' },
+        { type: 'text', text: 'The cave represents...' },
+      ],
+    });
+  });
+
   it('persists message parts, reasoning, and usage metadata on finish', async () => {
     await service.sendMessage('user-1', 'notebook-1', {
       content: 'Explain the cave allegory',
@@ -219,10 +274,7 @@ describe('ChatService streaming lifecycle', () => {
       onLanguageModelCallEnd: (event: {
         providerMetadata?: Record<string, Record<string, unknown>>;
       }) => void;
-      onEnd: (event: {
-        text: string;
-        finishReason?: string;
-      }) => Promise<void>;
+      onEnd: (event: { text: string; finishReason?: string }) => Promise<void>;
     };
 
     streamOptions.onLanguageModelCallEnd({
@@ -270,6 +322,149 @@ describe('ChatService streaming lifecycle', () => {
         ]),
       }),
     );
+    expect(requireCapability).toHaveBeenCalledWith(
+      expect.anything(),
+      'openai/gpt-5.6-sol',
+      'imageInput',
+      'image attachments',
+    );
+  });
+
+  it('rejects unsupported image input before starting the model stream', async () => {
+    requireCapability.mockImplementation(() => {
+      throw new CapabilityUnsupportedError(
+        "DeepSeek R1 doesn't support image attachments. Switch to a model that supports image attachments and try again.",
+      );
+    });
+
+    await expect(
+      service.sendMessage('user-1', 'notebook-1', {
+        content: 'Explain this image',
+        parts: [
+          {
+            type: 'file',
+            mediaType: 'image/png',
+            url: 'data:image/png;base64,iVBORw0KGgo=',
+          },
+        ],
+        model: 'deepseek/deepseek-r1',
+      }),
+    ).rejects.toThrow(/doesn't support image attachments/);
+    expect(mocks.streamText).not.toHaveBeenCalled();
+  });
+
+  it('requests gateway options without any fallback model chain', async () => {
+    const aiService = (service as any).aiService as {
+      getGatewayRequestOptions: ReturnType<typeof vi.fn>;
+    };
+
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain Plato',
+      model: 'anthropic/claude-fable-5.1',
+    });
+
+    expect(aiService.getGatewayRequestOptions).toHaveBeenCalledWith('user-1');
+    expect(aiService.getGatewayRequestOptions).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('fails loud when the gateway serves a different model than requested', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain Plato',
+      model: 'anthropic/claude-fable-5.1',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      onLanguageModelCallEnd: (event: {
+        providerMetadata?: Record<string, Record<string, unknown>>;
+      }) => void;
+    };
+
+    expect(() =>
+      streamOptions.onLanguageModelCallEnd({
+        providerMetadata: {
+          gateway: {
+            generationId: 'gen_substituted',
+            routing: { canonicalSlug: 'openai/gpt-4o-mini' },
+          },
+        },
+      }),
+    ).toThrow(/model_substituted/);
+    expect(() =>
+      streamOptions.onLanguageModelCallEnd({
+        providerMetadata: {
+          gateway: {
+            generationId: 'gen_substituted',
+            routing: { canonicalSlug: 'openai/gpt-4o-mini' },
+          },
+        },
+      }),
+    ).toThrow(/anthropic\/claude-fable-5\.1/);
+  });
+
+  it('accepts matching gateway routing metadata', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain Plato',
+      model: 'anthropic/claude-fable-5.1',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      onLanguageModelCallEnd: (event: {
+        providerMetadata?: Record<string, Record<string, unknown>>;
+      }) => void;
+      onEnd: (event: { text: string; finishReason?: string }) => Promise<void>;
+    };
+
+    expect(() =>
+      streamOptions.onLanguageModelCallEnd({
+        providerMetadata: {
+          gateway: {
+            generationId: 'gen_matching',
+            routing: { canonicalSlug: 'anthropic/claude-fable-5.1' },
+          },
+        },
+      }),
+    ).not.toThrow();
+    await streamOptions.onEnd({
+      text: 'Plato believed...',
+      finishReason: 'stop',
+    });
+
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+    expect(assistantInsert).toMatchObject({
+      metadata: expect.objectContaining({
+        servedModelId: 'anthropic/claude-fable-5.1',
+      }),
+    });
+  });
+
+  it('maps stream failures to client envelopes naming the model', async () => {
+    await service.sendMessage('user-1', 'notebook-1', {
+      content: 'Explain Plato',
+      model: 'anthropic/claude-fable-5.1',
+    });
+
+    const streamResult = mocks.streamText.mock.results[0].value as {
+      toUIMessageStreamResponse: ReturnType<typeof vi.fn>;
+    };
+    const responseOptions = streamResult.toUIMessageStreamResponse.mock
+      .calls[0][0] as { onError?: (error: unknown) => string };
+    expect(typeof responseOptions.onError).toBe('function');
+
+    const error = Object.assign(
+      new Error('Free tier users do not have access'),
+      { statusCode: 403 },
+    );
+    const parsed = JSON.parse(
+      responseOptions.onError!(error),
+    ) as { error: string; code: string; model?: string };
+    expect(parsed.code).toBe('gateway_entitlement');
+    expect(parsed.error).toContain('anthropic/claude-fable-5.1');
   });
 
   it('sends image-only input without embedding an empty retrieval query', async () => {

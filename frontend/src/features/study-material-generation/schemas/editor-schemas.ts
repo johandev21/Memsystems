@@ -74,6 +74,29 @@ export const RoadmapEditorContent = z.object({
 });
 export type RoadmapEditorContentType = z.infer<typeof RoadmapEditorContent>;
 
+const SlidesSlideInput = z.object({
+  id: cuid,
+  layout: z.enum(["title", "title-bullets", "two-column", "quote", "closing"]).optional(),
+  title: z.string().min(0).max(200),
+  subtitle: z.string().max(500).optional(),
+  bullets: z.array(z.string().max(500)).max(6).optional(),
+  body: z.string().max(2000).optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+export const SlidesEditorContent = z.object({
+  theme: z
+    .object({
+      background: z.string().optional(),
+      accent: z.string().optional(),
+      text: z.string().optional(),
+      muted: z.string().optional(),
+    })
+    .optional(),
+  slides: z.array(SlidesSlideInput).min(1).max(20),
+});
+export type SlidesEditorContentType = z.infer<typeof SlidesEditorContent>;
+
 export function createEmptyStudyMaterial(kind: StudyMaterialKind): unknown {
   switch (kind) {
     case "quiz": {
@@ -116,6 +139,18 @@ export function createEmptyStudyMaterial(kind: StudyMaterialKind): unknown {
       };
     case "mind_map":
       throw new Error(`createEmptyStudyMaterial is not implemented for kind "${kind}"`);
+    case "slides":
+      return {
+        slides: [
+          {
+            id: makeId(),
+            layout: "title",
+            title: "Untitled Deck",
+            subtitle: "",
+            bullets: [],
+          },
+        ],
+      };
   }
 }
 

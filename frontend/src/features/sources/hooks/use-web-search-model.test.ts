@@ -5,6 +5,11 @@ import { useWebSearchModel } from "./use-web-search-model";
 
 const sampleModels: ModelOption[] = [
   {
+    id: "openai/gpt-4o-mini",
+    displayName: "GPT-4o Mini",
+    supportsWebSearch: true,
+  },
+  {
     id: "openai/gpt-5.6-sol",
     displayName: "GPT-5.6 Sol",
     supportsWebSearch: true,

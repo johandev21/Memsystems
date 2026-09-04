@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
@@ -18,6 +18,8 @@ import {
   validateContent,
 } from './shapes';
 import { normalizeContent } from './content-normalizer';
+import { buildSlidePreviews, withSlidePreviews } from './slides-preview';
+import { SlidesBuilderService } from './slides-builder.service';
 
 export interface CreateStudyMaterialInput {
   kind: StudyMaterialKind;
@@ -41,6 +43,7 @@ export class StudyMaterialService {
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly notebooksService: NotebooksService,
+    @Optional() private readonly slidesBuilder?: SlidesBuilderService,
   ) {}
 
   async list(
@@ -65,9 +68,11 @@ export class StudyMaterialService {
       .where(and(...conditions))
       .orderBy(desc(studyMaterials.createdAt));
     return materials.map((material) =>
-      material.kind === 'quiz'
-        ? { ...material, content: normalizeContent('quiz', material.content) }
-        : material,
+      this.refreshDerivedContent(
+        material.kind === 'quiz'
+          ? { ...material, content: normalizeContent('quiz', material.content) }
+          : material,
+      ),
     );
   }
 
@@ -82,6 +87,10 @@ export class StudyMaterialService {
   ) {
     await this.notebooksService.assertNotebookOwner(userId, notebookId);
     const validatedContent = validateContent(input.kind, input.content);
+    const storable =
+      input.kind === 'slides'
+        ? withSlidePreviews(validatedContent as Record<string, unknown>)
+        : validatedContent;
     if (input.folderId) {
       await this.assertFolderOwned(userId, notebookId, input.folderId);
     }
@@ -91,13 +100,15 @@ export class StudyMaterialService {
         notebookId,
         kind: input.kind,
         title: input.title.trim().slice(0, 200),
-        content: validatedContent,
+        content: storable,
         folderId: input.folderId ?? null,
       })
       .returning();
-    return sm.kind === 'quiz'
-      ? { ...sm, content: normalizeContent('quiz', sm.content) }
-      : sm;
+    return this.refreshDerivedContent(
+      sm.kind === 'quiz'
+        ? { ...sm, content: normalizeContent('quiz', sm.content) }
+        : sm,
+    );
   }
 
   async update(userId: string, smId: string, input: UpdateStudyMaterialInput) {
@@ -111,7 +122,11 @@ export class StudyMaterialService {
       updates.title = trimmed.slice(0, 200);
     }
     if (input.content !== undefined) {
-      updates.content = validateContent(sm.kind, input.content);
+      const validated = validateContent(sm.kind, input.content);
+      updates.content =
+        sm.kind === 'slides'
+          ? withSlidePreviews(validated as Record<string, unknown>)
+          : validated;
     }
     if (Object.keys(updates).length === 0) {
       return sm;
@@ -121,7 +136,7 @@ export class StudyMaterialService {
       .set(updates)
       .where(eq(studyMaterials.id, smId))
       .returning();
-    return updated;
+    return this.refreshDerivedContent(updated);
   }
 
   async delete(userId: string, smId: string) {
@@ -188,6 +203,33 @@ export class StudyMaterialService {
     return moved;
   }
 
+  async buildSlidesPptx(
+    userId: string,
+    smId: string,
+  ): Promise<{ title: string; buffer: Buffer }> {
+    const sm = await this.fetchOwned(userId, smId);
+    if (sm.kind !== 'slides') {
+      throw new BadRequestError('Only slides can be exported as PowerPoint');
+    }
+    if (sm.deletedAt) {
+      throw new BadRequestError('Cannot export a deleted study material');
+    }
+    // Validate to guarantee the builder receives a well-formed deck.
+    // Previews are derived presentation images and are stripped before
+    // building so the .pptx contains only native editable elements.
+    const validated = validateContent('slides', sm.content) as Record<
+      string,
+      unknown
+    >;
+    const { previews, ...deck } = validated;
+    void previews;
+    if (!this.slidesBuilder) {
+      throw new BadRequestError('Slides export is unavailable');
+    }
+    const buffer = await this.slidesBuilder.buildPptxBuffer(deck);
+    return { title: sm.title, buffer };
+  }
+
   async duplicate(userId: string, smId: string) {
     const source = await this.fetchOwned(userId, smId);
     if (source.deletedAt) {
@@ -196,6 +238,10 @@ export class StudyMaterialService {
 
     // Validate content before copying; ensures kind/content invariant
     const validatedContent = validateContent(source.kind, source.content);
+    const storable =
+      source.kind === 'slides'
+        ? withSlidePreviews(validatedContent as Record<string, unknown>)
+        : validatedContent;
 
     // Title derivation: append " copy" while preserving 200 char limit
     const suffix = ' copy';
@@ -230,15 +276,36 @@ export class StudyMaterialService {
         notebookId: source.notebookId,
         kind: source.kind,
         title: newTitle,
-        content: validatedContent,
+        content: storable,
         folderId: targetFolderId,
         options: source.options ?? null,
       })
       .returning();
 
-    return copy.kind === 'quiz'
-      ? { ...copy, content: normalizeContent('quiz', copy.content) }
-      : copy;
+    return this.refreshDerivedContent(
+      copy.kind === 'quiz'
+        ? { ...copy, content: normalizeContent('quiz', copy.content) }
+        : copy,
+    );
+  }
+
+  /**
+   * Previews are derived presentation images, not source of truth. Regenerate
+   * them on read so decks persisted before a renderer fix (or with missing
+   * previews) self-heal without a data migration. The .pptx export path
+   * strips previews, so this never affects the editable deck.
+   */
+  private refreshDerivedContent<T extends { kind: string; content: unknown }>(
+    row: T,
+  ): T {
+    if (row.kind !== 'slides') return row;
+    const record =
+      row.content && typeof row.content === 'object'
+        ? (row.content as Record<string, unknown>)
+        : {};
+    const { previews, ...deck } = record;
+    void previews;
+    return { ...row, content: { ...deck, previews: buildSlidePreviews(deck) } };
   }
 
   private async findAliveAncestor(folderId: string): Promise<string | null> {
@@ -288,6 +355,6 @@ export class StudyMaterialService {
       throw new NotFoundError('Study material');
     }
     await this.notebooksService.assertNotebookOwner(userId, sm.notebookId);
-    return sm;
+    return this.refreshDerivedContent(sm);
   }
 }

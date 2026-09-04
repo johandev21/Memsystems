@@ -6,6 +6,7 @@ import * as appSchema from '../../database/schema';
 import { studyMaterials } from '../../database/schema';
 import { AiService } from '../ai/ai.service';
 import type { GatewayRequestOptions } from '../ai/providers/gateway.provider';
+import { toClientStreamError } from '../ai/stream-error';
 import { DRIZZLE } from '../database/database.module';
 import { getPromptTemplate } from './prompts';
 import type {
@@ -17,6 +18,7 @@ import {
   QuizContent,
   RoadmapContent,
   SimpleFlashcardContent,
+  SlidesContent,
   StudyMaterialKind,
   validateContent,
 } from './shapes';
@@ -25,6 +27,7 @@ import {
   generateTitle,
   normalizeContent,
 } from './content-normalizer';
+import { withSlidePreviews } from './slides-preview';
 
 export interface StreamResult {
   materialId: string;
@@ -61,6 +64,11 @@ export class StreamHandler {
         colorGroups: boolean;
         crossLinks: boolean;
       };
+      slidesOptions?: {
+        slideCount: number;
+        theme: 'dark' | 'light' | 'accent';
+        detailLevel: 'basic' | 'detailed';
+      };
     },
     sourceTexts: { title: string; rawText: string }[],
     requestId: string,
@@ -81,6 +89,7 @@ export class StreamHandler {
         cardStyle: input.cardStyle,
         roadmapOptions: input.roadmapOptions,
         mindMapOptions: input.mindMapOptions,
+        slidesOptions: input.slidesOptions,
       },
     );
     const schema = this.getContentSchema(input.kind);
@@ -98,11 +107,19 @@ export class StreamHandler {
             modelId,
             userId,
           );
+          const supportsStructuredOutput =
+            provider
+              .listModels?.()
+              .find((candidate) => candidate.id === modelId)?.capabilities
+              ?.structuredOutput === true;
           model = provider.createModel(modelId);
-          requestOptions = this.aiService.getGatewayRequestOptions(
-            modelId,
-            userId,
-          );
+          requestOptions = this.aiService.getGatewayRequestOptions(userId);
+
+          if (!supportsStructuredOutput) {
+            throw new Error(
+              `${modelId} doesn't support native structured output; using JSON fallback.`,
+            );
+          }
 
           const result = streamText({
             model,
@@ -121,6 +138,10 @@ export class StreamHandler {
           const finalContent: unknown = await result.output;
           const normalized = normalizeContent(input.kind, finalContent);
           const validated = validateContent(input.kind, normalized);
+          const storable =
+            input.kind === 'slides'
+              ? withSlidePreviews(validated as Record<string, unknown>)
+              : validated;
 
           const [inserted] = await this.db
             .insert(studyMaterials)
@@ -128,7 +149,7 @@ export class StreamHandler {
               notebookId,
               kind: input.kind,
               title: generateTitle(input.kind, normalized),
-              content: validated,
+              content: storable,
               options,
               folderId: input.folderId ?? null,
             })
@@ -211,6 +232,10 @@ export class StreamHandler {
             );
 
             const validated = validateContent(input.kind, normalizedContent);
+            const storable =
+              input.kind === 'slides'
+                ? withSlidePreviews(validated as Record<string, unknown>)
+                : validated;
 
             const [inserted] = await this.db
               .insert(studyMaterials)
@@ -218,7 +243,7 @@ export class StreamHandler {
                 notebookId,
                 kind: input.kind,
                 title: generateTitle(input.kind, normalizedContent),
-                content: validated,
+                content: storable,
                 options,
                 folderId: input.folderId ?? null,
               })
@@ -241,10 +266,11 @@ export class StreamHandler {
               fallbackError,
             );
 
-            const standardError =
-              fallbackError instanceof Error
-                ? new Error(fallbackError.message)
-                : new Error(String(fallbackError));
+            const standardError = new Error(
+              toClientStreamError(fallbackError, {
+                id: input.model ?? 'unknown model',
+              }),
+            );
             controller.error(standardError);
             onError(standardError.message);
           }
@@ -261,6 +287,7 @@ export class StreamHandler {
       simple_flashcard: SimpleFlashcardContent,
       roadmap: RoadmapContent,
       mind_map: MindMapContent,
+      slides: SlidesContent,
     };
     return schemas[kind];
   }
@@ -280,6 +307,11 @@ function buildOptions(input: {
     structure: 'radial' | 'hierarchical' | 'organic';
     colorGroups: boolean;
     crossLinks: boolean;
+  };
+  slidesOptions?: {
+    slideCount: number;
+    theme: 'dark' | 'light' | 'accent';
+    detailLevel: 'basic' | 'detailed';
   };
 }): Record<string, unknown> | null {
   switch (input.kind) {
@@ -312,6 +344,10 @@ function buildOptions(input: {
     case 'mind_map': {
       if (input.mindMapOptions == null) return null;
       return input.mindMapOptions;
+    }
+    case 'slides': {
+      if (input.slidesOptions == null) return null;
+      return input.slidesOptions;
     }
     default:
       return null;

@@ -10,7 +10,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/shared/utils/cn";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import {
+  CTA_BUTTON_CLASS,
+  generationSourceCheckboxClass,
+  generationSourceIconClass,
+  generationSourceOptionClass,
+  optionRowClass,
+} from "./option-row";
 
 type NodeCount = number;
 
@@ -302,24 +308,23 @@ function MindMapSourcePopover({
                   key={source.id}
                   type="button"
                   onClick={() => toggleOne(source.id)}
-                  className={cn(
-                    "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-left text-xs",
-                    checked
-                      ? "bg-surface-3 font-medium text-text-secondary"
-                      : "text-text-tertiary hover:bg-surface-2",
-                  )}
+                  className={generationSourceOptionClass(checked)}
                 >
                   <span className="flex min-w-0 items-center gap-2 truncate pr-2">
                     {source.kind === "web" ? (
-                      <Globe className="size-4 shrink-0 text-primary" />
+                      <Globe className={generationSourceIconClass(checked)} />
                     ) : source.kind === "file" ? (
-                      <FileText className="size-4 shrink-0 text-primary" />
+                      <FileText className={generationSourceIconClass(checked)} />
                     ) : (
-                      <BookOpen className="size-4 shrink-0 text-primary" />
+                      <BookOpen className={generationSourceIconClass(checked)} />
                     )}
                     <span className="truncate">{source.title}</span>
                   </span>
-                  <Checkbox checked={checked} onCheckedChange={() => toggleOne(source.id)} />
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggleOne(source.id)}
+                    className={generationSourceCheckboxClass(checked)}
+                  />
                 </button>
               );
             })}
@@ -332,5 +337,3 @@ function MindMapSourcePopover({
     </Popover>
   );
 }
-
-

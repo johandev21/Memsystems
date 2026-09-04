@@ -215,7 +215,6 @@ export class TranscriptionService implements TranscriptionPort {
       );
       const model = provider.createModel(modelId);
       const requestOptions = this.aiService.getGatewayRequestOptions(
-        modelId,
         input.userId,
       );
 

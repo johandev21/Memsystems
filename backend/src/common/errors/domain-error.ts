@@ -76,3 +76,10 @@ export class EntitlementError extends DomainError {
     this.name = 'EntitlementError';
   }
 }
+
+export class CapabilityUnsupportedError extends DomainError {
+  constructor(message: string, options?: DomainErrorOptions) {
+    super(message, 400, 'gateway_capability_unsupported', options);
+    this.name = 'CapabilityUnsupportedError';
+  }
+}

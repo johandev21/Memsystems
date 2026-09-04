@@ -1,4 +1,4 @@
-﻿import { apiDelete, apiPatch, apiPost, createQueryOptions } from "@/shared/api";
+﻿import { apiDelete, apiPatch, apiPost, createQueryOptions, fetchApi } from "@/shared/api";
 import type { StudyMaterialDTO, CreateStudyMaterialInput } from "../types";
 
 export interface UpdateStudyMaterialInput {
@@ -41,3 +41,19 @@ export const moveStudyMaterial = (materialId: string, folderId: string | null) =
     `/api/study-materials/${materialId}/move`,
     { folderId },
   );
+
+export const downloadSlidesPptx = async (materialId: string, filename: string) => {
+  const res = await fetchApi(`/api/study-materials/${materialId}/export`);
+  if (!res.ok) {
+    throw new Error(`Export failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename.endsWith(".pptx") ? filename : `${filename}.pptx`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+};

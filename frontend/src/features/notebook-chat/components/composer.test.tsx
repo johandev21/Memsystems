@@ -8,6 +8,7 @@ const models = [
   {
     id: "openai/gpt-5.6-luna",
     displayName: "GPT-5.6 Luna",
+    supportsWebSearch: true,
   },
 ];
 
@@ -39,6 +40,18 @@ function ComposerHarness({
 }
 
 describe("Composer", () => {
+  it("shows web-search capability in the model selector", async () => {
+    const user = userEvent.setup();
+    render(<ComposerHarness />);
+    await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
+    expect(await screen.findByText("Web")).toBeTruthy();
+  });
+
+  it("fails closed for image attachments when capability metadata is absent", () => {
+    render(<ComposerHarness />);
+    expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
+  });
+
   it("moves from an empty disabled state to a ready submit state", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

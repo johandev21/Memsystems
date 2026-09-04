@@ -5,17 +5,6 @@ export const GATEWAY_DEFAULT_MODEL = 'openai/gpt-5.6-sol';
 export const GATEWAY_EMBEDDING_MODEL = 'openai/text-embedding-3-small';
 
 /**
- * Server-side fallback chain for chat requests (`providerOptions.gateway.models`).
- * When the requested model fails (rate limit, entitlement, outage), the
- * gateway transparently retries these in order. Cheap, long-lived,
- * multimodal models only — gpt-4o-mini is proven on free-tier accounts.
- */
-export const GATEWAY_CHAT_FALLBACKS = [
-  'openai/gpt-4o-mini',
-  'google/gemini-3.6-flash',
-];
-
-/**
  * Stale model IDs (persisted in localStorage/DB or sent by old clients) and
  * their gateway replacements. Applied by resolveModelId() before validation.
  */
@@ -39,15 +28,162 @@ export function creatorFromModel(modelId: string): string | null {
   return resolved.slice(0, slash);
 }
 
-const BASE_CHAT_CAPABILITIES: ModelCapabilities = {
+const FAIL_CLOSED_CAPABILITIES: Required<ModelCapabilities> = {
   imageInput: false,
-  fileInput: true,
+  fileInput: false,
   audioInput: false,
-  tools: true,
-  structuredOutput: true,
+  tools: false,
+  structuredOutput: false,
   reasoning: false,
-  webSearch: true,
+  webSearch: false,
 };
+
+interface CapabilityRule {
+  /** Human-readable identifier used when extending or reviewing this table. */
+  family: string;
+  matches: RegExp;
+  capabilities: Partial<Required<ModelCapabilities>>;
+}
+
+/**
+ * Curated model-family knowledge. Rules are applied top-to-bottom, allowing a
+ * narrow rule to override a creator/family default. Web search uses a gateway
+ * tool, so it is advertised only for families with known tool-call support.
+ * Unknown/new families remain usable for plain chat but advertise no optional
+ * capabilities until explicitly reviewed here.
+ */
+export const MODEL_CAPABILITY_RULES: readonly CapabilityRule[] = [
+  {
+    family: 'OpenAI modern GPT and o-series',
+    matches: /^openai\/(?:gpt-(?:4|5)|o[134](?:-|$))/,
+    capabilities: {
+      imageInput: true,
+      fileInput: true,
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'OpenAI reasoning models',
+    matches: /^openai\/(?:gpt-5|o[134](?:-|$))/,
+    capabilities: { reasoning: true },
+  },
+  {
+    family: 'Anthropic Claude',
+    matches: /^anthropic\/claude/,
+    capabilities: {
+      imageInput: true,
+      fileInput: true,
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'Anthropic extended-thinking models',
+    matches: /^anthropic\/claude-(?:3-7|(?:sonnet|opus)-(?:4|5))/,
+    capabilities: { reasoning: true },
+  },
+  {
+    family: 'Google Gemini',
+    matches: /^google\/gemini/,
+    capabilities: {
+      imageInput: true,
+      fileInput: true,
+      audioInput: true,
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'Google Gemini thinking models',
+    matches: /^google\/gemini-(?:2\.5|3|.*thinking)/,
+    capabilities: { reasoning: true },
+  },
+  {
+    family: 'DeepSeek V3/V4 chat',
+    matches: /^deepseek\/deepseek-v[34]/,
+    capabilities: {
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'DeepSeek V4 reasoning',
+    matches: /^deepseek\/deepseek-v4/,
+    capabilities: { reasoning: true },
+  },
+  {
+    family: 'DeepSeek reasoning',
+    matches:
+      /^deepseek\/(?:deepseek-)?r1(?:-|$)|^deepseek\/.*(?:thinking|reasoning)/,
+    capabilities: { reasoning: true },
+  },
+  {
+    family: 'Moonshot Kimi K2+',
+    matches: /^moonshotai\/kimi-k(?:2|3)/,
+    capabilities: {
+      imageInput: true,
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'Meta Llama tool-use families',
+    matches: /^meta\/llama-(?:3\.1|3\.2|3\.3|4)-.*(?:instruct|scout|maverick)/,
+    capabilities: { tools: true, webSearch: true },
+  },
+  {
+    family: 'Meta Llama 4 vision',
+    matches: /^meta\/llama-4-(?:scout|maverick)/,
+    capabilities: { imageInput: true },
+  },
+  {
+    family: 'xAI Grok',
+    matches: /^(?:xai|spacexai)\/grok-/,
+    capabilities: {
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'xAI Grok vision',
+    matches: /^(?:xai|spacexai)\/grok-.*(?:vision|4)/,
+    capabilities: { imageInput: true },
+  },
+  {
+    family: 'Zhipu GLM 4+',
+    matches: /^(?:zhipu|zhipuai)\/glm-(?:4|5)/,
+    capabilities: {
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'Alibaba Qwen 2.5/3',
+    matches: /^(?:alibaba|qwen)\/qwen(?:2\.5|3)/,
+    capabilities: {
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+  {
+    family: 'ByteDance Seed 1.6+',
+    matches: /^bytedance\/seed-(?:1\.6|2)/,
+    capabilities: {
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    },
+  },
+];
 
 /**
  * Capability overlay for chat models. The gateway model list carries no
@@ -57,31 +193,9 @@ const BASE_CHAT_CAPABILITIES: ModelCapabilities = {
  */
 export function capabilitiesForModelId(modelId: string): ModelCapabilities {
   const id = resolveModelId(modelId).toLowerCase();
-  const caps: ModelCapabilities = { ...BASE_CHAT_CAPABILITIES };
-
-  if (id.startsWith('deepseek/')) {
-    caps.fileInput = false;
-  }
-  if (
-    id.startsWith('openai/gpt-4o') ||
-    id.startsWith('openai/gpt-5') ||
-    /^openai\/o[134](-|$)/.test(id)
-  ) {
-    caps.imageInput = true;
-  }
-  if (/^anthropic\/claude/.test(id)) {
-    caps.imageInput = true;
-    caps.reasoning = true;
-  }
-  if (/^google\/gemini/.test(id)) {
-    caps.imageInput = true;
-    caps.reasoning = true;
-  }
-  if (/^moonshotai\/kimi/.test(id)) {
-    caps.imageInput = true;
-  }
-  if (/meta\/llama-4-(scout|maverick)/.test(id)) {
-    caps.imageInput = true;
+  const caps: Required<ModelCapabilities> = { ...FAIL_CLOSED_CAPABILITIES };
+  for (const rule of MODEL_CAPABILITY_RULES) {
+    if (rule.matches.test(id)) Object.assign(caps, rule.capabilities);
   }
   if (
     /thinking/.test(id) ||
@@ -185,14 +299,12 @@ export function toProviderModel(
   }
   if (!isChatModelId(entry.id)) return null;
   const pricing = pricingFor(entry);
+  const capabilities = capabilitiesForModelId(entry.id);
   return {
     id: entry.id,
     displayName: displayNameFor(entry.id, entry.name),
-    supportsWebSearch: true,
-    capabilities: {
-      ...capabilitiesForModelId(entry.id),
-      webSearch: true,
-    },
+    supportsWebSearch: capabilities.webSearch === true,
+    capabilities,
     pricing,
     isFreeTier: isFreeTierModel(entry.id, pricing),
   };
@@ -214,11 +326,12 @@ export function buildChatCatalog(
 }
 
 function seedModel(id: string, displayName: string): ProviderModel {
+  const capabilities = capabilitiesForModelId(id);
   return {
     id,
     displayName,
-    supportsWebSearch: true,
-    capabilities: { ...capabilitiesForModelId(id), webSearch: true },
+    supportsWebSearch: capabilities.webSearch === true,
+    capabilities,
   };
 }
 
@@ -228,6 +341,7 @@ function seedModel(id: string, displayName: string): ProviderModel {
  * gateway-valid `creator/model` slugs.
  */
 export const SEED_GATEWAY_MODELS: ProviderModel[] = [
+  seedModel('openai/gpt-4o-mini', 'GPT-4o Mini'),
   seedModel('openai/gpt-5.6-sol', 'GPT-5.6 Sol'),
   seedModel('openai/gpt-5.6-terra', 'GPT-5.6 Terra'),
   seedModel('openai/gpt-5.6-luna', 'GPT-5.6 Luna'),

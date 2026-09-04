@@ -14,7 +14,14 @@ import {
 export interface ChatMessageListProps {
   messages: UIMessage[];
   citedSourcesMap: Map<string, CitedSourceDTO[]>;
-  isThinking: boolean;
+  /**
+   * True only while the request is in flight AND no assistant content
+   * (reasoning or text) has streamed yet. Never true once the first
+   * reasoning/text part arrives — the live Reasoning block / answer takes over.
+   */
+  showPendingIndicator: boolean;
+  /** Truthful copy for the pending phase, e.g. "Thinking…" vs "Waiting…". */
+  pendingLabel?: string;
   error?: Error | null;
   onCopy: (text: string) => void;
   onRegenerate: () => void;
@@ -23,7 +30,8 @@ export interface ChatMessageListProps {
 export function ChatMessageList({
   messages,
   citedSourcesMap,
-  isThinking,
+  showPendingIndicator,
+  pendingLabel = "Waiting for response…",
   error,
   onCopy,
   onRegenerate,
@@ -67,11 +75,14 @@ export function ChatMessageList({
           </MessageScrollerItem>
         );
       })}
-      {isThinking && (
+      {showPendingIndicator && (
         <MessageScrollerItem messageId="thinking-indicator">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+          <div
+            role="status"
+            className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse"
+          >
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Thinking...</span>
+            <span>{pendingLabel}</span>
           </div>
         </MessageScrollerItem>
       )}

@@ -1,5 +1,5 @@
 import type { UIMessage } from "@ai-sdk/react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   MessageScroller,
@@ -25,7 +25,11 @@ function assistantMessage(id: string, text: string): UIMessage {
   };
 }
 
-function renderChatMessageList(messages: UIMessage[], isThinking = false) {
+function renderChatMessageList(
+  messages: UIMessage[],
+  showPendingIndicator = false,
+  pendingLabel?: string,
+) {
   return render(
     <MessageScrollerProvider defaultScrollPosition="last-anchor">
       <MessageScroller>
@@ -34,7 +38,8 @@ function renderChatMessageList(messages: UIMessage[], isThinking = false) {
             <ChatMessageList
               messages={messages}
               citedSourcesMap={new Map()}
-              isThinking={isThinking}
+              showPendingIndicator={showPendingIndicator}
+              pendingLabel={pendingLabel}
               onCopy={vi.fn()}
               onRegenerate={vi.fn()}
             />
@@ -46,6 +51,31 @@ function renderChatMessageList(messages: UIMessage[], isThinking = false) {
 }
 
 describe("ChatMessageList scroll anchoring", () => {
+  it("offers general recovery guidance for capability errors", () => {
+    render(
+      <MessageScrollerProvider defaultScrollPosition="last-anchor">
+        <MessageScroller>
+          <MessageScrollerViewport>
+            <MessageScrollerContent>
+              <ChatMessageList
+                messages={[userMessage("msg-user-1", "Search this")]}
+                citedSourcesMap={new Map()}
+                showPendingIndicator={false}
+                error={new Error("tool_choice did not match any supported type")}
+                onCopy={vi.fn()}
+                onRegenerate={vi.fn()}
+              />
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+        </MessageScroller>
+      </MessageScrollerProvider>,
+    );
+
+    expect(screen.getByText("Web search isn't supported")).toBeTruthy();
+    expect(screen.getByText(/a model that supports web search/)).toBeTruthy();
+    expect(screen.queryByText(/GPT-4o Mini/)).toBeNull();
+  });
+
   it("anchors only the latest user message in a 4-turn conversation, ensuring earlier turns are not anchors", () => {
     const messages: UIMessage[] = [
       userMessage("msg-user-1", "Turn 1 question"),
@@ -114,7 +144,7 @@ describe("ChatMessageList scroll anchoring", () => {
               <ChatMessageList
                 messages={loadedHistory}
                 citedSourcesMap={new Map()}
-                isThinking={false}
+                showPendingIndicator={false}
                 onCopy={vi.fn()}
                 onRegenerate={vi.fn()}
               />
@@ -157,7 +187,7 @@ describe("ChatMessageList scroll anchoring", () => {
               <ChatMessageList
                 messages={updatedMessages}
                 citedSourcesMap={new Map()}
-                isThinking={true}
+                showPendingIndicator={true}
                 onCopy={vi.fn()}
                 onRegenerate={vi.fn()}
               />
@@ -196,5 +226,41 @@ describe("ChatMessageList scroll anchoring", () => {
     // The version counter "2 of 2" should be present
     expect(container.textContent).toContain("2 of 2");
     expect(container.textContent).toContain("Regenerated response");
+  });
+});
+
+describe("ChatMessageList pending indicator", () => {
+  it("renders the provided pending label with status semantics", () => {
+    const { container } = renderChatMessageList(
+      [userMessage("msg-user-1", "Hello")],
+      true,
+      "Thinking…",
+    );
+
+    const thinkingItem = container.querySelector('[data-message-id="thinking-indicator"]');
+    expect(thinkingItem?.textContent).toContain("Thinking…");
+    expect(thinkingItem?.querySelector('[role="status"]')).toBeTruthy();
+  });
+
+  it("renders the non-reasoning waiting copy instead of fake thinking", () => {
+    const { container } = renderChatMessageList(
+      [userMessage("msg-user-1", "Hello")],
+      true,
+      "Waiting for response…",
+    );
+
+    expect(container.textContent).toContain("Waiting for response…");
+    expect(container.textContent).not.toContain("Thinking…");
+  });
+
+  it("hides the pending indicator once assistant content arrives", () => {
+    const { container } = renderChatMessageList(
+      [userMessage("msg-user-1", "Hello"), assistantMessage("msg-asst-1", "Hi")],
+      false,
+    );
+
+    expect(
+      container.querySelector('[data-message-id="thinking-indicator"]'),
+    ).toBeNull();
   });
 });

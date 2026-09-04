@@ -5,6 +5,7 @@ import {
   type LucideIcon,
   Map as MapIcon,
   Network,
+  Presentation,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -50,6 +51,13 @@ const RESOURCES: ResourceConfig[] = [
     kind: "mind_map",
     icon: Network,
     label: "Mind Map",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
+  },
+  {
+    key: "slides",
+    kind: "slides",
+    icon: Presentation,
+    label: "Slides",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
 ];
@@ -253,5 +261,5 @@ function getGenerationSubtitle(generation: Generation, totalSourceCount: number)
 }
 
 function isInScope(kind: StudyMaterialKind): boolean {
-  return ["quiz", "simple_flashcard", "roadmap", "mind_map"].includes(kind);
+  return ["quiz", "simple_flashcard", "roadmap", "mind_map", "slides"].includes(kind);
 }

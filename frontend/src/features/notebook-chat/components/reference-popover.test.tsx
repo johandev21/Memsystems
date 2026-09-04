@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { CitedSourceDTO } from "../api/chat";
-import { ReferencePopover } from "./reference-popover";
+import { MessageReferences, ReferencePopover } from "./reference-popover";
 
 function reference(overrides: Partial<CitedSourceDTO> = {}): CitedSourceDTO {
   return {
@@ -30,14 +30,41 @@ describe("ReferencePopover", () => {
     const trigger = screen.getByRole("button", {
       name: "Reference 1: Internet Encyclopedia of Philosophy",
     });
+    expect(trigger.textContent).toBe("1");
     await user.click(trigger);
 
-    expect(screen.getAllByText("Internet Encyclopedia of Philosophy")).toHaveLength(2);
+    expect(screen.getByText("Internet Encyclopedia of Philosophy")).toBeTruthy();
     expect(
       screen.getByText("Plato develops the account through the structure of the ideal city."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: /open source/i }).getAttribute("href")).toBe(
       "https://example.com/republic",
+    );
+  });
+
+  it("renders remaining references as compact numbered triggers", () => {
+    render(
+      <MessageReferences
+        references={[
+          reference(),
+          reference({
+            id: "source-2",
+            citationKey: "R2",
+            chunkId: "chunk-2",
+            number: 12,
+            title: "The Republic",
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Reference 1: Internet Encyclopedia of Philosophy",
+      }).textContent,
+    ).toBe("1");
+    expect(screen.getByRole("button", { name: "Reference 12: The Republic" }).textContent).toBe(
+      "12",
     );
   });
 

@@ -57,7 +57,7 @@ export function TextInputMode({
         <div className="flex items-center justify-between">
           <Label htmlFor="source-text-body">Content</Label>
           {textBody.length > 0 && (
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+            <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
               <span>
                 {textBody.split("\n").length.toLocaleString()}{" "}
                 {textBody.split("\n").length === 1 ? "line" : "lines"} ·{" "}

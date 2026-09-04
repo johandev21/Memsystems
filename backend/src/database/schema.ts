@@ -124,6 +124,7 @@ export const studyMaterialKindEnum = pgEnum('study_material_kind', [
   'simple_flashcard',
   'roadmap',
   'mind_map',
+  'slides',
 ]);
 
 export const generationStatusEnum = pgEnum('generation_status', [

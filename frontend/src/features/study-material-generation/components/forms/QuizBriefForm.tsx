@@ -19,7 +19,13 @@ import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import {
+  CTA_BUTTON_CLASS,
+  generationSourceCheckboxClass,
+  generationSourceIconClass,
+  generationSourceOptionClass,
+  optionRowClass,
+} from "./option-row";
 import { GenerationSourcePopover } from "./generation-source-popover";
 
 // ============================================================================
@@ -299,24 +305,23 @@ export function QuizSourcePopover({
             <div
               key={src.id}
               onClick={() => toggleOne(src.id)}
-              className={cn(
-                "flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors",
-                checked
-                  ? "bg-surface-3 text-text-secondary font-medium"
-                  : "hover:bg-surface-2 text-text-tertiary",
-              )}
+              className={generationSourceOptionClass(checked)}
             >
               <div className="flex items-center gap-2 truncate pr-2">
                 {src.kind === "web" ? (
-                  <Globe className="size-4 text-primary shrink-0" />
+                  <Globe className={generationSourceIconClass(checked)} />
                 ) : src.kind === "file" ? (
-                  <FileText className="size-4 text-primary shrink-0" />
+                  <FileText className={generationSourceIconClass(checked)} />
                 ) : (
-                  <BookOpen className="size-4 text-primary shrink-0" />
+                  <BookOpen className={generationSourceIconClass(checked)} />
                 )}
                 <span className="truncate">{src.title}</span>
               </div>
-              <Checkbox checked={checked} onCheckedChange={() => toggleOne(src.id)} />
+              <Checkbox
+                checked={checked}
+                onCheckedChange={() => toggleOne(src.id)}
+                className={generationSourceCheckboxClass(checked)}
+              />
             </div>
           );
         })}
@@ -364,8 +369,6 @@ export function QuizSourcePopover({
     </Popover>
   );
 }
-
-
 
 // ============================================================================
 // Small Local Helper Components
@@ -432,13 +435,20 @@ function DifficultySelector({
               <span
                 className={cn(
                   "text-sm font-semibold",
-                  value === d.id ? "text-text-secondary" : "text-text-tertiary",
+                  value === d.id ? "text-primary-foreground" : "text-text-tertiary",
                 )}
               >
                 {d.title}
               </span>
             </div>
-            <span className="text-xs text-text-faint leading-tight">{d.description}</span>
+            <span
+              className={cn(
+                "text-xs leading-tight",
+                value === d.id ? "text-primary-foreground/80" : "text-text-faint",
+              )}
+            >
+              {d.description}
+            </span>
           </div>
         ))}
       </div>

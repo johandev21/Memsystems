@@ -11,7 +11,8 @@ import {
 } from '../../database/schema';
 import { AiService } from '../ai/ai.service';
 import { ConnectionService } from '../ai/connection.service';
-import { GATEWAY_CHAT_FALLBACKS } from '../ai/providers/model-catalog';
+import { toClientStreamError } from '../ai/stream-error';
+import { resolveModelId } from '../ai/providers/model-catalog';
 import { RetrievalService } from '../ai/retrieval.service';
 import type { CitationLocator } from '../ai/retrieval.service';
 import { DRIZZLE } from '../database/database.module';
@@ -36,11 +37,13 @@ GROUNDING & CITATION RULES:
 - Prioritize source-backed claims. Clearly separate source-derived info from general knowledge.
 - Never treat source availability as "permission" to answer; they are for evidence only.
 - Cite source-backed claims with the evidence key shown in the passages, using exactly this syntax at the end of the supported sentence: [ref:R1].
-- Use only evidence keys that were provided. Never invent a key or put source titles inside citation markers.
+- Emit citations as plain text only: never wrap them in backticks, code spans, or markdown links such as [1](#reference-R1).
+- Use only evidence keys that were provided. Never invent a key, a display number, or put source titles inside citation markers.
 - Do not discuss retrieval mechanics (e.g., source counts, indexing, loaded documents).
 
 TUTORING & ENGAGEMENT:
 - Deliver clear, well-structured, insightful explanations grounded in the sources.
+- Never use emojis in responses.
 - Foster active learning and retention: when explaining concepts, ask the learner to recall or explain key principles, or ask at most one focused reflective question at the end to check understanding.
 - When an image or document is provided, thoroughly analyze its visual content, diagrams, or handwritten steps in connection with the user question.
 - CRITICAL: Produce a single assistant response. Respond ONLY to the user. Do not simulate a multi-turn conversation or fabricate user labels (e.g., "User:", "Q:").`;
@@ -327,12 +330,47 @@ export class ChatService {
 
     const modelId = input.model;
     const provider = await this.aiService.getProviderForModel(modelId, userId);
-    const model = provider.createModel(modelId);
-    const requestOptions = this.aiService.getGatewayRequestOptions(
-      modelId,
-      userId,
-      { fallbacks: GATEWAY_CHAT_FALLBACKS },
+    const submittedParts = input.parts ?? [];
+    const hasImageInput = submittedParts.some(
+      (part) =>
+        part.type === 'file' &&
+        typeof part.mediaType === 'string' &&
+        part.mediaType.startsWith('image/'),
     );
+    const hasFileInput = submittedParts.some(
+      (part) =>
+        part.type === 'file' &&
+        (typeof part.mediaType !== 'string' ||
+          !part.mediaType.startsWith('image/')),
+    );
+    if (hasImageInput) {
+      this.aiService.requireCapability(
+        provider,
+        modelId,
+        'imageInput',
+        'image attachments',
+      );
+    }
+    if (hasFileInput) {
+      this.aiService.requireCapability(
+        provider,
+        modelId,
+        'fileInput',
+        'file attachments',
+      );
+    }
+    const selectedModel = provider
+      .listModels?.()
+      .find((candidate) => candidate.id === modelId);
+    // Always forward reasoning chunks when the model emits them. Gating on
+    // the static capability catalog caused reasoning-capable models that were
+    // misclassified to stream no reasoning live (reasoning only appeared
+    // after persist + history refetch). `sendReasoning: true` is a no-op for
+    // models that emit no reasoning.
+    // `selectedModel` is still used for error messages below.
+    void selectedModel;
+    const model = provider.createModel(modelId);
+    const requestOptions = this.aiService.getGatewayRequestOptions(userId);
 
     const systemMessage =
       retrievedChunks.length > 0
@@ -387,6 +425,7 @@ export class ChatService {
     let streamedReasoning = '';
     let assistantMessagePersisted = false;
     let gatewayGenerationId: string | undefined;
+    let servedModelId: string | undefined;
 
     const persistAssistantMessage = async (
       text: string,
@@ -440,7 +479,16 @@ export class ChatService {
         onChunk: ({ chunk }) => {
           if (chunk.type === 'text-delta') streamedText += chunk.text;
           if (chunk.type === 'reasoning-delta') {
-            streamedReasoning += chunk.text;
+            // `text` is the ai v7 field; fall back to legacy `textDelta`
+            // so abort-persist still captures reasoning across SDK shapes.
+            const asRecord = chunk as unknown as Record<string, unknown>;
+            const delta =
+              typeof asRecord.text === 'string'
+                ? asRecord.text
+                : typeof asRecord.textDelta === 'string'
+                  ? asRecord.textDelta
+                  : '';
+            streamedReasoning += delta;
           }
         },
         onError: ({ error }) => {
@@ -450,7 +498,30 @@ export class ChatService {
         },
         onLanguageModelCallEnd: ({ providerMetadata }) => {
           // Gateway generation id for cost/usage lookup (getGenerationInfo).
-          const generationId = providerMetadata?.gateway?.generationId;
+          const gatewayMeta = providerMetadata?.gateway as
+            | {
+                generationId?: unknown;
+                routing?: {
+                  originalModelId?: unknown;
+                  canonicalSlug?: unknown;
+                };
+              }
+            | undefined;
+          const generationId = gatewayMeta?.generationId;
+          // Fail loud on model substitution: the gateway must serve the
+          // requested model or fail. Serving a different model silently
+          // (e.g. via fallbacks) would present the wrong model as working.
+          const served =
+            gatewayMeta?.routing?.canonicalSlug ??
+            gatewayMeta?.routing?.originalModelId;
+          if (typeof served === 'string' && served.length > 0) {
+            servedModelId = served;
+            if (resolveModelId(served) !== resolveModelId(modelId)) {
+              throw new Error(
+                `model_substituted: requested ${modelId} but the gateway served ${served}. No model substitution is allowed — pick a model your plan includes.`,
+              );
+            }
+          }
           if (typeof generationId === 'string' && generationId) {
             gatewayGenerationId = generationId;
             this.logger.debug('gateway generation completed', {
@@ -485,6 +556,7 @@ export class ChatService {
           await persistAssistantMessage(text, reasoningString, {
             finishReason: String(finishReason),
             ...(gatewayGenerationId ? { gatewayGenerationId } : {}),
+            ...(servedModelId ? { servedModelId } : {}),
             usage: rawUsage
               ? {
                   inputTokens:
@@ -523,6 +595,14 @@ export class ChatService {
             };
           }
         },
+        // The SDK masks raw server errors ("An error occurred.") by default,
+        // which the client cannot classify. Map failures to curated
+        // `{error, code[, model]}` envelopes instead.
+        onError: (error) =>
+          toClientStreamError(error, {
+            id: modelId,
+            displayName: selectedModel?.displayName,
+          }),
       }),
       userMessageId: userMessage.id,
     };

@@ -12,6 +12,12 @@ export interface MindMapOptions {
   crossLinks: boolean;
 }
 
+export interface SlidesOptions {
+  slideCount: number;
+  theme: "dark" | "light" | "accent";
+  detailLevel: "basic" | "detailed";
+}
+
 export interface BriefFormData {
   brief: string;
   sourceIds: string[];
@@ -22,6 +28,7 @@ export interface BriefFormData {
   cardStyle?: "qa" | "definition" | "cloze" | "mixed";
   roadmapOptions?: RoadmapOptions;
   mindMapOptions?: MindMapOptions;
+  slidesOptions?: SlidesOptions;
 }
 
 export interface BaseMaterialFormProps {

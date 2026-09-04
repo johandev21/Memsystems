@@ -62,6 +62,21 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
     return () => window.removeEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
   }, [isLoading, messageCount, notebookId, panelRef, setIsClearDialogOpen]);
 
+  const selectedModelSupportsReasoning = modelOptions.some(
+    (m) => m.id === selectedModel && m.capabilities?.reasoning === true,
+  );
+  // Only show the generic pending row while NO assistant content has arrived
+  // yet. As soon as the first reasoning/text part streams, the live
+  // AssistantMessage (Reasoning block / answer) takes over and this hides,
+  // so we never double-render "Thinking…" alongside real reasoning.
+  const lastMessage = messages.at(-1);
+  const hasAssistantPlaceholder =
+    lastMessage?.role === "assistant" && (lastMessage.parts?.length ?? 0) > 0;
+  const showPendingIndicator = status === "submitted" && !hasAssistantPlaceholder;
+  const pendingLabel = selectedModelSupportsReasoning
+    ? "Thinking…"
+    : "Waiting for response…";
+
   const notebookTitle = notebook?.title ?? "Notebook";
   const isUntitled = notebookTitle.toLowerCase() === "untitled";
   const showBannerAsUntitled = isUntitled && messageCount === 0;
@@ -125,7 +140,8 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
               <ChatMessageList
                 messages={messages}
                 citedSourcesMap={citedSourcesMap}
-                isThinking={status === "submitted"}
+                showPendingIndicator={showPendingIndicator}
+                pendingLabel={pendingLabel}
                 error={error}
                 onCopy={handleCopy}
                 onRegenerate={handleRegenerate}

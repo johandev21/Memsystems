@@ -11,9 +11,16 @@ export interface FlashcardGenerationOptions {
   cardStyle: 'qa' | 'definition' | 'cloze' | 'mixed';
 }
 
+export interface SlidesGenerationOptions {
+  slideCount: number;
+  theme: 'dark' | 'light' | 'accent';
+  detailLevel: 'basic' | 'detailed';
+}
+
 export type StudyMaterialOptions =
   | ({ kind: 'quiz' } & QuizGenerationOptions)
-  | ({ kind: 'simple_flashcard' } & FlashcardGenerationOptions);
+  | ({ kind: 'simple_flashcard' } & FlashcardGenerationOptions)
+  | ({ kind: 'slides' } & SlidesGenerationOptions);
 
 interface PromptTemplate {
   instructions: string;
@@ -33,6 +40,11 @@ interface PromptTemplate {
         structure: 'radial' | 'hierarchical' | 'organic';
         colorGroups: boolean;
         crossLinks: boolean;
+      };
+      slidesOptions?: {
+        slideCount: number;
+        theme: 'dark' | 'light' | 'accent';
+        detailLevel: 'basic' | 'detailed';
       };
     },
   ) => string;
@@ -168,11 +180,41 @@ Identify the root node that represents the main topic.`,
   },
 };
 
+const slidesTemplate: PromptTemplate = {
+  instructions: `You are an expert presentation designer. Create a slide deck outline. Generate a descriptive, unique title reflecting the core topic and place it in the top-level 'title' field. Only the top-level 'title' field must be concise and formatted in kebab-case (lowercase, alphanumeric characters and hyphens only, e.g. 'nietzsche-core-ideas-slides') ending with '-slides'.
+All slide titles MUST use natural Title Case capitalization with spaces. NEVER use kebab-case for slide titles, subtitles, bullets, or body text.
+Each slide must have a unique string 'id', a 'layout' (one of 'title', 'title-bullets', 'two-column', 'quote', 'closing'), a 'title', and optionally 'subtitle', 'bullets' (3-5 concise bullets for content slides), 'body' (1-3 sentences), and 'notes' (speaker notes).
+Structure the deck with a clear narrative arc: opening title slide, 3+ content slides, and a closing slide. Vary layouts where appropriate. Do NOT include images, previews, or HTML — text content only.`,
+  user: (brief, sourceTexts, options) => {
+    const sourceBlock = sourceTexts
+      ? `Source material:\n${sourceTexts}\n\n`
+      : '';
+    const instructionsBlock = brief
+      ? `Generate a slide deck based on these instructions: ${brief}`
+      : 'Generate a general slide deck.';
+    const opts = options?.slidesOptions;
+    const countText =
+      opts?.slideCount && opts.slideCount > 0
+        ? `Create EXACTLY ${opts.slideCount} slides.`
+        : 'Create 8-10 slides.';
+    const themeText = opts?.theme ? `Visual theme: ${opts.theme}.` : '';
+    const detailText = opts?.detailLevel
+      ? `Detail level: ${
+          opts.detailLevel === 'detailed'
+            ? 'Include substantive bullets and body text per slide'
+            : 'Keep bullets concise with brief body text'
+        }.`
+      : '';
+    return `${sourceBlock}${instructionsBlock}\n\n${countText} ${themeText} ${detailText}\n\nGenerate a slide deck with ordered slides. Do not include a 'previews' field — previews are generated server-side.`;
+  },
+};
+
 const templates: Record<StudyMaterialKind, PromptTemplate> = {
   quiz: quizTemplate,
   simple_flashcard: simpleFlashcardTemplate,
   roadmap: roadmapTemplate,
   mind_map: mindMapTemplate,
+  slides: slidesTemplate,
 };
 
 export function getPromptTemplate(kind: StudyMaterialKind): PromptTemplate {

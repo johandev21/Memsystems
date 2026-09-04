@@ -66,6 +66,18 @@ describe('classifyGatewayError', () => {
     ).toMatchObject({ kind: 'transient', retryable: true });
   });
 
+  it.each([
+    ['tool_choice did not match any supported type'],
+    ['Tool choice `web_search_preview` not found in `tools` parameter.'],
+    ['This model does not support tools or function calling'],
+    ['Unsupported tool: web_search'],
+  ])('detects capability rejections: %s', (message) => {
+    expect(classifyGatewayError(new Error(message))).toMatchObject({
+      kind: 'capability',
+      retryable: false,
+    });
+  });
+
   it('falls back to unknown without crashing on odd shapes', () => {
     expect(classifyGatewayError(null).kind).toBe('unknown');
     expect(classifyGatewayError('plain string').kind).toBe('unknown');

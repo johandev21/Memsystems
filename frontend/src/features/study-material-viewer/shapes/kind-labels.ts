@@ -5,6 +5,7 @@ export const KIND_LABELS: Record<StudyMaterialKind, string> = {
   simple_flashcard: "Flashcards",
   roadmap: "Roadmap",
   mind_map: "Mind Map",
+  slides: "Slides",
 };
 
 export const KIND_PLURAL_LABELS: Record<StudyMaterialKind, string> = {
@@ -12,6 +13,7 @@ export const KIND_PLURAL_LABELS: Record<StudyMaterialKind, string> = {
   simple_flashcard: "Flashcards",
   roadmap: "Roadmaps",
   mind_map: "Mind Maps",
+  slides: "Slides",
 };
 
 export function getKindLabel(kind: StudyMaterialKind): string {

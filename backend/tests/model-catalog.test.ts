@@ -75,16 +75,32 @@ describe('gateway model catalog', () => {
     expect(ids).toEqual([...ids].sort());
   });
 
-  it('marks every chat model as web-search capable with gateway tools', () => {
+  it('fails closed for unknown and tool-less models', () => {
     const models = buildChatCatalog([
-      entry('deepseek/deepseek-v3.2', 'language'),
-      entry('spacexai/grok-4.6', 'language'),
+      entry('deepseek/deepseek-r1', 'language'),
+      entry('mystery/chat-model-x', 'language'),
     ]);
     for (const model of models) {
-      expect(model.supportsWebSearch).toBe(true);
-      expect(model.capabilities?.webSearch).toBe(true);
+      expect(model.supportsWebSearch).toBe(false);
+      expect(model.capabilities?.tools).toBe(false);
+      expect(model.capabilities?.webSearch).toBe(false);
       expect(model.displayName).toBeTruthy();
     }
+  });
+
+  it.each([
+    ['openai/gpt-4o-mini', true, true],
+    ['anthropic/claude-sonnet-4', true, true],
+    ['google/gemini-2.5-flash', true, true],
+    ['deepseek/deepseek-v3.2', true, true],
+    ['moonshotai/kimi-k2.6', true, true],
+    ['meta/llama-3.3-70b-instruct', true, true],
+    ['xai/grok-4', true, true],
+    ['zhipu/glm-4.5', true, true],
+    ['alibaba/qwen3-235b-a22b', true, true],
+    ['bytedance/seed-1.6', true, true],
+  ])('curates tool and web-search support for %s', (id, tools, webSearch) => {
+    expect(capabilitiesForModelId(id)).toMatchObject({ tools, webSearch });
   });
 
   it('applies the capability overlay', () => {
@@ -133,12 +149,21 @@ describe('gateway model catalog', () => {
     });
   });
 
-  it('ships a valid gateway seed catalog', () => {    expect(SEED_GATEWAY_MODELS.length).toBeGreaterThan(0);
+  it('ships a valid gateway seed catalog', () => {
+    expect(SEED_GATEWAY_MODELS.length).toBeGreaterThan(0);
     for (const model of SEED_GATEWAY_MODELS) {
       expect(model.id).toMatch(/^[^/]+\/[^/]+$/);
       expect(resolveModelId(model.id)).toBe(model.id);
       expect(model.displayName).toBeTruthy();
-      expect(model.supportsWebSearch).toBe(true);
+      expect(model.supportsWebSearch).toBe(
+        model.capabilities?.webSearch === true,
+      );
+      expect(Object.values(model.capabilities ?? {})).toHaveLength(7);
+      expect(
+        Object.values(model.capabilities ?? {}).every(
+          (capability) => typeof capability === 'boolean',
+        ),
+      ).toBe(true);
     }
     expect(
       SEED_GATEWAY_MODELS.some((m) => m.id === GATEWAY_DEFAULT_MODEL),

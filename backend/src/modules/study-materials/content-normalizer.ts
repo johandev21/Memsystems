@@ -59,6 +59,31 @@ type NormalizedMindMapContent = {
   edges: NormalizedMindMapEdge[];
 };
 
+export type SlidesLayout =
+  'title' | 'title-bullets' | 'two-column' | 'quote' | 'closing';
+
+type NormalizedSlidesSlide = {
+  id: string;
+  layout: SlidesLayout;
+  title: string;
+  subtitle?: string;
+  bullets: string[];
+  body?: string;
+  notes?: string;
+};
+
+type NormalizedSlidesContent = {
+  title?: string;
+  theme?: {
+    background?: string;
+    accent?: string;
+    text?: string;
+    muted?: string;
+  };
+  slides: NormalizedSlidesSlide[];
+  previews?: { slideId: string; svg: string }[];
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
@@ -448,6 +473,86 @@ export function normalizeMindMapContent(
   };
 }
 
+export function normalizeSlidesContent(
+  content: unknown,
+): NormalizedSlidesContent {
+  const record = isRecord(content) ? content : {};
+  const rawSlides: unknown[] = Array.isArray(record.slides)
+    ? (record.slides as unknown[])
+    : (() => {
+        const arrayKey = Object.keys(record).find((k) =>
+          Array.isArray(record[k]),
+        );
+        return arrayKey ? toArray(record[arrayKey]) : [];
+      })();
+
+  const validLayouts: SlidesLayout[] = [
+    'title',
+    'title-bullets',
+    'two-column',
+    'quote',
+    'closing',
+  ];
+
+  const normalizedSlides = rawSlides.map((s, index): NormalizedSlidesSlide => {
+    if (!isRecord(s)) {
+      return {
+        id: `slide-${index + 1}`,
+        layout: index === 0 ? 'title' : 'title-bullets',
+        title: stringify(s) || `Slide ${index + 1}`,
+        bullets: [],
+      };
+    }
+    const layout =
+      typeof s.layout === 'string' &&
+      (validLayouts as string[]).includes(s.layout)
+        ? (s.layout as SlidesLayout)
+        : index === 0
+          ? 'title'
+          : 'title-bullets';
+    const bullets = toArray(s.bullets)
+      .map((b) => stringify(b).trim())
+      .filter((b) => b.length > 0)
+      .slice(0, 6);
+    return {
+      id: typeof s.id === 'string' && s.id ? s.id : `slide-${index + 1}`,
+      layout,
+      title: stringify(s.title ?? s.heading ?? `Slide ${index + 1}`),
+      subtitle: typeof s.subtitle === 'string' ? s.subtitle : undefined,
+      bullets,
+      body: typeof s.body === 'string' ? s.body : undefined,
+      notes: typeof s.notes === 'string' ? s.notes : undefined,
+    };
+  });
+
+  const theme = isRecord(record.theme) ? record.theme : {};
+  const hexOrUndefined = (v: unknown) =>
+    typeof v === 'string' && /^#[0-9A-Fa-f]{6}$/.test(v) ? v : undefined;
+
+  return {
+    title:
+      isRecord(content) && content.title ? stringify(content.title) : undefined,
+    theme: {
+      ...(hexOrUndefined(theme.background)
+        ? { background: hexOrUndefined(theme.background) }
+        : {}),
+      ...(hexOrUndefined(theme.accent)
+        ? { accent: hexOrUndefined(theme.accent) }
+        : {}),
+      ...(hexOrUndefined(theme.text)
+        ? { text: hexOrUndefined(theme.text) }
+        : {}),
+      ...(hexOrUndefined(theme.muted)
+        ? { muted: hexOrUndefined(theme.muted) }
+        : {}),
+    },
+    slides: normalizedSlides,
+    ...(Array.isArray(record.previews)
+      ? { previews: record.previews as { slideId: string; svg: string }[] }
+      : {}),
+  };
+}
+
 export function normalizeContent(
   kind: StudyMaterialKind,
   content: unknown,
@@ -465,6 +570,8 @@ export function normalizeContent(
       return normalizeRoadmapContent(content);
     case 'mind_map':
       return normalizeMindMapContent(content);
+    case 'slides':
+      return normalizeSlidesContent(content);
     default:
       return content;
   }
@@ -508,6 +615,7 @@ export function slugifyTitle(title: string, kind: StudyMaterialKind): string {
     simple_flashcard: '-flashcards',
     roadmap: '-roadmap',
     mind_map: '-mind-map',
+    slides: '-slides',
   };
 
   const suffix = suffixMap[kind];
@@ -562,6 +670,9 @@ export function generateTitle(
         break;
       case 'mind_map':
         rawTitle = `Mind Map (${arrayLength(record.nodes)} nodes)`;
+        break;
+      case 'slides':
+        rawTitle = `Slides (${arrayLength(record.slides)} slides)`;
         break;
       default:
         rawTitle = 'Untitled';

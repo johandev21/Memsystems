@@ -1,6 +1,5 @@
 import { ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/shared/utils/cn";
 import type { CitedSourceDTO } from "../api/chat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,10 +20,9 @@ import {
 interface ReferencePopoverProps {
   reference: CitedSourceDTO;
   children?: ReactNode;
-  compact?: boolean;
 }
 
-export function ReferencePopover({ reference, children, compact = false }: ReferencePopoverProps) {
+export function ReferencePopover({ reference, children }: ReferencePopoverProps) {
   const safeUrl = getSafeReferenceUrl(reference.url);
   const kindLabel = reference.kind === "unknown" ? "Source" : capitalize(reference.kind);
   const locatorLabel = getReferenceLocatorLabel(reference);
@@ -33,18 +31,16 @@ export function ReferencePopover({ reference, children, compact = false }: Refer
     <Popover>
       <PopoverTrigger
         render={
-          <button
+          <Button
             type="button"
+            size="icon-xs"
+            variant="secondary"
             aria-label={`Reference ${reference.number}: ${reference.title}`}
-            className={cn(
-              compact
-                ? "inline-flex min-h-7 max-w-full items-center rounded-xl px-2 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
-                : "inline rounded-lg px-0.5 font-medium text-muted-foreground underline decoration-1 underline-offset-[3px] outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30",
-            )}
+            className="relative -top-px mx-0.5 inline-flex h-5 w-auto min-w-5 rounded-full px-1 align-baseline text-[0.6875rem] leading-none text-muted-foreground hover:text-foreground"
           />
         }
       >
-        {children ?? reference.title}
+        {children ?? reference.number}
       </PopoverTrigger>
 
       <PopoverContent
@@ -148,7 +144,6 @@ export function MessageReferences({ references }: MessageReferencesProps) {
         <ReferencePopover
           key={`${reference.citationKey}-${reference.id}-${reference.chunkId ?? "source"}`}
           reference={reference}
-          compact
         />
       ))}
     </div>

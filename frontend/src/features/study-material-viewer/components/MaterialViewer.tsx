@@ -5,6 +5,7 @@ import type {
   FlashcardEditorContentType,
   QuizEditorContentType,
   RoadmapEditorContentType,
+  SlidesEditorContentType,
 } from "@/features/study-material-generation";
 import type { MindMapContentType } from "../shapes/mind-map";
 import type { StudyMaterialDTO } from "../types";
@@ -12,6 +13,7 @@ import { FlashcardView } from "./FlashcardView";
 import { MindMapView } from "./MindMapView";
 import { QuizView } from "./QuizView";
 import { RoadmapView } from "./RoadmapView";
+import { SlidesView } from "./SlidesView";
 
 export interface MaterialViewerProps {
   material: StudyMaterialDTO;
@@ -107,6 +109,14 @@ export function MaterialViewer({
             materialId={material.id}
             materialTitle={material.title}
             content={material.content as MindMapContentType}
+          />
+        );
+      case "slides":
+        return (
+          <SlidesView
+            materialId={material.id}
+            materialTitle={material.title}
+            content={material.content as SlidesEditorContentType}
           />
         );
       default:

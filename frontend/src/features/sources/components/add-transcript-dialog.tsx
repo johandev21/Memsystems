@@ -162,7 +162,7 @@ export function AddTranscriptDialog({
                 type="button"
                 onClick={() => setTranscriptText("")}
                 disabled={isSubmitting}
-                className="text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                className="cursor-pointer text-xs text-muted-foreground transition-colors hover:text-destructive"
               >
                 Clear
               </button>

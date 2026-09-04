@@ -5,6 +5,7 @@ import { QuizBriefForm } from "./QuizBriefForm";
 import { FlashcardBriefForm } from "./FlashcardBriefForm";
 import { RoadmapBriefForm } from "./RoadmapBriefForm";
 import { MindMapBriefForm } from "./MindMapBriefForm";
+import { SlidesBriefForm } from "./SlidesBriefForm";
 import { StandardBriefForm } from "./StandardBriefForm";
 
 export type { BaseMaterialFormProps, BriefFormData } from "./types";
@@ -12,6 +13,7 @@ export { QuizBriefForm } from "./QuizBriefForm";
 export { FlashcardBriefForm } from "./FlashcardBriefForm";
 export { RoadmapBriefForm } from "./RoadmapBriefForm";
 export { MindMapBriefForm } from "./MindMapBriefForm";
+export { SlidesBriefForm } from "./SlidesBriefForm";
 export { StandardBriefForm } from "./StandardBriefForm";
 
 /**
@@ -25,6 +27,7 @@ export const MATERIAL_FORM_MAP: Partial<
   simple_flashcard: FlashcardBriefForm,
   roadmap: RoadmapBriefForm,
   mind_map: MindMapBriefForm,
+  slides: SlidesBriefForm,
 };
 
 /**

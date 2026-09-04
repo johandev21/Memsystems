@@ -3,7 +3,11 @@ import { BookOpen, ChevronDown, FileText, Globe, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/shared/utils/cn";
+import {
+  generationSourceCheckboxClass,
+  generationSourceIconClass,
+  generationSourceOptionClass,
+} from "./option-row";
 
 export type GenerationSource = { id: string; title: string; kind: string };
 
@@ -92,34 +96,33 @@ export function GenerationSourcePopover({
           <div className="p-4 text-center text-xs text-text-faint">{emptyMessage}</div>
         ) : (
           <div className="max-h-[220px] space-y-1 overflow-y-auto p-2">
-            {filteredSources.map((source) => (
-              <button
-                key={source.id}
-                type="button"
-                onClick={() => toggleSource(source.id)}
-                className={cn(
-                  "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-left text-xs",
-                  selectedIds.includes(source.id)
-                    ? "bg-surface-3 font-medium text-text-secondary"
-                    : "text-text-tertiary hover:bg-surface-2",
-                )}
-              >
-                <span className="flex min-w-0 items-center gap-2 truncate pr-2">
-                  {source.kind === "web" ? (
-                    <Globe className="size-4 shrink-0 text-primary" />
-                  ) : source.kind === "file" ? (
-                    <FileText className="size-4 shrink-0 text-primary" />
-                  ) : (
-                    <BookOpen className="size-4 shrink-0 text-primary" />
-                  )}
-                  <span className="truncate">{source.title}</span>
-                </span>
-                <Checkbox
-                  checked={selectedIds.includes(source.id)}
-                  onCheckedChange={() => toggleSource(source.id)}
-                />
-              </button>
-            ))}
+            {filteredSources.map((source) => {
+              const checked = selectedIds.includes(source.id);
+              return (
+                <button
+                  key={source.id}
+                  type="button"
+                  onClick={() => toggleSource(source.id)}
+                  className={generationSourceOptionClass(checked)}
+                >
+                  <span className="flex min-w-0 items-center gap-2 truncate pr-2">
+                    {source.kind === "web" ? (
+                      <Globe className={generationSourceIconClass(checked)} />
+                    ) : source.kind === "file" ? (
+                      <FileText className={generationSourceIconClass(checked)} />
+                    ) : (
+                      <BookOpen className={generationSourceIconClass(checked)} />
+                    )}
+                    <span className="truncate">{source.title}</span>
+                  </span>
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggleSource(source.id)}
+                    className={generationSourceCheckboxClass(checked)}
+                  />
+                </button>
+              );
+            })}
           </div>
         )}
         <div className="bg-surface-2 p-2.5 text-xs text-text-faint">

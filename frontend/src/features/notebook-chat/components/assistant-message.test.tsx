@@ -44,7 +44,7 @@ describe("AssistantMessage references", () => {
     const trigger = screen.getByRole("button", {
       name: "Reference 1: Internet Encyclopedia of Philosophy",
     });
-    expect(trigger.textContent).toBe("(Internet Encyclopedia of Philosophy)");
+    expect(trigger.textContent).toBe("1");
 
     await user.click(trigger);
     expect(
@@ -131,5 +131,70 @@ describe("AssistantMessage references", () => {
 
     expect(screen.getByText("2 of 2")).toBeTruthy();
     expect(screen.getByText("Second regenerated version answer.")).toBeTruthy();
+  });
+});
+
+describe("AssistantMessage reasoning streaming", () => {
+  function reasoningMessage(
+    text: string,
+    state: "streaming" | "done" = "streaming",
+    extraParts: UIMessage["parts"] = [],
+  ): UIMessage {
+    return {
+      id: "assistant-reasoning-1",
+      role: "assistant",
+      parts: [{ type: "reasoning", text, state }, ...extraParts],
+    } as UIMessage;
+  }
+
+  it("shows live Thinking state for reasoning-only streaming parts", () => {
+    const { container } = render(
+      <AssistantMessage
+        message={reasoningMessage("Considering Plato…", "streaming")}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showRegenerate
+      />,
+    );
+
+    // Reasoning block renders even with no answer text yet…
+    expect(container.textContent).toContain("Considering Plato");
+    // …and reports the live Thinking state (not "Thought for …").
+    expect(container.textContent).toContain("Thinking...");
+  });
+
+  it("marks reasoning done once answer text streams", () => {
+    const { container } = render(
+      <AssistantMessage
+        message={reasoningMessage("Considering Plato…", "done", [
+          { type: "text", text: "The cave represents…", state: "streaming" },
+        ])}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showRegenerate
+      />,
+    );
+
+    expect(container.textContent).toContain("The cave represents");
+    expect(container.textContent).not.toContain("Thinking...");
+  });
+
+  it("renders persisted reasoning without live state", () => {
+    const { container } = render(
+      <AssistantMessage
+        message={reasoningMessage("Considering Plato…", "done")}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showRegenerate
+      />,
+    );
+
+    // Done reasoning collapses behind the trigger ("Thought for …"), so the
+    // body text is hidden until expanded — but it must NOT show live state.
+    expect(container.textContent).toContain("Thought for");
+    expect(container.textContent).not.toContain("Thinking...");
   });
 });

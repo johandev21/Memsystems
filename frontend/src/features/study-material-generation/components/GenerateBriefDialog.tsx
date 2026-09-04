@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useModelPersistence } from "@/features/notebooks";
 import { useGenerationStore } from "../hooks/use-generation-store";
 import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-material-viewer";
-import type { RoadmapOptions, MindMapOptions } from "./forms/types";
+import type { RoadmapOptions, MindMapOptions, SlidesOptions } from "./forms/types";
 import { BriefForm } from "./BriefForm";
 import { cn } from "@/shared/utils/cn";
 
@@ -39,6 +39,7 @@ export function GenerateBriefDialog({
     cardStyle,
     roadmapOptions,
     mindMapOptions,
+    slidesOptions,
   } = value;
   const { model: selectedModel } = useModelPersistence(notebookId);
 
@@ -62,6 +63,7 @@ export function GenerateBriefDialog({
         cardStyle,
         roadmapOptions,
         mindMapOptions,
+        slidesOptions,
       },
       queryClient,
       onComplete,
@@ -83,7 +85,7 @@ export function GenerateBriefDialog({
           "bg-surface-1 border border-surface-border generate-material-dialog",
           "sm:max-w-md",
           (kind === "quiz" || kind === "simple_flashcard") && "sm:max-w-2xl",
-          (kind === "roadmap" || kind === "mind_map") && "sm:max-w-3xl",
+          (kind === "roadmap" || kind === "mind_map" || kind === "slides") && "sm:max-w-3xl",
         )}
       >
         <DialogHeader>
@@ -119,6 +121,7 @@ function useGenerationBriefState() {
     cardStyle?: "qa" | "definition" | "cloze" | "mixed";
     roadmapOptions?: RoadmapOptions;
     mindMapOptions?: MindMapOptions;
+    slidesOptions?: SlidesOptions;
   }>({
     brief: "",
     sourceIds: [],
@@ -135,6 +138,7 @@ function useGenerationBriefState() {
       brief: "",
       roadmapOptions: undefined,
       mindMapOptions: undefined,
+      slidesOptions: undefined,
     }));
 
   return { value, updateBriefForm, resetAfterSubmit };

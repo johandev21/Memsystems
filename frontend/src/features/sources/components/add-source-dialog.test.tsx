@@ -32,7 +32,7 @@ describe("AddSourceDialog & Source Modes Layout & Transcript Handling", () => {
 
     const dialogContent = dialogTitle.closest('[data-slot="dialog-content"]');
     expect(dialogContent).not.toBeNull();
-    expect(dialogContent?.className).toContain("max-h-[85vh]");
+    expect(dialogContent?.className).toContain("max-h-[calc(100dvh-1rem)]");
     expect(dialogContent?.className).toContain("flex");
     expect(dialogContent?.className).toContain("flex-col");
     expect(dialogContent?.className).toContain("overflow-hidden");
@@ -41,6 +41,8 @@ describe("AddSourceDialog & Source Modes Layout & Transcript Handling", () => {
     const scrollContainer = dialogContent?.querySelector(".overflow-y-auto");
     expect(scrollContainer).not.toBeNull();
     expect(scrollContainer?.className).toContain("flex-1");
+    expect(screen.getByText("Find sources on the web")).not.toBeNull();
+    expect(screen.getByPlaceholderText("What would you like to research?")).not.toBeNull();
   });
 
   describe("UrlInputMode", () => {

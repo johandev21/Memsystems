@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { generateText } from 'ai';
-import { BadRequestError } from '../src/common/errors/domain-error';
+import { CapabilityUnsupportedError } from '../src/common/errors/domain-error';
 import {
   AiService,
   parseSearchJson,
@@ -15,6 +15,37 @@ vi.mock('ai', async (importOriginal) => {
 const mockGenerateText = vi.mocked(generateText);
 
 describe('AiService.searchWeb', () => {
+  it('names the selected model and a compatible fallback in capability guards', () => {
+    const aiService = new AiService({} as any, {} as any, {} as any);
+    const provider = {
+      listModels: () => [
+        {
+          id: 'deepseek/deepseek-r1',
+          displayName: 'DeepSeek R1',
+          supportsWebSearch: false,
+          capabilities: { imageInput: false },
+        },
+        {
+          id: 'openai/gpt-4o-mini',
+          displayName: 'GPT-4o Mini',
+          supportsWebSearch: true,
+          capabilities: { imageInput: true },
+        },
+      ],
+    } as any;
+
+    expect(() =>
+      aiService.requireCapability(
+        provider,
+        'deepseek/deepseek-r1',
+        'imageInput',
+        'image attachments',
+      ),
+    ).toThrow(
+      "DeepSeek R1 doesn't support image attachments. Switch to a model that supports image attachments",
+    );
+  });
+
   it('rejects models that do not support web search', async () => {
     const aiService = new AiService(
       {} as any,
@@ -26,7 +57,18 @@ describe('AiService.searchWeb', () => {
     const provider = {
       id: 'openai',
       name: 'OpenAI',
-      listModels: vi.fn(),
+      listModels: vi.fn().mockReturnValue([
+        {
+          id: 'deepseek/deepseek-r1',
+          displayName: 'DeepSeek R1',
+          supportsWebSearch: false,
+        },
+        {
+          id: 'openai/gpt-4o-mini',
+          displayName: 'GPT-4o Mini',
+          supportsWebSearch: true,
+        },
+      ]),
       createModel: vi.fn(),
       supportsWebSearch: vi.fn().mockReturnValue(false),
       createWebSearchTool: vi.fn(),
@@ -35,14 +77,44 @@ describe('AiService.searchWeb', () => {
     vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue(provider);
 
     await expect(
-      aiService.searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1'),
-    ).rejects.toThrow(BadRequestError);
+      aiService.searchWeb('philosophy', 'deepseek/deepseek-r1', 'user-1'),
+    ).rejects.toThrow(CapabilityUnsupportedError);
     await expect(
-      aiService.searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1'),
-    ).rejects.toThrow(/does not support web search/);
+      aiService.searchWeb('philosophy', 'deepseek/deepseek-r1', 'user-1'),
+    ).rejects.toThrow(
+      /DeepSeek R1 doesn't support web search.*model that supports web search/,
+    );
+    expect(provider.createModel).not.toHaveBeenCalled();
+    expect(mockGenerateText).not.toHaveBeenCalled();
   });
 
-  it('returns curated sources and captures the gateway generation id', async () => {    const aiService = new AiService(
+  it('maps escaped tool-choice rejections to a capability domain error', async () => {
+    const aiService = new AiService(
+      {} as any,
+      { requireConnected: vi.fn().mockResolvedValue(undefined) } as any,
+      { getModels: () => [] } as any,
+    );
+    vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue({
+      createModel: vi.fn(() => ({})),
+      supportsWebSearch: vi.fn().mockReturnValue(true),
+      createWebSearchTool: vi.fn(() => ({})),
+    } as any);
+    mockGenerateText.mockRejectedValue(
+      new Error(
+        'Tool choice `web_search_preview` not found in `tools` parameter.',
+      ),
+    );
+
+    const failure = await aiService
+      .searchWeb('philosophy', 'mystery/model', 'user-1')
+      .catch((error) => error);
+    expect(failure?.status).toBe(400);
+    expect(failure?.code).toBe('gateway_capability_unsupported');
+    expect(failure?.message).toMatch(/doesn't support web search/i);
+  });
+
+  it('returns curated sources and captures the gateway generation id', async () => {
+    const aiService = new AiService(
       {} as any,
       {
         requireConnected: vi.fn().mockResolvedValue(undefined),
@@ -111,10 +183,7 @@ describe('AiService.searchWeb', () => {
     expect(result.sources[0].url).toBe(
       'https://plato.stanford.edu/entries/epistemology/',
     );
-    expect(capturedOptions.toolChoice).toEqual({
-      type: 'tool',
-      toolName: 'web_search',
-    });
+    expect(capturedOptions.toolChoice).toBe('required');
   });
 
   it('maps gateway rate limits to a 429 domain error', async () => {
@@ -229,9 +298,8 @@ describe('reconcileSearchSources', () => {
     );
     const sources = reconcileSearchSources(webSearchResult, parsed);
 
-    // Reddit is both blocked and not in real citation sources... it IS in tool results,
-    // but it's blacklisted so it must be dropped. Stanford is kept.
-    expect(sources).toHaveLength(1);
+    // Model curation is trusted: both real URLs are kept, even forum sources.
+    expect(sources).toHaveLength(2);
     expect(sources[0].url).toBe(
       'https://plato.stanford.edu/entries/epistemology/',
     );
@@ -279,8 +347,8 @@ describe('reconcileSearchSources', () => {
 
   it('falls back to real sources when the model emits no JSON', () => {
     const sources = reconcileSearchSources(webSearchResult, null);
-    // Reddit/YouTube tool results are blacklisted; the two citation sources survive.
-    expect(sources).toHaveLength(2);
+    // No blocklist: all real sources survive, including forum/video results.
+    expect(sources).toHaveLength(4);
     expect(sources.map((s) => s.url)).toEqual(
       expect.arrayContaining([
         'https://plato.stanford.edu/entries/epistemology/',
@@ -314,8 +382,8 @@ describe('reconcileSearchSources', () => {
       ],
     };
     const sources = reconcileSearchSources(perplexityResult, null);
-    // Blocked Reddit result is dropped; Stanford survives with tool title.
-    expect(sources).toHaveLength(1);
+    // No blocklist: both real results survive with tool titles.
+    expect(sources).toHaveLength(2);
     expect(sources[0].url).toBe(
       'https://plato.stanford.edu/entries/epistemology/',
     );

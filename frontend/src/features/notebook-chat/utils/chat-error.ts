@@ -14,27 +14,42 @@ export const GATEWAY_TOP_UP_URL =
 const RATE_LIMIT_PATTERNS = /rate.?limit|too many requests|429|quota exceeded/i;
 const ENTITLEMENT_PATTERNS =
   /do not have access|not have access|entitlement|forbidden|upgrade to paid/i;
+const SUBSTITUTION_PATTERNS = /model_substituted|served .* instead of the requested/i;
 const RETIRED_PATTERNS =
   /model not found|no such model|retired|deprecated|model .* removed/i;
 const AUTH_PATTERNS =
   /invalid api key|incorrect api key|unauthorized|authentication/i;
+const CAPABILITY_PATTERNS =
+  /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool|tools? (?:are|is) not supported/i;
 
-function rateLimited(): ClassifiedChatError {
+function rateLimited(model?: string): ClassifiedChatError {
+  const subject = model ? `${model} is` : "This model is";
   return {
     title: "AI is busy right now",
-    message:
-      "This model is rate-limited on your plan. Wait a few seconds and retry, or switch to another model.",
+    message: `${subject} rate-limited on your plan. Wait a few seconds and retry, or switch to another model.`,
     showTopUp: true,
     showSettings: false,
     showModelHint: true,
   };
 }
 
-function entitlement(): ClassifiedChatError {
+function entitlement(model?: string): ClassifiedChatError {
   return {
     title: "Model not included in your plan",
+    message: model
+      ? `${model} isn't included in your plan. Your gateway account can't use it — try a free-tier model or add credits.`
+      : "Your gateway account can't use this model. Try a free-tier model or add credits.",
+    showTopUp: true,
+    showSettings: false,
+    showModelHint: true,
+  };
+}
+
+function substituted(): ClassifiedChatError {
+  return {
+    title: "Wrong model served",
     message:
-      "Your gateway account can't use this model. Try a free-tier model or add credits.",
+      "The gateway answered with a different model than the one you picked. Nothing was presented as working — retry, or switch to a model your plan includes.",
     showTopUp: true,
     showSettings: false,
     showModelHint: true,
@@ -62,6 +77,27 @@ function needsSettings(): ClassifiedChatError {
   };
 }
 
+function capability(message?: string): ClassifiedChatError {
+  const safeMessage =
+    message ??
+    "This model doesn't support web search. Switch to a model that supports web search and try again.";
+  const lowerMessage = message?.toLowerCase() ?? "";
+  const title = lowerMessage.includes("image attachment")
+    ? "Image attachments aren't supported"
+    : lowerMessage.includes("file attachment")
+      ? "File attachments aren't supported"
+      : lowerMessage.includes("structured output")
+        ? "Structured output isn't supported"
+        : "Web search isn't supported";
+  return {
+    title,
+    message: safeMessage,
+    showTopUp: false,
+    showSettings: false,
+    showModelHint: false,
+  };
+}
+
 function generic(): ClassifiedChatError {
   return {
     title: "Something went wrong",
@@ -72,9 +108,11 @@ function generic(): ClassifiedChatError {
   };
 }
 
-function classifyText(text: string): ClassifiedChatError | null {
-  if (RATE_LIMIT_PATTERNS.test(text)) return rateLimited();
-  if (ENTITLEMENT_PATTERNS.test(text)) return entitlement();
+function classifyText(text: string, model?: string): ClassifiedChatError | null {
+  if (SUBSTITUTION_PATTERNS.test(text)) return substituted();
+  if (CAPABILITY_PATTERNS.test(text)) return capability();
+  if (RATE_LIMIT_PATTERNS.test(text)) return rateLimited(model);
+  if (ENTITLEMENT_PATTERNS.test(text)) return entitlement(model);
   if (RETIRED_PATTERNS.test(text)) return retired();
   if (AUTH_PATTERNS.test(text)) return needsSettings();
   return null;
@@ -94,15 +132,22 @@ export function classifyChatError(
       const parsed = JSON.parse(message) as {
         error?: unknown;
         code?: unknown;
+        model?: unknown;
       };
       const code = typeof parsed.code === "string" ? parsed.code : "";
       const inner =
         typeof parsed.error === "string" ? parsed.error : "";
+      const model =
+        typeof parsed.model === "string" && parsed.model.trim() !== ""
+          ? parsed.model.trim()
+          : undefined;
       switch (code) {
         case "gateway_rate_limited":
-          return rateLimited();
+          return rateLimited(model);
         case "gateway_entitlement":
-          return entitlement();
+          return entitlement(model);
+        case "gateway_capability_unsupported":
+          return capability(inner);
         case "unauthorized":
           return needsSettings();
         case "bad_request":
@@ -116,9 +161,9 @@ export function classifyChatError(
         case "service_unavailable":
         case "internal_error":
         case "http_exception":
-          return classifyText(inner) ?? generic();
+          return classifyText(inner, model) ?? generic();
         default:
-          return classifyText(inner || message) ?? generic();
+          return classifyText(inner || message, model) ?? generic();
       }
     } catch {
       // Not actually JSON — fall through to text rules.

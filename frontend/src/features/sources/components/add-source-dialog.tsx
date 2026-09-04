@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -16,6 +17,7 @@ import { isYouTubeUrl } from "../utils/detect-document-type";
 import { FileUploadMode } from "./file-upload-mode";
 import { TextInputMode } from "./text-input-mode";
 import { UrlInputMode } from "./url-input-mode";
+import { WebSearchComposer } from "./web-search-composer";
 
 function deriveTitleFromUrl(rawUrl: string): string {
   try {
@@ -60,6 +62,7 @@ export function AddSourceDialog({
   } = sourceState;
 
   const count = sources?.length ?? 0;
+  const remainingSourceSlots = Math.max(SOURCE_LIMIT - count, 0);
   const usedPercent = Math.min((count / SOURCE_LIMIT) * 100, 100);
 
   const handleCloseAndReset = () => {
@@ -267,23 +270,41 @@ export function AddSourceDialog({
       <DialogTrigger render={children} nativeButton={isNativeButton} />
       <DialogContent
         motion={false}
-        className="sm:max-w-[550px] max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-[min(var(--radius-4xl),24px)] border-border/60 bg-card p-0 shadow-2xl"
+        className="flex max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-[min(var(--radius-4xl),24px)] border-border/60 bg-card p-0 shadow-2xl sm:max-h-[90vh] sm:max-w-[680px]"
       >
-        <DialogHeader className="shrink-0 px-6 pb-2 pt-6">
+        <DialogHeader className="shrink-0 px-5 pb-2 pt-6 sm:px-6">
           <DialogTitle className="text-center text-xl font-semibold text-foreground">
             Add Knowledge Sources
           </DialogTitle>
+          <DialogDescription className="text-center">
+            Search the web or bring in your own material.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 pt-2 flex flex-col gap-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6">
           {mode === "menu" && (
-            <FileUploadMode
-              onSelectUrlMode={() => setMode("url")}
-              onSelectTextMode={() => setMode("text")}
-              onUploadFile={handleStartFileUpload}
-              isUploading={false}
-              busy={false}
-            />
+            <>
+              <WebSearchComposer
+                notebookId={notebookId}
+                remainingSourceSlots={remainingSourceSlots}
+              />
+
+              <div className="flex items-center gap-3" aria-hidden="true">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  Or add a source directly
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <FileUploadMode
+                onSelectUrlMode={() => setMode("url")}
+                onSelectTextMode={() => setMode("text")}
+                onUploadFile={handleStartFileUpload}
+                isUploading={false}
+                busy={remainingSourceSlots === 0}
+              />
+            </>
           )}
 
           {mode === "url" && (
@@ -327,7 +348,7 @@ function SourceLimitMeter({ count, usedPercent }: { count: number; usedPercent: 
   return (
     <div className="flex flex-col gap-2 px-2">
       <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-        <span>Sources Limit</span>
+        <span>Sources used</span>
         <span className="text-foreground">
           {count} / {SOURCE_LIMIT}
         </span>

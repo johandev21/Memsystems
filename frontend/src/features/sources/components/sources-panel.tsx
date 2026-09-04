@@ -31,7 +31,6 @@ import { cn } from "@/shared/utils/cn";
 import { useUploadStore } from "../hooks/use-upload-store";
 import { AddSourceDialog } from "./add-source-dialog";
 import { PendingUploadRow } from "./pending-upload-row";
-import { WebSearchComposer } from "./web-search-composer";
 import {
   isSourceProcessing,
   processingStageLabel,
@@ -115,8 +114,6 @@ export function SourcesPanel({
         ref={scrollContainerRef}
         className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
       >
-        <WebSearchComposer notebookId={notebookId} />
-
         {pendingUploads.map((upload) => (
           <PendingUploadRow key={upload.id} upload={upload} onCancel={cancelPendingUpload} />
         ))}
@@ -215,7 +212,12 @@ function SourcesList({
   }
   if (hasNoSources)
     return (
-      <p className="px-2 py-10 text-center text-xs text-muted-foreground">No sources added yet</p>
+      <div className="px-4 py-10 text-center">
+        <p className="text-sm font-medium text-foreground">No sources yet</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Add material to ground your chats and study materials.
+        </p>
+      </div>
     );
 
   if (isVirtualized && sources) {
@@ -324,7 +326,7 @@ function SourceRow({
         )}
         <span className="truncate">{source.title}</span>
         {status !== "ready" && (
-          <span className="max-w-36 truncate text-[11px] opacity-75">{statusLabel}</span>
+          <span className="max-w-36 truncate text-xs opacity-75">{statusLabel}</span>
         )}
       </button>
 

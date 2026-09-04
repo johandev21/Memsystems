@@ -19,6 +19,7 @@ const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
   simple_flashcard: 'openai/gpt-5.6-sol',
   roadmap: 'openai/gpt-5.6-sol',
   mind_map: 'openai/gpt-5.6-sol',
+  slides: 'openai/gpt-5.6-sol',
 };
 
 @Injectable()

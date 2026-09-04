@@ -93,7 +93,7 @@ export function UrlInputMode({
             <Badge
               variant="outline"
               data-testid="youtube-badge"
-              className="gap-1 font-normal text-[11px] text-red-600 dark:text-red-400 border-red-500/30 bg-red-500/10"
+              className="gap-1 border-red-500/30 bg-red-500/10 text-xs font-normal text-red-600 dark:text-red-400"
             >
               <Video className="size-3 text-red-600 dark:text-red-400" />
               YouTube Video
@@ -103,7 +103,7 @@ export function UrlInputMode({
             <Badge
               variant="outline"
               data-testid="arxiv-badge"
-              className="gap-1 font-normal text-[11px] text-indigo-600 dark:text-indigo-400 border-indigo-500/30 bg-indigo-500/10"
+              className="gap-1 border-indigo-500/30 bg-indigo-500/10 text-xs font-normal text-indigo-600 dark:text-indigo-400"
             >
               <BookOpen className="size-3 text-indigo-600 dark:text-indigo-400" />
               arXiv Paper
@@ -113,7 +113,7 @@ export function UrlInputMode({
             <Badge
               variant="outline"
               data-testid="doi-badge"
-              className="gap-1 font-normal text-[11px] text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+              className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-xs font-normal text-emerald-600 dark:text-emerald-400"
             >
               <GraduationCap className="size-3 text-emerald-600 dark:text-emerald-400" />
               DOI Identifier
@@ -131,12 +131,12 @@ export function UrlInputMode({
           disabled={busy}
         />
         {isArXiv && (
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Imports paper metadata and PDF full-text from arXiv.
           </p>
         )}
         {isAcademicDoi && (
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Resolves citation metadata, BibTeX, and accessible open-access articles.
           </p>
         )}
@@ -194,7 +194,7 @@ export function UrlInputMode({
                     Or Paste Subtitle / Transcript Text
                   </Label>
                   {captionText.length > 0 && (
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                    <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
                       <span>
                         {captionText.split("\n").length.toLocaleString()}{" "}
                         {captionText.split("\n").length === 1 ? "line" : "lines"} ·{" "}

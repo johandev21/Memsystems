@@ -55,6 +55,32 @@ describe("classifyChatError", () => {
     expect(result.showSettings).toBe(true);
   });
 
+  it.each([
+    "tool_choice did not match any supported type",
+    "Tool choice `web_search_preview` not found in `tools` parameter.",
+    "This model does not support tools or function calling",
+    "Unsupported web_search tool",
+  ])("maps raw capability rejection without provider jargon: %s", (message) => {
+    const result = classifyChatError(message);
+    expect(result.title).toBe("Web search isn't supported");
+    expect(result.message).not.toContain("tool_choice");
+    expect(result.message).toContain("a model that supports web search");
+    expect(result.message).not.toContain("GPT-4o Mini");
+  });
+
+  it("maps capability error envelopes", () => {
+    const result = classifyChatError(
+      JSON.stringify({
+        error:
+          "DeepSeek R1 doesn't support web search. Switch to a model that supports web search and try again.",
+        code: "gateway_capability_unsupported",
+      }),
+    );
+    expect(result.title).toBe("Web search isn't supported");
+    expect(result.message).toContain("DeepSeek R1");
+    expect(result.message).not.toContain("GPT-4o Mini");
+  });
+
   it("keeps our validation messages readable", () => {
     const result = classifyChatError(
       JSON.stringify({ error: "Empty user message", code: "bad_request" }),
@@ -73,6 +99,46 @@ describe("classifyChatError", () => {
   it("handles empty input", () => {
     expect(classifyChatError(undefined).title).toBe("Something went wrong");
     expect(classifyChatError("").title).toBe("Something went wrong");
+  });
+
+  it("flags gateway model substitution instead of generic failure", () => {
+    const result = classifyChatError(
+      "model_substituted: requested anthropic/claude-fable-5.1 but the gateway served openai/gpt-4o-mini. No model substitution is allowed — pick a model your plan includes.",
+    );
+    expect(result.title).toBe("Wrong model served");
+    expect(result.showModelHint).toBe(true);
+  });
+
+  it("names the model in entitlement envelopes", () => {
+    const result = classifyChatError(
+      JSON.stringify({
+        error: "Claude Fable 5.1 is not available",
+        code: "gateway_entitlement",
+        model: "Claude Fable 5.1",
+      }),
+    );
+    expect(result.title).toBe("Model not included in your plan");
+    expect(result.message).toContain("Claude Fable 5.1");
+  });
+
+  it("names the model in rate-limit envelopes", () => {
+    const result = classifyChatError(
+      JSON.stringify({
+        error: "busy",
+        code: "gateway_rate_limited",
+        model: "GPT-4o Mini",
+      }),
+    );
+    expect(result.title).toBe("AI is busy right now");
+    expect(result.message).toContain("GPT-4o Mini");
+    expect(result.message).not.toContain("This model");
+  });
+
+  it("keeps legacy envelopes without a model working", () => {
+    const result = classifyChatError(
+      JSON.stringify({ error: "busy", code: "gateway_rate_limited" }),
+    );
+    expect(result.message).toContain("This model is rate-limited");
   });
 
   it("exposes the top-up URL", () => {
