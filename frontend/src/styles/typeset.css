@@ -279,6 +279,43 @@
       text-align: end;
     }
 
+    &:where(.markdown-table-wrapper) {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      border: 1px solid var(--typeset-rule);
+      border-radius: var(--radius, 0.5em);
+      margin-block-start: var(--typeset-flow);
+      margin-block-end: 0;
+    }
+    &:where(.markdown-table-wrapper:focus-visible) {
+      outline: 2px solid var(--color-ring, currentColor);
+      outline-offset: 2px;
+    }
+    &:where(.markdown-table-wrapper > table) {
+      width: 100%;
+      min-width: 100%;
+      max-width: none;
+      table-layout: auto;
+      margin-block-start: 0;
+      border-block-end: 0;
+    }
+    &:where(.markdown-table-wrapper :is(th, td)) {
+      overflow-wrap: break-word;
+    }
+    &:where(.markdown-table-wrapper :is(tbody, tfoot) td) {
+      white-space: normal;
+      max-width: 32rem;
+    }
+    &:where(.markdown-table-wrapper :is(th:first-child, td:first-child)) {
+      padding-inline-start: 1em;
+    }
+    &:where(.markdown-table-wrapper :is(th:last-child, td:last-child)) {
+      padding-inline-end: 1em;
+    }
+
     @media print {
       &:where(pre, table, blockquote, figure) {
         break-inside: avoid;

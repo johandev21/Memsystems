@@ -7,6 +7,7 @@ import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer, type MarkdownRendererProps } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "./markdown-code-block";
+import { MarkdownTable } from "./markdown-table";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
@@ -248,6 +249,7 @@ export const MessageResponse = memo(
     const mergedComponents = useMemo(
       () => ({
         code: MarkdownCodeBlock,
+        table: MarkdownTable,
         ...components,
       }),
       [components],

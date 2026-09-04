@@ -6,6 +6,7 @@ import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer } from "@/components/ui/markdown";
 
 import { MarkdownCodeBlock } from "./markdown-code-block";
+import { MarkdownTable } from "./markdown-table";
 import { Shimmer } from "./shimmer";
 import { useReasoningLifecycle } from "../hooks/use-reasoning-lifecycle";
 
@@ -149,7 +150,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
           the text-sm utility and render thinking at response size. */}
       <MarkdownRenderer
         className="typeset typeset-chat max-w-[37em] text-sm text-muted-foreground [--typeset-size:1em]"
-        components={{ code: MarkdownCodeBlock }}
+        components={{ code: MarkdownCodeBlock, table: MarkdownTable }}
         isStreaming={isStreaming}
       >
         {children}

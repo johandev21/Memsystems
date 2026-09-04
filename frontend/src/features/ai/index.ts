@@ -4,6 +4,7 @@ export * from "./components/code-block";
 export * from "./components/conversation";
 export * from "./components/message";
 export * from "./components/markdown-code-block";
+export * from "./components/markdown-table";
 export * from "./components/model-selector";
 export * from "./components/gateway-key-prompt";
 export * from "./components/prompt-input";
