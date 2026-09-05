@@ -2,7 +2,19 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { studyMaterialFolders, studyMaterials } from '../../database/schema';
+import {
+  sources,
+  studyMaterialFolders,
+  studyMaterials,
+} from '../../database/schema';
+import {
+  validateStudyGuide,
+  validateStudyGuideSources,
+} from './study-guide-content';
+import {
+  validateCaseStudy,
+  validateCaseStudySources,
+} from './case-study-content';
 import {
   BadRequestError,
   ForbiddenError,
@@ -87,7 +99,12 @@ export class StudyMaterialService {
     input: CreateStudyMaterialInput,
   ) {
     await this.notebooksService.assertNotebookOwner(userId, notebookId);
-    const validatedContent = validateContent(input.kind, input.content);
+    const validatedContent =
+      input.kind === 'study_guide'
+        ? await this.validateGuideSources(notebookId, input.content)
+        : input.kind === 'case_study'
+          ? await this.validateCaseSources(notebookId, input.content)
+          : validateContent(input.kind, input.content);
     const storable =
       input.kind === 'slides'
         ? withSlidePreviews(validatedContent as Record<string, unknown>)
@@ -123,7 +140,20 @@ export class StudyMaterialService {
       updates.title = trimmed.slice(0, 200);
     }
     if (input.content !== undefined) {
-      const validated = validateContent(sm.kind, input.content);
+      const validated =
+        sm.kind === 'study_guide'
+          ? await this.validateGuideSources(
+              sm.notebookId,
+              input.content,
+              validateStudyGuide(sm.content).sourceIds,
+            )
+          : sm.kind === 'case_study'
+            ? await this.validateCaseSources(
+                sm.notebookId,
+                input.content,
+                validateCaseStudy(sm.content).sourceIds,
+              )
+            : validateContent(sm.kind, input.content);
       updates.content =
         sm.kind === 'slides'
           ? withSlidePreviews(validated as Record<string, unknown>)
@@ -138,6 +168,56 @@ export class StudyMaterialService {
       .where(eq(studyMaterials.id, smId))
       .returning();
     return this.refreshDerivedContent(updated);
+  }
+
+  private async validateCaseSources(
+    notebookId: string,
+    content: unknown,
+    selectedSourceIds?: string[],
+  ) {
+    const study = validateCaseStudy(content);
+    const requestedIds = selectedSourceIds ?? [
+      ...new Set([
+        ...study.sourceIds,
+        ...study.analyses.flatMap((analysis) => [
+          ...analysis.sourceIds,
+          ...analysis.conceptApplications.flatMap((app) => app.sourceIds),
+          ...analysis.alternativePerspectives.flatMap((alt) => alt.sourceIds),
+        ]),
+      ]),
+    ];
+    if (!requestedIds.length) return validateCaseStudySources(study, []);
+    const available = await this.db
+      .select({ id: sources.id })
+      .from(sources)
+      .where(eq(sources.notebookId, notebookId));
+    const allowed = available
+      .filter((source) => requestedIds.includes(source.id))
+      .map((source) => source.id);
+    return validateCaseStudySources(study, allowed);
+  }
+
+  private async validateGuideSources(
+    notebookId: string,
+    content: unknown,
+    selectedSourceIds?: string[],
+  ) {
+    const guide = validateStudyGuide(content);
+    const requestedIds = selectedSourceIds ?? [
+      ...new Set([
+        ...guide.sourceIds,
+        ...guide.sections.flatMap((section) => section.sourceIds),
+      ]),
+    ];
+    if (!requestedIds.length) return validateStudyGuideSources(guide, []);
+    const available = await this.db
+      .select({ id: sources.id })
+      .from(sources)
+      .where(eq(sources.notebookId, notebookId));
+    const allowed = available
+      .filter((source) => requestedIds.includes(source.id))
+      .map((source) => source.id);
+    return validateStudyGuideSources(guide, allowed);
   }
 
   async delete(userId: string, smId: string) {

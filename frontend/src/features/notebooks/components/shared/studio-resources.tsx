@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Brain,
+  BookOpen,
   HelpCircle,
   type LucideIcon,
   Map as MapIcon,
   Network,
+  ListChecks,
   Presentation,
+  Briefcase,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -25,6 +28,13 @@ type ResourceConfig = {
 };
 
 const RESOURCES: ResourceConfig[] = [
+  {
+    key: "studyGuide",
+    kind: "study_guide",
+    icon: BookOpen,
+    label: "Study Guide",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
+  },
   {
     key: "quiz",
     kind: "quiz",
@@ -54,10 +64,24 @@ const RESOURCES: ResourceConfig[] = [
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
+    key: "practiceProblems",
+    kind: "practice_problems",
+    icon: ListChecks,
+    label: "Practice Problems",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
+  },
+  {
     key: "slides",
     kind: "slides",
     icon: Presentation,
     label: "Slides",
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
+  },
+  {
+    key: "caseStudy",
+    kind: "case_study",
+    icon: Briefcase,
+    label: "Case Study",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
 ];
@@ -261,5 +285,7 @@ function getGenerationSubtitle(generation: Generation, totalSourceCount: number)
 }
 
 function isInScope(kind: StudyMaterialKind): boolean {
-  return ["quiz", "simple_flashcard", "roadmap", "mind_map", "slides"].includes(kind);
+  return ["quiz", "simple_flashcard", "roadmap", "mind_map", "slides", "study_guide", "practice_problems", "case_study"].includes(
+    kind,
+  );
 }

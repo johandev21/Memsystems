@@ -22,6 +22,20 @@
       "when": 1788483113124,
       "tag": "0002_add_slides_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788570000000,
+      "tag": "0003_add_study_guide_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788660000000,
+      "tag": "0004_add_practice_problems_kind",
+      "breakpoints": true
     }
   ]
 }

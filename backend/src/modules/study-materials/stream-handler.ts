@@ -22,12 +22,27 @@ import {
   StudyMaterialKind,
   validateContent,
 } from './shapes';
+import { PracticeProblemsContent } from './practice-problems-content';
+import { CaseStudyContent } from './case-study-content';
 import {
   extractJson,
   generateTitle,
   normalizeContent,
 } from './content-normalizer';
 import { withSlidePreviews } from './slides-preview';
+import {
+  StudyGuideContent,
+  prepareGeneratedStudyGuide,
+  type StudyGuideGenerationOptions,
+} from './study-guide-content';
+import {
+  prepareGeneratedPracticeProblems,
+  type PracticeProblemsGenerationOptions,
+} from './practice-problems-content';
+import {
+  prepareGeneratedCaseStudy,
+  type CaseStudyGenerationOptions,
+} from './case-study-content';
 
 export interface StreamResult {
   materialId: string;
@@ -48,6 +63,9 @@ export class StreamHandler {
     notebookId: string,
     input: {
       kind: StudyMaterialKind;
+      studyGuideOptions?: StudyGuideGenerationOptions;
+      practiceProblemsOptions?: PracticeProblemsGenerationOptions;
+      caseStudyOptions?: CaseStudyGenerationOptions;
       brief: string;
       folderId?: string | null;
       model?: string;
@@ -78,7 +96,7 @@ export class StreamHandler {
         detailLevel: 'basic' | 'detailed';
       };
     },
-    sourceTexts: { title: string; rawText: string }[],
+    sourceTexts: { id?: string; title: string; rawText: string }[],
     requestId: string,
     onDone: (result: StreamResult) => void,
     onError: (error: string) => void,
@@ -86,7 +104,10 @@ export class StreamHandler {
     const promptTemplate = getPromptTemplate(input.kind);
     const systemPrompt = promptTemplate.instructions;
     const concatenatedSources = sourceTexts
-      .map((s) => `[${s.title}]\n${s.rawText}`)
+      .map(
+        (s) =>
+          `[${s.title}]${input.kind === 'study_guide' || input.kind === 'practice_problems' || input.kind === 'case_study' ? ` Source ID: ${s.id ?? ''}` : ''}\n${s.rawText}`,
+      )
       .join('\n\n---\n\n');
     const userPrompt = promptTemplate.user(
       input.brief,
@@ -98,6 +119,9 @@ export class StreamHandler {
         roadmapOptions: input.roadmapOptions,
         mindMapOptions: input.mindMapOptions,
         slidesOptions: input.slidesOptions,
+        studyGuideOptions: input.studyGuideOptions,
+        practiceProblemsOptions: input.practiceProblemsOptions,
+        caseStudyOptions: input.caseStudyOptions,
       },
     );
     const schema = this.getContentSchema(input.kind);
@@ -146,10 +170,34 @@ export class StreamHandler {
           const finalContent: unknown = await result.output;
           const normalized = normalizeContent(input.kind, finalContent);
           const validated = validateContent(input.kind, normalized);
+          const allowedIds = sourceTexts.flatMap((source) =>
+            source.id ? [source.id] : [],
+          );
           const storable =
-            input.kind === 'slides'
-              ? withSlidePreviews(validated as Record<string, unknown>)
-              : validated;
+            input.kind === 'study_guide'
+              ? prepareGeneratedStudyGuide(
+                  validated,
+                  allowedIds,
+                  input.studyGuideOptions,
+                )
+              : input.kind === 'practice_problems'
+                ? prepareGeneratedPracticeProblems(validated, allowedIds, {
+                    ...input.practiceProblemsOptions,
+                    questionCount: input.questionCount,
+                    difficulty:
+                      input.difficulty ??
+                      input.practiceProblemsOptions?.difficulty,
+                  })
+                : input.kind === 'case_study'
+                  ? prepareGeneratedCaseStudy(validated, allowedIds, {
+                      ...input.caseStudyOptions,
+                      questionCount:
+                        input.caseStudyOptions?.questionCount ??
+                        input.questionCount,
+                    })
+                  : input.kind === 'slides'
+                    ? withSlidePreviews(validated as Record<string, unknown>)
+                    : validated;
 
           const [inserted] = await this.db
             .insert(studyMaterials)
@@ -240,10 +288,34 @@ export class StreamHandler {
             );
 
             const validated = validateContent(input.kind, normalizedContent);
+            const allowedIds = sourceTexts.flatMap((source) =>
+              source.id ? [source.id] : [],
+            );
             const storable =
-              input.kind === 'slides'
-                ? withSlidePreviews(validated as Record<string, unknown>)
-                : validated;
+              input.kind === 'study_guide'
+                ? prepareGeneratedStudyGuide(
+                    validated,
+                    allowedIds,
+                    input.studyGuideOptions,
+                  )
+                : input.kind === 'practice_problems'
+                  ? prepareGeneratedPracticeProblems(validated, allowedIds, {
+                      ...input.practiceProblemsOptions,
+                      questionCount: input.questionCount,
+                      difficulty:
+                        input.difficulty ??
+                        input.practiceProblemsOptions?.difficulty,
+                    })
+                  : input.kind === 'case_study'
+                    ? prepareGeneratedCaseStudy(validated, allowedIds, {
+                        ...input.caseStudyOptions,
+                        questionCount:
+                          input.caseStudyOptions?.questionCount ??
+                          input.questionCount,
+                      })
+                    : input.kind === 'slides'
+                      ? withSlidePreviews(validated as Record<string, unknown>)
+                      : validated;
 
             const [inserted] = await this.db
               .insert(studyMaterials)
@@ -296,6 +368,9 @@ export class StreamHandler {
       roadmap: RoadmapContent,
       mind_map: MindMapContent,
       slides: SlidesContent,
+      study_guide: StudyGuideContent,
+      practice_problems: PracticeProblemsContent,
+      case_study: CaseStudyContent,
     };
     return schemas[kind];
   }
@@ -303,6 +378,9 @@ export class StreamHandler {
 
 function buildOptions(input: {
   kind: StudyMaterialKind;
+  studyGuideOptions?: StudyGuideGenerationOptions;
+  practiceProblemsOptions?: PracticeProblemsGenerationOptions;
+  caseStudyOptions?: CaseStudyGenerationOptions;
   questionCount?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
@@ -360,6 +438,29 @@ function buildOptions(input: {
     case 'mind_map': {
       if (input.mindMapOptions == null) return null;
       return input.mindMapOptions;
+    }
+    case 'study_guide':
+      return {
+        format: input.studyGuideOptions?.format ?? 'detailed',
+        sectionCount: input.studyGuideOptions?.sectionCount ?? 6,
+      };
+    case 'practice_problems': {
+      const problemCount =
+        input.practiceProblemsOptions?.problemCount ?? input.questionCount ?? 8;
+      const difficulty =
+        input.practiceProblemsOptions?.difficulty ??
+        input.difficulty ??
+        'medium';
+      return { problemCount, difficulty };
+    }
+    case 'case_study': {
+      return {
+        questionCount:
+          input.caseStudyOptions?.questionCount ?? input.questionCount ?? 4,
+        focus: input.caseStudyOptions?.focus ?? '',
+        comparePerspectives:
+          input.caseStudyOptions?.comparePerspectives ?? false,
+      };
     }
     case 'slides': {
       if (input.slidesOptions == null) return null;

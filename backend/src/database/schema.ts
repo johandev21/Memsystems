@@ -125,6 +125,9 @@ export const studyMaterialKindEnum = pgEnum('study_material_kind', [
   'roadmap',
   'mind_map',
   'slides',
+  'study_guide',
+  'practice_problems',
+  'case_study',
 ]);
 
 export const generationStatusEnum = pgEnum('generation_status', [

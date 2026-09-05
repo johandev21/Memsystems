@@ -97,6 +97,33 @@ export const SlidesEditorContent = z.object({
 });
 export type SlidesEditorContentType = z.infer<typeof SlidesEditorContent>;
 
+const PracticeProblemStepInput = z.object({
+  id: cuid,
+  title: z.string().min(0).max(200),
+  explanation: z.string().min(0).max(12000),
+  sourceIds: z.array(z.string().min(1).max(100)).max(100).optional(),
+});
+
+const PracticeProblemInput = z.object({
+  id: cuid,
+  prompt: z.string().min(0).max(5000),
+  givens: z.array(z.string().max(2000)).max(10).optional(),
+  constraints: z.array(z.string().max(2000)).max(10).optional(),
+  hints: z.array(z.string().max(2000)).max(5).optional(),
+  steps: z.array(PracticeProblemStepInput).min(1).max(12),
+  answer: z.string().min(0).max(12000),
+  checklist: z.array(z.string().max(1000)).max(10).optional(),
+  acceptableAlternatives: z.array(z.string().max(2000)).max(10).optional(),
+  sourceIds: z.array(z.string().min(1).max(100)).max(100).optional(),
+});
+
+export const PracticeProblemsEditorContent = z.object({
+  overview: z.string().max(5000).optional(),
+  sourceIds: z.array(z.string().min(1).max(100)).max(100).optional(),
+  problems: z.array(PracticeProblemInput).min(1).max(30),
+});
+export type PracticeProblemsEditorContentType = z.infer<typeof PracticeProblemsEditorContent>;
+
 export function createEmptyStudyMaterial(kind: StudyMaterialKind): unknown {
   switch (kind) {
     case "quiz": {
@@ -139,6 +166,28 @@ export function createEmptyStudyMaterial(kind: StudyMaterialKind): unknown {
       };
     case "mind_map":
       throw new Error(`createEmptyStudyMaterial is not implemented for kind "${kind}"`);
+    case "study_guide":
+      throw new Error(`createEmptyStudyMaterial is not implemented for kind "${kind}"`);
+    case "case_study":
+      throw new Error(`createEmptyStudyMaterial is not implemented for kind "${kind}"`);
+    case "practice_problems":
+      return {
+        overview: "",
+        problems: [
+          {
+            id: makeId(),
+            prompt: "Problem 1",
+            givens: [],
+            constraints: [],
+            hints: [],
+            steps: [{ id: makeId(), title: "Step 1", explanation: "Explanation", sourceIds: [] }],
+            answer: "Answer",
+            checklist: [],
+            acceptableAlternatives: [],
+            sourceIds: [],
+          },
+        ],
+      };
     case "slides":
       return {
         slides: [

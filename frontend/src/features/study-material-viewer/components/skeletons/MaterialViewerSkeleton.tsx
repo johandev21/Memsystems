@@ -1,7 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StudyMaterialKind } from "../../types";
+import { CaseStudySkeleton } from "./CaseStudySkeleton";
 import { FlashcardSkeleton } from "./FlashcardSkeleton";
 import { MindMapSkeleton } from "./MindMapSkeleton";
+import { PracticeProblemsSkeleton } from "./PracticeProblemsSkeleton";
 import { QuizSkeleton } from "./QuizSkeleton";
 import { RoadmapSkeleton } from "./RoadmapSkeleton";
 import { SlidesSkeleton } from "./SlidesSkeleton";
@@ -65,6 +67,10 @@ export function MaterialViewerSkeleton({ kind }: MaterialViewerSkeletonProps) {
           <RoadmapSkeleton />
         ) : kind === "mind_map" ? (
           <MindMapSkeleton />
+        ) : kind === "practice_problems" ? (
+          <PracticeProblemsSkeleton />
+        ) : kind === "case_study" ? (
+          <CaseStudySkeleton />
         ) : (
           <GenericMaterialSkeleton />
         )}

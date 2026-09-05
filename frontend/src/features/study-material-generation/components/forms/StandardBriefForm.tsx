@@ -25,7 +25,7 @@ export function StandardBriefForm({
   const canSubmit = !disabled && (value.sourceIds.length > 0 || value.brief.trim().length > 0);
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="brief" className="text-sm font-medium">
           Brief instructions for {label} (optional)

@@ -6,9 +6,15 @@ import { generationRequests } from '../../database/schema';
 import { NotFoundError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { StudyMaterialKind } from './shapes';
+import type { StudyGuideGenerationOptions } from './study-guide-content';
+import type { PracticeProblemsGenerationOptions } from './practice-problems-content';
+import type { CaseStudyGenerationOptions } from './case-study-content';
 
 export interface StartGenerationInput {
   kind: StudyMaterialKind;
+  studyGuideOptions?: StudyGuideGenerationOptions;
+  practiceProblemsOptions?: PracticeProblemsGenerationOptions;
+  caseStudyOptions?: CaseStudyGenerationOptions;
   brief: string;
   sourceIds: string[];
   folderId?: string | null;

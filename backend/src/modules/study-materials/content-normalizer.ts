@@ -461,6 +461,197 @@ export function normalizeSlidesContent(content: unknown): SlideDeck {
   return resolveSlideDeckPreservingPreviews(content);
 }
 
+export function normalizeCaseStudyContent(content: unknown): unknown {
+  if (!isRecord(content)) return content;
+  const questions = toArray(content.questions).map((q, qIndex) => {
+    if (!isRecord(q)) {
+      return { id: `question-${qIndex + 1}`, prompt: stringify(q), hint: '' };
+    }
+    return {
+      id: typeof q.id === 'string' ? q.id : `question-${qIndex + 1}`,
+      prompt: stringify(q.prompt ?? q.question ?? q.text ?? 'Question'),
+      hint: typeof q.hint === 'string' ? q.hint : '',
+    };
+  });
+  const questionIds = questions.map((q: { id: string }) => q.id);
+  const analyses = toArray(content.analyses).map((a, aIndex) => {
+    if (!isRecord(a)) {
+      return {
+        questionId: questionIds[aIndex] ?? `question-${aIndex + 1}`,
+        reasoning: stringify(a),
+        keyPoints: [],
+        conceptApplications: [],
+        assumptions: [],
+        tradeoffs: [],
+        alternativePerspectives: [],
+        checklist: [],
+        sourceIds: [],
+      };
+    }
+    const strArray = (v: unknown): string[] =>
+      Array.isArray(v) ? (v as unknown[]).map((x) => stringify(x)) : [];
+    const conceptApplications = toArray(
+      a.conceptApplications ?? a.concepts ?? [],
+    ).map((c) => {
+      if (!isRecord(c))
+        return {
+          concept: stringify(c),
+          application: stringify(c),
+          sourceIds: [],
+        };
+      return {
+        concept: stringify(c.concept ?? c.title ?? c.name ?? 'Concept'),
+        application: stringify(c.application ?? c.explanation ?? c.text ?? ''),
+        sourceIds: Array.isArray(c.sourceIds)
+          ? (c.sourceIds as unknown[]).map((id) => stringify(id))
+          : [],
+      };
+    });
+    const alternativePerspectives = toArray(
+      a.alternativePerspectives ?? a.alternatives ?? a.perspectives ?? [],
+    ).map((p) => {
+      if (!isRecord(p))
+        return {
+          viewpoint: stringify(p),
+          reasoning: stringify(p),
+          sourceIds: [],
+        };
+      return {
+        viewpoint: stringify(p.viewpoint ?? p.title ?? p.name ?? 'Perspective'),
+        reasoning: stringify(p.reasoning ?? p.explanation ?? p.text ?? ''),
+        sourceIds: Array.isArray(p.sourceIds)
+          ? (p.sourceIds as unknown[]).map((id) => stringify(id))
+          : [],
+      };
+    });
+    return {
+      questionId:
+        typeof a.questionId === 'string'
+          ? a.questionId
+          : (questionIds[aIndex] ?? `question-${aIndex + 1}`),
+      reasoning: stringify(a.reasoning ?? a.analysis ?? a.explanation ?? ''),
+      keyPoints: strArray(a.keyPoints ?? a.points ?? []),
+      conceptApplications,
+      assumptions: strArray(a.assumptions ?? []),
+      tradeoffs: strArray(a.tradeoffs ?? []),
+      alternativePerspectives,
+      checklist: strArray(a.checklist ?? a.selfCheck ?? []),
+      sourceIds: Array.isArray(a.sourceIds)
+        ? (a.sourceIds as unknown[]).map((id) => stringify(id))
+        : [],
+    };
+  });
+  const scenario = isRecord(content.scenario)
+    ? {
+        title:
+          typeof content.scenario.title === 'string'
+            ? content.scenario.title
+            : 'Scenario',
+        setting: stringify(
+          content.scenario.setting ?? content.scenario.context ?? '',
+        ),
+        narrative: stringify(
+          content.scenario.narrative ?? content.scenario.story ?? '',
+        ),
+        isFictional:
+          typeof content.scenario.isFictional === 'boolean'
+            ? content.scenario.isFictional
+            : true,
+      }
+    : { title: 'Scenario', setting: '', narrative: '', isFictional: true };
+  return {
+    ...content,
+    scenario,
+    questions,
+    analyses,
+    facts: Array.isArray(content.facts)
+      ? (content.facts as unknown[]).map((x) => stringify(x))
+      : [],
+    learningObjectives: Array.isArray(content.learningObjectives)
+      ? (content.learningObjectives as unknown[]).map((x) => stringify(x))
+      : [],
+    conceptsFocus:
+      typeof content.conceptsFocus === 'string'
+        ? content.conceptsFocus
+        : typeof content.focus === 'string'
+          ? content.focus
+          : '',
+    sourceIds: Array.isArray(content.sourceIds)
+      ? (content.sourceIds as unknown[]).map((id) => stringify(id))
+      : [],
+  };
+}
+
+export function normalizePracticeProblemsContent(content: unknown): unknown {
+  if (!isRecord(content)) return content;
+  const problems = toArray(content.problems).map((p, pIndex) => {
+    if (!isRecord(p)) {
+      return {
+        id: `problem-${pIndex + 1}`,
+        prompt: stringify(p),
+        givens: [],
+        constraints: [],
+        hints: [],
+        steps: [
+          {
+            id: `problem-${pIndex + 1}-step-1`,
+            title: 'Worked solution',
+            explanation: 'Solution',
+            sourceIds: [],
+          },
+        ],
+        answer: 'Answer',
+        checklist: [],
+        acceptableAlternatives: [],
+        sourceIds: [],
+      };
+    }
+    const steps = toArray(p.steps).map((s, sIndex) => {
+      if (!isRecord(s)) {
+        return {
+          id: `step-${sIndex + 1}`,
+          title: stringify(s),
+          explanation: stringify(s),
+          sourceIds: [],
+        };
+      }
+      return {
+        id: typeof s.id === 'string' ? s.id : `step-${sIndex + 1}`,
+        title: stringify(s.title ?? s.name ?? `Step ${sIndex + 1}`),
+        explanation: stringify(s.explanation ?? s.body ?? s.text ?? ''),
+        sourceIds: Array.isArray(s.sourceIds)
+          ? (s.sourceIds as unknown[]).map((id) => stringify(id))
+          : [],
+      };
+    });
+    const strArray = (v: unknown): string[] =>
+      Array.isArray(v) ? (v as unknown[]).map((x) => stringify(x)) : [];
+    return {
+      id: typeof p.id === 'string' ? p.id : `problem-${pIndex + 1}`,
+      prompt: stringify(p.prompt ?? p.question ?? p.title ?? 'Problem'),
+      givens: strArray(p.givens ?? p.given ?? []),
+      constraints: strArray(p.constraints ?? p.rules ?? []),
+      hints: strArray(p.hints ?? []),
+      steps,
+      answer: stringify(p.answer ?? p.solution ?? p.exemplar ?? ''),
+      checklist: strArray(p.checklist ?? p.criteria ?? []),
+      acceptableAlternatives: strArray(
+        p.acceptableAlternatives ?? p.alternatives ?? [],
+      ),
+      sourceIds: Array.isArray(p.sourceIds)
+        ? (p.sourceIds as unknown[]).map((id) => stringify(id))
+        : [],
+    };
+  });
+  return {
+    ...content,
+    problems,
+    sourceIds: Array.isArray(content.sourceIds)
+      ? (content.sourceIds as unknown[]).map((id) => stringify(id))
+      : [],
+  };
+}
+
 export function normalizeContent(
   kind: StudyMaterialKind,
   content: unknown,
@@ -480,6 +671,10 @@ export function normalizeContent(
       return normalizeMindMapContent(content);
     case 'slides':
       return normalizeSlidesContent(content);
+    case 'practice_problems':
+      return normalizePracticeProblemsContent(content);
+    case 'case_study':
+      return normalizeCaseStudyContent(content);
     default:
       return content;
   }
@@ -524,6 +719,9 @@ export function slugifyTitle(title: string, kind: StudyMaterialKind): string {
     roadmap: '-roadmap',
     mind_map: '-mind-map',
     slides: '-slides',
+    study_guide: '-study-guide',
+    practice_problems: '-practice-problems',
+    case_study: '-case-study',
   };
 
   const suffix = suffixMap[kind];
@@ -581,6 +779,12 @@ export function generateTitle(
         break;
       case 'slides':
         rawTitle = `Slides (${arrayLength(record.slides)} slides)`;
+        break;
+      case 'practice_problems':
+        rawTitle = `Practice Problems (${arrayLength(record.problems)} problems)`;
+        break;
+      case 'case_study':
+        rawTitle = `Case Study (${arrayLength(record.questions)} questions)`;
         break;
       default:
         rawTitle = 'Untitled';

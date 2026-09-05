@@ -1,8 +1,21 @@
 import { z } from 'zod';
+import { StudyGuideContent, validateStudyGuide } from './study-guide-content';
+import {
+  PracticeProblemsContent,
+  validatePracticeProblems,
+} from './practice-problems-content';
+import { CaseStudyContent, validateCaseStudy } from './case-study-content';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export type StudyMaterialKind =
-  'quiz' | 'simple_flashcard' | 'roadmap' | 'mind_map' | 'slides';
+  | 'quiz'
+  | 'simple_flashcard'
+  | 'roadmap'
+  | 'mind_map'
+  | 'slides'
+  | 'study_guide'
+  | 'practice_problems'
+  | 'case_study';
 
 export const QuizQuestionOption = z.object({
   id: z.string(),
@@ -166,12 +179,18 @@ const contentSchemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
   roadmap: RoadmapContent,
   mind_map: MindMapContent,
   slides: SlidesContent,
+  study_guide: StudyGuideContent,
+  practice_problems: PracticeProblemsContent,
+  case_study: CaseStudyContent,
 };
 
 export function validateContent(kind: string, content: unknown) {
   if (!(kind in contentSchemas)) {
     throw new BadRequestError(`Invalid study material kind: ${kind}`);
   }
+  if (kind === 'study_guide') return validateStudyGuide(content);
+  if (kind === 'practice_problems') return validatePracticeProblems(content);
+  if (kind === 'case_study') return validateCaseStudy(content);
   if (kind === 'slides') {
     // Slides accept legacy prose decks, structured scenes, and malformed
     // partial output: the resolver always produces a complete v2 deck, and

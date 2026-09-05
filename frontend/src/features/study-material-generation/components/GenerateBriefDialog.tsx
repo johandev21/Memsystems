@@ -1,3 +1,4 @@
+import type { StudyGuideGenerationOptions, CaseStudyGenerationOptions } from "@/features/study-material-viewer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/features/ai";
@@ -5,7 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useModelPersistence } from "@/features/notebooks";
 import { useGenerationStore } from "../hooks/use-generation-store";
 import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-material-viewer";
-import type { RoadmapOptions, MindMapOptions, SlidesOptions } from "./forms/types";
+import type {
+  RoadmapOptions,
+  MindMapOptions,
+  SlidesOptions,
+  PracticeProblemsOptions,
+} from "./forms/types";
 import { BriefForm } from "./BriefForm";
 import { cn } from "@/shared/utils/cn";
 
@@ -40,6 +46,9 @@ export function GenerateBriefDialog({
     roadmapOptions,
     mindMapOptions,
     slidesOptions,
+    studyGuideOptions,
+    practiceProblemsOptions,
+    caseStudyOptions,
   } = value;
   const { model: selectedModel } = useModelPersistence(notebookId);
 
@@ -64,6 +73,9 @@ export function GenerateBriefDialog({
         roadmapOptions,
         mindMapOptions,
         slidesOptions,
+        studyGuideOptions,
+        practiceProblemsOptions,
+        caseStudyOptions,
       },
       queryClient,
       onComplete,
@@ -80,15 +92,21 @@ export function GenerateBriefDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent
-          className={cn(
-            "bg-surface-1 border border-surface-border generate-material-dialog",
-            "max-h-[calc(100dvh-2rem)] overflow-y-auto",
-            "sm:max-w-md",
-            (kind === "quiz" || kind === "simple_flashcard") && "sm:max-w-2xl",
-            (kind === "roadmap" || kind === "mind_map" || kind === "slides") && "sm:max-w-3xl",
-          )}
-        >
+      <DialogContent
+        className={cn(
+          "bg-surface-1 border border-surface-border generate-material-dialog",
+          "max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden",
+          "min-w-0 [&>*]:min-w-0",
+          "sm:max-w-md",
+          (kind === "quiz" ||
+            kind === "simple_flashcard" ||
+            kind === "study_guide" ||
+            kind === "practice_problems" ||
+            kind === "case_study") &&
+            "sm:max-w-2xl",
+          (kind === "roadmap" || kind === "mind_map" || kind === "slides") && "sm:max-w-3xl",
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-text-primary">
             Generate {label}
@@ -123,6 +141,9 @@ function useGenerationBriefState() {
     roadmapOptions?: RoadmapOptions;
     mindMapOptions?: MindMapOptions;
     slidesOptions?: SlidesOptions;
+  studyGuideOptions?: StudyGuideGenerationOptions;
+  practiceProblemsOptions?: PracticeProblemsOptions;
+  caseStudyOptions?: CaseStudyGenerationOptions;
   }>({
     brief: "",
     sourceIds: [],
@@ -140,6 +161,9 @@ function useGenerationBriefState() {
       roadmapOptions: undefined,
       mindMapOptions: undefined,
       slidesOptions: undefined,
+      studyGuideOptions: undefined,
+      practiceProblemsOptions: undefined,
+      caseStudyOptions: undefined,
     }));
 
   return { value, updateBriefForm, resetAfterSubmit };

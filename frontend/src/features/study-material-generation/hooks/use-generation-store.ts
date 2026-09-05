@@ -1,9 +1,15 @@
+import type { StudyGuideGenerationOptions, CaseStudyGenerationOptions } from "@/features/study-material-viewer";
 import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { create } from "zustand";
 import { cancelGeneration, type StudyMaterialKind, startGeneration } from "../api/generation";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
-import type { RoadmapGenerationOptions, MindMapGenerationOptions, SlidesGenerationOptions } from "../api/generation";
+import type {
+  RoadmapGenerationOptions,
+  MindMapGenerationOptions,
+  SlidesGenerationOptions,
+  PracticeProblemsGenerationOptions,
+} from "../api/generation";
 import { KIND_LABELS } from "@/features/study-material-viewer";
 import { classifyChatError } from "@/features/notebook-chat/utils/chat-error";
 
@@ -36,6 +42,9 @@ interface GenerationState {
       cardStyle?: "qa" | "definition" | "cloze" | "mixed";
       roadmapOptions?: RoadmapGenerationOptions;
       mindMapOptions?: MindMapGenerationOptions;
+      studyGuideOptions?: StudyGuideGenerationOptions;
+      practiceProblemsOptions?: PracticeProblemsGenerationOptions;
+      caseStudyOptions?: CaseStudyGenerationOptions;
       slidesOptions?: SlidesGenerationOptions;
     },
     queryClient: QueryClient,

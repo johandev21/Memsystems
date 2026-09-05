@@ -1,8 +1,10 @@
 import {
   Brain,
+  BookOpen,
   FileQuestion,
   Folder,
   FolderOpen,
+  ListChecks,
   Map as MapIcon,
   Network,
   type LucideIcon,
@@ -42,6 +44,12 @@ function getTreeIcon(node: TreeNode, isOpen: boolean): LucideIcon {
       return Brain;
     case "roadmap":
       return MapIcon;
+    case "study_guide":
+      return BookOpen;
+    case "practice_problems":
+      return ListChecks;
+    case "case_study":
+      return BookOpen;
     case "mind_map":
       return Network;
     case "quiz":

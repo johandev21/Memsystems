@@ -54,6 +54,41 @@ describe("GenerateBriefDialog", () => {
     });
   });
 
+  it("submits a study guide with revision format, section count, and the notebook model", async () => {
+    const user = userEvent.setup();
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="study_guide"
+        open
+        onOpenChange={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+    expect(screen.getByText("Study Guide Setup")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Revision sheet/ }));
+    await user.click(screen.getByRole("button", { name: "Custom" }));
+    const customInput = screen.getByLabelText("Custom section count");
+    await user.clear(customInput);
+    await user.type(customInput, "3");
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+    await user.type(screen.getByLabelText(/Custom Instructions/), "Virtue ethics");
+    await user.click(screen.getByRole("button", { name: "Generate" }));
+    expect(mockStartBackgroundGeneration).toHaveBeenCalledWith(
+      "nb-1",
+      expect.objectContaining({
+        kind: "study_guide",
+        brief: "Virtue ethics",
+        model: "openai/gpt-5.6-sol",
+        studyGuideOptions: { format: "revision", sectionCount: 3 },
+      }),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
   it("does not render any model selector in flashcard generation dialog and submits with global model", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

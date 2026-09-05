@@ -46,7 +46,7 @@ export function SourceMultiSelect({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-card max-h-[200px] overflow-y-auto p-1",
+        "rounded-2xl border border-border/60 bg-card max-h-[200px] overflow-y-auto overflow-x-hidden p-1",
         className,
       )}
     >
@@ -77,9 +77,14 @@ function SourceRow({
       htmlFor={id}
       className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-muted/60 cursor-pointer text-sm"
     >
-      <Checkbox id={id} checked={checked} onCheckedChange={(c) => onToggle(c === true)} />
-      <span className="truncate flex-1">{source.title}</span>
-      <span className="text-xs uppercase tracking-wide text-muted-foreground/70">
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(c) => onToggle(c === true)}
+        className="shrink-0"
+      />
+      <span className="min-w-0 flex-1 truncate">{source.title}</span>
+      <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground/70">
         {source.kind}
       </span>
     </Label>

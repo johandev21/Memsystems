@@ -7,6 +7,9 @@ import { RoadmapBriefForm } from "./RoadmapBriefForm";
 import { MindMapBriefForm } from "./MindMapBriefForm";
 import { SlidesBriefForm } from "./SlidesBriefForm";
 import { StandardBriefForm } from "./StandardBriefForm";
+import { StudyGuideBriefForm } from "./StudyGuideBriefForm";
+import { PracticeProblemsBriefForm } from "./PracticeProblemsBriefForm";
+import { CaseStudyBriefForm } from "./CaseStudyBriefForm";
 
 export type { BaseMaterialFormProps, BriefFormData } from "./types";
 export { QuizBriefForm } from "./QuizBriefForm";
@@ -28,6 +31,9 @@ export const MATERIAL_FORM_MAP: Partial<
   roadmap: RoadmapBriefForm,
   mind_map: MindMapBriefForm,
   slides: SlidesBriefForm,
+  study_guide: StudyGuideBriefForm,
+  practice_problems: PracticeProblemsBriefForm,
+  case_study: CaseStudyBriefForm,
 };
 
 /**

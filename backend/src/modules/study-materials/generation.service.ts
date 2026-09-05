@@ -4,6 +4,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { sources } from '../../database/schema';
 import { NotFoundError } from '../../common/errors/domain-error';
+import { BadRequestError } from '../../common/errors/domain-error';
 import { ConnectionService } from '../ai/connection.service';
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
@@ -20,6 +21,9 @@ const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
   roadmap: 'openai/gpt-5.6-sol',
   mind_map: 'openai/gpt-5.6-sol',
   slides: 'openai/gpt-5.6-sol',
+  study_guide: 'openai/gpt-5.6-sol',
+  practice_problems: 'openai/gpt-5.6-sol',
+  case_study: 'openai/gpt-5.6-sol',
 };
 
 @Injectable()
@@ -47,6 +51,48 @@ export class GenerationService {
       input.sourceIds.length > 0
         ? await this.fetchSourceTexts(userId, notebookId, input.sourceIds)
         : [];
+
+    if (input.kind === 'study_guide') {
+      if (
+        sourceTexts.length !== new Set(input.sourceIds).size ||
+        sourceTexts.some((source) => !source.rawText.trim())
+      ) {
+        throw new BadRequestError(
+          'Selected sources are unavailable or have no readable content. Update your selection and retry.',
+        );
+      }
+      if (!sourceTexts.length && !input.brief.trim()) {
+        throw new BadRequestError(
+          'Select a source or enter a brief for your study guide.',
+        );
+      }
+    }
+
+    if (input.kind === 'practice_problems') {
+      const problemCount =
+        input.practiceProblemsOptions?.problemCount ?? input.questionCount;
+      if (problemCount != null && (problemCount < 1 || problemCount > 30)) {
+        throw new BadRequestError('Problem count must be between 1 and 30.');
+      }
+      if (!sourceTexts.length && !input.brief.trim()) {
+        throw new BadRequestError(
+          'Select a source or enter a brief for your practice problems.',
+        );
+      }
+    }
+
+    if (input.kind === 'case_study') {
+      const questionCount =
+        input.caseStudyOptions?.questionCount ?? input.questionCount;
+      if (questionCount != null && (questionCount < 1 || questionCount > 10)) {
+        throw new BadRequestError('Question count must be between 1 and 10.');
+      }
+      if (!sourceTexts.length && !input.brief.trim()) {
+        throw new BadRequestError(
+          'Select a source or enter a brief for your case study.',
+        );
+      }
+    }
 
     const requestId = await this.requestManager.create(userId, notebookId, {
       ...input,

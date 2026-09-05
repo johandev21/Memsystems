@@ -13,6 +13,9 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
+import { StudyGuideOptions } from './study-guide-content';
+import { PracticeProblemsOptions } from './practice-problems-content';
+import { CaseStudyOptions } from './case-study-content';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -23,7 +26,16 @@ import { StudyMaterialService } from './study-material.service';
 import { TrashService } from './trash.service';
 
 const createStudyMaterialSchema = z.object({
-  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
+  kind: z.enum([
+    'quiz',
+    'simple_flashcard',
+    'roadmap',
+    'mind_map',
+    'slides',
+    'study_guide',
+    'practice_problems',
+    'case_study',
+  ]),
   title: z.string().min(1, 'Title is required').max(200),
   content: z.unknown(),
   folderId: z.string().optional(),
@@ -49,7 +61,16 @@ const updateFolderSchema = z.object({
 });
 
 export const generateRequestSchema = z.object({
-  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
+  kind: z.enum([
+    'quiz',
+    'simple_flashcard',
+    'roadmap',
+    'mind_map',
+    'slides',
+    'study_guide',
+    'practice_problems',
+    'case_study',
+  ]),
   brief: z.string().default(''),
   sourceIds: z.array(z.string()).default([]),
   folderId: z.string().nullable().optional(),
@@ -72,6 +93,9 @@ export const generateRequestSchema = z.object({
       detailLevel: z.enum(['basic', 'detailed']),
     })
     .optional(),
+  studyGuideOptions: StudyGuideOptions.optional(),
+  practiceProblemsOptions: PracticeProblemsOptions.optional(),
+  caseStudyOptions: CaseStudyOptions.optional(),
   slidesOptions: z
     .object({
       slideCount: z.number().min(0).max(20),

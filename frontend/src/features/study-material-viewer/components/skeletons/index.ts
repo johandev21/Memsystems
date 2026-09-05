@@ -4,3 +4,4 @@ export * from "./QuizSkeleton";
 export * from "./SlidesSkeleton";
 export * from "./RoadmapSkeleton";
 export * from "./MindMapSkeleton";
+export * from "./CaseStudySkeleton";

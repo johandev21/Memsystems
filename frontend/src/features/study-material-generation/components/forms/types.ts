@@ -1,3 +1,4 @@
+import type { StudyGuideGenerationOptions, CaseStudyGenerationOptions } from "@/features/study-material-viewer";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 
 export interface RoadmapOptions {
@@ -19,6 +20,11 @@ export interface SlidesOptions {
   detailLevel: "basic" | "detailed";
 }
 
+export interface PracticeProblemsOptions {
+  problemCount: number;
+  difficulty: "easy" | "medium" | "hard";
+}
+
 export interface BriefFormData {
   brief: string;
   sourceIds: string[];
@@ -29,6 +35,9 @@ export interface BriefFormData {
   cardStyle?: "qa" | "definition" | "cloze" | "mixed";
   roadmapOptions?: RoadmapOptions;
   mindMapOptions?: MindMapOptions;
+  studyGuideOptions?: StudyGuideGenerationOptions;
+  practiceProblemsOptions?: PracticeProblemsOptions;
+  caseStudyOptions?: CaseStudyGenerationOptions;
   slidesOptions?: SlidesOptions;
 }
 
