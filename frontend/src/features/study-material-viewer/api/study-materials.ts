@@ -1,5 +1,12 @@
-﻿import { apiDelete, apiPatch, apiPost, createQueryOptions, fetchApi } from "@/shared/api";
+import { apiDelete, apiPatch, apiPost, createQueryOptions, fetchApi } from "@/shared/api";
 import type { StudyMaterialDTO, CreateStudyMaterialInput } from "../types";
+import type { ProblemEvaluationResult } from "../shapes/practice-problems";
+
+export interface EvaluateProblemInput {
+  problemId: string;
+  studentAnswer: string;
+  modelId: string;
+}
 
 export interface UpdateStudyMaterialInput {
   title?: string;
@@ -57,3 +64,9 @@ export const downloadSlidesPptx = async (materialId: string, filename: string) =
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 };
+
+export const evaluatePracticeProblem = (materialId: string, input: EvaluateProblemInput) =>
+  apiPost<EvaluateProblemInput, ProblemEvaluationResult>(
+    `/api/study-materials/${materialId}/evaluate-problem`,
+    input,
+  );

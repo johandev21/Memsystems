@@ -9,7 +9,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronsUpDown, Folder, FolderOpen, FolderPlus } from "lucide-react";
+import { ChevronsUpDown, Command, Folder, FolderOpen, FolderPlus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import {
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -218,10 +219,15 @@ function TreeContent({ isPrototype }: { isPrototype: boolean }) {
 function TreeRootMenu() {
   const controller = useTreeControllerContext();
   return (
-    <ContextMenuContent className="min-w-52">
+    <ContextMenuContent className="min-w-56">
       <ContextMenuGroup>
         <ContextMenuItem onClick={() => controller.createFolder(null)}>
           <FolderPlus /> New folder
+          <ContextMenuShortcut className="flex items-center gap-1 tracking-normal font-sans text-xs text-muted-foreground group-focus/context-menu-item:text-accent-foreground">
+            <Command className="size-4 shrink-0" aria-hidden="true" />
+            <span className="font-sans font-medium">N</span>
+            <span className="sr-only">Command N</span>
+          </ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuGroup>
       <ContextMenuSeparator />

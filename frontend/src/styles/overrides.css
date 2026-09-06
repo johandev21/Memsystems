@@ -22,8 +22,11 @@ html[data-theme="default"] .dark [data-slot="alert-dialog-content"] {
   border-color: oklch(0.28 0 0);
 }
 
-/* Give interactive popover rows enough separation from the dark surface. */
-.dark [data-slot="popover-content"] .cursor-pointer:is(:hover, :focus-visible) {
+/* Give interactive popover rows enough separation from the dark surface.
+   Hover separation applies to unselected rows only so selected rows keep
+   their selected background and foreground on hover. */
+.dark [data-slot="popover-content"] .cursor-pointer:not(.bg-primary):is(:hover),
+.dark [data-slot="popover-content"] .cursor-pointer:is(:focus-visible) {
   background-color: var(--popover-hover);
   color: var(--foreground);
 }

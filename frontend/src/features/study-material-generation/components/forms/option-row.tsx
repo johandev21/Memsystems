@@ -31,7 +31,7 @@ export function generationSourceOptionClass(selected: boolean, className?: strin
   return cn(
     "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition-colors",
     selected
-      ? "bg-primary font-medium text-primary-foreground hover:bg-primary/90"
+      ? "bg-primary font-medium text-primary-foreground"
       : "text-text-tertiary hover:bg-surface-2",
     className,
   );

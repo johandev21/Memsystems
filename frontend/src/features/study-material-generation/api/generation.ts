@@ -69,6 +69,20 @@ export function startGeneration(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  }).then(async (response) => {
+    if (!response.ok) {
+      let message = `Generation failed (${response.status})`;
+      try {
+        const data: unknown = await response.json();
+        if (data && typeof data === "object" && "error" in data && typeof data.error === "string") {
+          message = data.error;
+        }
+      } catch {
+        // Keep the HTTP status when the server returns a non-JSON error.
+      }
+      throw new Error(message);
+    }
+    return response;
   });
 
   const requestIdPromise = promise.then(
@@ -95,18 +109,6 @@ async function* iteratorFrom(
       type: "error",
       error: err instanceof Error ? err : new Error(String(err)),
     };
-    return;
-  }
-
-  if (!response.ok) {
-    let message = `Generation failed (${response.status})`;
-    try {
-      const data = (await response.json()) as { error?: string };
-      if (data?.error) message = data.error;
-    } catch {
-      /* non-JSON body */
-    }
-    yield { type: "error", error: new Error(message) };
     return;
   }
 

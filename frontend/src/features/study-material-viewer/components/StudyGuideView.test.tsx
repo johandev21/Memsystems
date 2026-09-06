@@ -78,7 +78,7 @@ describe("StudyGuideView", () => {
     renderGuide(
       guide({ sourceIds: ["src-1"], sections: [section("s1", { sourceIds: ["src-1"] })] }),
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Retry references" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Retry References" }));
     expect(await screen.findByRole("button", { name: "Biology Textbook" })).toBeTruthy();
   });
 
@@ -92,6 +92,7 @@ describe("StudyGuideView", () => {
   it("renders a readable guide with headings, objectives, and sections", () => {
     const { container } = renderGuide(guide());
     expect(screen.getByRole("heading", { name: "photosynthesis" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Learning Objectives", level: 2 })).toBeTruthy();
     expect(container.textContent).toContain("How plants convert light");
     expect(container.textContent).toContain("Explain the light-dependent reactions.");
     expect(screen.getByRole("heading", { name: "Section s1" })).toBeTruthy();
@@ -101,7 +102,7 @@ describe("StudyGuideView", () => {
 
   it("labels examples as generated, separate from source claims", () => {
     const { container } = renderGuide(guide());
-    expect(screen.getAllByRole("heading", { name: "Generated examples" })).toHaveLength(2);
+    expect(screen.getAllByRole("heading", { name: "Generated Examples" })).toHaveLength(2);
     expect(container.textContent).toContain("Example of s1");
     expect(container.querySelector("article")).toBeTruthy();
   });
@@ -193,12 +194,12 @@ describe("StudyGuideView", () => {
       ],
     };
     const { container } = renderGuide(legacy);
-    expect(container.textContent).toContain("Detailed guide");
+    expect(container.textContent).toContain("Detailed Guide");
     expect(container.textContent).toContain("Old explanation.");
   });
 
   it("labels revision sheets distinctly from detailed guides", () => {
     const { container } = renderGuide(guide({ format: "revision" }));
-    expect(container.textContent).toContain("Revision sheet");
+    expect(container.textContent).toContain("Revision Sheet");
   });
 });

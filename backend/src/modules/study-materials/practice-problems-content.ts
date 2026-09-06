@@ -35,9 +35,29 @@ export const PracticeProblem = z.object({
 export const PracticeProblemsContent = z.object({
   title: z.string().min(1).max(200),
   overview: z.string().max(5000).default(''),
+  difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
   sourceIds: z.array(z.string().min(1).max(100)).max(100).default([]),
   problems: z.array(PracticeProblem).min(1).max(30),
 });
+
+export const ProblemEvaluationSchema = z.object({
+  status: z.enum(['correct', 'partially_correct', 'needs_improvement']),
+  feedback: z
+    .string()
+    .describe('Clear, constructive feedback explaining the evaluation'),
+  strengths: z.array(z.string()).default([]),
+  missingPoints: z.array(z.string()).default([]),
+});
+export type ProblemEvaluationResult = z.infer<typeof ProblemEvaluationSchema>;
+
+export const EvaluateProblemRequestSchema = z.object({
+  problemId: z.string().min(1).max(100),
+  studentAnswer: z.string().min(1, 'Please enter your attempt').max(10000),
+  modelId: z.string().min(1, 'modelId is required').max(200),
+});
+export type EvaluateProblemRequest = z.infer<
+  typeof EvaluateProblemRequestSchema
+>;
 
 export function validatePracticeProblems(content: unknown) {
   const result = PracticeProblemsContent.safeParse(content);
@@ -98,5 +118,5 @@ export function prepareGeneratedPracticeProblems(
       'Practice problem count does not match the request',
     );
   }
-  return set;
+  return { ...set, difficulty: settings.difficulty };
 }

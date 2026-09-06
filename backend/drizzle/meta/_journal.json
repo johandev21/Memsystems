@@ -36,6 +36,13 @@
       "when": 1788660000000,
       "tag": "0004_add_practice_problems_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788746400000,
+      "tag": "0005_add_case_study_kind",
+      "breakpoints": true
     }
   ]
 }

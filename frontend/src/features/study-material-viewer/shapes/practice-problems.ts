@@ -23,10 +23,20 @@ export const PracticeProblem = z.object({
 export const PracticeProblemsContent = z.object({
   title: z.string().min(1).max(200),
   overview: z.string().max(5000).default(""),
+  difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),
   sourceIds: z.array(z.string().min(1).max(100)).max(100).default([]),
   problems: z.array(PracticeProblem).min(1).max(30),
+});
+
+export const ProblemEvaluationSchema = z.object({
+  status: z.enum(["correct", "partially_correct", "needs_improvement"]),
+  feedback: z.string(),
+  strengths: z.array(z.string()).default([]),
+  missingPoints: z.array(z.string()).default([]),
 });
 
 export type PracticeProblemStepType = z.infer<typeof PracticeProblemWorkedStep>;
 export type PracticeProblemType = z.infer<typeof PracticeProblem>;
 export type PracticeProblemsContentType = z.infer<typeof PracticeProblemsContent>;
+export type PracticeProblemsDifficulty = "easy" | "medium" | "hard";
+export type ProblemEvaluationResult = z.infer<typeof ProblemEvaluationSchema>;

@@ -37,30 +37,27 @@ function StudyGuideReader({
   );
 
   return (
-    <article className="mx-auto w-full max-w-3xl space-y-6 p-3 text-text-primary sm:p-6">
-      <header className="space-y-3">
+    <article className="mx-auto w-full max-w-3xl space-y-8 py-3 text-text-primary sm:space-y-10 sm:py-6">
+      <header className="space-y-4">
         <p className="text-xs font-medium text-text-tertiary">
-          {guide.format === "revision" ? "Revision sheet" : "Detailed guide"}
+          {guide.format === "revision" ? "Revision Sheet" : "Detailed Guide"}
         </p>
-        <h1 className="text-2xl font-semibold break-words">
+        <h1 className="text-[1.75rem] leading-tight font-semibold break-words sm:text-3xl">
           {guide.title.replace(/-study-guide$/, "").replaceAll("-", " ")}
         </h1>
         {guide.sourceIds.length === 0 && !hasReferences && (
           <p className="text-sm text-text-tertiary">Generated without notebook sources.</p>
         )}
-        <GuideMarkdown text={guide.overview} />
-        <GuideList title="Learning objectives" items={guide.learningObjectives} />
+        <GuideMarkdown text={guide.overview} headingLevel={2} />
       </header>
-      <nav
-        aria-label="Study guide contents"
-        className="rounded-2xl border border-surface-border bg-surface-2 p-4"
-      >
-        <h2 className="mb-2 font-semibold">Contents</h2>
-        <ol className="list-inside list-decimal space-y-2">
+      <GuideList title="Learning Objectives" items={guide.learningObjectives} headingLevel={2} />
+      <nav aria-label="Study guide contents" className="space-y-3">
+        <h2 className="text-xl font-semibold">Contents</h2>
+        <ol className="list-decimal space-y-2 pl-5 marker:text-text-secondary">
           {guide.sections.map((section) => (
             <li key={section.id}>
               <a
-                className="text-sm underline underline-offset-4 focus-visible:outline-2"
+                className="leading-relaxed break-words underline underline-offset-4 focus-visible:outline-2"
                 href={`#${sectionId(section.id)}`}
                 onClick={(event) => navigateToSection(event, section.id)}
               >
@@ -75,7 +72,7 @@ function StudyGuideReader({
         <div role="alert" className="text-sm text-text-secondary">
           Source references could not be loaded.{" "}
           <Button variant="outline" size="sm" onClick={() => void sources.refetch()}>
-            Retry references
+            Retry References
           </Button>
         </div>
       )}
@@ -110,20 +107,20 @@ function GuideSection({
     <section
       id={anchorId}
       tabIndex={-1}
-      className="scroll-mt-4 space-y-4 rounded-2xl border border-surface-border bg-surface-2 p-4 sm:p-6"
+      className="scroll-mt-6 space-y-6 focus-visible:outline-2 focus-visible:outline-offset-4"
       aria-labelledby={`${anchorId}-title`}
     >
-      <h2 id={`${anchorId}-title`} className="text-xl font-semibold break-words">
+      <h2 id={`${anchorId}-title`} className="text-xl font-semibold break-words sm:text-2xl">
         {section.title}
       </h2>
-      <GuideMarkdown text={section.explanation} />
-      <GuideList title="Key concepts" items={section.keyConcepts} />
-      <GuideList title="Generated examples" items={section.examples} />
-      <GuideList title="Common misconceptions" items={section.misconceptions} />
+      <GuideMarkdown text={section.explanation} headingLevel={3} />
+      <GuideList title="Key Concepts" items={section.keyConcepts} />
+      <GuideList title="Generated Examples" items={section.examples} />
+      <GuideList title="Common Misconceptions" items={section.misconceptions} />
       <GuideList title="Takeaways" items={section.takeaways} />
       {section.sourceIds.length > 0 && (
-        <div className="space-y-2 border-t border-surface-border pt-3">
-          <h3 className="text-sm font-semibold">Supporting sources</h3>
+        <div className="space-y-2 text-sm text-text-secondary">
+          <h3 className="font-semibold">Supporting Sources</h3>
           <ul className="space-y-2">
             {section.sourceIds.map((id) => {
               const source = sources.find((candidate) => candidate.id === id);
@@ -154,11 +151,22 @@ function GuideSection({
   );
 }
 
-function GuideList({ title, items }: { title: string; items: string[] }) {
+function GuideList({
+  title,
+  items,
+  headingLevel = 3,
+}: {
+  title: string;
+  items: string[];
+  headingLevel?: 2 | 3;
+}) {
   if (!items.length) return null;
+  const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <div className="space-y-2">
-      <h3 className="font-semibold">{title}</h3>
+      <Heading className={headingLevel === 2 ? "text-xl font-semibold" : "text-base font-semibold"}>
+        {title}
+      </Heading>
       <ul className="list-disc space-y-2 pl-5">
         {items.map((item, index) => (
           <li key={index}>
@@ -170,9 +178,24 @@ function GuideList({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-function GuideMarkdown({ text }: { text: string }) {
+function GuideMarkdown({ text, headingLevel = 4 }: { text: string; headingLevel?: 2 | 3 | 4 }) {
+  const Heading = headingLevel === 2 ? "h2" : headingLevel === 3 ? "h3" : "h4";
+  const renderHeading = ({ children }: { children?: React.ReactNode }) => (
+    <Heading className="font-semibold">{children}</Heading>
+  );
   return (
-    <MarkdownRenderer className="space-y-3 text-sm leading-relaxed break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto [&_a]:underline">
+    <MarkdownRenderer
+      components={{
+        h1: renderHeading,
+        h2: renderHeading,
+        h3: renderHeading,
+        h4: renderHeading,
+        h5: renderHeading,
+        h6: renderHeading,
+        hr: () => null,
+      }}
+      className="space-y-3 text-base leading-relaxed break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1"
+    >
       {text}
     </MarkdownRenderer>
   );

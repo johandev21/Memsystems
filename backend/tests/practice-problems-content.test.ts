@@ -8,6 +8,7 @@ import {
   validatePracticeProblems,
   validatePracticeProblemSources,
   prepareGeneratedPracticeProblems,
+  ProblemEvaluationSchema,
 } from '../src/modules/study-materials/practice-problems-content';
 import { validateContent } from '../src/modules/study-materials/shapes';
 
@@ -127,6 +128,41 @@ describe('practice problems generation options', () => {
     expect(() =>
       prepareGeneratedPracticeProblems(validSet, ['src-1'], { questionCount: 1 }),
     ).not.toThrow();
+  });
+
+  it('preserves difficulty option or defaults to medium', () => {
+    const prepared = prepareGeneratedPracticeProblems(validSet, ['src-1'], {
+      problemCount: 1,
+      difficulty: 'hard',
+    });
+    expect(prepared.difficulty).toBe('hard');
+
+    const defaultPrepared = prepareGeneratedPracticeProblems(validSet, ['src-1'], {
+      problemCount: 1,
+    });
+    expect(defaultPrepared.difficulty).toBe('medium');
+  });
+});
+
+describe('problem evaluation schema', () => {
+  it('validates correct, partially_correct, and needs_improvement outputs', () => {
+    expect(
+      ProblemEvaluationSchema.safeParse({
+        status: 'correct',
+        feedback: 'Great job!',
+        strengths: ['Accurate calculation'],
+        missingPoints: [],
+      }).success,
+    ).toBe(true);
+
+    expect(
+      ProblemEvaluationSchema.safeParse({
+        status: 'invalid_status',
+        feedback: 'No',
+        strengths: [],
+        missingPoints: [],
+      }).success,
+    ).toBe(false);
   });
 });
 

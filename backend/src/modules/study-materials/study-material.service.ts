@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
@@ -17,8 +17,12 @@ import {
 } from './case-study-content';
 import {
   BadRequestError,
+  CapabilityUnsupportedError,
+  EntitlementError,
   ForbiddenError,
   NotFoundError,
+  RateLimitedError,
+  ServiceUnavailableError,
 } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
@@ -30,6 +34,15 @@ import {
   validateContent,
 } from './shapes';
 import { normalizeContent } from './content-normalizer';
+import { Output, generateText } from 'ai';
+import { AiService } from '../ai/ai.service';
+import { classifyGatewayError } from '../ai/providers/gateway-errors';
+import { resolveModelId } from '../ai/providers/model-catalog';
+import {
+  type ProblemEvaluationResult,
+  ProblemEvaluationSchema,
+  validatePracticeProblems,
+} from './practice-problems-content';
 import { buildSlidePreviews, withSlidePreviews } from './slides-preview';
 import { resolveSlideDeck } from './slides-design-resolver';
 import { SlidesBuilderService } from './slides-builder.service';
@@ -52,11 +65,14 @@ export interface MoveStudyMaterialInput {
 
 @Injectable()
 export class StudyMaterialService {
+  private readonly logger = new Logger(StudyMaterialService.name);
+
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly notebooksService: NotebooksService,
     @Optional() private readonly slidesBuilder?: SlidesBuilderService,
+    @Optional() private readonly aiService?: AiService,
   ) {}
 
   async list(
@@ -444,4 +460,172 @@ export class StudyMaterialService {
     await this.notebooksService.assertNotebookOwner(userId, sm.notebookId);
     return this.refreshDerivedContent(sm);
   }
+
+  async evaluatePracticeProblem(
+    userId: string,
+    smId: string,
+    input: { problemId: string; studentAnswer: string; modelId: string },
+  ): Promise<ProblemEvaluationResult> {
+    this.logger.debug(
+      `[EVAL-DEBUG] start userId=${userId} smId=${smId} problemId=${input.problemId} modelId=${input.modelId} resolvedModel=${resolveModelId(input.modelId)} answerLength=${input.studentAnswer?.length ?? 0}`,
+    );
+    const sm = await this.fetchOwned(userId, smId);
+    if (sm.kind !== 'practice_problems') {
+      throw new BadRequestError(
+        'Study material is not a practice problems set',
+      );
+    }
+
+    const validated = validatePracticeProblems(sm.content);
+    const problem = validated.problems.find((p) => p.id === input.problemId);
+    if (!problem) {
+      throw new NotFoundError('Practice problem');
+    }
+
+    if (!this.aiService) {
+      throw new BadRequestError('AI service is not configured');
+    }
+
+    const modelId = input.modelId;
+    const provider = await this.aiService.getProviderForModel(modelId, userId);
+    this.logger.debug(
+      `[EVAL-DEBUG] provider resolved modelId=${modelId} provider=${provider.id}`,
+    );
+    const model = provider.createModel(modelId);
+    const requestOptions = this.aiService.getGatewayRequestOptions(userId);
+
+    const systemPrompt = `You are an expert tutor evaluating a student's answer to a practice problem.
+Compare the student's attempt against the reference problem statement, givens, constraints, acceptable alternatives, reference answer, worked steps, and verification checklist.
+
+Evaluate the attempt objectively and constructively:
+- status: "correct" if the student solves the problem accurately and respects key constraints.
+- status: "partially_correct" if the student understands the core methodology but made minor arithmetic, sign, edge-case, or incomplete step errors.
+- status: "needs_improvement" if the attempt has fundamental misconceptions, wrong formulas, violated constraints, or missed the main question.
+- feedback: 1-3 concise sentences giving encouraging, pedagogical guidance.
+- strengths: list 1-3 specific things the student did right or understood well.
+- missingPoints: list 1-3 specific gaps, misconceptions, missing constraints, or incorrect steps. If the student answer was fully correct, this can be empty.`;
+
+    const userPrompt = `Problem Prompt:
+${problem.prompt}
+
+${problem.givens.length > 0 ? `Givens:\n${problem.givens.map((g) => `- ${g}`).join('\n')}\n` : ''}
+${problem.constraints.length > 0 ? `Constraints:\n${problem.constraints.map((c) => `- ${c}`).join('\n')}\n` : ''}
+${problem.checklist.length > 0 ? `Checklist:\n${problem.checklist.map((c) => `- ${c}`).join('\n')}\n` : ''}
+${problem.acceptableAlternatives.length > 0 ? `Acceptable Alternatives:\n${problem.acceptableAlternatives.map((a) => `- ${a}`).join('\n')}\n` : ''}
+
+Reference Answer:
+${problem.answer}
+
+Worked Steps:
+${problem.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.explanation}`).join('\n\n')}
+
+Student's Attempt:
+"""
+${input.studentAnswer.trim()}
+"""
+
+Evaluate this student attempt now.`;
+
+    let result: Awaited<ReturnType<typeof generateText>>;
+    try {
+      this.logger.debug(
+        `[EVAL-DEBUG] generateText start modelId=${modelId} promptLength=${userPrompt.length}`,
+      );
+      result = await generateText({
+        model,
+        output: Output.object({ schema: ProblemEvaluationSchema }),
+        instructions: systemPrompt,
+        prompt: userPrompt,
+        ...requestOptions,
+      });
+      this.logger.debug(
+        `[EVAL-DEBUG] generateText ok modelId=${modelId} outputPreview=${JSON.stringify(result.output)?.slice(0, 300)}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `[EVAL-DEBUG] generateText failed modelId=${modelId} kind=${classifyGatewayError(err).kind} ${describeGatewayError(err)}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+      throw toEvaluationDomainError(err, modelId, provider);
+    }
+
+    const parsed = ProblemEvaluationSchema.safeParse(result.output);
+    if (parsed.success) {
+      return parsed.data;
+    }
+    this.logger.error(
+      `[EVAL-DEBUG] output parse failed modelId=${modelId} rawPreview=${JSON.stringify(result.output)?.slice(0, 500)}`,
+    );
+    throw new Error('Invalid output format from model');
+  }
+}
+
+function describeGatewayError(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 3 && current; depth++) {
+    const name = current instanceof Error ? current.name : typeof current;
+    const message =
+      current instanceof Error ? current.message : String(current);
+    const status =
+      current && typeof current === 'object'
+        ? ((current as { statusCode?: unknown }).statusCode ??
+          (current as { status?: unknown }).status)
+        : undefined;
+    const retryable =
+      current && typeof current === 'object' && 'isRetryable' in current
+        ? (current as { isRetryable?: unknown }).isRetryable
+        : undefined;
+    parts.push(
+      `[depth${depth} name=${name} status=${String(status)} retryable=${String(retryable)} msg=${message.slice(0, 300)}]`,
+    );
+    if (current && typeof current === 'object' && 'lastError' in current) {
+      current = (current as { lastError?: unknown }).lastError;
+      continue;
+    }
+    if (current instanceof Error && 'cause' in current && current.cause) {
+      current = current.cause;
+      continue;
+    }
+    break;
+  }
+  return parts.join(' ');
+}
+
+function toEvaluationDomainError(
+  error: unknown,
+  modelId: string,
+  provider: { listModels?: () => { id: string; displayName: string }[] },
+): Error {
+  const classified = classifyGatewayError(error);
+  const modelName =
+    provider
+      .listModels?.()
+      .find((candidate) => candidate.id === resolveModelId(modelId))
+      ?.displayName ?? modelId;
+  if (classified.kind === 'entitlement') {
+    return new EntitlementError(
+      `${modelName} is not available on your plan. Try another model or add credits.`,
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (classified.kind === 'rate_limited') {
+    return new RateLimitedError(
+      'The AI service is busy right now. Please retry in a moment.',
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (classified.kind === 'transient') {
+    return new ServiceUnavailableError(
+      'The AI service is temporarily unavailable. Please try again shortly.',
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (classified.kind === 'capability') {
+    return new CapabilityUnsupportedError(
+      `${modelName} doesn't support answer evaluation. Switch to another model and try again.`,
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  return error instanceof Error ? error : new Error(String(error));
 }

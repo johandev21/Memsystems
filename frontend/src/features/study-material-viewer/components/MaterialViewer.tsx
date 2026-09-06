@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ArrowLeft, Maximize2, Minimize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type {
@@ -84,8 +84,17 @@ export function MaterialViewer({
   defaultFullscreen,
   forceFullscreen,
 }: MaterialViewerProps) {
+  const beforeCloseRef = useRef<(() => boolean) | null>(null);
+
+  const handleClose = useCallback(() => {
+    if (beforeCloseRef.current && !beforeCloseRef.current()) {
+      return;
+    }
+    onClose();
+  }, [onClose]);
+
   const { isFullscreen, setIsFullscreen, isExitingFullscreen, isEffectivelyFullscreen } =
-    useMaterialViewerFullscreen(forceFullscreen, defaultFullscreen, onClose);
+    useMaterialViewerFullscreen(forceFullscreen, defaultFullscreen, handleClose);
 
   const renderMaterialContent = () => {
     switch (material.kind) {
@@ -96,7 +105,7 @@ export function MaterialViewer({
             content={material.content}
             notebookId={material.notebookId}
             onOpenSource={() => {
-              if (forceFullscreen) onClose();
+              if (forceFullscreen) handleClose();
               else setIsFullscreen(false);
             }}
           />
@@ -107,8 +116,12 @@ export function MaterialViewer({
             materialId={material.id}
             content={material.content}
             notebookId={material.notebookId}
+            onClose={onClose}
+            registerBeforeClose={(fn) => {
+              beforeCloseRef.current = fn;
+            }}
             onOpenSource={() => {
-              if (forceFullscreen) onClose();
+              if (forceFullscreen) handleClose();
               else setIsFullscreen(false);
             }}
           />
@@ -165,16 +178,18 @@ export function MaterialViewer({
   const viewerHeader = (
     <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary cursor-pointer flex items-center gap-1.5 rounded-lg shrink-0"
-          title="Return to Studio overview"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-        </Button>
+        {!isEffectivelyFullscreen && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary cursor-pointer flex items-center gap-1.5 rounded-lg shrink-0"
+            title="Return to Studio overview"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </Button>
+        )}
         <h3 className="text-sm font-semibold truncate text-text-primary ml-1 min-w-0 flex-1">
           {material.title}
         </h3>
@@ -198,7 +213,7 @@ export function MaterialViewer({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={handleClose}
             className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
             title="Close"
           >

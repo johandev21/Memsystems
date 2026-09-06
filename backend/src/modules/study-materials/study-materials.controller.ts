@@ -14,7 +14,11 @@ import {
 import type { Response } from 'express';
 import { z } from 'zod';
 import { StudyGuideOptions } from './study-guide-content';
-import { PracticeProblemsOptions } from './practice-problems-content';
+import {
+  EvaluateProblemRequestSchema,
+  type EvaluateProblemRequest,
+  PracticeProblemsOptions,
+} from './practice-problems-content';
 import { CaseStudyOptions } from './case-study-content';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthGuard } from '../auth/auth.guard';
@@ -237,6 +241,16 @@ export class StudyMaterialsController {
     @Param('id') id: string,
   ) {
     return this.studyMaterialService.duplicate(userId, id);
+  }
+
+  @Post('study-materials/:id/evaluate-problem')
+  @UsePipes(new ZodValidationPipe(EvaluateProblemRequestSchema))
+  async evaluateProblem(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() body: EvaluateProblemRequest,
+  ) {
+    return this.studyMaterialService.evaluatePracticeProblem(userId, id, body);
   }
 
   // --- Folders ---
