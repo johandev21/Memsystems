@@ -321,7 +321,7 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
         new CustomEvent("send-chat-prompt", {
           detail: {
             prompt,
-            autoSend: true,
+            autoSend: false,
             focusChat: true,
             concept: item.label,
           },

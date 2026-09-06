@@ -22,6 +22,8 @@ export interface ActiveGeneration {
   status: "connecting" | "streaming" | "done" | "error";
   progress?: unknown;
   error?: string;
+  startedAt: number;
+  lastChunkAt: number;
   onComplete?: (materialId: string) => void;
 }
 
@@ -51,7 +53,11 @@ interface GenerationState {
     onComplete?: (materialId: string) => void,
   ) => Promise<void>;
   cancelBackgroundGeneration: (notebookId: string, id: string) => Promise<void>;
+  dismissGeneration: (id: string) => void;
 }
+
+export const GENERATION_STALL_TIMEOUT_MS = 5 * 60 * 1000;
+export const GENERATION_ERROR_AUTO_DISMISS_MS = 30_000;
 
 function createTempGenerationId(): string {
   return `temp-${Math.random().toString(36).substring(7)}-${Date.now()}`;
@@ -72,165 +78,269 @@ function updateGenerationError(
   return { ...generations, [id]: { ...generations[id], status: "error" as const, error } };
 }
 
-export const useGenerationStore = create<GenerationState>((set, get) => ({
-  generations: {},
-  isCollapsed: false,
-  setCollapsed: (collapsed) => set({ isCollapsed: collapsed }),
+export const useGenerationStore = create<GenerationState>((set, get) => {
+  const stallTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const errorDismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  startBackgroundGeneration: async (notebookId, input, queryClient, onComplete) => {
-    const tempId = createTempGenerationId();
+  function clearStallTimer(id: string) {
+    const timer = stallTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      stallTimers.delete(id);
+    }
+  }
 
+  function clearErrorDismissTimer(id: string) {
+    const timer = errorDismissTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      errorDismissTimers.delete(id);
+    }
+  }
+
+  function removeAndClear(id: string) {
+    clearStallTimer(id);
+    clearErrorDismissTimer(id);
+    set((state) => ({ generations: removeGeneration(state.generations, id) }));
+  }
+
+  function scheduleErrorDismiss(id: string) {
+    clearErrorDismissTimer(id);
+    errorDismissTimers.set(
+      id,
+      setTimeout(() => {
+        errorDismissTimers.delete(id);
+        // Only auto-dismiss error entries; leave active generations alone.
+        if (get().generations[id]?.status === "error") {
+          clearStallTimer(id);
+          set((state) => {
+            if (state.generations[id]?.status !== "error") return state;
+            return { generations: removeGeneration(state.generations, id) };
+          });
+        }
+      }, GENERATION_ERROR_AUTO_DISMISS_MS),
+    );
+  }
+
+  function failGeneration(id: string, kind: StudyMaterialKind, message: string) {
+    const entry = get().generations[id];
+    if (!entry) return;
+    if (entry.status !== "connecting" && entry.status !== "streaming") return;
+    clearStallTimer(id);
     set((state) => ({
-      generations: {
-        ...state.generations,
-        [tempId]: {
-          id: tempId,
+      generations: updateGenerationError(state.generations, id, message),
+    }));
+    toast.error(`Failed to generate ${kindLabel(kind)}: ${message}`);
+    scheduleErrorDismiss(id);
+  }
+
+  function scheduleStallCheck(id: string, kind: StudyMaterialKind) {
+    clearStallTimer(id);
+    stallTimers.set(
+      id,
+      setTimeout(() => {
+        const entry = get().generations[id];
+        if (!entry) {
+          stallTimers.delete(id);
+          return;
+        }
+        if (entry.status !== "connecting" && entry.status !== "streaming") {
+          stallTimers.delete(id);
+          return;
+        }
+        if (Date.now() - entry.lastChunkAt >= GENERATION_STALL_TIMEOUT_MS) {
+          failGeneration(
+            id,
+            kind,
+            "Generation timed out waiting for the server. Please try again.",
+          );
+        } else {
+          // Chunk arrived recently; re-arm for the remaining time.
+          scheduleStallCheck(id, kind);
+        }
+      }, GENERATION_STALL_TIMEOUT_MS),
+    );
+  }
+
+  return {
+    generations: {},
+    isCollapsed: false,
+    setCollapsed: (collapsed) => set({ isCollapsed: collapsed }),
+
+    startBackgroundGeneration: async (notebookId, input, queryClient, onComplete) => {
+      const tempId = createTempGenerationId();
+      const now = Date.now();
+
+      set((state) => ({
+        generations: {
+          ...state.generations,
+          [tempId]: {
+            id: tempId,
+            notebookId,
+            kind: input.kind,
+            brief: input.brief,
+            sourceIds: input.sourceIds,
+            status: "connecting",
+            startedAt: now,
+            lastChunkAt: now,
+            onComplete,
+          },
+        },
+      }));
+      scheduleStallCheck(tempId, input.kind);
+
+      const { stream, requestIdPromise } = startGeneration(notebookId, input);
+
+      let requestId: string;
+      try {
+        requestId = await requestIdPromise;
+        if (!requestId) {
+          throw new Error("No request ID returned from server");
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        clearStallTimer(tempId);
+        set((state) => {
+          return { generations: updateGenerationError(state.generations, tempId, msg) };
+        });
+        toast.error(`Generation failed: ${msg}`);
+        scheduleErrorDismiss(tempId);
+        return;
+      }
+
+      if (!get().generations[tempId]) {
+        clearStallTimer(tempId);
+        try {
+          await cancelGeneration(notebookId, requestId);
+        } catch {
+          // ignore cancellation failure
+        }
+        return;
+      }
+
+      const startedAt = get().generations[tempId]?.startedAt ?? Date.now();
+      const swappedAt = Date.now();
+      clearStallTimer(tempId);
+      set((state) => {
+        const next = removeGeneration(state.generations, tempId);
+        next[requestId] = {
+          id: requestId,
           notebookId,
           kind: input.kind,
           brief: input.brief,
           sourceIds: input.sourceIds,
-          status: "connecting",
+          status: "streaming",
+          startedAt,
+          lastChunkAt: swappedAt,
           onComplete,
-        },
-      },
-    }));
-
-    const { stream, requestIdPromise } = startGeneration(notebookId, input);
-
-    let requestId: string;
-    try {
-      requestId = await requestIdPromise;
-      if (!requestId) {
-        throw new Error("No request ID returned from server");
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-
-      set((state) => {
-        return { generations: updateGenerationError(state.generations, tempId, msg) };
+        };
+        return { generations: next };
       });
-      toast.error(`Generation failed: ${msg}`);
-      return;
-    }
+      scheduleStallCheck(requestId, input.kind);
 
-    if (!get().generations[tempId]) {
-      try {
-        await cancelGeneration(notebookId, requestId);
-      } catch {
-        // ignore cancellation failure
-      }
-      return;
-    }
-
-    set((state) => {
-      const next = removeGeneration(state.generations, tempId);
-      next[requestId] = {
-        id: requestId,
-        notebookId,
-        kind: input.kind,
-        brief: input.brief,
-        sourceIds: input.sourceIds,
-        status: "streaming",
-        onComplete,
-      };
-      return { generations: next };
-    });
-
-    (async () => {
-      try {
-        for await (const event of stream) {
-          if (!get().generations[requestId]) {
-            try {
-              await cancelGeneration(notebookId, requestId);
-            } catch {
-              // ignore
+      (async () => {
+        let settled = false;
+        try {
+          for await (const event of stream) {
+            if (!get().generations[requestId]) {
+              try {
+                await cancelGeneration(notebookId, requestId);
+              } catch {
+                // ignore
+              }
+              return;
             }
-            break;
-          }
 
-          if (event.type === "partial") {
-            set((state) => {
-              if (!state.generations[requestId]) return state;
-              return {
-                generations: {
-                  ...state.generations,
-                  [requestId]: {
-                    ...state.generations[requestId],
-                    status: "streaming",
-                    progress: event.content,
+            if (event.type === "partial") {
+              const at = Date.now();
+              set((state) => {
+                if (!state.generations[requestId]) return state;
+                return {
+                  generations: {
+                    ...state.generations,
+                    [requestId]: {
+                      ...state.generations[requestId],
+                      status: "streaming",
+                      progress: event.content,
+                      lastChunkAt: at,
+                    },
                   },
-                },
-              };
-            });
-          } else if (event.type === "done") {
-            await queryClient.invalidateQueries({
-              queryKey: ["study-materials", notebookId],
-            });
+                };
+              });
+              scheduleStallCheck(requestId, input.kind);
+            } else if (event.type === "done") {
+              settled = true;
+              clearStallTimer(requestId);
+              clearErrorDismissTimer(requestId);
+              await queryClient.invalidateQueries({
+                queryKey: ["study-materials", notebookId],
+              });
 
-            let viewMaterialId = event.materialId;
+              let viewMaterialId = event.materialId;
 
-            if (!viewMaterialId) {
-              const list =
-                queryClient.getQueryData<StudyMaterialDTO[]>(["study-materials", notebookId]) || [];
-              const matching = list.filter((m) => m.kind === input.kind);
-              matching.sort(
-                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-              );
-              viewMaterialId = matching[0]?.id;
+              if (!viewMaterialId) {
+                const list =
+                  queryClient.getQueryData<StudyMaterialDTO[]>(["study-materials", notebookId]) || [];
+                const matching = list.filter((m) => m.kind === input.kind);
+                matching.sort(
+                  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                );
+                viewMaterialId = matching[0]?.id;
+              }
+
+              set((state) => {
+                return { generations: removeGeneration(state.generations, requestId) };
+              });
+
+              const label = kindLabel(input.kind);
+              toast.success(`${label} generated successfully!`, {
+                action:
+                  viewMaterialId && onComplete
+                    ? {
+                        label: "View",
+                        onClick: () => onComplete(viewMaterialId),
+                      }
+                    : undefined,
+                duration: 8000,
+              });
+            } else if (event.type === "error") {
+              settled = true;
+              throw event.error;
             }
-
-            set((state) => {
-              return { generations: removeGeneration(state.generations, requestId) };
-            });
-
-            const label = kindLabel(input.kind);
-            toast.success(`${label} generated successfully!`, {
-              action:
-                viewMaterialId && onComplete
-                  ? {
-                      label: "View",
-                      onClick: () => onComplete(viewMaterialId),
-                    }
-                  : undefined,
-              duration: 8000,
-            });
-          } else if (event.type === "error") {
-            throw event.error;
           }
+          if (!settled && get().generations[requestId]) {
+            failGeneration(requestId, input.kind, "Connection closed before finishing.");
+          }
+        } catch (err) {
+          const rawMessage = err instanceof Error ? err.message : String(err);
+          // Generation failures arrive as `{error, code[, model]}` envelopes
+          // (or raw provider text) — classify to friendly copy so toasts never
+          // show JSON or provider jargon. Synthetic client-side messages
+          // (timeout / EOF) are already friendly, so they bypass classification.
+          failGeneration(requestId, input.kind, classifyChatError(rawMessage).message);
         }
-      } catch (err) {
-        const rawMessage = err instanceof Error ? err.message : String(err);
-        // Generation failures arrive as `{error, code[, model]}` envelopes
-        // (or raw provider text) — classify to friendly copy so toasts never
-        // show JSON or provider jargon.
-        const message = classifyChatError(rawMessage).message;
+      })();
+    },
 
-        set((state) => {
-          return { generations: updateGenerationError(state.generations, requestId, message) };
-        });
+    cancelBackgroundGeneration: async (notebookId, id) => {
+      const isTemp = id.startsWith("temp-");
+      removeAndClear(id);
 
-        toast.error(`Failed to generate ${kindLabel(input.kind)}: ${message}`);
+      if (!isTemp) {
+        try {
+          await cancelGeneration(notebookId, id);
+          toast.info("Generation cancelled");
+        } catch {
+          // ignore
+        }
       }
-    })();
-  },
+    },
 
-  cancelBackgroundGeneration: async (notebookId, id) => {
-    const isTemp = id.startsWith("temp-");
-
-    set((state) => {
-      return { generations: removeGeneration(state.generations, id) };
-    });
-
-    if (!isTemp) {
-      try {
-        await cancelGeneration(notebookId, id);
-        toast.info("Generation cancelled");
-      } catch {
-        // ignore
-      }
-    }
-  },
-}));
+    dismissGeneration: (id) => {
+      removeAndClear(id);
+    },
+  };
+});
 
 function kindLabel(kind: StudyMaterialKind): string {
   return KIND_LABELS[kind];

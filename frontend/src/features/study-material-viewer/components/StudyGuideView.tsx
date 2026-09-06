@@ -194,7 +194,7 @@ function GuideMarkdown({ text, headingLevel = 4 }: { text: string; headingLevel?
         h6: renderHeading,
         hr: () => null,
       }}
-      className="space-y-3 text-base leading-relaxed break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1"
+      className="typeset typeset-chat break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto"
     >
       {text}
     </MarkdownRenderer>

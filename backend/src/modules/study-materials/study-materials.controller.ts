@@ -345,25 +345,69 @@ export class StudyMaterialsController {
     res.setHeader('X-Generation-Request-Id', requestId);
 
     const reader = stream.getReader();
-    while (true) {
-      let value: Uint8Array;
-      try {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        value = chunk.value;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: message, code: 'generation_failed' });
-        } else {
-          res.write(`${JSON.stringify({ error: message, requestId })}\n`);
-        }
-        res.end();
-        return;
+    // Terminal-frame contract: the client hangs until it sees a `{done: true}`
+    // or `{error}` NDJSON frame (or the response ends). Track whether one was
+    // sent and always emit a terminal signal before res.end().
+    let terminalSent = false;
+    const writeTerminalError = (message: string) => {
+      if (terminalSent) return;
+      terminalSent = true;
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: message, code: 'generation_failed', requestId });
+      } else {
+        res.write(`${JSON.stringify({ error: message, requestId })}\n`);
       }
-      if (value) res.write(value);
+    };
+    try {
+      while (true) {
+        let chunk: ReadableStreamReadResult<Uint8Array>;
+        try {
+          chunk = await reader.read();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          writeTerminalError(message);
+          return;
+        }
+        if (chunk.done) break;
+        if (chunk.value) {
+          // Detect a terminal frame so a clean close without one can be fixed.
+          try {
+            const text = Buffer.from(chunk.value).toString('utf8');
+            for (const line of text.split('\n')) {
+              const candidate = line.trim();
+              if (!candidate) continue;
+              try {
+                const frame: unknown = JSON.parse(candidate);
+                if (
+                  frame &&
+                  typeof frame === 'object' &&
+                  ('done' in frame || 'error' in frame)
+                ) {
+                  terminalSent = true;
+                }
+              } catch {
+                // Partial/progress line — not a terminal frame.
+              }
+            }
+          } catch {
+            // Detection must never break streaming.
+          }
+          res.write(chunk.value);
+        }
+      }
+      if (!terminalSent) {
+        writeTerminalError('Generation stream ended without a terminal frame.');
+      }
+    } finally {
+      try {
+        reader.releaseLock();
+      } catch {
+        // Ignore release errors on an already-errored stream.
+      }
+      if (!res.writableEnded) res.end();
     }
-    res.end();
   }
 
   @Post('notebooks/:id/generation-requests/:requestId/cancel')

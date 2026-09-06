@@ -285,4 +285,23 @@ describe("useChatPanel send-chat-prompt handling", () => {
     expect(mocks.sendMessage).toHaveBeenCalledTimes(1);
     expect(mocks.sendMessage).toHaveBeenCalledWith({ text: "Explain this answer" });
   });
+
+  it("puts a study prompt in the visible composer without sending it", () => {
+    const visiblePanelRef = {
+      current: { getClientRects: () => [{ width: 800 }] },
+    } as unknown as RefObject<HTMLElement | null>;
+
+    const { result } = renderHook(() => useChatPanel("notebook-1", visiblePanelRef));
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("send-chat-prompt", {
+          detail: { prompt: "Study this slide", autoSend: false, focusChat: true },
+        }),
+      );
+    });
+
+    expect(result.current.input).toBe("Study this slide");
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+  });
 });

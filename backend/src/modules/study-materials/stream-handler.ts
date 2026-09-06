@@ -28,6 +28,7 @@ import {
   extractJson,
   generateTitle,
   normalizeContent,
+  repairJsonText,
 } from './content-normalizer';
 import { withSlidePreviews } from './slides-preview';
 import {
@@ -139,7 +140,12 @@ export class StreamHandler {
             modelId,
             userId,
           );
-          const supportsStructuredOutput =
+          // Capability flag is a UI/logging hint only — never a gate. Every
+          // model attempts native Output.object({ schema }) first
+          // (optimistic-try); on native failure we fall back to strict JSON
+          // prompting below. This keeps unlisted families (e.g. zai/glm-*)
+          // working instead of pre-throwing before trying.
+          const advertisedStructuredOutput =
             provider
               .listModels?.()
               .find((candidate) => candidate.id === modelId)?.capabilities
@@ -147,9 +153,9 @@ export class StreamHandler {
           model = provider.createModel(modelId);
           requestOptions = this.aiService.getGatewayRequestOptions(userId);
 
-          if (!supportsStructuredOutput) {
-            throw new Error(
-              `${modelId} doesn't support native structured output; using JSON fallback.`,
+          if (!advertisedStructuredOutput) {
+            this.logger.log(
+              `Model ${modelId} does not advertise native structured output; attempting native Output.object first with JSON fallback on failure.`,
             );
           }
 
@@ -229,13 +235,18 @@ export class StreamHandler {
           );
 
           try {
-            const fallbackSystemPrompt = `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested structure. Do not include any explanations, introduction, markdown formatting, or backticks.`;
+            const fallbackSystemPrompt =
+              `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested structure. ` +
+              `Use strict JSON: double quotes around all keys and strings (never single quotes), no trailing commas, no comments, ` +
+              `no explanations, no markdown formatting, no backticks.\nSchema hint for "${input.kind}": ${fallbackSchemaHint(input.kind)}`;
 
             const fallbackResult = streamText({
               model,
               instructions: fallbackSystemPrompt,
               prompt: userPrompt,
               ...requestOptions,
+              temperature: 0,
+              maxOutputTokens: 16000,
             });
 
             let accumulatedText = '';
@@ -263,22 +274,47 @@ export class StreamHandler {
 
             const cleanText = extractJson(accumulatedText);
 
+            // Staged tolerant parse: strict JSON -> AI SDK partial repair ->
+            // single-quote/trailing-comma repair -> strict again -> partial of
+            // the repaired text. Throws with a truncated preview for logs.
             let parsedContent: unknown;
             try {
               parsedContent = JSON.parse(cleanText);
-            } catch (parseError) {
-              try {
-                const partialParsed = await parsePartialJson(cleanText);
-                if (
-                  partialParsed.state === 'successful-parse' ||
-                  partialParsed.state === 'repaired-parse'
-                ) {
-                  parsedContent = partialParsed.value;
-                } else {
-                  throw parseError;
+            } catch (strictError) {
+              const partialParsed = await parsePartialJson(cleanText).catch(
+                () => null,
+              );
+              if (
+                partialParsed &&
+                (partialParsed.state === 'successful-parse' ||
+                  partialParsed.state === 'repaired-parse')
+              ) {
+                parsedContent = partialParsed.value;
+              } else {
+                const repaired = repairJsonText(cleanText);
+                try {
+                  parsedContent = JSON.parse(repaired);
+                } catch {
+                  const repairedPartial = await parsePartialJson(
+                    repaired,
+                  ).catch(() => null);
+                  if (
+                    repairedPartial &&
+                    (repairedPartial.state === 'successful-parse' ||
+                      repairedPartial.state === 'repaired-parse')
+                  ) {
+                    parsedContent = repairedPartial.value;
+                  } else {
+                    const reason =
+                      strictError instanceof Error
+                        ? strictError.message
+                        : String(strictError);
+                    const preview = cleanText.slice(0, 500);
+                    throw new SyntaxError(
+                      `Fallback JSON parse failed for ${requestId} (${reason}). Preview: ${preview}`,
+                    );
+                  }
                 }
-              } catch {
-                throw parseError;
               }
             }
 
@@ -373,6 +409,34 @@ export class StreamHandler {
       case_study: CaseStudyContent,
     };
     return schemas[kind];
+  }
+}
+
+/**
+ * Concise per-kind schema hint for the JSON fallback prompt: required shape
+ * plus one tiny valid example. Hand-written (no zod-to-json-schema dep) and
+ * deliberately minimal to keep the prompt short.
+ */
+function fallbackSchemaHint(kind: StudyMaterialKind): string {
+  switch (kind) {
+    case 'quiz':
+      return `{"title": string, "questions": [{"id", "prompt", "options": [{"id", "text", "explanation"}], "correctOptionId", "hint", "topic"}]}. Example: {"title": "Sample Quiz", "questions": [{"id": "q1", "prompt": "What is 2+2?", "options": [{"id": "q1-a", "text": "3", "explanation": "Too low."}, {"id": "q1-b", "text": "4", "explanation": "Correct."}], "correctOptionId": "q1-b", "hint": "", "topic": ""}]}`;
+    case 'simple_flashcard':
+      return `{"title": string, "cards": [{"front", "back"}]}. Example: {"title": "Sample Cards", "cards": [{"front": "Mitochondria", "back": "Powerhouse of the cell."}]}`;
+    case 'roadmap':
+      return `{"title", "description", "phases": [{"id", "title", "description", "color": "#rrggbb", "order": 0, "topics": [{"id", "title", "description", "estimatedMinutes": 0, "order": 0}]}]}. Example: {"title": "Sample Roadmap", "description": "", "phases": [{"id": "p1", "title": "Basics", "description": "", "color": "#64748b", "order": 0, "topics": [{"id": "p1-t1", "title": "Intro", "description": "", "estimatedMinutes": 30, "order": 0}]}]}`;
+    case 'mind_map':
+      return `{"title", "rootId", "nodes": [{"id", "label", "color": "#rrggbb", "position": {"x", "y"}}], "edges": [{"id", "sourceId", "targetId", "label", "directed"}]}. Example: {"title": "Sample Map", "rootId": "n1", "nodes": [{"id": "n1", "label": "Root", "color": "#64748b", "position": {"x": 0, "y": 0}}], "edges": []}`;
+    case 'slides':
+      return `{"schemaVersion": 2, "title", "design": {"background", "surface", "primary", "secondary", "text", "muted" hex colors}, "slides": [{"id", "role": "content", "title", "elements": []}]}. Example: {"schemaVersion": 2, "title": "Sample Deck", "design": {"background": "#0F172A", "surface": "#1E293B", "primary": "#38BDF8", "secondary": "#818CF8", "text": "#F8FAFC", "muted": "#94A3B8"}, "slides": [{"id": "s1", "role": "content", "title": "Intro", "elements": []}]}`;
+    case 'study_guide':
+      return `{"title", "overview", "learningObjectives": [string], "sections": [{"id", "title", "explanation", "keyConcepts": [string]}]}. Example: {"title": "Sample Guide", "overview": "Basics.", "learningObjectives": ["Understand X"], "sections": [{"id": "s1", "title": "X", "explanation": "X means...", "keyConcepts": ["X"]}]}`;
+    case 'practice_problems':
+      return `{"title", "problems": [{"id", "prompt", "steps": [{"id", "title", "explanation"}], "answer"}]}. Example: {"title": "Sample Problems", "difficulty": "medium", "problems": [{"id": "p1", "prompt": "Solve 2x=4.", "steps": [{"id": "p1-s1", "title": "Divide", "explanation": "Divide both sides by 2."}], "answer": "x=2"}]}`;
+    case 'case_study':
+      return `{"title", "learningObjectives": [string], "scenario": {"title", "setting", "narrative"}, "questions": [{"id", "prompt"}]}. Example: {"title": "Sample Case", "learningObjectives": ["Analyze X"], "scenario": {"title": "Scenario", "setting": "A clinic.", "narrative": "A patient..."}, "questions": [{"id": "c1", "prompt": "What would you do?"}]}`;
+    default:
+      return `A JSON object with a "title" string field. Example: {"title": "Sample"}`;
   }
 }
 

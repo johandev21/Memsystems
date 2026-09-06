@@ -1,6 +1,8 @@
+import { ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { ChatPanel } from "@/features/notebook-chat";
 import { SourceContentViewer, SourcesPanel } from "@/features/sources";
 import { MobileStudyMaterialsPanel } from "@/features/study-material-tree";
@@ -26,12 +28,44 @@ export function MobileNotebookLayout({
   onSelectSource,
 }: MobileNotebookLayoutProps) {
   const [activeTab, setActiveTab] = useMobileChatNavigation();
-  useMobileOverlayScrollLock(Boolean(selectedSourceId || dialogs.selectedStudyMaterialId));
+  const [isMaterialReviewSuspended, setIsMaterialReviewSuspended] = useState(false);
+
+  useEffect(() => {
+    const handleHandoff = (event: Event) => {
+      const detail = (event as CustomEvent<{ suspended?: boolean }>).detail;
+      if (typeof detail?.suspended === "boolean") setIsMaterialReviewSuspended(detail.suspended);
+    };
+    window.addEventListener("study-material-chat-handoff", handleHandoff);
+    return () => window.removeEventListener("study-material-chat-handoff", handleHandoff);
+  }, []);
+
+  useEffect(() => {
+    if (dialogs.selectedStudyMaterialId) return;
+    setIsMaterialReviewSuspended(false);
+  }, [dialogs.selectedStudyMaterialId]);
+
+  useMobileOverlayScrollLock(
+    Boolean(selectedSourceId || (dialogs.selectedStudyMaterialId && !isMaterialReviewSuspended)),
+  );
 
   return (
     <div className="lg:hidden h-full flex flex-col">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full gap-0">
         <MobileTabsHeader notebookId={notebookId} />
+        {isMaterialReviewSuspended && dialogs.selectedStudyMaterialId && (
+          <div className="shrink-0 px-3 pb-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full justify-center gap-1.5 cursor-pointer"
+              onClick={() => window.dispatchEvent(new CustomEvent("restore-study-material"))}
+            >
+              <ArrowLeft className="size-3.5" />
+              Back to Material
+            </Button>
+          </div>
+        )}
 
         <TabsContent value="sources" className="flex-1 mt-0 min-h-0">
           <SourcesPanel notebookId={notebookId} onSelectSource={onSelectSource} />

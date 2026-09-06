@@ -438,7 +438,7 @@ function SourceRefs({
 
 function CaseMarkdown({ text }: { text: string }) {
   return (
-    <MarkdownRenderer className="space-y-3 text-base leading-relaxed break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1">
+    <MarkdownRenderer className="typeset typeset-chat break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto">
       {text}
     </MarkdownRenderer>
   );

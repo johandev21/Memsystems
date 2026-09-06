@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Brain,
   BookOpen,
+  CircleAlert,
   HelpCircle,
   type LucideIcon,
   Map as MapIcon,
@@ -250,6 +251,42 @@ function ActiveGenerationCard({
   totalSourceCount: number;
   onCancel: (generationId: string) => void;
 }) {
+  if (generation.status === "error") {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 shadow-xs transition-all animate-in fade-in slide-in-from-top-1">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-destructive/30 shadow-2xs text-destructive shrink-0">
+            <CircleAlert className="h-4.5 w-4.5" />
+          </div>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-xs font-semibold text-foreground truncate">
+              Failed to generate {KIND_LABELS[generation.kind] || generation.kind}
+            </span>
+            <span className="text-xs text-muted-foreground truncate wrap-break-words">
+              {generation.error || "Generation failed"}
+            </span>
+            <button
+              type="button"
+              onClick={() => onCancel(generation.id)}
+              className="mt-1 self-start text-xs font-medium text-primary hover:underline cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg"
+          onClick={() => onCancel(generation.id)}
+          title="Dismiss error"
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/60 dark:bg-muted/30 p-3 shadow-xs transition-all animate-in fade-in slide-in-from-top-1">
       <div className="flex items-center gap-3 min-w-0 flex-1">

@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
-import { detectCardFormat } from "../card-type-detector";
+import { detectCardFormat, fillClozeBlanks } from "../card-type-detector";
 import { ClozeInteractive } from "../ClozeInteractive";
 
 export interface FlashcardVariantAProps {
@@ -178,10 +178,7 @@ export function FlashcardVariantA({
                   <p className="text-xs text-text-faint italic leading-relaxed pt-2 border-t border-surface-border-subtle">
                     Full sentence:{" "}
                     <span className="text-text-secondary font-medium not-italic">
-                      {currentCard.front.replace(
-                        /_{2,}|\[\s*blank\s*\]|\[\s*\.\.\.\s*\]|___+/i,
-                        currentCard.back,
-                      )}
+                      {fillClozeBlanks(currentCard.front, currentCard.back)}
                     </span>
                   </p>
                 )}

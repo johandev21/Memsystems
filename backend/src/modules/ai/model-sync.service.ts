@@ -49,8 +49,15 @@ export class ModelSyncService implements OnModuleInit {
    * This intentionally does not probe model capabilities with inference.
    * Tool-call probes spend user quota, add one request per model every six
    * hours, and can misclassify support during rate limits/provider outages.
-   * Metadata refresh stays quota-free; capability knowledge is curated in
-   * model-catalog.ts and fails closed for unknown families.
+   * Metadata refresh stays quota-free: buildChatCatalog() maps each gateway
+   * entry through toProviderModel(), which merges curated regex capabilities
+   * with any gateway metadata capability fields when present (see
+   * capabilitiesFromGatewayEntry — currently a no-op because the gateway
+   * returns no capability flags) and persists the result on
+   * ProviderModel.capabilities. structuredOutput stays fail-closed (`false`
+   * for unlisted families) as a UI/logging hint only — stream-handler.ts
+   * attempts native Output.object first for every model regardless of the
+   * flag and falls back to strict JSON prompting on native failure.
    */
   async refreshModels(
     reason = 'manual',

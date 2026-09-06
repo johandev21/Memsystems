@@ -1,5 +1,5 @@
-import { useState, useId, useEffect, type KeyboardEvent } from "react";
-import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { Fragment, useState, useId, useEffect, type KeyboardEvent } from "react";
+import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/utils/cn";
@@ -11,112 +11,169 @@ export interface ClozeInteractiveProps {
   onAnswerChecked?: (isCorrect: boolean) => void;
 }
 
-function ClozeFeedback({
-  status,
-  expected,
-}: {
-  status: "idle" | "correct" | "incorrect";
-  expected: string;
-}) {
-  if (status === "correct") {
+export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteractiveProps) {
+  const parsed = parseClozeCard(front, back);
+  const { segments, expectedAnswers, blankCount } = parsed;
+
+  const [values, setValues] = useState<string[]>(() => Array(blankCount).fill(""));
+  const [results, setResults] = useState<boolean[] | null>(null);
+  const baseId = useId();
+  const feedbackId = useId();
+
+  useEffect(() => {
+    setValues(Array(parseClozeCard(front, back).blankCount).fill(""));
+    setResults(null);
+  }, [front, back]);
+
+  const isChecked = results !== null;
+  const isCorrectOverall = isChecked && results.every(Boolean);
+  const status: "idle" | "correct" | "incorrect" = !isChecked
+    ? "idle"
+    : isCorrectOverall
+      ? "correct"
+      : "incorrect";
+  const canCheck =
+    !isChecked && blankCount > 0 && values.length === blankCount && values.every((v) => v.trim().length > 0);
+
+  function checkBlank(user: string, expected: string): boolean {
+    const userClean = user.trim().toLowerCase();
+    // A blank with no corresponding expected answer (padded "" on
+    // length mismatch) accepts any non-empty input.
+    if (!expected) return userClean.length > 0;
+    return userClean === expected.trim().toLowerCase();
+  }
+
+  function handleCheckAnswer() {
+    if (!canCheck) return;
+    const next = values.map((value, index) =>
+      checkBlank(value, expectedAnswers[index] ?? ""),
+    );
+    setResults(next);
+    onAnswerChecked?.(next.every(Boolean));
+  }
+
+  function handleInputChange(index: number, value: string) {
+    setValues((prev) => prev.map((entry, i) => (i === index ? value : entry)));
+    setResults(null);
+  }
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (!event.repeat) handleCheckAnswer();
+    }
+  }
+
+  if (!parsed.isCloze || blankCount === 0) {
     return (
-      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold text-success-foreground bg-success border border-success animate-in fade-in zoom-in-95 duration-150">
-        <CheckCircle2 className="size-4 shrink-0" /> Correct answer!
+      <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-6 text-center">
+        <p className="text-lg font-semibold leading-relaxed text-text-primary break-words sm:text-xl">
+          {front}
+        </p>
       </div>
     );
   }
 
-  if (status !== "incorrect") return null;
-
   return (
-    <div className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl text-xs bg-destructive border border-destructive text-destructive-foreground animate-in fade-in zoom-in-95 duration-150 w-full max-w-sm mx-auto">
-      <div className="flex items-center gap-1.5 font-semibold text-destructive">
-        <XCircle className="size-4 shrink-0" /> Incorrect
-      </div>
-      <p className="text-destructive-foreground text-xs font-medium">
-        Correct Answer: <span className="font-bold text-success">{expected}</span>
+    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-6 text-center">
+      <p className="text-lg font-semibold leading-relaxed text-text-primary break-words sm:text-xl">
+        {segments.map((segment, index) => (
+          <Fragment key={index}>
+            {segment}
+            {index < blankCount && (
+              <Input
+                id={`${baseId}-blank-${index}`}
+                type="text"
+                value={values[index] ?? ""}
+                onChange={(event) => handleInputChange(index, event.target.value)}
+                onKeyDown={handleInputKeyDown}
+                placeholder={
+                  blankCount === 1 ? "Type the missing word…" : `Blank ${index + 1}`
+                }
+                aria-label={
+                  blankCount === 1 ? "Your Answer" : `Answer for blank ${index + 1}`
+                }
+                aria-invalid={isChecked && !results[index]}
+                aria-describedby={isChecked ? feedbackId : undefined}
+                className={cn(
+                  "mx-1 inline-block h-8 w-28 min-w-0 rounded-lg px-2 text-center text-sm font-medium select-text sm:w-32",
+                  isChecked &&
+                    (results[index] ? "border-success/60 bg-success/5" : "bg-destructive/5"),
+                )}
+              />
+            )}
+          </Fragment>
+        ))}
       </p>
+      <div className="flex w-full min-w-0 max-w-sm flex-col gap-2 text-left">
+        <Button
+          type="button"
+          onClick={handleCheckAnswer}
+          disabled={!canCheck}
+          className="h-10 w-full shrink-0 rounded-xl"
+        >
+          Check Answer
+        </Button>
+      </div>
+      <div id={feedbackId} role="status" className="w-full text-sm">
+        <ClozeFeedback
+          status={status}
+          expectedAnswers={expectedAnswers}
+          results={results}
+        />
+      </div>
     </div>
   );
 }
 
-export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteractiveProps) {
-  const [inputVal, setInputVal] = useState("");
-  const [status, setStatus] = useState<"idle" | "correct" | "incorrect">("idle");
-  const inputId = useId();
+function ClozeFeedback({
+  status,
+  expectedAnswers,
+  results,
+}: {
+  status: "idle" | "correct" | "incorrect";
+  expectedAnswers: string[];
+  results: boolean[] | null;
+}) {
+  if (status === "idle") return null;
+  const isCorrect = status === "correct";
+  const Icon = isCorrect ? Check : X;
 
-  // Reset state whenever front or back prompt changes
-  useEffect(() => {
-    setInputVal("");
-    setStatus("idle");
-  }, [front, back]);
-
-  const parsed = parseClozeCard(front, back);
-
-  const handleCheckAnswer = () => {
-    const userClean = inputVal.trim().toLowerCase();
-    const expectedClean = parsed.expected.trim().toLowerCase();
-
-    if (!userClean) return;
-
-    const isMatch = userClean === expectedClean || expectedClean.includes(userClean);
-    setStatus(isMatch ? "correct" : "incorrect");
-    onAnswerChecked?.(isMatch);
-  };
-
-  const handleInputChange = (value: string) => {
-    setInputVal(value);
-    if (status !== "idle") setStatus("idle");
-  };
-
-  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      handleCheckAnswer();
-    }
-  };
+  const failed = (results ?? []).flatMap((passed, index) =>
+    !passed && expectedAnswers[index] ? [{ index, expected: expectedAnswers[index] }] : [],
+  );
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-xl mx-auto text-center py-1">
-      {/* Sentence display with inline blank slot */}
-      <p className="text-lg md:text-xl font-medium leading-relaxed tracking-tight text-text-primary">
-        <span>{parsed.prefix}</span>
-        <span className="inline-flex items-center px-3 py-1 mx-1.5 rounded-xl border-2 border-dashed border-surface-border-strong bg-surface-4 font-bold text-text-primary text-base transition-colors">
-          {inputVal || "____"}
-        </span>
-        <span>{parsed.suffix}</span>
-      </p>
-
-      {/* Input controls row */}
-      <div className="flex items-center justify-center gap-2.5 w-full max-w-sm">
-        <Input
-          id={inputId}
-          type="text"
-          value={inputVal}
-          onChange={(e) => handleInputChange(e.target.value)}
-          onKeyDown={handleInputKeyDown}
-          placeholder="Type missing word..."
-          className={cn(
-            "h-10 text-sm rounded-2xl text-center font-medium transition-all shadow-2xs border-surface-border-strong focus-visible:ring-surface-border-strong",
-            status === "correct" &&
-              "border-success bg-success text-success-foreground focus-visible:ring-success",
-            status === "incorrect" &&
-              "border-destructive bg-destructive text-destructive-foreground focus-visible:ring-destructive",
-          )}
+    <div className="flex flex-col items-center gap-2">
+      <p className="flex items-center gap-2 font-medium text-text-primary">
+        <Icon
+          aria-hidden="true"
+          className={
+            isCorrect ? "size-5 shrink-0 text-success" : "size-5 shrink-0 text-destructive"
+          }
         />
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleCheckAnswer}
-          disabled={!inputVal.trim()}
-          className="h-10 px-4 text-xs font-semibold rounded-2xl gap-1.5 cursor-pointer shrink-0 transition-all shadow-xs"
-        >
-          Check <ArrowRight className="size-3.5" />
-        </Button>
-      </div>
-
-      {/* Visual Feedback Banner */}
-      <ClozeFeedback status={status} expected={parsed.expected} />
+        {isCorrect ? "Correct Answer" : "Incorrect Answer"}
+      </p>
+      {!isCorrect && (
+        <div className="text-text-secondary break-words">
+          {failed.length > 0 ? (
+            failed.map(({ index, expected }) => (
+              <p key={index}>
+                {expectedAnswers.length > 1 ? `Blank ${index + 1}: ` : "Correct Answer: "}
+                <span className="font-medium text-text-primary">{expected}</span>
+              </p>
+            ))
+          ) : (
+            <p>
+              Correct Answer:{" "}
+              <span className="font-medium text-text-primary">
+                {expectedAnswers.filter(Boolean).join(", ")}
+              </span>
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

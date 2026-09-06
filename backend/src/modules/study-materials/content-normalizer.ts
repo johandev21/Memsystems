@@ -681,35 +681,195 @@ export function normalizeContent(
 }
 
 export function extractJson(text: string): string {
-  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (match?.[1]) {
-    return match[1].trim();
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+
+  let working = trimmed;
+
+  // 1. Fenced code blocks: prefer the first block containing JSON structure.
+  const fencePattern = /```(?:json)?\s*([\s\S]*?)```/gi;
+  const blocks: string[] = [];
+  let fenceMatch: RegExpExecArray | null;
+  while ((fenceMatch = fencePattern.exec(trimmed)) !== null) {
+    blocks.push(fenceMatch[1]);
   }
-  const structuredMatch = text.match(
-    /<structured_output>\s*([\s\S]*?)<\/structured_output>/,
-  );
-  if (structuredMatch?.[1]) {
-    return structuredMatch[1].trim();
+  if (blocks.length > 0) {
+    working = (
+      blocks.find((block) => block.includes('{') || block.includes('[')) ??
+      blocks[0]
+    ).trim();
+  } else {
+    // 2. <structured_output> wrappers (case-insensitive, closing tag optional).
+    const structuredMatch = trimmed.match(
+      /<structured_output>\s*([\s\S]*?)(?:<\/structured_output>|$)/i,
+    );
+    if (
+      structuredMatch?.[1] &&
+      (structuredMatch[1].includes('{') || structuredMatch[1].includes('['))
+    ) {
+      working = structuredMatch[1].trim();
+    } else {
+      // 3. Strip stray tags, then slice from the first { or [ (leading prose).
+      working = trimmed.replace(/<\/?structured_output>/gi, '').trim();
+      const firstBrace = working.indexOf('{');
+      const firstBracket = working.indexOf('[');
+      let startIdx = -1;
+      if (
+        firstBrace !== -1 &&
+        (firstBracket === -1 || firstBrace < firstBracket)
+      ) {
+        startIdx = firstBrace;
+      } else if (firstBracket !== -1) {
+        startIdx = firstBracket;
+      }
+      if (startIdx !== -1) {
+        working = working.slice(startIdx);
+      }
+    }
   }
 
-  const firstBrace = text.indexOf('{');
-  const firstBracket = text.indexOf('[');
-  let startIdx = -1;
+  // 4. Drop trailing fence fragments / closing tags left over from streaming.
+  working = working.replace(/```[\s\S]*$/, '').trim();
+  working = working.replace(/<\/structured_output>[\s\S]*$/i, '').trim();
 
-  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
-    startIdx = firstBrace;
-  } else if (firstBracket !== -1) {
-    startIdx = firstBracket;
+  // 5. Drop trailing prose after the last } / ], but only when the tail shows
+  // no sign of being a truncated partial (partials almost always carry a
+  // structural continuation such as ":", "{" or "[").
+  const lastBrace = working.lastIndexOf('}');
+  const lastBracket = working.lastIndexOf(']');
+  const lastClose = Math.max(lastBrace, lastBracket);
+  if (lastClose !== -1 && lastClose < working.length - 1) {
+    const tail = working.slice(lastClose + 1);
+    if (!/[:{[]/.test(tail)) {
+      working = working.slice(0, lastClose + 1).trim();
+    }
   }
 
-  if (startIdx !== -1) {
-    let sliced = text.slice(startIdx);
-    sliced = sliced.replace(/<\/structured_output>[\s\S]*$/, '');
-    sliced = sliced.replace(/```[\s\S]*$/, '');
-    return sliced.trim();
+  return working;
+}
+
+/**
+ * Minimal tolerant repair for near-JSON model output. Handles the failure
+ * modes seen from small/flash models: single-quoted strings (e.g. 'p2-s8'),
+ * trailing commas, smart quotes, and stray JS comments. Single-quote
+ * conversion only applies outside double-quoted strings, so apostrophes
+ * inside "..." are never touched. Best-effort: anything beyond these cases
+ * should fail downstream with a truncated preview (see parseJsonLenient).
+ */
+export function repairJsonText(text: string): string {
+  const normalized = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+
+  let out = '';
+  let i = 0;
+  const len = normalized.length;
+  let inDouble = false;
+
+  while (i < len) {
+    const ch = normalized[i];
+
+    if (inDouble) {
+      out += ch;
+      if (ch === '\\' && i + 1 < len) {
+        out += normalized[i + 1];
+        i += 2;
+        continue;
+      }
+      if (ch === '"') inDouble = false;
+      i += 1;
+      continue;
+    }
+
+    if (ch === '"') {
+      inDouble = true;
+      out += ch;
+      i += 1;
+      continue;
+    }
+
+    // Strip JS-style comments outside strings.
+    if (ch === '/' && i + 1 < len) {
+      const next = normalized[i + 1];
+      if (next === '/') {
+        while (i < len && normalized[i] !== '\n') i += 1;
+        continue;
+      }
+      if (next === '*') {
+        i += 2;
+        while (
+          i < len &&
+          !(normalized[i] === '*' && normalized[i + 1] === '/')
+        ) {
+          i += 1;
+        }
+        i += 2;
+        continue;
+      }
+    }
+
+    // Convert single-quoted strings to double-quoted.
+    if (ch === "'") {
+      let j = i + 1;
+      let inner = '';
+      let closed = false;
+      while (j < len) {
+        const c = normalized[j];
+        if (c === '\\' && j + 1 < len) {
+          inner += c + normalized[j + 1];
+          j += 2;
+          continue;
+        }
+        if (c === "'") {
+          closed = true;
+          break;
+        }
+        inner += c;
+        j += 1;
+      }
+      if (!closed) {
+        // Unterminated quote: emit an opening double quote and let the
+        // downstream parser fail with a preview.
+        out += '"';
+        i += 1;
+        continue;
+      }
+      const unescaped = inner.replace(/\\'/g, "'");
+      out += `"${unescaped.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+      i = j + 1;
+      continue;
+    }
+
+    out += ch;
+    i += 1;
   }
 
-  return text.trim();
+  // Drop trailing commas before } or ].
+  return out.replace(/,(\s*[}\]])/g, '$1');
+}
+
+/**
+ * Strict parse with a single tolerant-repair retry. Throws a SyntaxError with
+ * a truncated preview of the offending text so logs stay useful.
+ */
+export function parseJsonLenient(text: string): unknown {
+  const cleaned = extractJson(text);
+  try {
+    return JSON.parse(cleaned);
+  } catch (firstError) {
+    const repaired = repairJsonText(cleaned);
+    if (repaired !== cleaned) {
+      try {
+        return JSON.parse(repaired);
+      } catch {
+        // Fall through to the preview error below.
+      }
+    }
+    const preview = cleaned.slice(0, 500);
+    const reason =
+      firstError instanceof Error ? firstError.message : String(firstError);
+    throw new SyntaxError(
+      `Lenient JSON parse failed (${reason}). Preview: ${preview}`,
+    );
+  }
 }
 
 export function slugifyTitle(title: string, kind: StudyMaterialKind): string {

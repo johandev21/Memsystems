@@ -27,6 +27,7 @@ export interface MaterialViewerProps {
 }
 
 function useMaterialViewerFullscreen(
+  materialId: string,
   forceFullscreen: boolean | undefined,
   defaultFullscreen: boolean | undefined,
   onClose: () => void,
@@ -35,11 +36,17 @@ function useMaterialViewerFullscreen(
     Boolean(defaultFullscreen || forceFullscreen),
   );
   const [isExitingFullscreen, setIsExitingFullscreen] = useState(false);
-  const isEffectivelyFullscreen = forceFullscreen || isFullscreen;
+  const [isChatSuspended, setIsChatSuspended] = useState(false);
+  const [hasChatHandoff, setHasChatHandoff] = useState(false);
+  const scrollPositionRef = useRef({ top: 0, left: 0 });
+  const isEffectivelyFullscreen = !isChatSuspended && (Boolean(forceFullscreen) || isFullscreen);
+
+  const isActiveViewer = () =>
+    window.matchMedia(forceFullscreen ? "(max-width: 1023px)" : "(min-width: 1024px)").matches;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isEffectivelyFullscreen) {
+      if (event.key === "Escape" && isEffectivelyFullscreen && isActiveViewer()) {
         if (forceFullscreen) onClose();
         else setIsFullscreen(false);
       }
@@ -51,12 +58,19 @@ function useMaterialViewerFullscreen(
   useEffect(() => {
     let exitTimer: number | undefined;
     const handleChatNavigation = (event: Event) => {
-      const detail = (event as CustomEvent<{ focusChat?: boolean }>).detail;
-      if (!detail?.focusChat || !isEffectivelyFullscreen) return;
+      const detail = (event as CustomEvent<{ focusChat?: boolean; chatNavigationRetry?: boolean }>).detail;
+      if (!detail?.focusChat || !isEffectivelyFullscreen || detail.chatNavigationRetry) return;
+      if (!isActiveViewer()) return;
       if (forceFullscreen) {
-        onClose();
+        window.dispatchEvent(
+          new CustomEvent("study-material-chat-handoff", {
+            detail: { materialId, suspended: true },
+          }),
+        );
+        setIsChatSuspended(true);
         return;
       }
+      setHasChatHandoff(true);
       setIsExitingFullscreen(true);
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       exitTimer = window.setTimeout(
@@ -72,9 +86,45 @@ function useMaterialViewerFullscreen(
       window.removeEventListener("send-chat-prompt", handleChatNavigation);
       if (exitTimer) window.clearTimeout(exitTimer);
     };
-  }, [isEffectivelyFullscreen, forceFullscreen, onClose]);
+  }, [isEffectivelyFullscreen, forceFullscreen, materialId, onClose]);
 
-  return { isFullscreen, setIsFullscreen, isExitingFullscreen, isEffectivelyFullscreen };
+  useEffect(() => {
+    if (!forceFullscreen) return;
+    const handleRestore = (event: Event) => {
+      const detail = (event as CustomEvent<{ materialId?: string }>).detail;
+      if (detail?.materialId && detail.materialId !== materialId) return;
+      setIsChatSuspended(false);
+      requestAnimationFrame(() => {
+        const element = scrollPositionRef.current.element;
+        if (element) {
+          element.scrollTop = scrollPositionRef.current.top;
+          element.scrollLeft = scrollPositionRef.current.left;
+        }
+      });
+        window.dispatchEvent(
+          new CustomEvent("study-material-chat-handoff", {
+          detail: { materialId, suspended: false },
+          }),
+        );
+    };
+    window.addEventListener("restore-study-material", handleRestore);
+    return () => window.removeEventListener("restore-study-material", handleRestore);
+  }, [forceFullscreen, materialId]);
+
+  useEffect(() => {
+    setIsChatSuspended(false);
+    setHasChatHandoff(false);
+  }, [materialId]);
+
+  return {
+    isFullscreen,
+    setIsFullscreen,
+    isExitingFullscreen,
+    isEffectivelyFullscreen,
+    isChatSuspended,
+    hasChatHandoff,
+    scrollPositionRef,
+  };
 }
 
 export function MaterialViewer({
@@ -93,8 +143,18 @@ export function MaterialViewer({
     onClose();
   }, [onClose]);
 
-  const { isFullscreen, setIsFullscreen, isExitingFullscreen, isEffectivelyFullscreen } =
-    useMaterialViewerFullscreen(forceFullscreen, defaultFullscreen, handleClose);
+  const {
+    isFullscreen,
+    setIsFullscreen,
+    isExitingFullscreen,
+    isEffectivelyFullscreen,
+    isChatSuspended,
+    hasChatHandoff,
+    scrollPositionRef,
+  } = useMaterialViewerFullscreen(material.id, forceFullscreen, defaultFullscreen, handleClose);
+
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+  scrollPositionRef.current.element = contentScrollRef.current;
 
   const renderMaterialContent = () => {
     switch (material.kind) {
@@ -204,8 +264,13 @@ export function MaterialViewer({
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
             title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Mode"}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
           >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            {isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
           </Button>
         )}
         {isEffectivelyFullscreen && (
@@ -224,27 +289,23 @@ export function MaterialViewer({
     </div>
   );
 
-  if (isEffectivelyFullscreen || isExitingFullscreen) {
-    return (
+  return (
+    <div
+      className={`flex h-full flex-col bg-surface-1 text-text-primary overflow-hidden ${
+        isChatSuspended ? "hidden" : ""
+      } ${
+        isEffectivelyFullscreen || isExitingFullscreen
+          ? "fixed inset-0 z-viewer h-[100dvh] w-screen motion-reduce:animate-none"
+          : ""
+      } ${isExitingFullscreen ? "animate-out fade-out duration-150" : ""}`}
+    >
+      {showHeader && viewerHeader}
       <div
-        className={`fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col overflow-hidden bg-surface-1 text-text-primary motion-reduce:animate-none ${
-          isExitingFullscreen
-            ? "animate-out fade-out duration-150"
-            : "animate-in fade-in duration-150"
+        ref={contentScrollRef}
+        className={`flex-1 overflow-y-auto overscroll-contain ${
+          isEffectivelyFullscreen ? "p-3 sm:p-4 md:p-8 max-w-7xl mx-auto w-full" : "p-3 sm:p-4 md:p-6"
         }`}
       >
-        {viewerHeader}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-8 max-w-7xl mx-auto w-full">
-          {renderMaterialContent()}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full flex-col bg-surface-1 text-text-primary overflow-hidden">
-      {showHeader && viewerHeader}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-6">
         {renderMaterialContent()}
       </div>
     </div>

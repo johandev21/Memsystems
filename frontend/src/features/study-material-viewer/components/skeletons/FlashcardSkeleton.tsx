@@ -4,25 +4,20 @@ export function FlashcardSkeleton() {
   return (
     <div
       data-slot="flashcard-skeleton"
-      className="mx-auto flex w-full max-w-2xl flex-col gap-4"
+      className="mx-auto flex w-full max-w-2xl flex-col gap-6"
       aria-hidden="true"
     >
-      {/* Progress + counter */}
       <div className="flex items-center justify-between gap-2">
-        <Skeleton className="h-4 w-20 rounded-full" />
-        <Skeleton className="h-4 w-16 rounded-full" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-16" />
       </div>
-      <Skeleton className="h-2 w-full rounded-full" />
-      {/* Card stage */}
-      <Skeleton className="h-64 w-full rounded-2xl sm:h-72" />
-      <div className="flex flex-col items-center gap-2">
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-4 w-1/3" />
+      <div className="flex min-h-64 flex-col items-center justify-center gap-6 rounded-2xl bg-surface-2 p-6 sm:min-h-72 sm:p-8">
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-5 w-1/2" />
+        <Skeleton className="h-10 w-28 rounded-xl" />
       </div>
-      {/* Nav / rating buttons */}
       <div className="flex items-center justify-between gap-2">
         <Skeleton className="h-10 w-24 rounded-xl" />
-        <Skeleton className="h-10 w-32 rounded-xl" />
         <Skeleton className="h-10 w-24 rounded-xl" />
       </div>
     </div>

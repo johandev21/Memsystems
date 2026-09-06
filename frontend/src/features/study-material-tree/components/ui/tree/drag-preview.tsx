@@ -1,12 +1,14 @@
 import {
   Brain,
   BookOpen,
+  Briefcase,
   FileQuestion,
   Folder,
   FolderOpen,
   ListChecks,
   Map as MapIcon,
   Network,
+  Presentation,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
@@ -49,7 +51,9 @@ function getTreeIcon(node: TreeNode, isOpen: boolean): LucideIcon {
     case "practice_problems":
       return ListChecks;
     case "case_study":
-      return BookOpen;
+      return Briefcase;
+    case "slides":
+      return Presentation;
     case "mind_map":
       return Network;
     case "quiz":

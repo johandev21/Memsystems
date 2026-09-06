@@ -22,7 +22,7 @@ function svgToDataUrl(svg: string): string {
 function dispatchChatPrompt(promptText: string): void {
   window.dispatchEvent(
     new CustomEvent(SEND_CHAT_PROMPT_EVENT, {
-      detail: { prompt: promptText, autoSend: true },
+      detail: { prompt: promptText, autoSend: false, focusChat: true },
     }),
   );
 }

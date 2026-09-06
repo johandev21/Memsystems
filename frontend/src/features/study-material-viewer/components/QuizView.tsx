@@ -1,18 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  XCircle,
-  Sparkles,
-  RotateCcw,
-  Check,
-  ArrowLeft,
-  BookOpen,
-} from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef, useId } from "react";
+import { AlertCircle, ChevronLeft, ChevronRight, X, Check, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +38,212 @@ export interface QuizViewProps {
 }
 
 type ViewMode = "active" | "summary" | "review";
+
+export function QuizView({ content }: QuizViewProps) {
+  const questions = useMemo(() => content?.questions || [], [content?.questions]);
+  const totalQuestions = questions.length;
+
+  const [viewMode, setViewMode] = useState<ViewMode>("active");
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>({});
+  const [showUnansweredModal, setShowUnansweredModal] = useState(false);
+
+  const answeredCount = Object.keys(selectedOptions).length;
+  const unansweredCount = totalQuestions - answeredCount;
+
+  const correctCount = useMemo(() => {
+    let count = 0;
+    questions.forEach((q) => {
+      const correctIdx = getCorrectOptionIndex(q);
+      if (selectedOptions[q.id] === correctIdx) {
+        count++;
+      }
+    });
+    return count;
+  }, [questions, selectedOptions]);
+
+  const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+  const handleSelectOption = useCallback(
+    (questionId: string, optionIndex: number) => {
+      if (viewMode !== "active") return;
+      if (selectedOptions[questionId] !== undefined) return;
+
+      setSelectedOptions((prev) => ({
+        ...prev,
+        [questionId]: optionIndex,
+      }));
+    },
+    [viewMode, selectedOptions],
+  );
+
+  const handleNext = useCallback(() => {
+    if (currentIdx < totalQuestions - 1) {
+      setCurrentIdx((prev) => prev + 1);
+    }
+  }, [currentIdx, totalQuestions]);
+
+  const handlePrev = useCallback(() => {
+    if (currentIdx > 0) {
+      setCurrentIdx((prev) => prev - 1);
+    }
+  }, [currentIdx]);
+
+  const handleSubmit = useCallback(() => {
+    if (unansweredCount > 0) {
+      setShowUnansweredModal(true);
+    } else {
+      setViewMode("summary");
+    }
+  }, [unansweredCount]);
+
+  const handleReviewUnanswered = useCallback(() => {
+    setShowUnansweredModal(false);
+    const firstUnansweredIndex = questions.findIndex((q) => selectedOptions[q.id] === undefined);
+    if (firstUnansweredIndex !== -1) {
+      setCurrentIdx(firstUnansweredIndex);
+    }
+  }, [questions, selectedOptions]);
+
+  const handleSubmitAnyway = useCallback(() => {
+    setShowUnansweredModal(false);
+    setViewMode("summary");
+  }, []);
+
+  const handleRetakeQuiz = useCallback(() => {
+    setSelectedOptions({});
+    setCurrentIdx(0);
+    setViewMode("active");
+  }, []);
+
+  const handleReviewQuiz = useCallback(() => {
+    setCurrentIdx(0);
+    setViewMode("review");
+  }, []);
+
+  const quizRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+      }
+
+      if (showUnansweredModal || document.querySelector('[role="dialog"][aria-modal="true"]'))
+        return;
+      const target = e.target as HTMLElement;
+      if (!quizRef.current?.contains(target)) return;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest(
+            "button, a, input, textarea, select, [role=button], [contenteditable='true']",
+          ) !== null)
+      ) {
+        return;
+      }
+
+      if (viewMode === "summary") return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (currentIdx === totalQuestions - 1 && viewMode === "active") {
+          handleSubmit();
+        } else {
+          handleNext();
+        }
+      } else if (["a", "b", "c", "d", "1", "2", "3", "4"].includes(e.key.toLowerCase())) {
+        if (viewMode === "active" && questions[currentIdx]) {
+          const key = e.key.toLowerCase();
+          let optIdx = -1;
+          if (["a", "b", "c", "d"].includes(key)) {
+            optIdx = key.charCodeAt(0) - 97;
+          } else {
+            optIdx = parseInt(key, 10) - 1;
+          }
+          if (optIdx >= 0 && optIdx < questions[currentIdx].options.length) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSelectOption(questions[currentIdx].id, optIdx);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [
+    viewMode,
+    showUnansweredModal,
+    currentIdx,
+    totalQuestions,
+    questions,
+    handlePrev,
+    handleNext,
+    handleSubmit,
+    handleSelectOption,
+  ]);
+
+  if (totalQuestions === 0) {
+    return <EmptyQuizState />;
+  }
+
+  return (
+    <div ref={quizRef}>
+      {viewMode === "summary" && (
+        <QuizCompletionSummary
+          scorePercent={scorePercent}
+          correctCount={correctCount}
+          totalQuestions={totalQuestions}
+          unansweredCount={unansweredCount}
+          onReviewQuiz={handleReviewQuiz}
+          onRetakeQuiz={handleRetakeQuiz}
+        />
+      )}
+
+      {viewMode === "active" && (
+        <div data-quiz-active="true">
+          <QuizQuestionStepper
+            questions={questions}
+            currentIdx={currentIdx}
+            selectedOptions={selectedOptions}
+            onSelectOption={handleSelectOption}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onSubmit={handleSubmit}
+          />
+        </div>
+      )}
+
+      {viewMode === "review" && (
+        <QuizQuestionStepper
+          questions={questions}
+          currentIdx={currentIdx}
+          selectedOptions={selectedOptions}
+          onSelectOption={handleSelectOption}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onSubmit={handleSubmit}
+          isReviewMode
+          onBackToResults={() => setViewMode("summary")}
+        />
+      )}
+
+      <QuizUnansweredModal
+        isOpen={showUnansweredModal}
+        unansweredCount={unansweredCount}
+        onReviewUnanswered={handleReviewUnanswered}
+        onSubmitAnyway={handleSubmitAnyway}
+        onClose={() => setShowUnansweredModal(false)}
+      />
+    </div>
+  );
+}
 
 function EmptyQuizState() {
   return (
@@ -106,7 +300,7 @@ Please explain why "${correctOption.text}" is correct${
 
   window.dispatchEvent(
     new CustomEvent("send-chat-prompt", {
-      detail: { prompt: promptText, autoSend: true },
+      detail: { prompt: promptText, autoSend: false, focusChat: true },
     }),
   );
 }
@@ -114,85 +308,6 @@ Please explain why "${correctOption.text}" is correct${
 // -----------------------------------------------------------------------------
 // 3. Sub-Components
 // -----------------------------------------------------------------------------
-
-/**
- * Donut Score Indicator with smooth SVG ring animation & dark/light support
- */
-function ScoreDonut({
-  percent,
-  correctCount,
-  totalQuestions,
-}: {
-  percent: number;
-  correctCount: number;
-  totalQuestions: number;
-}) {
-  const radius = 46;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percent / 100) * circumference;
-  const wrongCount = totalQuestions - correctCount;
-
-  return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6 rounded-3xl bg-surface-2 border border-surface-border">
-      <div className="flex items-center gap-6">
-        <div className="relative size-32 flex items-center justify-center shrink-0">
-          <svg className="size-full -rotate-90" viewBox="0 0 120 120">
-            <circle
-              cx="60"
-              cy="60"
-              r={radius}
-              className="stroke-surface-4 fill-none"
-              strokeWidth="10"
-            />
-            <circle
-              cx="60"
-              cy="60"
-              r={radius}
-              className="stroke-success fill-none transition-all duration-700 ease-out"
-              strokeWidth="10"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-xl font-extrabold text-text-primary leading-none">
-              {correctCount}/{totalQuestions}
-            </span>
-            <span className="text-xs font-semibold text-success mt-1">{percent}%</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col justify-center gap-2 text-sm">
-          <div className="flex items-center gap-3">
-            <span className="size-2.5 rounded-full bg-success shrink-0" />
-            <span className="text-text-tertiary font-medium">Right</span>
-            <span className="font-bold text-success ml-4">{correctCount}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="size-2.5 rounded-full bg-destructive shrink-0" />
-            <span className="text-text-tertiary font-medium">Wrong</span>
-            <span className="font-bold text-text-primary ml-4">{wrongCount}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="text-right hidden sm:block">
-        <Badge
-          variant="outline"
-          className={cn(
-            "px-3 py-1 text-xs font-semibold rounded-full",
-            percent >= 70
-              ? "border-success bg-success/10 text-success"
-              : "border-warning bg-warning/10 text-warning",
-          )}
-        >
-          {percent === 100 ? "Perfect Score!" : percent >= 70 ? "Passed" : "Practice Needed"}
-        </Badge>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Confirmation dialog shown when submitting with skipped/unanswered questions
@@ -229,7 +344,7 @@ function QuizUnansweredModal({
             type="button"
             variant="outline"
             onClick={onReviewUnanswered}
-            className="cursor-pointer text-xs h-9 rounded-xl font-medium"
+            className="cursor-pointer text-sm h-9 rounded-xl font-medium"
           >
             Review Unanswered
           </Button>
@@ -237,7 +352,7 @@ function QuizUnansweredModal({
             type="button"
             variant="default"
             onClick={onSubmitAnyway}
-            className="cursor-pointer text-xs h-9 rounded-xl font-semibold"
+            className="cursor-pointer text-sm h-9 rounded-xl font-semibold"
           >
             Submit Anyway
           </Button>
@@ -247,83 +362,162 @@ function QuizUnansweredModal({
   );
 }
 
-/**
- * Completion Summary Screen matching clean layout
- */
 function QuizCompletionSummary({
   scorePercent,
   correctCount,
   totalQuestions,
+  unansweredCount,
   onReviewQuiz,
   onRetakeQuiz,
 }: {
   scorePercent: number;
   correctCount: number;
   totalQuestions: number;
+  unansweredCount: number;
   onReviewQuiz: () => void;
   onRetakeQuiz: () => void;
 }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
-      {/* Header */}
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold tracking-tight text-text-primary">
-          You did it! Quiz Complete.
-        </h2>
-        <p className="text-xs text-text-tertiary">Review your performance summary.</p>
+    <section className="mx-auto w-full max-w-2xl space-y-8 py-3 text-text-primary sm:py-6">
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="text-xl font-semibold focus-visible:outline-none"
+      >
+        Quiz Complete
+      </h2>
+      <div className="space-y-2">
+        <p className="text-3xl font-semibold tabular-nums">{scorePercent}%</p>
+        <p className="text-sm text-text-secondary">
+          {correctCount} of {totalQuestions} Correct
+        </p>
       </div>
-
-      {/* Donut Score Card */}
-      <ScoreDonut
-        percent={scorePercent}
-        correctCount={correctCount}
-        totalQuestions={totalQuestions}
-      />
-
-      {/* Bottom Actions */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onReviewQuiz}
-          className="gap-1.5 cursor-pointer text-xs h-9 rounded-xl font-medium border-surface-border text-text-secondary hover:bg-surface-2 hover:text-text-primary"
-        >
-          <BookOpen className="size-3.5" />
-          Review Quiz
-        </Button>
-
-        <Button
-          type="button"
-          onClick={onRetakeQuiz}
-          className="gap-1.5 cursor-pointer text-xs h-9 rounded-xl font-semibold border border-surface-border bg-surface-3 text-text-primary hover:bg-surface-4"
-        >
-          <RotateCcw className="size-3.5" />
+      <dl className="flex flex-wrap gap-x-10 gap-y-4">
+        {[
+          ["Correct", correctCount],
+          ["Incorrect", totalQuestions - unansweredCount - correctCount],
+          ["Unanswered", unansweredCount],
+        ].map(([label, count]) => (
+          <div key={label} className="space-y-1">
+            <dt className="text-sm text-text-secondary">{label}</dt>
+            <dd className="text-lg font-semibold tabular-nums">{count}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="flex flex-wrap justify-end gap-3">
+        <Button variant="ghost" onClick={onRetakeQuiz}>
           Retake Quiz
         </Button>
+        <Button onClick={onReviewQuiz}>Review Quiz</Button>
       </div>
+    </section>
+  );
+}
+
+function QuizOption({
+  option,
+  index,
+  selected,
+  correct,
+  checked,
+  review,
+  name,
+  onSelect,
+}: {
+  option: QuizQuestionOption;
+  index: number;
+  selected: boolean;
+  correct: boolean;
+  checked: boolean;
+  review: boolean;
+  name: string;
+  onSelect: () => void;
+}) {
+  const id = useId();
+  const showFeedback = checked && (review || selected || correct);
+  const status =
+    checked && correct
+      ? selected
+        ? "Your Answer · Correct"
+        : "Correct Answer"
+      : checked && selected
+        ? "Your Answer was incorrect"
+        : null;
+  return (
+    <div
+      className={cn(
+        "rounded-xl border text-text-primary transition-colors focus-within:ring-2 focus-within:ring-primary",
+        checked && correct
+          ? "border-success/60 bg-success/5"
+          : checked && selected
+            ? "border-destructive/60 bg-destructive/5"
+            : "border-surface-border bg-surface-2",
+        !checked && "hover:bg-surface-3",
+      )}
+    >
+      <label className={cn("flex items-start gap-3 p-4", !checked && "cursor-pointer")}>
+        <input
+          type="radio"
+          name={name}
+          value={option.id}
+          checked={selected}
+          disabled={checked}
+          onChange={onSelect}
+          aria-label={String.fromCharCode(65 + index) + ". " + option.text}
+          aria-describedby={showFeedback ? id : undefined}
+          className="sr-only"
+        />
+        {checked && correct ? (
+          <Check aria-hidden="true" className="size-6 shrink-0 text-success" />
+        ) : checked && selected ? (
+          <X aria-hidden="true" className="size-6 shrink-0 text-destructive" />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="w-6 shrink-0 text-center text-sm font-semibold leading-6 text-text-secondary"
+          >
+            {String.fromCharCode(65 + index)}
+          </span>
+        )}
+        <span className="min-w-0 text-sm leading-relaxed break-words">{option.text}</span>
+      </label>
+      {showFeedback && (
+        <div
+          id={id}
+          className="space-y-1 pb-4 pl-[3.25rem] pr-4 text-sm leading-relaxed break-words"
+        >
+          {status && (
+            <p className={cn("font-semibold", correct ? "text-success" : "text-destructive")}>
+              {status}
+            </p>
+          )}
+          {option.explanation && (
+            <p className="text-text-secondary">{formatExplanationText(option.explanation)}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-/**
- * Question Stepper view used for active taking & read-only review
- */
 function QuizQuestionStepper({
   questions,
   currentIdx,
   selectedOptions,
-  checkedQuestions,
   onSelectOption,
   onPrev,
   onNext,
   onSubmit,
-  isReviewMode,
+  isReviewMode = false,
   onBackToResults,
 }: {
   questions: QuizQuestion[];
   currentIdx: number;
   selectedOptions: Record<string, number>;
-  checkedQuestions: Record<string, boolean>;
   onSelectOption: (questionId: string, optionIndex: number) => void;
   onPrev: () => void;
   onNext: () => void;
@@ -333,421 +527,105 @@ function QuizQuestionStepper({
 }) {
   const q = questions[currentIdx];
   const selectedIdx = selectedOptions[q.id];
-  const isChecked = checkedQuestions[q.id] || isReviewMode || selectedIdx !== undefined;
-
-  const correctOptionIdx = getCorrectOptionIndex(q);
-  const isCorrect = selectedIdx === correctOptionIdx;
-  const isLastQuestion = currentIdx === questions.length - 1;
-  const progressPercent = ((currentIdx + 1) / questions.length) * 100;
-
-  return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 animate-in fade-in duration-300">
-      {/* Container Card */}
-      <div className="rounded-3xl border border-surface-border bg-surface-2 p-6 md:p-8 flex flex-col gap-6">
-        {/* Top Progress & Header Bar */}
-        <div className="flex flex-col gap-2.5">
-          <div className="flex justify-between items-center text-xs font-medium text-text-faint">
-            <div className="flex items-center gap-2">
-              {isReviewMode && onBackToResults && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onBackToResults}
-                  className="h-7 px-2 text-xs gap-1.5 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
-                >
-                  <ArrowLeft className="size-3.5" /> Back to Results
-                </Button>
-              )}
-              <span>
-                {Object.keys(selectedOptions).length} of {questions.length} answered
-              </span>
-            </div>
-            <span className="font-semibold">
-              {currentIdx + 1} / {questions.length}
-            </span>
-          </div>
-
-          <div className="h-1.5 w-full bg-surface-4 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-text-faint rounded-full transition-all duration-300 ease-in-out"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Question Prompt */}
-        <fieldset
-          key={currentIdx}
-          className="flex flex-col animate-in fade-in duration-300 border-none p-0 m-0"
-        >
-          <legend className="text-base sm:text-lg font-bold leading-relaxed text-text-primary mb-6 tracking-tight">
-            {currentIdx + 1}. {q.prompt}
-          </legend>
-
-          {/* Options List */}
-          <div className="flex flex-col gap-2.5" role="radiogroup" aria-label={q.prompt}>
-            {q.options.map((opt, oi) => {
-              const isCurrentSelected = selectedIdx === oi;
-              const isCurrentCorrect = oi === correctOptionIdx;
-
-              let optionStyle = isCurrentSelected
-                ? "border-surface-border-strong bg-surface-4 text-text-secondary transition-colors duration-200"
-                : "border-surface-border bg-surface-3 text-text-tertiary hover:bg-surface-4 hover:text-text-secondary transition-colors duration-200";
-              let badge = (
-                <span
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-full border border-surface-border-strong text-[16px] font-semibold transition-all",
-                    isCurrentSelected ? "text-text-primary" : "text-text-secondary",
-                  )}
-                >
-                  {String.fromCharCode(65 + oi)}
-                </span>
-              );
-              let statusTag: React.ReactNode = null;
-              let explanationStyle = "text-text-tertiary";
-
-              if (isChecked) {
-                if (isCurrentCorrect) {
-                  optionStyle = "border-success bg-success/10 text-success font-medium";
-                  explanationStyle = "text-success";
-                  badge = (
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-success bg-success/10 text-success">
-                      <CheckCircle2 className="size-4" />
-                    </span>
-                  );
-                  statusTag = (
-                    <span className="text-xs font-bold text-success flex items-center gap-1">
-                      <Check className="size-3.5" /> Right answer
-                    </span>
-                  );
-                } else if (isCurrentSelected && !isCorrect) {
-                  optionStyle = "border-destructive bg-destructive/10 text-destructive font-medium";
-                  explanationStyle = "text-destructive";
-                  badge = (
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/10 text-destructive">
-                      <XCircle className="size-4" />
-                    </span>
-                  );
-                  statusTag = (
-                    <span className="text-xs font-bold text-destructive flex items-center gap-1">
-                      <XCircle className="size-3.5" /> Not quite
-                    </span>
-                  );
-                } else {
-                  optionStyle =
-                    "border-surface-border bg-surface-3 text-text-faint pointer-events-none";
-                  badge = (
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-surface-border-strong text-text-faint text-[16px] font-semibold">
-                      {String.fromCharCode(65 + oi)}
-                    </span>
-                  );
-                }
-              }
-
-              return (
-                <div
-                  key={`${q.id}-${oi}`}
-                  className={cn(
-                    "w-full p-4 rounded-2xl border text-sm flex flex-col gap-2 relative overflow-hidden focus-within:ring-2 focus-within:ring-surface-border-strong focus-within:ring-offset-2",
-                    optionStyle,
-                    !isChecked && !isReviewMode && "cursor-pointer",
-                  )}
-                  onClick={() => {
-                    if (!isChecked && !isReviewMode) {
-                      onSelectOption(q.id, oi);
-                    }
-                  }}
-                >
-                  <button
-                    type="button"
-                    disabled={isChecked || isReviewMode}
-                    aria-pressed={isCurrentSelected}
-                    className="w-full text-left flex items-start gap-3 group focus-visible:outline-none cursor-pointer"
-                  >
-                    {badge}
-                    <span className="flex-1 leading-snug mt-1">{opt.text}</span>
-                  </button>
-
-                  {/* Option Explanation on Evaluation */}
-                  {isChecked && (
-                    <div className="pl-10 pt-1 flex flex-col gap-1 text-xs leading-relaxed">
-                      {statusTag}
-                      <p className={explanationStyle}>{formatExplanationText(opt.explanation)}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* Footer Navigation & Actions Bar */}
-        <div className="flex justify-between items-center pt-3 gap-3">
-          {/* Left Assistance Trigger: Explain (after answer) */}
-          {isChecked ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleExplainInChat(q, selectedIdx)}
-              className="text-xs gap-1.5 h-8 rounded-lg cursor-pointer border-primary/30 text-primary hover:bg-primary/10"
-            >
-              <Sparkles className="size-3.5" />
-              Explain
-            </Button>
-          ) : (
-            <div />
-          )}
-
-          {/* Right Stepper Buttons */}
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onPrev}
-              disabled={currentIdx === 0}
-              className="flex items-center gap-1 hover:bg-surface-3 text-text-secondary hover:text-text-primary cursor-pointer text-xs h-8 rounded-lg"
-            >
-              <ChevronLeft className="size-4" />
-              Previous
-            </Button>
-
-            {isLastQuestion && !isReviewMode ? (
-              <Button
-                type="button"
-                size="sm"
-                onClick={onSubmit}
-                className="min-w-[100px] cursor-pointer text-xs h-8 font-semibold rounded-lg border border-surface-border bg-surface-3 text-text-primary hover:bg-surface-4"
-              >
-                Submit Quiz
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                onClick={onNext}
-                disabled={isLastQuestion && isReviewMode}
-                className="flex items-center gap-1 min-w-[90px] cursor-pointer text-xs h-8 rounded-lg border border-surface-border bg-surface-3 text-text-primary font-semibold hover:bg-surface-4"
-              >
-                Next
-                <ChevronRight className="size-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// 4. Main Component Controller
-// -----------------------------------------------------------------------------
-
-export function QuizView({ content }: QuizViewProps) {
-  const questions = useMemo(() => content?.questions || [], [content?.questions]);
-  const totalQuestions = questions.length;
-
-  const [viewMode, setViewMode] = useState<ViewMode>("active");
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>({});
-  const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
-  const [showUnansweredModal, setShowUnansweredModal] = useState(false);
-
+  const isChecked = isReviewMode || selectedIdx !== undefined;
+  const correctIdx = getCorrectOptionIndex(q);
   const answeredCount = Object.keys(selectedOptions).length;
-  const unansweredCount = totalQuestions - answeredCount;
-
-  const correctCount = useMemo(() => {
-    let count = 0;
-    questions.forEach((q) => {
-      const correctIdx = getCorrectOptionIndex(q);
-      if (selectedOptions[q.id] === correctIdx) {
-        count++;
-      }
-    });
-    return count;
-  }, [questions, selectedOptions]);
-
-  const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
-
-  const handleSelectOption = useCallback(
-    (questionId: string, optionIndex: number) => {
-      if (viewMode !== "active") return;
-      if (selectedOptions[questionId] !== undefined) return;
-
-      setSelectedOptions((prev) => ({
-        ...prev,
-        [questionId]: optionIndex,
-      }));
-      setCheckedQuestions((prev) => ({
-        ...prev,
-        [questionId]: true,
-      }));
-    },
-    [viewMode, selectedOptions],
-  );
-
-  const handleNext = useCallback(() => {
-    if (currentIdx < totalQuestions - 1) {
-      setCurrentIdx((prev) => prev + 1);
-    }
-  }, [currentIdx, totalQuestions]);
-
-  const handlePrev = useCallback(() => {
-    if (currentIdx > 0) {
-      setCurrentIdx((prev) => prev - 1);
-    }
-  }, [currentIdx]);
-
-  const handleSubmit = useCallback(() => {
-    if (unansweredCount > 0) {
-      setShowUnansweredModal(true);
-    } else {
-      setViewMode("summary");
-    }
-  }, [unansweredCount]);
-
-  const handleReviewUnanswered = useCallback(() => {
-    setShowUnansweredModal(false);
-    const firstUnansweredIndex = questions.findIndex((q) => selectedOptions[q.id] === undefined);
-    if (firstUnansweredIndex !== -1) {
-      setCurrentIdx(firstUnansweredIndex);
-    }
-  }, [questions, selectedOptions]);
-
-  const handleSubmitAnyway = useCallback(() => {
-    setShowUnansweredModal(false);
-    setViewMode("summary");
-  }, []);
-
-  const handleRetakeQuiz = useCallback(() => {
-    setSelectedOptions({});
-    setCheckedQuestions({});
-    setCurrentIdx(0);
-    setViewMode("active");
-  }, []);
-
-  const handleReviewQuiz = useCallback(() => {
-    setCurrentIdx(0);
-    setViewMode("review");
-  }, []);
-
+  const isLast = currentIdx === questions.length - 1;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const id = useId();
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.repeat || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) {
-        return;
-      }
-
-      const target = e.target as HTMLElement;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          target.closest("input, textarea, select, [contenteditable='true']") !== null)
-      ) {
-        return;
-      }
-
-      if (viewMode === "summary") return;
-
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        handlePrev();
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        handleNext();
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        if (currentIdx === totalQuestions - 1 && viewMode === "active") {
-          handleSubmit();
-        } else {
-          handleNext();
-        }
-      } else if (["a", "b", "c", "d", "1", "2", "3", "4"].includes(e.key.toLowerCase())) {
-        if (viewMode === "active" && questions[currentIdx]) {
-          const key = e.key.toLowerCase();
-          let optIdx = -1;
-          if (["a", "b", "c", "d"].includes(key)) {
-            optIdx = key.charCodeAt(0) - 97;
-          } else {
-            optIdx = parseInt(key, 10) - 1;
-          }
-          if (optIdx >= 0 && optIdx < questions[currentIdx].options.length) {
-            e.preventDefault();
-            e.stopPropagation();
-            handleSelectOption(questions[currentIdx].id, optIdx);
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [
-    viewMode,
-    currentIdx,
-    totalQuestions,
-    questions,
-    handlePrev,
-    handleNext,
-    handleSubmit,
-    handleSelectOption,
-  ]);
-
-  if (totalQuestions === 0) {
-    return <EmptyQuizState />;
-  }
-
+    headingRef.current?.focus();
+    headingRef.current?.scrollIntoView({ block: "nearest" });
+  }, [currentIdx, isReviewMode]);
   return (
-    <>
-      {viewMode === "summary" && (
-        <QuizCompletionSummary
-          scorePercent={scorePercent}
-          correctCount={correctCount}
-          totalQuestions={totalQuestions}
-          onReviewQuiz={handleReviewQuiz}
-          onRetakeQuiz={handleRetakeQuiz}
-        />
+    <section className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-3 text-text-primary sm:py-6">
+      {isReviewMode && (
+        <Button variant="ghost" size="sm" onClick={onBackToResults} className="self-start">
+          <ArrowLeft aria-hidden="true" className="size-4" /> Back to Results
+        </Button>
       )}
-
-      {viewMode === "active" && (
-        <div data-quiz-active="true">
-          <QuizQuestionStepper
-            questions={questions}
-            currentIdx={currentIdx}
-            selectedOptions={selectedOptions}
-            checkedQuestions={checkedQuestions}
-            onSelectOption={handleSelectOption}
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onSubmit={handleSubmit}
+      <div className="space-y-3">
+        <div className="flex flex-wrap justify-between gap-2 text-sm text-text-secondary">
+          <span>
+            Question {currentIdx + 1}
+          </span>
+          <span>
+            {answeredCount} of {questions.length} Answered
+          </span>
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Questions Answered"
+          aria-valuemin={0}
+          aria-valuemax={questions.length}
+          aria-valuenow={answeredCount}
+          className="h-1.5 overflow-hidden rounded-full bg-surface-4"
+        >
+          <div
+            className="h-full rounded-full bg-text-secondary transition-[width] motion-reduce:transition-none"
+            style={{ width: (answeredCount / questions.length) * 100 + "%" }}
           />
         </div>
-      )}
-
-      {viewMode === "review" && (
-        <QuizQuestionStepper
-          questions={questions}
-          currentIdx={currentIdx}
-          selectedOptions={selectedOptions}
-          checkedQuestions={checkedQuestions}
-          onSelectOption={handleSelectOption}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onSubmit={handleSubmit}
-          isReviewMode
-          onBackToResults={() => setViewMode("summary")}
-        />
-      )}
-
-      <QuizUnansweredModal
-        isOpen={showUnansweredModal}
-        unansweredCount={unansweredCount}
-        onReviewUnanswered={handleReviewUnanswered}
-        onSubmitAnyway={handleSubmitAnyway}
-        onClose={() => setShowUnansweredModal(false)}
-      />
-    </>
+      </div>
+      <div className="space-y-3">
+        <h2
+          id={id}
+          ref={headingRef}
+          tabIndex={-1}
+          className="text-lg font-semibold leading-relaxed break-words focus-visible:outline-none sm:text-xl"
+        >
+          {q.prompt}
+        </h2>
+        {!isChecked && (
+          <p className="text-sm text-text-secondary">
+            Selecting an answer checks it immediately. You cannot change it afterward.
+          </p>
+        )}
+        {isReviewMode && selectedIdx === undefined && (
+          <p className="text-sm text-text-secondary">You left this question unanswered.</p>
+        )}
+      </div>
+      <div role="status" aria-live="polite" className="sr-only">
+        {!isReviewMode && selectedIdx !== undefined
+          ? selectedIdx === correctIdx
+            ? "Your answer is correct."
+            : "Your answer is incorrect. The correct answer is " + q.options[correctIdx]?.text
+          : ""}
+      </div>
+      <fieldset aria-labelledby={id} className="min-w-0 space-y-3 border-0 p-0">
+        {q.options.map((option, index) => (
+          <QuizOption
+            key={q.id + option.id}
+            option={option}
+            index={index}
+            selected={selectedIdx === index}
+            correct={correctIdx === index}
+            checked={isChecked}
+            review={isReviewMode}
+            name={id + q.id}
+            onSelect={() => onSelectOption(q.id, index)}
+          />
+        ))}
+      </fieldset>
+      <footer className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        {isChecked && (
+          <Button variant="ghost" onClick={() => handleExplainInChat(q, selectedIdx)}>
+            Explain
+          </Button>
+        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button variant="ghost" onClick={onPrev} disabled={currentIdx === 0}>
+            <ChevronLeft aria-hidden="true" className="size-4" /> Previous
+          </Button>
+          {isLast && !isReviewMode ? (
+            <Button onClick={onSubmit}>Submit Quiz</Button>
+          ) : (
+            <Button onClick={onNext} disabled={isLast}>
+              Next <ChevronRight aria-hidden="true" className="size-4" />
+            </Button>
+          )}
+        </div>
+      </footer>
+    </section>
   );
 }

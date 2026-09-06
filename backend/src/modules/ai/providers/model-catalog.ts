@@ -28,6 +28,29 @@ export function creatorFromModel(modelId: string): string | null {
   return resolved.slice(0, slash);
 }
 
+/**
+ * GatewayLanguageModelEntry findings (@ai-sdk/gateway, inspected in
+ * backend/node_modules/@ai-sdk/gateway/dist/index.d.ts):
+ * `{ id: string; name: string; description?: string | null;
+ *    pricing?: { input: string; output: string;
+ *      cachedInputTokens?: string; cacheCreationInputTokens?: string } | null;
+ *    specification: Pick<LanguageModelV4,
+ *      'specificationVersion' | 'provider' | 'modelId'>;
+ *    modelType?: KnownModelType | null }`
+ * where KnownModelType = 'embedding' | 'image' | 'language' | 'realtime' |
+ * 'reranking' | 'speech' | 'transcription' | 'video'.
+ * The gateway returns NO capability flags (no vision/tools/structuredOutput/
+ * reasoning/audio fields). `modelType` only separates chat (`language`) from
+ * non-chat modalities; everything else about optional capabilities must come
+ * from the curated MODEL_CAPABILITY_RULES table below or from a future
+ * gateway field (handled defensively by capabilitiesFromGatewayEntry).
+ * Creator prefixes observed in the GatewayModelId union (~256 models):
+ * alibaba, amazon, anthropic, bytedance, cohere, deepseek, google, inception,
+ * inclusionai, interfaze, kwaipilot, meta, minimax, mistral, moonshotai,
+ * morph, nvidia, openai, perplexity, poolside, sakana, spacexai, stepfun,
+ * tencent, thinkingmachines, xiaomi, zai (plus legacy `xai`, `zhipu`,
+ * `zhipuai`, `qwen`, `kimi` aliases remapped via MODEL_ID_ALIASES).
+ */
 const FAIL_CLOSED_CAPABILITIES: Required<ModelCapabilities> = {
   imageInput: false,
   fileInput: false,
@@ -37,6 +60,13 @@ const FAIL_CLOSED_CAPABILITIES: Required<ModelCapabilities> = {
   reasoning: false,
   webSearch: false,
 };
+// NOTE: structuredOutput stays `false` in FAIL_CLOSED_CAPABILITIES by design,
+// even though stream-handler.ts now attempts native Output.object({ schema })
+// optimistically for EVERY model and falls back to strict JSON prompting on
+// native failure. The flag is therefore a UI/logging hint ("advertised"
+// support), not a gate: keeping unknown families at `false` avoids overstating
+// tool/webSearch support (which have no runtime fallback), while structured
+// output still works everywhere via the fallback path.
 
 interface CapabilityRule {
   /** Human-readable identifier used when extending or reviewing this table. */
@@ -157,8 +187,8 @@ export const MODEL_CAPABILITY_RULES: readonly CapabilityRule[] = [
     capabilities: { imageInput: true },
   },
   {
-    family: 'Zhipu GLM 4+',
-    matches: /^(?:zhipu|zhipuai)\/glm-(?:4|5)/,
+    family: 'Zhipu GLM 4+ (incl. zai gateway prefix)',
+    matches: /^(?:zhipu|zhipuai|zai)\/glm-(?:4|5)/,
     capabilities: {
       tools: true,
       structuredOutput: true,
@@ -166,8 +196,8 @@ export const MODEL_CAPABILITY_RULES: readonly CapabilityRule[] = [
     },
   },
   {
-    family: 'Alibaba Qwen 2.5/3',
-    matches: /^(?:alibaba|qwen)\/qwen(?:2\.5|3)/,
+    family: 'Alibaba Qwen 2.5/3 (hyphenated and compact slugs)',
+    matches: /^(?:alibaba|qwen)\/qwen[-_]?.*(?:2\.5|3)/,
     capabilities: {
       tools: true,
       structuredOutput: true,
@@ -176,7 +206,7 @@ export const MODEL_CAPABILITY_RULES: readonly CapabilityRule[] = [
   },
   {
     family: 'ByteDance Seed 1.6+',
-    matches: /^bytedance\/seed-(?:1\.6|2)/,
+    matches: /^bytedance\/seed-(?:1\.[68]|2)/,
     capabilities: {
       tools: true,
       structuredOutput: true,
@@ -184,6 +214,73 @@ export const MODEL_CAPABILITY_RULES: readonly CapabilityRule[] = [
     },
   },
 ];
+
+/**
+ * Best-effort capability overlay straight from gateway metadata. The current
+ * GatewayLanguageModelEntry type carries no capability fields, so this
+ * returns `null` today; it exists so a future gateway field (e.g.
+ * `capabilities`, `features`, `supportsStructuredOutput`, `vision`) is picked
+ * up automatically without another catalog change. Only boolean values for
+ * known ModelCapabilities keys are accepted; everything else is ignored.
+ */
+function capabilitiesFromGatewayEntry(
+  entry: GatewayLanguageModelEntry,
+): Partial<ModelCapabilities> | null {
+  const raw = entry as unknown as Record<string, unknown>;
+  const candidates: Record<string, unknown>[] = [];
+  for (const key of ['capabilities', 'features', 'capability']) {
+    const value = raw[key];
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      candidates.push(value as Record<string, unknown>);
+    }
+  }
+  // Flat vendor-style flags, e.g. `{ supportsStructuredOutput: true }` or
+  // `{ vision: true }`, when a future gateway version inlines them.
+  candidates.push(raw);
+  const knownKeys: (keyof ModelCapabilities)[] = [
+    'imageInput',
+    'fileInput',
+    'audioInput',
+    'tools',
+    'structuredOutput',
+    'reasoning',
+    'webSearch',
+  ];
+  // Alias map for plausible future/vendor field names.
+  const aliases: Record<string, keyof ModelCapabilities> = {
+    vision: 'imageInput',
+    image: 'imageInput',
+    file: 'fileInput',
+    audio: 'audioInput',
+    toolUse: 'tools',
+    toolCalling: 'tools',
+    functionCalling: 'tools',
+    structuredOutput: 'structuredOutput',
+    jsonMode: 'structuredOutput',
+    supportsStructuredOutput: 'structuredOutput',
+    reasoning: 'reasoning',
+    thinking: 'reasoning',
+    webSearch: 'webSearch',
+    search: 'webSearch',
+  };
+  const overlay: Partial<ModelCapabilities> = {};
+  const recordOverlay = overlay as Record<string, boolean>;
+  for (const source of candidates) {
+    for (const [rawKey, target] of Object.entries(aliases)) {
+      const value: unknown = source[rawKey];
+      if (!(target in recordOverlay) && typeof value === 'boolean') {
+        recordOverlay[target] = value;
+      }
+    }
+    for (const key of knownKeys) {
+      const value: unknown = source[key];
+      if (!(key in recordOverlay) && typeof value === 'boolean') {
+        recordOverlay[key] = value;
+      }
+    }
+  }
+  return Object.keys(overlay).length > 0 ? overlay : null;
+}
 
 /**
  * Capability overlay for chat models. The gateway model list carries no
@@ -299,7 +396,14 @@ export function toProviderModel(
   }
   if (!isChatModelId(entry.id)) return null;
   const pricing = pricingFor(entry);
-  const capabilities = capabilitiesForModelId(entry.id);
+  // Prefer gateway metadata capabilities when present (future-proof:
+  // currently always null — see capabilitiesFromGatewayEntry). Gateway
+  // truth wins over curated regex rules when it speaks.
+  const capabilities: ModelCapabilities = Object.assign(
+    {},
+    capabilitiesForModelId(entry.id),
+    capabilitiesFromGatewayEntry(entry) ?? {},
+  );
   return {
     id: entry.id,
     displayName: displayNameFor(entry.id, entry.name),
@@ -339,6 +443,10 @@ function seedModel(id: string, displayName: string): ProviderModel {
  * Curated fallback catalog used until the first successful gateway sync
  * (no API key configured, gateway unreachable, first boot). All IDs are
  * gateway-valid `creator/model` slugs.
+ * Freshness verified against the GatewayModelId union in
+ * @ai-sdk/gateway (dist/index.d.ts): GATEWAY_DEFAULT_MODEL
+ * (`openai/gpt-5.6-sol`) and every seed slug below are present, so no
+ * seed update is needed at this time.
  */
 export const SEED_GATEWAY_MODELS: ProviderModel[] = [
   seedModel('openai/gpt-4o-mini', 'GPT-4o Mini'),

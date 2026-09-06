@@ -2,6 +2,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Brain,
   BookOpen,
+  Briefcase,
   FileQuestion,
   Folder,
   FolderOpen,
@@ -9,6 +10,7 @@ import {
   ListChecks,
   Map as MapIcon,
   Network,
+  Presentation,
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -396,7 +398,9 @@ function getTreeIcon(node: TreeNode, isOpen: boolean): LucideIcon {
     case "practice_problems":
       return ListChecks;
     case "case_study":
-      return BookOpen;
+      return Briefcase;
+    case "slides":
+      return Presentation;
     case "mind_map":
       return Network;
     case "quiz":

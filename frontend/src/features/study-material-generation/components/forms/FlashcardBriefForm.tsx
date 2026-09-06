@@ -36,7 +36,7 @@ type DifficultyId = (typeof DIFFICULTIES)[number]["id"];
 const CARD_STYLES = [
   { id: "qa", title: "Q & A", description: "Classic question → answer format" },
   { id: "definition", title: "Definition", description: "Term → definition pairs" },
-  { id: "cloze", title: "Fill-in-the-Blank", description: "Sentence with missing word" },
+  { id: "cloze", title: "Fill-in-the-Blank", description: "Sentence with missing word(s)" },
   {
     id: "mixed",
     title: "Mixed",

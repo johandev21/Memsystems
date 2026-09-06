@@ -130,6 +130,72 @@ describe('gateway model catalog', () => {
     expect(toProviderModel(entry('openai/gpt-image-1', 'image'))).toBeNull();
   });
 
+  it('covers zai GLM, kimi-k3, and unknown-family hint behavior', () => {
+    // Previously zai/* missed the (zhipu|zhipuai) rule and always fell back.
+    expect(capabilitiesForModelId('zai/glm-5.3-flash')).toMatchObject({
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    });
+    expect(capabilitiesForModelId('zai/glm-4.5-air')).toMatchObject({
+      tools: true,
+      structuredOutput: true,
+    });
+    expect(capabilitiesForModelId('moonshotai/kimi-k3')).toMatchObject({
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    });
+    expect(capabilitiesForModelId('moonshotai/kimi-k2.6')).toMatchObject({
+      structuredOutput: true,
+    });
+    // Unknown families stay fail-closed (all false) as a UI/logging hint
+    // only — stream-handler.ts still attempts native Output.object first
+    // for these models and falls back to JSON prompting on native failure.
+    expect(capabilitiesForModelId('mystery/chat-model-x')).toMatchObject({
+      tools: false,
+      structuredOutput: false,
+      webSearch: false,
+    });
+    expect(
+      toProviderModel(entry('mystery/chat-model-x', 'language')),
+    ).toMatchObject({
+      supportsWebSearch: false,
+      capabilities: { structuredOutput: false },
+    });
+  });
+
+  it('covers hyphenated qwen and newer seed slugs', () => {
+    expect(capabilitiesForModelId('alibaba/qwen-3-14b')).toMatchObject({
+      tools: true,
+      structuredOutput: true,
+      webSearch: true,
+    });
+    expect(capabilitiesForModelId('bytedance/seed-1.8')).toMatchObject({
+      tools: true,
+      structuredOutput: true,
+    });
+  });
+
+  it('prefers gateway metadata capabilities over curated rules when present', () => {
+    const withMetadata = {
+      ...entry('mystery/chat-model-x', 'language'),
+      capabilities: { structuredOutput: true, tools: true },
+    } as unknown as GatewayLanguageModelEntry;
+    expect(toProviderModel(withMetadata)?.capabilities).toMatchObject({
+      structuredOutput: true,
+      tools: true,
+    });
+    // Gateway truth wins even when it downgrades a curated rule.
+    const downgrade = {
+      ...entry('openai/gpt-4o-mini', 'language'),
+      capabilities: { tools: false },
+    } as unknown as GatewayLanguageModelEntry;
+    expect(toProviderModel(downgrade)?.capabilities).toMatchObject({
+      tools: false,
+      structuredOutput: true,
+    });
+  });
   it('flags free-tier models from slugs and zero pricing', () => {
     const models = buildChatCatalog([
       entry('poolside/laguna-s-2.1-free', 'language'),

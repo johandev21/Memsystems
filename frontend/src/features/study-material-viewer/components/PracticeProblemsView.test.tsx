@@ -167,12 +167,14 @@ describe("PracticeProblemsView", () => {
     await user.click(screen.getByRole("button", { name: /Discuss in Chat/i }));
     expect(dispatchedEvents.length).toBe(1);
     expect(dispatchedEvents[0].autoSend).toBe(false);
+    expect(dispatchedEvents[0].focusChat).toBe(true);
     expect(dispatchedEvents[0].prompt).toContain("Prompt for p-1");
 
     // 2. Ask for Socratic Hint in Chat
     await user.click(screen.getByRole("button", { name: /Ask for Socratic Hint in Chat/i }));
     expect(dispatchedEvents.length).toBe(2);
     expect(dispatchedEvents[1].autoSend).toBe(false);
+    expect(dispatchedEvents[1].focusChat).toBe(true);
     expect(dispatchedEvents[1].prompt).toContain("Socratic hint");
 
     // 3. Explain this step in Chat
@@ -180,6 +182,7 @@ describe("PracticeProblemsView", () => {
     await user.click(explainStepButtons[0]);
     expect(dispatchedEvents.length).toBe(3);
     expect(dispatchedEvents[2].autoSend).toBe(false);
+    expect(dispatchedEvents[2].focusChat).toBe(true);
     expect(dispatchedEvents[2].prompt).toContain("Step 1: First move");
 
     window.removeEventListener("send-chat-prompt", listener);

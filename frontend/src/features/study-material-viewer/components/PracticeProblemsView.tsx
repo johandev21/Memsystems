@@ -51,7 +51,7 @@ const SEND_CHAT_PROMPT_EVENT = "send-chat-prompt";
 function dispatchChatPrompt(promptText: string): void {
   window.dispatchEvent(
     new CustomEvent(SEND_CHAT_PROMPT_EVENT, {
-      detail: { prompt: promptText, autoSend: false },
+      detail: { prompt: promptText, autoSend: false, focusChat: true },
     }),
   );
 }
