@@ -57,7 +57,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
       await deleteNotebook(notebookId);
       await queryClient.invalidateQueries({ queryKey: ["notebooks"] });
       toast.success("Notebook deleted");
-      navigate({ to: "/home" });
+      navigate({ to: "/" });
     } catch {
       toast.error("Failed to delete notebook");
       setIsDeleting(false);

@@ -27,7 +27,7 @@ import { EpubParserService } from '../src/modules/sources/epub-parser.service';
 import { TabularInspectorService } from '../src/modules/sources/tabular-inspector.service';
 import { TabularParserService } from '../src/modules/sources/tabular-parser.service';
 import { db } from './db';
-import { seedNotebook, seedSource, seedUser } from './fixtures';
+import { seedNotebook, seedSource } from './fixtures';
 
 describe('SourceProcessingHandler', () => {
   function createHandler(
@@ -339,8 +339,7 @@ describe('SourceProcessingHandler', () => {
   }
 
   it('processes image source end-to-end with analyzing_visuals stage and persists segments', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'diagram.png',
@@ -368,7 +367,6 @@ describe('SourceProcessingHandler', () => {
       buffer: expect.any(Buffer),
       mimeType: 'image/png',
       filename: 'diagram.png',
-      userId: user.id,
     });
 
     expect(queue.enqueueIfActive).toHaveBeenCalledWith(
@@ -407,8 +405,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('processes audio source end-to-end with transcribing stage and persists transcript segments', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'lecture.mp3',
@@ -436,7 +433,6 @@ describe('SourceProcessingHandler', () => {
       buffer: expect.any(Buffer),
       mimeType: 'audio/mpeg',
       filename: 'lecture.mp3',
-      userId: user.id,
     });
 
     expect(queue.enqueueIfActive).toHaveBeenCalledWith(
@@ -485,8 +481,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('processes non-image file with extracting stage and acquisitionService', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'paper.pdf',
@@ -515,8 +510,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('throws SourceProcessingCancelledError when job is no longer active in queue', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'photo.png',
@@ -546,8 +540,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('throws SourceProcessingCancelledError when source is marked cancelled', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'photo.png',
@@ -574,8 +567,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('marks source failed when extraction error occurs on final attempt', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'corrupt.png',
@@ -616,8 +608,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('processes video source end-to-end with transcribing and analyzing_visuals stages, merging transcript and visual segments', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'lecture.mp4',
@@ -650,14 +641,12 @@ describe('SourceProcessingHandler', () => {
       buffer: expect.any(Buffer),
       mimeType: 'video/mp4',
       filename: 'lecture.mp4',
-      userId: user.id,
     });
     expect(videoInspector.sampleKeyframes).toHaveBeenCalled();
     expect(visionExtraction.extractVisualDocument).toHaveBeenCalledWith(
       expect.objectContaining({
         buffer: expect.any(Buffer),
         mimeType: 'image/png',
-        userId: user.id,
       }),
     );
 
@@ -703,8 +692,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('deduplicates consecutive identical visual keyframes to prevent chunk bloat', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'presentation.mp4',
@@ -765,8 +753,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('processes YouTube URL source end-to-end with extracting stage and persists segments', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'url',
       title: 'YouTube Lecture Video',
@@ -830,8 +817,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('processes PPTX slides flow with extracting stage, validates limits, parses and persists slide segments', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'deck.pptx',
@@ -899,8 +885,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('processes EPUB ebook flow with extracting stage, validates limits, parses and persists chapter segments', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'book.epub',
@@ -954,8 +939,7 @@ describe('SourceProcessingHandler', () => {
   });
 
   it('processes Tabular datasets into table segments with sheet and cellRange locators', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'data.csv',

@@ -67,6 +67,19 @@ afterEach(() => {
 
 describe("MaterialViewer Explain handoff", () => {
   it("returns desktop fullscreen to the inline layout while retaining flashcard state", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          matches: query === "(min-width: 1024px)",
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }) as MediaQueryList,
+    );
     const user = userEvent.setup();
     renderViewer(flashcards, { defaultFullscreen: true });
 
@@ -87,6 +100,7 @@ describe("MaterialViewer Explain handoff", () => {
     expect(screen.getByText("The conversion of light into chemical energy.")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Return to Fullscreen/i })).toBeTruthy();
 
+    vi.useRealTimers();
     await user.click(screen.getByRole("button", { name: /Return to Fullscreen/i }));
     expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
     expect(screen.getByText("The conversion of light into chemical energy.")).toBeTruthy();

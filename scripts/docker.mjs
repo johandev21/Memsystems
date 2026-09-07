@@ -52,7 +52,7 @@ function parseEnv(path) {
 if (mode === 'prod') {
   const values = parseEnv(envPath)
   const required = ['APP_ORIGIN', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB']
-  const secretKeys = ['CLERK_SECRET_KEY', 'DEV_STORAGE_TOKEN_SECRET']
+  const secretKeys = ['DEV_STORAGE_TOKEN_SECRET', 'CREDENTIALS_ENCRYPTION_KEY']
   const missing = required.filter((key) => !values.get(key))
   const weakSecrets = secretKeys.filter((key) => {
     const value = values.get(key) || ''

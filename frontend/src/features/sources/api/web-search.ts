@@ -12,7 +12,6 @@ export type WebSearchJobStatus = "pending" | "processing" | "ready" | "failed";
 export interface WebSearchJob {
   id: string;
   notebookId: string;
-  userId: string;
   query: string;
   modelId: string;
   status: WebSearchJobStatus;

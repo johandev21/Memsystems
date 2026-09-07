@@ -105,7 +105,7 @@ describe('ChatService streaming lifecycle', () => {
   it('passes request cancellation to the model stream', async () => {
     const abortController = new AbortController();
 
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'openai/gpt-5.6-sol',
       abortSignal: abortController.signal,
@@ -121,7 +121,7 @@ describe('ChatService streaming lifecycle', () => {
     abortController.abort(new Error('Client disconnected'));
 
     await expect(
-      service.sendMessage('user-1', 'notebook-1', {
+      service.sendMessage('notebook-1', {
         content: 'Explain Plato',
         model: 'openai/gpt-5.6-sol',
         abortSignal: abortController.signal,
@@ -131,7 +131,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('persists partial streamed text on abort using the client-visible message id', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'openai/gpt-5.6-sol',
     });
@@ -169,7 +169,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('always forwards reasoning to the client, even for uncatalogued models', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'some-unknown-model',
     });
@@ -185,7 +185,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('accumulates reasoning-delta chunks for abort persist', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'openai/gpt-5.6-sol',
     });
@@ -203,7 +203,11 @@ describe('ChatService streaming lifecycle', () => {
       chunk: { type: 'reasoning-delta', text: 'the cave.', id: 'reasoning-1' },
     });
     streamOptions.onChunk({
-      chunk: { type: 'text-delta', text: 'The cave represents...', id: 'text-1' },
+      chunk: {
+        type: 'text-delta',
+        text: 'The cave represents...',
+        id: 'text-1',
+      },
     });
     await streamOptions.onAbort();
 
@@ -220,7 +224,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('persists message parts, reasoning, and usage metadata on finish', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain the cave allegory',
       model: 'openai/gpt-5.6-sol',
     });
@@ -265,7 +269,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('persists the gateway generation id for cost lookup', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain the cave allegory',
       model: 'openai/gpt-5.6-sol',
     });
@@ -296,7 +300,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('handles multimodal image parts in user messages', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'What is shown in this chart?',
       parts: [
         {
@@ -338,7 +342,7 @@ describe('ChatService streaming lifecycle', () => {
     });
 
     await expect(
-      service.sendMessage('user-1', 'notebook-1', {
+      service.sendMessage('notebook-1', {
         content: 'Explain this image',
         parts: [
           {
@@ -358,7 +362,7 @@ describe('ChatService streaming lifecycle', () => {
       getGatewayRequestOptions: ReturnType<typeof vi.fn>;
     };
 
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'anthropic/claude-fable-5.1',
     });
@@ -372,7 +376,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('fails loud when the gateway serves a different model than requested', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'anthropic/claude-fable-5.1',
     });
@@ -406,7 +410,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('accepts matching gateway routing metadata', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'anthropic/claude-fable-5.1',
     });
@@ -444,7 +448,7 @@ describe('ChatService streaming lifecycle', () => {
   });
 
   it('maps stream failures to client envelopes naming the model', async () => {
-    await service.sendMessage('user-1', 'notebook-1', {
+    await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
       model: 'anthropic/claude-fable-5.1',
     });
@@ -460,16 +464,18 @@ describe('ChatService streaming lifecycle', () => {
       new Error('Free tier users do not have access'),
       { statusCode: 403 },
     );
-    const parsed = JSON.parse(
-      responseOptions.onError!(error),
-    ) as { error: string; code: string; model?: string };
+    const parsed = JSON.parse(responseOptions.onError!(error)) as {
+      error: string;
+      code: string;
+      model?: string;
+    };
     expect(parsed.code).toBe('gateway_entitlement');
     expect(parsed.error).toContain('anthropic/claude-fable-5.1');
   });
 
   it('sends image-only input without embedding an empty retrieval query', async () => {
     await expect(
-      service.sendMessage('user-1', 'notebook-1', {
+      service.sendMessage('notebook-1', {
         content: '',
         parts: [
           {

@@ -4,7 +4,7 @@ import { createDatabaseConnection } from '../src/database/connection';
 import { sourceChunks } from '../src/database/schema';
 import { ChunkingService } from '../src/modules/ai/chunking.service';
 import { IndexingService } from '../src/modules/ai/indexing.service';
-import { seedNotebook, seedSource, seedUser } from './fixtures';
+import { seedNotebook, seedSource } from './fixtures';
 
 const LONG_TEXT = Array.from(
   { length: 12 },
@@ -54,8 +54,7 @@ function makeIndexing(embedding: any) {
 
 describe('IndexingService', () => {
   it('chunks, embeds and persists a source', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Long Source',
@@ -75,8 +74,7 @@ describe('IndexingService', () => {
   });
 
   it('keeps the previous chunk set when embedding fails', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Stable',
@@ -99,8 +97,7 @@ describe('IndexingService', () => {
   });
 
   it('rejects an embedding count mismatch without touching existing chunks', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Mismatch',
@@ -129,8 +126,7 @@ describe('IndexingService', () => {
   });
 
   it('skips sources with no extractable text', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Empty',

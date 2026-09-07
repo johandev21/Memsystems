@@ -1,8 +1,9 @@
-﻿import { queryOptions } from "@tanstack/react-query";
+﻿import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { fetchApi, apiDelete, createQueryOptions } from "@/shared/api";
 import type { Notebook, NotebooksResponse } from "../types";
 
 export type { Notebook, NotebooksResponse };
+export type NotebooksPage = NotebooksResponse;
 
 async function fetchNotebooks(
   limit?: number,
@@ -25,6 +26,17 @@ export const notebooksQueryOptions = queryOptions({
   queryFn: () => fetchNotebooks(6),
   staleTime: 30_000,
   refetchOnMount: "always",
+});
+
+export const notebooksInfiniteQueryOptions = infiniteQueryOptions({
+  queryKey: ["notebooks", "infinite"],
+  queryFn: ({ pageParam = 0 }) => fetchNotebooks(20, pageParam),
+  initialPageParam: 0,
+  getNextPageParam: (lastPage, allPages) => {
+    const loaded = allPages.flatMap((p) => p.notebooks).length;
+    return loaded < lastPage.total ? loaded : undefined;
+  },
+  staleTime: 30_000,
 });
 
 export const notebookQueryOptions = (id: string) =>

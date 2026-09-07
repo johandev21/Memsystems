@@ -99,11 +99,8 @@ export class ChatService {
     private readonly retrievalService: RetrievalService,
   ) {}
 
-  async listMessages(
-    userId: string,
-    notebookId: string,
-  ): Promise<ChatMessage[]> {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async listMessages(notebookId: string): Promise<ChatMessage[]> {
+    await this.notebooksService.assertNotebookOwner(notebookId);
 
     const rows = await this.db
       .select()
@@ -224,9 +221,9 @@ export class ChatService {
     return lastUserMessage?.parts ?? [];
   }
 
-  async sendMessage(userId: string, notebookId: string, input: SendInput) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
-    await this.connectionService.requireConnected(userId, input.model);
+  async sendMessage(notebookId: string, input: SendInput) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    await this.connectionService.requireConnected(input.model);
 
     // An image/file-only message has no text to embed. Retrieval is optional
     // for multimodal turns, so let the model inspect the supplied parts
@@ -235,7 +232,6 @@ export class ChatService {
       ? await this.retrievalService.retrieveRelevantChunks(
           notebookId,
           input.content,
-          userId,
           8,
         )
       : [];
@@ -329,7 +325,7 @@ export class ChatService {
     input.abortSignal?.throwIfAborted();
 
     const modelId = input.model;
-    const provider = await this.aiService.getProviderForModel(modelId, userId);
+    const provider = await this.aiService.getProviderForModel(modelId);
     const submittedParts = input.parts ?? [];
     const hasImageInput = submittedParts.some(
       (part) =>
@@ -370,7 +366,7 @@ export class ChatService {
     // `selectedModel` is still used for error messages below.
     void selectedModel;
     const model = provider.createModel(modelId);
-    const requestOptions = this.aiService.getGatewayRequestOptions(userId);
+    const requestOptions = this.aiService.getGatewayRequestOptions();
 
     const systemMessage =
       retrievedChunks.length > 0
@@ -608,8 +604,8 @@ export class ChatService {
     };
   }
 
-  async clearMessages(userId: string, notebookId: string): Promise<void> {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async clearMessages(notebookId: string): Promise<void> {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     await this.db
       .delete(notebookChatMessages)
       .where(eq(notebookChatMessages.notebookId, notebookId));

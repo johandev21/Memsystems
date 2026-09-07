@@ -1,15 +1,16 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { NotebookText, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { toast } from "sonner";
 import { NotebookIcon } from "@/features/notebooks";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { notebooksQueryOptions } from "@/features/notebooks";
+import { notebooksInfiniteQueryOptions } from "@/features/notebooks";
 import { fetchApi } from "@/shared/api";
 import { NotebookCard } from "@/features/notebooks";
 import { SectionHeader } from "./section-header";
@@ -20,8 +21,32 @@ export function NotebooksSection() {
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
 
-  const { data: notebooksData, isLoading } = useQuery(notebooksQueryOptions);
-  const notebooks = notebooksData?.notebooks;
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useInfiniteQuery(notebooksInfiniteQueryOptions);
+  const notebooks = data?.pages.flatMap((p) => p.notebooks) ?? [];
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (!hasNextPage || isFetchingNextPage) return;
+        void fetchNextPage();
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, notebooks.length]);
 
   async function handleCreateNotebook() {
     try {
@@ -67,12 +92,17 @@ export function NotebooksSection() {
       </section>
 
       <section className="flex flex-col gap-4 py-6">
-        <SectionHeader title="Recent Notebooks" viewAllHref="/notebooks" viewAllLabel="View all" />
+        <SectionHeader title="Recent Notebooks" />
         <RecentNotebooksContent
           isLoading={isLoading}
           notebooks={notebooks}
           isCreating={isCreating}
           onCreate={handleCreateNotebook}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          isFetchNextPageError={isFetchNextPageError}
+          onRetryNextPage={() => void fetchNextPage()}
+          sentinelRef={sentinelRef}
         />
       </section>
     </>
@@ -84,38 +114,86 @@ function RecentNotebooksContent({
   notebooks,
   isCreating,
   onCreate,
+  hasNextPage,
+  isFetchingNextPage,
+  isFetchNextPageError,
+  onRetryNextPage,
+  sentinelRef,
 }: {
   isLoading: boolean;
   notebooks?: Notebook[];
   isCreating: boolean;
   onCreate: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage: boolean;
+  isFetchNextPageError: boolean;
+  onRetryNextPage: () => void;
+  sentinelRef: RefObject<HTMLDivElement | null>;
 }) {
   if (isLoading) return <RecentNotebooksLoading />;
   if (!notebooks?.length)
     return <RecentNotebooksEmpty isCreating={isCreating} onCreate={onCreate} />;
-  return <RecentNotebookGrid notebooks={notebooks} />;
+  return (
+    <div className="flex flex-col gap-4">
+      <RecentNotebookGrid notebooks={notebooks} />
+      <div ref={sentinelRef} />
+      {isFetchingNextPage ? <RecentNotebooksLoadingMore /> : null}
+      {!isFetchingNextPage && isFetchNextPageError ? (
+        <div className="flex items-center justify-center gap-3 py-4 text-sm text-muted-foreground">
+          <span>Couldn&apos;t load more notebooks.</span>
+          <Button variant="outline" size="sm" onClick={onRetryNextPage} className="cursor-pointer">
+            Retry
+          </Button>
+        </div>
+      ) : null}
+      {!hasNextPage && !isFetchNextPageError && notebooks.length > 0 ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          You&apos;ve seen all {notebooks.length} notebooks
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function NotebookSkeletonCard() {
+  return (
+    <div className="flex flex-col overflow-hidden ring-1 ring-foreground/10 rounded-[min(var(--radius-4xl),24px)]">
+      <Skeleton className="h-36 w-full rounded-none" />
+      <div className="flex flex-col gap-1 p-4 pt-8">
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-4 w-full mt-1" />
+        <Skeleton className="h-4 w-2/3 mt-0.5" />
+      </div>
+      <div className="flex items-center justify-between px-4 pb-4">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+    </div>
+  );
 }
 
 function RecentNotebooksLoading() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex flex-col overflow-hidden ring-1 ring-foreground/10 rounded-[min(var(--radius-4xl),24px)]"
-        >
-          <Skeleton className="h-36 w-full rounded-none" />
-          <div className="flex flex-col gap-1 p-4 pt-8">
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-full mt-1" />
-            <Skeleton className="h-4 w-2/3 mt-0.5" />
-          </div>
-          <div className="flex items-center justify-between px-4 pb-4">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        </div>
+        <NotebookSkeletonCard key={i} />
       ))}
+    </div>
+  );
+}
+
+function RecentNotebooksLoadingMore() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <NotebookSkeletonCard key={i} />
+        ))}
+      </div>
+      <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+        <Spinner />
+        <span>Loading more…</span>
+      </div>
     </div>
   );
 }

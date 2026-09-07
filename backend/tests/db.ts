@@ -97,7 +97,6 @@ export async function ensureTestDatabase(): Promise<void> {
     await pgClient.query(`CREATE TABLE IF NOT EXISTS "web_search_jobs" (
       "id" varchar PRIMARY KEY,
       "notebook_id" varchar NOT NULL,
-      "user_id" text NOT NULL,
       "query" varchar(500) NOT NULL,
       "model_id" varchar(200) NOT NULL,
       "status" "web_search_job_status" DEFAULT 'pending' NOT NULL,
@@ -112,9 +111,6 @@ export async function ensureTestDatabase(): Promise<void> {
     )`);
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "web_search_jobs_notebook_id_idx" ON "web_search_jobs" ("notebook_id")',
-    );
-    await pgClient.query(
-      'CREATE INDEX IF NOT EXISTS "web_search_jobs_user_id_idx" ON "web_search_jobs" ("user_id")',
     );
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "web_search_jobs_status_idx" ON "web_search_jobs" ("status")',
@@ -159,7 +155,6 @@ export async function ensureTestDatabase(): Promise<void> {
     END $$;`);
     await pgClient.query(`CREATE TABLE IF NOT EXISTS "source_upload_intents" (
       "id" varchar PRIMARY KEY,
-      "user_id" text NOT NULL,
       "notebook_id" varchar NOT NULL,
       "storage_key" varchar(1000) NOT NULL,
       "filename" varchar(500) NOT NULL,
@@ -174,9 +169,6 @@ export async function ensureTestDatabase(): Promise<void> {
       "consumed_at" timestamp,
       CONSTRAINT "source_upload_intents_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "notebooks"("id") ON DELETE CASCADE
     )`);
-    await pgClient.query(
-      'CREATE INDEX IF NOT EXISTS "source_upload_intents_user_id_idx" ON "source_upload_intents" ("user_id")',
-    );
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "source_upload_intents_notebook_id_idx" ON "source_upload_intents" ("notebook_id")',
     );

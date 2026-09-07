@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
-import { seedNotebook, seedUser } from './fixtures';
+import { seedNotebook } from './fixtures';
 import { db } from './db';
 
 describe('NotebooksService Integration Tests', () => {
@@ -15,8 +15,7 @@ describe('NotebooksService Integration Tests', () => {
   const notebooksService = new NotebooksService(db as any, storageService);
 
   it('should create and list notebooks for a user', async () => {
-    const user = await seedUser();
-    const created = await notebooksService.create(user.id, {
+    const created = await notebooksService.create({
       title: 'My NestJS Notebook',
       description: 'Testing backend extraction',
     });
@@ -24,20 +23,19 @@ describe('NotebooksService Integration Tests', () => {
     expect(created.id).toBeDefined();
     expect(created.title).toBe('My NestJS Notebook');
 
-    const list = await notebooksService.list(user.id);
+    const list = await notebooksService.list();
     expect(Array.isArray(list)).toBe(true);
     expect((list as any[]).length).toBe(1);
     expect((list as any[])[0].id).toBe(created.id);
   });
 
   it('should update notebook details', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id, {
+    const notebook = await seedNotebook({
       title: 'Old Title',
       description: 'Initial description',
     });
 
-    const updated = await notebooksService.update(user.id, notebook.id, {
+    const updated = await notebooksService.update(notebook.id, {
       title: 'New Updated Title',
       description: null,
       icon: null,
@@ -49,12 +47,11 @@ describe('NotebooksService Integration Tests', () => {
   });
 
   it('should delete a notebook', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id, { title: 'To Delete' });
+    const notebook = await seedNotebook({ title: 'To Delete' });
 
-    await notebooksService.delete(user.id, notebook.id);
+    await notebooksService.delete(notebook.id);
 
-    await expect(notebooksService.get(user.id, notebook.id)).rejects.toThrow(
+    await expect(notebooksService.get(notebook.id)).rejects.toThrow(
       'Notebook not found',
     );
   });

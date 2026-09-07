@@ -51,13 +51,9 @@ export class RetrievalService {
   async retrieveRelevantChunks(
     notebookId: string,
     query: string,
-    userId: string,
     topK: number = DEFAULT_TOP_K,
   ): Promise<RetrievedChunk[]> {
-    const queryEmbedding = await this.embeddingService.generateEmbedding(
-      query,
-      userId,
-    );
+    const queryEmbedding = await this.embeddingService.generateEmbedding(query);
 
     const vectorLiteral = `[${queryEmbedding.join(',')}]`;
 

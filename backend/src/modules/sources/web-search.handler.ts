@@ -4,7 +4,6 @@ import { Job, JobHandler } from '../jobs/job-handler.interface';
 import { WebSearchService } from './web-search.service';
 
 export interface WebSearchJobPayload {
-  userId: string;
   notebookId: string;
   query: string;
   modelId: string;
@@ -25,13 +24,9 @@ export class WebSearchHandler implements JobHandler<
   async process(
     job: Job<WebSearchJobPayload, WebSearchResult>,
   ): Promise<WebSearchResult> {
-    return this.webSearchService.search(
-      job.payload.userId,
-      job.payload.notebookId,
-      {
-        query: job.payload.query,
-        modelId: job.payload.modelId,
-      },
-    );
+    return this.webSearchService.search(job.payload.notebookId, {
+      query: job.payload.query,
+      modelId: job.payload.modelId,
+    });
   }
 }

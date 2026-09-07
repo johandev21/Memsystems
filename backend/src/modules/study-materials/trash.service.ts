@@ -23,8 +23,8 @@ export class TrashService {
     private readonly notebooksService: NotebooksService,
   ) {}
 
-  async list(userId: string, notebookId: string) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async list(notebookId: string) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const [deletedMaterials, deletedFolders] = await Promise.all([
       this.db
         .select({
@@ -77,19 +77,19 @@ export class TrashService {
     return items;
   }
 
-  async hardDeleteStudyMaterial(userId: string, smId: string) {
-    await this.assertStudyMaterialOwned(userId, smId);
+  async hardDeleteStudyMaterial(smId: string) {
+    await this.assertStudyMaterialOwned(smId);
     await this.db.delete(studyMaterials).where(eq(studyMaterials.id, smId));
   }
 
-  async hardDeleteFolder(userId: string, folderId: string) {
-    await this.assertFolderOwned(userId, folderId);
+  async hardDeleteFolder(folderId: string) {
+    await this.assertFolderOwned(folderId);
     await this.db
       .delete(studyMaterialFolders)
       .where(eq(studyMaterialFolders.id, folderId));
   }
 
-  private async assertStudyMaterialOwned(userId: string, smId: string) {
+  private async assertStudyMaterialOwned(smId: string) {
     const [sm] = await this.db
       .select({ id: studyMaterials.id, notebookId: studyMaterials.notebookId })
       .from(studyMaterials)
@@ -97,10 +97,10 @@ export class TrashService {
     if (!sm) {
       throw new NotFoundError('Study material');
     }
-    await this.notebooksService.assertNotebookOwner(userId, sm.notebookId);
+    await this.notebooksService.assertNotebookOwner(sm.notebookId);
   }
 
-  private async assertFolderOwned(userId: string, folderId: string) {
+  private async assertFolderOwned(folderId: string) {
     const [folder] = await this.db
       .select({
         id: studyMaterialFolders.id,
@@ -111,6 +111,6 @@ export class TrashService {
     if (!folder) {
       throw new NotFoundError('Folder');
     }
-    await this.notebooksService.assertNotebookOwner(userId, folder.notebookId);
+    await this.notebooksService.assertNotebookOwner(folder.notebookId);
   }
 }

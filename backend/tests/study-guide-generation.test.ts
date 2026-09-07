@@ -95,7 +95,6 @@ describe('study guide generation boundary', () => {
       const onDone = vi.fn();
       const onError = vi.fn();
       const { stream } = handler.createStream(
-        'user-1',
         'notebook-1',
         {
           kind: 'study_guide',
@@ -115,7 +114,7 @@ describe('study guide generation boundary', () => {
         onError,
       );
       expect(await drain(stream)).toContain('"materialId":"material-1"');
-      const reopened = await materials.get('user-1', 'material-1');
+      const reopened = await materials.get('material-1');
       expect(reopened).toMatchObject({
         kind: 'study_guide',
         content: {
@@ -149,7 +148,6 @@ describe('study guide generation boundary', () => {
       } as never);
     const onError = vi.fn();
     const { stream } = handler.createStream(
-      'user',
       'notebook',
       { kind: 'study_guide', brief: 'Virtue', model: 'test-model' },
       [],

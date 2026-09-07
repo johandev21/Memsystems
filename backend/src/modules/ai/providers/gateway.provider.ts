@@ -13,9 +13,8 @@ import type { HealthCheckResult, Provider, ProviderModel } from './provider';
 // fixed release (7.0.93+) and re-run the live inference test.
 
 /**
- * Optional server gateway key, used ONLY for background model-catalog syncs
- * (startup/cron) that run without a user context. Inference and embeddings
- * always use the requesting user's own key from UserSettingsService.
+ * Optional server gateway key, used only for background model-catalog syncs.
+ * Inference and embeddings use the app-wide key from UserSettingsService.
  */
 export function gatewayServerKey(): string | null {
   const key = process.env.AI_GATEWAY_API_KEY?.trim();
@@ -27,9 +26,14 @@ export interface GatewayRequestOptions {
 }
 
 /**
- * Builds per-request gateway options: the end-user id for spend attribution.
- * Auth travels with the provider instance (each user's own gateway key), not
- * the options bag. The bag stays plain JSON so it satisfies the AI SDK
+ * Stable gateway attribution id for requests made by this single-user app.
+ */
+export const SINGLE_USER_ID = 'single-user';
+
+/**
+ * Builds per-request gateway options with a stable id for spend attribution.
+ * The app-wide key travels with the provider instance, not the options bag.
+ * The bag stays plain JSON so it satisfies the AI SDK
  * provider-options type at every call site. Note: no fallback model chain is
  * attached — the gateway must serve the requested model or fail, never
  * silently substitute another model.

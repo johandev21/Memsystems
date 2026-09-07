@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Post,
-  UseGuards,
-  UsePipes,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, UsePipes } from '@nestjs/common';
 import { z } from 'zod';
 import { createGateway } from '@ai-sdk/gateway';
 import {
@@ -17,8 +9,6 @@ import {
   UnauthorizedError,
 } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { AiService } from './ai.service';
 import { ConnectionService } from './connection.service';
 import { ModelSyncService } from './model-sync.service';
@@ -37,7 +27,6 @@ const LEGACY_REMOVED_MESSAGE =
   'Per-provider keys were removed. Add your AI Gateway key in Settings.';
 
 @Controller('ai')
-@UseGuards(AuthGuard)
 export class AiController {
   constructor(
     private readonly aiService: AiService,
@@ -47,23 +36,23 @@ export class AiController {
   ) {}
 
   @Get('models')
-  async listModels(@CurrentUser('id') userId: string) {
-    const models = await this.aiService.listModels(userId);
+  async listModels() {
+    const models = await this.aiService.listModels();
     return { models, ...this.modelSyncService.getStatus() };
   }
 
   @Post('models/refresh')
-  async refreshModels(@CurrentUser('id') userId: string) {
-    // A user's own key can drive the shared metadata sync, so the catalog
-    // stays fresh even without a server gateway key.
-    const userKey = await this.userSettingsService.getGatewayApiKey(userId);
+  async refreshModels() {
+    // The single gateway key drives the shared metadata sync, so the
+    // catalog stays fresh even without a server gateway key.
+    const userKey = await this.userSettingsService.getGatewayApiKey();
     await this.modelSyncService.refreshModels('manual', userKey);
-    return this.connectionService.snapshot(userId);
+    return this.connectionService.snapshot();
   }
 
   @Get('credits')
-  async getCredits(@CurrentUser('id') userId: string) {
-    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+  async getCredits() {
+    const apiKey = await this.userSettingsService.getGatewayApiKey();
     if (!apiKey) {
       throw new ServiceUnavailableError(
         'Add your AI Gateway key in Settings to view credits.',
@@ -82,17 +71,14 @@ export class AiController {
   }
 
   @Get('connection')
-  async getConnectionStatus(@CurrentUser('id') userId: string) {
-    return this.connectionService.snapshot(userId);
+  async getConnectionStatus() {
+    return this.connectionService.snapshot();
   }
 
   @Post('connection')
   @Post('connection/settings')
   @UsePipes(new ZodValidationPipe(updateSettingsSchema))
-  async updateSettings(
-    @CurrentUser('id') userId: string,
-    @Body() body: z.infer<typeof updateSettingsSchema>,
-  ) {
+  async updateSettings(@Body() body: z.infer<typeof updateSettingsSchema>) {
     if (
       body.provider !== undefined ||
       body.apiKey !== undefined ||
@@ -102,25 +88,22 @@ export class AiController {
     }
     if (body.gatewayApiKey !== undefined) {
       if (body.gatewayApiKey == null || body.gatewayApiKey.trim() === '') {
-        await this.userSettingsService.removeGatewayApiKey(userId);
+        await this.userSettingsService.removeGatewayApiKey();
       } else {
         await this.verifyGatewayKey(body.gatewayApiKey.trim());
-        await this.userSettingsService.setGatewayApiKey(
-          userId,
-          body.gatewayApiKey,
-        );
+        await this.userSettingsService.setGatewayApiKey(body.gatewayApiKey);
       }
-      this.connectionService.invalidateUserCache(userId);
+      this.connectionService.invalidateCache();
     }
-    return this.connectionService.snapshot(userId);
+    return this.connectionService.snapshot();
   }
 
   @Delete('connection')
   @Delete('connection/settings')
-  async deleteSettings(@CurrentUser('id') userId: string) {
-    await this.userSettingsService.removeGatewayApiKey(userId);
-    this.connectionService.invalidateUserCache(userId);
-    return this.connectionService.snapshot(userId);
+  async deleteSettings() {
+    await this.userSettingsService.removeGatewayApiKey();
+    this.connectionService.invalidateCache();
+    return this.connectionService.snapshot();
   }
 
   /**

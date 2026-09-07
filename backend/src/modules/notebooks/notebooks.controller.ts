@@ -8,15 +8,12 @@ import {
   Post,
   Query,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { NotebooksService } from './notebooks.service';
 
 const createNotebookSchema = z.object({
@@ -45,20 +42,18 @@ const updateNotebookSchema = z.object({
 });
 
 @Controller('notebooks')
-@UseGuards(AuthGuard)
 export class NotebooksController {
   constructor(private readonly notebooksService: NotebooksService) {}
 
   @Get()
   async list(
-    @CurrentUser('id') userId: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('search') search?: string,
   ) {
     const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
     const parsedOffset = offset ? Number.parseInt(offset, 10) : undefined;
-    return this.notebooksService.list(userId, {
+    return this.notebooksService.list({
       limit: Number.isNaN(parsedLimit) ? undefined : parsedLimit,
       offset: Number.isNaN(parsedOffset) ? undefined : parsedOffset,
       search,
@@ -67,37 +62,32 @@ export class NotebooksController {
 
   @Post()
   @UsePipes(new ZodValidationPipe(createNotebookSchema))
-  async create(
-    @CurrentUser('id') userId: string,
-    @Body() body: z.infer<typeof createNotebookSchema>,
-  ) {
-    return this.notebooksService.create(userId, body);
+  async create(@Body() body: z.infer<typeof createNotebookSchema>) {
+    return this.notebooksService.create(body);
   }
 
   @Get(':id')
-  async get(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.notebooksService.get(userId, id);
+  async get(@Param('id') id: string) {
+    return this.notebooksService.get(id);
   }
 
   @Patch(':id')
   @UsePipes(new ZodValidationPipe(updateNotebookSchema))
   async update(
-    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() body: z.infer<typeof updateNotebookSchema>,
   ) {
-    return this.notebooksService.update(userId, id, body);
+    return this.notebooksService.update(id, body);
   }
 
   @Delete(':id')
-  async delete(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.notebooksService.delete(userId, id);
+  async delete(@Param('id') id: string) {
+    return this.notebooksService.delete(id);
   }
 
   @Post(':id/banner')
   @UseInterceptors(FileInterceptor('file'))
   async uploadBanner(
-    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @UploadedFile() file?: Express.Multer.File,
     @Body('focalPoint') focalPointRaw?: string,
@@ -116,7 +106,6 @@ export class NotebooksController {
     }
 
     return this.notebooksService.uploadBanner(
-      userId,
       id,
       file.buffer,
       file.originalname,
@@ -126,10 +115,7 @@ export class NotebooksController {
   }
 
   @Delete(':id/banner')
-  async removeBanner(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    return this.notebooksService.removeBanner(userId, id);
+  async removeBanner(@Param('id') id: string) {
+    return this.notebooksService.removeBanner(id);
   }
 }

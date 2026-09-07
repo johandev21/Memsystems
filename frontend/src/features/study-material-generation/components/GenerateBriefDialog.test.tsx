@@ -311,7 +311,7 @@ describe("GenerateBriefDialog", () => {
     expect(screen.getByText("Slides Setup")).toBeTruthy();
     expect(screen.getByText("Step 1 of 2")).toBeTruthy();
     // Design step is visible first; the submit action lives on step two.
-    expect(screen.getByRole("button", { name: /Dark theme/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Dark" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Generate" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /Next Step/i }));

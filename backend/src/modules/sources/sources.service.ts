@@ -143,8 +143,8 @@ export class SourcesService {
     @Optional() private readonly captionParser?: CaptionParserService,
   ) {}
 
-  async list(userId: string, notebookId: string) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async list(notebookId: string) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     return this.db
       .select({
         id: sources.id,
@@ -166,8 +166,8 @@ export class SourcesService {
       .orderBy(desc(sources.createdAt));
   }
 
-  async get(userId: string, id: string) {
-    const source = await this.fetchOwned(userId, id);
+  async get(id: string) {
+    const source = await this.fetchOwned(id);
     const indexingStatus = await this.sourceJobsService.latestForSource(id);
     let segments: (typeof sourceSegments.$inferSelect)[] = [];
     if (source.currentVersionId) {
@@ -180,12 +180,8 @@ export class SourcesService {
     return { ...source, indexingStatus, segments };
   }
 
-  async createText(
-    userId: string,
-    notebookId: string,
-    input: CreateTextSourceInput,
-  ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async createText(notebookId: string, input: CreateTextSourceInput) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const title = input.title.trim();
     const rawText = input.rawText;
     if (rawText.trim().length === 0) {
@@ -218,12 +214,8 @@ export class SourcesService {
     return row;
   }
 
-  async createUrl(
-    userId: string,
-    notebookId: string,
-    input: CreateUrlSourceInput,
-  ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async createUrl(notebookId: string, input: CreateUrlSourceInput) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const document = await this.acquisitionService.acquireUrl(input.url, {
       oauthToken: input.oauthToken,
       captionText: input.captionText,
@@ -272,8 +264,8 @@ export class SourcesService {
     return row;
   }
 
-  async countForNotebook(userId: string, notebookId: string): Promise<number> {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async countForNotebook(notebookId: string): Promise<number> {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const [row] = await this.db
       .select({ value: count() })
       .from(sources)
@@ -281,11 +273,8 @@ export class SourcesService {
     return row?.value ?? 0;
   }
 
-  async listUrlsForNotebook(
-    userId: string,
-    notebookId: string,
-  ): Promise<string[]> {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async listUrlsForNotebook(notebookId: string): Promise<string[]> {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const rows = await this.db
       .select({ url: sources.url })
       .from(sources)
@@ -294,14 +283,13 @@ export class SourcesService {
   }
 
   async createFile(
-    userId: string,
     notebookId: string,
     fileBuffer: Buffer,
     fileName: string,
     fileType: string,
     customTitle?: string,
   ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+    await this.notebooksService.assertNotebookOwner(notebookId);
     if (fileBuffer.length === 0) {
       throw new BadRequestError('Uploaded file is empty');
     }
@@ -389,11 +377,10 @@ export class SourcesService {
 
   /** Create a source after a direct upload has already persisted its artifact. */
   async createFileFromArtifact(
-    userId: string,
     notebookId: string,
     input: CreateFileArtifactInput,
   ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+    await this.notebooksService.assertNotebookOwner(notebookId);
     if (!input.artifactKey.startsWith('pending-sources/')) {
       throw new BadRequestError('Invalid source artifact key');
     }
@@ -484,8 +471,8 @@ export class SourcesService {
     return row;
   }
 
-  async delete(userId: string, id: string) {
-    const source = await this.fetchOwned(userId, id);
+  async delete(id: string) {
+    const source = await this.fetchOwned(id);
     if (source.kind === 'file' && source.s3Key) {
       await this.storageService.deleteObject(source.s3Key).catch(() => {});
     }
@@ -498,15 +485,15 @@ export class SourcesService {
   }
 
   /** Explicit operator re-run: enqueues a fresh indexing job for a source. */
-  async reindex(userId: string, id: string) {
-    await this.fetchOwned(userId, id);
+  async reindex(id: string) {
+    await this.fetchOwned(id);
     const job = await this.sourceJobsService.enqueue(id);
     return job;
   }
 
   /** Retry extraction for artifacts, or indexing for already-normalized sources. */
-  async retry(userId: string, id: string) {
-    const source = await this.fetchOwned(userId, id);
+  async retry(id: string) {
+    const source = await this.fetchOwned(id);
     await this.db
       .update(sources)
       .set({
@@ -523,8 +510,8 @@ export class SourcesService {
     return this.sourceJobsService.enqueue(id);
   }
 
-  async cancel(userId: string, id: string): Promise<void> {
-    await this.fetchOwned(userId, id);
+  async cancel(id: string): Promise<void> {
+    await this.fetchOwned(id);
     await this.sourceJobsService.cancelForSource(id);
     await this.db
       .update(sources)
@@ -535,18 +522,14 @@ export class SourcesService {
       .where(eq(sources.id, id));
   }
 
-  async reindexNotebook(userId: string, notebookId: string) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async reindexNotebook(notebookId: string) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const count = await this.sourceJobsService.reindexNotebook(notebookId);
     return { enqueued: count };
   }
 
-  async getDownload(
-    userId: string,
-    id: string,
-    expiresInSeconds = 300,
-  ): Promise<DownloadInfo> {
-    const source = await this.fetchOwned(userId, id);
+  async getDownload(id: string, expiresInSeconds = 300): Promise<DownloadInfo> {
+    const source = await this.fetchOwned(id);
     if (source.kind !== 'file' || !source.s3Key) {
       throw new BadRequestError('Source has no downloadable file');
     }
@@ -559,11 +542,10 @@ export class SourcesService {
   }
 
   async updateSpeakerLabels(
-    userId: string,
     sourceId: string,
     speakerMap: Record<string, string>,
   ) {
-    const source = await this.fetchOwned(userId, sourceId);
+    const source = await this.fetchOwned(sourceId);
     if (!source.currentVersionId) {
       throw new BadRequestError('Source has no current version to update');
     }
@@ -628,12 +610,8 @@ export class SourcesService {
     });
   }
 
-  async addTranscript(
-    userId: string,
-    sourceId: string,
-    transcriptText: string,
-  ) {
-    const source = await this.fetchOwned(userId, sourceId);
+  async addTranscript(sourceId: string, transcriptText: string) {
+    const source = await this.fetchOwned(sourceId);
     const trimmed = transcriptText.trim();
     if (!trimmed) {
       throw new BadRequestError('Transcript text must not be empty');
@@ -680,10 +658,10 @@ export class SourcesService {
     await this.persistVersion(source.id, doc);
     await this.sourceJobsService.enqueue(source.id);
 
-    return this.get(userId, source.id);
+    return this.get(source.id);
   }
 
-  private async fetchOwned(userId: string, id: string) {
+  private async fetchOwned(id: string) {
     const [source] = await this.db
       .select()
       .from(sources)
@@ -691,7 +669,7 @@ export class SourcesService {
     if (!source) {
       throw new NotFoundError('Source');
     }
-    await this.notebooksService.assertNotebookOwner(userId, source.notebookId);
+    await this.notebooksService.assertNotebookOwner(source.notebookId);
     return source;
   }
 

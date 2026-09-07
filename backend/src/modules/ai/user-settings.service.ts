@@ -2,13 +2,16 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { userSettings } from '../../database/schema';
+import { appSettings } from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
 import {
   decryptApiKey,
   encryptApiKey,
   isEncryptedPayload,
 } from './key-encryption';
+
+/** Singleton row id in `app_settings` holding the global gateway key. */
+export const APP_SETTINGS_ID = 'global';
 
 @Injectable()
 export class UserSettingsService {
@@ -20,20 +23,20 @@ export class UserSettingsService {
   ) {}
 
   /**
-   * The user's Vercel AI Gateway key, decrypted. `null` when unset or
+   * The global Vercel AI Gateway key, decrypted. `null` when unset or
    * unreadable (corrupt payload / rotated encryption secret) — the latter
    * is logged so it surfaces in server logs instead of failing silently.
    */
-  async getGatewayApiKey(userId: string): Promise<string | null> {
+  async getGatewayApiKey(): Promise<string | null> {
     const [row] = await this.db
-      .select({ apiKey: userSettings.gatewayApiKey })
-      .from(userSettings)
-      .where(eq(userSettings.userId, userId));
+      .select({ apiKey: appSettings.gatewayApiKey })
+      .from(appSettings)
+      .where(eq(appSettings.id, APP_SETTINGS_ID));
     const stored = row?.apiKey;
     if (!stored) return null;
     if (!isEncryptedPayload(stored)) {
       this.logger.warn(
-        `Ignoring unencrypted gateway key payload for user ${userId}.`,
+        'Ignoring unencrypted gateway key payload in app_settings.',
       );
       return null;
     }
@@ -41,7 +44,7 @@ export class UserSettingsService {
       return decryptApiKey(stored);
     } catch (error) {
       this.logger.warn(
-        `Could not decrypt gateway key for user ${userId}: ${
+        `Could not decrypt gateway key: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
@@ -49,28 +52,25 @@ export class UserSettingsService {
     }
   }
 
-  async setGatewayApiKey(
-    userId: string,
-    apiKey: string | null | undefined,
-  ): Promise<void> {
+  async setGatewayApiKey(apiKey: string | null | undefined): Promise<void> {
     if (!apiKey || !apiKey.trim()) {
-      await this.removeGatewayApiKey(userId);
+      await this.removeGatewayApiKey();
       return;
     }
     const encrypted = encryptApiKey(apiKey.trim());
     await this.db
-      .insert(userSettings)
-      .values({ userId, gatewayApiKey: encrypted })
+      .insert(appSettings)
+      .values({ id: APP_SETTINGS_ID, gatewayApiKey: encrypted })
       .onConflictDoUpdate({
-        target: userSettings.userId,
+        target: appSettings.id,
         set: { gatewayApiKey: encrypted, updatedAt: new Date() },
       });
   }
 
-  async removeGatewayApiKey(userId: string): Promise<void> {
+  async removeGatewayApiKey(): Promise<void> {
     await this.db
-      .update(userSettings)
+      .update(appSettings)
       .set({ gatewayApiKey: null, updatedAt: new Date() })
-      .where(eq(userSettings.userId, userId));
+      .where(eq(appSettings.id, APP_SETTINGS_ID));
   }
 }

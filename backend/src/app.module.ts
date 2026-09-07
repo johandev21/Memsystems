@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AiModule } from './modules/ai/ai.module';
-import { AuthModule } from './modules/auth/auth.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { JobsModule } from './modules/jobs/jobs.module';
@@ -20,7 +19,6 @@ import { StudyMaterialsModule } from './modules/study-materials/study-materials.
     }),
     DatabaseModule,
     JobsModule,
-    AuthModule,
     StorageModule,
     AiModule,
     NotebooksModule,

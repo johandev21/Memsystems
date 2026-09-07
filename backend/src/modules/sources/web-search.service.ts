@@ -61,29 +61,21 @@ export class WebSearchService {
   ) {}
 
   async search(
-    userId: string,
     notebookId: string,
     input: WebSearchSearchInput,
   ): Promise<WebSearchSearchResponse> {
     this.logger.log(`web-search search start`, {
-      userId,
       notebookId,
       query: input.query,
       modelId: input.modelId,
     });
 
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+    await this.notebooksService.assertNotebookOwner(notebookId);
 
-    const result = await this.aiService.searchWeb(
-      input.query,
-      input.modelId,
-      userId,
-    );
+    const result = await this.aiService.searchWeb(input.query, input.modelId);
 
-    const existingUrls = await this.sourcesService.listUrlsForNotebook(
-      userId,
-      notebookId,
-    );
+    const existingUrls =
+      await this.sourcesService.listUrlsForNotebook(notebookId);
     const existing = new Set(existingUrls);
     const sources = result.sources.filter((s) => !existing.has(s.url));
 
@@ -102,24 +94,22 @@ export class WebSearchService {
   }
 
   async import(
-    userId: string,
     notebookId: string,
     input: WebSearchImportInput,
   ): Promise<WebSearchImportResponse> {
     this.logger.log(`web-search import start`, {
-      userId,
       notebookId,
       modelId: input.modelId,
       candidateCount: input.candidates.length,
       query: input.query,
     });
 
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+    await this.notebooksService.assertNotebookOwner(notebookId);
 
     const existingUrls = new Set(
-      await this.sourcesService.listUrlsForNotebook(userId, notebookId),
+      await this.sourcesService.listUrlsForNotebook(notebookId),
     );
-    let count = await this.sourcesService.countForNotebook(userId, notebookId);
+    let count = await this.sourcesService.countForNotebook(notebookId);
 
     const results: WebSearchImportResultItem[] = [];
 
@@ -153,7 +143,7 @@ export class WebSearchService {
       }
 
       try {
-        const source = await this.sourcesService.createUrl(userId, notebookId, {
+        const source = await this.sourcesService.createUrl(notebookId, {
           url: candidate.url,
           title: candidate.title,
           minTextLength: MIN_WEB_SEARCH_SOURCE_TEXT_LENGTH,

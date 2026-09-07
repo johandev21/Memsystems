@@ -39,7 +39,6 @@ type UploadIntent = typeof sourceUploadIntents.$inferSelect;
 
 interface UploadTarget {
   token: string;
-  userId: string;
   notebookId: string;
   key: string;
   filename: string;
@@ -68,12 +67,8 @@ export class SourceUploadsService {
     private readonly sourcesService: SourcesService,
   ) {}
 
-  async createTarget(
-    userId: string,
-    notebookId: string,
-    input: CreateUploadTargetInput,
-  ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async createTarget(notebookId: string, input: CreateUploadTargetInput) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const filename = input.filename.trim();
     const contentType = input.contentType.split(';')[0].trim().toLowerCase();
     if (!filename || filename.length > 500) {
@@ -123,7 +118,6 @@ export class SourceUploadsService {
     const sha256 = input.sha256?.toLowerCase();
     await this.db.insert(sourceUploadIntents).values({
       id: token,
-      userId,
       notebookId,
       storageKey: key,
       filename,
@@ -156,8 +150,8 @@ export class SourceUploadsService {
     };
   }
 
-  async uploadLocal(userId: string, token: string, request: Request) {
-    const target = await this.getTarget(token, userId);
+  async uploadLocal(token: string, request: Request) {
+    const target = await this.getTarget(token);
     if (!this.storageService.isLocalStorage()) {
       throw new BadRequestError(
         'This upload target requires its presigned URL',
@@ -225,13 +219,12 @@ export class SourceUploadsService {
       .where(
         and(
           eq(sourceUploadIntents.id, token),
-          eq(sourceUploadIntents.userId, userId),
           inArray(sourceUploadIntents.status, ['pending', 'uploaded']),
         ),
       )
       .returning({ status: sourceUploadIntents.status });
     if (!updated) {
-      const current = await this.getTarget(token, userId);
+      const current = await this.getTarget(token);
       if (!current.uploaded) {
         await this.storageService.deleteObject(target.key).catch(() => {});
         throw new BadRequestError('Upload target is no longer available');
@@ -240,13 +233,8 @@ export class SourceUploadsService {
     return { uploaded: true, size: uploaded.size };
   }
 
-  async finalize(
-    userId: string,
-    notebookId: string,
-    token: string,
-    title?: string,
-  ) {
-    const target = await this.getTarget(token, userId);
+  async finalize(notebookId: string, token: string, title?: string) {
+    const target = await this.getTarget(token);
     if (target.notebookId !== notebookId) {
       throw new ForbiddenError(
         'Upload target does not belong to this notebook',
@@ -292,7 +280,7 @@ export class SourceUploadsService {
     }
     this.assertIntegrity(target, uploaded);
 
-    const claim = await this.claimForFinalize(userId, notebookId, token);
+    const claim = await this.claimForFinalize(notebookId, token);
     if (claim.expired) {
       await this.storageService.deleteObject(target.key).catch(() => {});
       throw new BadRequestError('Upload target has expired');
@@ -306,7 +294,6 @@ export class SourceUploadsService {
     try {
       this.assertIntegrity(claimedTarget, claimedUpload);
       const source = await this.sourcesService.createFileFromArtifact(
-        userId,
         notebookId,
         {
           artifactKey: claimedTarget.key,
@@ -343,19 +330,13 @@ export class SourceUploadsService {
     }
   }
 
-  private async getTarget(
-    token: string,
-    userId: string,
-  ): Promise<UploadTarget> {
+  private async getTarget(token: string): Promise<UploadTarget> {
     const [row] = await this.db
       .select()
       .from(sourceUploadIntents)
       .where(eq(sourceUploadIntents.id, token))
       .limit(1);
     if (!row) throw new NotFoundError('Upload target');
-    if (row.userId !== userId) {
-      throw new ForbiddenError('Upload target does not belong to this user');
-    }
     if (row.status === 'consumed') {
       throw new BadRequestError('Upload target has already been finalized');
     }
@@ -383,7 +364,6 @@ export class SourceUploadsService {
   }
 
   private async claimForFinalize(
-    userId: string,
     notebookId: string,
     token: string,
   ): Promise<{ row: UploadIntent; expired?: false } | { expired: true }> {
@@ -394,9 +374,6 @@ export class SourceUploadsService {
         .where(eq(sourceUploadIntents.id, token))
         .for('update');
       if (!row) throw new NotFoundError('Upload target');
-      if (row.userId !== userId) {
-        throw new ForbiddenError('Upload target does not belong to this user');
-      }
       if (row.notebookId !== notebookId) {
         throw new ForbiddenError(
           'Upload target does not belong to this notebook',
@@ -445,7 +422,6 @@ export class SourceUploadsService {
   private toTarget(row: UploadIntent): UploadTarget {
     return {
       token: row.id,
-      userId: row.userId,
       notebookId: row.notebookId,
       key: row.storageKey,
       filename: row.filename,

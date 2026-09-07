@@ -29,7 +29,7 @@ describe("QuizView", () => {
     const user = userEvent.setup();
     renderQuiz();
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByText("Question 2 of 2")).toBeTruthy();
+    expect(screen.getByText("Question 2")).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("0");
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Question 2?" }));
     await user.click(screen.getByRole("radio", { name: "B. Second option" }));
@@ -71,7 +71,7 @@ describe("QuizView", () => {
         autoSend: false,
         focusChat: true,
       });
-      expect(screen.getByText("Question 1 of 2")).toBeTruthy();
+      expect(screen.getByText("Question 1")).toBeTruthy();
     } finally {
       window.removeEventListener("send-chat-prompt", listener);
     }
@@ -87,7 +87,7 @@ describe("QuizView", () => {
     const dialog = screen.getByRole("dialog");
     fireEvent.keyDown(heading, { key: "a" });
     fireEvent.keyDown(heading, { key: "ArrowLeft" });
-    expect(screen.getByText("Question 2 of 2")).toBeTruthy();
+    expect(screen.getByText("Question 2")).toBeTruthy();
     const submit = within(dialog).getByRole("button", { name: "Submit Anyway" });
     submit.focus();
     await user.keyboard("{Enter}");

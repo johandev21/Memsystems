@@ -8,7 +8,6 @@ import { WebSearchJobPayload } from './web-search.handler';
 export interface FormattedWebSearchJob {
   id: string;
   notebookId: string;
-  userId: string;
   query: string;
   modelId: string;
   status: 'pending' | 'processing' | 'ready' | 'failed';
@@ -25,7 +24,6 @@ export function formatWebSearchJob(
   return {
     id: job.id,
     notebookId: job.payload.notebookId,
-    userId: job.payload.userId,
     query: job.payload.query,
     modelId: job.payload.modelId,
     status: job.status === 'cancelled' ? 'failed' : job.status,
@@ -49,11 +47,10 @@ export class WebSearchJobsService {
   ) {}
 
   async enqueue(
-    userId: string,
     notebookId: string,
     input: { query: string; modelId: string },
   ): Promise<FormattedWebSearchJob> {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+    await this.notebooksService.assertNotebookOwner(notebookId);
 
     const job = await this.jobQueue.enqueue<
       WebSearchJobPayload,
@@ -61,7 +58,6 @@ export class WebSearchJobsService {
     >(
       'web_search',
       {
-        userId,
         notebookId,
         query: input.query,
         modelId: input.modelId,
@@ -75,11 +71,8 @@ export class WebSearchJobsService {
     return formatWebSearchJob(job);
   }
 
-  async latest(
-    userId: string,
-    notebookId: string,
-  ): Promise<FormattedWebSearchJob | null> {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async latest(notebookId: string): Promise<FormattedWebSearchJob | null> {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const job = await this.jobQueue.getLatestByGroup<
       WebSearchJobPayload,
       WebSearchResult
@@ -87,8 +80,8 @@ export class WebSearchJobsService {
     return job ? formatWebSearchJob(job) : null;
   }
 
-  async dismiss(userId: string, notebookId: string): Promise<void> {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async dismiss(notebookId: string): Promise<void> {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     await this.jobQueue.deleteByGroup(`web_search:${notebookId}`);
   }
 

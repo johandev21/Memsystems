@@ -1,23 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import { toClientStreamError } from '../src/modules/ai/stream-error';
 
-const MODEL = { id: 'anthropic/claude-fable-5.1', displayName: 'Claude Fable 5.1' };
+const MODEL = {
+  id: 'anthropic/claude-fable-5.1',
+  displayName: 'Claude Fable 5.1',
+};
 
-function envelopeOf(output: string): { error: string; code: string; model?: string } {
+function envelopeOf(output: string): {
+  error: string;
+  code: string;
+  model?: string;
+} {
   return JSON.parse(output) as { error: string; code: string; model?: string };
 }
 
 describe('toClientStreamError', () => {
   it('passes model-substitution failures through verbatim', () => {
-    const message =
-      'model_substituted: requested a but the gateway served b.';
+    const message = 'model_substituted: requested a but the gateway served b.';
     expect(toClientStreamError(new Error(message), MODEL)).toBe(message);
   });
 
   it('maps entitlement failures to an envelope naming the model', () => {
-    const error = Object.assign(new Error('Free tier users do not have access'), {
-      statusCode: 403,
-    });
+    const error = Object.assign(
+      new Error('Free tier users do not have access'),
+      {
+        statusCode: 403,
+      },
+    );
     const parsed = envelopeOf(toClientStreamError(error, MODEL));
     expect(parsed.code).toBe('gateway_entitlement');
     expect(parsed.model).toBe('Claude Fable 5.1');

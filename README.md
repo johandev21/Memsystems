@@ -70,12 +70,12 @@ La aplicación integra varios proveedores y permite consultar los modelos dispon
 - Google Gemini.
 - Kimi.
 
-Las claves pueden configurarse mediante variables de entorno o, cuando corresponde, desde los ajustes de usuario. La conexión y disponibilidad de los proveedores se comprueban antes de utilizar sus modelos. Algunos modelos también admiten búsqueda web.
+La clave global de AI Gateway puede configurarse mediante una variable de entorno o desde los ajustes de la aplicación. La conexión y disponibilidad se comprueban antes de utilizar los modelos. Algunos modelos también admiten búsqueda web.
 
-### Cuenta y almacenamiento
+### Modo local y almacenamiento
 
-- Autenticación y sesiones gestionadas mediante Clerk.
-- Configuración de claves de IA por usuario.
+- Aplicación local de usuario único, sin autenticación ni separación por cuenta.
+- Configuración global de la clave de AI Gateway.
 - Almacenamiento local para desarrollo.
 - Compatibilidad con almacenamiento S3, R2 o MinIO mediante una interfaz compatible con S3.
 - Persistencia de notebooks, fuentes, chats, materiales y configuraciones en PostgreSQL.
@@ -98,7 +98,8 @@ pnpm install
 Copia `backend/.env.example` a `backend/.env.local` y `frontend/.env.example` a `frontend/.env.local` y completa los valores necesarios. Como mínimo, configura:
 
 - `DATABASE_URL`: conexión a PostgreSQL.
-- `CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY`: credenciales de Clerk.
+
+Para guardar una clave de AI Gateway desde la aplicación, configura también `CREDENTIALS_ENCRYPTION_KEY`.
 
 Para el desarrollo local se puede usar el almacenamiento en disco incluido en el proyecto. La configuración correspondiente está en `backend/.env.example`.
 
@@ -175,7 +176,7 @@ Genera tres valores independientes ejecutando este comando tres veces:
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-Usa uno como `POSTGRES_PASSWORD` y el otro como `DEV_STORAGE_TOKEN_SECRET`. Los valores hexadecimales son seguros dentro del `DATABASE_URL` que construye Compose. Configura también `CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY`. Para uso local puedes conservar `APP_PORT=3000` y `APP_ORIGIN=http://localhost:3000`; en un despliegue, `APP_ORIGIN` debe ser el origen HTTPS exacto que abre el navegador, sin barra final.
+Usa los tres valores como `POSTGRES_PASSWORD`, `DEV_STORAGE_TOKEN_SECRET` y `CREDENTIALS_ENCRYPTION_KEY`. Los valores hexadecimales son seguros dentro del `DATABASE_URL` que construye Compose. Para uso local puedes conservar `APP_PORT=3000` y `APP_ORIGIN=http://localhost:3000`; en un despliegue, `APP_ORIGIN` debe ser el origen HTTPS exacto que abre el navegador, sin barra final.
 
 Después ejecuta:
 

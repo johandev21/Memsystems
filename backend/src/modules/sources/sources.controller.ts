@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
@@ -15,8 +14,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { z } from 'zod';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { SourcesService } from './sources.service';
 import { WebSearchJobsService } from './web-search-jobs.service';
 import { WebSearchService } from './web-search.service';
@@ -68,7 +65,6 @@ const webSearchImportSchema = z.object({
 });
 
 @Controller()
-@UseGuards(AuthGuard)
 export class SourcesController {
   constructor(
     private readonly sourcesService: SourcesService,
@@ -77,31 +73,26 @@ export class SourcesController {
   ) {}
 
   @Get('notebooks/:notebookId/sources')
-  async listSources(
-    @CurrentUser('id') userId: string,
-    @Param('notebookId') notebookId: string,
-  ) {
-    return this.sourcesService.list(userId, notebookId);
+  async listSources(@Param('notebookId') notebookId: string) {
+    return this.sourcesService.list(notebookId);
   }
 
   @Post('notebooks/:notebookId/sources/text')
   @UsePipes(new ZodValidationPipe(textSourceSchema))
   async createTextSource(
-    @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
     @Body() body: z.infer<typeof textSourceSchema>,
   ) {
-    return this.sourcesService.createText(userId, notebookId, body);
+    return this.sourcesService.createText(notebookId, body);
   }
 
   @Post('notebooks/:notebookId/sources/url')
   @UsePipes(new ZodValidationPipe(urlSourceSchema))
   async createUrlSource(
-    @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
     @Body() body: z.infer<typeof urlSourceSchema>,
   ) {
-    return this.sourcesService.createUrl(userId, notebookId, body);
+    return this.sourcesService.createUrl(notebookId, body);
   }
 
   @Post('notebooks/:notebookId/sources/file')
@@ -111,7 +102,6 @@ export class SourcesController {
     FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
   )
   async createFileSource(
-    @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
     @UploadedFile() file?: Express.Multer.File,
     @Body('title') title?: string,
@@ -120,7 +110,6 @@ export class SourcesController {
       throw new BadRequestError('File is required');
     }
     return this.sourcesService.createFile(
-      userId,
       notebookId,
       file.buffer,
       file.originalname,
@@ -130,120 +119,89 @@ export class SourcesController {
   }
 
   @Get('sources/:id')
-  async getSource(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.sourcesService.get(userId, id);
+  async getSource(@Param('id') id: string) {
+    return this.sourcesService.get(id);
   }
 
   @Post('sources/:id/reindex')
-  async reindexSource(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    return this.sourcesService.reindex(userId, id);
+  async reindexSource(@Param('id') id: string) {
+    return this.sourcesService.reindex(id);
   }
 
   @Post('sources/:id/retry')
-  async retrySource(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    return this.sourcesService.retry(userId, id);
+  async retrySource(@Param('id') id: string) {
+    return this.sourcesService.retry(id);
   }
 
   @Post('sources/:id/cancel')
-  async cancelSource(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    await this.sourcesService.cancel(userId, id);
+  async cancelSource(@Param('id') id: string) {
+    await this.sourcesService.cancel(id);
   }
 
   @Delete('sources/:id')
-  async deleteSource(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    return this.sourcesService.delete(userId, id);
+  async deleteSource(@Param('id') id: string) {
+    return this.sourcesService.delete(id);
   }
 
   @Get('sources/:id/download')
-  async downloadSource(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    return this.sourcesService.getDownload(userId, id);
+  async downloadSource(@Param('id') id: string) {
+    return this.sourcesService.getDownload(id);
   }
 
   @Patch('sources/:id/speakers')
   @UsePipes(new ZodValidationPipe(updateSpeakerLabelsSchema))
   async updateSpeakerLabels(
-    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() body: z.infer<typeof updateSpeakerLabelsSchema>,
   ) {
-    return this.sourcesService.updateSpeakerLabels(userId, id, body.speakerMap);
+    return this.sourcesService.updateSpeakerLabels(id, body.speakerMap);
   }
 
   @Post('sources/:id/transcript')
   @UsePipes(new ZodValidationPipe(addTranscriptSchema))
   async addTranscript(
-    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() body: z.infer<typeof addTranscriptSchema>,
   ) {
-    return this.sourcesService.addTranscript(userId, id, body.transcriptText);
+    return this.sourcesService.addTranscript(id, body.transcriptText);
   }
 
   @Post('notebooks/:notebookId/sources/reindex')
-  async reindexNotebook(
-    @CurrentUser('id') userId: string,
-    @Param('notebookId') notebookId: string,
-  ) {
-    return this.sourcesService.reindexNotebook(userId, notebookId);
+  async reindexNotebook(@Param('notebookId') notebookId: string) {
+    return this.sourcesService.reindexNotebook(notebookId);
   }
 
   @Post('notebooks/:notebookId/sources/reindex-all')
-  async reindexAllSources(
-    @CurrentUser('id') userId: string,
-    @Param('notebookId') notebookId: string,
-  ) {
-    return this.sourcesService.reindexNotebook(userId, notebookId);
+  async reindexAllSources(@Param('notebookId') notebookId: string) {
+    return this.sourcesService.reindexNotebook(notebookId);
   }
 
   @Post('notebooks/:notebookId/sources/web-search')
   @UsePipes(new ZodValidationPipe(webSearchSchema))
   async webSearch(
-    @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
     @Body() body: z.infer<typeof webSearchSchema>,
   ) {
-    return this.webSearchJobsService.enqueue(userId, notebookId, body);
+    return this.webSearchJobsService.enqueue(notebookId, body);
   }
 
   @Get('notebooks/:notebookId/sources/web-search/latest')
-  async latestWebSearchJob(
-    @CurrentUser('id') userId: string,
-    @Param('notebookId') notebookId: string,
-  ) {
-    return this.webSearchJobsService.latest(userId, notebookId);
+  async latestWebSearchJob(@Param('notebookId') notebookId: string) {
+    return this.webSearchJobsService.latest(notebookId);
   }
 
   @Delete('notebooks/:notebookId/sources/web-search/latest')
-  async dismissWebSearchJob(
-    @CurrentUser('id') userId: string,
-    @Param('notebookId') notebookId: string,
-  ) {
-    await this.webSearchJobsService.dismiss(userId, notebookId);
+  async dismissWebSearchJob(@Param('notebookId') notebookId: string) {
+    await this.webSearchJobsService.dismiss(notebookId);
   }
 
   @Post('notebooks/:notebookId/sources/web-search/import')
   @UsePipes(new ZodValidationPipe(webSearchImportSchema))
   async webSearchImport(
-    @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
     @Body() body: z.infer<typeof webSearchImportSchema>,
   ) {
-    return this.webSearchService.import(userId, notebookId, {
+    return this.webSearchService.import(notebookId, {
       candidates: body.candidates,
       modelId: body.modelId,
       query: body.query ?? '',

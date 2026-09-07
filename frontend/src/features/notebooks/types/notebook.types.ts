@@ -1,6 +1,5 @@
 export interface Notebook {
   id: string;
-  userId: string;
   title: string;
   description: string;
   icon: string;

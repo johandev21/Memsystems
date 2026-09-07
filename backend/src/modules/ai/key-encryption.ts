@@ -9,7 +9,7 @@ const PAYLOAD_PREFIX = 'v1';
 const IV_BYTES = 12;
 
 /**
- * At-rest encryption for per-user gateway keys (AES-256-GCM).
+ * At-rest encryption for the app-wide gateway key (AES-256-GCM).
  *
  * `CREDENTIALS_ENCRYPTION_KEY` accepts a 64-char hex string, a base64
  * 32-byte key, or any passphrase (SHA-256 derived — fine for dev, use a

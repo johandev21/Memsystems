@@ -38,11 +38,18 @@ function useMaterialViewerFullscreen(
   const [isExitingFullscreen, setIsExitingFullscreen] = useState(false);
   const [isChatSuspended, setIsChatSuspended] = useState(false);
   const [hasChatHandoff, setHasChatHandoff] = useState(false);
-  const scrollPositionRef = useRef({ top: 0, left: 0 });
+  const scrollPositionRef = useRef<{
+    top: number;
+    left: number;
+    element: HTMLDivElement | null;
+  }>({ top: 0, left: 0, element: null });
   const isEffectivelyFullscreen = !isChatSuspended && (Boolean(forceFullscreen) || isFullscreen);
 
-  const isActiveViewer = () =>
-    window.matchMedia(forceFullscreen ? "(max-width: 1023px)" : "(min-width: 1024px)").matches;
+  const isActiveViewer = useCallback(
+    () =>
+      window.matchMedia(forceFullscreen ? "(max-width: 1023px)" : "(min-width: 1024px)").matches,
+    [forceFullscreen],
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -53,7 +60,7 @@ function useMaterialViewerFullscreen(
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isEffectivelyFullscreen, forceFullscreen, onClose]);
+  }, [isActiveViewer, isEffectivelyFullscreen, forceFullscreen, onClose]);
 
   useEffect(() => {
     let exitTimer: number | undefined;
@@ -63,6 +70,11 @@ function useMaterialViewerFullscreen(
       if (!detail?.focusChat || !isEffectivelyFullscreen || detail.chatNavigationRetry) return;
       if (!isActiveViewer()) return;
       if (forceFullscreen) {
+        const element = scrollPositionRef.current.element;
+        if (element) {
+          scrollPositionRef.current.top = element.scrollTop;
+          scrollPositionRef.current.left = element.scrollLeft;
+        }
         window.dispatchEvent(
           new CustomEvent("study-material-chat-handoff", {
             detail: { materialId, suspended: true },
@@ -87,7 +99,7 @@ function useMaterialViewerFullscreen(
       window.removeEventListener("send-chat-prompt", handleChatNavigation);
       if (exitTimer) window.clearTimeout(exitTimer);
     };
-  }, [isEffectivelyFullscreen, forceFullscreen, materialId, onClose]);
+  }, [isActiveViewer, isEffectivelyFullscreen, forceFullscreen, materialId]);
 
   useEffect(() => {
     if (!forceFullscreen) return;
@@ -124,6 +136,7 @@ function useMaterialViewerFullscreen(
     isEffectivelyFullscreen,
     isChatSuspended,
     hasChatHandoff,
+    setHasChatHandoff,
     scrollPositionRef,
   };
 }
@@ -151,6 +164,7 @@ export function MaterialViewer({
     isEffectivelyFullscreen,
     isChatSuspended,
     hasChatHandoff,
+    setHasChatHandoff,
     scrollPositionRef,
   } = useMaterialViewerFullscreen(material.id, forceFullscreen, defaultFullscreen, handleClose);
 
@@ -239,7 +253,7 @@ export function MaterialViewer({
   const viewerHeader = (
     <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        {!isEffectivelyFullscreen && (
+        {!isEffectivelyFullscreen && !hasChatHandoff && (
           <Button
             type="button"
             variant="ghost"
@@ -262,10 +276,25 @@ export function MaterialViewer({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={() => {
+              setIsFullscreen(!isFullscreen);
+              if (!isFullscreen) setHasChatHandoff(false);
+            }}
             className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
-            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Mode"}
-            aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
+            title={
+              isFullscreen
+                ? "Exit Fullscreen (Esc)"
+                : hasChatHandoff
+                  ? "Return to Fullscreen"
+                  : "Fullscreen Mode"
+            }
+            aria-label={
+              isFullscreen
+                ? "Exit Fullscreen"
+                : hasChatHandoff
+                  ? "Return to Fullscreen"
+                  : "Fullscreen Mode"
+            }
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>

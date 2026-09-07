@@ -180,7 +180,6 @@ describe("WebSearchComposer", () => {
     const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol", {
       id: "job-failed",
       notebookId: "nb-1",
-      userId: "user-1",
       query: "Nietzsche",
       modelId: "openai/gpt-5.6-sol",
       status: "failed",
@@ -209,7 +208,6 @@ describe("WebSearchComposer", () => {
     mockStartWebSearchJob.mockResolvedValueOnce({
       id: "job-ready",
       notebookId: "nb-1",
-      userId: "user-1",
       query: "Plato",
       modelId: "openai/gpt-5.6-sol",
       status: "ready",
@@ -252,7 +250,6 @@ describe("WebSearchComposer", () => {
     const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol", {
       id: "job-ready",
       notebookId: "nb-1",
-      userId: "user-1",
       query: "Plato",
       modelId: "openai/gpt-5.6-sol",
       status: "ready",
@@ -292,7 +289,6 @@ describe("WebSearchComposer", () => {
     const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol", {
       id: "job-ready",
       notebookId: "nb-1",
-      userId: "user-1",
       query: "Plato",
       modelId: "openai/gpt-5.6-sol",
       status: "ready",

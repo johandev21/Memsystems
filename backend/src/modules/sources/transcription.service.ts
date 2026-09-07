@@ -201,7 +201,7 @@ export class TranscriptionService implements TranscriptionPort {
     const filename = input.fileName || input.filename;
 
     const modelId = await this.resolveAudioModel(input);
-    if (!modelId || !input.userId || !buffer) {
+    if (!modelId || !buffer) {
       return this.deterministicFallback(
         input,
         'Audio model unavailable or not configured. Used deterministic fallback transcript.',
@@ -209,14 +209,9 @@ export class TranscriptionService implements TranscriptionPort {
     }
 
     try {
-      const provider = await this.aiService.getProviderForModel(
-        modelId,
-        input.userId,
-      );
+      const provider = await this.aiService.getProviderForModel(modelId);
       const model = provider.createModel(modelId);
-      const requestOptions = this.aiService.getGatewayRequestOptions(
-        input.userId,
-      );
+      const requestOptions = this.aiService.getGatewayRequestOptions();
 
       const promptText = input.prompt
         ? `Transcribe this audio recording. Additional instructions: ${input.prompt}`
@@ -302,12 +297,8 @@ export class TranscriptionService implements TranscriptionPort {
   private async resolveAudioModel(
     input: TranscriptionInput,
   ): Promise<string | null> {
-    if (!input.userId) {
-      return null;
-    }
-
     try {
-      const snapshot = await this.connectionService.snapshot(input.userId);
+      const snapshot = await this.connectionService.snapshot();
       const audioModels = snapshot.models.filter(
         (m) => m.capabilities?.audioInput === true,
       );

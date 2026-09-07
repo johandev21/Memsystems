@@ -37,8 +37,6 @@ EXPOSE 3000 4000
 # build: compile both applications; type errors must fail the image build
 # ---------------------------------------------------------------------------
 FROM source AS build
-ARG VITE_CLERK_PUBLISHABLE_KEY=pk_test_sample_key
-ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 RUN cd backend && pnpm run build
 RUN cd frontend && pnpm run build
 
@@ -59,6 +57,7 @@ COPY --from=backend-prod-deps /prod/backend/package.json ./package.json
 COPY --from=backend-prod-deps /prod/backend/node_modules ./node_modules
 COPY --from=build /app/backend/dist ./dist
 COPY --from=build /app/backend/drizzle ./drizzle
+COPY --from=build /app/backend/seed ./seed
 EXPOSE 4000
 CMD ["node", "dist/main.js"]
 

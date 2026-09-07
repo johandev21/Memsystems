@@ -5,14 +5,11 @@ import {
   Post,
   Put,
   Req,
-  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { SourceUploadsService } from './source-uploads.service';
 
 const createUploadTargetSchema = z.object({
@@ -31,37 +28,30 @@ const finalizeUploadSchema = z.object({
 
 /** Direct upload control plane. The artifact PUT itself is streamed in local mode. */
 @Controller()
-@UseGuards(AuthGuard)
 export class SourceUploadsController {
   constructor(private readonly uploadsService: SourceUploadsService) {}
 
   @Post('notebooks/:notebookId/source-uploads')
   @UsePipes(new ZodValidationPipe(createUploadTargetSchema))
   createTarget(
-    @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
     @Body() body: z.infer<typeof createUploadTargetSchema>,
   ) {
-    return this.uploadsService.createTarget(userId, notebookId, body);
+    return this.uploadsService.createTarget(notebookId, body);
   }
 
   @Put('source-uploads/:token')
-  uploadLocal(
-    @CurrentUser('id') userId: string,
-    @Param('token') token: string,
-    @Req() request: Request,
-  ) {
-    return this.uploadsService.uploadLocal(userId, token, request);
+  uploadLocal(@Param('token') token: string, @Req() request: Request) {
+    return this.uploadsService.uploadLocal(token, request);
   }
 
   @Post('notebooks/:notebookId/source-uploads/:token/finalize')
   @UsePipes(new ZodValidationPipe(finalizeUploadSchema))
   finalize(
-    @CurrentUser('id') userId: string,
     @Param('notebookId') notebookId: string,
     @Param('token') token: string,
     @Body() body: z.infer<typeof finalizeUploadSchema>,
   ) {
-    return this.uploadsService.finalize(userId, notebookId, token, body.title);
+    return this.uploadsService.finalize(notebookId, token, body.title);
   }
 }

@@ -139,29 +139,24 @@ export const generationStatusEnum = pgEnum('generation_status', [
 
 export const chatRoleEnum = pgEnum('chat_role', ['user', 'assistant']);
 
-export const notebooks = pgTable(
-  'notebooks',
-  {
-    id: varchar('id')
-      .$defaultFn(() => createId())
-      .primaryKey(),
-    userId: text('user_id').notNull(),
-    title: varchar('title', { length: 200 }).notNull(),
-    description: varchar('description', { length: 500 }).default('').notNull(),
-    icon: varchar('icon', { length: 50 }).default('notebook').notNull(),
-    banner: varchar('banner', { length: 2000 }),
-    bannerFocalPoint: jsonb('banner_focal_point').$type<{
-      x: number;
-      y: number;
-    } | null>(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at')
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [index('notebooks_user_id_idx').on(table.userId)],
-);
+export const notebooks = pgTable('notebooks', {
+  id: varchar('id')
+    .$defaultFn(() => createId())
+    .primaryKey(),
+  title: varchar('title', { length: 200 }).notNull(),
+  description: varchar('description', { length: 500 }).default('').notNull(),
+  icon: varchar('icon', { length: 50 }).default('notebook').notNull(),
+  banner: varchar('banner', { length: 2000 }),
+  bannerFocalPoint: jsonb('banner_focal_point').$type<{
+    x: number;
+    y: number;
+  } | null>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
 
 export const sources = pgTable(
   'sources',
@@ -319,7 +314,6 @@ export const webSearchJobs = pgTable(
     notebookId: varchar('notebook_id')
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
-    userId: text('user_id').notNull(),
     query: varchar('query', { length: 500 }).notNull(),
     modelId: varchar('model_id', { length: 200 }).notNull(),
     status: webSearchJobStatusEnum('status').notNull().default('pending'),
@@ -339,7 +333,6 @@ export const webSearchJobs = pgTable(
   },
   (table) => [
     index('web_search_jobs_notebook_id_idx').on(table.notebookId),
-    index('web_search_jobs_user_id_idx').on(table.userId),
     index('web_search_jobs_status_idx').on(table.status),
   ],
 );
@@ -593,7 +586,6 @@ export const sourceUploadIntents = pgTable(
   'source_upload_intents',
   {
     id: varchar('id').primaryKey(),
-    userId: text('user_id').notNull(),
     notebookId: varchar('notebook_id')
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
@@ -610,7 +602,6 @@ export const sourceUploadIntents = pgTable(
     consumedAt: timestamp('consumed_at'),
   },
   (table) => [
-    index('source_upload_intents_user_id_idx').on(table.userId),
     index('source_upload_intents_notebook_id_idx').on(table.notebookId),
     index('source_upload_intents_status_expires_at_idx').on(
       table.status,
@@ -703,19 +694,11 @@ export const notebookChatMessagesRelations = relations(
   }),
 );
 
-export const userSettings = pgTable('user_settings', {
-  userId: text('user_id').primaryKey(),
-  // Per-user Vercel AI Gateway key (AES-256-GCM encrypted, see
-  // UserSettingsService). Funds every model for that user.
+export const appSettings = pgTable('app_settings', {
+  id: text('id').primaryKey().default('global'),
+  // Global Vercel AI Gateway key (AES-256-GCM encrypted, see
+  // UserSettingsService). Funds every model for the single-user app.
   gatewayApiKey: text('gateway_api_key'),
-  // Legacy per-provider BYOK columns (openai/deepseek/anthropic/gemini/kimi).
-  // No longer read or written; kept for data preservation until a follow-up
-  // migration drops them.
-  openaiApiKey: text('openai_api_key'),
-  deepseekApiKey: text('deepseek_api_key'),
-  anthropicApiKey: text('anthropic_api_key'),
-  geminiApiKey: text('gemini_api_key'),
-  kimiApiKey: text('kimi_api_key'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -746,7 +729,7 @@ export const table = {
   studyMaterialFolders,
   generationRequests,
   notebookChatMessages,
-  userSettings,
+  appSettings,
 } as const;
 
 export type Table = typeof table;

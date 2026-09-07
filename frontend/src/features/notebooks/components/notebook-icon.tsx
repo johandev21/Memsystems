@@ -8,7 +8,11 @@ interface NotebookIconProps extends Omit<LucideProps, "ref" | "name"> {
 }
 
 export function NotebookIcon({ name, ...props }: NotebookIconProps) {
-  const normalized = (name || "notebook").toLowerCase().trim().replace(/\s+/g, "-");
+  const normalized = (name || "notebook")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase();
 
   const isValid = normalized in dynamicIconImports;
 

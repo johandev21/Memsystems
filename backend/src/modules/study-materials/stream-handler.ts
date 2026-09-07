@@ -60,7 +60,6 @@ export class StreamHandler {
   ) {}
 
   createStream(
-    userId: string,
     notebookId: string,
     input: {
       kind: StudyMaterialKind;
@@ -136,10 +135,7 @@ export class StreamHandler {
         };
         try {
           const modelId = input.model!;
-          const provider = await this.aiService.getProviderForModel(
-            modelId,
-            userId,
-          );
+          const provider = await this.aiService.getProviderForModel(modelId);
           // Capability flag is a UI/logging hint only — never a gate. Every
           // model attempts native Output.object({ schema }) first
           // (optimistic-try); on native failure we fall back to strict JSON
@@ -151,7 +147,7 @@ export class StreamHandler {
               .find((candidate) => candidate.id === modelId)?.capabilities
               ?.structuredOutput === true;
           model = provider.createModel(modelId);
-          requestOptions = this.aiService.getGatewayRequestOptions(userId);
+          requestOptions = this.aiService.getGatewayRequestOptions();
 
           if (!advertisedStructuredOutput) {
             this.logger.log(

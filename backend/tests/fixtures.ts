@@ -8,36 +8,19 @@ import {
 } from '../src/database/schema';
 import { db } from './db';
 
-export interface SeededUser {
-  id: string;
-  email: string;
-  name: string;
-}
-
-export async function seedUser(
-  overrides: Partial<SeededUser> = {},
-): Promise<SeededUser> {
-  const id = overrides.id ?? createId();
-  const email = overrides.email ?? `test-${id}@example.com`;
-  const name = overrides.name ?? 'Test User';
-  return { id, email, name };
-}
-
 export async function seedNotebook(
-  userId: string,
   overrides: { id?: string; title?: string; description?: string } = {},
-): Promise<{ id: string; userId: string; title: string }> {
+): Promise<{ id: string; title: string }> {
   const id = overrides.id ?? createId();
   const [row] = await db
     .insert(notebooks)
     .values({
       id,
-      userId,
       title: overrides.title ?? 'Test Notebook',
       description: overrides.description ?? '',
     })
     .returning();
-  return { id: row.id, userId: row.userId, title: row.title };
+  return { id: row.id, title: row.title };
 }
 
 export async function seedChatMessage(
