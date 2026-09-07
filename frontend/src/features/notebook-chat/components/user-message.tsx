@@ -48,4 +48,3 @@ export function UserMessage({ message }: { message: UIMessage }) {
     </Message>
   );
 }
-

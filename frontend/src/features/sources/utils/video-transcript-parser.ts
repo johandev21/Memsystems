@@ -17,8 +17,8 @@ export interface ParsedVideoSegment {
  */
 export function parseTimestampToMs(timeStr: string): number {
   if (!timeStr) return 0;
-  const clean = timeStr.trim().replace(',', '.');
-  const parts = clean.split(':');
+  const clean = timeStr.trim().replace(",", ".");
+  const parts = clean.split(":");
 
   if (parts.length === 3) {
     const hours = parseFloat(parts[0]);
@@ -91,12 +91,12 @@ export function parseRawTextToVideoSegments(
 
   // Remove WebVTT header or numeric cue indexes if present
   const lines = rawText
-    .replace(/\r\n/g, '\n')
-    .split('\n')
+    .replace(/\r\n/g, "\n")
+    .split("\n")
     .map((l) => l.trim())
     .filter((l) => {
       if (!l) return false;
-      if (l === 'WEBVTT' || l.startsWith('NOTE') || l.startsWith('STYLE')) return false;
+      if (l === "WEBVTT" || l.startsWith("NOTE") || l.startsWith("STYLE")) return false;
       return true;
     });
 
@@ -116,7 +116,7 @@ export function parseRawTextToVideoSegments(
     // Skip lone integer cue numbers (SRT format)
     if (/^\d+$/.test(line) && i + 1 < lines.length) {
       const nextLine = lines[i + 1];
-      if (TIMESTAMP_LINE_REGEX.test(nextLine) || nextLine.includes('-->')) {
+      if (TIMESTAMP_LINE_REGEX.test(nextLine) || nextLine.includes("-->")) {
         i++;
         continue;
       }
@@ -128,7 +128,7 @@ export function parseRawTextToVideoSegments(
       const speaker = speakerTsMatch[1].trim();
       const startTime = speakerTsMatch[2];
       const endTime = speakerTsMatch[3];
-      const inlineContent = speakerTsMatch[4]?.trim() || '';
+      const inlineContent = speakerTsMatch[4]?.trim() || "";
 
       const startOffsetMs = parseTimestampToMs(startTime);
       const endOffsetMs = endTime ? parseTimestampToMs(endTime) : undefined;
@@ -155,7 +155,7 @@ export function parseRawTextToVideoSegments(
     if (tsMatch) {
       const startTime = tsMatch[1];
       const endTime = tsMatch[2];
-      let remaining = tsMatch[3]?.trim() || '';
+      let remaining = tsMatch[3]?.trim() || "";
 
       const startOffsetMs = parseTimestampToMs(startTime);
       const endOffsetMs = endTime ? parseTimestampToMs(endTime) : undefined;
@@ -164,7 +164,7 @@ export function parseRawTextToVideoSegments(
       const speakerMatch = remaining.match(SPEAKER_PREFIX_REGEX);
       if (speakerMatch) {
         speaker = speakerMatch[1].trim();
-        remaining = speakerMatch[2]?.trim() || '';
+        remaining = speakerMatch[2]?.trim() || "";
       }
 
       let content = remaining;
@@ -201,7 +201,7 @@ export function parseRawTextToVideoSegments(
   // Adjust endOffsetMs for contiguous segments
   const result: ParsedVideoSegment[] = rawSegments.map((seg, idx) => {
     let endOffsetMs = seg.endOffsetMs;
-    if (typeof endOffsetMs !== 'number' || endOffsetMs <= seg.startOffsetMs) {
+    if (typeof endOffsetMs !== "number" || endOffsetMs <= seg.startOffsetMs) {
       const nextSeg = rawSegments[idx + 1];
       if (nextSeg && nextSeg.startOffsetMs > seg.startOffsetMs) {
         endOffsetMs = nextSeg.startOffsetMs;
@@ -216,7 +216,7 @@ export function parseRawTextToVideoSegments(
       id: `raw-seg-${idx + 1}`,
       ordinal: idx + 1,
       content: seg.content,
-      kind: 'transcript',
+      kind: "transcript",
       speaker: seg.speaker,
       startOffsetMs: seg.startOffsetMs,
       endOffsetMs,

@@ -25,9 +25,7 @@ export function MarkdownTable({ children, className }: MarkdownTableProps) {
       role="region"
       aria-label="Scrollable table"
     >
-      <table className="w-full border-collapse text-left text-sm">
-        {children}
-      </table>
+      <table className="w-full border-collapse text-left text-sm">{children}</table>
     </div>
   );
 }

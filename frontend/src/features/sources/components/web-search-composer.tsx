@@ -372,7 +372,10 @@ function SearchResults({
               )}
             >
               {settled ? (
-                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center" title="Added">
+                <span
+                  className="mt-0.5 flex size-4 shrink-0 items-center justify-center"
+                  title="Added"
+                >
                   <Check className="size-3.5 text-success" />
                 </span>
               ) : (

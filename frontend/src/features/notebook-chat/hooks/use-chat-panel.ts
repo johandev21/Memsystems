@@ -311,4 +311,3 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     chatAnnouncement,
   };
 }
-

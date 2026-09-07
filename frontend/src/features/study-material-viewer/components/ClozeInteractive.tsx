@@ -33,7 +33,10 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
       ? "correct"
       : "incorrect";
   const canCheck =
-    !isChecked && blankCount > 0 && values.length === blankCount && values.every((v) => v.trim().length > 0);
+    !isChecked &&
+    blankCount > 0 &&
+    values.length === blankCount &&
+    values.every((v) => v.trim().length > 0);
 
   function checkBlank(user: string, expected: string): boolean {
     const userClean = user.trim().toLowerCase();
@@ -45,9 +48,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
 
   function handleCheckAnswer() {
     if (!canCheck) return;
-    const next = values.map((value, index) =>
-      checkBlank(value, expectedAnswers[index] ?? ""),
-    );
+    const next = values.map((value, index) => checkBlank(value, expectedAnswers[index] ?? ""));
     setResults(next);
     onAnswerChecked?.(next.every(Boolean));
   }
@@ -88,12 +89,8 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
                 value={values[index] ?? ""}
                 onChange={(event) => handleInputChange(index, event.target.value)}
                 onKeyDown={handleInputKeyDown}
-                placeholder={
-                  blankCount === 1 ? "Type the missing word…" : `Blank ${index + 1}`
-                }
-                aria-label={
-                  blankCount === 1 ? "Your Answer" : `Answer for blank ${index + 1}`
-                }
+                placeholder={blankCount === 1 ? "Type the missing word…" : `Blank ${index + 1}`}
+                aria-label={blankCount === 1 ? "Your Answer" : `Answer for blank ${index + 1}`}
                 aria-invalid={isChecked && !results[index]}
                 aria-describedby={isChecked ? feedbackId : undefined}
                 className={cn(
@@ -117,11 +114,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
         </Button>
       </div>
       <div id={feedbackId} role="status" className="w-full text-sm">
-        <ClozeFeedback
-          status={status}
-          expectedAnswers={expectedAnswers}
-          results={results}
-        />
+        <ClozeFeedback status={status} expectedAnswers={expectedAnswers} results={results} />
       </div>
     </div>
   );

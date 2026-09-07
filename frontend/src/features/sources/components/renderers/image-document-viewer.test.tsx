@@ -25,7 +25,8 @@ const mockImageSource: SourceWithContent = {
   contentType: "image/png",
   fileSize: 1024 * 500,
   createdAt: "2026-08-30T12:00:00.000Z",
-  rawText: "# Kinematics Diagram\n\nAcceleration curve for projectile motion.\n\n$$a = \\frac{dv}{dt}$$\n\n### Visual Description\nLine graph showing velocity vs time with shaded area under the curve.",
+  rawText:
+    "# Kinematics Diagram\n\nAcceleration curve for projectile motion.\n\n$$a = \\frac{dv}{dt}$$\n\n### Visual Description\nLine graph showing velocity vs time with shaded area under the curve.",
   s3Key: "uploads/nb-1/kinematics.png",
   sha256: "abc123sha",
   segments: [

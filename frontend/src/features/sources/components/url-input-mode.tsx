@@ -1,4 +1,12 @@
-import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, GraduationCap, Loader2, Video } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  GraduationCap,
+  Loader2,
+  Video,
+} from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -169,7 +177,11 @@ export function UrlInputMode({
             className="flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             <span>Custom Captions & OAuth Options</span>
-            {showAdvanced ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            {showAdvanced ? (
+              <ChevronUp className="size-3.5" />
+            ) : (
+              <ChevronDown className="size-3.5" />
+            )}
           </button>
 
           {showAdvanced && (

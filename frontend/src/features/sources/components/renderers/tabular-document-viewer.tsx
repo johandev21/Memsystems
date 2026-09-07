@@ -38,7 +38,10 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
   const sheets: ParsedSheet[] = [];
 
   for (const section of sheetSections) {
-    const lines = section.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const lines = section
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     if (lines.length === 0) continue;
 
     let sheetName = "Dataset";
@@ -97,19 +100,12 @@ function inferFrontendType(val: string): "number" | "boolean" | "date" | "string
   if (!val) return "string";
   if (val.toLowerCase() === "true" || val.toLowerCase() === "false") return "boolean";
   if (!isNaN(Number(val)) && !isNaN(parseFloat(val))) return "number";
-  if (!isNaN(Date.parse(val)) && val.length >= 8 && /\d{4}|\d{2}[-/]\d{2}/.test(val))
-    return "date";
+  if (!isNaN(Date.parse(val)) && val.length >= 8 && /\d{4}|\d{2}[-/]\d{2}/.test(val)) return "date";
   return "string";
 }
 
-export function TabularDocumentViewer({
-  source,
-  selectedLocator,
-}: TabularDocumentViewerProps) {
-  const sheets = useMemo(
-    () => parseMarkdownTableOrDelimited(source.rawText),
-    [source.rawText],
-  );
+export function TabularDocumentViewer({ source, selectedLocator }: TabularDocumentViewerProps) {
+  const sheets = useMemo(() => parseMarkdownTableOrDelimited(source.rawText), [source.rawText]);
 
   const [activeSheetIndex, setActiveSheetIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -133,9 +129,7 @@ export function TabularDocumentViewer({
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return activeSheet.rows;
     const q = searchQuery.toLowerCase();
-    return activeSheet.rows.filter((row) =>
-      row.some((cell) => cell.toLowerCase().includes(q)),
-    );
+    return activeSheet.rows.filter((row) => row.some((cell) => cell.toLowerCase().includes(q)));
   }, [activeSheet.rows, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
@@ -238,9 +232,7 @@ export function TabularDocumentViewer({
                       className="px-3 py-2.5 font-semibold text-foreground border-r border-border/30 last:border-r-0 whitespace-nowrap"
                     >
                       <div className="flex items-center gap-1.5">
-                        {colType === "number" && (
-                          <Hash className="size-3 text-blue-500 shrink-0" />
-                        )}
+                        {colType === "number" && <Hash className="size-3 text-blue-500 shrink-0" />}
                         {colType === "string" && (
                           <Type className="size-3 text-muted-foreground shrink-0" />
                         )}

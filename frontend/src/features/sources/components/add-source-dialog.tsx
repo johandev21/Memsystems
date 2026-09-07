@@ -119,17 +119,13 @@ export function AddSourceDialog({
           handleSourceCreated(
             uploadId,
             source,
-            isYouTube
-              ? "YouTube video source added"
-              : "URL source added",
+            isYouTube ? "YouTube video source added" : "URL source added",
           ),
         onAbort: () => removePendingUpload(uploadId),
         onError: (error) =>
           handleUploadError(
             uploadId,
-            isYouTube
-              ? "Failed to add YouTube video source"
-              : "Failed to add URL source",
+            isYouTube ? "Failed to add YouTube video source" : "Failed to add URL source",
             error,
           ),
       },
@@ -144,21 +140,17 @@ export function AddSourceDialog({
     const abortController = new AbortController();
     handleCloseAndReset();
 
-    const isVideo =
-      file.type.startsWith("video/") ||
-      /\.(mp4|webm|mov|mkv)$/i.test(file.name);
+    const isVideo = file.type.startsWith("video/") || /\.(mp4|webm|mov|mkv)$/i.test(file.name);
     const isAudio =
       !isVideo &&
-      (file.type.startsWith("audio/") ||
-       /\.(mp3|m4a|wav|webm|aac|ogg)$/i.test(file.name));
+      (file.type.startsWith("audio/") || /\.(mp3|m4a|wav|webm|aac|ogg)$/i.test(file.name));
     const isImage =
       file.type.startsWith("image/") ||
       /\.(png|jpe?g|webp|heic|heif|gif|svg|bmp)$/i.test(file.name);
     const isSlides =
       file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
       /\.pptx$/i.test(file.name);
-    const isEbook =
-      file.type === "application/epub+zip" || /\.epub$/i.test(file.name);
+    const isEbook = file.type === "application/epub+zip" || /\.epub$/i.test(file.name);
     const isTex = file.type === "application/x-tex" || /\.tex$/i.test(file.name);
     const isBib =
       file.type === "text/x-bibtex" ||

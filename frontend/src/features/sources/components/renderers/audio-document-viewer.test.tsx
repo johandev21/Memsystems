@@ -25,7 +25,8 @@ const mockAudioSource: SourceWithContent = {
   contentType: "audio/mpeg",
   fileSize: 1024 * 1024 * 15,
   createdAt: "2026-08-30T12:00:00.000Z",
-  rawText: "[00:00] Prof. Miller: Welcome to lecture four on quantum computing.\n[00:15] Prof. Miller: Today we will explore quantum superposition and qubits.\n[00:45] Alice: Can qubits hold both zero and one states simultaneously?\n[01:00] Prof. Miller: Exactly Alice. Superposition allows a linear combination of states.",
+  rawText:
+    "[00:00] Prof. Miller: Welcome to lecture four on quantum computing.\n[00:15] Prof. Miller: Today we will explore quantum superposition and qubits.\n[00:45] Alice: Can qubits hold both zero and one states simultaneously?\n[01:00] Prof. Miller: Exactly Alice. Superposition allows a linear combination of states.",
   s3Key: "uploads/nb-1/quantum-lecture.mp3",
   sha256: "audio123sha",
   segments: [
@@ -356,9 +357,7 @@ describe("AudioDocumentViewer", () => {
     expect(marks[0].tagName).toBe("MARK");
 
     // Segment 1 (which doesn't contain "superposition") should be filtered out
-    expect(
-      screen.queryByText(/lecture four on quantum computing/),
-    ).toBeNull();
+    expect(screen.queryByText(/lecture four on quantum computing/)).toBeNull();
   });
 
   it("parses rawText into segments when segments array is not provided", () => {

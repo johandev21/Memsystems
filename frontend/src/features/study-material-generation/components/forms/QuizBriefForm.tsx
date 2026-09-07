@@ -1,31 +1,15 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChevronDown,
-  Search,
-  BookOpen,
-  Globe,
-  FileText,
-  ArrowRight,
-  ArrowLeft,
-} from "lucide-react";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import {
-  CTA_BUTTON_CLASS,
-  generationSourceCheckboxClass,
-  generationSourceIconClass,
-  generationSourceOptionClass,
-  optionRowClass,
-} from "./option-row";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
 import { GenerationSourcePopover } from "./generation-source-popover";
 
 // ============================================================================
@@ -222,151 +206,6 @@ export function QuizBriefForm({
       <WizardHeader step={step} onStepChange={setStep} />
       {step === 1 ? renderStepOne() : renderStepTwo()}
     </div>
-  );
-}
-
-// ============================================================================
-// Quiz Source Popover Component
-// ============================================================================
-
-export function QuizSourcePopover({
-  sources,
-  selectedIds,
-  onChange,
-}: {
-  sources: Array<{ id: string; title: string; kind: string }>;
-  selectedIds: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  const [search, setSearch] = useState("");
-
-  const filtered = sources.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
-
-  const allSelected = filtered.length > 0 && filtered.every((s) => selectedIds.includes(s.id));
-
-  const toggleAll = () => {
-    if (allSelected) {
-      const filteredSet = new Set(filtered.map((s) => s.id));
-      onChange(selectedIds.filter((id) => !filteredSet.has(id)));
-    } else {
-      const merged = new Set([...selectedIds, ...filtered.map((s) => s.id)]);
-      onChange(Array.from(merged));
-    }
-  };
-
-  const toggleOne = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((i) => i !== id));
-    } else {
-      onChange([...selectedIds, id]);
-    }
-  };
-
-  function renderHeader() {
-    return (
-      <div className="flex items-center justify-between px-3.5 py-2.5 bg-surface-2">
-        <div className="flex items-center gap-2 flex-1">
-          <Search className="size-4 text-text-faint shrink-0" />
-          <input
-            type="text"
-            placeholder="Search sources..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent text-sm text-text-tertiary placeholder:text-text-faint outline-none w-full"
-          />
-        </div>
-        <div className="flex items-center gap-2 pl-2">
-          <span
-            className="text-xs text-text-tertiary cursor-pointer select-none"
-            onClick={toggleAll}
-          >
-            Select all
-          </span>
-          <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-        </div>
-      </div>
-    );
-  }
-
-  function renderSourceList() {
-    if (sources.length === 0) {
-      return (
-        <div className="p-4 text-center text-xs text-text-faint">
-          No sources in notebook. Quiz will generate using general knowledge.
-        </div>
-      );
-    }
-
-    return (
-      <div className="max-h-[220px] overflow-y-auto p-2 space-y-1">
-        {filtered.map((src) => {
-          const checked = selectedIds.includes(src.id);
-          return (
-            <div
-              key={src.id}
-              onClick={() => toggleOne(src.id)}
-              className={generationSourceOptionClass(checked)}
-            >
-              <div className="flex items-center gap-2 truncate pr-2">
-                {src.kind === "web" ? (
-                  <Globe className={generationSourceIconClass(checked)} />
-                ) : src.kind === "file" ? (
-                  <FileText className={generationSourceIconClass(checked)} />
-                ) : (
-                  <BookOpen className={generationSourceIconClass(checked)} />
-                )}
-                <span className="truncate">{src.title}</span>
-              </div>
-              <Checkbox
-                checked={checked}
-                onCheckedChange={() => toggleOne(src.id)}
-                className={generationSourceCheckboxClass(checked)}
-              />
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  function renderFooter() {
-    return (
-      <div className="p-2.5 bg-surface-2 flex justify-between items-center text-xs text-text-faint">
-        <span>{selectedIds.length} selected</span>
-      </div>
-    );
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 rounded-2xl border border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3 hover:text-text-secondary text-xs font-medium gap-2 px-3.5 justify-between w-full"
-          >
-            <div className="flex items-center gap-2 truncate">
-              <BookOpen className="size-4 text-primary shrink-0" />
-              <span className="truncate">
-                {selectedIds.length === 0
-                  ? "None selected (General Knowledge)"
-                  : `${selectedIds.length} source${selectedIds.length !== 1 ? "s" : ""} selected`}
-              </span>
-            </div>
-            <ChevronDown className="size-4 text-text-faint shrink-0" />
-          </Button>
-        }
-      />
-      <PopoverContent
-        align="start"
-        className="w-[320px] p-0 bg-surface-1 border-surface-border shadow-xl rounded-2xl overflow-hidden"
-      >
-        {renderHeader()}
-        {renderSourceList()}
-        {renderFooter()}
-      </PopoverContent>
-    </Popover>
   );
 }
 

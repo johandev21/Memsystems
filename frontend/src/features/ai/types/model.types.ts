@@ -24,4 +24,3 @@ export interface ModelOption {
 export interface ModelsResponse {
   models: ModelOption[];
 }
-

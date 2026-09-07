@@ -66,7 +66,10 @@ vi.mock("@/features/notebooks", async (importOriginal) => {
   return {
     ...actual,
     useModelPersistence: () => ({ model: null, setModel: vi.fn() }),
-    notebookQueryOptions: vi.fn((id: string) => ({ queryKey: ["notebooks", id], queryFn: vi.fn() })),
+    notebookQueryOptions: vi.fn((id: string) => ({
+      queryKey: ["notebooks", id],
+      queryFn: vi.fn(),
+    })),
   };
 });
 

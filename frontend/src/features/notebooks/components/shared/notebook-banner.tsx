@@ -176,9 +176,11 @@ export function NotebookBanner({
         );
       } else if (bannerRemoved && bannerUrl) {
         requests.push(
-          fetchApi(`/api/notebooks/${notebookId}/banner`, { method: "DELETE" }).then((response: Response) => {
-            if (!response.ok) throw new Error("Failed to remove banner");
-          }),
+          fetchApi(`/api/notebooks/${notebookId}/banner`, { method: "DELETE" }).then(
+            (response: Response) => {
+              if (!response.ok) throw new Error("Failed to remove banner");
+            },
+          ),
         );
       }
 

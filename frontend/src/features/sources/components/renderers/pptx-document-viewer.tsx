@@ -103,8 +103,7 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
   }, [filteredSegments, activeSlideNumber]);
 
   const warningMessage =
-    source.processingErrorMessage ||
-    (segments.length === 0 ? undefined : null);
+    source.processingErrorMessage || (segments.length === 0 ? undefined : null);
 
   if (segments.length === 0) {
     return (
@@ -221,7 +220,8 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
                     Slide {activeSlideNumber}
                   </Badge>
                   <span className="text-[11px] text-muted-foreground">
-                    {currentSlideSegments.length} {currentSlideSegments.length === 1 ? "block" : "blocks"}
+                    {currentSlideSegments.length}{" "}
+                    {currentSlideSegments.length === 1 ? "block" : "blocks"}
                   </span>
                 </div>
                 {currentSlideSegments.length === 0 ? (
@@ -246,11 +246,19 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
                         >
                           {seg.kind === "heading" ? (
                             <h3 className="font-bold text-foreground text-base tracking-tight">
-                              {searchQuery ? <HighlightMatches text={seg.content} query={searchQuery} /> : seg.content}
+                              {searchQuery ? (
+                                <HighlightMatches text={seg.content} query={searchQuery} />
+                              ) : (
+                                seg.content
+                              )}
                             </h3>
                           ) : (
                             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                              {searchQuery ? <HighlightMatches text={seg.content} query={searchQuery} /> : seg.content}
+                              {searchQuery ? (
+                                <HighlightMatches text={seg.content} query={searchQuery} />
+                              ) : (
+                                seg.content
+                              )}
                             </p>
                           )}
                           <span className="mt-2 inline-flex text-[10px] font-mono text-muted-foreground">
@@ -292,10 +300,7 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
             <h3 className="text-xs font-semibold text-foreground">Slide Segments</h3>
             <p className="text-[11px] text-muted-foreground">{filteredSegments.length} segments</p>
           </div>
-          <div
-            ref={segmentContainerRef}
-            className="flex-1 overflow-y-auto p-2"
-          >
+          <div ref={segmentContainerRef} className="flex-1 overflow-y-auto p-2">
             {filteredSegments.length === 0 ? (
               <p className="py-8 text-center text-xs text-muted-foreground">
                 No segments match &quot;{searchQuery}&quot;.
@@ -345,7 +350,11 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
                         <p className="line-clamp-3 text-xs leading-relaxed text-foreground/80">
                           {searchQuery ? (
                             <>
-                              ↳ <HighlightMatches text={seg.content.slice(0, 80)} query={searchQuery} />
+                              ↳{" "}
+                              <HighlightMatches
+                                text={seg.content.slice(0, 80)}
+                                query={searchQuery}
+                              />
                             </>
                           ) : (
                             `↳ ${seg.content.slice(0, 80)}${seg.content.length > 80 ? "…" : ""}`
@@ -369,7 +378,8 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
                       data-active={isActive ? "true" : undefined}
                       onClick={() => handleSegmentClick(seg)}
                       ref={(el) => {
-                        if (el) segmentRefs.current.set(seg.slideNumber, el as unknown as HTMLDivElement);
+                        if (el)
+                          segmentRefs.current.set(seg.slideNumber, el as unknown as HTMLDivElement);
                       }}
                       className={cn(
                         "w-full text-left rounded-lg border p-2.5 transition-colors cursor-pointer",
@@ -386,7 +396,8 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
                       <p className="line-clamp-3 text-xs leading-relaxed text-foreground/80">
                         {searchQuery ? (
                           <>
-                            ↳ <HighlightMatches text={seg.content.slice(0, 80)} query={searchQuery} />
+                            ↳{" "}
+                            <HighlightMatches text={seg.content.slice(0, 80)} query={searchQuery} />
                           </>
                         ) : (
                           `↳ ${seg.content.slice(0, 80)}${seg.content.length > 80 ? "…" : ""}`

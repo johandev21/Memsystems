@@ -47,12 +47,14 @@ export function MarkdownRenderer({
   ...props
 }: MarkdownRendererProps) {
   const effectiveRemarkPlugins = useMemo(
-    () => (remarkPlugins?.length ? [...defaultRemarkPlugins, ...remarkPlugins] : defaultRemarkPlugins),
+    () =>
+      remarkPlugins?.length ? [...defaultRemarkPlugins, ...remarkPlugins] : defaultRemarkPlugins,
     [remarkPlugins],
   );
 
   const effectiveRehypePlugins = useMemo(
-    () => (rehypePlugins?.length ? [...defaultRehypePlugins, ...rehypePlugins] : defaultRehypePlugins),
+    () =>
+      rehypePlugins?.length ? [...defaultRehypePlugins, ...rehypePlugins] : defaultRehypePlugins,
     [rehypePlugins],
   );
 
@@ -85,4 +87,3 @@ export function MarkdownRenderer({
     markdown
   );
 }
-

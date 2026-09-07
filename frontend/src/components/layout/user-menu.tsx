@@ -39,8 +39,7 @@ export function UserMenu() {
     }
   }
 
-  const displayName =
-    user?.fullName || user?.firstName || user?.username || "Account";
+  const displayName = user?.fullName || user?.firstName || user?.username || "Account";
   const primaryEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
   return (
@@ -54,9 +53,7 @@ export function UserMenu() {
           ) : (
             <Avatar size="sm">
               <AvatarImage src={user?.imageUrl} alt={displayName} />
-              <AvatarFallback>
-                {displayName.charAt(0)?.toUpperCase() || "U"}
-              </AvatarFallback>
+              <AvatarFallback>{displayName.charAt(0)?.toUpperCase() || "U"}</AvatarFallback>
             </Avatar>
           )}
         </div>
@@ -73,17 +70,11 @@ export function UserMenu() {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => openUserProfile()}
-          className="cursor-pointer"
-        >
+        <DropdownMenuItem onClick={() => openUserProfile()} className="cursor-pointer">
           <UserIcon className="mr-2 size-4" />
           <span>Manage Account</span>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => navigate({ to: "/settings" })}
-          className="cursor-pointer"
-        >
+        <DropdownMenuItem onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
           <Settings className="mr-2 size-4" />
           <span>Settings</span>
         </DropdownMenuItem>
@@ -104,4 +95,3 @@ export function UserMenu() {
     </DropdownMenu>
   );
 }
-

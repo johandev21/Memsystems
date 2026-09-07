@@ -189,11 +189,7 @@ export function SourceContentViewer({
         forceFullscreen={forceFullscreen}
         onClose={onClose}
       />
-      <SourceDocument
-        source={source}
-        controls={readerControls}
-        selectedLocator={selectedLocator}
-      />
+      <SourceDocument source={source} controls={readerControls} selectedLocator={selectedLocator} />
     </div>
   );
 }
@@ -286,7 +282,6 @@ function useSourceReaderControls({
     toggleFullscreen: () => setIsFullscreen((value) => !value),
   };
 }
-
 
 function SourceReaderError({ onClose }: { onClose: () => void }) {
   return (

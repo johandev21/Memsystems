@@ -2,7 +2,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function PracticeProblemsSkeleton() {
   return (
-    <div data-slot="material-skeleton-practice-problems" className="mx-auto flex w-full max-w-3xl flex-col gap-4" aria-hidden="true">
+    <div
+      data-slot="material-skeleton-practice-problems"
+      className="mx-auto flex w-full max-w-3xl flex-col gap-4"
+      aria-hidden="true"
+    >
       <Skeleton className="h-6 w-1/2" />
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-5/6" />

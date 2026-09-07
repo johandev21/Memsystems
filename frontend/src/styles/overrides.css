@@ -138,5 +138,3 @@ html[data-theme="default"] .dark [data-slot="alert-dialog-content"] {
 .animate-route-progress {
   animation: route-progress 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
-
-

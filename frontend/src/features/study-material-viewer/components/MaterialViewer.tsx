@@ -58,7 +58,8 @@ function useMaterialViewerFullscreen(
   useEffect(() => {
     let exitTimer: number | undefined;
     const handleChatNavigation = (event: Event) => {
-      const detail = (event as CustomEvent<{ focusChat?: boolean; chatNavigationRetry?: boolean }>).detail;
+      const detail = (event as CustomEvent<{ focusChat?: boolean; chatNavigationRetry?: boolean }>)
+        .detail;
       if (!detail?.focusChat || !isEffectivelyFullscreen || detail.chatNavigationRetry) return;
       if (!isActiveViewer()) return;
       if (forceFullscreen) {
@@ -101,11 +102,11 @@ function useMaterialViewerFullscreen(
           element.scrollLeft = scrollPositionRef.current.left;
         }
       });
-        window.dispatchEvent(
-          new CustomEvent("study-material-chat-handoff", {
+      window.dispatchEvent(
+        new CustomEvent("study-material-chat-handoff", {
           detail: { materialId, suspended: false },
-          }),
-        );
+        }),
+      );
     };
     window.addEventListener("restore-study-material", handleRestore);
     return () => window.removeEventListener("restore-study-material", handleRestore);
@@ -266,11 +267,7 @@ export function MaterialViewer({
             title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Mode"}
             aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
           >
-            {isFullscreen ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         )}
         {isEffectivelyFullscreen && (
@@ -303,7 +300,9 @@ export function MaterialViewer({
       <div
         ref={contentScrollRef}
         className={`flex-1 overflow-y-auto overscroll-contain ${
-          isEffectivelyFullscreen ? "p-3 sm:p-4 md:p-8 max-w-7xl mx-auto w-full" : "p-3 sm:p-4 md:p-6"
+          isEffectivelyFullscreen
+            ? "p-3 sm:p-4 md:p-8 max-w-7xl mx-auto w-full"
+            : "p-3 sm:p-4 md:p-6"
         }`}
       >
         {renderMaterialContent()}

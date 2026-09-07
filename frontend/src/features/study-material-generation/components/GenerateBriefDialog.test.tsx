@@ -205,6 +205,8 @@ describe("GenerateBriefDialog", () => {
     expect(screen.queryByText("Select Model")).toBeNull();
     expect(screen.queryByText("AI Intelligence Model")).toBeNull();
 
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+
     const instructions = screen.getByPlaceholderText(
       "What do you want to learn? Describe the topic, goal, or target skill...",
     );
@@ -253,6 +255,8 @@ describe("GenerateBriefDialog", () => {
 
     await user.click(screen.getByRole("button", { name: /Basic/ }));
     await user.click(screen.getByRole("button", { name: /Grouped colors/ }));
+
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
 
     const instructions = screen.getByPlaceholderText(
       "What should this map explain? Describe the topic, question, or connections...",

@@ -15,8 +15,16 @@ import { GenerationSourcePopover } from "./generation-source-popover";
 type StudyGuideFormat = "detailed" | "revision";
 
 const FORMAT_OPTIONS = [
-  { id: "detailed" as StudyGuideFormat, title: "Detailed", desc: "Explanations, examples & takeaways" },
-  { id: "revision" as StudyGuideFormat, title: "Revision sheet", desc: "Essential concepts for quick review" },
+  {
+    id: "detailed" as StudyGuideFormat,
+    title: "Detailed",
+    desc: "Explanations, examples & takeaways",
+  },
+  {
+    id: "revision" as StudyGuideFormat,
+    title: "Revision sheet",
+    desc: "Essential concepts for quick review",
+  },
 ] as const;
 
 const SECTION_PRESETS = [4, 6, 8, 12] as const;
@@ -233,7 +241,8 @@ export function StudyGuideBriefForm({
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="brief-study-guide" className="text-sm font-medium text-text-primary">
-                Custom Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
+                Custom Instructions
+                {!hasSources && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <Textarea
                 id="brief-study-guide"
@@ -246,9 +255,7 @@ export function StudyGuideBriefForm({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-text-tertiary">
-                Destination Folder
-              </Label>
+              <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
               <FolderPicker
                 notebookId={notebookId}
                 value={value.folderId}

@@ -6,10 +6,7 @@ import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { AssistantMessage } from "./assistant-message";
 import { UserMessage } from "./user-message";
 import { groupMessagesIntoTurns } from "../types/chat-turn.types";
-import {
-  GATEWAY_TOP_UP_URL,
-  classifyChatError,
-} from "../utils/chat-error";
+import { GATEWAY_TOP_UP_URL, classifyChatError } from "../utils/chat-error";
 
 export interface ChatMessageListProps {
   messages: UIMessage[];
@@ -95,13 +92,7 @@ export function ChatMessageList({
   );
 }
 
-function ChatErrorCard({
-  message,
-  onRegenerate,
-}: {
-  message?: string;
-  onRegenerate: () => void;
-}) {
+function ChatErrorCard({ message, onRegenerate }: { message?: string; onRegenerate: () => void }) {
   const classified = useMemo(() => classifyChatError(message), [message]);
 
   return (
@@ -109,9 +100,7 @@ function ChatErrorCard({
       <p className="font-semibold">{classified.title}</p>
       <p className="mt-1 leading-5 opacity-90">{classified.message}</p>
       {classified.showModelHint && (
-        <p className="mt-1 leading-5 opacity-75">
-          Tip: cheaper models are throttled less often.
-        </p>
+        <p className="mt-1 leading-5 opacity-75">Tip: cheaper models are throttled less often.</p>
       )}
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <button

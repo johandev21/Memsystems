@@ -73,9 +73,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
   const hasAssistantPlaceholder =
     lastMessage?.role === "assistant" && (lastMessage.parts?.length ?? 0) > 0;
   const showPendingIndicator = status === "submitted" && !hasAssistantPlaceholder;
-  const pendingLabel = selectedModelSupportsReasoning
-    ? "Thinking…"
-    : "Waiting for response…";
+  const pendingLabel = selectedModelSupportsReasoning ? "Thinking…" : "Waiting for response…";
 
   const notebookTitle = notebook?.title ?? "Notebook";
   const isUntitled = notebookTitle.toLowerCase() === "untitled";
@@ -167,8 +165,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
                 role="status"
                 className="mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
               >
-                AI Gateway is busy — responses may fail. Waiting a bit and retrying usually
-                works.
+                AI Gateway is busy — responses may fail. Waiting a bit and retrying usually works.
               </div>
             )}
             <ClearHistoryDialog

@@ -51,7 +51,10 @@ const quiz: StudyMaterialDTO = {
   },
 };
 
-function renderViewer(material: StudyMaterialDTO, options?: { defaultFullscreen?: boolean; forceFullscreen?: boolean }) {
+function renderViewer(
+  material: StudyMaterialDTO,
+  options?: { defaultFullscreen?: boolean; forceFullscreen?: boolean },
+) {
   const onClose = vi.fn();
   render(<MaterialViewer material={material} onClose={onClose} {...options} />);
   return onClose;
@@ -109,6 +112,8 @@ describe("MaterialViewer Explain handoff", () => {
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText("Which process uses light energy?")).toBeTruthy();
-    expect((screen.getByRole("radio", { name: "A. Photosynthesis" }) as HTMLInputElement).checked).toBe(true);
+    expect(
+      (screen.getByRole("radio", { name: "A. Photosynthesis" }) as HTMLInputElement).checked,
+    ).toBe(true);
   });
 });

@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 const STORAGE_KEY = "memsystems-selected-model";
 export const DEFAULT_MODEL_ID = "openai/gpt-5.6-sol";
@@ -66,9 +59,7 @@ export function NotebookModelProvider({
   });
 
   useEffect(() => {
-    setSelectedModelState(
-      resolveModelId(initialModel ?? getPersistedModel(notebookId)),
-    );
+    setSelectedModelState(resolveModelId(initialModel ?? getPersistedModel(notebookId)));
   }, [notebookId, initialModel]);
 
   const setSelectedModel = useCallback(
@@ -86,11 +77,7 @@ export function NotebookModelProvider({
     setModel: setSelectedModel,
   };
 
-  return (
-    <NotebookModelContext.Provider value={value}>
-      {children}
-    </NotebookModelContext.Provider>
-  );
+  return <NotebookModelContext.Provider value={value}>{children}</NotebookModelContext.Provider>;
 }
 
 export function useNotebookModel(): NotebookModelContextValue {

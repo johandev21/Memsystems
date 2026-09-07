@@ -322,7 +322,14 @@ function getGenerationSubtitle(generation: Generation, totalSourceCount: number)
 }
 
 function isInScope(kind: StudyMaterialKind): boolean {
-  return ["quiz", "simple_flashcard", "roadmap", "mind_map", "slides", "study_guide", "practice_problems", "case_study"].includes(
-    kind,
-  );
+  return [
+    "quiz",
+    "simple_flashcard",
+    "roadmap",
+    "mind_map",
+    "slides",
+    "study_guide",
+    "practice_problems",
+    "case_study",
+  ].includes(kind);
 }

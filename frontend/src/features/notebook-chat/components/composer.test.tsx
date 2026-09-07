@@ -71,9 +71,7 @@ describe("Composer", () => {
 
     await user.click(submit);
 
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "Explain this source" }),
-    );
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ text: "Explain this source" }));
   });
 
   it("exposes the streaming stop state without requiring input", async () => {

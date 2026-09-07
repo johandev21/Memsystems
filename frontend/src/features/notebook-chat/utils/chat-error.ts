@@ -15,10 +15,8 @@ const RATE_LIMIT_PATTERNS = /rate.?limit|too many requests|429|quota exceeded/i;
 const ENTITLEMENT_PATTERNS =
   /do not have access|not have access|entitlement|forbidden|upgrade to paid/i;
 const SUBSTITUTION_PATTERNS = /model_substituted|served .* instead of the requested/i;
-const RETIRED_PATTERNS =
-  /model not found|no such model|retired|deprecated|model .* removed/i;
-const AUTH_PATTERNS =
-  /invalid api key|incorrect api key|unauthorized|authentication/i;
+const RETIRED_PATTERNS = /model not found|no such model|retired|deprecated|model .* removed/i;
+const AUTH_PATTERNS = /invalid api key|incorrect api key|unauthorized|authentication/i;
 const CAPABILITY_PATTERNS =
   /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool|tools? (?:are|is) not supported/i;
 
@@ -59,8 +57,7 @@ function substituted(): ClassifiedChatError {
 function retired(): ClassifiedChatError {
   return {
     title: "Model no longer available",
-    message:
-      "This model was retired from the gateway. Pick a current model above and retry.",
+    message: "This model was retired from the gateway. Pick a current model above and retry.",
     showTopUp: false,
     showSettings: false,
     showModelHint: false,
@@ -123,9 +120,7 @@ function classifyText(text: string, model?: string): ClassifiedChatError | null 
  * AI SDK / gateway messages) into a friendly card. Never surfaces raw
  * technical text except for our own validation messages.
  */
-export function classifyChatError(
-  rawMessage: string | undefined | null,
-): ClassifiedChatError {
+export function classifyChatError(rawMessage: string | undefined | null): ClassifiedChatError {
   const message = (rawMessage ?? "").trim();
   if (message.startsWith("{")) {
     try {
@@ -135,8 +130,7 @@ export function classifyChatError(
         model?: unknown;
       };
       const code = typeof parsed.code === "string" ? parsed.code : "";
-      const inner =
-        typeof parsed.error === "string" ? parsed.error : "";
+      const inner = typeof parsed.error === "string" ? parsed.error : "";
       const model =
         typeof parsed.model === "string" && parsed.model.trim() !== ""
           ? parsed.model.trim()

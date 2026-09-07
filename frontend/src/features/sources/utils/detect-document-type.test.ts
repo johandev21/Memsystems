@@ -232,4 +232,3 @@ describe("detect-document-type utilities", () => {
     });
   });
 });
-

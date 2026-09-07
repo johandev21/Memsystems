@@ -19,9 +19,7 @@ export function useWebSearchModel(
     [models, selectedModel],
   );
 
-  const isSupported = Boolean(
-    currentModel && supportsWebSearch(currentModel),
-  );
+  const isSupported = Boolean(currentModel && supportsWebSearch(currentModel));
 
   return {
     isSupported,

@@ -413,7 +413,8 @@ function getIcon(source: Source) {
   }
   if (
     source.modality === "slides" ||
-    source.contentType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    source.contentType ===
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
     /\.pptx$/i.test(source.title)
   ) {
     return Presentation;
@@ -425,10 +426,7 @@ function getIcon(source: Source) {
   ) {
     return BookOpen;
   }
-  if (
-    source.contentType === "application/x-tex" ||
-    /\.tex$/i.test(source.title)
-  ) {
+  if (source.contentType === "application/x-tex" || /\.tex$/i.test(source.title)) {
     return Code;
   }
   if (

@@ -1,4 +1,7 @@
-import type { StudyGuideGenerationOptions, CaseStudyGenerationOptions } from "@/features/study-material-viewer";
+import type {
+  StudyGuideGenerationOptions,
+  CaseStudyGenerationOptions,
+} from "@/features/study-material-viewer";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 import { getApiUrl } from "@/shared/api";
 

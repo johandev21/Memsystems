@@ -30,14 +30,20 @@ describe("generation startup", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it.each([
-    [400, JSON.stringify({ error: "Select a source or enter a brief for your case study." }), "Select a source or enter a brief for your case study."],
+    [
+      400,
+      JSON.stringify({ error: "Select a source or enter a brief for your case study." }),
+      "Select a source or enter a brief for your case study.",
+    ],
     [500, JSON.stringify({ error: "Internal server error" }), "Internal server error"],
     [502, "<html>Bad gateway</html>", "Generation failed (502)"],
     [503, JSON.stringify({ error: { detail: "unavailable" } }), "Generation failed (503)"],
   ])("reports the HTTP %s error before requiring an ID", async (status, body, message) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status })));
 
-    await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, new QueryClient());
+    await useGenerationStore
+      .getState()
+      .startBackgroundGeneration("notebook-1", input, new QueryClient());
 
     expect(toast.error).toHaveBeenCalledExactlyOnceWith(`Generation failed: ${message}`);
     expect(Object.values(useGenerationStore.getState().generations)).toEqual([
@@ -48,34 +54,48 @@ describe("generation startup", () => {
 
   it("reports network failures", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Failed to fetch")));
-    await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, new QueryClient());
+    await useGenerationStore
+      .getState()
+      .startBackgroundGeneration("notebook-1", input, new QueryClient());
     expect(toast.error).toHaveBeenCalledExactlyOnceWith("Generation failed: Failed to fetch");
   });
 
   it("still detects a successful response missing its request ID", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 200 })));
-    await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, new QueryClient());
-    expect(toast.error).toHaveBeenCalledExactlyOnceWith("Generation failed: No request ID returned from server");
+    await useGenerationStore
+      .getState()
+      .startBackgroundGeneration("notebook-1", input, new QueryClient());
+    expect(toast.error).toHaveBeenCalledExactlyOnceWith(
+      "Generation failed: No request ID returned from server",
+    );
   });
 
-  it.each(["X-Request-Id", "X-Generation-Request-Id"])("streams and completes using %s", async (header) => {
-    const body = [
-      JSON.stringify({ title: "philosophy-case-study" }),
-      JSON.stringify({ done: true, requestId: "request-1", materialId: "material-1" }),
-    ].join("\n");
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, {
-      headers: { [header]: "request-1" },
-    })));
-    const client = new QueryClient();
-    const invalidate = vi.spyOn(client, "invalidateQueries");
+  it.each(["X-Request-Id", "X-Generation-Request-Id"])(
+    "streams and completes using %s",
+    async (header) => {
+      const body = [
+        JSON.stringify({ title: "philosophy-case-study" }),
+        JSON.stringify({ done: true, requestId: "request-1", materialId: "material-1" }),
+      ].join("\n");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(body, {
+            headers: { [header]: "request-1" },
+          }),
+        ),
+      );
+      const client = new QueryClient();
+      const invalidate = vi.spyOn(client, "invalidateQueries");
 
-    await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, client);
+      await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, client);
 
-    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["study-materials", "notebook-1"] });
-    expect(useGenerationStore.getState().generations).toEqual({});
-    expect(toast.error).not.toHaveBeenCalled();
-  });
+      await vi.waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["study-materials", "notebook-1"] });
+      expect(useGenerationStore.getState().generations).toEqual({});
+      expect(toast.error).not.toHaveBeenCalled();
+    },
+  );
 
   it("treats EOF without done as an error instead of streaming forever", async () => {
     const body = [JSON.stringify({ title: "philosophy-case-study" })].join("\n");
@@ -84,7 +104,9 @@ describe("generation startup", () => {
       vi.fn().mockResolvedValue(new Response(body, { headers: { "X-Request-Id": "request-eof" } })),
     );
 
-    await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, new QueryClient());
+    await useGenerationStore
+      .getState()
+      .startBackgroundGeneration("notebook-1", input, new QueryClient());
 
     await vi.waitFor(() =>
       expect(Object.values(useGenerationStore.getState().generations)).toEqual([
@@ -121,12 +143,16 @@ describe("generation stall timeout", () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(new ReadableStream({}), { headers: { "X-Request-Id": "request-stall" } }),
-      ),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(new ReadableStream({}), { headers: { "X-Request-Id": "request-stall" } }),
+        ),
     );
 
-    await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, new QueryClient());
+    await useGenerationStore
+      .getState()
+      .startBackgroundGeneration("notebook-1", input, new QueryClient());
     expect(useGenerationStore.getState().generations["request-stall"]?.status).toBe("streaming");
 
     await vi.advanceTimersByTimeAsync(GENERATION_STALL_TIMEOUT_MS);

@@ -8,202 +8,200 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as HomeRouteImport } from './routes/home'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as NotebooksIndexRouteImport } from './routes/notebooks.index'
-import { Route as NotebooksNotebookIdRouteImport } from './routes/notebooks.$notebookId'
-import { Route as SettingsIndexRouteImport } from './routes/settings.index'
-import { Route as SettingsConnectionRouteImport } from './routes/settings.connection'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as HomeRouteImport } from "./routes/home";
+import { Route as LoginRouteImport } from "./routes/login";
+import { Route as SettingsRouteImport } from "./routes/settings";
+import { Route as NotebooksIndexRouteImport } from "./routes/notebooks.index";
+import { Route as NotebooksNotebookIdRouteImport } from "./routes/notebooks.$notebookId";
+import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
+import { Route as SettingsConnectionRouteImport } from "./routes/settings.connection";
 
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const HomeRoute = HomeRouteImport.update({
-  id: '/home',
-  path: '/home',
+  id: "/home",
+  path: "/home",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+  id: "/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+  id: "/settings",
+  path: "/settings",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const NotebooksIndexRoute = NotebooksIndexRouteImport.update({
-  id: '/notebooks/',
-  path: '/notebooks/',
+  id: "/notebooks/",
+  path: "/notebooks/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const NotebooksNotebookIdRoute = NotebooksNotebookIdRouteImport.update({
-  id: '/notebooks/$notebookId',
-  path: '/notebooks/$notebookId',
+  id: "/notebooks/$notebookId",
+  path: "/notebooks/$notebookId",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => SettingsRoute,
-} as any)
+} as any);
 const SettingsConnectionRoute = SettingsConnectionRouteImport.update({
-  id: '/connection',
-  path: '/connection',
+  id: "/connection",
+  path: "/connection",
   getParentRoute: () => SettingsRoute,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/home': typeof HomeRoute
-  '/login': typeof LoginRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/notebooks/$notebookId': typeof NotebooksNotebookIdRoute
-  '/settings/connection': typeof SettingsConnectionRoute
-  '/notebooks/': typeof NotebooksIndexRoute
-  '/settings/': typeof SettingsIndexRoute
+  "/": typeof IndexRoute;
+  "/home": typeof HomeRoute;
+  "/login": typeof LoginRoute;
+  "/settings": typeof SettingsRouteWithChildren;
+  "/notebooks/$notebookId": typeof NotebooksNotebookIdRoute;
+  "/settings/connection": typeof SettingsConnectionRoute;
+  "/notebooks/": typeof NotebooksIndexRoute;
+  "/settings/": typeof SettingsIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/home': typeof HomeRoute
-  '/login': typeof LoginRoute
-  '/notebooks/$notebookId': typeof NotebooksNotebookIdRoute
-  '/settings/connection': typeof SettingsConnectionRoute
-  '/notebooks': typeof NotebooksIndexRoute
-  '/settings': typeof SettingsIndexRoute
+  "/": typeof IndexRoute;
+  "/home": typeof HomeRoute;
+  "/login": typeof LoginRoute;
+  "/notebooks/$notebookId": typeof NotebooksNotebookIdRoute;
+  "/settings/connection": typeof SettingsConnectionRoute;
+  "/notebooks": typeof NotebooksIndexRoute;
+  "/settings": typeof SettingsIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/home': typeof HomeRoute
-  '/login': typeof LoginRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/notebooks/$notebookId': typeof NotebooksNotebookIdRoute
-  '/settings/connection': typeof SettingsConnectionRoute
-  '/notebooks/': typeof NotebooksIndexRoute
-  '/settings/': typeof SettingsIndexRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/home": typeof HomeRoute;
+  "/login": typeof LoginRoute;
+  "/settings": typeof SettingsRouteWithChildren;
+  "/notebooks/$notebookId": typeof NotebooksNotebookIdRoute;
+  "/settings/connection": typeof SettingsConnectionRoute;
+  "/notebooks/": typeof NotebooksIndexRoute;
+  "/settings/": typeof SettingsIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/home'
-    | '/login'
-    | '/settings'
-    | '/notebooks/$notebookId'
-    | '/settings/connection'
-    | '/notebooks/'
-    | '/settings/'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/home"
+    | "/login"
+    | "/settings"
+    | "/notebooks/$notebookId"
+    | "/settings/connection"
+    | "/notebooks/"
+    | "/settings/";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/home'
-    | '/login'
-    | '/notebooks/$notebookId'
-    | '/settings/connection'
-    | '/notebooks'
-    | '/settings'
+    | "/"
+    | "/home"
+    | "/login"
+    | "/notebooks/$notebookId"
+    | "/settings/connection"
+    | "/notebooks"
+    | "/settings";
   id:
-    | '__root__'
-    | '/'
-    | '/home'
-    | '/login'
-    | '/settings'
-    | '/notebooks/$notebookId'
-    | '/settings/connection'
-    | '/notebooks/'
-    | '/settings/'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/home"
+    | "/login"
+    | "/settings"
+    | "/notebooks/$notebookId"
+    | "/settings/connection"
+    | "/notebooks/"
+    | "/settings/";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  HomeRoute: typeof HomeRoute
-  LoginRoute: typeof LoginRoute
-  SettingsRoute: typeof SettingsRouteWithChildren
-  NotebooksNotebookIdRoute: typeof NotebooksNotebookIdRoute
-  NotebooksIndexRoute: typeof NotebooksIndexRoute
+  IndexRoute: typeof IndexRoute;
+  HomeRoute: typeof HomeRoute;
+  LoginRoute: typeof LoginRoute;
+  SettingsRoute: typeof SettingsRouteWithChildren;
+  NotebooksNotebookIdRoute: typeof NotebooksNotebookIdRoute;
+  NotebooksIndexRoute: typeof NotebooksIndexRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/home': {
-      id: '/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof HomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notebooks/': {
-      id: '/notebooks/'
-      path: '/notebooks'
-      fullPath: '/notebooks/'
-      preLoaderRoute: typeof NotebooksIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notebooks/$notebookId': {
-      id: '/notebooks/$notebookId'
-      path: '/notebooks/$notebookId'
-      fullPath: '/notebooks/$notebookId'
-      preLoaderRoute: typeof NotebooksNotebookIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/': {
-      id: '/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/connection': {
-      id: '/settings/connection'
-      path: '/connection'
-      fullPath: '/settings/connection'
-      preLoaderRoute: typeof SettingsConnectionRouteImport
-      parentRoute: typeof SettingsRoute
-    }
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/home": {
+      id: "/home";
+      path: "/home";
+      fullPath: "/home";
+      preLoaderRoute: typeof HomeRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/login": {
+      id: "/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof LoginRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings": {
+      id: "/settings";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/notebooks/": {
+      id: "/notebooks/";
+      path: "/notebooks";
+      fullPath: "/notebooks/";
+      preLoaderRoute: typeof NotebooksIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/notebooks/$notebookId": {
+      id: "/notebooks/$notebookId";
+      path: "/notebooks/$notebookId";
+      fullPath: "/notebooks/$notebookId";
+      preLoaderRoute: typeof NotebooksNotebookIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/": {
+      id: "/settings/";
+      path: "/";
+      fullPath: "/settings/";
+      preLoaderRoute: typeof SettingsIndexRouteImport;
+      parentRoute: typeof SettingsRoute;
+    };
+    "/settings/connection": {
+      id: "/settings/connection";
+      path: "/connection";
+      fullPath: "/settings/connection";
+      preLoaderRoute: typeof SettingsConnectionRouteImport;
+      parentRoute: typeof SettingsRoute;
+    };
   }
 }
 
 interface SettingsRouteChildren {
-  SettingsConnectionRoute: typeof SettingsConnectionRoute
-  SettingsIndexRoute: typeof SettingsIndexRoute
+  SettingsConnectionRoute: typeof SettingsConnectionRoute;
+  SettingsIndexRoute: typeof SettingsIndexRoute;
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsConnectionRoute: SettingsConnectionRoute,
   SettingsIndexRoute: SettingsIndexRoute,
-}
+};
 
-const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
-  SettingsRouteChildren,
-)
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(SettingsRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -212,7 +210,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   NotebooksNotebookIdRoute: NotebooksNotebookIdRoute,
   NotebooksIndexRoute: NotebooksIndexRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

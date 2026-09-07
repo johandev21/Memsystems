@@ -23,11 +23,7 @@ export function startUrlUpload(
   } = {},
 ) {
   return runUpload(
-    createUrlSource(
-      notebookId,
-      { url, title, ...options },
-      context.abortController?.signal,
-    ),
+    createUrlSource(notebookId, { url, title, ...options }, context.abortController?.signal),
     context,
   );
 }

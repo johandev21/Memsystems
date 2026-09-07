@@ -21,4 +21,3 @@ describe("LoginPage", () => {
     expect(signIn.getAttribute("data-routing")).toBe("hash");
   });
 });
-

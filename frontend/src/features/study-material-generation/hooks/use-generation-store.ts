@@ -1,4 +1,7 @@
-import type { StudyGuideGenerationOptions, CaseStudyGenerationOptions } from "@/features/study-material-viewer";
+import type {
+  StudyGuideGenerationOptions,
+  CaseStudyGenerationOptions,
+} from "@/features/study-material-viewer";
 import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { create } from "zustand";
@@ -280,7 +283,8 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
 
               if (!viewMaterialId) {
                 const list =
-                  queryClient.getQueryData<StudyMaterialDTO[]>(["study-materials", notebookId]) || [];
+                  queryClient.getQueryData<StudyMaterialDTO[]>(["study-materials", notebookId]) ||
+                  [];
                 const matching = list.filter((m) => m.kind === input.kind);
                 matching.sort(
                   (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),

@@ -31,14 +31,7 @@ const IMAGE_EXTENSIONS = new Set([
   "bmp",
 ]);
 
-const TABULAR_EXTENSIONS = new Set([
-  "csv",
-  "tsv",
-  "tab",
-  "xlsx",
-  "xls",
-  "ods",
-]);
+const TABULAR_EXTENSIONS = new Set(["csv", "tsv", "tab", "xlsx", "xls", "ods"]);
 
 const JUPYTER_EXTENSIONS = new Set(["ipynb"]);
 
@@ -117,8 +110,10 @@ export function extractArXivId(urlOrId?: string | null): string | null {
     trimmed.match(/^\d{4}\.\d{4,5}(?:v\d+)?$/i) ||
     trimmed.match(/^[a-zA-Z\-]+(?:\.[A-Za-z]{2})?\/\d{7}(?:v\d+)?$/i) ||
     trimmed.match(/^arxiv:\s*([a-zA-Z0-9.\-\/]+)$/i) ||
-    trimmed.match(/(?:arxiv\.org\/(?:abs|pdf|html)\/|arxiv:\s*)([a-zA-Z0-9.\-\/]+?)(?:\.pdf|\/|$|\s|\?)/i);
-  return match ? (match[1] || match[0]) : null;
+    trimmed.match(
+      /(?:arxiv\.org\/(?:abs|pdf|html)\/|arxiv:\s*)([a-zA-Z0-9.\-\/]+?)(?:\.pdf|\/|$|\s|\?)/i,
+    );
+  return match ? match[1] || match[0] : null;
 }
 
 export function isDoi(urlOrId?: string | null): boolean {
@@ -136,7 +131,7 @@ export function extractDoi(urlOrId?: string | null): string | null {
     trimmed.match(/^10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+$/i) ||
     trimmed.match(/^doi:\s*(10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+)$/i) ||
     trimmed.match(/(?:doi\.org\/|doi:\s*)(10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+)/i);
-  return match ? (match[1] || match[0]) : null;
+  return match ? match[1] || match[0] : null;
 }
 
 export function detectDocumentType(source: Source | SourceWithContent): DocumentType {

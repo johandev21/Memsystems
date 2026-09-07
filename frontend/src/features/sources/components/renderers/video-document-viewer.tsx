@@ -1,18 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  AlertTriangle,
-  FileText,
-  ImageIcon,
-  Loader2,
-} from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { AlertTriangle, FileText, ImageIcon, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchApi } from "@/shared/api";
 import { cn } from "@/shared/utils/cn";
 import type { SourceSegmentLocator, SourceWithContent } from "../../types";
@@ -32,17 +21,9 @@ export interface VideoDocumentViewerProps {
   scrollElement?: HTMLDivElement | null;
 }
 
-export {
-  type ParsedVideoSegment,
-  formatTime,
-  parseRawTextToVideoSegments,
-  parseTimestampToMs,
-};
+export { type ParsedVideoSegment, formatTime, parseRawTextToVideoSegments, parseTimestampToMs };
 
-export function VideoDocumentViewer({
-  source,
-  selectedLocator,
-}: VideoDocumentViewerProps) {
+export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -84,14 +65,8 @@ export function VideoDocumentViewer({
   const segments = useMemo<ParsedVideoSegment[]>(() => {
     if (source.segments && source.segments.length > 0) {
       // If there is only 1 segment that contains timestamp cues, re-parse and split it
-      if (
-        source.segments.length === 1 &&
-        hasTimestampPatterns(source.segments[0].content)
-      ) {
-        return parseRawTextToVideoSegments(
-          source.segments[0].content,
-          duration || undefined,
-        );
+      if (source.segments.length === 1 && hasTimestampPatterns(source.segments[0].content)) {
+        return parseRawTextToVideoSegments(source.segments[0].content, duration || undefined);
       }
 
       return source.segments.map((seg, idx) => {
@@ -137,8 +112,7 @@ export function VideoDocumentViewer({
     if (segments.length === 1) {
       const seg = segments[0];
       const isTitleOnly =
-        seg.content.trim() === source.title.trim() &&
-        !hasTimestampPatterns(source.rawText || "");
+        seg.content.trim() === source.title.trim() && !hasTimestampPatterns(source.rawText || "");
       if (isTitleOnly && seg.kind !== "transcript") return false;
     }
     return segments.some(
@@ -320,9 +294,7 @@ export function VideoDocumentViewer({
           )}
         </div>
 
-        <p className="text-xs leading-relaxed text-text-primary select-text">
-          {segment.content}
-        </p>
+        <p className="text-xs leading-relaxed text-text-primary select-text">{segment.content}</p>
       </div>
     );
   };
@@ -363,7 +335,9 @@ export function VideoDocumentViewer({
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-warning gap-2 p-4 text-center">
           <AlertTriangle className="size-7 text-destructive" />
           <span className="text-sm font-semibold text-foreground">Video stream unavailable</span>
-          <span className="text-xs text-muted-foreground">The source file could not be loaded.</span>
+          <span className="text-xs text-muted-foreground">
+            The source file could not be loaded.
+          </span>
         </div>
       )}
     </>
@@ -503,9 +477,7 @@ export function VideoDocumentViewer({
             <div className="flex size-12 items-center justify-center rounded-xl bg-surface-2 text-text-muted mb-3">
               <FileText className="size-6 text-text-secondary" />
             </div>
-            <h4 className="text-sm font-semibold text-text-primary mb-1">
-              No Transcripts
-            </h4>
+            <h4 className="text-sm font-semibold text-text-primary mb-1">No Transcripts</h4>
             <p className="text-xs text-text-muted max-w-[260px] leading-relaxed mb-4">
               Add or paste a transcript to follow along with synchronized timestamps and search.
             </p>

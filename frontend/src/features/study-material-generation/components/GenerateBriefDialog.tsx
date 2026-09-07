@@ -1,4 +1,7 @@
-import type { StudyGuideGenerationOptions, CaseStudyGenerationOptions } from "@/features/study-material-viewer";
+import type {
+  StudyGuideGenerationOptions,
+  CaseStudyGenerationOptions,
+} from "@/features/study-material-viewer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/features/ai";
@@ -102,9 +105,11 @@ export function GenerateBriefDialog({
             kind === "simple_flashcard" ||
             kind === "study_guide" ||
             kind === "practice_problems" ||
-            kind === "case_study") &&
+            kind === "case_study" ||
+            kind === "roadmap" ||
+            kind === "mind_map" ||
+            kind === "slides") &&
             "sm:max-w-2xl",
-          (kind === "roadmap" || kind === "mind_map" || kind === "slides") && "sm:max-w-3xl",
         )}
       >
         <DialogHeader>
@@ -141,9 +146,9 @@ function useGenerationBriefState() {
     roadmapOptions?: RoadmapOptions;
     mindMapOptions?: MindMapOptions;
     slidesOptions?: SlidesOptions;
-  studyGuideOptions?: StudyGuideGenerationOptions;
-  practiceProblemsOptions?: PracticeProblemsOptions;
-  caseStudyOptions?: CaseStudyGenerationOptions;
+    studyGuideOptions?: StudyGuideGenerationOptions;
+    practiceProblemsOptions?: PracticeProblemsOptions;
+    caseStudyOptions?: CaseStudyGenerationOptions;
   }>({
     brief: "",
     sourceIds: [],

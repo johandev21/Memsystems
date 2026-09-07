@@ -1,13 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  Check,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  KeyRound,
-  RefreshCw,
-} from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Eye, EyeOff, KeyRound, RefreshCw } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
@@ -65,22 +57,11 @@ function formatCredits(value: string | null | undefined): string | null {
   return parsed.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
-function GatewayStat({
-  label,
-  value,
-  title,
-}: {
-  label: string;
-  value: string;
-  title?: string;
-}) {
+function GatewayStat({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
     <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd
-        className="mt-0.5 truncate text-lg font-semibold tracking-tight"
-        title={title}
-      >
+      <dd className="mt-0.5 truncate text-lg font-semibold tracking-tight" title={title}>
         {value}
       </dd>
     </div>
@@ -311,11 +292,7 @@ function GatewayCard() {
       <div className="flex flex-col gap-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
           <h3 className="text-sm font-semibold tracking-[-0.01em]">AI Gateway</h3>
-          <GatewayStatusBadge
-            connected={connected}
-            degraded={degraded}
-            isPending={isPending}
-          />
+          <GatewayStatusBadge connected={connected} degraded={degraded} isPending={isPending} />
           <div className="ms-auto">
             <Button
               type="button"
@@ -325,11 +302,7 @@ function GatewayCard() {
               disabled={isPending || isRefreshing}
               className="h-9 min-w-20 rounded-xl text-xs font-semibold shadow-sm"
             >
-              {isRefreshing ? (
-                <RefreshCw className="size-3.5 animate-spin" />
-              ) : (
-                "Refresh models"
-              )}
+              {isRefreshing ? <RefreshCw className="size-3.5 animate-spin" /> : "Refresh models"}
             </Button>
           </div>
         </div>
@@ -339,8 +312,7 @@ function GatewayCard() {
             ? "Checking gateway status…"
             : usable
               ? `Every notebook can use ${modelCount} models through your gateway key.`
-              : (connection?.detail ??
-                "Add your AI Gateway key below to connect every model.")}
+              : (connection?.detail ?? "Add your AI Gateway key below to connect every model.")}
         </p>
 
         <GatewayKeyForm hasKey={connection?.gateway.hasKey ?? false} />
@@ -372,9 +344,7 @@ function GatewayCard() {
           </a>
           <span>Model list refreshes automatically every 6 hours.</span>
           {connection?.checkedAt && (
-            <span>
-              Last checked {new Date(connection.checkedAt).toLocaleString()}
-            </span>
+            <span>Last checked {new Date(connection.checkedAt).toLocaleString()}</span>
           )}
         </div>
       </div>

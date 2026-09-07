@@ -83,12 +83,12 @@ describe("prepareReferenceMessage", () => {
       { ...baseReference, citationKey: "R2", number: 2 },
       { ...baseReference, citationKey: "R3", number: 4, id: "source-3" },
     ];
-    expect(
-      prepareReferenceMessage("Claim `[ref:R3]`.", refs, false).markdown,
-    ).toBe("Claim [4](#reference-R3).");
-    expect(
-      prepareReferenceMessage("Claim [9](#reference-R3).", refs, false).markdown,
-    ).toBe("Claim [4](#reference-R3).");
+    expect(prepareReferenceMessage("Claim `[ref:R3]`.", refs, false).markdown).toBe(
+      "Claim [4](#reference-R3).",
+    );
+    expect(prepareReferenceMessage("Claim [9](#reference-R3).", refs, false).markdown).toBe(
+      "Claim [4](#reference-R3).",
+    );
     expect(
       prepareReferenceMessage("A [2](#reference-R2)[5](#reference-R7).", refs, false).markdown,
     ).toBe("A [2](#reference-R2)5.");
@@ -99,12 +99,12 @@ describe("prepareReferenceMessage", () => {
       { ...baseReference, citationKey: "R2", number: 2 },
       { ...baseReference, citationKey: "R7", number: 5, id: "source-7" },
     ];
-    expect(
-      prepareReferenceMessage("Vitality `[ref:R2][ref:R7]`.", refs, false).markdown,
-    ).toBe("Vitality [2](#reference-R2) [5](#reference-R7).");
-    expect(
-      prepareReferenceMessage("Vitality [ref:R2][ref:R7].", refs, false).markdown,
-    ).toBe("Vitality [2](#reference-R2) [5](#reference-R7).");
+    expect(prepareReferenceMessage("Vitality `[ref:R2][ref:R7]`.", refs, false).markdown).toBe(
+      "Vitality [2](#reference-R2) [5](#reference-R7).",
+    );
+    expect(prepareReferenceMessage("Vitality [ref:R2][ref:R7].", refs, false).markdown).toBe(
+      "Vitality [2](#reference-R2) [5](#reference-R7).",
+    );
     expect(
       prepareReferenceMessage("Vitality `[2](#reference-R2)[9](#reference-R7)`.", refs, false)
         .markdown,
@@ -123,14 +123,14 @@ describe("prepareReferenceMessage", () => {
 
   it("leaves real code blocks untouched while stripping link syntax when streaming", () => {
     const refs = [{ ...baseReference, citationKey: "R1", number: 1 }];
-    expect(
-      prepareReferenceMessage("```\n[ref:R1]\n```", refs, false).markdown,
-    ).toBe("```\n[ref:R1]\n```");
-    expect(
-      prepareReferenceMessage("Claim `const x = 1`.", refs, false).markdown,
-    ).toBe("Claim `const x = 1`.");
-    expect(
-      prepareReferenceMessage("Vitality [2](#reference-R2).", refs, true).markdown,
-    ).toBe("Vitality.");
+    expect(prepareReferenceMessage("```\n[ref:R1]\n```", refs, false).markdown).toBe(
+      "```\n[ref:R1]\n```",
+    );
+    expect(prepareReferenceMessage("Claim `const x = 1`.", refs, false).markdown).toBe(
+      "Claim `const x = 1`.",
+    );
+    expect(prepareReferenceMessage("Vitality [2](#reference-R2).", refs, true).markdown).toBe(
+      "Vitality.",
+    );
   });
 });

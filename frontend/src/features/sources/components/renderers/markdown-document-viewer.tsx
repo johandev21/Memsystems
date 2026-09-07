@@ -103,9 +103,7 @@ const markdownComponents = {
   hr: () => <hr className="my-6 border-t border-border/40" />,
   table: ({ children }: { children?: ReactNode }) => (
     <div className="my-4 overflow-x-auto overscroll-x-contain rounded-lg border border-border/40 shadow-xs">
-      <table className="w-full text-left text-sm border-collapse min-w-[500px]">
-        {children}
-      </table>
+      <table className="w-full text-left text-sm border-collapse min-w-[500px]">{children}</table>
     </div>
   ),
   thead: ({ children }: { children?: ReactNode }) => (
@@ -179,8 +177,7 @@ export function MarkdownDocumentViewer({
         if (selectedLocator?.symbol) {
           const slug = createSlug(selectedLocator.symbol);
           targetElement =
-            root.querySelector(`#heading-${slug}`) ||
-            root.querySelector(`[id*="${slug}"]`);
+            root.querySelector(`#heading-${slug}`) || root.querySelector(`[id*="${slug}"]`);
         }
         if (!targetElement && selectedLocator?.pageNumber) {
           const paragraphs = root.querySelectorAll("p, h1, h2, h3, h4, blockquote");
@@ -272,7 +269,9 @@ function VirtualizedMarkdownDocument({
         overscan={5}
         targetIndex={targetIndex}
         highlightedIndex={highlightedIndex}
-        getItemKey={(chunk, index) => `md-chunk-${index}-${chunk.slice(0, 20).replace(/[^a-z0-9]/gi, "_")}`}
+        getItemKey={(chunk, index) =>
+          `md-chunk-${index}-${chunk.slice(0, 20).replace(/[^a-z0-9]/gi, "_")}`
+        }
         renderItem={(chunk, index, isHighlighted) => (
           <MarkdownChunk key={index} chunk={chunk} isHighlighted={isHighlighted} />
         )}
@@ -315,4 +314,3 @@ function MarkdownDocumentShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

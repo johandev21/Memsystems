@@ -150,7 +150,9 @@ describe("VideoDocumentViewer", () => {
     }
     if (!HTMLVideoElement.prototype.requestPictureInPicture) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (HTMLVideoElement.prototype as any).requestPictureInPicture = vi.fn().mockResolvedValue(undefined);
+      (HTMLVideoElement.prototype as any).requestPictureInPicture = vi
+        .fn()
+        .mockResolvedValue(undefined);
     }
     if (!document.exitPictureInPicture) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -214,7 +216,9 @@ describe("VideoDocumentViewer", () => {
 
     // Transcript segments rendered
     expect(screen.getByText("Welcome to lecture five on neural networks.")).toBeTruthy();
-    expect(screen.getByText("Today we will explore convolutional layers and attention.")).toBeTruthy();
+    expect(
+      screen.getByText("Today we will explore convolutional layers and attention."),
+    ).toBeTruthy();
     expect(screen.getByText("How does self-attention scale with sequence length?")).toBeTruthy();
 
     // Speaker badges and editing are NOT rendered (removed per requirements)
@@ -335,7 +339,8 @@ describe("VideoDocumentViewer", () => {
     const youtubePatternSource: SourceWithContent = {
       ...mockVideoSource,
       segments: undefined,
-      rawText: "(00:00) First part introduction\n(00:04) Second part main topic\n(00:15) Third part conclusion",
+      rawText:
+        "(00:00) First part introduction\n(00:04) Second part main topic\n(00:15) Third part conclusion",
     };
 
     render(
@@ -359,7 +364,8 @@ describe("VideoDocumentViewer", () => {
     const multilineSource: SourceWithContent = {
       ...mockVideoSource,
       segments: undefined,
-      rawText: "0:00\nIntro to neural networks\n0:04\nAttention is all you need\n0:20\nTransformer architecture",
+      rawText:
+        "0:00\nIntro to neural networks\n0:04\nAttention is all you need\n0:20\nTransformer architecture",
     };
 
     render(
@@ -425,7 +431,8 @@ describe("VideoDocumentViewer", () => {
           id: "mock-2",
           ordinal: 2,
           kind: "transcript",
-          content: "In the first part of this video, we explore the core concepts and architectural foundations.",
+          content:
+            "In the first part of this video, we explore the core concepts and architectural foundations.",
           locator: { startOffsetMs: 15000, endOffsetMs: 30000 },
         },
       ],

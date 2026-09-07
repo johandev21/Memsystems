@@ -76,10 +76,30 @@ function writeStored(materialId: string, next: CaseStudyProgressMap): boolean {
 export interface UseCaseStudyProgressResult {
   entries: CaseStudyProgressMap;
   storageError: string | null;
-  getEntry: (questionId: string, contentHash: string, checklistLength: number) => CaseStudyQuestionProgress;
-  saveResponse: (questionId: string, response: string, contentHash: string, checklistLength: number) => void;
-  setRevealed: (questionId: string, revealed: boolean, contentHash: string, checklistLength: number) => void;
-  setChecklistItem: (questionId: string, index: number, checked: boolean, contentHash: string, checklistLength: number) => void;
+  getEntry: (
+    questionId: string,
+    contentHash: string,
+    checklistLength: number,
+  ) => CaseStudyQuestionProgress;
+  saveResponse: (
+    questionId: string,
+    response: string,
+    contentHash: string,
+    checklistLength: number,
+  ) => void;
+  setRevealed: (
+    questionId: string,
+    revealed: boolean,
+    contentHash: string,
+    checklistLength: number,
+  ) => void;
+  setChecklistItem: (
+    questionId: string,
+    index: number,
+    checked: boolean,
+    contentHash: string,
+    checklistLength: number,
+  ) => void;
   resetAll: () => void;
 }
 
@@ -107,7 +127,9 @@ export function useCaseStudyProgress(materialId: string): UseCaseStudyProgressRe
         if (writeStored(materialId, next)) {
           setStorageError(null);
         } else {
-          setStorageError("Progress could not be saved on this device. Your current session is kept in memory.");
+          setStorageError(
+            "Progress could not be saved on this device. Your current session is kept in memory.",
+          );
         }
         return next;
       });
@@ -150,7 +172,13 @@ export function useCaseStudyProgress(materialId: string): UseCaseStudyProgressRe
   );
 
   const setChecklistItem = useCallback(
-    (questionId: string, index: number, checked: boolean, contentHash: string, checklistLength: number) => {
+    (
+      questionId: string,
+      index: number,
+      checked: boolean,
+      contentHash: string,
+      checklistLength: number,
+    ) => {
       const current = ensureEntry(entries, questionId, contentHash, checklistLength);
       const next = [...normalizeChecklist(current.checklist, checklistLength)];
       next[index] = checked;

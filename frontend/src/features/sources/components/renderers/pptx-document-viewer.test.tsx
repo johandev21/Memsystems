@@ -114,7 +114,11 @@ describe("PptxDocumentViewer", () => {
     // Switch to slide 2 which contains caching
     const navItems = screen.getAllByTestId("slide-nav-item");
     await user.click(navItems[1]);
-    const deep = screen.getByText((_content, el) => el?.textContent === "Deep dive into caching strategies" && !!el?.className.includes("whitespace-pre-wrap"));
+    const deep = screen.getByText(
+      (_content, el) =>
+        el?.textContent === "Deep dive into caching strategies" &&
+        !!el?.className.includes("whitespace-pre-wrap"),
+    );
     expect(deep.parentElement?.innerHTML).toContain("<mark");
   });
 

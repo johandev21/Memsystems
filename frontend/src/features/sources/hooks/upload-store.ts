@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { SourceKind, SourceModality, SourceProcessingStage, SourceProcessingStatus } from "../types";
+import type {
+  SourceKind,
+  SourceModality,
+  SourceProcessingStage,
+  SourceProcessingStatus,
+} from "../types";
 
 export interface PendingSourceUpload {
   id: string;

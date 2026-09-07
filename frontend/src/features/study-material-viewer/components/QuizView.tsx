@@ -546,9 +546,7 @@ function QuizQuestionStepper({
       )}
       <div className="space-y-3">
         <div className="flex flex-wrap justify-between gap-2 text-sm text-text-secondary">
-          <span>
-            Question {currentIdx + 1}
-          </span>
+          <span>Question {currentIdx + 1}</span>
           <span>
             {answeredCount} of {questions.length} Answered
           </span>

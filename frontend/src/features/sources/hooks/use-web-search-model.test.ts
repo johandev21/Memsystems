@@ -35,9 +35,7 @@ const sampleModels: ModelOption[] = [
 
 describe("useWebSearchModel", () => {
   it("returns isSupported: true for models with supportsWebSearch: true", () => {
-    const { result } = renderHook(() =>
-      useWebSearchModel(sampleModels, "openai/gpt-5.6-sol"),
-    );
+    const { result } = renderHook(() => useWebSearchModel(sampleModels, "openai/gpt-5.6-sol"));
     expect(result.current.isSupported).toBe(true);
     expect(result.current.currentModel?.displayName).toBe("GPT-5.6 Sol");
   });
@@ -59,17 +57,13 @@ describe("useWebSearchModel", () => {
   });
 
   it("returns isSupported: false when model is not found in models list", () => {
-    const { result } = renderHook(() =>
-      useWebSearchModel(sampleModels, "unknown/model-id"),
-    );
+    const { result } = renderHook(() => useWebSearchModel(sampleModels, "unknown/model-id"));
     expect(result.current.isSupported).toBe(false);
     expect(result.current.currentModel).toBeUndefined();
   });
 
   it("returns isSupported: false when models is undefined", () => {
-    const { result } = renderHook(() =>
-      useWebSearchModel(undefined, "openai/gpt-5.6-sol"),
-    );
+    const { result } = renderHook(() => useWebSearchModel(undefined, "openai/gpt-5.6-sol"));
     expect(result.current.isSupported).toBe(false);
     expect(result.current.currentModel).toBeUndefined();
   });

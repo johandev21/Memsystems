@@ -84,4 +84,3 @@ export interface SourceWithContent extends Source {
   sha256: string | null;
   segments?: SourceSegment[];
 }
-

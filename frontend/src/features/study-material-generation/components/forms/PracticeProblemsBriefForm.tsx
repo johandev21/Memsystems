@@ -93,11 +93,17 @@ export function PracticeProblemsBriefForm({
         <div className="grid grid-cols-2 gap-2">
           <div
             onClick={() => setStep(1)}
-            className={cn("h-1.5 rounded-full transition-all cursor-pointer", step >= 1 ? "bg-primary" : "bg-surface-4")}
+            className={cn(
+              "h-1.5 rounded-full transition-all cursor-pointer",
+              step >= 1 ? "bg-primary" : "bg-surface-4",
+            )}
           />
           <div
             onClick={() => setStep(2)}
-            className={cn("h-1.5 rounded-full transition-all cursor-pointer", step === 2 ? "bg-primary" : "bg-surface-4")}
+            className={cn(
+              "h-1.5 rounded-full transition-all cursor-pointer",
+              step === 2 ? "bg-primary" : "bg-surface-4",
+            )}
           />
         </div>
       </div>
@@ -112,12 +118,25 @@ export function PracticeProblemsBriefForm({
                   <div
                     key={d.id}
                     onClick={() => setDifficulty(d.id)}
-                    className={cn(optionRowClass(difficulty === d.id), "p-3 flex flex-col justify-between gap-1.5")}
+                    className={cn(
+                      optionRowClass(difficulty === d.id),
+                      "p-3 flex flex-col justify-between gap-1.5",
+                    )}
                   >
-                    <span className={cn("text-sm font-semibold", difficulty === d.id ? "text-primary-foreground" : "text-text-tertiary")}>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold",
+                        difficulty === d.id ? "text-primary-foreground" : "text-text-tertiary",
+                      )}
+                    >
                       {d.title}
                     </span>
-                    <span className={cn("text-xs leading-tight", difficulty === d.id ? "text-primary-foreground/80" : "text-text-faint")}>
+                    <span
+                      className={cn(
+                        "text-xs leading-tight",
+                        difficulty === d.id ? "text-primary-foreground/80" : "text-text-faint",
+                      )}
+                    >
                       {d.description}
                     </span>
                   </div>
@@ -127,7 +146,9 @@ export function PracticeProblemsBriefForm({
 
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <Label className="text-sm font-medium text-text-primary">2. Number of Problems</Label>
+                <Label className="text-sm font-medium text-text-primary">
+                  2. Number of Problems
+                </Label>
                 <span className="text-xs font-medium text-primary">{problemLabel}</span>
               </div>
               <div className="grid grid-cols-5 gap-2">
@@ -173,7 +194,10 @@ export function PracticeProblemsBriefForm({
                       const parsed = parseInt(customVal, 10) || 16;
                       setProblemCount(Math.min(MAX_PROBLEMS, Math.max(1, parsed)));
                     }}
-                    className={cn(optionRowClass(false), "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5")}
+                    className={cn(
+                      optionRowClass(false),
+                      "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
+                    )}
                   >
                     Custom
                   </button>
@@ -200,7 +224,10 @@ export function PracticeProblemsBriefForm({
             <Button
               type="button"
               onClick={() => setStep(2)}
-              className={cn("h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors", CTA_BUTTON_CLASS)}
+              className={cn(
+                "h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors",
+                CTA_BUTTON_CLASS,
+              )}
             >
               Next Step
               <ArrowRight className="size-4" />
@@ -211,8 +238,12 @@ export function PracticeProblemsBriefForm({
         <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="brief-practice-problems" className="text-sm font-medium text-text-primary">
-                Custom Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
+              <Label
+                htmlFor="brief-practice-problems"
+                className="text-sm font-medium text-text-primary"
+              >
+                Custom Instructions
+                {!hasSources && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <Textarea
                 id="brief-practice-problems"
@@ -245,7 +276,10 @@ export function PracticeProblemsBriefForm({
             </Button>
             <Button
               type="button"
-              className={cn("h-10 px-6 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors", CTA_BUTTON_CLASS)}
+              className={cn(
+                "h-10 px-6 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors",
+                CTA_BUTTON_CLASS,
+              )}
               disabled={!canSubmit}
               onClick={onSubmit}
             >

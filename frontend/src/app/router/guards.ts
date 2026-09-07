@@ -25,4 +25,3 @@ export function redirectIfAuthenticated({ context }: { context: RouterContext })
     });
   }
 }
-

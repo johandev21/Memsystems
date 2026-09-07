@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
@@ -35,6 +37,8 @@ export function MindMapBriefForm({
   submitLabel = "Generate Mind Map",
   disabled = false,
 }: BaseMaterialFormProps) {
+  const [step, setStep] = useState<1 | 2>(1);
+
   const initialNodeCount = value.mindMapOptions?.nodeCount ?? 20;
   const [nodeCount, setNodeCount] = useState(initialNodeCount);
   const [isAutoMode, setIsAutoMode] = useState(initialNodeCount === 0);
@@ -90,92 +94,184 @@ export function MindMapBriefForm({
     ? "Auto (AI decides)"
     : `${nodeCount} nodes${nodeCount >= MAX_NODE_COUNT ? " (max 100)" : ""}`;
 
+  // Section Render Helpers
+  function renderStepOne() {
+    return (
+      <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
+        <div className="flex flex-col gap-5">
+          <NodeCountSelector
+            nodeCount={nodeCount}
+            isAutoMode={isAutoMode}
+            isCustomMode={isCustomMode}
+            customValue={customValue}
+            label={mapSizeLabel}
+            onAuto={() => {
+              setIsAutoMode(true);
+              setIsCustomMode(false);
+              setNodeCount(0);
+            }}
+            onPreset={(count) => {
+              setIsAutoMode(false);
+              setIsCustomMode(false);
+              setNodeCount(count);
+            }}
+            onCustom={() => {
+              setIsAutoMode(false);
+              setIsCustomMode(true);
+              setNodeCount(
+                Math.min(MAX_NODE_COUNT, Math.max(1, Number.parseInt(customValue, 10) || 40)),
+              );
+            }}
+            onCustomChange={handleCustomChange}
+            onCustomBlur={handleCustomBlur}
+          />
+
+          <OptionCards
+            label="2. Detail Level"
+            options={DETAIL_OPTIONS}
+            selectedId={detailLevel}
+            onSelect={setDetailLevel}
+          />
+          <OptionCards
+            label="3. Color Groups"
+            options={COLOR_OPTIONS}
+            selectedId={colorGroups}
+            onSelect={setColorGroups}
+          />
+
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium text-text-primary">
+              4. Knowledge Sources
+              {!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
+            </Label>
+            <GenerationSourcePopover
+              sources={sources}
+              selectedIds={value.sourceIds}
+              onChange={(sourceIds) => onChange({ sourceIds })}
+              emptyMessage="No sources in notebook. Mind map will generate using general knowledge."
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center pt-2 border-t border-transparent">
+          <span className="text-xs text-text-faint">Configure custom instructions next</span>
+          <Button
+            type="button"
+            onClick={() => setStep(2)}
+            className={cn(
+              "h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors",
+              CTA_BUTTON_CLASS,
+            )}
+          >
+            Next Step
+            <ArrowRight className="size-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStepTwo() {
+    return (
+      <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="brief-mindmap" className="text-sm font-medium text-text-primary">
+              Custom Instructions{!hasSources && <span className="ml-0.5 text-destructive">*</span>}
+            </Label>
+            <Textarea
+              id="brief-mindmap"
+              value={value.brief}
+              onChange={(event) => onChange({ brief: event.target.value })}
+              placeholder="What should this map explain? Describe the topic, question, or connections..."
+              className="min-h-[120px] max-h-[200px] w-full resize-none text-xs"
+              disabled={disabled}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+            <FolderPicker
+              notebookId={notebookId}
+              value={value.folderId}
+              onChange={(folderId) => onChange({ folderId })}
+              disabled={disabled}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center pt-2 border-t border-transparent">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setStep(1)}
+            className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
+          >
+            <ArrowLeft className="size-4" />
+            Back
+          </Button>
+
+          <Button
+            type="button"
+            className={cn(
+              "h-10 px-6 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors",
+              CTA_BUTTON_CLASS,
+            )}
+            disabled={!canSubmit}
+            onClick={onSubmit}
+          >
+            {submitLabel}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex w-full flex-col gap-4 font-sans text-text-tertiary">
-      <NodeCountSelector
-        nodeCount={nodeCount}
-        isAutoMode={isAutoMode}
-        isCustomMode={isCustomMode}
-        customValue={customValue}
-        label={mapSizeLabel}
-        onAuto={() => {
-          setIsAutoMode(true);
-          setIsCustomMode(false);
-          setNodeCount(0);
-        }}
-        onPreset={(count) => {
-          setIsAutoMode(false);
-          setIsCustomMode(false);
-          setNodeCount(count);
-        }}
-        onCustom={() => {
-          setIsAutoMode(false);
-          setIsCustomMode(true);
-          setNodeCount(
-            Math.min(MAX_NODE_COUNT, Math.max(1, Number.parseInt(customValue, 10) || 40)),
-          );
-        }}
-        onCustomChange={handleCustomChange}
-        onCustomBlur={handleCustomBlur}
-      />
+    <div className="flex flex-col gap-5 font-sans text-text-tertiary">
+      <WizardHeader step={step} onStepChange={setStep} />
+      {step === 1 ? renderStepOne() : renderStepTwo()}
+    </div>
+  );
+}
 
-      <OptionCards
-        label="Detail Level"
-        options={DETAIL_OPTIONS}
-        selectedId={detailLevel}
-        onSelect={setDetailLevel}
-      />
-      <OptionCards
-        label="Color Groups"
-        options={COLOR_OPTIONS}
-        selectedId={colorGroups}
-        onSelect={setColorGroups}
-      />
+// ============================================================================
+// Small Local Helper Components
+// ============================================================================
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-sm font-medium text-text-primary">
-          Knowledge Sources{!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
-        </Label>
-        <GenerationSourcePopover
-          sources={sources}
-          selectedIds={value.sourceIds}
-          onChange={(sourceIds) => onChange({ sourceIds })}
-          emptyMessage="No sources in notebook. Mind map will generate using general knowledge."
+function WizardHeader({
+  step,
+  onStepChange,
+}: {
+  step: 1 | 2;
+  onStepChange: (step: 1 | 2) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2 font-medium text-text-primary">
+          <span className="text-sm font-semibold">Mind Map Setup</span>
+        </div>
+        <Badge variant="outline" className="text-xs font-normal">
+          Step {step} of 2
+        </Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div
+          onClick={() => onStepChange(1)}
+          className={cn(
+            "h-1.5 rounded-full transition-all cursor-pointer",
+            step >= 1 ? "bg-primary" : "bg-surface-4",
+          )}
+        />
+        <div
+          onClick={() => onStepChange(2)}
+          className={cn(
+            "h-1.5 rounded-full transition-all cursor-pointer",
+            step === 2 ? "bg-primary" : "bg-surface-4",
+          )}
         />
       </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="brief-mindmap" className="text-sm font-medium text-text-primary">
-          Custom Instructions{!hasSources && <span className="ml-0.5 text-destructive">*</span>}
-        </Label>
-        <Textarea
-          id="brief-mindmap"
-          value={value.brief}
-          onChange={(event) => onChange({ brief: event.target.value })}
-          placeholder="What should this map explain? Describe the topic, question, or connections..."
-          className="min-h-[70px] max-h-[180px] w-full resize-none text-xs"
-          disabled={disabled}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
-        <FolderPicker
-          notebookId={notebookId}
-          value={value.folderId}
-          onChange={(folderId) => onChange({ folderId })}
-          disabled={disabled}
-        />
-      </div>
-
-      <Button
-        type="button"
-        className={cn("mt-1 h-10 w-full gap-2 rounded-full text-sm font-medium", CTA_BUTTON_CLASS)}
-        disabled={!canSubmit}
-        onClick={onSubmit}
-      >
-        {submitLabel}
-      </Button>
     </div>
   );
 }
@@ -206,7 +302,7 @@ function NodeCountSelector({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-text-primary">Map Size</Label>
+        <Label className="text-sm font-medium text-text-primary">1. Map Size</Label>
         <span className="text-xs font-medium text-primary">{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">

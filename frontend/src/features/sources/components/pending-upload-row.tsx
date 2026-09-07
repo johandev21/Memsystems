@@ -1,4 +1,17 @@
-import { AlertCircle, BookOpen, Code, File, FileText, Globe, Headphones, ImageIcon, Loader2, Presentation, Video, X } from "lucide-react";
+import {
+  AlertCircle,
+  BookOpen,
+  Code,
+  File,
+  FileText,
+  Globe,
+  Headphones,
+  ImageIcon,
+  Loader2,
+  Presentation,
+  Video,
+  X,
+} from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import type { PendingSourceUpload } from "../hooks/use-upload-store";
 import { processingStageLabel } from "../utils/source-processing";
@@ -12,10 +25,7 @@ function getKindIcon(upload: PendingSourceUpload) {
   ) {
     return Video;
   }
-  if (
-    upload.modality === "audio" ||
-    /\.(mp3|m4a|wav|webm|aac|ogg)$/i.test(upload.title)
-  ) {
+  if (upload.modality === "audio" || /\.(mp3|m4a|wav|webm|aac|ogg)$/i.test(upload.title)) {
     return Headphones;
   }
   if (

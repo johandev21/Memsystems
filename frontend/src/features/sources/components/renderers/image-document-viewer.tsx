@@ -38,10 +38,7 @@ interface ParsedImageSection {
   warning?: string;
 }
 
-export function ImageDocumentViewer({
-  source,
-  selectedLocator,
-}: ImageDocumentViewerProps) {
+export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentViewerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [zoom, setZoom] = useState(1);
   const [showOverlays, setShowOverlays] = useState(true);
@@ -104,14 +101,11 @@ export function ImageDocumentViewer({
     }
   }, [selectedLocator, sections]);
 
-  const handleSelectSegment = useCallback(
-    (segmentId: string) => {
-      setActiveSegmentId((prev) => (prev === segmentId ? null : segmentId));
-      const noteEl = noteElementsRef.current.get(segmentId);
-      noteEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    },
-    [],
-  );
+  const handleSelectSegment = useCallback((segmentId: string) => {
+    setActiveSegmentId((prev) => (prev === segmentId ? null : segmentId));
+    const noteEl = noteElementsRef.current.get(segmentId);
+    noteEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, []);
 
   const handleZoomIn = () => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)));
   const handleZoomOut = () => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)));
@@ -141,7 +135,8 @@ export function ImageDocumentViewer({
           </Badge>
           {segmentsWithRegions.length > 0 && (
             <Badge variant="secondary" className="font-normal text-[11px]">
-              {segmentsWithRegions.length} visual {segmentsWithRegions.length === 1 ? "region" : "regions"}
+              {segmentsWithRegions.length} visual{" "}
+              {segmentsWithRegions.length === 1 ? "region" : "regions"}
             </Badge>
           )}
         </div>
@@ -503,10 +498,7 @@ function parseRawTextToSections(rawText: string): ParsedImageSection[] {
   });
 }
 
-function isMatchingRegion(
-  regionA?: ImageRegion | null,
-  regionB?: ImageRegion | null,
-): boolean {
+function isMatchingRegion(regionA?: ImageRegion | null, regionB?: ImageRegion | null): boolean {
   if (!regionA || !regionB) return false;
   const tolerance = 0.02;
   return (

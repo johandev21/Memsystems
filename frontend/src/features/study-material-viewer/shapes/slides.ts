@@ -60,19 +60,11 @@ export const SlideElement = z.object({
   ]),
   text: z.string().optional(),
   items: z.array(z.string()).optional(),
-  cards: z
-    .array(z.object({ title: z.string(), body: z.string().optional() }))
-    .optional(),
+  cards: z.array(z.object({ title: z.string(), body: z.string().optional() })).optional(),
   columns: z.number().optional(),
-  left: z
-    .object({ heading: z.string(), points: z.array(z.string()) })
-    .optional(),
-  right: z
-    .object({ heading: z.string(), points: z.array(z.string()) })
-    .optional(),
-  steps: z
-    .array(z.object({ title: z.string(), body: z.string().optional() }))
-    .optional(),
+  left: z.object({ heading: z.string(), points: z.array(z.string()) }).optional(),
+  right: z.object({ heading: z.string(), points: z.array(z.string()) }).optional(),
+  steps: z.array(z.object({ title: z.string(), body: z.string().optional() })).optional(),
   value: z.string().optional(),
   label: z.string().optional(),
   context: z.string().optional(),

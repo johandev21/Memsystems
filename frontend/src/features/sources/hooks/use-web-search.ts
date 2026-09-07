@@ -97,9 +97,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
   );
 
   const selectAllCandidates = useCallback(() => {
-    setSelectedUrls(
-      new Set(candidates.slice(0, selectionLimit).map((candidate) => candidate.url)),
-    );
+    setSelectedUrls(new Set(candidates.slice(0, selectionLimit).map((candidate) => candidate.url)));
   }, [candidates, selectionLimit]);
 
   const clearSelection = useCallback(() => setSelectedUrls(new Set()), []);

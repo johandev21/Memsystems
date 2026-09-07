@@ -251,11 +251,9 @@ export function CaseStudyBriefForm({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label
-                htmlFor="brief-case-study"
-                className="text-sm font-medium text-text-primary"
-              >
-                Custom Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
+              <Label htmlFor="brief-case-study" className="text-sm font-medium text-text-primary">
+                Custom Instructions
+                {!hasSources && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <Textarea
                 id="brief-case-study"
@@ -268,9 +266,7 @@ export function CaseStudyBriefForm({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-text-tertiary">
-                Destination Folder
-              </Label>
+              <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
               <FolderPicker
                 notebookId={notebookId}
                 value={value.folderId}

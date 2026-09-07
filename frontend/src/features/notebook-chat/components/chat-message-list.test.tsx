@@ -259,8 +259,6 @@ describe("ChatMessageList pending indicator", () => {
       false,
     );
 
-    expect(
-      container.querySelector('[data-message-id="thinking-indicator"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-message-id="thinking-indicator"]')).toBeNull();
   });
 });

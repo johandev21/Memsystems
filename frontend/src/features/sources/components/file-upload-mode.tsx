@@ -34,7 +34,9 @@ export function FileUploadMode({
     const file = e.dataTransfer.files?.[0];
     if (file) {
       if (!isClientSupportedSourceFile(file)) {
-        toast.error("Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.");
+        toast.error(
+          "Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.",
+        );
         return;
       }
       onUploadFile(file);
@@ -62,7 +64,9 @@ export function FileUploadMode({
     const file = e.target.files?.[0];
     if (file) {
       if (!isClientSupportedSourceFile(file)) {
-        toast.error("Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.");
+        toast.error(
+          "Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.",
+        );
         e.target.value = "";
         return;
       }
@@ -96,7 +100,8 @@ export function FileUploadMode({
         {isUploading ? "Uploading file..." : "Drop your files here"}
       </h3>
       <p className="text-xs text-muted-foreground mb-4 text-center max-w-[340px]">
-        Supports PDF, DOCX, TXT, Markdown, Images, Audio, Video, Presentations, eBooks, LaTeX, and BibTeX.
+        Supports PDF, DOCX, TXT, Markdown, Images, Audio, Video, Presentations, eBooks, LaTeX, and
+        BibTeX.
       </p>
 
       <div className="flex flex-wrap justify-center gap-2.5 w-full relative z-10">

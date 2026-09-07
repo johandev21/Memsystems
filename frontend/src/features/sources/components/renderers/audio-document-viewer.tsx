@@ -51,10 +51,7 @@ export interface ParsedAudioSegment {
 
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const;
 
-export function AudioDocumentViewer({
-  source,
-  selectedLocator,
-}: AudioDocumentViewerProps) {
+export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentViewerProps) {
   const queryClient = useQueryClient();
   const audioRef = useRef<HTMLAudioElement>(null);
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
@@ -226,7 +223,9 @@ export function AudioDocumentViewer({
     setIsSeeking(true);
   };
 
-  const handleScrubberEnd = (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) => {
+  const handleScrubberEnd = (
+    e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>,
+  ) => {
     setIsSeeking(false);
     const value = parseFloat((e.target as HTMLInputElement).value);
     seekTo(value);
@@ -450,7 +449,8 @@ export function AudioDocumentViewer({
               </Badge>
               {segments.length > 0 && (
                 <Badge variant="secondary" className="font-normal text-[11px]">
-                  {segments.length} {segments.length === 1 ? "segment" : "segments"} · {totalWords} words
+                  {segments.length} {segments.length === 1 ? "segment" : "segments"} · {totalWords}{" "}
+                  words
                 </Badge>
               )}
             </div>
@@ -726,8 +726,7 @@ export function AudioDocumentViewer({
                 typeof selectedLocator?.startOffsetMs === "number" &&
                 Math.abs(segment.startOffsetMs - selectedLocator.startOffsetMs) < 1000;
               const isEditingThisSpeaker =
-                editingSpeaker !== null &&
-                editingSpeaker.originalSpeaker === segment.speaker;
+                editingSpeaker !== null && editingSpeaker.originalSpeaker === segment.speaker;
 
               return (
                 <div
@@ -863,7 +862,10 @@ export function formatTime(seconds: number): string {
 export function parseRawTextToAudioSegments(rawText: string): ParsedAudioSegment[] {
   if (!rawText || !rawText.trim()) return [];
 
-  const lines = rawText.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const lines = rawText
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   const segments: ParsedAudioSegment[] = [];
 
   // Regex patterns:
@@ -872,8 +874,7 @@ export function parseRawTextToAudioSegments(rawText: string): ParsedAudioSegment
   // Speaker 1 (00:15): text
   const timestampPrefixRegex =
     /^\[(\d{1,2}:\d{2}(?::\d{2})?)(?:\s*-\s*(\d{1,2}:\d{2}(?::\d{2})?))?\]\s*(?:([^:]+):\s*)?(.*)$/i;
-  const speakerPrefixRegex =
-    /^([^:\n(]+)(?:\s*\((?:(\d{1,2}:\d{2}(?::\d{2})?))\))?:\s*(.*)$/i;
+  const speakerPrefixRegex = /^([^:\n(]+)(?:\s*\((?:(\d{1,2}:\d{2}(?::\d{2})?))\))?:\s*(.*)$/i;
 
   let currentOrdinal = 1;
 

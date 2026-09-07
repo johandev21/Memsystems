@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PracticeProblemsView } from "./PracticeProblemsView";
 import type { PracticeProblemsContentType } from "../shapes/practice-problems";
 
-function problem(id: string, overrides: Partial<PracticeProblemsContentType["problems"][number]> = {}) {
+function problem(
+  id: string,
+  overrides: Partial<PracticeProblemsContentType["problems"][number]> = {},
+) {
   return {
     id,
     prompt: `Prompt for ${id}.`,
@@ -13,8 +16,18 @@ function problem(id: string, overrides: Partial<PracticeProblemsContentType["pro
     constraints: [],
     hints: [`Cue for ${id}`, `Specific help for ${id}`],
     steps: [
-      { id: `${id}-s1`, title: "First move", explanation: `Why first for ${id}.`, sourceIds: [] as string[] },
-      { id: `${id}-s2`, title: "Second move", explanation: `Why second for ${id}.`, sourceIds: [] as string[] },
+      {
+        id: `${id}-s1`,
+        title: "First move",
+        explanation: `Why first for ${id}.`,
+        sourceIds: [] as string[],
+      },
+      {
+        id: `${id}-s2`,
+        title: "Second move",
+        explanation: `Why second for ${id}.`,
+        sourceIds: [] as string[],
+      },
     ],
     answer: `Answer for ${id}.`,
     checklist: [`Includes units for ${id}`],
@@ -78,7 +91,9 @@ describe("PracticeProblemsView", () => {
 
     await user.click(screen.getByRole("button", { name: "Previous" }));
     expect(screen.getByText("Problem 1 of 2")).toBeTruthy();
-    expect((screen.getByLabelText("Your attempt") as HTMLTextAreaElement).value).toBe("Attempt for p-1");
+    expect((screen.getByLabelText("Your attempt") as HTMLTextAreaElement).value).toBe(
+      "Attempt for p-1",
+    );
   });
 
   it("reveals hints one at a time in medium mode", async () => {
@@ -131,9 +146,7 @@ describe("PracticeProblemsView", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(mockEvaluation), { status: 200 }),
-      ),
+      vi.fn().mockResolvedValue(new Response(JSON.stringify(mockEvaluation), { status: 200 })),
     );
 
     const user = userEvent.setup();
@@ -178,7 +191,9 @@ describe("PracticeProblemsView", () => {
     expect(dispatchedEvents[1].prompt).toContain("Socratic hint");
 
     // 3. Explain this step in Chat
-    const explainStepButtons = screen.getAllByRole("button", { name: /Explain this step in Chat/i });
+    const explainStepButtons = screen.getAllByRole("button", {
+      name: /Explain this step in Chat/i,
+    });
     await user.click(explainStepButtons[0]);
     expect(dispatchedEvents.length).toBe(3);
     expect(dispatchedEvents[2].autoSend).toBe(false);
@@ -232,7 +247,16 @@ describe("PracticeProblemsView", () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify([
-          { id: "src-1", notebookId: "nb-1", kind: "text", title: "Textbook", url: null, contentType: null, fileSize: null, createdAt: new Date().toISOString() },
+          {
+            id: "src-1",
+            notebookId: "nb-1",
+            kind: "text",
+            title: "Textbook",
+            url: null,
+            contentType: null,
+            fileSize: null,
+            createdAt: new Date().toISOString(),
+          },
         ]),
         { status: 200 },
       ),

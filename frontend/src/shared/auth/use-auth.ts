@@ -1,18 +1,18 @@
-import { useEffect, useRef } from 'react';
-import { useAuth as useClerkAuth } from '@clerk/react';
-import { router } from '@/app/router/router';
-import type { AuthState } from './types';
+import { useEffect, useRef } from "react";
+import { useAuth as useClerkAuth } from "@clerk/react";
+import { router } from "@/app/router/router";
+import type { AuthState } from "./types";
 
 export function useAuth(): AuthState {
   const { isLoaded, isSignedIn, userId } = useClerkAuth();
 
   let state: AuthState;
   if (!isLoaded) {
-    state = { status: 'loading' };
+    state = { status: "loading" };
   } else if (isSignedIn && userId) {
-    state = { status: 'signed-in', userId };
+    state = { status: "signed-in", userId };
   } else {
-    state = { status: 'signed-out' };
+    state = { status: "signed-out" };
   }
 
   const prevStatusRef = useRef(state.status);
@@ -25,4 +25,3 @@ export function useAuth(): AuthState {
 
   return state;
 }
-

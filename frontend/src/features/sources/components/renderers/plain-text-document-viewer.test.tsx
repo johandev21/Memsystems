@@ -92,10 +92,7 @@ describe("PlainTextDocumentViewer", () => {
     });
 
     const { container } = render(
-      <PlainTextDocumentViewer
-        content={content}
-        scrollElement={scrollContainer}
-      />,
+      <PlainTextDocumentViewer content={content} scrollElement={scrollContainer} />,
     );
 
     // Initial render should render blocks

@@ -153,9 +153,7 @@ export function AddTranscriptDialog({
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
               <span>
                 Detected:{" "}
-                <strong className="text-foreground font-semibold">
-                  {parsedSegments.length}
-                </strong>{" "}
+                <strong className="text-foreground font-semibold">{parsedSegments.length}</strong>{" "}
                 segment{parsedSegments.length === 1 ? "" : "s"}
               </span>
               <button

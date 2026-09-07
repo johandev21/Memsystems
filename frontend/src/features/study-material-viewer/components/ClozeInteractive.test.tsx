@@ -61,9 +61,7 @@ describe("ClozeInteractive", () => {
 
   it("supports three blanks split on semicolons with case-insensitive matching", async () => {
     const user = userEvent.setup();
-    render(
-      <ClozeInteractive front="___ , ___ and [blank] are colors." back="red; green; blue" />,
-    );
+    render(<ClozeInteractive front="___ , ___ and [blank] are colors." back="red; green; blue" />);
 
     const inputs = screen.getAllByRole("textbox");
     expect(inputs).toHaveLength(3);

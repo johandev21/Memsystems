@@ -37,4 +37,3 @@ export function useSourcesPanel() {
 }
 
 export type UseSourcesPanelReturn = ReturnType<typeof useSourcesPanel>;
-

@@ -154,9 +154,7 @@ function PracticeProblemsReader({
 
   const handleOpenSource = useCallback(
     (sourceId: string) => {
-      window.dispatchEvent(
-        new CustomEvent("open-source-viewer", { detail: { sourceId } }),
-      );
+      window.dispatchEvent(new CustomEvent("open-source-viewer", { detail: { sourceId } }));
       onOpenSource?.();
     },
     [onOpenSource],
@@ -211,11 +209,15 @@ Can you explain this step in more detail, clarify why this method was chosen, an
     [currentProblem],
   );
 
-  const difficultyLabels: Record<PracticeProblemsDifficulty, { label: string; className: string }> = {
-    easy: { label: "Warmup", className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-    medium: { label: "Standard", className: "bg-primary/15 text-primary border-primary/30" },
-    hard: { label: "Challenge", className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  };
+  const difficultyLabels: Record<PracticeProblemsDifficulty, { label: string; className: string }> =
+    {
+      easy: {
+        label: "Warmup",
+        className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+      },
+      medium: { label: "Standard", className: "bg-primary/15 text-primary border-primary/30" },
+      hard: { label: "Challenge", className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
+    };
 
   const difficultyConfig = difficultyLabels[difficulty] ?? difficultyLabels.medium;
 
@@ -225,7 +227,10 @@ Can you explain this step in more detail, clarify why this method was chosen, an
       <div className="sticky top-0 z-10 bg-surface-1/95 backdrop-blur-sm px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
-            <Badge variant="outline" className={cn("text-xs font-medium", difficultyConfig.className)}>
+            <Badge
+              variant="outline"
+              className={cn("text-xs font-medium", difficultyConfig.className)}
+            >
               {difficultyConfig.label}
             </Badge>
             <span className="text-sm font-medium text-text-secondary">
@@ -355,7 +360,9 @@ Can you explain this step in more detail, clarify why this method was chosen, an
 
                 {currentProblem.acceptableAlternatives.length > 0 && (
                   <div>
-                    <h4 className="font-medium text-text-primary mb-1.5">Acceptable Alternatives</h4>
+                    <h4 className="font-medium text-text-primary mb-1.5">
+                      Acceptable Alternatives
+                    </h4>
                     <ul className="list-disc list-inside space-y-1 text-text-secondary">
                       {currentProblem.acceptableAlternatives.map((alt) => (
                         <li key={alt}>{alt}</li>
@@ -397,13 +404,14 @@ Can you explain this step in more detail, clarify why this method was chosen, an
           {/* Student Attempt Section */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <label htmlFor="student-attempt-input" className="text-base font-semibold text-text-primary">
+              <label
+                htmlFor="student-attempt-input"
+                className="text-base font-semibold text-text-primary"
+              >
                 Your Attempt
               </label>
               {currentState.evaluation && (
-                <span className="text-xs text-text-secondary">
-                  Evaluated with AI
-                </span>
+                <span className="text-xs text-text-secondary">Evaluated with AI</span>
               )}
             </div>
 
@@ -432,9 +440,7 @@ Can you explain this step in more detail, clarify why this method was chosen, an
                       Evaluating with AI...
                     </>
                   ) : (
-                    <>
-                      {currentState.evaluation ? "Re-evaluate" : "Evaluate answer"}
-                    </>
+                    <>{currentState.evaluation ? "Re-evaluate" : "Evaluate answer"}</>
                   )}
                 </Button>
 
@@ -501,9 +507,7 @@ Can you explain this step in more detail, clarify why this method was chosen, an
 
                 {currentState.evaluation.strengths.length > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    <h5 className="text-sm font-semibold text-text-primary">
-                      Key Strengths
-                    </h5>
+                    <h5 className="text-sm font-semibold text-text-primary">Key Strengths</h5>
                     <ul className="list-disc list-inside space-y-1 text-sm text-text-secondary">
                       {currentState.evaluation.strengths.map((str) => (
                         <li key={str}>{str}</li>
@@ -558,8 +562,7 @@ Can you explain this step in more detail, clarify why this method was chosen, an
               {/* Display revealed hints */}
               <div className="space-y-2.5">
                 {currentProblem.hints.map((hint, idx) => {
-                  const isRevealed =
-                    difficulty === "easy" || idx < currentState.hintsRevealed;
+                  const isRevealed = difficulty === "easy" || idx < currentState.hintsRevealed;
                   if (!isRevealed) return null;
 
                   return (
@@ -631,7 +634,8 @@ Can you explain this step in more detail, clarify why this method was chosen, an
                   Challenge Mode: Solution Locked
                 </div>
                 <p className="text-sm text-text-secondary">
-                  In Challenge mode, the reference solution unlocks once you evaluate your answer with AI.
+                  In Challenge mode, the reference solution unlocks once you evaluate your answer
+                  with AI.
                 </p>
                 <Button
                   type="button"
@@ -657,9 +661,7 @@ Can you explain this step in more detail, clarify why this method was chosen, an
               <div className="space-y-6 pt-1">
                 {/* Reference Answer */}
                 <div className="rounded-xl border border-surface-border-subtle bg-surface-2 p-5 space-y-2">
-                  <h4 className="text-sm font-semibold text-text-primary">
-                    Reference Answer
-                  </h4>
+                  <h4 className="text-sm font-semibold text-text-primary">Reference Answer</h4>
                   <div className="text-base text-text-primary leading-relaxed font-medium">
                     <MarkdownRenderer>{currentProblem.answer}</MarkdownRenderer>
                   </div>
@@ -668,9 +670,7 @@ Can you explain this step in more detail, clarify why this method was chosen, an
                 {/* Worked Steps */}
                 {currentProblem.steps.length > 0 && (
                   <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-text-primary">
-                      Worked Steps
-                    </h4>
+                    <h4 className="text-sm font-semibold text-text-primary">Worked Steps</h4>
 
                     <div className="space-y-3">
                       {currentProblem.steps.map((step, sIdx) => (
@@ -739,13 +739,12 @@ Can you explain this step in more detail, clarify why this method was chosen, an
           <AlertDialogHeader>
             <AlertDialogTitle>Leave Practice Session?</AlertDialogTitle>
             <AlertDialogDescription>
-              You have answers or evaluations in this session. If you leave now, your session progress will be lost.
+              You have answers or evaluations in this session. If you leave now, your session
+              progress will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelExit}>
-              Stay and Practice
-            </AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelExit}>Stay and Practice</AlertDialogCancel>
             <AlertDialogAction onClick={confirmExit} variant="destructive">
               Leave Anyway
             </AlertDialogAction>
