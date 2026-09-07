@@ -11,7 +11,7 @@ import {
 import { SourceIndexingHandler } from '../src/modules/sources/source-indexing.handler';
 import { SourceJobsService } from '../src/modules/sources/source-jobs.service';
 import { SourceVersionService } from '../src/modules/sources/source-version.service';
-import { seedNotebook, seedSource, seedUser } from './fixtures';
+import { seedNotebook, seedSource } from './fixtures';
 
 const LONG_TEXT = Array.from(
   { length: 12 },
@@ -90,8 +90,7 @@ describe('SourceJobsService', () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service, queue } = makeJobsService(embedding);
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Durable Indexing',
       rawText: LONG_TEXT,
@@ -128,8 +127,7 @@ describe('SourceJobsService', () => {
       defaultMaxAttempts: 3,
     });
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Failing Source',
       rawText: 'short text',
@@ -164,8 +162,7 @@ describe('SourceJobsService', () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service, queue } = makeJobsService(embedding);
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Stable Source',
       rawText: LONG_TEXT,
@@ -193,8 +190,7 @@ describe('SourceJobsService', () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service, queue } = makeJobsService(embedding);
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Changing Source',
       rawText: LONG_TEXT,
@@ -224,8 +220,7 @@ describe('SourceJobsService', () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service } = makeJobsService(embedding);
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Superseded Source',
       rawText: 'Initial text',
@@ -265,8 +260,7 @@ describe('SourceJobsService', () => {
       }),
     } as any;
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Cancellation fence',
       rawText: LONG_TEXT,
@@ -357,8 +351,7 @@ describe('SourceJobsService', () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service } = makeJobsService(embedding);
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Doomed Source',
       rawText: 'About to be deleted',
@@ -379,8 +372,7 @@ describe('SourceJobsService', () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service } = makeJobsService(embedding);
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     await seedSource(notebook.id, { title: 'A', rawText: 'A', kind: 'text' });
     await seedSource(notebook.id, { title: 'B', rawText: 'B', kind: 'text' });
     await seedSource(notebook.id, { title: 'C', rawText: 'C', kind: 'text' });
@@ -398,8 +390,7 @@ describe('SourceJobsService', () => {
   it('routes an unextracted file to processing during notebook reindex', async () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service } = makeJobsService(embedding);
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       title: 'Pending upload',
       rawText: '',

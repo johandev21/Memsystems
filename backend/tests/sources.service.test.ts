@@ -12,7 +12,7 @@ import { StorageService } from '../src/modules/storage/storage.service';
 import { SourceExtractionService } from '../src/modules/sources/source-extraction.service';
 import { SourceVersionService } from '../src/modules/sources/source-version.service';
 import { SourcesService } from '../src/modules/sources/sources.service';
-import { seedNotebook, seedSource, seedUser } from './fixtures';
+import { seedNotebook, seedSource } from './fixtures';
 import { db } from './db';
 
 function mockStorageService() {
@@ -69,10 +69,9 @@ function createSourcesService(
 describe.sequential('SourcesService', () => {
   it('createText normalizes content, hashes it and enqueues indexing', async () => {
     const { service, jobs, db } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    const row = await service.createText(user.id, notebook.id, {
+    const row = await service.createText(notebook.id, {
       title: 'Pasted Notes',
       rawText: 'Some notes.\n\n\nExtra blank line.',
     });
@@ -92,15 +91,14 @@ describe.sequential('SourcesService', () => {
 
   it('createText rejects empty and oversized text', async () => {
     const { service } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     await expect(
-      service.createText(user.id, notebook.id, { title: 'X', rawText: '   ' }),
+      service.createText(notebook.id, { title: 'X', rawText: '   ' }),
     ).rejects.toThrow('non-empty');
 
     await expect(
-      service.createText(user.id, notebook.id, {
+      service.createText(notebook.id, {
         title: 'X',
         rawText: 'a'.repeat(5 * 1024 * 1024 + 1),
       }),
@@ -128,9 +126,8 @@ describe.sequential('SourcesService', () => {
     } as any;
     const { service, jobs, db } = createSourcesService({ acquisition });
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
-    const row = await service.createUrl(user.id, notebook.id, {
+    const notebook = await seedNotebook();
+    const row = await service.createUrl(notebook.id, {
       url: 'https://example.com/a?utm=1',
     });
 
@@ -168,11 +165,10 @@ describe.sequential('SourcesService', () => {
       }),
     } as any;
     const { service, db } = createSourcesService({ acquisition });
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     await expect(
-      service.createUrl(user.id, notebook.id, {
+      service.createUrl(notebook.id, {
         url: 'https://example.com/short',
         minTextLength: 1000,
       }),
@@ -194,11 +190,9 @@ describe.sequential('SourcesService', () => {
       acquireUrl: vi.fn(),
     } as any;
     const { service, jobs } = createSourcesService({ acquisition });
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     const row = await service.createFile(
-      user.id,
       notebook.id,
       Buffer.from('Hello file'),
       'notes.txt',
@@ -218,15 +212,14 @@ describe.sequential('SourcesService', () => {
 
   it('delete removes the source and cancels indexing', async () => {
     const { service, jobs } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Doomed',
       rawText: 'content',
     });
 
-    await service.delete(user.id, source.id);
+    await service.delete(source.id);
     expect(jobs.cancelForSource).toHaveBeenCalledWith(source.id);
 
     const rows = await db
@@ -244,31 +237,28 @@ describe.sequential('SourcesService', () => {
       reindexNotebook: vi.fn(),
     } as any;
     const { service } = createSourcesService({ jobs });
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Reindex me',
       rawText: 'content',
     });
 
-    const job = await service.reindex(user.id, source.id);
+    const job = await service.reindex(source.id);
     expect(job.id).toBe('job-2');
     expect(jobs.enqueue).toHaveBeenCalledWith(source.id);
   });
 
-  it('reindex rejects sources owned by other users', async () => {
+  it('reindex rejects unknown sources', async () => {
     const { service } = createSourcesService();
-    const owner = await seedUser();
-    const other = await seedUser();
-    const notebook = await seedNotebook(owner.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Private',
       rawText: 'content',
     });
 
-    await expect(service.reindex(other.id, source.id)).rejects.toThrow();
+    await expect(service.reindex('non-existent-source-id')).rejects.toThrow();
   });
 
   it('get includes the latest indexing job status', async () => {
@@ -280,15 +270,14 @@ describe.sequential('SourcesService', () => {
       }),
     } as any;
     const { service } = createSourcesService({ jobs });
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Status',
       rawText: 'content',
     });
 
-    const result = await service.get(user.id, source.id);
+    const result = await service.get(source.id);
     expect(result.indexingStatus).toEqual({
       id: 'job-3',
       status: 'ready',
@@ -299,13 +288,11 @@ describe.sequential('SourcesService', () => {
 
   it('createFile assigns modality: image and enforces 20 MB limit for images', async () => {
     const { service, db } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     // Rejects oversized image (> 20 MB)
     await expect(
       service.createFile(
-        user.id,
         notebook.id,
         Buffer.alloc(20 * 1024 * 1024 + 1),
         'photo.png',
@@ -315,7 +302,6 @@ describe.sequential('SourcesService', () => {
 
     // Accepts valid image and sets modality to image
     const row = await service.createFile(
-      user.id,
       notebook.id,
       Buffer.from('png-bytes'),
       'photo.png',
@@ -354,12 +340,11 @@ describe.sequential('SourcesService', () => {
       new SourceExtractionService(),
     );
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     // Rejects oversized image
     await expect(
-      service.createFileFromArtifact(user.id, notebook.id, {
+      service.createFileFromArtifact(notebook.id, {
         artifactKey: 'pending-sources/test-token',
         filename: 'photo.jpg',
         contentType: 'image/jpeg',
@@ -368,7 +353,7 @@ describe.sequential('SourcesService', () => {
     ).rejects.toThrow('exceeds maximum size');
 
     // Creates source with modality: image
-    const row = await service.createFileFromArtifact(user.id, notebook.id, {
+    const row = await service.createFileFromArtifact(notebook.id, {
       artifactKey: 'pending-sources/test-token',
       filename: 'photo.jpg',
       contentType: 'image/jpeg',
@@ -381,8 +366,7 @@ describe.sequential('SourcesService', () => {
 
   it('get returns segments for source.currentVersionId ordered by ordinal', async () => {
     const { service } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'Vision Doc',
@@ -430,7 +414,7 @@ describe.sequential('SourcesService', () => {
       },
     ]);
 
-    const result = await service.get(user.id, source.id);
+    const result = await service.get(source.id);
     expect(result.segments).toHaveLength(3);
     expect(result.segments[0].ordinal).toBe(0);
     expect(result.segments[0].kind).toBe('heading');
@@ -461,13 +445,11 @@ describe.sequential('SourcesService', () => {
       new SourceExtractionService(),
     );
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     // Audio createFile
     const audioBuffer = Buffer.from('fake-audio-mp3-bytes');
     const audioSource = await service.createFile(
-      user.id,
       notebook.id,
       audioBuffer,
       'lecture.mp3',
@@ -478,23 +460,19 @@ describe.sequential('SourcesService', () => {
     expect(audioSource.modality).toBe('audio');
 
     // Audio createFileFromArtifact
-    const artifactSource = await service.createFileFromArtifact(
-      user.id,
-      notebook.id,
-      {
-        artifactKey: 'pending-sources/test-token',
-        filename: 'recording.wav',
-        contentType: 'audio/wav',
-        fileSize: 1024,
-      },
-    );
+    const artifactSource = await service.createFileFromArtifact(notebook.id, {
+      artifactKey: 'pending-sources/test-token',
+      filename: 'recording.wav',
+      contentType: 'audio/wav',
+      fileSize: 1024,
+    });
 
     expect(artifactSource.kind).toBe('file');
     expect(artifactSource.modality).toBe('audio');
 
     // Rejects audio exceeding 500 MB
     await expect(
-      service.createFileFromArtifact(user.id, notebook.id, {
+      service.createFileFromArtifact(notebook.id, {
         artifactKey: 'pending-sources/test-token',
         filename: 'large.mp3',
         contentType: 'audio/mpeg',
@@ -524,13 +502,11 @@ describe.sequential('SourcesService', () => {
       new SourceExtractionService(),
     );
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     // Video createFile assigns modality video
     const videoBuffer = Buffer.from('fake-video-mp4-bytes');
     const videoSource = await service.createFile(
-      user.id,
       notebook.id,
       videoBuffer,
       'lecture.mp4',
@@ -540,22 +516,18 @@ describe.sequential('SourcesService', () => {
     expect(videoSource.modality).toBe('video');
 
     // Video createFileFromArtifact assigns modality video
-    const artifactSource = await service.createFileFromArtifact(
-      user.id,
-      notebook.id,
-      {
-        artifactKey: 'pending-sources/test-token-video',
-        filename: 'recording.mp4',
-        contentType: 'video/mp4',
-        fileSize: 2048,
-      },
-    );
+    const artifactSource = await service.createFileFromArtifact(notebook.id, {
+      artifactKey: 'pending-sources/test-token-video',
+      filename: 'recording.mp4',
+      contentType: 'video/mp4',
+      fileSize: 2048,
+    });
     expect(artifactSource.kind).toBe('file');
     expect(artifactSource.modality).toBe('video');
 
     // Rejects video exceeding 1 GB
     await expect(
-      service.createFileFromArtifact(user.id, notebook.id, {
+      service.createFileFromArtifact(notebook.id, {
         artifactKey: 'pending-sources/test-token-video',
         filename: 'large.mp4',
         contentType: 'video/mp4',
@@ -581,17 +553,16 @@ describe.sequential('SourcesService', () => {
       }),
     } as any;
     const { service } = createSourcesService({ acquisition });
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    const row = await service.createUrl(user.id, notebook.id, {
+    const row = await service.createUrl(notebook.id, {
       url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     });
     expect(row.modality).toBe('video');
     expect(row.kind).toBe('url');
 
     // Non-YouTube URL remains document
-    const row2 = await service.createUrl(user.id, notebook.id, {
+    const row2 = await service.createUrl(notebook.id, {
       url: 'https://example.com/article',
     });
     expect(row2.modality).toBe('document');
@@ -618,13 +589,11 @@ describe.sequential('SourcesService', () => {
       new SourceExtractionService(),
     );
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     // Rejects PPTX exceeding 200 MB
     await expect(
       service.createFile(
-        user.id,
         notebook.id,
         Buffer.alloc(200 * 1024 * 1024 + 1),
         'deck.pptx',
@@ -635,7 +604,6 @@ describe.sequential('SourcesService', () => {
     // PPTX createFile assigns modality slides
     const pptxBuffer = Buffer.from('fake-pptx-bytes');
     const pptxSource = await service.createFile(
-      user.id,
       notebook.id,
       pptxBuffer,
       'deck.pptx',
@@ -645,23 +613,19 @@ describe.sequential('SourcesService', () => {
     expect(pptxSource.modality).toBe('slides');
 
     // PPTX createFileFromArtifact assigns modality slides
-    const artifactSource = await service.createFileFromArtifact(
-      user.id,
-      notebook.id,
-      {
-        artifactKey: 'pending-sources/pptx-token',
-        filename: 'deck.pptx',
-        contentType:
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        fileSize: 2048,
-      },
-    );
+    const artifactSource = await service.createFileFromArtifact(notebook.id, {
+      artifactKey: 'pending-sources/pptx-token',
+      filename: 'deck.pptx',
+      contentType:
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      fileSize: 2048,
+    });
     expect(artifactSource.kind).toBe('file');
     expect(artifactSource.modality).toBe('slides');
 
     // Rejects via artifact exceeding 200 MB
     await expect(
-      service.createFileFromArtifact(user.id, notebook.id, {
+      service.createFileFromArtifact(notebook.id, {
         artifactKey: 'pending-sources/pptx-token',
         filename: 'big.pptx',
         contentType:
@@ -692,12 +656,10 @@ describe.sequential('SourcesService', () => {
       new SourceExtractionService(),
     );
 
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     await expect(
       service.createFile(
-        user.id,
         notebook.id,
         Buffer.alloc(200 * 1024 * 1024 + 1),
         'book.epub',
@@ -707,7 +669,6 @@ describe.sequential('SourcesService', () => {
 
     const epubBuffer = Buffer.from('fake-epub-bytes');
     const epubSource = await service.createFile(
-      user.id,
       notebook.id,
       epubBuffer,
       'book.epub',
@@ -716,24 +677,19 @@ describe.sequential('SourcesService', () => {
     expect(epubSource.kind).toBe('file');
     expect(epubSource.modality).toBe('ebook');
 
-    const artifactSource = await service.createFileFromArtifact(
-      user.id,
-      notebook.id,
-      {
-        artifactKey: 'pending-sources/epub-token',
-        filename: 'book.epub',
-        contentType: 'application/epub+zip',
-        fileSize: 4096,
-      },
-    );
+    const artifactSource = await service.createFileFromArtifact(notebook.id, {
+      artifactKey: 'pending-sources/epub-token',
+      filename: 'book.epub',
+      contentType: 'application/epub+zip',
+      fileSize: 4096,
+    });
     expect(artifactSource.kind).toBe('file');
     expect(artifactSource.modality).toBe('ebook');
   });
 
   it('updateSpeakerLabels updates speaker in source_segments and source_chunks without retranscription', async () => {
     const { service } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'Audio Source',
@@ -805,13 +761,9 @@ describe.sequential('SourcesService', () => {
       ])
       .returning();
 
-    const updatedSegments = await service.updateSpeakerLabels(
-      user.id,
-      source.id,
-      {
-        'Speaker 1': 'Alice',
-      },
-    );
+    const updatedSegments = await service.updateSpeakerLabels(source.id, {
+      'Speaker 1': 'Alice',
+    });
 
     expect(updatedSegments).toHaveLength(2);
     expect(updatedSegments[0].locator.speaker).toBe('Alice');
@@ -833,8 +785,7 @@ describe.sequential('SourcesService', () => {
 
   it('adds transcripts to a video source and creates timed segments', async () => {
     const { service } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'url',
       modality: 'video',
@@ -844,11 +795,7 @@ describe.sequential('SourcesService', () => {
     });
 
     const transcriptText = `(00:00) Welcome to the course\n(00:05) First chapter on algorithms\n(00:20) Summary and conclusion`;
-    const result = await service.addTranscript(
-      user.id,
-      source.id,
-      transcriptText,
-    );
+    const result = await service.addTranscript(source.id, transcriptText);
 
     expect(result.id).toBe(source.id);
     expect(result.segments).toHaveLength(3);

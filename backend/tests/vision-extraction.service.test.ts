@@ -163,7 +163,6 @@ describe('VisionExtractionService', () => {
       imageBuffer: Buffer.from([1, 2, 3]),
       mimeType: 'image/jpeg',
       fileName: 'diagram.jpg',
-      userId: 'user-123',
     };
 
     const result = await service.extract(input);
@@ -222,7 +221,6 @@ describe('VisionExtractionService', () => {
       imageBuffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
       mimeType: 'image/png',
       fileName: 'cnn_diagram.png',
-      userId: 'user-123',
     };
 
     const result = await service.extract(input);
@@ -254,7 +252,6 @@ describe('VisionExtractionService', () => {
       imageBuffer: Buffer.from([1, 2, 3]),
       mimeType: 'image/png',
       fileName: 'circuit.png',
-      userId: 'user-123',
     };
 
     const result = await service.extract(input);

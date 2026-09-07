@@ -6,7 +6,6 @@ import * as appSchema from '../../database/schema';
 import { notebooks } from '../../database/schema';
 import {
   BadRequestError,
-  ForbiddenError,
   NotFoundError,
 } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
@@ -31,7 +30,6 @@ export interface UpdateNotebookInput {
 
 export interface NotebookResponse {
   id: string;
-  userId: string;
   title: string;
   description: string;
   icon: string;
@@ -51,7 +49,6 @@ export interface BannerUploadResponse {
 function toResponse(nb: typeof notebooks.$inferSelect): NotebookResponse {
   return {
     id: nb.id,
-    userId: nb.userId,
     title: nb.title,
     description: nb.description ?? '',
     icon: nb.icon ?? 'notebook',
@@ -77,17 +74,18 @@ export class NotebooksService {
     private readonly storageService: StorageService,
   ) {}
 
-  async assertNotebookOwner(userId: string, notebookId: string): Promise<void> {
+  /**
+   * Single-user mode: notebooks have no owner. This only asserts existence.
+   * Kept under the historical name so existing call sites read naturally.
+   */
+  async assertNotebookOwner(notebookId: string): Promise<void> {
     const [notebook] = await this.db
-      .select({ id: notebooks.id, userId: notebooks.userId })
+      .select({ id: notebooks.id })
       .from(notebooks)
       .where(eq(notebooks.id, notebookId))
       .limit(1);
     if (!notebook) {
       throw new NotFoundError('Notebook');
-    }
-    if (notebook.userId !== userId) {
-      throw new ForbiddenError('Notebook does not belong to user');
     }
   }
 
@@ -99,13 +97,9 @@ export class NotebooksService {
     return res;
   }
 
-  async list(
-    userId: string,
-    filter?: { limit?: number; offset?: number; search?: string },
-  ) {
+  async list(filter?: { limit?: number; offset?: number; search?: string }) {
     if (filter?.limit !== undefined || filter?.search !== undefined) {
       const conditions = [
-        eq(notebooks.userId, userId),
         ...(filter.search
           ? [
               or(
@@ -115,16 +109,17 @@ export class NotebooksService {
             ]
           : []),
       ];
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
       const [{ count }] = await this.db
         .select({ count: sql<number>`count(*)` })
         .from(notebooks)
-        .where(and(...conditions));
+        .where(where);
       const total = Number(count);
 
       const rows = await this.db
         .select()
         .from(notebooks)
-        .where(and(...conditions))
+        .where(where)
         .orderBy(desc(notebooks.updatedAt))
         .limit(filter.limit ?? 100)
         .offset(filter.offset ?? 0);
@@ -139,28 +134,26 @@ export class NotebooksService {
     const rows = await this.db
       .select()
       .from(notebooks)
-      .where(eq(notebooks.userId, userId))
       .orderBy(desc(notebooks.updatedAt));
 
     return Promise.all(rows.map((nb) => this.formatNotebook(nb)));
   }
 
-  async get(userId: string, id: string) {
+  async get(id: string) {
     const [row] = await this.db
       .select()
       .from(notebooks)
-      .where(and(eq(notebooks.id, id), eq(notebooks.userId, userId)));
+      .where(eq(notebooks.id, id));
     if (!row) {
       throw new NotFoundError('Notebook');
     }
     return this.formatNotebook(row);
   }
 
-  async create(userId: string, input: CreateNotebookInput) {
+  async create(input: CreateNotebookInput) {
     const [row] = await this.db
       .insert(notebooks)
       .values({
-        userId,
         title: input.title,
         description: input.description?.trim().slice(0, 500) ?? '',
         icon: input.icon?.trim().slice(0, 50) ?? 'notebook',
@@ -169,7 +162,7 @@ export class NotebooksService {
     return toResponse(row);
   }
 
-  async update(userId: string, id: string, input: UpdateNotebookInput) {
+  async update(id: string, input: UpdateNotebookInput) {
     const updates: Partial<typeof notebooks.$inferInsert> = {};
     if (input.title !== undefined) {
       updates.title = input.title;
@@ -186,12 +179,12 @@ export class NotebooksService {
       updates.bannerFocalPoint = input.bannerFocalPoint;
     }
     if (Object.keys(updates).length === 0) {
-      return this.get(userId, id);
+      return this.get(id);
     }
     const [row] = await this.db
       .update(notebooks)
       .set(updates)
-      .where(and(eq(notebooks.id, id), eq(notebooks.userId, userId)))
+      .where(eq(notebooks.id, id))
       .returning();
     if (!row) {
       throw new NotFoundError('Notebook');
@@ -206,25 +199,23 @@ export class NotebooksService {
     return res;
   }
 
-  async delete(userId: string, id: string) {
+  async delete(id: string) {
     const [row] = await this.db
       .select()
       .from(notebooks)
-      .where(and(eq(notebooks.id, id), eq(notebooks.userId, userId)));
+      .where(eq(notebooks.id, id));
     if (!row) {
       throw new NotFoundError('Notebook');
     }
     if (row.banner) {
       await this.storageService.deleteObject(row.banner).catch(() => {});
     }
-    await this.db
-      .delete(notebooks)
-      .where(and(eq(notebooks.id, id), eq(notebooks.userId, userId)));
+    await this.db.delete(notebooks).where(eq(notebooks.id, id));
     return toResponse(row);
   }
 
-  async removeBanner(userId: string, notebookId: string) {
-    await this.assertNotebookOwner(userId, notebookId);
+  async removeBanner(notebookId: string) {
+    await this.assertNotebookOwner(notebookId);
 
     const [existing] = await this.db
       .select({ banner: notebooks.banner })
@@ -247,14 +238,13 @@ export class NotebooksService {
   }
 
   async uploadBanner(
-    userId: string,
     notebookId: string,
     fileBuffer: Buffer,
     fileName: string,
     fileType: string,
     focalPoint?: { x: number; y: number },
   ) {
-    await this.assertNotebookOwner(userId, notebookId);
+    await this.assertNotebookOwner(notebookId);
 
     if (fileBuffer.length === 0) {
       throw new BadRequestError('Uploaded file is empty');

@@ -31,12 +31,20 @@ const validCase = {
       reasoning: 'Severity first because breathing issues escalate.',
       keyPoints: ['Airway first'],
       conceptApplications: [
-        { concept: 'Triage', application: 'Applied to breathing case', sourceIds: ['src-1'] },
+        {
+          concept: 'Triage',
+          application: 'Applied to breathing case',
+          sourceIds: ['src-1'],
+        },
       ],
       assumptions: ['Vitals are accurate'],
       tradeoffs: ['Longer wait for stable patients'],
       alternativePerspectives: [
-        { viewpoint: 'Throughput view', reasoning: 'See quick cases first', sourceIds: [] },
+        {
+          viewpoint: 'Throughput view',
+          reasoning: 'See quick cases first',
+          sourceIds: [],
+        },
       ],
       checklist: ['Named the concept', 'Cited evidence', 'Explained reasoning'],
       sourceIds: ['src-1'],
@@ -97,9 +105,7 @@ describe('case study content validation', () => {
 describe('case study sources', () => {
   it('rejects references outside the selected sources', () => {
     expect(() => validateCaseStudySources(validCase, [])).toThrow();
-    expect(() =>
-      validateCaseStudySources(validCase, ['src-1']),
-    ).not.toThrow();
+    expect(() => validateCaseStudySources(validCase, ['src-1'])).not.toThrow();
   });
 
   it('rejects nested concept references outside the selected sources', () => {
@@ -121,23 +127,39 @@ describe('case study sources', () => {
 
 describe('case study generation options', () => {
   it('accepts questionCount 1-10 and focus/compare options', () => {
-    const base = { kind: 'case_study' as const, brief: 'clinic', sourceIds: [] as string[] };
+    const base = {
+      kind: 'case_study' as const,
+      brief: 'clinic',
+      sourceIds: [] as string[],
+    };
     expect(
       generateRequestSchema.safeParse({
         ...base,
-        caseStudyOptions: { questionCount: 4, focus: 'triage', comparePerspectives: true },
+        caseStudyOptions: {
+          questionCount: 4,
+          focus: 'triage',
+          comparePerspectives: true,
+        },
       }).success,
     ).toBe(true);
     expect(
       generateRequestSchema.safeParse({
         ...base,
-        caseStudyOptions: { questionCount: 0, focus: '', comparePerspectives: false },
+        caseStudyOptions: {
+          questionCount: 0,
+          focus: '',
+          comparePerspectives: false,
+        },
       }).success,
     ).toBe(false);
     expect(
       generateRequestSchema.safeParse({
         ...base,
-        caseStudyOptions: { questionCount: 11, focus: '', comparePerspectives: false },
+        caseStudyOptions: {
+          questionCount: 11,
+          focus: '',
+          comparePerspectives: false,
+        },
       }).success,
     ).toBe(false);
   });
@@ -151,7 +173,10 @@ describe('case study generation options', () => {
     ).toThrow();
     expect(() =>
       prepareGeneratedCaseStudy(
-        { ...validCase, scenario: { ...validCase.scenario, isFictional: false } },
+        {
+          ...validCase,
+          scenario: { ...validCase.scenario, isFictional: false },
+        },
         ['src-1'],
         { questionCount: 2 },
       ),

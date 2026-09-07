@@ -76,11 +76,10 @@ export class StudyMaterialService {
   ) {}
 
   async list(
-    userId: string,
     notebookId: string,
     filters?: { folderId?: string; kind?: StudyMaterialKind },
   ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const conditions = [
       eq(studyMaterials.notebookId, notebookId),
       isNull(studyMaterials.deletedAt),
@@ -105,16 +104,12 @@ export class StudyMaterialService {
     );
   }
 
-  async get(userId: string, smId: string) {
-    return this.fetchOwned(userId, smId);
+  async get(smId: string) {
+    return this.fetchOwned(smId);
   }
 
-  async create(
-    userId: string,
-    notebookId: string,
-    input: CreateStudyMaterialInput,
-  ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async create(notebookId: string, input: CreateStudyMaterialInput) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const validatedContent =
       input.kind === 'study_guide'
         ? await this.validateGuideSources(notebookId, input.content)
@@ -126,7 +121,7 @@ export class StudyMaterialService {
         ? withSlidePreviews(validatedContent as Record<string, unknown>)
         : validatedContent;
     if (input.folderId) {
-      await this.assertFolderOwned(userId, notebookId, input.folderId);
+      await this.assertFolderOwned(notebookId, input.folderId);
     }
     const [sm] = await this.db
       .insert(studyMaterials)
@@ -145,8 +140,8 @@ export class StudyMaterialService {
     );
   }
 
-  async update(userId: string, smId: string, input: UpdateStudyMaterialInput) {
-    const sm = await this.fetchOwned(userId, smId);
+  async update(smId: string, input: UpdateStudyMaterialInput) {
+    const sm = await this.fetchOwned(smId);
     const updates: Partial<typeof studyMaterials.$inferInsert> = {};
     if (input.title !== undefined) {
       const trimmed = input.title.trim();
@@ -236,8 +231,8 @@ export class StudyMaterialService {
     return validateStudyGuideSources(guide, allowed);
   }
 
-  async delete(userId: string, smId: string) {
-    const sm = await this.fetchOwned(userId, smId);
+  async delete(smId: string) {
+    const sm = await this.fetchOwned(smId);
     if (sm.deletedAt) {
       return sm;
     }
@@ -249,8 +244,8 @@ export class StudyMaterialService {
     return deleted;
   }
 
-  async restore(userId: string, smId: string) {
-    const sm = await this.fetchOwned(userId, smId);
+  async restore(smId: string) {
+    const sm = await this.fetchOwned(smId);
     if (!sm.deletedAt) {
       return sm;
     }
@@ -266,13 +261,13 @@ export class StudyMaterialService {
     return restored;
   }
 
-  async permanentDelete(userId: string, smId: string) {
-    await this.fetchOwned(userId, smId);
+  async permanentDelete(smId: string) {
+    await this.fetchOwned(smId);
     await this.db.delete(studyMaterials).where(eq(studyMaterials.id, smId));
   }
 
-  async shuffle(userId: string, smId: string) {
-    const sm = await this.fetchOwned(userId, smId);
+  async shuffle(smId: string) {
+    const sm = await this.fetchOwned(smId);
     if (sm.kind !== 'quiz') {
       throw new BadRequestError('Only quizzes can be shuffled');
     }
@@ -287,10 +282,10 @@ export class StudyMaterialService {
     return updated;
   }
 
-  async move(userId: string, smId: string, input: MoveStudyMaterialInput) {
-    const sm = await this.fetchOwned(userId, smId);
+  async move(smId: string, input: MoveStudyMaterialInput) {
+    const sm = await this.fetchOwned(smId);
     if (input.folderId) {
-      await this.assertFolderOwned(userId, sm.notebookId, input.folderId);
+      await this.assertFolderOwned(sm.notebookId, input.folderId);
     }
     const [moved] = await this.db
       .update(studyMaterials)
@@ -301,10 +296,9 @@ export class StudyMaterialService {
   }
 
   async buildSlidesPptx(
-    userId: string,
     smId: string,
   ): Promise<{ title: string; buffer: Buffer }> {
-    const sm = await this.fetchOwned(userId, smId);
+    const sm = await this.fetchOwned(smId);
     if (sm.kind !== 'slides') {
       throw new BadRequestError('Only slides can be exported as PowerPoint');
     }
@@ -327,8 +321,8 @@ export class StudyMaterialService {
     return { title: sm.title, buffer };
   }
 
-  async duplicate(userId: string, smId: string) {
-    const source = await this.fetchOwned(userId, smId);
+  async duplicate(smId: string) {
+    const source = await this.fetchOwned(smId);
     if (source.deletedAt) {
       throw new BadRequestError('Cannot duplicate a deleted study material');
     }
@@ -425,11 +419,7 @@ export class StudyMaterialService {
     return null;
   }
 
-  private async assertFolderOwned(
-    _userId: string,
-    notebookId: string,
-    folderId: string,
-  ) {
+  private async assertFolderOwned(notebookId: string, folderId: string) {
     const [folder] = await this.db
       .select({
         id: studyMaterialFolders.id,
@@ -449,7 +439,7 @@ export class StudyMaterialService {
     }
   }
 
-  private async fetchOwned(userId: string, smId: string) {
+  private async fetchOwned(smId: string) {
     const [sm] = await this.db
       .select()
       .from(studyMaterials)
@@ -457,19 +447,18 @@ export class StudyMaterialService {
     if (!sm) {
       throw new NotFoundError('Study material');
     }
-    await this.notebooksService.assertNotebookOwner(userId, sm.notebookId);
+    await this.notebooksService.assertNotebookOwner(sm.notebookId);
     return this.refreshDerivedContent(sm);
   }
 
   async evaluatePracticeProblem(
-    userId: string,
     smId: string,
     input: { problemId: string; studentAnswer: string; modelId: string },
   ): Promise<ProblemEvaluationResult> {
     this.logger.debug(
-      `[EVAL-DEBUG] start userId=${userId} smId=${smId} problemId=${input.problemId} modelId=${input.modelId} resolvedModel=${resolveModelId(input.modelId)} answerLength=${input.studentAnswer?.length ?? 0}`,
+      `[EVAL-DEBUG] start smId=${smId} problemId=${input.problemId} modelId=${input.modelId} resolvedModel=${resolveModelId(input.modelId)} answerLength=${input.studentAnswer?.length ?? 0}`,
     );
-    const sm = await this.fetchOwned(userId, smId);
+    const sm = await this.fetchOwned(smId);
     if (sm.kind !== 'practice_problems') {
       throw new BadRequestError(
         'Study material is not a practice problems set',
@@ -487,12 +476,12 @@ export class StudyMaterialService {
     }
 
     const modelId = input.modelId;
-    const provider = await this.aiService.getProviderForModel(modelId, userId);
+    const provider = await this.aiService.getProviderForModel(modelId);
     this.logger.debug(
       `[EVAL-DEBUG] provider resolved modelId=${modelId} provider=${provider.id}`,
     );
     const model = provider.createModel(modelId);
-    const requestOptions = this.aiService.getGatewayRequestOptions(userId);
+    const requestOptions = this.aiService.getGatewayRequestOptions();
 
     const systemPrompt = `You are an expert tutor evaluating a student's answer to a practice problem.
 Compare the student's attempt against the reference problem statement, givens, constraints, acceptable alternatives, reference answer, worked steps, and verification checklist.

@@ -59,6 +59,7 @@ COPY --from=backend-prod-deps /prod/backend/package.json ./package.json
 COPY --from=backend-prod-deps /prod/backend/node_modules ./node_modules
 COPY --from=build /app/backend/dist ./dist
 COPY --from=build /app/backend/drizzle ./drizzle
+COPY --from=build /app/backend/seed ./seed
 EXPOSE 4000
 CMD ["node", "dist/main.js"]
 

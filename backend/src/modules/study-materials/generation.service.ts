@@ -37,19 +37,15 @@ export class GenerationService {
     private readonly streamHandler: StreamHandler,
   ) {}
 
-  async generate(
-    userId: string,
-    notebookId: string,
-    input: StartGenerationInput,
-  ) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async generate(notebookId: string, input: StartGenerationInput) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
 
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
-    await this.connectionService.requireConnected(userId, modelId);
+    await this.connectionService.requireConnected(modelId);
 
     const sourceTexts =
       input.sourceIds.length > 0
-        ? await this.fetchSourceTexts(userId, notebookId, input.sourceIds)
+        ? await this.fetchSourceTexts(notebookId, input.sourceIds)
         : [];
 
     if (input.kind === 'study_guide') {
@@ -94,13 +90,12 @@ export class GenerationService {
       }
     }
 
-    const requestId = await this.requestManager.create(userId, notebookId, {
+    const requestId = await this.requestManager.create(notebookId, {
       ...input,
       model: modelId,
     });
 
     const { stream } = this.streamHandler.createStream(
-      userId,
       notebookId,
       {
         ...input,
@@ -119,21 +114,17 @@ export class GenerationService {
     return { stream, requestId };
   }
 
-  async cancel(userId: string, requestId: string) {
+  async cancel(requestId: string) {
     const request = await this.requestManager.get(requestId);
     if (!request) {
       throw new NotFoundError('Generation request');
     }
-    await this.notebooksService.assertNotebookOwner(userId, request.notebookId);
-    await this.requestManager.cancel(userId, requestId);
+    await this.notebooksService.assertNotebookOwner(request.notebookId);
+    await this.requestManager.cancel(requestId);
     return request;
   }
 
-  private async fetchSourceTexts(
-    _userId: string,
-    notebookId: string,
-    sourceIds: string[],
-  ) {
+  private async fetchSourceTexts(notebookId: string, sourceIds: string[]) {
     const rows = await this.db
       .select({
         id: sources.id,

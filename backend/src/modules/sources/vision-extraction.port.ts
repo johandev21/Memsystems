@@ -19,7 +19,6 @@ export interface VisionExtractionInput {
   imageBuffer: Buffer;
   mimeType: 'image/png' | 'image/jpeg' | 'image/webp';
   fileName?: string;
-  userId?: string;
   modelId?: string;
 }
 

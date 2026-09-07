@@ -157,21 +157,19 @@ export class VisionExtractionService implements VisionExtractionPort {
     buffer: Buffer;
     mimeType: string;
     filename?: string;
-    userId?: string;
     modelId?: string;
   }): Promise<VisionExtractionResult> {
     return this.extract({
       imageBuffer: input.buffer,
       mimeType: input.mimeType as 'image/png' | 'image/jpeg' | 'image/webp',
       fileName: input.filename,
-      userId: input.userId,
       modelId: input.modelId,
     });
   }
 
   async extract(input: VisionExtractionInput): Promise<VisionExtractionResult> {
     const modelId = await this.resolveVisionModel(input);
-    if (!modelId || !input.userId) {
+    if (!modelId) {
       return this.deterministicFallback(
         input,
         'Vision model unavailable or not configured. Used fallback descriptor.',
@@ -179,14 +177,9 @@ export class VisionExtractionService implements VisionExtractionPort {
     }
 
     try {
-      const provider = await this.aiService.getProviderForModel(
-        modelId,
-        input.userId,
-      );
+      const provider = await this.aiService.getProviderForModel(modelId);
       const model = provider.createModel(modelId);
-      const requestOptions = this.aiService.getGatewayRequestOptions(
-        input.userId,
-      );
+      const requestOptions = this.aiService.getGatewayRequestOptions();
 
       const promptText = `Analyze this image and extract its textual and semantic content. Follow all system instructions faithfully.`;
 
@@ -256,12 +249,8 @@ export class VisionExtractionService implements VisionExtractionPort {
   private async resolveVisionModel(
     input: VisionExtractionInput,
   ): Promise<string | null> {
-    if (!input.userId) {
-      return null;
-    }
-
     try {
-      const snapshot = await this.connectionService.snapshot(input.userId);
+      const snapshot = await this.connectionService.snapshot();
       const visionModels = snapshot.models.filter(
         (m) => m.capabilities?.imageInput === true,
       );

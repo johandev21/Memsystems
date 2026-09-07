@@ -183,7 +183,6 @@ describe('TranscriptionService', () => {
       audioBuffer: Buffer.from([1, 2, 3]),
       mimeType: 'audio/wav',
       fileName: 'interview.wav',
-      userId: 'user-123',
     };
 
     const result = await service.transcribe(input);
@@ -238,7 +237,6 @@ describe('TranscriptionService', () => {
       audioBuffer: Buffer.from([0x49, 0x44, 0x33]),
       mimeType: 'audio/mpeg',
       fileName: 'lecture.mp3',
-      userId: 'user-123',
     };
 
     const result = await service.transcribe(input);
@@ -273,7 +271,6 @@ describe('TranscriptionService', () => {
       audioBuffer: Buffer.from([1, 2, 3]),
       mimeType: 'audio/wav',
       fileName: 'pod.wav',
-      userId: 'user-123',
     };
 
     const result = await service.transcribe(input);

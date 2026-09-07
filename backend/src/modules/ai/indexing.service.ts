@@ -5,7 +5,6 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
   jobs,
-  notebooks,
   sourceChunks,
   sourceSegments,
   sources,
@@ -64,10 +63,8 @@ export class IndexingService {
         rawText: sources.rawText,
         contentHash: sources.contentHash,
         currentVersionId: sources.currentVersionId,
-        userId: notebooks.userId,
       })
       .from(sources)
-      .innerJoin(notebooks, eq(sources.notebookId, notebooks.id))
       .where(eq(sources.id, sourceId));
 
     if (!source) {
@@ -111,10 +108,7 @@ export class IndexingService {
     }
 
     const contents = chunks.map((c) => c.content);
-    const embeddings = await this.embeddingService.generateEmbeddings(
-      contents,
-      source.userId,
-    );
+    const embeddings = await this.embeddingService.generateEmbeddings(contents);
 
     if (embeddings.length !== chunks.length) {
       throw new InternalError(

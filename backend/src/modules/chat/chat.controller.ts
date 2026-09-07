@@ -6,15 +6,12 @@ import {
   Param,
   Post,
   Res,
-  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { ChatService } from './chat.service';
 
 const textPartSchema = z.object({
@@ -57,22 +54,17 @@ const chatRequestSchema = z.object({
 });
 
 @Controller('notebooks/:id/chat')
-@UseGuards(AuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get()
-  async list(
-    @CurrentUser('id') userId: string,
-    @Param('id') notebookId: string,
-  ) {
-    return this.chatService.listMessages(userId, notebookId);
+  async list(@Param('id') notebookId: string) {
+    return this.chatService.listMessages(notebookId);
   }
 
   @Post()
   @UsePipes(new ZodValidationPipe(chatRequestSchema))
   async sendMessage(
-    @CurrentUser('id') userId: string,
     @Param('id') notebookId: string,
     @Body() body: z.infer<typeof chatRequestSchema>,
     @Res() res: Response,
@@ -101,7 +93,6 @@ export class ChatController {
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
       const { streamResponse } = await this.chatService.sendMessage(
-        userId,
         notebookId,
         {
           content,
@@ -142,11 +133,8 @@ export class ChatController {
   }
 
   @Delete()
-  async clearMessages(
-    @CurrentUser('id') userId: string,
-    @Param('id') notebookId: string,
-  ) {
-    await this.chatService.clearMessages(userId, notebookId);
+  async clearMessages(@Param('id') notebookId: string) {
+    await this.chatService.clearMessages(notebookId);
     return { success: true };
   }
 }

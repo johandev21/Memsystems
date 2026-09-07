@@ -4,7 +4,6 @@ import type { Response as ExpressResponse } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatController } from '../src/modules/chat/chat.controller';
 import { ChatService } from '../src/modules/chat/chat.service';
-import { AuthGuard } from '../src/modules/auth/auth.guard';
 
 class DisconnectingResponse extends EventEmitter {
   readonly writes: Uint8Array[] = [];
@@ -49,10 +48,7 @@ describe('ChatController streaming lifecycle', () => {
           },
         },
       ],
-    })
-      .overrideGuard(AuthGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     controller = module.get(ChatController);
   });
@@ -73,7 +69,6 @@ describe('ChatController streaming lifecycle', () => {
     const response = new DisconnectingResponse();
 
     await controller.sendMessage(
-      'user-1',
       'notebook-1',
       {
         model: 'openai/gpt-5.6-sol',
@@ -87,7 +82,7 @@ describe('ChatController streaming lifecycle', () => {
       response as unknown as ExpressResponse,
     );
 
-    const sendInput = sendMessage.mock.calls[0]?.[2] as {
+    const sendInput = sendMessage.mock.calls[0]?.[1] as {
       abortSignal?: AbortSignal;
     };
     expect(sendInput.abortSignal?.aborted).toBe(true);

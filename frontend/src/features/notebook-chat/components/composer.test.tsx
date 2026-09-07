@@ -40,11 +40,13 @@ function ComposerHarness({
 }
 
 describe("Composer", () => {
-  it("shows web-search capability in the model selector", async () => {
+  it("lists models in the selector without capability badges", async () => {
     const user = userEvent.setup();
     render(<ComposerHarness />);
     await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
-    expect(await screen.findByText("Web")).toBeTruthy();
+    expect(await screen.findByRole("option", { name: /GPT-5.6 Luna/ })).toBeTruthy();
+    expect(screen.queryByText("Web")).toBeNull();
+    expect(screen.queryByText("Free")).toBeNull();
   });
 
   it("fails closed for image attachments when capability metadata is absent", () => {

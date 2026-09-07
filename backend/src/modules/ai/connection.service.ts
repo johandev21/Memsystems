@@ -4,6 +4,7 @@ import { ModelSyncService } from './model-sync.service';
 import {
   buildGatewayOptions,
   createGatewayProvider,
+  SINGLE_USER_ID,
   type GatewayRequestOptions,
 } from './providers/gateway.provider';
 import { resolveModelId } from './providers/model-catalog';
@@ -27,6 +28,11 @@ class TtlCache<T> {
   set(value: T): void {
     this.value = value;
     this.timestamp = Date.now();
+  }
+
+  clear(): void {
+    this.value = null;
+    this.timestamp = 0;
   }
 
   getTimestamp(): number {
@@ -69,8 +75,8 @@ function disconnectedSnapshot(detail: string): ConnectionSnapshot {
 
 @Injectable()
 export class ConnectionService {
-  /** Gateway health probes are per user — every user has their own key. */
-  private readonly userHealth = new Map<string, TtlCache<GatewayHealth>>();
+  /** Single-user mode: one gateway health probe for the single gateway key. */
+  private readonly healthCache = new TtlCache<GatewayHealth>(HEALTH_TTL_MS);
 
   constructor(
     private readonly userSettingsService: UserSettingsService,
@@ -80,32 +86,27 @@ export class ConnectionService {
   private async checkHealth(
     apiKey: string,
     options: GatewayRequestOptions,
-    userId: string,
   ): Promise<GatewayHealth & { checkedAt: number }> {
-    let cache = this.userHealth.get(userId);
-    if (!cache) {
-      cache = new TtlCache<GatewayHealth>(HEALTH_TTL_MS);
-      this.userHealth.set(userId, cache);
-    }
-    const cached = cache.get();
-    if (cached) return { ...cached, checkedAt: cache.getTimestamp() };
+    const cached = this.healthCache.get();
+    if (cached)
+      return { ...cached, checkedAt: this.healthCache.getTimestamp() };
 
     const health = await createGatewayProvider({
       apiKey,
       getModels: () => this.modelSyncService.getModels(),
       requestOptions: options,
     }).health();
-    if (health.ok) cache.set(health);
-    return { ...health, checkedAt: cache.getTimestamp() };
+    if (health.ok) this.healthCache.set(health);
+    return { ...health, checkedAt: this.healthCache.getTimestamp() };
   }
 
-  async requireConnected(userId: string, modelId: string): Promise<void> {
+  async requireConnected(modelId: string): Promise<void> {
     const resolved = resolveModelId(modelId);
     const catalog = this.modelSyncService.getModels();
     if (!catalog.some((model) => model.id === resolved)) {
       throw new ServiceUnavailableError(`Model ${modelId} is not supported.`);
     }
-    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+    const apiKey = await this.userSettingsService.getGatewayApiKey();
     if (!apiKey) {
       throw new ServiceUnavailableError(
         'AI Gateway is not connected. Add your AI Gateway key in Settings.',
@@ -113,8 +114,7 @@ export class ConnectionService {
     }
     const health = await this.checkHealth(
       apiKey,
-      buildGatewayOptions(userId),
-      userId,
+      buildGatewayOptions(SINGLE_USER_ID),
     );
     // Degraded (rate-limited, non-entitled, upstream blip) is NOT
     // disconnected: let the request through so it can retry, fall back,
@@ -125,12 +125,9 @@ export class ConnectionService {
       );
   }
 
-  async snapshot(userId?: string): Promise<ConnectionSnapshot> {
+  async snapshot(): Promise<ConnectionSnapshot> {
     const catalog = this.modelSyncService.getModels();
-    if (!userId) {
-      return disconnectedSnapshot('User context required.');
-    }
-    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+    const apiKey = await this.userSettingsService.getGatewayApiKey();
     if (!apiKey) {
       return disconnectedSnapshot(
         'No AI Gateway key configured. Add your key in Settings to use AI features.',
@@ -139,8 +136,7 @@ export class ConnectionService {
 
     const health = await this.checkHealth(
       apiKey,
-      buildGatewayOptions(userId),
-      userId,
+      buildGatewayOptions(SINGLE_USER_ID),
     );
     const healthy = health.ok === true;
     const degraded = health.degraded === true && !healthy;
@@ -159,7 +155,7 @@ export class ConnectionService {
     };
   }
 
-  invalidateUserCache(userId: string): void {
-    this.userHealth.delete(userId);
+  invalidateCache(): void {
+    this.healthCache.clear();
   }
 }

@@ -16,6 +16,7 @@ import { ModelSyncService } from './model-sync.service';
 import {
   buildGatewayOptions,
   createGatewayProvider,
+  SINGLE_USER_ID,
   type GatewayRequestOptions,
 } from './providers/gateway.provider';
 import { classifyGatewayError } from './providers/gateway-errors';
@@ -80,24 +81,19 @@ export class AiService {
     private readonly modelSyncService: ModelSyncService,
   ) {}
 
-  async getProviderForModel(
-    modelId: string,
-    userId?: string,
-  ): Promise<Provider> {
-    if (!userId) {
-      throw new BadRequestError('User context required to use AI models.');
-    }
+  async getProviderForModel(modelId: string): Promise<Provider> {
     const resolved = resolveModelId(modelId);
     const catalog = this.modelSyncService.getModels();
     if (!catalog.some((model) => model.id === resolved)) {
       throw new BadRequestError(`Model ${modelId} is not supported.`);
     }
-    if (!(await this.hasEffectiveAuth(userId))) {
+    if (!(await this.hasEffectiveAuth())) {
       throw new BadRequestError(
         'AI Gateway is not connected. Add your AI Gateway key in Settings.',
       );
     }
-    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+    // The global gateway key lives in the singleton app_settings row.
+    const apiKey = await this.userSettingsService.getGatewayApiKey();
     if (!apiKey) {
       throw new BadRequestError(
         'AI Gateway is not connected. Add your AI Gateway key in Settings.',
@@ -110,22 +106,22 @@ export class AiService {
   }
 
   /**
-   * Per-request gateway options for a model call: the user id for spend
-   * attribution. Auth travels with the provider instance (the user's own
+   * Per-request gateway options with the single-user id for spend
+   * attribution. Auth travels with the provider instance (the single
    * gateway key), not the options bag. The gateway must serve the requested
    * model or fail — silent substitution via fallback models is not allowed.
    */
-  getGatewayRequestOptions(userId: string): GatewayRequestOptions {
-    return buildGatewayOptions(userId);
+  getGatewayRequestOptions(): GatewayRequestOptions {
+    return buildGatewayOptions(SINGLE_USER_ID);
   }
 
-  private async hasEffectiveAuth(userId: string): Promise<boolean> {
-    const apiKey = await this.userSettingsService.getGatewayApiKey(userId);
+  private async hasEffectiveAuth(): Promise<boolean> {
+    const apiKey = await this.userSettingsService.getGatewayApiKey();
     return Boolean(apiKey);
   }
 
-  async listModels(userId: string) {
-    return (await this.connectionService.snapshot(userId)).models;
+  async listModels() {
+    return (await this.connectionService.snapshot()).models;
   }
 
   requireCapability(
@@ -145,21 +141,17 @@ export class AiService {
     );
   }
 
-  async searchWeb(
-    query: string,
-    modelId: string,
-    userId: string,
-  ): Promise<WebSearchResult> {
-    this.logger.log(`searchWeb start`, { userId, modelId, query });
+  async searchWeb(query: string, modelId: string): Promise<WebSearchResult> {
+    this.logger.log(`searchWeb start`, { modelId, query });
 
-    await this.connectionService.requireConnected(userId, modelId);
-    const provider = await this.getProviderForModel(modelId, userId);
+    await this.connectionService.requireConnected(modelId);
+    const provider = await this.getProviderForModel(modelId);
     if (!provider.supportsWebSearch(modelId)) {
       this.requireCapability(provider, modelId, 'webSearch', 'web search');
     }
 
     const model = provider.createModel(modelId);
-    const requestOptions = this.getGatewayRequestOptions(userId);
+    const requestOptions = this.getGatewayRequestOptions();
     const webSearchTool = provider.createWebSearchTool?.();
     if (!webSearchTool) {
       throw new BadRequestError(
@@ -236,18 +228,11 @@ export class AiService {
     };
   }
 
-  async generateStream(
-    modelId: string,
-    messages: ConvertInput,
-    userId?: string,
-  ): Promise<any> {
-    if (!userId) {
-      throw new BadRequestError('User context required to generate stream.');
-    }
-    await this.connectionService.requireConnected(userId, modelId);
-    const provider = await this.getProviderForModel(modelId, userId);
+  async generateStream(modelId: string, messages: ConvertInput): Promise<any> {
+    await this.connectionService.requireConnected(modelId);
+    const provider = await this.getProviderForModel(modelId);
     const model = provider.createModel(modelId);
-    const requestOptions = this.getGatewayRequestOptions(userId);
+    const requestOptions = this.getGatewayRequestOptions();
     const coreMessages = await convertToModelMessages(messages);
     return streamText({
       model,

@@ -3,12 +3,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { sourceSegments, sourceVersions } from '../src/database/schema';
 import { SourceVersionService } from '../src/modules/sources/source-version.service';
 import { db } from './db';
-import { seedNotebook, seedSource, seedUser } from './fixtures';
+import { seedNotebook, seedSource } from './fixtures';
 
 describe('SourceVersionService', () => {
   it('persists one version and one segment set when the same extraction retries', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'text',
       title: 'Retry-safe source',
@@ -43,8 +42,7 @@ describe('SourceVersionService', () => {
   });
 
   it('persists specific section kinds and imageRegion locators into sourceSegments', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
       title: 'Vision Source',

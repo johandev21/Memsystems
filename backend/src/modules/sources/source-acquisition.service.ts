@@ -96,7 +96,7 @@ export class SourceAcquisitionService {
     buffer: Buffer,
     contentType: string,
     fileName: string,
-    options: { userId?: string; modelId?: string } = {},
+    options: { modelId?: string } = {},
   ): Promise<NormalizedDocument> {
     if (this.extraction.isImageFile(contentType, fileName)) {
       const inspected = this.imageInspector.inspect(buffer);
@@ -104,7 +104,6 @@ export class SourceAcquisitionService {
         imageBuffer: buffer,
         mimeType: inspected.mimeType,
         fileName,
-        userId: options.userId,
         modelId: options.modelId,
       });
       return this.normalizer.fromImageResult(visionResult, {

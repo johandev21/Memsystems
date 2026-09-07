@@ -29,7 +29,6 @@ export interface TranscriptionInput {
     | (string & {});
   fileName?: string;
   filename?: string;
-  userId?: string;
   modelId?: string;
   language?: string;
   prompt?: string;

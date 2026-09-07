@@ -24,8 +24,18 @@ const validSet = {
       constraints: ['Use SI units'],
       hints: ['Think F=ma', 'Multiply'],
       steps: [
-        { id: 'p-1-s-1', title: 'Identify mass', explanation: 'Mass is 2kg because given.', sourceIds: [] },
-        { id: 'p-1-s-2', title: 'Multiply', explanation: 'Multiply by acceleration.', sourceIds: ['src-1'] },
+        {
+          id: 'p-1-s-1',
+          title: 'Identify mass',
+          explanation: 'Mass is 2kg because given.',
+          sourceIds: [],
+        },
+        {
+          id: 'p-1-s-2',
+          title: 'Multiply',
+          explanation: 'Multiply by acceleration.',
+          sourceIds: ['src-1'],
+        },
       ],
       answer: 'F = 20N',
       checklist: ['Correct units'],
@@ -78,7 +88,10 @@ describe('practice problems content validation', () => {
         },
       ],
     };
-    const validated = validateContent('practice_problems', minimal) as typeof validSet;
+    const validated = validateContent(
+      'practice_problems',
+      minimal,
+    ) as typeof validSet;
     expect(validated.problems[0].hints).toEqual([]);
     expect(validated.problems[0].sourceIds).toEqual([]);
   });
@@ -87,14 +100,22 @@ describe('practice problems content validation', () => {
 describe('practice problems sources', () => {
   it('rejects references outside the selected sources', () => {
     expect(() => validatePracticeProblemSources(validSet, [])).toThrow();
-    expect(() => validatePracticeProblemSources(validSet, ['src-1'])).not.toThrow();
+    expect(() =>
+      validatePracticeProblemSources(validSet, ['src-1']),
+    ).not.toThrow();
   });
 
   it('rejects step-level references outside the selected sources', () => {
     const bad = {
       ...validSet,
       problems: [
-        { ...validSet.problems[0], sourceIds: [], steps: [{ id: 's', title: 'T', explanation: 'E', sourceIds: ['other'] }] },
+        {
+          ...validSet.problems[0],
+          sourceIds: [],
+          steps: [
+            { id: 's', title: 'T', explanation: 'E', sourceIds: ['other'] },
+          ],
+        },
       ],
     };
     expect(() => validatePracticeProblemSources(bad, ['src-1'])).toThrow();
@@ -103,30 +124,49 @@ describe('practice problems sources', () => {
 
 describe('practice problems generation options', () => {
   it('accepts problemCount 1-30 and rejects out-of-range counts', () => {
-    const base = { kind: 'practice_problems' as const, brief: 'physics', sourceIds: [] as string[] };
+    const base = {
+      kind: 'practice_problems' as const,
+      brief: 'physics',
+      sourceIds: [] as string[],
+    };
     expect(
-      generateRequestSchema.safeParse({ ...base, practiceProblemsOptions: { problemCount: 8, difficulty: 'medium' } }).success,
+      generateRequestSchema.safeParse({
+        ...base,
+        practiceProblemsOptions: { problemCount: 8, difficulty: 'medium' },
+      }).success,
     ).toBe(true);
     expect(
-      generateRequestSchema.safeParse({ ...base, practiceProblemsOptions: { problemCount: 0, difficulty: 'medium' } }).success,
+      generateRequestSchema.safeParse({
+        ...base,
+        practiceProblemsOptions: { problemCount: 0, difficulty: 'medium' },
+      }).success,
     ).toBe(false);
     expect(
-      generateRequestSchema.safeParse({ ...base, practiceProblemsOptions: { problemCount: 31, difficulty: 'medium' } }).success,
+      generateRequestSchema.safeParse({
+        ...base,
+        practiceProblemsOptions: { problemCount: 31, difficulty: 'medium' },
+      }).success,
     ).toBe(false);
   });
 
   it('enforces problem count match on prepare', () => {
     expect(() =>
-      prepareGeneratedPracticeProblems(validSet, ['src-1'], { problemCount: 1 }),
+      prepareGeneratedPracticeProblems(validSet, ['src-1'], {
+        problemCount: 1,
+      }),
     ).not.toThrow();
     expect(() =>
-      prepareGeneratedPracticeProblems(validSet, ['src-1'], { problemCount: 2 }),
+      prepareGeneratedPracticeProblems(validSet, ['src-1'], {
+        problemCount: 2,
+      }),
     ).toThrow();
   });
 
   it('supports questionCount alias for problem count', () => {
     expect(() =>
-      prepareGeneratedPracticeProblems(validSet, ['src-1'], { questionCount: 1 }),
+      prepareGeneratedPracticeProblems(validSet, ['src-1'], {
+        questionCount: 1,
+      }),
     ).not.toThrow();
   });
 
@@ -137,9 +177,13 @@ describe('practice problems generation options', () => {
     });
     expect(prepared.difficulty).toBe('hard');
 
-    const defaultPrepared = prepareGeneratedPracticeProblems(validSet, ['src-1'], {
-      problemCount: 1,
-    });
+    const defaultPrepared = prepareGeneratedPracticeProblems(
+      validSet,
+      ['src-1'],
+      {
+        problemCount: 1,
+      },
+    );
     expect(defaultPrepared.difficulty).toBe('medium');
   });
 });
@@ -185,7 +229,9 @@ describe('practice problems normalizer', () => {
   });
 
   it('generates a practice-problems title suffix and supports save/reopen content shape', () => {
-    expect(generateTitle('practice_problems', { title: 'Newton Laws' })).toBe('newton-laws-practice-problems');
+    expect(generateTitle('practice_problems', { title: 'Newton Laws' })).toBe(
+      'newton-laws-practice-problems',
+    );
     const reopened = validateContent('practice_problems', validSet);
     expect(reopened).toMatchObject({ title: validSet.title });
   });

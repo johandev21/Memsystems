@@ -27,6 +27,13 @@ export interface GatewayRequestOptions {
 }
 
 /**
+ * Single-user mode: there are no per-user gateway keys anymore. Callers that
+ * still read UserSettingsService (until the Settings agent migrates it to
+ * app_settings) use this constant as the lookup key.
+ */
+export const SINGLE_USER_ID = 'single-user';
+
+/**
  * Builds per-request gateway options: the end-user id for spend attribution.
  * Auth travels with the provider instance (each user's own gateway key), not
  * the options bag. The bag stays plain JSON so it satisfies the AI SDK

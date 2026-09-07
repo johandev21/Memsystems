@@ -1,14 +1,11 @@
 import { useRouterState } from "@tanstack/react-router";
-import { useAuth } from "@/shared/auth";
 
 export function RouteProgressBar() {
   const isNavigating = useRouterState({
     select: (state) => state.status === "pending",
   });
-  const auth = useAuth();
-  const isLoading = isNavigating || auth.status === "loading";
 
-  if (!isLoading) {
+  if (!isNavigating) {
     return null;
   }
 

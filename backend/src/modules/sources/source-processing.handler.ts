@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { notebooks, sources } from '../../database/schema';
+import { sources } from '../../database/schema';
 import { Job, JobHandler } from '../jobs/job-handler.interface';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { DRIZZLE } from '../database/database.module';
@@ -154,16 +154,10 @@ export class SourceProcessingHandler implements JobHandler<
             source.contentType,
             source.s3Key,
           );
-          const [notebook] = await this.db
-            .select({ userId: notebooks.userId })
-            .from(notebooks)
-            .where(eq(notebooks.id, source.notebookId));
-
           const result = await this.transcriptionService.transcribeAudio({
             buffer,
             mimeType: inspected.mimeType,
             filename: source.title,
-            userId: notebook?.userId,
           });
 
           await this.versions.markProcessing(sourceId, 'analyzing_visuals');
@@ -186,7 +180,6 @@ export class SourceProcessingHandler implements JobHandler<
                 buffer: keyframe.buffer,
                 mimeType: keyframe.mimeType,
                 filename: `${source.title} (Frame at ${Math.round(keyframe.timestampMs / 1000)}s)`,
-                userId: notebook?.userId,
               },
             );
 
@@ -213,16 +206,10 @@ export class SourceProcessingHandler implements JobHandler<
             source.contentType,
             source.s3Key,
           );
-          const [notebook] = await this.db
-            .select({ userId: notebooks.userId })
-            .from(notebooks)
-            .where(eq(notebooks.id, source.notebookId));
-
           const result = await this.transcriptionService.transcribeAudio({
             buffer,
             mimeType: inspected.mimeType,
             filename: source.title,
-            userId: notebook?.userId,
           });
 
           document = this.documentNormalizer.fromAudioResult(result, {
@@ -232,16 +219,10 @@ export class SourceProcessingHandler implements JobHandler<
         } else if (isImage) {
           await this.versions.markProcessing(sourceId, 'analyzing_visuals');
           const inspected = this.imageInspector.inspect(buffer);
-          const [notebook] = await this.db
-            .select({ userId: notebooks.userId })
-            .from(notebooks)
-            .where(eq(notebooks.id, source.notebookId));
-
           const result = await this.visionExtraction.extractVisualDocument({
             buffer,
             mimeType: inspected.mimeType,
             filename: source.title,
-            userId: notebook?.userId,
           });
 
           document = this.documentNormalizer.fromImageResult(result, {

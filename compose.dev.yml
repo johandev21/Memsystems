@@ -28,7 +28,10 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-superuser}@db:5432/${POSTGRES_DB:-memsystems_dev}
-    command: ["pnpm", "run", "db:migrate"]
+      DEV_STORAGE_DIR: /app/dev-storage
+    volumes:
+      - storage:/app/dev-storage
+    command: ["sh", "-c", "pnpm run db:migrate && pnpm run db:seed"]
     depends_on:
       db:
         condition: service_healthy

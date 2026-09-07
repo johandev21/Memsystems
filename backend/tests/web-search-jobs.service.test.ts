@@ -4,7 +4,7 @@ import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import { WebSearchHandler } from '../src/modules/sources/web-search.handler';
 import { WebSearchJobsService } from '../src/modules/sources/web-search-jobs.service';
-import { seedNotebook, seedUser } from './fixtures';
+import { seedNotebook } from './fixtures';
 import { db } from './db';
 
 function createJobsService(searchImpl: () => Promise<unknown>) {
@@ -50,10 +50,9 @@ const SEARCH_RESULT = {
 describe('WebSearchJobsService', () => {
   it('enqueue creates a pending job and processing marks it ready with candidates', async () => {
     const { service, queue } = createJobsService(async () => SEARCH_RESULT);
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    const job = await service.enqueue(user.id, notebook.id, {
+    const job = await service.enqueue(notebook.id, {
       query: 'philosophy',
       modelId: 'openai/gpt-5.6-sol',
     });
@@ -61,7 +60,7 @@ describe('WebSearchJobsService', () => {
 
     await queue.drain();
 
-    const latest = await service.latest(user.id, notebook.id);
+    const latest = await service.latest(notebook.id);
     expect(latest?.status).toBe('ready');
     expect(latest?.summary).toBe('A summary of philosophy sources.');
     expect(latest?.candidates).toEqual([
@@ -76,21 +75,20 @@ describe('WebSearchJobsService', () => {
 
   it('enqueue replaces the previous job so only the latest remains', async () => {
     const { service } = createJobsService(async () => SEARCH_RESULT);
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    const job1 = await service.enqueue(user.id, notebook.id, {
+    const job1 = await service.enqueue(notebook.id, {
       query: 'first query',
       modelId: 'openai/gpt-5.6-sol',
     });
 
-    const job2 = await service.enqueue(user.id, notebook.id, {
+    const job2 = await service.enqueue(notebook.id, {
       query: 'second query',
       modelId: 'openai/gpt-5.6-sol',
     });
 
     expect(job1.id).not.toBe(job2.id);
-    const latest = await service.latest(user.id, notebook.id);
+    const latest = await service.latest(notebook.id);
     expect(latest?.id).toBe(job2.id);
     expect(latest?.query).toBe('second query');
   });
@@ -99,42 +97,39 @@ describe('WebSearchJobsService', () => {
     const { service, queue } = createJobsService(async () => {
       throw new Error('provider unavailable');
     });
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    await service.enqueue(user.id, notebook.id, {
+    await service.enqueue(notebook.id, {
       query: 'failing query',
       modelId: 'openai/gpt-5.6-sol',
     });
 
     await queue.drain();
 
-    const latest = await service.latest(user.id, notebook.id);
+    const latest = await service.latest(notebook.id);
     expect(latest?.status).toBe('failed');
     expect(latest?.lastError).toContain('provider unavailable');
   });
 
   it('dismiss deletes the latest job', async () => {
     const { service } = createJobsService(async () => SEARCH_RESULT);
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    await service.enqueue(user.id, notebook.id, {
+    await service.enqueue(notebook.id, {
       query: 'dismiss query',
       modelId: 'openai/gpt-5.6-sol',
     });
 
-    await service.dismiss(user.id, notebook.id);
-    const latest = await service.latest(user.id, notebook.id);
+    await service.dismiss(notebook.id);
+    const latest = await service.latest(notebook.id);
     expect(latest).toBeNull();
   });
 
   it('latest returns null for a notebook with no jobs', async () => {
     const { service } = createJobsService(async () => SEARCH_RESULT);
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    const latest = await service.latest(user.id, notebook.id);
+    const latest = await service.latest(notebook.id);
     expect(latest).toBeNull();
   });
 });

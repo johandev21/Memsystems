@@ -77,10 +77,10 @@ describe('AiService.searchWeb', () => {
     vi.spyOn(aiService, 'getProviderForModel').mockResolvedValue(provider);
 
     await expect(
-      aiService.searchWeb('philosophy', 'deepseek/deepseek-r1', 'user-1'),
+      aiService.searchWeb('philosophy', 'deepseek/deepseek-r1'),
     ).rejects.toThrow(CapabilityUnsupportedError);
     await expect(
-      aiService.searchWeb('philosophy', 'deepseek/deepseek-r1', 'user-1'),
+      aiService.searchWeb('philosophy', 'deepseek/deepseek-r1'),
     ).rejects.toThrow(
       /DeepSeek R1 doesn't support web search.*model that supports web search/,
     );
@@ -106,7 +106,7 @@ describe('AiService.searchWeb', () => {
     );
 
     const failure = await aiService
-      .searchWeb('philosophy', 'mystery/model', 'user-1')
+      .searchWeb('philosophy', 'mystery/model')
       .catch((error) => error);
     expect(failure?.status).toBe(400);
     expect(failure?.code).toBe('gateway_capability_unsupported');
@@ -175,7 +175,6 @@ describe('AiService.searchWeb', () => {
     const result = await aiService.searchWeb(
       'epistemology',
       'openai/gpt-5.6-sol',
-      'user-1',
     );
 
     expect(result.summary).toBe('Good overviews.');
@@ -210,7 +209,7 @@ describe('AiService.searchWeb', () => {
     );
 
     const failure = await aiService
-      .searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1')
+      .searchWeb('philosophy', 'openai/gpt-5.6-sol')
       .catch((error) => error);
     expect(failure?.status).toBe(429);
     expect(failure?.code).toBe('gateway_rate_limited');
@@ -240,7 +239,7 @@ describe('AiService.searchWeb', () => {
     );
 
     const failure = await aiService
-      .searchWeb('philosophy', 'openai/gpt-5.6-sol', 'user-1')
+      .searchWeb('philosophy', 'openai/gpt-5.6-sol')
       .catch((error) => error);
     expect(failure?.status).toBe(403);
     expect(failure?.code).toBe('gateway_entitlement');

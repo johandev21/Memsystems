@@ -7,7 +7,7 @@ import { SourceAcquisitionService } from '../src/modules/sources/source-acquisit
 import { SourceExtractionService } from '../src/modules/sources/source-extraction.service';
 import { SourcesService } from '../src/modules/sources/sources.service';
 import { WebSearchService } from '../src/modules/sources/web-search.service';
-import { seedNotebook, seedSource, seedUser } from './fixtures';
+import { seedNotebook, seedSource } from './fixtures';
 import { db } from './db';
 
 function createSourcesService() {
@@ -88,8 +88,7 @@ function createWebSearchService(
 describe('WebSearchService', () => {
   it('search returns candidates minus already-added URLs', async () => {
     const { sourcesService, notebooksService } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     await seedSource(notebook.id, {
       kind: 'url',
       title: 'Philosophy Basics',
@@ -101,7 +100,7 @@ describe('WebSearchService', () => {
       sourcesService,
       notebooksService,
     );
-    const result = await service.search(user.id, notebook.id, {
+    const result = await service.search(notebook.id, {
       query: 'philosophy',
       modelId: 'openai/gpt-5.6-sol',
     });
@@ -109,7 +108,6 @@ describe('WebSearchService', () => {
     expect(aiService.searchWeb).toHaveBeenCalledWith(
       'philosophy',
       'openai/gpt-5.6-sol',
-      user.id,
     );
     expect(result.summary).toBe('A summary of philosophy sources.');
     expect(result.sources).toHaveLength(1);
@@ -119,14 +117,13 @@ describe('WebSearchService', () => {
   it('import scrapes and persists each candidate as an ai_search source', async () => {
     const { sourcesService, notebooksService, acquisitionService } =
       createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     const { service } = createWebSearchService(
       sourcesService,
       notebooksService,
     );
-    const result = await service.import(user.id, notebook.id, {
+    const result = await service.import(notebook.id, {
       candidates: [
         { url: 'https://example.com/one', title: 'One', description: 'First' },
         { url: 'https://example.com/two', description: 'Second' },
@@ -139,9 +136,9 @@ describe('WebSearchService', () => {
     expect(result.results).toHaveLength(2);
     expect(result.results.every((r) => r.status === 'added')).toBe(true);
 
-    const sources = await sourcesService.list(user.id, notebook.id);
+    const sources = await sourcesService.list(notebook.id);
     expect(sources).toHaveLength(2);
-    const rows = await sourcesService.listUrlsForNotebook(user.id, notebook.id);
+    const rows = await sourcesService.listUrlsForNotebook(notebook.id);
     expect(rows).toEqual(
       expect.arrayContaining([
         'https://example.com/one',
@@ -153,8 +150,7 @@ describe('WebSearchService', () => {
   it('import marks duplicate URLs and skips re-scraping', async () => {
     const { sourcesService, notebooksService, acquisitionService } =
       createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     await seedSource(notebook.id, {
       kind: 'url',
       title: 'Existing',
@@ -166,7 +162,7 @@ describe('WebSearchService', () => {
       sourcesService,
       notebooksService,
     );
-    const result = await service.import(user.id, notebook.id, {
+    const result = await service.import(notebook.id, {
       candidates: [
         { url: 'https://example.com/one', title: 'One' },
         { url: 'https://example.com/two' },
@@ -196,14 +192,13 @@ describe('WebSearchService', () => {
         sections: [],
       })
       .mockRejectedValueOnce(new Error('fetch_failed'));
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     const { service } = createWebSearchService(
       sourcesService,
       notebooksService,
     );
-    const result = await service.import(user.id, notebook.id, {
+    const result = await service.import(notebook.id, {
       candidates: [
         { url: 'https://example.com/good' },
         { url: 'https://example.com/bad' },
@@ -219,14 +214,13 @@ describe('WebSearchService', () => {
 
   it('import records provenance (addedVia + metadata) on created sources', async () => {
     const { db, sourcesService, notebooksService } = createSourcesService();
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
     const { service } = createWebSearchService(
       sourcesService,
       notebooksService,
     );
-    await service.import(user.id, notebook.id, {
+    await service.import(notebook.id, {
       candidates: [{ url: 'https://example.com/provenance' }],
       modelId: 'openai/gpt-5.6-sol',
       query: 'philosophy',

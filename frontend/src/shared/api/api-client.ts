@@ -8,25 +8,9 @@ export function getApiUrl(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-function handleUnauthorized(res: Response) {
-  if (res.status === 401 && typeof window !== "undefined") {
-    const currentPath = window.location.pathname;
-    if (currentPath !== "/login" && currentPath !== "/") {
-      const redirectUrl = `/login?redirect=${encodeURIComponent(window.location.href)}`;
-      if (window.location.pathname !== "/login") {
-        window.location.href = redirectUrl;
-      }
-    }
-  }
-}
-
 export async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
   const options: RequestInit = { credentials: "include", ...init };
-  const res = await fetch(getApiUrl(path), options);
-  if (res.status === 401) {
-    handleUnauthorized(res);
-  }
-  return res;
+  return fetch(getApiUrl(path), options);
 }
 
 export function createQueryOptions<TData>(

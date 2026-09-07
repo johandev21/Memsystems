@@ -29,8 +29,8 @@ export class StudyMaterialFolderService {
     private readonly notebooksService: NotebooksService,
   ) {}
 
-  async list(userId: string, notebookId: string) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async list(notebookId: string) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     return this.db
       .select()
       .from(studyMaterialFolders)
@@ -43,14 +43,14 @@ export class StudyMaterialFolderService {
       .orderBy(desc(studyMaterialFolders.createdAt));
   }
 
-  async create(userId: string, notebookId: string, input: CreateFolderInput) {
-    await this.notebooksService.assertNotebookOwner(userId, notebookId);
+  async create(notebookId: string, input: CreateFolderInput) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
     const name = input.name.trim();
     if (name.length === 0) {
       throw new BadRequestError('Folder name cannot be empty');
     }
     if (input.parentId) {
-      await this.assertFolderOwned(userId, notebookId, input.parentId);
+      await this.assertFolderOwned(notebookId, input.parentId);
     }
     const [folder] = await this.db
       .insert(studyMaterialFolders)
@@ -63,8 +63,8 @@ export class StudyMaterialFolderService {
     return folder;
   }
 
-  async update(userId: string, folderId: string, input: UpdateFolderInput) {
-    const folder = await this.fetchOwned(userId, folderId);
+  async update(folderId: string, input: UpdateFolderInput) {
+    const folder = await this.fetchOwned(folderId);
     const updates: Partial<typeof studyMaterialFolders.$inferInsert> = {};
     if (input.name !== undefined) {
       const name = input.name.trim();
@@ -78,7 +78,7 @@ export class StudyMaterialFolderService {
         throw new BadRequestError('Folder cannot be its own parent');
       }
       if (input.parentId) {
-        await this.assertFolderOwned(userId, folder.notebookId, input.parentId);
+        await this.assertFolderOwned(folder.notebookId, input.parentId);
         const wouldCycle = await this.wouldCreateCycle(
           folderId,
           input.parentId,
@@ -102,8 +102,8 @@ export class StudyMaterialFolderService {
     return updated;
   }
 
-  async delete(userId: string, folderId: string) {
-    const folder = await this.fetchOwned(userId, folderId);
+  async delete(folderId: string) {
+    const folder = await this.fetchOwned(folderId);
     if (folder.deletedAt) {
       throw new BadRequestError('Folder already deleted');
     }
@@ -217,8 +217,8 @@ export class StudyMaterialFolderService {
     return ids;
   }
 
-  async restore(userId: string, folderId: string) {
-    const folder = await this.fetchOwned(userId, folderId);
+  async restore(folderId: string) {
+    const folder = await this.fetchOwned(folderId);
     if (!folder.deletedAt) {
       return folder;
     }
@@ -265,11 +265,7 @@ export class StudyMaterialFolderService {
     return false;
   }
 
-  private async assertFolderOwned(
-    _userId: string,
-    notebookId: string,
-    folderId: string,
-  ) {
+  private async assertFolderOwned(notebookId: string, folderId: string) {
     const [folder] = await this.db
       .select({
         id: studyMaterialFolders.id,
@@ -289,7 +285,7 @@ export class StudyMaterialFolderService {
     }
   }
 
-  private async fetchOwned(userId: string, folderId: string) {
+  private async fetchOwned(folderId: string) {
     const [folder] = await this.db
       .select()
       .from(studyMaterialFolders)
@@ -297,7 +293,7 @@ export class StudyMaterialFolderService {
     if (!folder) {
       throw new NotFoundError('Folder');
     }
-    await this.notebooksService.assertNotebookOwner(userId, folder.notebookId);
+    await this.notebooksService.assertNotebookOwner(folder.notebookId);
     return folder;
   }
 }

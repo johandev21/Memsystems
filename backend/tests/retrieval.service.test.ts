@@ -28,7 +28,7 @@ describe('RetrievalService citation locations', () => {
     );
 
     await expect(
-      service.retrieveRelevantChunks('notebook-1', 'derivative', 'user-1'),
+      service.retrieveRelevantChunks('notebook-1', 'derivative'),
     ).resolves.toEqual([
       {
         chunkId: 'chunk-1',
@@ -70,7 +70,6 @@ describe('RetrievalService citation locations', () => {
     const [chunk] = await service.retrieveRelevantChunks(
       'notebook-1',
       'legacy',
-      'user-1',
     );
     expect(chunk.sourceVersionId).toBeNull();
     expect(chunk.locator).toBeNull();

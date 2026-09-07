@@ -303,19 +303,6 @@ function ModelOption({
     >
       <ModelSelectorLogo provider={provider} />
       <ModelSelectorName>{model.displayName}</ModelSelectorName>
-      {model.isFreeTier && (
-        <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-xs font-semibold text-success">
-          Free
-        </span>
-      )}
-      {(model.supportsWebSearch === true || model.capabilities?.webSearch === true) && (
-        <span
-          className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary"
-          title="Supports web search"
-        >
-          Web
-        </span>
-      )}
       {selected ? <CheckIcon className="ml-auto size-4" /> : <div className="ml-auto size-4" />}
     </ModelSelectorItem>
   );

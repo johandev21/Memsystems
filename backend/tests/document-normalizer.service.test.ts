@@ -528,8 +528,6 @@ describe('DocumentNormalizerService.fromYouTubeResult', () => {
   });
 });
 
-
-
 describe('DocumentNormalizerService.fromTabularResult', () => {
   it('normalizes tabular dataset results with table sections and dimension locators', () => {
     const tabularResult = {

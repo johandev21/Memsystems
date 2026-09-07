@@ -3,7 +3,7 @@ import { StudyMaterialFolderService } from '../src/modules/study-materials/study
 import { StudyMaterialService } from '../src/modules/study-materials/study-material.service';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
-import { seedNotebook, seedStudyMaterial, seedUser } from './fixtures';
+import { seedNotebook, seedStudyMaterial } from './fixtures';
 import { db } from './db';
 import { studyMaterialFolders } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
@@ -24,10 +24,9 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
   const materialService = new StudyMaterialService(db as any, notebooksService);
 
   it('creates root folder with server ID and Untitled folder name', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
 
-    const folder = await folderService.create(user.id, notebook.id, {
+    const folder = await folderService.create(notebook.id, {
       name: 'Untitled folder',
     });
 
@@ -38,13 +37,12 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
   });
 
   it('creates nested folder under parent', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
-    const parent = await folderService.create(user.id, notebook.id, {
+    const notebook = await seedNotebook();
+    const parent = await folderService.create(notebook.id, {
       name: 'Parent',
     });
 
-    const child = await folderService.create(user.id, notebook.id, {
+    const child = await folderService.create(notebook.id, {
       name: 'Child',
       parentId: parent.id,
     });
@@ -54,13 +52,12 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
   });
 
   it('renames folder with valid name and persists', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
-    const folder = await folderService.create(user.id, notebook.id, {
+    const notebook = await seedNotebook();
+    const folder = await folderService.create(notebook.id, {
       name: 'Old',
     });
 
-    const updated = await folderService.update(user.id, folder.id, {
+    const updated = await folderService.update(folder.id, {
       name: 'New Name',
     });
 
@@ -75,40 +72,36 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
   });
 
   it('rejects blank folder name on rename', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
-    const folder = await folderService.create(user.id, notebook.id, {
+    const notebook = await seedNotebook();
+    const folder = await folderService.create(notebook.id, {
       name: 'Original',
     });
 
     await expect(
-      folderService.update(user.id, folder.id, { name: '   ' }),
+      folderService.update(folder.id, { name: '   ' }),
     ).rejects.toThrow();
   });
 
-  it('rejects rename for unauthorized user', async () => {
-    const owner = await seedUser();
-    const other = await seedUser();
-    const notebook = await seedNotebook(owner.id);
-    const folder = await folderService.create(owner.id, notebook.id, {
+  it('rejects rename for unknown folder', async () => {
+    const notebook = await seedNotebook();
+    const folder = await folderService.create(notebook.id, {
       name: 'Secret',
     });
 
     await expect(
-      folderService.update(other.id, folder.id, { name: 'Hacked' }),
+      folderService.update('non-existent-folder-id', { name: 'Hacked' }),
     ).rejects.toThrow();
   });
 
   it('rejects cross-notebook parent on create', async () => {
-    const user = await seedUser();
-    const nb1 = await seedNotebook(user.id);
-    const nb2 = await seedNotebook(user.id);
-    const parentInNb2 = await folderService.create(user.id, nb2.id, {
+    const nb1 = await seedNotebook();
+    const nb2 = await seedNotebook();
+    const parentInNb2 = await folderService.create(nb2.id, {
       name: 'Other',
     });
 
     await expect(
-      folderService.create(user.id, nb1.id, {
+      folderService.create(nb1.id, {
         name: 'Child',
         parentId: parentInNb2.id,
       }),
@@ -116,12 +109,11 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
   });
 
   it('allows non-unique folder names', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
-    const f1 = await folderService.create(user.id, notebook.id, {
+    const notebook = await seedNotebook();
+    const f1 = await folderService.create(notebook.id, {
       name: 'Same',
     });
-    const f2 = await folderService.create(user.id, notebook.id, {
+    const f2 = await folderService.create(notebook.id, {
       name: 'Same',
     });
 
@@ -131,14 +123,13 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
   });
 
   it('renames material with valid title and persists', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const material = await seedStudyMaterial(notebook.id, {
       kind: 'quiz',
       title: 'Old Title',
     });
 
-    const updated = await materialService.update(user.id, material.id, {
+    const updated = await materialService.update(material.id, {
       title: 'New Title',
     });
 
@@ -147,29 +138,26 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
   });
 
   it('rejects blank material title on rename', async () => {
-    const user = await seedUser();
-    const notebook = await seedNotebook(user.id);
+    const notebook = await seedNotebook();
     const material = await seedStudyMaterial(notebook.id, {
       kind: 'quiz',
       title: 'Original',
     });
 
     await expect(
-      materialService.update(user.id, material.id, { title: '   ' }),
+      materialService.update(material.id, { title: '   ' }),
     ).rejects.toThrow();
   });
 
-  it('rejects material rename for unauthorized user', async () => {
-    const owner = await seedUser();
-    const other = await seedUser();
-    const notebook = await seedNotebook(owner.id);
+  it('rejects material rename for unknown material', async () => {
+    const notebook = await seedNotebook();
     const material = await seedStudyMaterial(notebook.id, {
       kind: 'quiz',
       title: 'Secret',
     });
 
     await expect(
-      materialService.update(other.id, material.id, { title: 'Hacked' }),
+      materialService.update('non-existent-material-id', { title: 'Hacked' }),
     ).rejects.toThrow();
   });
 });

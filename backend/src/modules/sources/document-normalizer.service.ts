@@ -818,14 +818,12 @@ export interface PptxDocumentOptions {
   title?: string;
   filename?: string;
   fileName?: string;
-  userId?: string;
 }
 
 export interface EpubDocumentOptions {
   title?: string;
   filename?: string;
   fileName?: string;
-  userId?: string;
 }
 
 function detectMarkdown(contentType: string, fileName?: string): boolean {

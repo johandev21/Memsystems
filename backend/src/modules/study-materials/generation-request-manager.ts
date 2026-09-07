@@ -43,7 +43,6 @@ export class GenerationRequestManager {
   ) {}
 
   async create(
-    _userId: string,
     notebookId: string,
     input: StartGenerationInput,
   ): Promise<string> {
@@ -78,7 +77,7 @@ export class GenerationRequestManager {
       .where(eq(generationRequests.id, requestId));
   }
 
-  async cancel(_userId: string, requestId: string): Promise<void> {
+  async cancel(requestId: string): Promise<void> {
     const [request] = await this.db
       .select({ status: generationRequests.status })
       .from(generationRequests)
