@@ -1,20 +1,12 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import {
-  getCommandPendingKey,
-  type TreeCommand,
-  type TreeCommandExecutor,
-} from "../model/commands";
+import type { TreeCommand, TreeCommandExecutor } from "../model/commands";
 import {
   buildStudyMaterialTree,
   canMoveItem,
-  createFolder,
-  duplicateMaterial,
   flattenVisibleTree,
   getItemName,
   moveItem,
-  renameItem,
-  softDeleteItem,
   type TreeNode,
   type TreeState,
 } from "../model/tree";
@@ -24,25 +16,12 @@ import {
   useTreeFocusRegistry,
 } from "./controller-hooks";
 import { getActiveFolderIds } from "../model/use-expanded";
+import { getCommandPendingKey } from "../model/commands";
+import { useTreeKeyboardNav } from "./use-tree-keyboard-nav";
+import { type PendingDelete, useTreeMutations } from "./use-tree-mutations";
 
-export const ROOT_DROP_ID = "study-materials-root";
-export const DRAG_ID_PREFIX = "study-materials-drag:";
-export const FOLDER_DROP_ID_PREFIX = "study-materials-folder:";
-
-export type TreeDragData = {
-  type: "study-material-tree-item";
-  itemId: string;
-};
-
-export type TreeDropData =
-  | { type: "study-materials-root"; folderId: null }
-  | { type: "study-materials-folder"; folderId: string };
-
-export type PendingDelete = {
-  id: string;
-  name: string;
-  type: "folder" | "material";
-};
+export * from "./controller-dnd";
+export type { PendingDelete } from "./use-tree-mutations";
 
 type ControllerParams = {
   folders: TreeState["folders"];
@@ -134,8 +113,6 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     onExpandedChange,
   );
   const [focusedItemId, setFocusedItemId] = useState<string | null>(selectedId ?? null);
-  const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [activeDragItemId, setActiveDragItemId] = useState<string | null>(null);
   const { pendingKeys, isPending, setPending, runPendingCommand } =
     usePendingTreeCommands(onCommand);
@@ -210,7 +187,6 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
         setFolderOpen(node.id, nextOpen);
         setLastAction?.(`${nextOpen ? "Expanded" : "Collapsed"} ${node.name}.`);
       } else {
-        // Material activation is deliberate and distinct from selection/focus.
         onMaterialActivate?.(node.id);
         setLastAction?.(`Activated ${node.name}.`);
       }
@@ -228,240 +204,29 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     setLastAction?.("Collapsed all folders.");
   }, [setLastAction, setOpenFolderIds]);
 
-  const beginRename = useCallback(
-    (id: string) => {
-      setSelectedId(id);
-      setRenamingItemId(id);
-    },
-    [setSelectedId],
-  );
-
-  const commitRename = useCallback(
-    async (itemId: string, name: string) => {
-      const previousName = getItemName(effectiveState, itemId) ?? "Item";
-      const nextName = name.trim();
-      if (!nextName || previousName === nextName) {
-        setRenamingItemId(null);
-        focus(itemId);
-        return;
-      }
-      if (onCommand) {
-        const command: TreeCommand = { type: "renameItem", id: itemId, name: nextName };
-        const key = getCommandPendingKey(command);
-        const result = await runPendingCommand(key, command);
-        if (!result) return;
-        if (!result.ok) {
-          focus(itemId);
-          return;
-        }
-        const exists =
-          effectiveState.folders.some((f) => f.id === itemId) ||
-          effectiveState.materials.some((m) => m.id === itemId);
-        if (!exists) {
-          setRenamingItemId(null);
-          return;
-        }
-        setRenamingItemId(null);
-        focus(itemId);
-        return;
-      }
-      setRenamingItemId(null);
-      const now = new Date().toISOString();
-      onInternalStateChange?.((prev) => renameItem(prev, itemId, nextName, now));
-      setLastAction?.(`Renamed ${previousName} to ${nextName}.`);
-      focus(itemId);
-    },
-    [effectiveState, focus, onCommand, onInternalStateChange, runPendingCommand, setLastAction],
-  );
-
-  const cancelRename = useCallback(
-    (id: string, originalName: string) => {
-      setRenamingItemId(null);
-      focus(id);
-      void originalName;
-    },
-    [focus],
-  );
-
-  const createFolderInternal = useCallback(
-    async (parentId: string | null) => {
-      if (onCommand) {
-        const command: TreeCommand = { type: "createFolder", parentId };
-        const key = getCommandPendingKey(command);
-        if (isPending(key)) return;
-        setPending(key, true);
-        try {
-          const result = await onCommand(command);
-          if (!result.ok) {
-            if (parentId) focus(parentId);
-            return;
-          }
-          const newId = result.newId;
-          if (!newId) return;
-          const parentExists =
-            parentId === null ||
-            effectiveState.folders.some((f) => f.id === parentId && !f.deletedAt);
-          if (parentId && !parentExists) return;
-          if (parentId) setFolderOpen(parentId, true);
-          setSelectedId(newId);
-          setFocusedItemId(newId);
-          setRenamingItemId(newId);
-        } finally {
-          setPending(key, false);
-        }
-        return;
-      }
-      const now = new Date().toISOString();
-      const id = `folder-${crypto.randomUUID()}`;
-      const folder = createFolder(parentId, id, now);
-      const notebookId = effectiveState.folders[0]?.notebookId ?? "notebook-placeholder";
-      const folderWithNotebook = { ...folder, notebookId };
-      onInternalStateChange?.((prev) => ({
-        ...prev,
-        folders: [...prev.folders, folderWithNotebook],
-      }));
-      if (parentId) setFolderOpen(parentId, true);
-      setSelectedId(folderWithNotebook.id);
-      setFocusedItemId(folderWithNotebook.id);
-      setRenamingItemId(folderWithNotebook.id);
-      setLastAction?.(`Created ${folderWithNotebook.name}.`);
-    },
-    [
-      effectiveState.folders,
-      focus,
-      isPending,
-      onCommand,
-      onInternalStateChange,
-      setFolderOpen,
-      setLastAction,
-      setPending,
-      setSelectedId,
-    ],
-  );
-
-  const duplicateMaterialInternal = useCallback(
-    async (id: string) => {
-      const name = getItemName(effectiveState, id) ?? "Study material";
-      if (onCommand) {
-        const command: TreeCommand = { type: "duplicateMaterial", id };
-        const key = getCommandPendingKey(command);
-        if (isPending(key)) return;
-        setPending(key, true);
-        try {
-          const result = await onCommand(command);
-          if (!result.ok) return;
-          const exists = effectiveState.materials.some((m) => m.id === id && !m.deletedAt);
-          if (!exists) return;
-        } finally {
-          setPending(key, false);
-        }
-        return;
-      }
-      const now = new Date().toISOString();
-      const newId = `material-${crypto.randomUUID()}`;
-      onInternalStateChange?.((prev) => duplicateMaterial(prev, id, newId, now));
-      setLastAction?.(`Duplicated ${name}.`);
-    },
-    [effectiveState, isPending, onCommand, onInternalStateChange, setLastAction, setPending],
-  );
-
-  const moveToRoot = useCallback(
-    async (id: string) => {
-      const name = getItemName(effectiveState, id) ?? "Item";
-      if (!canMoveItem(effectiveState, id, null)) return;
-      if (onCommand) {
-        const command: TreeCommand = { type: "moveItem", id, targetFolderId: null };
-        const key = getCommandPendingKey(command);
-        if (isPending(key)) return;
-        setPending(key, true);
-        try {
-          const result = await onCommand(command);
-          if (!result.ok) {
-            focus(id);
-            return;
-          }
-          const exists =
-            effectiveState.folders.some((f) => f.id === id) ||
-            effectiveState.materials.some((m) => m.id === id);
-          if (!exists) return;
-          focus(id);
-        } finally {
-          setPending(key, false);
-        }
-        return;
-      }
-      const now = new Date().toISOString();
-      onInternalStateChange?.((prev) => moveItem(prev, id, null, now));
-      setLastAction?.(`Moved ${name} to Study Materials.`);
-    },
-    [effectiveState, focus, isPending, onCommand, onInternalStateChange, setLastAction, setPending],
-  );
-
-  const requestDelete = useCallback((node: TreeNode) => {
-    setPendingDelete({ id: node.id, name: node.name, type: node.type });
-  }, []);
-
-  const confirmDelete = useCallback(async () => {
-    const pending = pendingDelete;
-    if (!pending) return;
-    const deleteId = pending.id;
-    if (onCommand) {
-      const command: TreeCommand = { type: "deleteItem", id: deleteId };
-      const key = getCommandPendingKey(command);
-      if (isPending(key)) return;
-      setPending(key, true);
-      try {
-        const result = await onCommand(command);
-        if (!result.ok) {
-          focus(deleteId);
-          return;
-        }
-        const exists =
-          effectiveState.folders.some((f) => f.id === deleteId) ||
-          effectiveState.materials.some((m) => m.id === deleteId);
-        if (!exists) {
-          setPendingDelete(null);
-          return;
-        }
-        setSelectedId(null);
-        setFocusedItemId(null);
-        setRenamingItemId(null);
-        setPendingDelete(null);
-      } finally {
-        setPending(key, false);
-      }
-      return;
-    }
-    const now = new Date().toISOString();
-    onInternalStateChange?.((prev) => softDeleteItem(prev, deleteId, now));
-    setSelectedId(null);
-    setFocusedItemId(null);
-    setRenamingItemId(null);
-    setLastAction?.(`Deleted ${pending.name} from the local prototype.`);
-    setPendingDelete(null);
-  }, [
+  const mutations = useTreeMutations({
     effectiveState,
-    focus,
-    isPending,
-    onCommand,
-    onInternalStateChange,
-    pendingDelete,
-    setLastAction,
-    setPending,
     setSelectedId,
-  ]);
-
-  const cancelDelete = useCallback(() => setPendingDelete(null), []);
+    setFocusedItemId,
+    onCommand,
+    runPendingCommand,
+    isPending,
+    setPending,
+    onInternalStateChange,
+    setLastAction,
+    setFolderOpen,
+    focus,
+  });
 
   const beginDrag = useCallback(
     (id: string, _name: string) => {
-      setRenamingItemId(null);
+      mutations.setRenamingItemId(null);
       setActiveDragItemId(id);
       setSelectedId(id);
       const n = getItemName(effectiveState, id) ?? "item";
       setLastAction?.(`Moving ${n}.`);
     },
-    [effectiveState, setLastAction, setSelectedId],
+    [effectiveState, mutations, setLastAction, setSelectedId],
   );
 
   const endDrag = useCallback(
@@ -517,72 +282,22 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     setLastAction?.("Cancelled move.");
   }, [setLastAction]);
 
-  const handleKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLElement>, node: TreeNode) => {
-      if (activeDragItemId) return;
-      const currentIndex = visibleItems.findIndex((item) => item.id === node.id);
-      const moveFocus = (index: number) => {
-        const nextItem = visibleItems[index];
-        if (nextItem) focus(nextItem.id);
-      };
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        moveFocus(Math.min(currentIndex + 1, visibleItems.length - 1));
-        return;
-      }
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        moveFocus(Math.max(currentIndex - 1, 0));
-        return;
-      }
-      if (event.key === "Home") {
-        event.preventDefault();
-        moveFocus(0);
-        return;
-      }
-      if (event.key === "End") {
-        event.preventDefault();
-        moveFocus(visibleItems.length - 1);
-        return;
-      }
-      if (event.key === "ArrowRight" && node.type === "folder") {
-        event.preventDefault();
-        if (!openFolderIds.has(node.id)) {
-          setFolderOpen(node.id, true);
-          return;
-        }
-        const firstChild = node.children[0];
-        if (firstChild) focus(firstChild.id);
-        return;
-      }
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        if (node.type === "folder" && openFolderIds.has(node.id)) {
-          setFolderOpen(node.id, false);
-          return;
-        }
-        if (node.parentId) focus(node.parentId);
-        return;
-      }
-      if (event.key === "Enter") {
-        event.preventDefault();
-        activate(node);
-        return;
-      }
-      if (event.key === "F2") {
-        event.preventDefault();
-        beginRename(node.id);
-      }
-    },
-    [activeDragItemId, activate, beginRename, focus, openFolderIds, setFolderOpen, visibleItems],
-  );
+  const { handleKeyDown } = useTreeKeyboardNav({
+    activeDragItemId,
+    visibleItems,
+    openFolderIds,
+    setFolderOpen,
+    focus,
+    activate,
+    beginRename: mutations.beginRename,
+  });
 
   return {
     size,
     openFolderIds,
     focusedItemId,
-    renamingItemId,
-    pendingDelete,
+    renamingItemId: mutations.renamingItemId,
+    pendingDelete: mutations.pendingDelete,
     activeDragItemId,
     treeHasFocus,
     pendingKeys,
@@ -591,7 +306,7 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     isFolderOpen: (id: string) => openFolderIds.has(id),
     isSelected: (id: string) => selectedId === id,
     isFocused: (id: string) => focusedItemId === id,
-    isRenaming: (id: string) => renamingItemId === id,
+    isRenaming: (id: string) => mutations.renamingItemId === id,
     canMove,
     select,
     activate,
@@ -599,15 +314,15 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     setFolderOpen,
     expandAll,
     collapseAll,
-    beginRename,
-    commitRename,
-    cancelRename,
-    createFolder: createFolderInternal,
-    duplicateMaterial: duplicateMaterialInternal,
-    moveToRoot,
-    requestDelete,
-    confirmDelete,
-    cancelDelete,
+    beginRename: mutations.beginRename,
+    commitRename: mutations.commitRename,
+    cancelRename: mutations.cancelRename,
+    createFolder: mutations.createFolderInternal,
+    duplicateMaterial: mutations.duplicateMaterialInternal,
+    moveToRoot: mutations.moveToRoot,
+    requestDelete: mutations.requestDelete,
+    confirmDelete: mutations.confirmDelete,
+    cancelDelete: mutations.cancelDelete,
     beginDrag,
     endDrag,
     cancelDrag,
@@ -615,31 +330,4 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     registerNode,
     registerTreeSurface,
   } as TreeController & { registerTreeSurface: (el: HTMLDivElement | null) => void };
-}
-
-export function getTreeDragData(data: unknown): TreeDragData | null {
-  if (!data || typeof data !== "object") return null;
-  const candidate = data as Partial<TreeDragData>;
-  return candidate.type === "study-material-tree-item" && typeof candidate.itemId === "string"
-    ? { type: candidate.type, itemId: candidate.itemId }
-    : null;
-}
-
-export function getTreeDropData(data: unknown): TreeDropData | null {
-  if (!data || typeof data !== "object") return null;
-  const candidate = data as Partial<TreeDropData>;
-  if (candidate.type === "study-materials-root") return { type: candidate.type, folderId: null };
-  if (candidate.type === "study-materials-folder" && typeof candidate.folderId === "string")
-    return { type: candidate.type, folderId: candidate.folderId };
-  return null;
-}
-
-export function findTreeNode(nodes: readonly TreeNode[], id: string | null): TreeNode | null {
-  if (!id) return null;
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    const descendant = findTreeNode(node.children, id);
-    if (descendant) return descendant;
-  }
-  return null;
 }

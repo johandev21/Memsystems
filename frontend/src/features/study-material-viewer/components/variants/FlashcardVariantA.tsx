@@ -14,7 +14,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import { useState } from "react";
-import { detectCardFormat, fillClozeBlanks } from "../card-type-detector";
+import { detectCardFormat, fillClozeBlanks } from "../../utils/card-type-detector";
 import { ClozeInteractive } from "../ClozeInteractive";
 import { FlashcardNavigation } from "./flashcard-navigation";
 

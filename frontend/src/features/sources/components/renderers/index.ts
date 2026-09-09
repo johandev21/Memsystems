@@ -10,13 +10,13 @@ export {
   parseRawTextToAudioSegments,
   parseTimestampToMs,
   type ParsedAudioSegment,
-} from "./audio-transcript-parser";
-export * from "./document-type-detector";
+} from "../../utils/audio-transcript-parser";
+export * from "../../utils/detect-document-type";
 export * from "./image-document-viewer";
 export * from "./markdown-document-viewer";
 export * from "./plain-text-document-viewer";
 export { PptxDocumentViewer, type PptxDocumentViewerProps } from "./pptx-document-viewer";
-export { parseRawTextToSlideSegments, type ParsedSlideSegment } from "./slide-segment-parser";
+export { parseRawTextToSlideSegments, type ParsedSlideSegment } from "../../utils/slide-segment-parser";
 export * from "./tabular-document-viewer";
 export {
   VideoDocumentViewer,

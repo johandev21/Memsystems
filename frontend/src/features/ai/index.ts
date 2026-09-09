@@ -16,3 +16,4 @@ export { isConnectionUsable, useConnectionStatus } from "./hooks/use-connection-
 export type { ConnectionStatus, GatewayKeyStatus } from "./hooks/use-connection-status";
 export * from "./types";
 export { highlightCode } from "./utils/code-highlighting";
+export * from "./utils/ai-error";

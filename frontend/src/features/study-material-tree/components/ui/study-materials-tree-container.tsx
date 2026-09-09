@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { foldersQueryOptions } from "@/features/study-material-tree";
+import { foldersQueryOptions } from "../../api/folders";
 import { studyMaterialsQueryOptions } from "@/features/study-material-viewer";
 import { StudyMaterialsTree, type StudyMaterialsTreeSize } from "./study-materials-tree";
 import { StudyMaterialsTreeSkeleton } from "./study-materials-tree-skeleton";

@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
-import { formatDisplayTitle } from "@/shared/utils/format-title";
-import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "./useRoadmapProgress";
+import { formatDisplayTitle } from "../utils/format-title";
+import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "../hooks/use-roadmap-progress";
 import "./roadmap-theme.css";
 
 // =============================================================================

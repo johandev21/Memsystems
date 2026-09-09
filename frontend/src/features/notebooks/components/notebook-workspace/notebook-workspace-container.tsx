@@ -2,12 +2,10 @@ import { useEffect } from "react";
 import { DesktopLayout, REVIEW_STUDIO_SIZE } from "./desktop-layout";
 import { MobileNotebookLayout } from "./mobile-notebook-layout";
 import { GenerateBriefDialog } from "@/features/study-material-generation";
-import {
-  NotebookModelProvider,
-  useNotebookPanels,
-  useSourcesPanel,
-  useStudioDialogs,
-} from "@/features/notebooks";
+import { NotebookModelProvider } from "../../context/notebook-model-context";
+import { useNotebookPanels } from "../../hooks/use-notebook-panels";
+import { useSourcesPanel } from "../../hooks/use-sources-panel";
+import { useStudioDialogs } from "../../hooks/use-studio-dialogs";
 
 export interface NotebookWorkspaceContainerProps {
   notebookId: string;

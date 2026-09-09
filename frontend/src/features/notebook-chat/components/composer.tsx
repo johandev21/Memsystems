@@ -1,6 +1,6 @@
 import type { FileUIPart } from "ai";
 import { CheckIcon, ChevronDownIcon, ImageIcon, XIcon } from "lucide-react";
-import { type RefObject, useMemo, useState } from "react";
+import { type RefObject, useState } from "react";
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -26,6 +26,7 @@ import {
   usePromptInputAttachments,
 } from "@/features/ai";
 import type { ModelOption } from "@/features/ai";
+import { getProviderName, useComposerModels } from "../hooks/use-composer-models";
 
 export interface ComposerProps {
   input: string;
@@ -38,16 +39,6 @@ export interface ComposerProps {
   onModelChange: (model: string) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 }
-
-const providerNames: Record<string, string> = {
-  openai: "OpenAI",
-  opencode: "OpenCode",
-  google: "Google",
-  gemini: "Gemini",
-  anthropic: "Anthropic",
-  deepseek: "DeepSeek",
-  kimi: "Kimi",
-};
 
 export function Composer({
   input,
@@ -189,48 +180,6 @@ function ComposerAttachmentList() {
       ))}
     </div>
   );
-}
-
-function normalizeModels(models: ModelOption[] | unknown): ModelOption[] {
-  if (Array.isArray(models)) return models;
-  if (models && typeof models === "object" && "models" in models && Array.isArray(models.models))
-    return models.models as ModelOption[];
-  return [];
-}
-
-function filterModels(models: ModelOption[], search: string) {
-  const query = search.trim().toLowerCase();
-  return query
-    ? models.filter(
-        (model) =>
-          model.displayName.toLowerCase().includes(query) || model.id.toLowerCase().includes(query),
-      )
-    : models;
-}
-
-function groupModels(models: ModelOption[]) {
-  return models.reduce<Record<string, ModelOption[]>>((groups, model) => {
-    const provider = model.id.split("/")[0] || "openai";
-    (groups[provider] ??= []).push(model);
-    return groups;
-  }, {});
-}
-
-function getProviderName(provider: string) {
-  return providerNames[provider] || provider.charAt(0).toUpperCase() + provider.slice(1);
-}
-
-function useComposerModels(models: ModelOption[] | unknown, selectedModel: string, search: string) {
-  const safeModels = useMemo(() => normalizeModels(models), [models]);
-  const groups = useMemo(() => groupModels(filterModels(safeModels, search)), [safeModels, search]);
-  const activeModel = safeModels.find((model) => model.id === selectedModel);
-  const supportsImages = activeModel?.capabilities?.imageInput === true;
-  return {
-    activeModel,
-    activeProvider: selectedModel.split("/")[0] || "openai",
-    groups,
-    supportsImages,
-  };
 }
 
 function ComposerModelList({

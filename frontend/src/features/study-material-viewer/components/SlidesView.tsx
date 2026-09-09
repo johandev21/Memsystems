@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
-import { formatDisplayTitle } from "@/shared/utils/format-title";
+import { formatDisplayTitle } from "../utils/format-title";
 import { downloadSlidesPptx } from "../api/study-materials";
 import type { SlideElementType, SlidesContentType, SlidesSlideType } from "../shapes/slides";
 

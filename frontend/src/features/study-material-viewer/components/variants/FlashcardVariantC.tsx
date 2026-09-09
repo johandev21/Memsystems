@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { detectCardFormat } from "../card-type-detector";
+import { detectCardFormat } from "../../utils/card-type-detector";
 import { ClozeInteractive } from "../ClozeInteractive";
 import { FlashcardNavigation } from "./flashcard-navigation";
 

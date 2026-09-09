@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { notebookQueryOptions } from "../api/notebooks";
-import { fetchApi } from "@/shared/api";
+import { notebookQueryOptions, updateNotebook } from "../api/notebooks";
 
 export function EditableNotebookTitle({ id }: { id: string }) {
   const queryClient = useQueryClient();
@@ -26,15 +25,7 @@ export function EditableNotebookTitle({ id }: { id: string }) {
   }, [isEditing]);
 
   const mutation = useMutation({
-    mutationFn: async (newTitle: string) => {
-      const res = await fetchApi(`/api/notebooks/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
-      });
-      if (!res.ok) throw new Error(`Failed to update notebook (${res.status})`);
-      return res.json();
-    },
+    mutationFn: (newTitle: string) => updateNotebook(id, { title: newTitle }),
     onSuccess: (updated) => {
       queryClient.setQueryData(["notebooks", id], updated);
       queryClient.invalidateQueries({ queryKey: ["notebooks"] });

@@ -1,4 +1,4 @@
-﻿import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { fetchApi, apiDelete, createQueryOptions } from "@/shared/api";
 import type { Notebook, NotebooksResponse } from "../types";
 
@@ -58,4 +58,51 @@ export function allNotebooksQueryOptions(page: number, search?: string) {
 
 export function deleteNotebook(id: string): Promise<void> {
   return apiDelete(`/api/notebooks/${id}`);
+}
+
+export async function createNotebook(
+  input: { title?: string; icon?: string; description?: string } = {},
+): Promise<Notebook> {
+  const res = await fetchApi("/api/notebooks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Failed to create notebook (${res.status})`);
+  return res.json();
+}
+
+export async function updateNotebook(
+  id: string,
+  updates: Partial<Pick<Notebook, "title" | "description" | "icon" | "bannerFocalPoint">>,
+): Promise<Notebook> {
+  const res = await fetchApi(`/api/notebooks/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error(`Failed to update notebook (${res.status})`);
+  return res.json();
+}
+
+export async function uploadNotebookBanner(
+  id: string,
+  file: File,
+  focalPoint?: { x: number; y: number },
+): Promise<void> {
+  const body = new FormData();
+  body.append("id", id);
+  body.append("file", file);
+  if (focalPoint) {
+    body.append("focalPointX", focalPoint.x.toString());
+    body.append("focalPointY", focalPoint.y.toString());
+    body.append("focalPoint", JSON.stringify(focalPoint));
+  }
+  const res = await fetchApi(`/api/notebooks/${id}/banner`, { method: "POST", body });
+  if (!res.ok) throw new Error(`Failed to upload banner (${res.status})`);
+}
+
+export async function deleteNotebookBanner(id: string): Promise<void> {
+  const res = await fetchApi(`/api/notebooks/${id}/banner`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Failed to remove banner (${res.status})`);
 }

@@ -3,7 +3,7 @@ import { MarkdownRenderer } from "@/components/ui/markdown";
 import { type Source } from "@/features/sources";
 import { StudyGuideContent, type StudyGuideContentType } from "../shapes/study-guide";
 
-import { useStudyGuideReader } from "./use-study-guide-reader";
+import { useStudyGuideReader } from "../hooks/use-study-guide-reader";
 
 interface StudyGuideViewProps {
   content: unknown;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { FolderDTO } from "@/features/study-material-tree";
+import type { FolderDTO } from "../../types";
 
 const STORAGE_PREFIX = "study-materials-tree:expanded:";
 

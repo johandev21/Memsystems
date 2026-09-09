@@ -1,16 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { FolderPicker } from "@/features/notebooks";
-import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { BriefKnowledgeStep } from "./brief-knowledge-step";
 import { BriefWizardHeader } from "./brief-wizard-header";
-import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
 import type { BaseMaterialFormProps, MindMapOptions } from "./types";
+import { useBriefWizard } from "./use-brief-wizard";
 
 type DetailLevel = "basic" | "detailed";
 
@@ -29,224 +26,28 @@ const COLOR_OPTIONS = [
   { id: true, title: "Grouped colors", desc: "Color related concepts by theme" },
 ] as const;
 
-export function MindMapBriefForm({
-  notebookId,
-  value,
-  onChange,
-  onSubmit,
-  submitLabel = "Generate Mind Map",
-  disabled = false,
-}: BaseMaterialFormProps) {
-  const [step, setStep] = useState<1 | 2>(1);
-
-  const initialNodeCount = value.mindMapOptions?.nodeCount ?? 20;
-  const [nodeCount, setNodeCount] = useState(initialNodeCount);
-  const [isAutoMode, setIsAutoMode] = useState(initialNodeCount === 0);
-  const [isCustomMode, setIsCustomMode] = useState(
-    initialNodeCount > 0 && !NODE_PRESETS.includes(initialNodeCount),
-  );
-  const [customValue, setCustomValue] = useState(
-    initialNodeCount > 0 && !NODE_PRESETS.includes(initialNodeCount)
-      ? String(initialNodeCount)
-      : "40",
-  );
-  const [detailLevel, setDetailLevel] = useState<DetailLevel>(
-    value.mindMapOptions?.detailLevel ?? "detailed",
-  );
-  const [colorGroups, setColorGroups] = useState(value.mindMapOptions?.colorGroups ?? false);
-  const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
-
-  const hasSources = value.sourceIds.length > 0;
-  const hasInstructions = value.brief.trim().length > 0;
-  const canSubmit = !disabled && (hasSources || hasInstructions);
-
-  const updateMindMapOptions = (patch: Partial<MindMapOptions>) => {
-    const nextCount =
-      patch.nodeCount !== undefined ? patch.nodeCount : isAutoMode ? 0 : nodeCount;
-    const nextDetail = patch.detailLevel ?? detailLevel;
-    const nextColor = patch.colorGroups !== undefined ? patch.colorGroups : colorGroups;
-    onChange({
-      mindMapOptions: {
-        nodeCount: nextCount,
-        structure: "hierarchical",
-        colorGroups: nextColor,
-        crossLinks: false,
-        detailLevel: nextDetail,
-      },
-    });
-  };
-
-  const handleCustomChange = (raw: string) => {
-    setCustomValue(raw);
-    const parsed = Number.parseInt(raw, 10);
-    if (!Number.isNaN(parsed) && parsed > 0) {
-      const next = Math.min(MAX_NODE_COUNT, Math.max(1, parsed));
-      setNodeCount(next);
-      updateMindMapOptions({ nodeCount: next });
-    }
-  };
-
-  const handleCustomBlur = () => {
-    const parsed = Number.parseInt(customValue, 10);
-    const nextValue = Number.isNaN(parsed) ? 40 : Math.min(MAX_NODE_COUNT, Math.max(1, parsed));
-    setCustomValue(String(nextValue));
-    setNodeCount(nextValue);
-    updateMindMapOptions({ nodeCount: nextValue });
-  };
-
-  const mapSizeLabel = isAutoMode
-    ? "Auto (AI decides)"
-    : `${nodeCount} nodes${nodeCount >= MAX_NODE_COUNT ? " (max 100)" : ""}`;
-
-  // Section Render Helpers
-  function renderStepOne() {
-    return (
-      <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
-        <div className="flex flex-col gap-5">
-          <NodeCountSelector
-            nodeCount={nodeCount}
-            isAutoMode={isAutoMode}
-            isCustomMode={isCustomMode}
-            customValue={customValue}
-            label={mapSizeLabel}
-            onAuto={() => {
-              setIsAutoMode(true);
-              setIsCustomMode(false);
-              setNodeCount(0);
-              updateMindMapOptions({ nodeCount: 0 });
-            }}
-            onPreset={(count) => {
-              setIsAutoMode(false);
-              setIsCustomMode(false);
-              setNodeCount(count);
-              updateMindMapOptions({ nodeCount: count });
-            }}
-            onCustom={() => {
-              setIsAutoMode(false);
-              setIsCustomMode(true);
-              const count = Math.min(
-                MAX_NODE_COUNT,
-                Math.max(1, Number.parseInt(customValue, 10) || 40),
-              );
-              setNodeCount(count);
-              updateMindMapOptions({ nodeCount: count });
-            }}
-            onCustomChange={handleCustomChange}
-            onCustomBlur={handleCustomBlur}
-          />
-
-          <OptionCards
-            label="2. Detail Level"
-            options={DETAIL_OPTIONS}
-            selectedId={detailLevel}
-            onSelect={(level) => {
-              setDetailLevel(level);
-              updateMindMapOptions({ detailLevel: level });
-            }}
-          />
-          <OptionCards
-            label="3. Color Groups"
-            options={COLOR_OPTIONS}
-            selectedId={colorGroups}
-            onSelect={(color) => {
-              setColorGroups(color);
-              updateMindMapOptions({ colorGroups: color });
-            }}
-          />
-
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-text-primary">
-              4. Knowledge Sources
-              {!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
-            </Label>
-            <GenerationSourcePopover
-              sources={sources}
-              selectedIds={value.sourceIds}
-              onChange={(sourceIds) => onChange({ sourceIds })}
-              emptyMessage="No sources in notebook. Mind map will generate using general knowledge."
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center pt-2 border-t border-transparent">
-          <span className="text-xs text-text-faint">Configure custom instructions next</span>
-          <Button
-            type="button"
-            onClick={() => setStep(2)}
-            className={cn(
-              "h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors",
-              CTA_BUTTON_CLASS,
-            )}
-          >
-            Next Step
-            <ArrowRight className="size-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  function renderStepTwo() {
-    return (
-      <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="brief-mindmap" className="text-sm font-medium text-text-primary">
-              Custom Instructions{!hasSources && <span className="ml-0.5 text-destructive">*</span>}
-            </Label>
-            <Textarea
-              id="brief-mindmap"
-              value={value.brief}
-              onChange={(event) => onChange({ brief: event.target.value })}
-              placeholder="What should this map explain? Describe the topic, question, or connections..."
-              className="min-h-[120px] max-h-[200px] w-full resize-none text-xs"
-              disabled={disabled}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
-            <FolderPicker
-              notebookId={notebookId}
-              value={value.folderId}
-              onChange={(folderId) => onChange({ folderId })}
-              disabled={disabled}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center pt-2 border-t border-transparent">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setStep(1)}
-            className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-
-          <Button
-            type="button"
-            className={cn(
-              "h-10 px-6 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors",
-              CTA_BUTTON_CLASS,
-            )}
-            disabled={!canSubmit}
-            onClick={onSubmit}
-          >
-            {submitLabel}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
+function OptionButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <BriefWizardHeader title="Mind Map Setup" step={step} onStepChange={setStep} />
-      {step === 1 ? renderStepOne() : renderStepTwo()}
-    </div>
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        optionRowClass(selected),
+        "flex h-9 items-center justify-center text-xs",
+        selected ? "font-semibold" : "font-medium",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -362,27 +163,169 @@ function OptionCards<T extends string | boolean>({
   );
 }
 
-function OptionButton({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
+export function MindMapBriefForm({
+  notebookId,
+  value,
+  onChange,
+  onSubmit,
+  submitLabel = "Generate Mind Map",
+  disabled = false,
+}: BaseMaterialFormProps) {
+  const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
+    useBriefWizard({ notebookId, value, onChange, disabled });
+
+  const initialNodeCount = value.mindMapOptions?.nodeCount ?? 20;
+  const [nodeCount, setNodeCount] = useState(initialNodeCount);
+  const [isAutoMode, setIsAutoMode] = useState(initialNodeCount === 0);
+  const [isCustomMode, setIsCustomMode] = useState(
+    initialNodeCount > 0 && !NODE_PRESETS.includes(initialNodeCount),
+  );
+  const [customValue, setCustomValue] = useState(
+    initialNodeCount > 0 && !NODE_PRESETS.includes(initialNodeCount)
+      ? String(initialNodeCount)
+      : "40",
+  );
+  const [detailLevel, setDetailLevel] = useState<DetailLevel>(
+    value.mindMapOptions?.detailLevel ?? "detailed",
+  );
+  const [colorGroups, setColorGroups] = useState(value.mindMapOptions?.colorGroups ?? false);
+
+  const updateMindMapOptions = (patch: Partial<MindMapOptions>) => {
+    const nextCount =
+      patch.nodeCount !== undefined ? patch.nodeCount : isAutoMode ? 0 : nodeCount;
+    const nextDetail = patch.detailLevel ?? detailLevel;
+    const nextColor = patch.colorGroups !== undefined ? patch.colorGroups : colorGroups;
+    onChange({
+      mindMapOptions: {
+        nodeCount: nextCount,
+        structure: "hierarchical",
+        colorGroups: nextColor,
+        crossLinks: false,
+        detailLevel: nextDetail,
+      },
+    });
+  };
+
+  const handleCustomChange = (raw: string) => {
+    setCustomValue(raw);
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      const next = Math.min(MAX_NODE_COUNT, Math.max(1, parsed));
+      setNodeCount(next);
+      updateMindMapOptions({ nodeCount: next });
+    }
+  };
+
+  const handleCustomBlur = () => {
+    const parsed = Number.parseInt(customValue, 10);
+    const nextValue = Number.isNaN(parsed) ? 40 : Math.min(MAX_NODE_COUNT, Math.max(1, parsed));
+    setCustomValue(String(nextValue));
+    setNodeCount(nextValue);
+    updateMindMapOptions({ nodeCount: nextValue });
+  };
+
+  const mapSizeLabel = isAutoMode
+    ? "Auto (AI decides)"
+    : `${nodeCount} nodes${nodeCount >= MAX_NODE_COUNT ? " (max 100)" : ""}`;
+
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={cn(
-        optionRowClass(selected),
-        "flex h-9 items-center justify-center text-xs",
-        selected ? "font-semibold" : "font-medium",
+    <div className="flex flex-col gap-5 font-sans text-text-tertiary">
+      <BriefWizardHeader title="Mind Map Setup" step={step} onStepChange={setStep} />
+      {step === 1 ? (
+        <div className="flex min-h-[380px] flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
+          <div className="flex flex-col gap-5">
+            <NodeCountSelector
+              nodeCount={nodeCount}
+              isAutoMode={isAutoMode}
+              isCustomMode={isCustomMode}
+              customValue={customValue}
+              label={mapSizeLabel}
+              onAuto={() => {
+                setIsAutoMode(true);
+                setIsCustomMode(false);
+                setNodeCount(0);
+                updateMindMapOptions({ nodeCount: 0 });
+              }}
+              onPreset={(count) => {
+                setIsAutoMode(false);
+                setIsCustomMode(false);
+                setNodeCount(count);
+                updateMindMapOptions({ nodeCount: count });
+              }}
+              onCustom={() => {
+                setIsAutoMode(false);
+                setIsCustomMode(true);
+                const count = Math.min(
+                  MAX_NODE_COUNT,
+                  Math.max(1, Number.parseInt(customValue, 10) || 40),
+                );
+                setNodeCount(count);
+                updateMindMapOptions({ nodeCount: count });
+              }}
+              onCustomChange={handleCustomChange}
+              onCustomBlur={handleCustomBlur}
+            />
+
+            <OptionCards
+              label="2. Detail Level"
+              options={DETAIL_OPTIONS}
+              selectedId={detailLevel}
+              onSelect={(level) => {
+                setDetailLevel(level);
+                updateMindMapOptions({ detailLevel: level });
+              }}
+            />
+
+            <OptionCards
+              label="3. Visual Grouping"
+              options={COLOR_OPTIONS}
+              selectedId={colorGroups}
+              onSelect={(color) => {
+                setColorGroups(color);
+                updateMindMapOptions({ colorGroups: color });
+              }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between border-t border-transparent pt-2">
+            <span className="text-xs text-text-faint">Configure custom instructions next</span>
+            <Button
+              type="button"
+              onClick={() => {
+                updateMindMapOptions({});
+                setStep(2);
+              }}
+              className={cn(
+                "h-9 gap-1.5 rounded-full px-5 text-sm font-medium transition-colors cursor-pointer",
+                CTA_BUTTON_CLASS,
+              )}
+            >
+              Next Step
+              <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <BriefKnowledgeStep
+          notebookId={notebookId}
+          value={value}
+          sources={sources}
+          hasSources={hasSources}
+          hasInstructions={hasInstructions}
+          canSubmit={canSubmit}
+          submitLabel={submitLabel}
+          disabled={disabled}
+          placeholder="What should this map explain? Describe the topic, question, or connections..."
+          textareaId="brief-mindmap"
+          emptySourcesMessage="No sources in notebook. Mind map will generate using general knowledge."
+          onPatch={patchFormData}
+          onBack={() => setStep(1)}
+          onSubmit={() => {
+            updateMindMapOptions({});
+            onSubmit();
+          }}
+        />
       )}
-    >
-      {children}
-    </button>
+    </div>
   );
 }

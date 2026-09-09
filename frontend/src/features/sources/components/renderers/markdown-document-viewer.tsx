@@ -3,7 +3,7 @@ import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "@/features/ai";
 import type { SourceSegmentLocator } from "../../types";
-import { splitTextIntoChunks } from "./document-type-detector";
+import { splitTextIntoChunks } from "../../utils/detect-document-type";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
 export interface MarkdownDocumentViewerProps {

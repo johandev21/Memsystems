@@ -1,29 +1,7 @@
-import { Button } from "@/components/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/shared/utils/cn";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import {
-  BookOpen,
-  Brain,
-  Briefcase,
-  FileQuestion,
-  Folder,
-  FolderOpen,
-  GripVertical,
-  ListChecks,
-  Map as MapIcon,
-  Network,
-  Presentation,
-  type LucideIcon,
-} from "lucide-react";
+import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getCommandPendingKey } from "../../model/commands";
 import type { TreeNode } from "../../model/tree";
@@ -34,7 +12,9 @@ import {
   useTreeControllerContext,
 } from "../controller-state";
 import { InlineRename } from "./inline-rename";
+import { MobileTreeRowActions } from "./mobile-tree-row-actions";
 import { RowMenu } from "./row-menu";
+import { getTreeIcon } from "./row-icon";
 
 type RowProps = {
   node: TreeNode;
@@ -352,126 +332,4 @@ function TreeRowLabel({ node, isRenaming }: { node: TreeNode; isRenaming: boolea
       {node.name}
     </span>
   );
-}
-
-type MobileTreeRowActionsProps = {
-  node: TreeNode;
-  visible: boolean;
-  isPending: boolean;
-  pendingRename: boolean;
-  pendingDuplicate: boolean;
-  pendingMove: boolean;
-  pendingDelete: boolean;
-};
-
-function MobileTreeRowActions({
-  node,
-  visible,
-  isPending,
-  pendingRename,
-  pendingDuplicate,
-  pendingMove,
-  pendingDelete,
-}: MobileTreeRowActionsProps) {
-  const controller = useTreeControllerContext();
-  if (!visible) return null;
-  const isFolder = node.type === "folder";
-  return (
-    <span
-      data-slot="study-materials-tree-row-actions"
-      className="ml-auto hidden shrink-0 items-center [@media(pointer:coarse)]:flex"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Actions for ${node.name}`}
-              className="size-6 shrink-0 rounded-md hover:bg-accent hover:text-accent-foreground"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => event.stopPropagation()}
-            />
-          }
-        />
-        <DropdownMenuContent align="end" side="bottom" className="min-w-52">
-          <DropdownMenuGroup>
-            {isFolder && (
-              <DropdownMenuItem
-                onClick={() => controller.createFolder(node.id)}
-                disabled={isPending}
-              >
-                New folder
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => controller.beginRename(node.id)}
-              disabled={pendingRename}
-            >
-              Rename
-            </DropdownMenuItem>
-            {node.type === "material" && (
-              <DropdownMenuItem
-                onClick={() => controller.duplicateMaterial(node.id)}
-                disabled={pendingDuplicate}
-              >
-                Duplicate
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              onClick={() => controller.moveToRoot(node.id)}
-              disabled={node.parentId === null || pendingMove}
-            >
-              Move to Study Materials
-            </DropdownMenuItem>
-            {isFolder && (
-              <>
-                <DropdownMenuItem onClick={controller.expandAll}>Expand all</DropdownMenuItem>
-                <DropdownMenuItem onClick={controller.collapseAll}>Collapse all</DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => controller.requestDelete(node)}
-              disabled={pendingDelete}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </span>
-  );
-}
-
-function getTreeIcon(node: TreeNode, isOpen: boolean): LucideIcon {
-  if (node.type === "folder") return isOpen ? FolderOpen : Folder;
-
-  switch (node.materialKind) {
-    case "simple_flashcard":
-      return Brain;
-    case "roadmap":
-      return MapIcon;
-    case "study_guide":
-      return BookOpen;
-    case "practice_problems":
-      return ListChecks;
-    case "case_study":
-      return Briefcase;
-    case "slides":
-      return Presentation;
-    case "mind_map":
-      return Network;
-    case "quiz":
-    default:
-      return FileQuestion;
-  }
 }

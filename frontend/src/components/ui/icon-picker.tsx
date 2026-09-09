@@ -1,10 +1,11 @@
 import { Search, X } from "lucide-react";
-import { dynamicIconImports } from "lucide-react/dynamic";
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { NotebookIcon } from "@/features/notebooks";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
+import { ALL_ICON_NAMES, CURATED_CATEGORIES } from "./icon-picker-data";
+import { IconPickerGrid } from "./icon-picker-grid";
 
 export interface IconPickerProps {
   value: string | null;
@@ -14,202 +15,6 @@ export interface IconPickerProps {
   placeholder?: string;
   triggerVariant?: "default" | "minimal";
 }
-
-const ALL_ICON_NAMES = Object.keys(dynamicIconImports);
-
-const CURATED_CATEGORIES: { name: string; icons: string[] }[] = [
-  {
-    name: "Popular",
-    icons: [
-      "notebook",
-      "book-open",
-      "brain",
-      "rocket",
-      "terminal",
-      "globe",
-      "compass",
-      "folder",
-      "code",
-      "cpu",
-      "database",
-      "hammer",
-      "zap",
-      "sparkles",
-      "star",
-      "layout",
-      "file-text",
-      "folder-open",
-      "settings",
-      "user",
-      "bell",
-      "calendar",
-      "bookmark",
-      "tag",
-      "layers",
-      "palette",
-      "music",
-      "video",
-      "camera",
-      "mail",
-      "message-square",
-      "shield",
-      "target",
-      "award",
-    ],
-  },
-  {
-    name: "Tech",
-    icons: [
-      "code",
-      "cpu",
-      "database",
-      "terminal",
-      "server",
-      "laptop",
-      "smartphone",
-      "wifi",
-      "git-branch",
-      "command",
-      "hard-drive",
-      "monitor",
-      "cloud",
-      "shield-check",
-      "binary",
-      "rss",
-    ],
-  },
-  {
-    name: "Files",
-    icons: [
-      "file-text",
-      "file",
-      "folder",
-      "folder-open",
-      "files",
-      "archive",
-      "paperclip",
-      "file-code",
-      "file-json",
-      "file-spreadsheet",
-      "file-check",
-      "folder-plus",
-    ],
-  },
-  {
-    name: "Communication",
-    icons: [
-      "message-square",
-      "mail",
-      "phone",
-      "send",
-      "inbox",
-      "share-2",
-      "at-sign",
-      "bell",
-      "message-circle",
-      "voicemail",
-    ],
-  },
-  {
-    name: "Objects",
-    icons: [
-      "hammer",
-      "wrench",
-      "key",
-      "lock",
-      "scissors",
-      "lightbulb",
-      "compass",
-      "anchor",
-      "briefcase",
-      "gift",
-      "box",
-      "shopping-bag",
-    ],
-  },
-  {
-    name: "System",
-    icons: [
-      "settings",
-      "sliders",
-      "filter",
-      "power",
-      "shield",
-      "trash-2",
-      "search",
-      "refresh-cw",
-      "check-circle",
-      "alert-circle",
-      "info",
-      "help-circle",
-    ],
-  },
-  {
-    name: "Media",
-    icons: [
-      "image",
-      "music",
-      "video",
-      "camera",
-      "headphones",
-      "film",
-      "mic",
-      "play",
-      "volume-2",
-      "sparkles",
-      "radio",
-      "tv",
-    ],
-  },
-];
-
-function formatIconLabel(name: string): string {
-  return name
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-interface IconItemProps {
-  name: string;
-  isSelected: boolean;
-  isFocused: boolean;
-  onClick: (name: string) => void;
-  onMouseEnter: (name: string) => void;
-}
-
-const IconItem = memo(function IconItem({
-  name,
-  isSelected,
-  isFocused,
-  onClick,
-  onMouseEnter,
-}: IconItemProps) {
-  const label = useMemo(() => formatIconLabel(name), [name]);
-
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={isSelected}
-      aria-label={label}
-      title={label}
-      tabIndex={-1}
-      onClick={() => onClick(name)}
-      onMouseEnter={() => onMouseEnter(name)}
-      className={cn(
-        "flex size-9 cursor-pointer items-center justify-center rounded-md border border-transparent bg-transparent text-foreground outline-none transition-colors duration-150",
-        isSelected
-          ? "bg-accent text-accent-foreground"
-          : isFocused
-            ? "bg-muted text-foreground ring-1 ring-ring/50"
-            : "hover:bg-muted/60",
-      )}
-    >
-      <NotebookIcon name={name} className="size-4 shrink-0" />
-    </button>
-  );
-});
 
 const BATCH_SIZE = 60;
 
@@ -352,7 +157,7 @@ export function IconPicker({
           className,
         )}
       >
-        <NotebookIcon
+        <DynamicIcon
           name={value}
           className={cn(
             "text-foreground",
@@ -407,61 +212,16 @@ export function IconPicker({
           aria-label="Icons"
           className="max-h-[280px] overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
         >
-          {isSearching ? (
-            matchingIcons.length > 0 ? (
-              <div className="grid gap-2">
-                <div className="px-0.5 text-xs font-medium text-muted-foreground">Results</div>
-                <div className="grid grid-cols-6 gap-1">
-                  {displayedMatchingIcons.map((iconName, index) => (
-                    <IconItem
-                      key={iconName}
-                      name={iconName}
-                      isSelected={value === iconName}
-                      isFocused={focusedIndex === index}
-                      onClick={handleSelect}
-                      onMouseEnter={handleIconMouseEnter}
-                    />
-                  ))}
-                </div>
-                {displayedMatchingIcons.length < matchingIcons.length && (
-                  <div className="py-1 text-center text-xs text-muted-foreground">
-                    Scroll down for more icons...
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <Search className="size-8 mb-2 stroke-1 opacity-50" />
-                <p className="text-xs font-medium">No icons found</p>
-                <p className="text-xs opacity-75 mt-0.5">Try searching for another keyword</p>
-              </div>
-            )
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {CURATED_CATEGORIES.map((category) => (
-                <div key={category.name} className="flex flex-col gap-1">
-                  <div className="px-0.5 text-xs font-medium text-muted-foreground">
-                    {category.name}
-                  </div>
-                  <div className="grid grid-cols-6 gap-1">
-                    {category.icons.map((iconName) => {
-                      const globalIdx = currentIcons.indexOf(iconName);
-                      return (
-                        <IconItem
-                          key={iconName}
-                          name={iconName}
-                          isSelected={value === iconName}
-                          isFocused={focusedIndex === globalIdx}
-                          onClick={handleSelect}
-                          onMouseEnter={handleIconMouseEnter}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <IconPickerGrid
+            isSearching={isSearching}
+            matchingIcons={matchingIcons}
+            displayedMatchingIcons={displayedMatchingIcons}
+            currentIcons={currentIcons}
+            value={value}
+            focusedIndex={focusedIndex}
+            onSelect={handleSelect}
+            onMouseEnter={handleIconMouseEnter}
+          />
         </div>
       </PopoverContent>
     </Popover>

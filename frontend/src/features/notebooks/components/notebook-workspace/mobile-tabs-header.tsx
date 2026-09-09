@@ -1,6 +1,6 @@
 import { BookOpen, MessageSquare, Sparkles } from "lucide-react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NotebookSettingsDialog } from "@/features/notebooks";
+import { NotebookSettingsDialog } from "../dialogs/notebook-settings-dialog";
 
 export interface MobileTabsHeaderProps {
   notebookId: string;

@@ -12,7 +12,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { FolderDTO } from "@/features/study-material-tree";
+import type { FolderDTO } from "../../types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import { cn } from "@/shared/utils/cn";
 import {

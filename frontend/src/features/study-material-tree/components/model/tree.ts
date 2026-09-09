@@ -1,4 +1,4 @@
-import type { FolderDTO } from "@/features/study-material-tree";
+import type { FolderDTO } from "../../types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 
 export type StudyMaterialTreeFolder = FolderDTO;

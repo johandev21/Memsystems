@@ -1,14 +1,11 @@
 import { useRef, type KeyboardEvent } from "react";
 import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useFlashcardSession } from "./useFlashcardSession";
-import { detectCardFormat } from "./card-type-detector";
+import { useFlashcardSession } from "../hooks/use-flashcard-session";
+import { detectCardFormat, type FlashcardItem } from "../utils/card-type-detector";
 import { ClozeInteractive } from "./ClozeInteractive";
 
-export interface FlashcardItem {
-  front: string;
-  back: string;
-}
+export type { FlashcardItem };
 
 export interface FlashcardViewProps {
   materialId: string;

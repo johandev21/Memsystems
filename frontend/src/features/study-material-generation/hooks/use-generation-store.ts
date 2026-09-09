@@ -14,7 +14,7 @@ import type {
   PracticeProblemsGenerationOptions,
 } from "../api/generation";
 import { KIND_LABELS } from "@/features/study-material-viewer";
-import { classifyChatError } from "@/features/notebook-chat/utils/chat-error";
+import { classifyChatError } from "@/features/ai";
 
 export interface ActiveGeneration {
   id: string;

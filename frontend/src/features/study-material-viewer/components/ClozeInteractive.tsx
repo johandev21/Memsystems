@@ -3,7 +3,7 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/utils/cn";
-import { parseClozeCard } from "./card-type-detector";
+import { parseClozeCard } from "../utils/card-type-detector";
 
 export interface ClozeInteractiveProps {
   front: string;
