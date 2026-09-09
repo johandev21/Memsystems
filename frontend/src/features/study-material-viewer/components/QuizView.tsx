@@ -122,8 +122,9 @@ export function QuizView({ content }: QuizViewProps) {
   }, []);
 
   const quizRef = useRef<HTMLDivElement>(null);
+  const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    handleKeyDownRef.current = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.repeat || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) {
         return;
       }
@@ -174,20 +175,16 @@ export function QuizView({ content }: QuizViewProps) {
         }
       }
     };
+  });
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      handleKeyDownRef.current(e);
+    };
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [
-    viewMode,
-    showUnansweredModal,
-    currentIdx,
-    totalQuestions,
-    questions,
-    handlePrev,
-    handleNext,
-    handleSubmit,
-    handleSelectOption,
-  ]);
+  }, []);
 
   if (totalQuestions === 0) {
     return <EmptyQuizState />;
@@ -418,6 +415,72 @@ function QuizCompletionSummary({
   );
 }
 
+function getOptionStatus(checked: boolean, correct: boolean, selected: boolean): string | null {
+  if (!checked) return null;
+  if (correct) return selected ? "Your Answer · Correct" : "Correct Answer";
+  if (selected) return "Your Answer was incorrect";
+  return null;
+}
+
+function getOptionContainerClass(checked: boolean, correct: boolean, selected: boolean): string {
+  if (!checked) return "border-surface-border bg-surface-2 hover:bg-surface-3";
+  if (correct) return "border-success/60 bg-success/5";
+  if (selected) return "border-destructive/60 bg-destructive/5";
+  return "border-surface-border bg-surface-2";
+}
+
+function OptionIndicator({
+  checked,
+  correct,
+  selected,
+  index,
+}: {
+  checked: boolean;
+  correct: boolean;
+  selected: boolean;
+  index: number;
+}) {
+  if (checked && correct) {
+    return <Check aria-hidden="true" className="size-6 shrink-0 text-success" />;
+  }
+  if (checked && selected) {
+    return <X aria-hidden="true" className="size-6 shrink-0 text-destructive" />;
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="w-6 shrink-0 text-center text-sm font-semibold leading-6 text-text-secondary"
+    >
+      {String.fromCharCode(65 + index)}
+    </span>
+  );
+}
+
+function OptionFeedback({
+  id,
+  status,
+  correct,
+  explanation,
+}: {
+  id: string;
+  status: string | null;
+  correct: boolean;
+  explanation?: string;
+}) {
+  return (
+    <div id={id} className="space-y-1 pb-4 pl-[3.25rem] pr-4 text-sm leading-relaxed break-words">
+      {status && (
+        <p className={cn("font-semibold", correct ? "text-success" : "text-destructive")}>
+          {status}
+        </p>
+      )}
+      {explanation && (
+        <p className="text-text-secondary">{formatExplanationText(explanation)}</p>
+      )}
+    </div>
+  );
+}
+
 function QuizOption({
   option,
   index,
@@ -439,24 +502,13 @@ function QuizOption({
 }) {
   const id = useId();
   const showFeedback = checked && (review || selected || correct);
-  const status =
-    checked && correct
-      ? selected
-        ? "Your Answer · Correct"
-        : "Correct Answer"
-      : checked && selected
-        ? "Your Answer was incorrect"
-        : null;
+  const status = getOptionStatus(checked, correct, selected);
+
   return (
     <div
       className={cn(
         "rounded-xl border text-text-primary transition-colors focus-within:ring-2 focus-within:ring-primary",
-        checked && correct
-          ? "border-success/60 bg-success/5"
-          : checked && selected
-            ? "border-destructive/60 bg-destructive/5"
-            : "border-surface-border bg-surface-2",
-        !checked && "hover:bg-surface-3",
+        getOptionContainerClass(checked, correct, selected),
       )}
     >
       <label className={cn("flex items-start gap-3 p-4", !checked && "cursor-pointer")}>
@@ -471,34 +523,21 @@ function QuizOption({
           aria-describedby={showFeedback ? id : undefined}
           className="sr-only"
         />
-        {checked && correct ? (
-          <Check aria-hidden="true" className="size-6 shrink-0 text-success" />
-        ) : checked && selected ? (
-          <X aria-hidden="true" className="size-6 shrink-0 text-destructive" />
-        ) : (
-          <span
-            aria-hidden="true"
-            className="w-6 shrink-0 text-center text-sm font-semibold leading-6 text-text-secondary"
-          >
-            {String.fromCharCode(65 + index)}
-          </span>
-        )}
+        <OptionIndicator
+          checked={checked}
+          correct={correct}
+          selected={selected}
+          index={index}
+        />
         <span className="min-w-0 text-sm leading-relaxed break-words">{option.text}</span>
       </label>
       {showFeedback && (
-        <div
+        <OptionFeedback
           id={id}
-          className="space-y-1 pb-4 pl-[3.25rem] pr-4 text-sm leading-relaxed break-words"
-        >
-          {status && (
-            <p className={cn("font-semibold", correct ? "text-success" : "text-destructive")}>
-              {status}
-            </p>
-          )}
-          {option.explanation && (
-            <p className="text-text-secondary">{formatExplanationText(option.explanation)}</p>
-          )}
-        </div>
+          status={status}
+          correct={correct}
+          explanation={option.explanation}
+        />
       )}
     </div>
   );

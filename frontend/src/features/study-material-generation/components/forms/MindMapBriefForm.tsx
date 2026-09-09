@@ -6,11 +6,11 @@ import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
-import type { BaseMaterialFormProps } from "./types";
+import type { BaseMaterialFormProps, MindMapOptions } from "./types";
 
 type DetailLevel = "basic" | "detailed";
 
@@ -60,26 +60,29 @@ export function MindMapBriefForm({
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  useEffect(() => {
+  const updateMindMapOptions = (patch: Partial<MindMapOptions>) => {
+    const nextCount =
+      patch.nodeCount !== undefined ? patch.nodeCount : isAutoMode ? 0 : nodeCount;
+    const nextDetail = patch.detailLevel ?? detailLevel;
+    const nextColor = patch.colorGroups !== undefined ? patch.colorGroups : colorGroups;
     onChange({
       mindMapOptions: {
-        nodeCount: isAutoMode ? 0 : nodeCount,
+        nodeCount: nextCount,
         structure: "hierarchical",
-        colorGroups,
+        colorGroups: nextColor,
         crossLinks: false,
-        detailLevel,
+        detailLevel: nextDetail,
       },
     });
-    // The dialog's update callback is recreated with each parent render.
-    // These local option values are the effect's actual dependencies.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [colorGroups, detailLevel, isAutoMode, nodeCount]);
+  };
 
   const handleCustomChange = (raw: string) => {
     setCustomValue(raw);
     const parsed = Number.parseInt(raw, 10);
     if (!Number.isNaN(parsed) && parsed > 0) {
-      setNodeCount(Math.min(MAX_NODE_COUNT, Math.max(1, parsed)));
+      const next = Math.min(MAX_NODE_COUNT, Math.max(1, parsed));
+      setNodeCount(next);
+      updateMindMapOptions({ nodeCount: next });
     }
   };
 
@@ -88,6 +91,7 @@ export function MindMapBriefForm({
     const nextValue = Number.isNaN(parsed) ? 40 : Math.min(MAX_NODE_COUNT, Math.max(1, parsed));
     setCustomValue(String(nextValue));
     setNodeCount(nextValue);
+    updateMindMapOptions({ nodeCount: nextValue });
   };
 
   const mapSizeLabel = isAutoMode
@@ -109,18 +113,23 @@ export function MindMapBriefForm({
               setIsAutoMode(true);
               setIsCustomMode(false);
               setNodeCount(0);
+              updateMindMapOptions({ nodeCount: 0 });
             }}
             onPreset={(count) => {
               setIsAutoMode(false);
               setIsCustomMode(false);
               setNodeCount(count);
+              updateMindMapOptions({ nodeCount: count });
             }}
             onCustom={() => {
               setIsAutoMode(false);
               setIsCustomMode(true);
-              setNodeCount(
-                Math.min(MAX_NODE_COUNT, Math.max(1, Number.parseInt(customValue, 10) || 40)),
+              const count = Math.min(
+                MAX_NODE_COUNT,
+                Math.max(1, Number.parseInt(customValue, 10) || 40),
               );
+              setNodeCount(count);
+              updateMindMapOptions({ nodeCount: count });
             }}
             onCustomChange={handleCustomChange}
             onCustomBlur={handleCustomBlur}
@@ -130,13 +139,19 @@ export function MindMapBriefForm({
             label="2. Detail Level"
             options={DETAIL_OPTIONS}
             selectedId={detailLevel}
-            onSelect={setDetailLevel}
+            onSelect={(level) => {
+              setDetailLevel(level);
+              updateMindMapOptions({ detailLevel: level });
+            }}
           />
           <OptionCards
             label="3. Color Groups"
             options={COLOR_OPTIONS}
             selectedId={colorGroups}
-            onSelect={setColorGroups}
+            onSelect={(color) => {
+              setColorGroups(color);
+              updateMindMapOptions({ colorGroups: color });
+            }}
           />
 
           <div className="flex flex-col gap-2">

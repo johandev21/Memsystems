@@ -60,6 +60,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
       navigate({ to: "/" });
     } catch {
       toast.error("Failed to delete notebook");
+    } finally {
       setIsDeleting(false);
     }
   };

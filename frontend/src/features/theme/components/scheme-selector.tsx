@@ -15,104 +15,109 @@ const SCHEME_OPTIONS: readonly SchemeOption[] = [
   { value: "system", label: "System", icon: Monitor },
 ] as const;
 
-function SchemePreview({ scheme }: { scheme: string }) {
-  const palette = usePaletteOptional();
-  const meta = getThemeMeta(palette?.theme ?? "default");
-  const { light, dark, accentLight, accentDark } = meta.preview;
+interface SchemeHalfPaneProps {
+  bg: string;
+  accent: string;
+  mixTarget: "black" | "white";
+  accentPercent: string;
+}
 
-  if (scheme === "system") {
-    return (
-      <div className="relative h-20 w-full overflow-hidden rounded-xl border border-border/80 shadow-xs">
-        <div className="absolute inset-0 flex">
-          {/* Light side */}
-          <div className="flex flex-1 flex-col p-2" style={{ backgroundColor: light }}>
-            <div className="mb-1.5 flex gap-1">
-              <div
-                className="h-1.5 w-8 rounded-full"
-                style={{ backgroundColor: `color-mix(in oklch, ${light}, ${accentLight} 25%)` }}
-              />
-              <div
-                className="h-1.5 flex-1 rounded-full"
-                style={{ backgroundColor: `color-mix(in oklch, ${light}, black 6%)` }}
-              />
-            </div>
-            <div className="flex flex-1 gap-1.5" style={{ height: "48px" }}>
-              <div
-                className="w-6 rounded-md border"
-                style={{
-                  backgroundColor: `color-mix(in oklch, ${light}, black 4%)`,
-                  borderColor: `color-mix(in oklch, ${light}, black 10%)`,
-                }}
-              />
-              <div className="flex flex-1 flex-col gap-1">
-                <div
-                  className="h-2 rounded"
-                  style={{ backgroundColor: `color-mix(in oklch, ${light}, black 8%)` }}
-                />
-                <div
-                  className="h-2 w-3/4 rounded"
-                  style={{ backgroundColor: `color-mix(in oklch, ${light}, black 8%)` }}
-                />
-              </div>
-            </div>
-            <div className="mt-1.5 flex justify-center">
-              <div
-                className="h-1.5 w-16 rounded-full"
-                style={{ backgroundColor: `color-mix(in oklch, ${light}, black 8%)` }}
-              />
-            </div>
-          </div>
-
-          {/* Dark side */}
-          <div className="flex flex-1 flex-col p-2" style={{ backgroundColor: dark }}>
-            <div className="mb-1.5 flex gap-1">
-              <div
-                className="h-1.5 w-8 rounded-full"
-                style={{ backgroundColor: `color-mix(in oklch, ${dark}, ${accentDark} 35%)` }}
-              />
-              <div
-                className="h-1.5 flex-1 rounded-full"
-                style={{ backgroundColor: `color-mix(in oklch, ${dark}, white 10%)` }}
-              />
-            </div>
-            <div className="flex flex-1 gap-1.5" style={{ height: "48px" }}>
-              <div
-                className="w-6 rounded-md border"
-                style={{
-                  backgroundColor: `color-mix(in oklch, ${dark}, white 6%)`,
-                  borderColor: `color-mix(in oklch, ${dark}, white 12%)`,
-                }}
-              />
-              <div className="flex flex-1 flex-col gap-1">
-                <div
-                  className="h-2 rounded"
-                  style={{ backgroundColor: `color-mix(in oklch, ${dark}, white 12%)` }}
-                />
-                <div
-                  className="h-2 w-3/4 rounded"
-                  style={{ backgroundColor: `color-mix(in oklch, ${dark}, white 12%)` }}
-                />
-              </div>
-            </div>
-            <div className="mt-1.5 flex justify-center">
-              <div
-                className="h-1.5 w-16 rounded-full"
-                style={{ backgroundColor: `color-mix(in oklch, ${dark}, white 12%)` }}
-              />
-            </div>
-          </div>
-        </div>
-        {/* divider */}
-        <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-black/15 dark:bg-white/15" />
+function SchemeHalfPane({ bg, accent, mixTarget, accentPercent }: SchemeHalfPaneProps) {
+  const isWhite = mixTarget === "white";
+  return (
+    <div className="flex flex-1 flex-col p-2" style={{ backgroundColor: bg }}>
+      <div className="mb-1.5 flex gap-1">
+        <div
+          className="h-1.5 w-8 rounded-full"
+          style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${accent} ${accentPercent})` }}
+        />
+        <div
+          className="h-1.5 flex-1 rounded-full"
+          style={{
+            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "10%" : "6%"})`,
+          }}
+        />
       </div>
-    );
-  }
+      <div className="flex flex-1 gap-1.5" style={{ height: "48px" }}>
+        <div
+          className="w-6 rounded-md border"
+          style={{
+            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "6%" : "4%"})`,
+            borderColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "10%"})`,
+          }}
+        />
+        <div className="flex flex-1 flex-col gap-1">
+          <div
+            className="h-2 rounded"
+            style={{
+              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
+            }}
+          />
+          <div
+            className="h-2 w-3/4 rounded"
+            style={{
+              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
+            }}
+          />
+        </div>
+      </div>
+      <div className="mt-1.5 flex justify-center">
+        <div
+          className="h-1.5 w-16 rounded-full"
+          style={{
+            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
-  const isDark = scheme === "dark";
-  const bg = isDark ? dark : light;
-  const accent = isDark ? accentDark : accentLight;
-  const mixTarget = isDark ? "white" : "black";
+function SystemSchemePreview({
+  light,
+  dark,
+  accentLight,
+  accentDark,
+}: {
+  light: string;
+  dark: string;
+  accentLight: string;
+  accentDark: string;
+}) {
+  return (
+    <div className="relative h-20 w-full overflow-hidden rounded-xl border border-border/80 shadow-xs">
+      <div className="absolute inset-0 flex">
+        <SchemeHalfPane
+          bg={light}
+          accent={accentLight}
+          mixTarget="black"
+          accentPercent="25%"
+        />
+        <SchemeHalfPane
+          bg={dark}
+          accent={accentDark}
+          mixTarget="white"
+          accentPercent="35%"
+        />
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-black/15 dark:bg-white/15" />
+    </div>
+  );
+}
 
+function SingleSchemePreview({
+  scheme,
+  bg,
+  accent,
+  mixTarget,
+  isDark,
+}: {
+  scheme: string;
+  bg: string;
+  accent: string;
+  mixTarget: "black" | "white";
+  isDark: boolean;
+}) {
   return (
     <div
       className="relative h-20 w-full overflow-hidden rounded-xl border border-border/80 p-2 shadow-xs"
@@ -178,6 +183,34 @@ function SchemePreview({ scheme }: { scheme: string }) {
         />
       </div>
     </div>
+  );
+}
+
+function SchemePreview({ scheme }: { scheme: string }) {
+  const palette = usePaletteOptional();
+  const meta = getThemeMeta(palette?.theme ?? "default");
+  const { light, dark, accentLight, accentDark } = meta.preview;
+
+  if (scheme === "system") {
+    return (
+      <SystemSchemePreview
+        light={light}
+        dark={dark}
+        accentLight={accentLight}
+        accentDark={accentDark}
+      />
+    );
+  }
+
+  const isDark = scheme === "dark";
+  return (
+    <SingleSchemePreview
+      scheme={scheme}
+      bg={isDark ? dark : light}
+      accent={isDark ? accentDark : accentLight}
+      mixTarget={isDark ? "white" : "black"}
+      isDark={isDark}
+    />
   );
 }
 

@@ -6,7 +6,7 @@ import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
@@ -53,20 +53,29 @@ export function PracticeProblemsBriefForm({
     onChange(patch);
   };
 
-  useEffect(() => {
-    update({
-      questionCount: problemCount,
-      difficulty,
-      practiceProblemsOptions: { problemCount, difficulty },
+  const updatePracticeProblems = (patch: {
+    problemCount?: number;
+    difficulty?: DifficultyId;
+  }) => {
+    const nextCount = patch.problemCount ?? problemCount;
+    const nextDiff = patch.difficulty ?? difficulty;
+    onChange({
+      questionCount: nextCount,
+      difficulty: nextDiff,
+      practiceProblemsOptions: {
+        problemCount: nextCount,
+        difficulty: nextDiff,
+      },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problemCount, difficulty]);
+  };
 
   const handleCustomChange = (raw: string) => {
     setCustomVal(raw);
     const parsed = parseInt(raw, 10);
     if (!isNaN(parsed) && parsed > 0) {
-      setProblemCount(Math.min(MAX_PROBLEMS, Math.max(1, parsed)));
+      const clamped = Math.min(MAX_PROBLEMS, Math.max(1, parsed));
+      setProblemCount(clamped);
+      updatePracticeProblems({ problemCount: clamped });
     }
   };
 
@@ -76,6 +85,7 @@ export function PracticeProblemsBriefForm({
     if (parsed > MAX_PROBLEMS) parsed = MAX_PROBLEMS;
     setCustomVal(String(parsed));
     setProblemCount(parsed);
+    updatePracticeProblems({ problemCount: parsed });
   };
 
   return (
@@ -89,12 +99,17 @@ export function PracticeProblemsBriefForm({
               <Label className="text-sm font-medium text-text-primary">1. Target Difficulty</Label>
               <div className="grid grid-cols-3 gap-3">
                 {DIFFICULTIES.map((d) => (
-                  <div
+                  <button
                     key={d.id}
-                    onClick={() => setDifficulty(d.id)}
+                    type="button"
+                    aria-pressed={difficulty === d.id}
+                    onClick={() => {
+                      setDifficulty(d.id);
+                      updatePracticeProblems({ difficulty: d.id });
+                    }}
                     className={cn(
                       optionRowClass(difficulty === d.id),
-                      "p-3 flex flex-col justify-between gap-1.5",
+                      "p-3 flex flex-col justify-between gap-1.5 text-left cursor-pointer",
                     )}
                   >
                     <span
@@ -113,7 +128,7 @@ export function PracticeProblemsBriefForm({
                     >
                       {d.description}
                     </span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -132,9 +147,11 @@ export function PracticeProblemsBriefForm({
                     <button
                       key={cnt}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() => {
                         setIsCustomMode(false);
                         setProblemCount(cnt);
+                        updatePracticeProblems({ problemCount: cnt });
                       }}
                       className={cn(
                         optionRowClass(selected),
@@ -156,6 +173,7 @@ export function PracticeProblemsBriefForm({
                       onChange={(e) => handleCustomChange(e.target.value)}
                       onBlur={handleCustomBlur}
                       placeholder="1-30"
+                      aria-label="1-30"
                       className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
                       autoFocus
                     />
@@ -166,7 +184,9 @@ export function PracticeProblemsBriefForm({
                     onClick={() => {
                       setIsCustomMode(true);
                       const parsed = parseInt(customVal, 10) || 16;
-                      setProblemCount(Math.min(MAX_PROBLEMS, Math.max(1, parsed)));
+                      const clamped = Math.min(MAX_PROBLEMS, Math.max(1, parsed));
+                      setProblemCount(clamped);
+                      updatePracticeProblems({ problemCount: clamped });
                     }}
                     className={cn(
                       optionRowClass(false),

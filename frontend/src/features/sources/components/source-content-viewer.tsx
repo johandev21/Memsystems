@@ -91,6 +91,7 @@ function ReaderMoreMenu({
                 href={source.url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Open original webpage"
                 className="cursor-pointer"
               />
             }
@@ -261,7 +262,7 @@ function useSourceReaderControls({
       const response = await fetchApi(`/api/sources/${source.id}/download`);
       if (!response.ok) throw new Error("Failed to retrieve download link");
       const { url } = await response.json();
-      window.open(url, "_blank");
+      window.open(url, "_blank", "noopener,noreferrer");
       toast.success("Download started");
     } catch {
       toast.error("Download failed");
@@ -369,6 +370,115 @@ function SourceReaderHeader({
   );
 }
 
+function ScrollableDocumentContainer({
+  controls,
+  maxWidth = "max-w-4xl",
+  children,
+}: {
+  controls: ReaderControls;
+  maxWidth?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      ref={controls.setScrollElement}
+      className="h-full w-full overflow-y-auto overscroll-contain"
+    >
+      <div
+        className={cn(
+          "w-full flex flex-col",
+          controls.isEffectivelyFullscreen
+            ? `px-4 sm:px-8 py-4 sm:py-6 ${maxWidth} mx-auto gap-4`
+            : "p-3 sm:p-4",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function renderDocumentContent(
+  documentType: ReturnType<typeof detectDocumentType>,
+  source: SourceWithContent,
+  controls: ReaderControls,
+  selectedLocator?: SourceSegmentLocator | null,
+) {
+  switch (documentType) {
+    case "image":
+      return (
+        <ImageDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      );
+    case "audio":
+      return (
+        <AudioDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      );
+    case "video":
+      return (
+        <VideoDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      );
+    case "slides":
+      return (
+        <PptxDocumentViewer
+          source={source}
+          selectedLocator={selectedLocator}
+          scrollElement={controls.scrollElement}
+        />
+      );
+    case "dataset":
+      return (
+        <ScrollableDocumentContainer controls={controls} maxWidth="max-w-5xl">
+          <TabularDocumentViewer
+            source={source}
+            selectedLocator={selectedLocator}
+            scrollElement={controls.scrollElement}
+          />
+        </ScrollableDocumentContainer>
+      );
+    case "plaintext":
+      return (
+        <ScrollableDocumentContainer controls={controls}>
+          <PlainTextDocumentViewer
+            content={source.rawText}
+            selectedLocator={selectedLocator}
+            scrollElement={controls.scrollElement}
+          />
+        </ScrollableDocumentContainer>
+      );
+    case "article":
+      return (
+        <ScrollableDocumentContainer controls={controls}>
+          <ArticleDocumentViewer
+            content={source.rawText}
+            scrollElement={controls.scrollElement}
+          />
+        </ScrollableDocumentContainer>
+      );
+    default:
+      return (
+        <ScrollableDocumentContainer controls={controls}>
+          <MarkdownDocumentViewer
+            content={source.rawText}
+            selectedLocator={selectedLocator}
+            scrollElement={controls.scrollElement}
+          />
+        </ScrollableDocumentContainer>
+      );
+  }
+}
+
 function SourceDocument({
   source,
   controls,
@@ -381,110 +491,7 @@ function SourceDocument({
   const documentType = detectDocumentType(source);
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
-      {documentType === "image" ? (
-        <ImageDocumentViewer
-          source={source}
-          selectedLocator={selectedLocator}
-          scrollElement={controls.scrollElement}
-        />
-      ) : documentType === "audio" ? (
-        <AudioDocumentViewer
-          source={source}
-          selectedLocator={selectedLocator}
-          scrollElement={controls.scrollElement}
-        />
-      ) : documentType === "video" ? (
-        <VideoDocumentViewer
-          source={source}
-          selectedLocator={selectedLocator}
-          scrollElement={controls.scrollElement}
-        />
-      ) : documentType === "slides" ? (
-        <PptxDocumentViewer
-          source={source}
-          selectedLocator={selectedLocator}
-          scrollElement={controls.scrollElement}
-        />
-      ) : documentType === "dataset" ? (
-        <div
-          ref={controls.setScrollElement}
-          className="h-full w-full overflow-y-auto overscroll-contain"
-        >
-          <div
-            className={cn(
-              "w-full flex flex-col",
-              controls.isEffectivelyFullscreen
-                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-5xl mx-auto gap-4"
-                : "p-3 sm:p-4",
-            )}
-          >
-            <TabularDocumentViewer
-              source={source}
-              selectedLocator={selectedLocator}
-              scrollElement={controls.scrollElement}
-            />
-          </div>
-        </div>
-      ) : documentType === "plaintext" ? (
-        <div
-          ref={controls.setScrollElement}
-          className="h-full w-full overflow-y-auto overscroll-contain"
-        >
-          <div
-            className={cn(
-              "w-full flex flex-col",
-              controls.isEffectivelyFullscreen
-                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
-                : "p-3 sm:p-4",
-            )}
-          >
-            <PlainTextDocumentViewer
-              content={source.rawText}
-              selectedLocator={selectedLocator}
-              scrollElement={controls.scrollElement}
-            />
-          </div>
-        </div>
-      ) : documentType === "article" ? (
-        <div
-          ref={controls.setScrollElement}
-          className="h-full w-full overflow-y-auto overscroll-contain"
-        >
-          <div
-            className={cn(
-              "w-full flex flex-col",
-              controls.isEffectivelyFullscreen
-                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
-                : "p-3 sm:p-4",
-            )}
-          >
-            <ArticleDocumentViewer
-              content={source.rawText}
-              scrollElement={controls.scrollElement}
-            />
-          </div>
-        </div>
-      ) : (
-        <div
-          ref={controls.setScrollElement}
-          className="h-full w-full overflow-y-auto overscroll-contain"
-        >
-          <div
-            className={cn(
-              "w-full flex flex-col",
-              controls.isEffectivelyFullscreen
-                ? "px-4 sm:px-8 py-4 sm:py-6 max-w-4xl mx-auto gap-4"
-                : "p-3 sm:p-4",
-            )}
-          >
-            <MarkdownDocumentViewer
-              content={source.rawText}
-              selectedLocator={selectedLocator}
-              scrollElement={controls.scrollElement}
-            />
-          </div>
-        </div>
-      )}
+      {renderDocumentContent(documentType, source, controls, selectedLocator)}
     </div>
   );
 }

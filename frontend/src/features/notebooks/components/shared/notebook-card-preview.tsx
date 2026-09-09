@@ -1,5 +1,5 @@
 import { ImageIcon, Move, Trash2, Upload } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,23 @@ export function NotebookCardPreview({
     focalPoint,
     onChange: setFocalPoint,
   });
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const handleBannerKeyDown = (e: React.KeyboardEvent) => {
+    if (!bannerPreviewUrl) return;
+    const STEP = 0.05;
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocalPoint({ ...focalPoint, y: Math.max(0, focalPoint.y - STEP) });
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocalPoint({ ...focalPoint, y: Math.min(1, focalPoint.y + STEP) });
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      setFocalPoint({ ...focalPoint, x: Math.max(0, focalPoint.x - STEP) });
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      setFocalPoint({ ...focalPoint, x: Math.min(1, focalPoint.x + STEP) });
+    }
+  };
 
   return (
     <div
@@ -64,12 +80,16 @@ export function NotebookCardPreview({
     >
       <div
         ref={focalPointDrag.containerRef}
+        role="region"
+        aria-label="Notebook banner preview"
+        tabIndex={0}
+        onKeyDown={handleBannerKeyDown}
         onMouseDown={focalPointDrag.handleMouseDown}
         onMouseMove={focalPointDrag.handleMouseMove}
         onMouseUp={focalPointDrag.stopDragging}
         onMouseLeave={focalPointDrag.stopDragging}
         className={cn(
-          "group relative h-52 sm:h-60 w-full overflow-hidden rounded-2xl border border-border bg-muted/60 select-none",
+          "group relative h-52 sm:h-60 w-full overflow-hidden rounded-2xl border border-border bg-muted/60 select-none outline-none focus-visible:ring-2 focus-visible:ring-ring",
           bannerPreviewUrl
             ? focalPointDrag.isDragging
               ? "cursor-grabbing"
@@ -172,7 +192,6 @@ export function NotebookCardPreview({
         </Label>
         <Textarea
           id="notebook-description"
-          ref={descriptionRef}
           value={description ?? ""}
           onChange={(e) => setDescription(e.target.value || null)}
           placeholder="Add a detailed description for your notebook..."

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, CheckCircle2, Eye, EyeOff, KeyRound, RefreshCw } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
 import { SchemeSelector, ThemeGrid } from "@/features/theme";
@@ -80,20 +80,140 @@ async function readSaveError(res: Response): Promise<string> {
   return "Could not save this key";
 }
 
+function GatewayKeyInput({
+  input,
+  setInput,
+  isMasked,
+  showKey,
+  setShowKey,
+  busy,
+  onClearConfirmRemove,
+}: {
+  input: string;
+  setInput: (value: string) => void;
+  isMasked: boolean;
+  showKey: boolean;
+  setShowKey: (updater: (current: boolean) => boolean) => void;
+  busy: boolean;
+  onClearConfirmRemove: () => void;
+}) {
+  return (
+    <div className="relative flex h-10 items-center rounded-xl border border-border/70 bg-background shadow-[0_1px_2px_rgb(15_23_42/0.03)] transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/10">
+      <KeyRound className="ml-3 size-3.5 shrink-0 text-muted-foreground/70" />
+      <input
+        id="gateway-key-input"
+        type={showKey ? "text" : "password"}
+        placeholder="Paste your Vercel AI Gateway key…"
+        value={input}
+        onChange={(event) => {
+          setInput(event.target.value);
+          onClearConfirmRemove();
+        }}
+        readOnly={isMasked}
+        disabled={busy}
+        autoComplete="off"
+        className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
+      />
+      {isMasked && (
+        <button
+          type="button"
+          onClick={() => {
+            setInput("");
+            setShowKey(() => false);
+          }}
+          className="mr-1 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          Replace
+        </button>
+      )}
+      {input && !isMasked && (
+        <button
+          type="button"
+          onClick={() => setShowKey((current) => !current)}
+          className="mr-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label={showKey ? "Hide gateway key" : "Show gateway key"}
+        >
+          {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface GatewayKeyStatus {
+  isDirty: boolean;
+  isSaving: boolean;
+  isRemoving: boolean;
+  saved: boolean;
+  hasKey: boolean;
+  confirmRemove: boolean;
+}
+
+function GatewayKeyActions({
+  status,
+  onRemove,
+}: {
+  status: GatewayKeyStatus;
+  onRemove: () => void;
+}) {
+  const { isDirty, isSaving, isRemoving, saved, hasKey, confirmRemove } = status;
+  const busy = isSaving || isRemoving;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        type="submit"
+        form="gateway-key-form"
+        size="sm"
+        disabled={!isDirty || busy}
+        className="h-10 rounded-xl px-4 text-xs font-semibold shadow-sm"
+      >
+        {isSaving ? (
+          <RefreshCw className="size-3.5 animate-spin" />
+        ) : saved ? (
+          <Check className="size-3.5" />
+        ) : (
+          "Save key"
+        )}
+      </Button>
+      {hasKey && (
+        <Button
+          type="button"
+          size="sm"
+          variant={confirmRemove ? "destructive" : "outline"}
+          onClick={onRemove}
+          disabled={busy}
+          className="h-10 rounded-xl px-4 text-xs font-semibold"
+        >
+          {isRemoving ? (
+            <RefreshCw className="size-3.5 animate-spin" />
+          ) : confirmRemove ? (
+            "Confirm remove"
+          ) : (
+            "Remove"
+          )}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
   const queryClient = useQueryClient();
-  const [input, setInput] = useState("");
+  const [prevHasKey, setPrevHasKey] = useState(hasKey);
+  const [input, setInput] = useState(hasKey ? MASKED_GATEWAY_KEY : "");
   const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
+  if (prevHasKey !== hasKey) {
+    setPrevHasKey(hasKey);
     setInput(hasKey ? MASKED_GATEWAY_KEY : "");
     setShowKey(false);
     setConfirmRemove(false);
-  }, [hasKey]);
+  }
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["connection-status"] });
@@ -165,81 +285,27 @@ function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <form id="gateway-key-form" onSubmit={handleSave} className="min-w-0 flex-1">
-          <div className="relative flex h-10 items-center rounded-xl border border-border/70 bg-background shadow-[0_1px_2px_rgb(15_23_42/0.03)] transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/10">
-            <KeyRound className="ml-3 size-3.5 shrink-0 text-muted-foreground/70" />
-            <input
-              id="gateway-key-input"
-              type={showKey ? "text" : "password"}
-              placeholder="Paste your Vercel AI Gateway key…"
-              value={input}
-              onChange={(event) => {
-                setInput(event.target.value);
-                setConfirmRemove(false);
-              }}
-              readOnly={isMasked}
-              disabled={busy}
-              autoComplete="off"
-              className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
-            />
-            {isMasked && (
-              <button
-                type="button"
-                onClick={() => {
-                  setInput("");
-                  setShowKey(false);
-                }}
-                className="mr-1 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                Replace
-              </button>
-            )}
-            {input && !isMasked && (
-              <button
-                type="button"
-                onClick={() => setShowKey((current) => !current)}
-                className="mr-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label={showKey ? "Hide gateway key" : "Show gateway key"}
-              >
-                {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-              </button>
-            )}
-          </div>
+          <GatewayKeyInput
+            input={input}
+            setInput={setInput}
+            isMasked={isMasked}
+            showKey={showKey}
+            setShowKey={setShowKey}
+            busy={busy}
+            onClearConfirmRemove={() => setConfirmRemove(false)}
+          />
         </form>
-        <div className="flex items-center gap-2">
-          <Button
-            type="submit"
-            form="gateway-key-form"
-            size="sm"
-            disabled={!isDirty || busy}
-            className="h-10 rounded-xl px-4 text-xs font-semibold shadow-sm"
-          >
-            {isSaving ? (
-              <RefreshCw className="size-3.5 animate-spin" />
-            ) : saved ? (
-              <Check className="size-3.5" />
-            ) : (
-              "Save key"
-            )}
-          </Button>
-          {hasKey && (
-            <Button
-              type="button"
-              size="sm"
-              variant={confirmRemove ? "destructive" : "outline"}
-              onClick={() => void handleRemove()}
-              disabled={busy}
-              className="h-10 rounded-xl px-4 text-xs font-semibold"
-            >
-              {isRemoving ? (
-                <RefreshCw className="size-3.5 animate-spin" />
-              ) : confirmRemove ? (
-                "Confirm remove"
-              ) : (
-                "Remove"
-              )}
-            </Button>
-          )}
-        </div>
+        <GatewayKeyActions
+          status={{
+            isDirty,
+            isSaving,
+            isRemoving,
+            saved,
+            hasKey,
+            confirmRemove,
+          }}
+          onRemove={() => void handleRemove()}
+        />
       </div>
       {confirmRemove && (
         <p className="mt-1.5 text-xs text-muted-foreground">
@@ -248,6 +314,107 @@ function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
       )}
     </div>
   );
+}
+
+function GatewayCardHeader({
+  connected,
+  degraded,
+  isPending,
+  isRefreshing,
+  onRefresh,
+}: {
+  connected: boolean;
+  degraded: boolean;
+  isPending: boolean;
+  isRefreshing: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <h3 className="text-sm font-semibold tracking-[-0.01em]">AI Gateway</h3>
+      <GatewayStatusBadge connected={connected} degraded={degraded} isPending={isPending} />
+      <div className="ms-auto">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={onRefresh}
+          disabled={isPending || isRefreshing}
+          className="h-9 min-w-20 rounded-xl text-xs font-semibold shadow-sm"
+        >
+          {isRefreshing ? <RefreshCw className="size-3.5 animate-spin" /> : "Refresh models"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function GatewayStatsGrid({
+  modelCount,
+  balance,
+  rawBalance,
+  used,
+  rawUsed,
+}: {
+  modelCount: number;
+  balance: string | null;
+  rawBalance?: string;
+  used: string | null;
+  rawUsed?: string;
+}) {
+  return (
+    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <GatewayStat label="Models included" value={String(modelCount)} />
+      <GatewayStat
+        label="Balance"
+        value={balance ? `${balance} credits` : "—"}
+        title={rawBalance}
+      />
+      <GatewayStat
+        label="Credits used"
+        value={used ?? "—"}
+        title={rawUsed}
+      />
+    </dl>
+  );
+}
+
+function GatewayCardFooter({ checkedAt }: { checkedAt?: string | null }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      <a
+        href="https://vercel.com/docs/ai-gateway"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1 transition-colors hover:text-foreground hover:underline"
+      >
+        What is the gateway?
+      </a>
+      <span>Model list refreshes automatically every 6 hours.</span>
+      {checkedAt && (
+        <span>Last checked {new Date(checkedAt).toLocaleString()}</span>
+      )}
+    </div>
+  );
+}
+
+function GatewayDegradedAlert({ detail }: { detail: string }) {
+  return (
+    <div className="border-t border-amber-500/30 bg-amber-500/10 px-5 py-3 text-xs leading-5 text-amber-700 sm:px-6 dark:text-amber-300">
+      {detail}
+    </div>
+  );
+}
+
+function getGatewayDescription(
+  isPending: boolean,
+  usable: boolean,
+  modelCount: number,
+  detail?: string | null
+): string {
+  if (isPending) return "Checking gateway status…";
+  if (usable) return `Every notebook can use ${modelCount} models through your gateway key.`;
+  return detail ?? "Add your AI Gateway key below to connect every model.";
 }
 
 function GatewayCard() {
@@ -287,72 +454,43 @@ function GatewayCard() {
     }
   };
 
+  const description = getGatewayDescription(
+    isPending,
+    usable,
+    modelCount,
+    connection?.detail
+  );
+
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_8px_30px_rgb(15_23_42/0.035)]">
       <div className="flex flex-col gap-5 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h3 className="text-sm font-semibold tracking-[-0.01em]">AI Gateway</h3>
-          <GatewayStatusBadge connected={connected} degraded={degraded} isPending={isPending} />
-          <div className="ms-auto">
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => void handleRefreshModels()}
-              disabled={isPending || isRefreshing}
-              className="h-9 min-w-20 rounded-xl text-xs font-semibold shadow-sm"
-            >
-              {isRefreshing ? <RefreshCw className="size-3.5 animate-spin" /> : "Refresh models"}
-            </Button>
-          </div>
-        </div>
+        <GatewayCardHeader
+          connected={connected}
+          degraded={degraded}
+          isPending={isPending}
+          isRefreshing={isRefreshing}
+          onRefresh={() => void handleRefreshModels()}
+        />
 
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {isPending
-            ? "Checking gateway status…"
-            : usable
-              ? `Every notebook can use ${modelCount} models through your gateway key.`
-              : (connection?.detail ?? "Add your AI Gateway key below to connect every model.")}
-        </p>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
 
         <GatewayKeyForm hasKey={connection?.gateway.hasKey ?? false} />
 
         {usable && (
-          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <GatewayStat label="Models included" value={String(modelCount)} />
-            <GatewayStat
-              label="Balance"
-              value={balance ? `${balance} credits` : "—"}
-              title={credits?.balance ?? undefined}
-            />
-            <GatewayStat
-              label="Credits used"
-              value={used ?? "—"}
-              title={credits?.totalUsed ?? undefined}
-            />
-          </dl>
+          <GatewayStatsGrid
+            modelCount={modelCount}
+            balance={balance}
+            rawBalance={credits?.balance ?? undefined}
+            used={used}
+            rawUsed={credits?.totalUsed ?? undefined}
+          />
         )}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <a
-            href="https://vercel.com/docs/ai-gateway"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 transition-colors hover:text-foreground hover:underline"
-          >
-            What is the gateway?
-          </a>
-          <span>Model list refreshes automatically every 6 hours.</span>
-          {connection?.checkedAt && (
-            <span>Last checked {new Date(connection.checkedAt).toLocaleString()}</span>
-          )}
-        </div>
+        <GatewayCardFooter checkedAt={connection?.checkedAt} />
       </div>
 
       {degraded && connection?.degradedDetail && (
-        <div className="border-t border-amber-500/30 bg-amber-500/10 px-5 py-3 text-xs leading-5 text-amber-700 sm:px-6 dark:text-amber-300">
-          {connection.degradedDetail}
-        </div>
+        <GatewayDegradedAlert detail={connection.degradedDetail} />
       )}
     </div>
   );

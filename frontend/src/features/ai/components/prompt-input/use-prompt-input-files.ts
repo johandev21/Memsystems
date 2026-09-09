@@ -1,7 +1,7 @@
 import type { FileUIPart } from "ai";
 import { nanoid } from "nanoid";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { validateIncomingFiles } from "../../utils/prompt-input-files";
+import { createObjectUrl, validateIncomingFiles } from "../../utils/prompt-input-files";
 import type { PromptInputControllerProps } from "./prompt-input-context";
 
 export interface UsePromptInputFilesOptions {
@@ -15,6 +15,7 @@ export interface UsePromptInputFilesOptions {
 }
 
 const EMPTY_FILE_LIST: (FileUIPart & { id: string })[] = [];
+
 export function usePromptInputFiles({
   accept,
   maxFiles,
@@ -33,9 +34,9 @@ export function usePromptInputFiles({
     filesRef.current = files;
   }, [files]);
 
-  // Revoke leftover blob URLs for the local (non-provider) mode on unmount.
-  useEffect(
-    () => () => {
+  // Revoke leftover blob URLs for the local mode on unmount.
+  useEffect(() => {
+    return () => {
       if (!usingProvider) {
         for (const f of filesRef.current) {
           if (f.url) {
@@ -43,9 +44,8 @@ export function usePromptInputFiles({
           }
         }
       }
-    },
-    [usingProvider],
-  );
+    };
+  }, [usingProvider]);
 
   const openFileDialogLocal = useCallback(() => {
     inputRef.current?.click();
@@ -67,7 +67,7 @@ export function usePromptInputFiles({
         id: nanoid(),
         mediaType: file.type,
         type: "file" as const,
-        url: URL.createObjectURL(file),
+        url: createObjectUrl(file),
       }));
       setItems((prev) => [...prev, ...next]);
     },

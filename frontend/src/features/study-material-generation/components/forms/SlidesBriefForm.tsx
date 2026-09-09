@@ -7,7 +7,7 @@ import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
@@ -369,22 +369,27 @@ export function SlidesBriefForm({
 
   const update = (patch: Partial<BriefFormData>) => onChange(patch);
 
-  useEffect(() => {
-    update({
+  const updateSlidesOptions = (patch: Partial<NonNullable<BriefFormData["slidesOptions"]>>) => {
+    const nextCount =
+      patch.slideCount !== undefined ? patch.slideCount : isAutoMode ? 0 : slideCount;
+    const nextTheme = patch.theme ?? theme;
+    const nextDetail = patch.detailLevel ?? detailLevel;
+    onChange({
       slidesOptions: {
-        slideCount: isAutoMode ? 0 : slideCount,
-        theme,
-        detailLevel,
+        slideCount: nextCount,
+        theme: nextTheme,
+        detailLevel: nextDetail,
       },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideCount, isAutoMode, theme, detailLevel]);
+  };
 
   const handleCustomChange = (raw: string) => {
     setCustomValue(raw);
     const parsed = Number.parseInt(raw, 10);
     if (!Number.isNaN(parsed) && parsed > 0) {
-      setSlideCount(Math.min(MAX_SLIDE_COUNT, Math.max(1, parsed)));
+      const count = Math.min(MAX_SLIDE_COUNT, Math.max(1, parsed));
+      setSlideCount(count);
+      updateSlidesOptions({ slideCount: count });
     }
   };
 
@@ -393,6 +398,7 @@ export function SlidesBriefForm({
     const next = Number.isNaN(parsed) ? 8 : Math.min(MAX_SLIDE_COUNT, Math.max(1, parsed));
     setCustomValue(String(next));
     setSlideCount(next);
+    updateSlidesOptions({ slideCount: next });
   };
 
   const countLabel = isAutoMode
@@ -415,33 +421,44 @@ export function SlidesBriefForm({
                 setIsAutoMode(true);
                 setIsCustomMode(false);
                 setSlideCount(0);
+                updateSlidesOptions({ slideCount: 0 });
               }}
               onPreset={(count) => {
                 setIsAutoMode(false);
                 setIsCustomMode(false);
                 setSlideCount(count);
+                updateSlidesOptions({ slideCount: count });
               }}
               onCustomMode={() => {
                 setIsAutoMode(false);
                 setIsCustomMode(true);
-                setSlideCount(
-                  Math.min(
-                    MAX_SLIDE_COUNT,
-                    Math.max(1, Number.parseInt(customValue, 10) || 15),
-                  ),
+                const count = Math.min(
+                  MAX_SLIDE_COUNT,
+                  Math.max(1, Number.parseInt(customValue, 10) || 15),
                 );
+                setSlideCount(count);
+                updateSlidesOptions({ slideCount: count });
               }}
               onCustomChange={handleCustomChange}
               onCustomBlur={handleCustomBlur}
             />
 
-            <SlideThemeSection theme={theme} onThemeChange={setTheme} />
+            <SlideThemeSection
+              theme={theme}
+              onThemeChange={(nextTheme) => {
+                setTheme(nextTheme);
+                updateSlidesOptions({ theme: nextTheme });
+              }}
+            />
 
             <BriefChoiceField
               label="3. Detail Level"
               options={DETAIL_OPTIONS}
               value={detailLevel}
-              onChange={setDetailLevel}
+              onChange={(nextDetail) => {
+                setDetailLevel(nextDetail);
+                updateSlidesOptions({ detailLevel: nextDetail });
+              }}
             />
           </div>
 
@@ -449,7 +466,10 @@ export function SlidesBriefForm({
             <span className="text-xs text-text-faint">Configure custom instructions next</span>
             <Button
               type="button"
-              onClick={() => setStep(2)}
+              onClick={() => {
+                updateSlidesOptions({});
+                setStep(2);
+              }}
               className={cn(
                 "h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors",
                 CTA_BUTTON_CLASS,
@@ -472,7 +492,10 @@ export function SlidesBriefForm({
           sources={sources}
           onPatch={update}
           onBack={() => setStep(1)}
-          onSubmit={onSubmit}
+          onSubmit={() => {
+            updateSlidesOptions({});
+            onSubmit();
+          }}
         />
       )}
     </div>

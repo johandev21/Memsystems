@@ -6,7 +6,7 @@ import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
@@ -54,19 +54,31 @@ export function CaseStudyBriefForm({
     onChange(patch);
   };
 
-  useEffect(() => {
-    update({
-      questionCount,
-      caseStudyOptions: { questionCount, focus, comparePerspectives },
+  const updateCaseStudyOptions = (patch: {
+    questionCount?: number;
+    comparePerspectives?: boolean;
+    focus?: string;
+  }) => {
+    const nextCount = patch.questionCount ?? questionCount;
+    const nextCompare = patch.comparePerspectives ?? comparePerspectives;
+    const nextFocus = patch.focus ?? focus;
+    onChange({
+      questionCount: nextCount,
+      caseStudyOptions: {
+        questionCount: nextCount,
+        focus: nextFocus,
+        comparePerspectives: nextCompare,
+      },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionCount, focus, comparePerspectives]);
+  };
 
   const handleCustomChange = (raw: string) => {
     setCustomVal(raw);
     const parsed = parseInt(raw, 10);
     if (!isNaN(parsed) && parsed > 0) {
-      setQuestionCount(Math.min(MAX_QUESTIONS, Math.max(1, parsed)));
+      const clamped = Math.min(MAX_QUESTIONS, Math.max(1, parsed));
+      setQuestionCount(clamped);
+      updateCaseStudyOptions({ questionCount: clamped });
     }
   };
 
@@ -76,6 +88,7 @@ export function CaseStudyBriefForm({
     if (parsed > MAX_QUESTIONS) parsed = MAX_QUESTIONS;
     setCustomVal(String(parsed));
     setQuestionCount(parsed);
+    updateCaseStudyOptions({ questionCount: parsed });
   };
 
   return (
@@ -103,6 +116,7 @@ export function CaseStudyBriefForm({
                       onClick={() => {
                         setIsCustomMode(false);
                         setQuestionCount(cnt);
+                        updateCaseStudyOptions({ questionCount: cnt });
                       }}
                       className={cn(
                         optionRowClass(selected),
@@ -135,7 +149,9 @@ export function CaseStudyBriefForm({
                     onClick={() => {
                       setIsCustomMode(true);
                       const parsed = parseInt(customVal, 10) || 4;
-                      setQuestionCount(Math.min(MAX_QUESTIONS, Math.max(1, parsed)));
+                      const clamped = Math.min(MAX_QUESTIONS, Math.max(1, parsed));
+                      setQuestionCount(clamped);
+                      updateCaseStudyOptions({ questionCount: clamped });
                     }}
                     className={cn(
                       optionRowClass(false),
@@ -158,7 +174,10 @@ export function CaseStudyBriefForm({
                       key={opt.title}
                       type="button"
                       aria-pressed={selected}
-                      onClick={() => setComparePerspectives(opt.id)}
+                      onClick={() => {
+                        setComparePerspectives(opt.id);
+                        updateCaseStudyOptions({ comparePerspectives: opt.id });
+                      }}
                       className={cn(
                         optionRowClass(selected),
                         "p-3 flex items-start gap-3 cursor-pointer text-left",
@@ -216,7 +235,10 @@ export function CaseStudyBriefForm({
               <Textarea
                 id="brief-case-study-focus"
                 value={focus}
-                onChange={(e) => setFocus(e.target.value)}
+                onChange={(e) => {
+                  setFocus(e.target.value);
+                  updateCaseStudyOptions({ focus: e.target.value });
+                }}
                 placeholder="e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives..."
                 className="min-h-[80px] max-h-[160px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}

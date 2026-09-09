@@ -61,8 +61,65 @@ interface PendingUploadRowProps {
   onCancel: (id: string) => void;
 }
 
-export function PendingUploadRow({ upload, onCancel }: PendingUploadRowProps) {
+function UploadStatusIcon({
+  isError,
+  isTerminal,
+  Icon,
+}: {
+  isError: boolean;
+  isTerminal: boolean;
+  Icon: React.ComponentType<{ className?: string }>;
+}) {
+  if (isError) {
+    return <AlertCircle className="size-4 shrink-0 text-destructive" />;
+  }
+  if (isTerminal) {
+    return <Icon className="size-4 shrink-0 text-muted-foreground" />;
+  }
+  return <Loader2 className="size-4 shrink-0 animate-spin text-primary" />;
+}
+
+function UploadHeader({
+  upload,
+  isError,
+  isTerminal,
+  onCancel,
+}: {
+  upload: PendingSourceUpload;
+  isError: boolean;
+  isTerminal: boolean;
+  onCancel: (id: string) => void;
+}) {
   const Icon = getKindIcon(upload);
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <UploadStatusIcon isError={isError} isTerminal={isTerminal} Icon={Icon} />
+        {!isTerminal && <Icon className="size-3.5 shrink-0 text-muted-foreground" />}
+        <span className="truncate text-xs font-medium text-foreground">{upload.title}</span>
+      </div>
+      <button
+        type="button"
+        onClick={() => onCancel(upload.id)}
+        className="flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+        title={isTerminal ? "Dismiss" : "Cancel source processing"}
+        aria-label={isTerminal ? "Dismiss source status" : "Cancel source processing"}
+      >
+        <X className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function UploadProgressBar() {
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15" aria-hidden="true">
+      <div className="h-full w-1/3 animate-[source-progress_1.5s_ease-in-out_infinite] rounded-full bg-primary" />
+    </div>
+  );
+}
+
+export function PendingUploadRow({ upload, onCancel }: PendingUploadRowProps) {
   const isError = upload.status === "failed";
   const isCancelled = upload.status === "cancelled";
   const isTerminal = isError || isCancelled;
@@ -85,38 +142,18 @@ export function PendingUploadRow({ upload, onCancel }: PendingUploadRowProps) {
             : "border-primary/30 bg-primary/5 shadow-xs",
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          {isError ? (
-            <AlertCircle className="size-4 shrink-0 text-destructive" />
-          ) : isTerminal ? (
-            <Icon className="size-4 shrink-0 text-muted-foreground" />
-          ) : (
-            <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-          )}
-          {!isTerminal && <Icon className="size-3.5 shrink-0 text-muted-foreground" />}
-          <span className="truncate text-xs font-medium text-foreground">{upload.title}</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => onCancel(upload.id)}
-          className="flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-          title={isTerminal ? "Dismiss" : "Cancel source processing"}
-          aria-label={isTerminal ? "Dismiss source status" : "Cancel source processing"}
-        >
-          <X className="size-3.5" />
-        </button>
-      </div>
+      <UploadHeader
+        upload={upload}
+        isError={isError}
+        isTerminal={isTerminal}
+        onCancel={onCancel}
+      />
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className={cn("truncate", isError && "text-destructive")}>{statusText}</span>
       </div>
 
-      {!isTerminal && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15" aria-hidden="true">
-          <div className="h-full w-1/3 animate-[source-progress_1.5s_ease-in-out_infinite] rounded-full bg-primary" />
-        </div>
-      )}
+      {!isTerminal && <UploadProgressBar />}
     </div>
   );
 }

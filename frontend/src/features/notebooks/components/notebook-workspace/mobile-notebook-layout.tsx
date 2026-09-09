@@ -28,21 +28,25 @@ export function MobileNotebookLayout({
   onSelectSource,
 }: MobileNotebookLayoutProps) {
   const [activeTab, setActiveTab] = useMobileChatNavigation();
-  const [isMaterialReviewSuspended, setIsMaterialReviewSuspended] = useState(false);
+  const [suspendedMaterialId, setSuspendedMaterialId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleHandoff = (event: Event) => {
-      const detail = (event as CustomEvent<{ suspended?: boolean }>).detail;
-      if (typeof detail?.suspended === "boolean") setIsMaterialReviewSuspended(detail.suspended);
+      const detail = (event as CustomEvent<{ materialId?: string; suspended?: boolean }>).detail;
+      if (detail?.suspended && detail.materialId) {
+        setSuspendedMaterialId(detail.materialId);
+      } else if (detail?.suspended === false) {
+        setSuspendedMaterialId(null);
+      }
     };
     window.addEventListener("study-material-chat-handoff", handleHandoff);
     return () => window.removeEventListener("study-material-chat-handoff", handleHandoff);
   }, []);
 
-  useEffect(() => {
-    if (dialogs.selectedStudyMaterialId) return;
-    setIsMaterialReviewSuspended(false);
-  }, [dialogs.selectedStudyMaterialId]);
+  const isMaterialReviewSuspended = Boolean(
+    dialogs.selectedStudyMaterialId &&
+      suspendedMaterialId === dialogs.selectedStudyMaterialId,
+  );
 
   useMobileOverlayScrollLock(
     Boolean(selectedSourceId || (dialogs.selectedStudyMaterialId && !isMaterialReviewSuspended)),

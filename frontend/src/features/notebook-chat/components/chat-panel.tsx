@@ -95,57 +95,23 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
         style={{ ["--composer-height" as string]: "96px" } as React.CSSProperties}
       >
         <Conversation key={notebookId} className="flex-1 min-h-0">
-          <ConversationContent
-            className="mx-auto w-full max-w-4xl pb-32"
-            aria-busy={isLoading}
-            style={
-              { paddingBottom: "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties
-            }
-          >
-            {notebook && (
-              <MessageScrollerItem messageId="notebook-banner">
-                <NotebookBanner
-                  notebookId={notebook.id}
-                  title={notebook.title}
-                  description={notebook.description}
-                  icon={notebook.icon ?? undefined}
-                  bannerUrl={notebook.bannerUrl}
-                  bannerFocalPoint={notebook.bannerFocalPoint}
-                  updatedAt={notebook.updatedAt}
-                  isUntitled={showBannerAsUntitled}
-                />
-                {!hasMessages && (
-                  <ChatEmptyState
-                    notebookTitle={notebookTitle}
-                    description={notebook?.description ?? null}
-                    isUntitled={isUntitled}
-                  />
-                )}
-              </MessageScrollerItem>
-            )}
-
-            {!notebook && !hasMessages && (
-              <MessageScrollerItem messageId="chat-empty-state">
-                <ChatEmptyState
-                  notebookTitle={notebookTitle}
-                  description={null}
-                  isUntitled={isUntitled}
-                />
-              </MessageScrollerItem>
-            )}
-
-            {hasMessages && (
-              <ChatMessageList
-                messages={messages}
-                citedSourcesMap={citedSourcesMap}
-                showPendingIndicator={showPendingIndicator}
-                pendingLabel={pendingLabel}
-                error={error}
-                onCopy={handleCopy}
-                onRegenerate={handleRegenerate}
-              />
-            )}
-          </ConversationContent>
+          <ChatContent
+            notebook={notebook}
+            notebookTitle={notebookTitle}
+            flags={{
+              isUntitled,
+              showBannerAsUntitled,
+              hasMessages,
+              isLoading,
+              showPendingIndicator,
+            }}
+            messages={messages}
+            citedSourcesMap={citedSourcesMap}
+            pendingLabel={pendingLabel}
+            error={error}
+            onCopy={handleCopy}
+            onRegenerate={handleRegenerate}
+          />
           <ConversationScrollButton
             style={
               {
@@ -155,42 +121,185 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
           />
         </Conversation>
 
-        <div
-          ref={composerWrapperRef}
-          className="absolute inset-x-0 bottom-0 z-composer p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none"
-        >
-          <div className="mx-auto w-full max-w-4xl">
-            {connection && !connection.ok && connection.degraded && (
-              <div
-                role="status"
-                className="mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
-              >
-                AI Gateway is busy — responses may fail. Waiting a bit and retrying usually works.
-              </div>
-            )}
-            <ClearHistoryDialog
-              open={isClearDialogOpen}
-              onOpenChange={handleClearDialogChange}
-              onConfirm={handleClearHistory}
-              isClearing={clearHistoryMutation.isPending}
+        <ChatComposerArea
+          composerWrapperRef={composerWrapperRef}
+          connection={connection}
+          isClearDialogOpen={isClearDialogOpen}
+          onClearDialogChange={handleClearDialogChange}
+          onClearHistory={handleClearHistory}
+          isClearing={clearHistoryMutation.isPending}
+          input={input}
+          onInputChange={setInput}
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+          onStop={stop}
+          models={modelOptions}
+          selectedModel={selectedModel}
+          onModelChange={handleModelChange}
+          composerTextareaRef={composerTextareaRef}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface ChatContentFlags {
+  isUntitled: boolean;
+  showBannerAsUntitled: boolean;
+  hasMessages: boolean;
+  isLoading: boolean;
+  showPendingIndicator: boolean;
+}
+
+interface ChatContentProps {
+  notebook: ReturnType<typeof useChatPanel>["notebook"];
+  notebookTitle: string;
+  flags: ChatContentFlags;
+  messages: ReturnType<typeof useChatPanel>["messages"];
+  citedSourcesMap: ReturnType<typeof useChatPanel>["citedSourcesMap"];
+  pendingLabel: string;
+  error: ReturnType<typeof useChatPanel>["error"];
+  onCopy: (content: string) => void;
+  onRegenerate: () => void;
+}
+
+function ChatContent({
+  notebook,
+  notebookTitle,
+  flags,
+  messages,
+  citedSourcesMap,
+  pendingLabel,
+  error,
+  onCopy,
+  onRegenerate,
+}: ChatContentProps) {
+  const { isUntitled, showBannerAsUntitled, hasMessages, isLoading, showPendingIndicator } = flags;
+  return (
+    <ConversationContent
+      className="mx-auto w-full max-w-4xl pb-32"
+      aria-busy={isLoading}
+      style={
+        { paddingBottom: "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties
+      }
+    >
+      {notebook && (
+        <MessageScrollerItem messageId="notebook-banner">
+          <NotebookBanner
+            notebookId={notebook.id}
+            title={notebook.title}
+            description={notebook.description}
+            icon={notebook.icon ?? undefined}
+            bannerUrl={notebook.bannerUrl}
+            bannerFocalPoint={notebook.bannerFocalPoint}
+            updatedAt={notebook.updatedAt}
+            isUntitled={showBannerAsUntitled}
+          />
+          {!hasMessages && (
+            <ChatEmptyState
+              notebookTitle={notebookTitle}
+              description={notebook?.description ?? null}
+              isUntitled={isUntitled}
             />
-            {isConnectionUsable(connection) ? (
-              <Composer
-                input={input}
-                onInputChange={setInput}
-                onSubmit={handleSubmit}
-                isLoading={isLoading}
-                onStop={stop}
-                models={modelOptions}
-                selectedModel={selectedModel}
-                onModelChange={handleModelChange}
-                textareaRef={composerTextareaRef}
-              />
-            ) : (
-              <GatewayKeyPrompt description="An AI Gateway key is required to chat with your study assistant." />
-            )}
+          )}
+        </MessageScrollerItem>
+      )}
+
+      {!notebook && !hasMessages && (
+        <MessageScrollerItem messageId="chat-empty-state">
+          <ChatEmptyState
+            notebookTitle={notebookTitle}
+            description={null}
+            isUntitled={isUntitled}
+          />
+        </MessageScrollerItem>
+      )}
+
+      {hasMessages && (
+        <ChatMessageList
+          messages={messages}
+          citedSourcesMap={citedSourcesMap}
+          showPendingIndicator={showPendingIndicator}
+          pendingLabel={pendingLabel}
+          error={error}
+          onCopy={onCopy}
+          onRegenerate={onRegenerate}
+        />
+      )}
+    </ConversationContent>
+  );
+}
+
+interface ChatComposerAreaProps {
+  composerWrapperRef: React.RefObject<HTMLDivElement | null>;
+  connection: ReturnType<typeof useChatPanel>["connection"];
+  isClearDialogOpen: boolean;
+  onClearDialogChange: (open: boolean) => void;
+  onClearHistory: () => void;
+  isClearing: boolean;
+  input: string;
+  onInputChange: (val: string) => void;
+  onSubmit: ReturnType<typeof useChatPanel>["handleSubmit"];
+  isLoading: boolean;
+  onStop: () => void;
+  models: ReturnType<typeof useChatPanel>["modelOptions"];
+  selectedModel: string;
+  onModelChange: (model: string) => void;
+  composerTextareaRef: React.RefObject<HTMLTextAreaElement | null>;
+}
+
+function ChatComposerArea({
+  composerWrapperRef,
+  connection,
+  isClearDialogOpen,
+  onClearDialogChange,
+  onClearHistory,
+  isClearing,
+  input,
+  onInputChange,
+  onSubmit,
+  isLoading,
+  onStop,
+  models,
+  selectedModel,
+  onModelChange,
+  composerTextareaRef,
+}: ChatComposerAreaProps) {
+  return (
+    <div
+      ref={composerWrapperRef}
+      className="absolute inset-x-0 bottom-0 z-composer p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none"
+    >
+      <div className="mx-auto w-full max-w-4xl">
+        {connection && !connection.ok && connection.degraded && (
+          <div
+            role="status"
+            className="mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
+          >
+            AI Gateway is busy — responses may fail. Waiting a bit and retrying usually works.
           </div>
-        </div>
+        )}
+        <ClearHistoryDialog
+          open={isClearDialogOpen}
+          onOpenChange={onClearDialogChange}
+          onConfirm={onClearHistory}
+          isClearing={isClearing}
+        />
+        {isConnectionUsable(connection) ? (
+          <Composer
+            input={input}
+            onInputChange={onInputChange}
+            onSubmit={onSubmit}
+            isLoading={isLoading}
+            onStop={onStop}
+            models={models}
+            selectedModel={selectedModel}
+            onModelChange={onModelChange}
+            textareaRef={composerTextareaRef}
+          />
+        ) : (
+          <GatewayKeyPrompt description="An AI Gateway key is required to chat with your study assistant." />
+        )}
       </div>
     </div>
   );

@@ -87,6 +87,7 @@ function PptxSearchBar({
           value={searchQuery}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Search slides…"
+          aria-label="Search slides"
           className="h-8 w-full rounded-lg border border-border/60 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         {searchQuery && (
@@ -217,7 +218,7 @@ function MobileSlideNavigator({
 
 export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentViewerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeSlideNumber, setActiveSlideNumber] = useState<number | null>(null);
+  const [selectedSlideNumber, setSelectedSlideNumber] = useState<number | null>(null);
   const segmentContainerRef = useRef<HTMLDivElement>(null);
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const slideRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -247,6 +248,11 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
 
   const totalSlides = slideNumbers.length > 0 ? Math.max(...slideNumbers) : segments.length;
 
+  const activeSlideNumber =
+    selectedSlideNumber !== null && slideNumbers.includes(selectedSlideNumber)
+      ? selectedSlideNumber
+      : (slideNumbers[0] ?? null);
+
   const filteredSegments = useMemo(() => {
     if (!searchQuery.trim()) return segments;
     const q = searchQuery.toLowerCase();
@@ -265,18 +271,11 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
     initialRect: { width: 800, height: 600 },
   });
 
-  // Initialize active slide
-  useEffect(() => {
-    if (slideNumbers.length > 0 && activeSlideNumber === null) {
-      setActiveSlideNumber(slideNumbers[0]);
-    }
-  }, [slideNumbers, activeSlideNumber]);
-
   // Citation jump via selectedLocator.slideNumber
   useEffect(() => {
     if (typeof selectedLocator?.slideNumber === "number") {
       const target = selectedLocator.slideNumber;
-      setActiveSlideNumber(target);
+      setSelectedSlideNumber(target);
       const el = slideRefs.current.get(target);
       el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
@@ -315,13 +314,13 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
   }
 
   const handleSlideSelect = (num: number) => {
-    setActiveSlideNumber(num);
+    setSelectedSlideNumber(num);
     const el = slideRefs.current.get(num);
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
   const handleSegmentClick = (seg: ParsedSlideSegment) => {
-    setActiveSlideNumber(seg.slideNumber);
+    setSelectedSlideNumber(seg.slideNumber);
     const el = slideRefs.current.get(seg.slideNumber);
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
@@ -439,7 +438,7 @@ function SegmentListPanel({
   selectedSlideNumber?: number | null;
   searchQuery: string;
   isVirtualized: boolean;
-  virtualizer: ReturnType<typeof useVirtualizer>;
+  virtualizer: ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
   containerRef: RefObject<HTMLDivElement | null>;
   segmentRefs: RefObject<Map<number, HTMLDivElement>>;
   onSegmentClick: (seg: ParsedSlideSegment) => void;
@@ -515,9 +514,12 @@ function HighlightMatches({ text, query }: { text: string; query: string }) {
   const parts = text.split(new RegExp(`(${escapeRegex(query)})`, "gi"));
   return (
     <>
-      {parts.map((part) =>
+      {parts.map((part, index) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <mark key={part} className="bg-warning/30 text-foreground rounded-xs px-0.5 font-medium">
+          <mark
+            key={`${part}-${index}`}
+            className="bg-warning/30 text-foreground rounded-xs px-0.5 font-medium"
+          >
             {part}
           </mark>
         ) : (

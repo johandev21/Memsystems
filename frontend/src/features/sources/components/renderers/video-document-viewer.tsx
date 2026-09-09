@@ -103,9 +103,8 @@ function TranscriptSegmentCard({
     <div
       data-testid="transcript-segment"
       data-active={isActive ? "true" : undefined}
-      onClick={() => onSeek(segment)}
       className={cn(
-        "group rounded-lg border p-2.5 @min-[720px]:p-3 transition-colors cursor-pointer",
+        "group rounded-lg border p-2.5 @min-[720px]:p-3 transition-colors",
         isActive || isSelectedCitation
           ? "border-primary/40 bg-surface-2 ring-1 ring-primary/20 shadow-2xs"
           : "border-surface-border-subtle bg-surface-1/70 hover:bg-surface-2 hover:border-surface-border",
@@ -136,7 +135,13 @@ function TranscriptSegmentCard({
         )}
       </div>
 
-      <p className="text-xs leading-relaxed text-text-primary select-text">{segment.content}</p>
+      <button
+        type="button"
+        onClick={() => onSeek(segment)}
+        className="w-full text-left font-normal text-xs leading-relaxed text-text-primary select-text cursor-pointer focus:outline-none focus-visible:underline"
+      >
+        {segment.content}
+      </button>
     </div>
   );
 }
@@ -155,7 +160,7 @@ function TranscriptListView({
   activeSegmentId: string | null;
   selectedStartOffsetMs?: number | null;
   isVirtualized: boolean;
-  virtualizer: ReturnType<typeof useVirtualizer>;
+  virtualizer: ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
   containerRef: { current: HTMLDivElement | null };
   segmentRefs: { current: Map<string, HTMLDivElement> };
   onSeek: (segment: ParsedVideoSegment) => void;
@@ -356,25 +361,17 @@ function useVideoSegments(source: SourceWithContent, duration: number) {
 function useVideoSegmentSync({
   segments,
   currentTime,
-  activeSegmentId,
-  setActiveSegmentId,
-  duration,
-  setDuration,
+  isVirtualized,
+  virtualizer,
+  segmentElementsRef,
 }: {
   segments: ParsedVideoSegment[];
   currentTime: number;
-  activeSegmentId: string | null;
-  setActiveSegmentId: (id: string) => void;
-  duration: number;
-  setDuration: (d: number) => void;
+  isVirtualized: boolean;
+  virtualizer: ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
+  segmentElementsRef: { current: Map<string, HTMLDivElement> };
 }) {
-  useEffect(() => {
-    if (duration === 0 && segments.length > 0) {
-      const lastSeg = segments[segments.length - 1];
-      const maxMs = lastSeg.endOffsetMs ?? lastSeg.startOffsetMs + 5000;
-      if (maxMs > 0) setDuration(Math.ceil(maxMs / 1000));
-    }
-  }, [segments, duration, setDuration]);
+  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (segments.length === 0) return;
@@ -391,8 +388,23 @@ function useVideoSegmentSync({
         }
       }
     }
-    if (found && found.id !== activeSegmentId) setActiveSegmentId(found.id);
-  }, [currentTime, segments, activeSegmentId, setActiveSegmentId]);
+    if (found && found.id !== activeSegmentId) {
+      setActiveSegmentId(found.id);
+      if (isVirtualized) {
+        const idx = segments.findIndex((s) => s.id === found.id);
+        if (idx !== -1) {
+          virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
+        }
+      } else {
+        segmentElementsRef.current.get(found.id)?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }
+    }
+  }, [currentTime, segments, activeSegmentId, isVirtualized, virtualizer, segmentElementsRef]);
+
+  return { activeSegmentId, setActiveSegmentId };
 }
 
 export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentViewerProps) {
@@ -408,8 +420,7 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
 
   // Minimal playback tracking for transcript synchronization
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  const [mediaDuration, setMediaDuration] = useState(0);
   const [isAddTranscriptOpen, setIsAddTranscriptOpen] = useState(false);
 
   // Fetch presigned video download URL if not a YouTube URL
@@ -419,16 +430,43 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
     isYouTube,
   );
 
+  // Fallback duration estimation from segments if mediaDuration is 0
+  const fallbackDuration = useMemo(() => {
+    const srcSegments = source.segments;
+    if (srcSegments && srcSegments.length > 0) {
+      const last = srcSegments[srcSegments.length - 1];
+      const maxMs =
+        (last.locator as { endOffsetMs?: number } | undefined)?.endOffsetMs ??
+        (last.locator as { startOffsetMs?: number } | undefined)?.startOffsetMs ??
+        0;
+      if (maxMs > 0) return Math.ceil(maxMs / 1000);
+    }
+    return 0;
+  }, [source.segments]);
+
+  const duration = mediaDuration > 0 ? mediaDuration : fallbackDuration;
+
   // Normalize segments + transcript availability
   const { segments, hasTranscripts } = useVideoSegments(source, duration);
 
-  useVideoSegmentSync({
+  const isVirtualized = segments.length > 30;
+
+  const virtualizer = useVirtualizer({
+    count: segments.length,
+    getScrollElement: () => transcriptContainerRef.current,
+    estimateSize: () => 80,
+    overscan: 6,
+    getItemKey: (index) => segments[index]?.id ?? index,
+    enabled: isVirtualized,
+    initialRect: { width: 800, height: 600 },
+  });
+
+  const { activeSegmentId, setActiveSegmentId } = useVideoSegmentSync({
     segments,
     currentTime,
-    activeSegmentId,
-    setActiveSegmentId,
-    duration,
-    setDuration,
+    isVirtualized,
+    virtualizer,
+    segmentElementsRef,
   });
 
   // Video element event handlers for transcript synchronization
@@ -442,7 +480,7 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
     if (videoRef.current) {
       const dur = videoRef.current.duration;
       if (dur && !isNaN(dur) && isFinite(dur)) {
-        setDuration(dur);
+        setMediaDuration(dur);
       }
     }
   };
@@ -471,34 +509,6 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
     setActiveSegmentId(segment.id);
   };
 
-  const isVirtualized = segments.length > 30;
-
-  const virtualizer = useVirtualizer({
-    count: segments.length,
-    getScrollElement: () => transcriptContainerRef.current,
-    estimateSize: () => 80,
-    overscan: 6,
-    getItemKey: (index) => segments[index]?.id ?? index,
-    enabled: isVirtualized,
-    initialRect: { width: 800, height: 600 },
-  });
-
-  // Auto-scroll to active segment if playing
-  useEffect(() => {
-    if (!activeSegmentId) return;
-    if (isVirtualized) {
-      const idx = segments.findIndex((s) => s.id === activeSegmentId);
-      if (idx !== -1) {
-        virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
-      }
-    } else {
-      const el = segmentElementsRef.current.get(activeSegmentId);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
-    }
-  }, [activeSegmentId, isVirtualized, segments, virtualizer]);
-
   // Handle citation jumping
   useEffect(() => {
     if (typeof selectedLocator?.startOffsetMs !== "number") return;
@@ -519,7 +529,7 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
         el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
-  }, [selectedLocator, segments, isVirtualized, virtualizer, seekTo]);
+  }, [selectedLocator, segments, isVirtualized, virtualizer, seekTo, setActiveSegmentId]);
 
   const playerNode = (
     <VideoPlayerView

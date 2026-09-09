@@ -98,11 +98,12 @@ function FlashcardSidebar({
         {filteredCards.map((c) => {
           const isSelected = c.originalIndex === currentIndex;
           return (
-            <div
+            <button
               key={c.originalIndex}
+              type="button"
               onClick={() => onSelectIndex(c.originalIndex)}
               className={cn(
-                "p-3 rounded-2xl border text-xs transition-all cursor-pointer space-y-1",
+                "w-full text-left p-3 rounded-2xl border text-xs transition-all cursor-pointer space-y-1",
                 isSelected
                   ? "bg-surface-3 border-surface-border font-semibold shadow-2xs text-text-secondary"
                   : "bg-surface-2 border-surface-border-subtle hover:bg-surface-3 text-text-tertiary hover:text-text-secondary",
@@ -110,7 +111,7 @@ function FlashcardSidebar({
             >
               <span className="text-xs text-text-faint block">#{c.originalIndex + 1}</span>
               <p className="line-clamp-2 leading-relaxed">{c.front}</p>
-            </div>
+            </button>
           );
         })}
       </div>

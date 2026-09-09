@@ -40,8 +40,7 @@ describe("shared brief controls", () => {
       return <BriefWizardHeader title="Quiz Setup" step={step} onStepChange={setStep} />;
     }
     const { container } = render(<Wizard />);
-    // Preserve the existing step-bar interaction; keyboard accessibility is a follow-up.
-    const bars = container.querySelectorAll(".grid > div");
+    const bars = container.querySelectorAll(".grid > button, .grid > div");
     fireEvent.click(bars[1]);
     expect(screen.getByText("Step 2 of 2")).toBeTruthy();
     fireEvent.click(bars[0]);

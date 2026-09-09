@@ -1,4 +1,4 @@
-import { Fragment, useState, useId, useEffect, type KeyboardEvent } from "react";
+import { Fragment, useState, useId, type KeyboardEvent } from "react";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,19 @@ export interface ClozeInteractiveProps {
   onAnswerChecked?: (isCorrect: boolean) => void;
 }
 
-export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteractiveProps) {
+function checkBlank(user: string, expected: string): boolean {
+  const userClean = user.trim().toLowerCase();
+  // A blank with no corresponding expected answer (padded "" on
+  // length mismatch) accepts any non-empty input.
+  if (!expected) return userClean.length > 0;
+  return userClean === expected.trim().toLowerCase();
+}
+
+export function ClozeInteractive(props: ClozeInteractiveProps) {
+  return <ClozeInteractiveForm key={`${props.front}||${props.back}`} {...props} />;
+}
+
+function ClozeInteractiveForm({ front, back, onAnswerChecked }: ClozeInteractiveProps) {
   const parsed = parseClozeCard(front, back);
   const { segments, expectedAnswers, blankCount } = parsed;
 
@@ -19,11 +31,6 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
   const [results, setResults] = useState<boolean[] | null>(null);
   const baseId = useId();
   const feedbackId = useId();
-
-  useEffect(() => {
-    setValues(Array(parseClozeCard(front, back).blankCount).fill(""));
-    setResults(null);
-  }, [front, back]);
 
   const isChecked = results !== null;
   const isCorrectOverall = isChecked && results.every(Boolean);
@@ -37,14 +44,6 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
     blankCount > 0 &&
     values.length === blankCount &&
     values.every((v) => v.trim().length > 0);
-
-  function checkBlank(user: string, expected: string): boolean {
-    const userClean = user.trim().toLowerCase();
-    // A blank with no corresponding expected answer (padded "" on
-    // length mismatch) accepts any non-empty input.
-    if (!expected) return userClean.length > 0;
-    return userClean === expected.trim().toLowerCase();
-  }
 
   function handleCheckAnswer() {
     if (!canCheck) return;

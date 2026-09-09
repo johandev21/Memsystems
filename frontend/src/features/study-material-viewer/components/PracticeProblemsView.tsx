@@ -707,6 +707,16 @@ function AttemptSection({
   );
 }
 
+const DIFFICULTY_LABELS: Record<PracticeProblemsDifficulty, { label: string; className: string }> =
+  {
+    easy: {
+      label: "Warmup",
+      className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    },
+    medium: { label: "Standard", className: "bg-primary/15 text-primary border-primary/30" },
+    hard: { label: "Challenge", className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
+  };
+
 function PracticeProblemsReader({
   set,
   materialId,
@@ -785,17 +795,7 @@ function PracticeProblemsReader({
   const { handleDiscussInChat, handleAskSocraticHint, handleExplainStepInChat } =
     usePracticeChatPrompts(currentProblem);
 
-  const difficultyLabels: Record<PracticeProblemsDifficulty, { label: string; className: string }> =
-    {
-      easy: {
-        label: "Warmup",
-        className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-      },
-      medium: { label: "Standard", className: "bg-primary/15 text-primary border-primary/30" },
-      hard: { label: "Challenge", className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-    };
-
-  const difficultyConfig = difficultyLabels[difficulty] ?? difficultyLabels.medium;
+  const difficultyConfig = DIFFICULTY_LABELS[difficulty] ?? DIFFICULTY_LABELS.medium;
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-surface-1 text-text-primary">

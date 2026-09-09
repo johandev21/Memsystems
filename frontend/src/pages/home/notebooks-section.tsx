@@ -98,13 +98,54 @@ export function NotebooksSection() {
           notebooks={notebooks}
           isCreating={isCreating}
           onCreate={handleCreateNotebook}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          isFetchNextPageError={isFetchNextPageError}
-          onRetryNextPage={() => void fetchNextPage()}
-          sentinelRef={sentinelRef}
+          pagination={{
+            hasNextPage,
+            isFetchingNextPage,
+            isFetchNextPageError,
+            onRetry: () => void fetchNextPage(),
+            sentinelRef,
+          }}
         />
       </section>
+    </>
+  );
+}
+
+interface RecentNotebooksPagination {
+  hasNextPage?: boolean;
+  isFetchingNextPage: boolean;
+  isFetchNextPageError: boolean;
+  onRetry: () => void;
+  sentinelRef: RefObject<HTMLDivElement | null>;
+}
+
+function RecentNotebooksPaginationFooter({
+  pagination,
+  totalCount,
+}: {
+  pagination: RecentNotebooksPagination;
+  totalCount: number;
+}) {
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, onRetry, sentinelRef } =
+    pagination;
+
+  return (
+    <>
+      <div ref={sentinelRef} />
+      {isFetchingNextPage ? <RecentNotebooksLoadingMore /> : null}
+      {!isFetchingNextPage && isFetchNextPageError ? (
+        <div className="flex items-center justify-center gap-3 py-4 text-sm text-muted-foreground">
+          <span>Couldn&apos;t load more notebooks.</span>
+          <Button variant="outline" size="sm" onClick={onRetry} className="cursor-pointer">
+            Retry
+          </Button>
+        </div>
+      ) : null}
+      {!hasNextPage && !isFetchNextPageError && totalCount > 0 ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          You&apos;ve seen all {totalCount} notebooks
+        </p>
+      ) : null}
     </>
   );
 }
@@ -114,21 +155,13 @@ function RecentNotebooksContent({
   notebooks,
   isCreating,
   onCreate,
-  hasNextPage,
-  isFetchingNextPage,
-  isFetchNextPageError,
-  onRetryNextPage,
-  sentinelRef,
+  pagination,
 }: {
   isLoading: boolean;
   notebooks?: Notebook[];
   isCreating: boolean;
   onCreate: () => void;
-  hasNextPage?: boolean;
-  isFetchingNextPage: boolean;
-  isFetchNextPageError: boolean;
-  onRetryNextPage: () => void;
-  sentinelRef: RefObject<HTMLDivElement | null>;
+  pagination: RecentNotebooksPagination;
 }) {
   if (isLoading) return <RecentNotebooksLoading />;
   if (!notebooks?.length)
@@ -136,21 +169,10 @@ function RecentNotebooksContent({
   return (
     <div className="flex flex-col gap-4">
       <RecentNotebookGrid notebooks={notebooks} />
-      <div ref={sentinelRef} />
-      {isFetchingNextPage ? <RecentNotebooksLoadingMore /> : null}
-      {!isFetchingNextPage && isFetchNextPageError ? (
-        <div className="flex items-center justify-center gap-3 py-4 text-sm text-muted-foreground">
-          <span>Couldn&apos;t load more notebooks.</span>
-          <Button variant="outline" size="sm" onClick={onRetryNextPage} className="cursor-pointer">
-            Retry
-          </Button>
-        </div>
-      ) : null}
-      {!hasNextPage && !isFetchNextPageError && notebooks.length > 0 ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          You&apos;ve seen all {notebooks.length} notebooks
-        </p>
-      ) : null}
+      <RecentNotebooksPaginationFooter
+        pagination={pagination}
+        totalCount={notebooks.length}
+      />
     </div>
   );
 }

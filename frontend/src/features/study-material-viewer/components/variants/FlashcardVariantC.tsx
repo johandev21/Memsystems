@@ -105,7 +105,15 @@ export function FlashcardVariantC({
       {/* Speed Card Surface with Pure Physical Motion & Distinct Back Background */}
       <div className="relative w-full">
         <div
+          role="button"
+          tabIndex={0}
           onClick={onFlip}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onFlip();
+            }
+          }}
           className={cn(
             "w-full rounded-3xl border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm cursor-pointer hover:border-primary/40 select-none transition-all duration-300 ease-out",
             !isFlipped

@@ -12,7 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/ui/markdown";
@@ -260,6 +260,15 @@ function ImageNoteCard({
         if (el) noteRefs.current.set(section.id, el);
         else noteRefs.current.delete(section.id);
       }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(section.id);
+        }
+      }}
       onMouseEnter={() => onHover(section.id)}
       onMouseLeave={() => onHover(null)}
       onClick={() => onSelect(section.id)}
@@ -323,6 +332,183 @@ function ImageNoteCard({
           <span>{section.warning}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+interface ImagePreviewPanelProps {
+  viewMode: ViewMode;
+  zoom: number;
+  segmentsWithRegions: ParsedImageSection[];
+  showOverlays: boolean;
+  isLoadingImage: boolean;
+  isImageError: boolean;
+  imageUrl: string | null;
+  sourceTitle: string;
+  activeSegmentId: string | null;
+  hoveredSegmentId: string | null;
+  selectedRegion?: ImageRegion | null;
+  imageViewportRef: React.RefObject<HTMLDivElement | null>;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  onToggleOverlays: () => void;
+  onSelectSegment: (id: string) => void;
+  onHoverSegment: (id: string | null) => void;
+}
+
+function ImagePreviewPanel({
+  viewMode,
+  zoom,
+  segmentsWithRegions,
+  showOverlays,
+  isLoadingImage,
+  isImageError,
+  imageUrl,
+  sourceTitle,
+  activeSegmentId,
+  hoveredSegmentId,
+  selectedRegion,
+  imageViewportRef,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+  onToggleOverlays,
+  onSelectSegment,
+  onHoverSegment,
+}: ImagePreviewPanelProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col border-r border-border/60 bg-muted/10 relative overflow-hidden",
+        viewMode === "split" ? "w-full lg:w-1/2" : "w-full",
+      )}
+    >
+      <ImageZoomBar
+        zoom={zoom}
+        showOverlaysToggle={segmentsWithRegions.length > 0}
+        showOverlays={showOverlays}
+        onZoomIn={onZoomIn}
+        onZoomOut={onZoomOut}
+        onResetZoom={onResetZoom}
+        onToggleOverlays={onToggleOverlays}
+      />
+
+      <div
+        ref={imageViewportRef}
+        className="flex flex-1 items-center justify-center overflow-auto p-4 select-none"
+      >
+        {isLoadingImage ? (
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Loader2 className="size-6 animate-spin text-primary" />
+            <span className="text-xs">Loading image…</span>
+          </div>
+        ) : isImageError || !imageUrl ? (
+          <div className="flex flex-col items-center gap-2 p-6 text-center text-muted-foreground">
+            <AlertTriangle className="size-8 text-warning" />
+            <span className="text-sm font-medium">Image preview unavailable</span>
+            <span className="text-xs text-muted-foreground">
+              The original image could not be loaded directly.
+            </span>
+          </div>
+        ) : (
+          <div
+            className="relative inline-block transition-transform duration-100 ease-out max-w-full"
+            style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
+          >
+            <img
+              src={imageUrl}
+              alt={sourceTitle}
+              className="max-h-[85vh] max-w-full rounded-md object-contain shadow-xs border border-border/40"
+            />
+
+            {showOverlays && (
+              <ImageRegionOverlays
+                segmentsWithRegions={segmentsWithRegions}
+                activeSegmentId={activeSegmentId}
+                hoveredSegmentId={hoveredSegmentId}
+                selectedRegion={selectedRegion}
+                onSelectSegment={onSelectSegment}
+                onHoverSegment={onHoverSegment}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ExtractedNotesPanelProps {
+  viewMode: ViewMode;
+  warningMessage: string | null;
+  sections: ParsedImageSection[];
+  activeSegmentId: string | null;
+  hoveredSegmentId: string | null;
+  notesContainerRef: React.RefObject<HTMLDivElement | null>;
+  noteElementsRef: { current: Map<string, HTMLDivElement> };
+  onSelectSegment: (id: string) => void;
+  onHoverSegment: (id: string | null) => void;
+}
+
+function ExtractedNotesPanel({
+  viewMode,
+  warningMessage,
+  sections,
+  activeSegmentId,
+  hoveredSegmentId,
+  notesContainerRef,
+  noteElementsRef,
+  onSelectSegment,
+  onHoverSegment,
+}: ExtractedNotesPanelProps) {
+  return (
+    <div
+      ref={notesContainerRef}
+      className={cn(
+        "flex flex-col overflow-y-auto overscroll-contain bg-background p-4 sm:p-6",
+        viewMode === "split" ? "w-full lg:w-1/2" : "w-full max-w-4xl mx-auto",
+      )}
+    >
+      <div className="mb-4 space-y-2 border-b border-border/40 pb-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">Extracted Notes</h2>
+          <Badge variant="secondary" className="gap-1 font-normal text-xs">
+            <Sparkles className="size-3 text-primary" />
+            AI Vision Analysis
+          </Badge>
+        </div>
+
+        {warningMessage && (
+          <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
+            <AlertTriangle className="size-4 shrink-0 text-warning mt-0.5" />
+            <div>
+              <div className="font-semibold">Notice</div>
+              <div className="text-muted-foreground">{warningMessage}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {sections.length === 0 ? (
+          <div className="py-12 text-center text-xs text-muted-foreground">
+            No extracted text or visual analysis available for this image.
+          </div>
+        ) : (
+          sections.map((section) => (
+            <ImageNoteCard
+              key={section.id}
+              section={section}
+              isActive={activeSegmentId === section.id}
+              isHovered={hoveredSegmentId === section.id}
+              onHover={onHoverSegment}
+              onSelect={onSelectSegment}
+              noteRefs={noteElementsRef}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -423,122 +609,41 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
 
       {/* Main Workspace Panels */}
       <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
-        {/* Left: Original Image Panel */}
         {(viewMode === "split" || viewMode === "image") && (
-          <div
-            className={cn(
-              "flex flex-col border-r border-border/60 bg-muted/10 relative overflow-hidden",
-              viewMode === "split" ? "w-full lg:w-1/2" : "w-full",
-            )}
-          >
-            <ImageZoomBar
-              zoom={zoom}
-              showOverlaysToggle={segmentsWithRegions.length > 0}
-              showOverlays={showOverlays}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onResetZoom={handleResetZoom}
-              onToggleOverlays={() => setShowOverlays((v) => !v)}
-            />
-
-            {/* Image Container Viewport */}
-            <div
-              ref={imageViewportRef}
-              className="flex flex-1 items-center justify-center overflow-auto p-4 select-none"
-            >
-              {isLoadingImage ? (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <Loader2 className="size-6 animate-spin text-primary" />
-                  <span className="text-xs">Loading image…</span>
-                </div>
-              ) : isImageError || !imageUrl ? (
-                <div className="flex flex-col items-center gap-2 p-6 text-center text-muted-foreground">
-                  <AlertTriangle className="size-8 text-warning" />
-                  <span className="text-sm font-medium">Image preview unavailable</span>
-                  <span className="text-xs text-muted-foreground">
-                    The original image could not be loaded directly.
-                  </span>
-                </div>
-              ) : (
-                <div
-                  className="relative inline-block transition-transform duration-100 ease-out max-w-full"
-                  style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
-                >
-                  <img
-                    src={imageUrl}
-                    alt={source.title}
-                    className="max-h-[85vh] max-w-full rounded-md object-contain shadow-xs border border-border/40"
-                  />
-
-                  {showOverlays && (
-                    <ImageRegionOverlays
-                      segmentsWithRegions={segmentsWithRegions}
-                      activeSegmentId={activeSegmentId}
-                      hoveredSegmentId={hoveredSegmentId}
-                      selectedRegion={selectedLocator?.imageRegion}
-                      onSelectSegment={handleSelectSegment}
-                      onHoverSegment={(id) => setHoveredSegmentId(id)}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          <ImagePreviewPanel
+            viewMode={viewMode}
+            zoom={zoom}
+            segmentsWithRegions={segmentsWithRegions}
+            showOverlays={showOverlays}
+            isLoadingImage={isLoadingImage}
+            isImageError={isImageError}
+            imageUrl={imageUrl}
+            sourceTitle={source.title}
+            activeSegmentId={activeSegmentId}
+            hoveredSegmentId={hoveredSegmentId}
+            selectedRegion={selectedLocator?.imageRegion}
+            imageViewportRef={imageViewportRef}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetZoom={handleResetZoom}
+            onToggleOverlays={() => setShowOverlays((v) => !v)}
+            onSelectSegment={handleSelectSegment}
+            onHoverSegment={(id) => setHoveredSegmentId(id)}
+          />
         )}
 
-        {/* Right: Extracted Notes Panel */}
         {(viewMode === "split" || viewMode === "notes") && (
-          <div
-            ref={notesContainerRef}
-            className={cn(
-              "flex flex-col overflow-y-auto overscroll-contain bg-background p-4 sm:p-6",
-              viewMode === "split" ? "w-full lg:w-1/2" : "w-full max-w-4xl mx-auto",
-            )}
-          >
-            {/* Header & Warnings */}
-            <div className="mb-4 space-y-2 border-b border-border/40 pb-4">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-bold tracking-tight text-foreground">
-                  Extracted Notes
-                </h2>
-                <Badge variant="secondary" className="gap-1 font-normal text-xs">
-                  <Sparkles className="size-3 text-primary" />
-                  AI Vision Analysis
-                </Badge>
-              </div>
-
-              {warningMessage && (
-                <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-                  <AlertTriangle className="size-4 shrink-0 text-warning mt-0.5" />
-                  <div>
-                    <div className="font-semibold">Notice</div>
-                    <div className="text-muted-foreground">{warningMessage}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sections & Note Cards */}
-            <div className="space-y-4">
-              {sections.length === 0 ? (
-                <div className="py-12 text-center text-xs text-muted-foreground">
-                  No extracted text or visual analysis available for this image.
-                </div>
-              ) : (
-                sections.map((section) => (
-                  <ImageNoteCard
-                    key={section.id}
-                    section={section}
-                    isActive={activeSegmentId === section.id}
-                    isHovered={hoveredSegmentId === section.id}
-                    onHover={(id) => setHoveredSegmentId(id)}
-                    onSelect={handleSelectSegment}
-                    noteRefs={noteElementsRef}
-                  />
-                ))
-              )}
-            </div>
-          </div>
+          <ExtractedNotesPanel
+            viewMode={viewMode}
+            warningMessage={warningMessage}
+            sections={sections}
+            activeSegmentId={activeSegmentId}
+            hoveredSegmentId={hoveredSegmentId}
+            notesContainerRef={notesContainerRef}
+            noteElementsRef={noteElementsRef}
+            onSelectSegment={handleSelectSegment}
+            onHoverSegment={(id) => setHoveredSegmentId(id)}
+          />
         )}
       </div>
     </div>

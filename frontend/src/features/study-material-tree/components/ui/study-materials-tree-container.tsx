@@ -18,14 +18,7 @@ export interface StudyMaterialsTreeContainerProps {
   variant?: "desktop" | "mobile" | "standalone";
 }
 
-export function StudyMaterialsTreeContainer({
-  notebookId,
-  onMaterialActivate,
-  onCommand,
-  size = "sm",
-  className,
-  variant = "standalone",
-}: StudyMaterialsTreeContainerProps) {
+function useStudyMaterialsTreeData(notebookId: string) {
   const foldersQuery = useQuery({
     ...foldersQueryOptions(notebookId),
     enabled: Boolean(notebookId),
@@ -37,11 +30,6 @@ export function StudyMaterialsTreeContainer({
 
   const folders = foldersQuery.data ?? [];
   const materials = materialsQuery.data ?? [];
-
-  const [expandedIds, setExpandedIds] = usePersistentExpandedFolders(notebookId, folders);
-  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
-  const productionExecute = useProductionTreeAdapter(notebookId);
-  const effectiveOnCommand = onCommand ?? productionExecute;
 
   const isInitialLoading = foldersQuery.isPending || materialsQuery.isPending;
   const isError = foldersQuery.isError || materialsQuery.isError;
@@ -57,40 +45,106 @@ export function StudyMaterialsTreeContainer({
     void materialsQuery.refetch();
   }, [foldersQuery, materialsQuery]);
 
-  if (isInitialLoading && !hasData) {
-    return <StudyMaterialsTreeSkeleton className={className} />;
-  }
+  return {
+    folders,
+    materials,
+    isInitialLoading,
+    isError,
+    errorMessage,
+    isFetching,
+    hasData,
+    handleRetry,
+  };
+}
 
-  if (isError && !hasData) {
-    return (
-      <StudyMaterialsTreeError
-        message={errorMessage}
-        onRetry={handleRetry}
-        isRetrying={isFetching}
-      />
-    );
-  }
+interface TreeLoadedContentProps {
+  className?: string;
+  data: ReturnType<typeof useStudyMaterialsTreeData>;
+  onMaterialActivate?: (materialId: string) => void;
+  effectiveOnCommand?: TreeCommandExecutor;
+  size?: StudyMaterialsTreeSize;
+  expandedIds: Set<string>;
+  setExpandedIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  isPanelExpanded: boolean;
+  onPanelToggle: () => void;
+  variant?: StudyMaterialsTreeContainerProps["variant"];
+}
 
-  // hasData: render tree, retain last good during background refetch
+function TreeLoadedContent({
+  className,
+  data,
+  onMaterialActivate,
+  effectiveOnCommand,
+  size,
+  expandedIds,
+  setExpandedIds,
+  isPanelExpanded,
+  onPanelToggle,
+  variant,
+}: TreeLoadedContentProps) {
   const contentHeight = getTreeContentHeight(variant);
 
   return (
     <div data-slot="study-materials-tree-container" className={className}>
-      {isFetching && hasData && <TreeUpdatingIndicator />}
+      {data.isFetching && data.hasData && <TreeUpdatingIndicator />}
       <StudyMaterialsTree
-        folders={folders}
-        materials={materials}
+        folders={data.folders}
+        materials={data.materials}
         onMaterialActivate={onMaterialActivate}
         onCommand={effectiveOnCommand}
         size={size}
         expandedIds={expandedIds}
         onExpandedChange={setExpandedIds}
         isPanelExpanded={isPanelExpanded}
-        onPanelToggle={() => setIsPanelExpanded((v) => !v)}
+        onPanelToggle={onPanelToggle}
         contentClassName={contentHeight}
       />
-      {isError && hasData && <TreeRefreshError onRetry={handleRetry} />}
+      {data.isError && data.hasData && <TreeRefreshError onRetry={data.handleRetry} />}
     </div>
+  );
+}
+
+export function StudyMaterialsTreeContainer({
+  notebookId,
+  onMaterialActivate,
+  onCommand,
+  size = "sm",
+  className,
+  variant = "standalone",
+}: StudyMaterialsTreeContainerProps) {
+  const data = useStudyMaterialsTreeData(notebookId);
+  const [expandedIds, setExpandedIds] = usePersistentExpandedFolders(notebookId, data.folders);
+  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
+  const productionExecute = useProductionTreeAdapter(notebookId);
+  const effectiveOnCommand = onCommand ?? productionExecute;
+
+  if (data.isInitialLoading && !data.hasData) {
+    return <StudyMaterialsTreeSkeleton className={className} />;
+  }
+
+  if (data.isError && !data.hasData) {
+    return (
+      <StudyMaterialsTreeError
+        message={data.errorMessage}
+        onRetry={data.handleRetry}
+        isRetrying={data.isFetching}
+      />
+    );
+  }
+
+  return (
+    <TreeLoadedContent
+      className={className}
+      data={data}
+      onMaterialActivate={onMaterialActivate}
+      effectiveOnCommand={effectiveOnCommand}
+      size={size}
+      expandedIds={expandedIds}
+      setExpandedIds={setExpandedIds}
+      isPanelExpanded={isPanelExpanded}
+      onPanelToggle={() => setIsPanelExpanded((v) => !v)}
+      variant={variant}
+    />
   );
 }
 

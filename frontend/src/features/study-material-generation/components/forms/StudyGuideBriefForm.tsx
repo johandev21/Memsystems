@@ -6,7 +6,7 @@ import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
@@ -64,18 +64,27 @@ export function StudyGuideBriefForm({
     onChange(patch);
   };
 
-  useEffect(() => {
-    update({
-      studyGuideOptions: { format, sectionCount },
+  const updateStudyGuideOptions = (patch: {
+    format?: StudyGuideFormat;
+    sectionCount?: number;
+  }) => {
+    const nextFormat = patch.format ?? format;
+    const nextCount = patch.sectionCount ?? sectionCount;
+    onChange({
+      studyGuideOptions: {
+        format: nextFormat,
+        sectionCount: nextCount,
+      },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [format, sectionCount]);
+  };
 
   const handleCustomChange = (raw: string) => {
     setCustomVal(raw);
     const parsed = parseInt(raw, 10);
     if (!isNaN(parsed) && parsed > 0) {
-      setSectionCount(Math.min(MAX_SECTIONS, Math.max(1, parsed)));
+      const clamped = Math.min(MAX_SECTIONS, Math.max(1, parsed));
+      setSectionCount(clamped);
+      updateStudyGuideOptions({ sectionCount: clamped });
     }
   };
 
@@ -85,6 +94,7 @@ export function StudyGuideBriefForm({
     if (parsed > MAX_SECTIONS) parsed = MAX_SECTIONS;
     setCustomVal(String(parsed));
     setSectionCount(parsed);
+    updateStudyGuideOptions({ sectionCount: parsed });
   };
 
   return (
@@ -98,7 +108,10 @@ export function StudyGuideBriefForm({
               label="1. Format"
               options={FORMAT_OPTIONS}
               value={format}
-              onChange={setFormat}
+              onChange={(nextFormat) => {
+                setFormat(nextFormat);
+                updateStudyGuideOptions({ format: nextFormat });
+              }}
             />
 
             <div className="flex flex-col gap-2">
@@ -117,6 +130,7 @@ export function StudyGuideBriefForm({
                       onClick={() => {
                         setIsCustomMode(false);
                         setSectionCount(cnt);
+                        updateStudyGuideOptions({ sectionCount: cnt });
                       }}
                       className={cn(
                         optionRowClass(selected),
@@ -149,7 +163,9 @@ export function StudyGuideBriefForm({
                     onClick={() => {
                       setIsCustomMode(true);
                       const parsed = parseInt(customVal, 10) || 6;
-                      setSectionCount(Math.min(MAX_SECTIONS, Math.max(1, parsed)));
+                      const clamped = Math.min(MAX_SECTIONS, Math.max(1, parsed));
+                      setSectionCount(clamped);
+                      updateStudyGuideOptions({ sectionCount: clamped });
                     }}
                     className={cn(
                       optionRowClass(false),

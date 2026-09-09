@@ -57,11 +57,7 @@ function ensureEntry(
 }
 
 function normalizeChecklist(current: boolean[], length: number): boolean[] {
-  const next = Array(length).fill(false);
-  for (let i = 0; i < Math.min(current.length, length); i++) {
-    next[i] = current[i] === true;
-  }
-  return next;
+  return Array.from({ length }, (_, i) => current[i] === true);
 }
 
 function writeStored(materialId: string, next: CaseStudyProgressMap): boolean {
@@ -114,27 +110,25 @@ export function useCaseStudyProgress(materialId: string): UseCaseStudyProgressRe
       checklistLength: number,
       update: Partial<CaseStudyQuestionProgress>,
     ) => {
-      setEntries((prev) => {
-        const next = {
-          ...prev,
-          [questionId]: {
-            ...ensureEntry(prev, questionId, contentHash, checklistLength),
-            ...update,
-            contentHash,
-            updatedAt: new Date().toISOString(),
-          },
-        };
-        if (writeStored(materialId, next)) {
-          setStorageError(null);
-        } else {
-          setStorageError(
-            "Progress could not be saved on this device. Your current session is kept in memory.",
-          );
-        }
-        return next;
-      });
+      const next: CaseStudyProgressMap = {
+        ...entries,
+        [questionId]: {
+          ...ensureEntry(entries, questionId, contentHash, checklistLength),
+          ...update,
+          contentHash,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      setEntries(next);
+      if (writeStored(materialId, next)) {
+        setStorageError(null);
+      } else {
+        setStorageError(
+          "Progress could not be saved on this device. Your current session is kept in memory.",
+        );
+      }
     },
-    [materialId],
+    [entries, materialId],
   );
 
   const getEntry = useCallback(

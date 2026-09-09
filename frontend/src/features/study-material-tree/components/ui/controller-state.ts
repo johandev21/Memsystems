@@ -148,11 +148,21 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     [openFolderIds, tree],
   );
 
-  useEffect(() => {
-    if (selectedId !== undefined && selectedId !== focusedItemId) {
-      // keep intentional separation
+  const [prevFolders, setPrevFolders] = useState(effectiveState.folders);
+  const [prevMaterials, setPrevMaterials] = useState(effectiveState.materials);
+
+  if (prevFolders !== effectiveState.folders || prevMaterials !== effectiveState.materials) {
+    setPrevFolders(effectiveState.folders);
+    setPrevMaterials(effectiveState.materials);
+    if (focusedItemId != null && pendingKeys.size === 0) {
+      const exists =
+        effectiveState.folders.some((f) => f.id === focusedItemId) ||
+        effectiveState.materials.some((m) => m.id === focusedItemId);
+      if (!exists) {
+        setFocusedItemId(null);
+      }
     }
-  }, [selectedId, focusedItemId]);
+  }
 
   useEffect(() => {
     if (selectedId == null) return;
@@ -162,7 +172,6 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
       effectiveState.materials.some((m) => m.id === selectedId);
     if (!exists) {
       setSelectedId(null);
-      setFocusedItemId(null);
     }
   }, [effectiveState.folders, effectiveState.materials, pendingKeys, selectedId, setSelectedId]);
 

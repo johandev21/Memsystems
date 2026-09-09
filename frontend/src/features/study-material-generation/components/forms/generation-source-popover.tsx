@@ -80,6 +80,7 @@ export function GenerationSourcePopover({
             <input
               type="text"
               placeholder="Search sources..."
+              aria-label="Search sources"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint"

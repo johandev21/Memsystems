@@ -21,17 +21,21 @@ export function BriefWizardHeader({
         </Badge>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <div
+        <button
+          type="button"
+          aria-label="Step 1"
           onClick={() => onStepChange(1)}
           className={cn(
-            "h-1.5 rounded-full transition-all cursor-pointer",
+            "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",
             step >= 1 ? "bg-primary" : "bg-surface-4",
           )}
         />
-        <div
+        <button
+          type="button"
+          aria-label="Step 2"
           onClick={() => onStepChange(2)}
           className={cn(
-            "h-1.5 rounded-full transition-all cursor-pointer",
+            "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",
             step === 2 ? "bg-primary" : "bg-surface-4",
           )}
         />

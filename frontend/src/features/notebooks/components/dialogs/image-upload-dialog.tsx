@@ -1,7 +1,6 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -123,6 +122,18 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
           </DialogDescription>
         </DialogHeader>
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          aria-label="Upload notebook banner image"
+          accept={ACCEPTED_IMAGE_TYPES.join(",")}
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileSelect(file);
+          }}
+        />
+
         <div
           role="button"
           tabIndex={0}
@@ -138,17 +149,6 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
               : "border-border hover:border-primary/50 hover:bg-muted/50",
           )}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPTED_IMAGE_TYPES.join(",")}
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileSelect(file);
-            }}
-          />
-
           <div className="flex size-12 items-center justify-center rounded-full bg-background border border-border shadow-xs">
             <Upload className="size-5 text-foreground" />
           </div>
@@ -160,9 +160,9 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
             <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 2MB</p>
           </div>
 
-          <Button type="button" variant="secondary" size="sm" className="mt-1 cursor-pointer">
+          <span className="mt-1 inline-flex items-center justify-center rounded-md bg-secondary text-secondary-foreground text-xs font-medium px-3 py-1.5 shadow-xs pointer-events-none">
             Browse files
-          </Button>
+          </span>
         </div>
       </DialogContent>
     </Dialog>

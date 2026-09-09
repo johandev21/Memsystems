@@ -109,12 +109,16 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") goTo(clampedIndex + 1);
-      if (event.key === "ArrowLeft") goTo(clampedIndex - 1);
+      if (slides.length === 0) return;
+      if (event.key === "ArrowRight") {
+        setActiveIndex((prev) => (prev + 1) % slides.length);
+      } else if (event.key === "ArrowLeft") {
+        setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [clampedIndex, goTo]);
+  }, [slides.length]);
 
   const handleDownload = async () => {
     setIsDownloading(true);

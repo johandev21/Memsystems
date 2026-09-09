@@ -6,7 +6,7 @@ import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
@@ -65,17 +65,13 @@ export function QuizBriefForm({
     onChange(patch);
   };
 
-  // Sync internal state to parent brief form values
-  useEffect(() => {
-    update({ questionCount, difficulty });
-  }, [questionCount, difficulty]);
-
   const handleCustomChange = (raw: string) => {
     setCustomVal(raw);
     const parsed = parseInt(raw, 10);
     if (!isNaN(parsed) && parsed > 0) {
       const clamped = Math.min(50, Math.max(1, parsed));
       setQuestionCount(clamped);
+      update({ questionCount: clamped });
     }
   };
 
@@ -85,6 +81,7 @@ export function QuizBriefForm({
     if (parsed > 50) parsed = 50;
     setCustomVal(String(parsed));
     setQuestionCount(parsed);
+    update({ questionCount: parsed });
   };
 
   // Section Render Helpers
@@ -92,7 +89,13 @@ export function QuizBriefForm({
     return (
       <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
         <div className="flex flex-col gap-5">
-          <DifficultySelector value={difficulty} onChange={setDifficulty} />
+          <DifficultySelector
+            value={difficulty}
+            onChange={(val) => {
+              setDifficulty(val);
+              update({ difficulty: val });
+            }}
+          />
 
           <QuestionSelector
             questionLabel={questionLabel}
@@ -102,11 +105,14 @@ export function QuizBriefForm({
             onSelectPreset={(cnt) => {
               setIsCustomMode(false);
               setQuestionCount(cnt);
+              update({ questionCount: cnt });
             }}
             onEnableCustom={() => {
               setIsCustomMode(true);
               const parsed = parseInt(customVal, 10) || 25;
-              setQuestionCount(Math.min(50, Math.max(1, parsed)));
+              const clamped = Math.min(50, Math.max(1, parsed));
+              setQuestionCount(clamped);
+              update({ questionCount: clamped });
             }}
             onCustomChange={handleCustomChange}
             onCustomBlur={handleCustomBlur}
@@ -221,12 +227,14 @@ function DifficultySelector({
       <Label className="text-sm font-medium text-text-primary">1. Target Difficulty</Label>
       <div className="grid grid-cols-3 gap-3">
         {DIFFICULTIES.map((d) => (
-          <div
+          <button
             key={d.id}
+            type="button"
+            aria-pressed={value === d.id}
             onClick={() => onChange(d.id)}
             className={cn(
               optionRowClass(value === d.id),
-              "p-3 flex flex-col justify-between gap-1.5",
+              "p-3 flex flex-col justify-between gap-1.5 text-left cursor-pointer",
             )}
           >
             <div className="flex items-center justify-between">
@@ -247,7 +255,7 @@ function DifficultySelector({
             >
               {d.description}
             </span>
-          </div>
+          </button>
         ))}
       </div>
     </div>
@@ -287,6 +295,7 @@ function QuestionSelector({
             <button
               key={cnt}
               type="button"
+              aria-pressed={selected}
               onClick={() => onSelectPreset(cnt)}
               className={cn(
                 optionRowClass(selected),
@@ -309,6 +318,7 @@ function QuestionSelector({
               onChange={(e) => onCustomChange(e.target.value)}
               onBlur={onCustomBlur}
               placeholder="1-50"
+              aria-label="1-50"
               className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
               autoFocus
             />

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Search, BookOpen, Globe, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -85,17 +85,13 @@ export function FlashcardBriefForm({
     onChange(patch);
   };
 
-  // Sync internal state to parent brief form values
-  useEffect(() => {
-    update({ questionCount: cardCount, difficulty, cardStyle });
-  }, [cardCount, difficulty, cardStyle]);
-
   const handleCustomChange = (raw: string) => {
     setCustomVal(raw);
     const parsed = parseInt(raw, 10);
     if (!isNaN(parsed) && parsed > 0) {
       const clamped = Math.min(50, Math.max(1, parsed));
       setCardCount(clamped);
+      update({ questionCount: clamped });
     }
   };
 
@@ -105,6 +101,7 @@ export function FlashcardBriefForm({
     if (parsed > 50) parsed = 50;
     setCustomVal(String(parsed));
     setCardCount(parsed);
+    update({ questionCount: parsed });
   };
 
   return (
@@ -119,7 +116,10 @@ export function FlashcardBriefForm({
               <button
                 key={style.id}
                 type="button"
-                onClick={() => setCardStyle(style.id)}
+                onClick={() => {
+                  setCardStyle(style.id);
+                  update({ cardStyle: style.id });
+                }}
                 className={cn(
                   optionRowClass(selected),
                   "h-9 text-xs text-center flex items-center justify-center gap-1.5",
@@ -144,7 +144,10 @@ export function FlashcardBriefForm({
                 <button
                   key={d.id}
                   type="button"
-                  onClick={() => setDifficulty(d.id)}
+                  onClick={() => {
+                    setDifficulty(d.id);
+                    update({ difficulty: d.id });
+                  }}
                   className={cn(
                     optionRowClass(selected),
                     "flex-1 h-9 text-xs cursor-pointer flex items-center justify-center gap-1",
@@ -166,11 +169,14 @@ export function FlashcardBriefForm({
           onSelectPreset={(cnt) => {
             setIsCustomMode(false);
             setCardCount(cnt);
+            update({ questionCount: cnt });
           }}
           onEnableCustom={() => {
             setIsCustomMode(true);
             const parsed = parseInt(customVal, 10) || 25;
-            setCardCount(Math.min(50, Math.max(1, parsed)));
+            const clamped = Math.min(50, Math.max(1, parsed));
+            setCardCount(clamped);
+            update({ questionCount: clamped });
           }}
           onCustomChange={handleCustomChange}
           onCustomBlur={handleCustomBlur}
@@ -279,18 +285,20 @@ export function FlashcardSourcePopover({
           <input
             type="text"
             placeholder="Search sources..."
+            aria-label="Search sources"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="bg-transparent text-sm text-text-tertiary placeholder:text-text-faint outline-none w-full"
           />
         </div>
         <div className="flex items-center gap-2 pl-2">
-          <span
+          <button
+            type="button"
             className="text-xs text-text-tertiary cursor-pointer select-none"
             onClick={toggleAll}
           >
             Select all
-          </span>
+          </button>
           <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
         </div>
       </div>
@@ -313,7 +321,15 @@ export function FlashcardSourcePopover({
           return (
             <div
               key={src.id}
+              role="button"
+              tabIndex={0}
               onClick={() => toggleOne(src.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleOne(src.id);
+                }
+              }}
               className={generationSourceOptionClass(checked)}
             >
               <div className="flex items-center gap-2 truncate pr-2">
@@ -442,6 +458,7 @@ function CardCountSelector({
               onChange={(e) => onCustomChange(e.target.value)}
               onBlur={onCustomBlur}
               placeholder="1-50"
+              aria-label="1-50"
               className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
               autoFocus
             />

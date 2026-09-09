@@ -16,6 +16,86 @@ export interface SourceReaderSkeletonProps {
   onClose: () => void;
 }
 
+function SkeletonHeader({
+  onClose,
+  title,
+  forceFullscreen,
+  isEffectivelyFullscreen,
+}: {
+  onClose: () => void;
+  title?: string | null;
+  forceFullscreen?: boolean;
+  isEffectivelyFullscreen: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none border-b border-border/40">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0"
+          aria-label="Back to sources"
+          title="Back to sources"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+
+        {title ? (
+          <h3 className="text-sm font-semibold truncate text-foreground min-w-0 flex-1">
+            {title}
+          </h3>
+        ) : (
+          <Skeleton className="h-4 w-40 max-w-[220px] rounded-md" />
+        )}
+      </div>
+
+      <div className="flex items-center gap-1">
+        <div className="h-8 w-8 flex items-center justify-center text-muted-foreground/30">
+          <MoreVertical className="h-4 w-4" />
+        </div>
+        {!forceFullscreen && (
+          <div className="h-8 w-8 flex items-center justify-center text-muted-foreground/30">
+            <Maximize2 className="h-4 w-4" />
+          </div>
+        )}
+        {isEffectivelyFullscreen && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
+            title="Close"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SkeletonViewerBody({ detectedType }: { detectedType?: DocumentType | null }) {
+  switch (detectedType) {
+    case "audio":
+      return <AudioViewerSkeleton />;
+    case "video":
+      return <VideoViewerSkeleton />;
+    case "slides":
+      return <SlidesViewerSkeleton />;
+    case "image":
+      return <ImageViewerSkeleton />;
+    case "epub":
+      return <DocumentViewerSkeleton variant="book" />;
+    case "article":
+      return <DocumentViewerSkeleton variant="article" />;
+    default:
+      return <DocumentViewerSkeleton variant="document" />;
+  }
+}
+
 export function SourceReaderSkeleton({
   detectedType,
   title,
@@ -34,71 +114,14 @@ export function SourceReaderSkeleton({
           : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden"
       }
     >
-      {/* Persistent Zero-CLS Header */}
-      <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none border-b border-border/40">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0"
-            aria-label="Back to sources"
-            title="Back to sources"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-
-          {title ? (
-            <h3 className="text-sm font-semibold truncate text-foreground min-w-0 flex-1">
-              {title}
-            </h3>
-          ) : (
-            <Skeleton className="h-4 w-40 max-w-[220px] rounded-md" />
-          )}
-        </div>
-
-        <div className="flex items-center gap-1">
-          <div className="h-8 w-8 flex items-center justify-center text-muted-foreground/30">
-            <MoreVertical className="h-4 w-4" />
-          </div>
-          {!forceFullscreen && (
-            <div className="h-8 w-8 flex items-center justify-center text-muted-foreground/30">
-              <Maximize2 className="h-4 w-4" />
-            </div>
-          )}
-          {isEffectivelyFullscreen && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
-              title="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Modality-specific skeleton body */}
+      <SkeletonHeader
+        onClose={onClose}
+        title={title}
+        forceFullscreen={forceFullscreen}
+        isEffectivelyFullscreen={isEffectivelyFullscreen}
+      />
       <div className="flex-1 min-h-0 overflow-hidden">
-        {detectedType === "audio" ? (
-          <AudioViewerSkeleton />
-        ) : detectedType === "video" ? (
-          <VideoViewerSkeleton />
-        ) : detectedType === "slides" ? (
-          <SlidesViewerSkeleton />
-        ) : detectedType === "image" ? (
-          <ImageViewerSkeleton />
-        ) : detectedType === "epub" ? (
-          <DocumentViewerSkeleton variant="book" />
-        ) : detectedType === "article" ? (
-          <DocumentViewerSkeleton variant="article" />
-        ) : (
-          <DocumentViewerSkeleton variant="document" />
-        )}
+        <SkeletonViewerBody detectedType={detectedType} />
       </div>
     </div>
   );

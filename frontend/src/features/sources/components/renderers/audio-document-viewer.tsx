@@ -201,38 +201,22 @@ function useSpeakerRename(
   };
 }
 
-function AudioPlayerBar({
-  segmentsCount,
-  totalWords,
-  isLoadingAudio,
-  isAudioError,
-  audioSrc,
-  currentTime,
-  duration,
-  isPlaying,
-  playbackRate,
-  volume,
-  isMuted,
-  onScrubberChange,
-  onScrubberStart,
-  onScrubberEnd,
-  onSkip,
-  onTogglePlay,
-  onCycleRate,
-  onToggleMute,
-  onVolumeChange,
-}: {
-  segmentsCount: number;
-  totalWords: number;
+interface AudioPlaybackState {
   isLoadingAudio: boolean;
   isAudioError: boolean;
+  isPlaying: boolean;
+  isMuted: boolean;
+}
+
+interface AudioPlayerBarProps {
+  segmentsCount: number;
+  totalWords: number;
+  playbackState: AudioPlaybackState;
   audioSrc: string | undefined;
   currentTime: number;
   duration: number;
-  isPlaying: boolean;
   playbackRate: number;
   volume: number;
-  isMuted: boolean;
   onScrubberChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onScrubberStart: () => void;
   onScrubberEnd: (
@@ -243,7 +227,27 @@ function AudioPlayerBar({
   onCycleRate: () => void;
   onToggleMute: () => void;
   onVolumeChange: (e: ChangeEvent<HTMLInputElement>) => void;
-}) {
+}
+
+function AudioPlayerBar({
+  segmentsCount,
+  totalWords,
+  playbackState,
+  audioSrc,
+  currentTime,
+  duration,
+  playbackRate,
+  volume,
+  onScrubberChange,
+  onScrubberStart,
+  onScrubberEnd,
+  onSkip,
+  onTogglePlay,
+  onCycleRate,
+  onToggleMute,
+  onVolumeChange,
+}: AudioPlayerBarProps) {
+  const { isLoadingAudio, isAudioError, isPlaying, isMuted } = playbackState;
   return (
     <div className="shrink-0 border-b border-border/70 bg-card/60 backdrop-blur-md p-3 sm:p-4 shadow-xs">
       <div className="max-w-4xl mx-auto flex flex-col gap-3">
@@ -409,6 +413,7 @@ function AudioTranscriptToolbar({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search transcript text or speaker…"
+            aria-label="Search transcript text or speaker"
             className="h-8 w-full rounded-lg border border-border/60 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           {searchQuery && (
@@ -467,9 +472,8 @@ function AudioSegmentCard({
     <div
       data-testid="transcript-segment"
       data-active={isActive ? "true" : undefined}
-      onClick={() => onSegmentClick(segment)}
       className={cn(
-        "group rounded-xl border p-3.5 transition-all cursor-pointer",
+        "group rounded-xl border p-3.5 transition-all",
         isActive || isSelectedCitation
           ? "border-primary bg-primary/5 ring-1 ring-primary/30 shadow-xs"
           : "border-border/60 bg-card/40 hover:border-border hover:bg-card/70",
@@ -497,6 +501,7 @@ function AudioSegmentCard({
                     type="text"
                     autoFocus
                     data-testid="speaker-rename-input"
+                    aria-label="Rename speaker"
                     value={editingValue}
                     onChange={(e) => onRenameChange(e.target.value)}
                     onKeyDown={onSpeakerKeyDown}
@@ -541,16 +546,20 @@ function AudioSegmentCard({
         </div>
         <span className="text-[10px] font-mono text-muted-foreground">#{segment.ordinal}</span>
       </div>
-      <p className="text-sm leading-relaxed text-foreground/90 select-text">
+      <button
+        type="button"
+        onClick={() => onSegmentClick(segment)}
+        className="w-full text-left font-normal text-sm leading-relaxed text-foreground/90 select-text cursor-pointer focus:outline-none focus-visible:underline"
+      >
         {searchQuery ? <HighlightMatches text={segment.content} query={searchQuery} /> : segment.content}
-      </p>
+      </button>
     </div>
   );
 }
 
 function useAudioPlayer(audioRef: { current: HTMLAudioElement | null }) {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState<number>(1);
   const [volume, setVolume] = useState(1);
@@ -655,41 +664,19 @@ function useAudioPlayer(audioRef: { current: HTMLAudioElement | null }) {
 function useAudioSegmentSync({
   segments,
   currentTime,
-  activeSegmentId,
-  setActiveSegmentId,
-  duration,
-  setDuration,
   filteredSegments,
   isVirtualized,
   virtualizer,
   segmentElementsRef,
-  selectedLocator,
-  audioRef,
-  setCurrentTime,
-  setIsPlaying,
 }: {
   segments: ParsedAudioSegment[];
   currentTime: number;
-  activeSegmentId: string | null;
-  setActiveSegmentId: (id: string) => void;
-  duration: number;
-  setDuration: (d: number) => void;
   filteredSegments: ParsedAudioSegment[];
   isVirtualized: boolean;
-  virtualizer: ReturnType<typeof useVirtualizer>;
+  virtualizer: ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
   segmentElementsRef: { current: Map<string, HTMLDivElement> };
-  selectedLocator?: SourceSegmentLocator | null;
-  audioRef: { current: HTMLAudioElement | null };
-  setCurrentTime: (t: number) => void;
-  setIsPlaying: (v: boolean) => void;
 }) {
-  useEffect(() => {
-    if (duration === 0 && segments.length > 0) {
-      const last = segments[segments.length - 1];
-      const maxMs = last.endOffsetMs ?? last.startOffsetMs + 5000;
-      if (maxMs > 0) setDuration(Math.ceil(maxMs / 1000));
-    }
-  }, [segments, duration, setDuration]);
+  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (segments.length === 0) return;
@@ -706,54 +693,21 @@ function useAudioSegmentSync({
         }
       }
     }
-    if (found && found.id !== activeSegmentId) setActiveSegmentId(found.id);
-  }, [currentTime, segments, activeSegmentId, setActiveSegmentId]);
+    if (found && found.id !== activeSegmentId) {
+      setActiveSegmentId(found.id);
+      if (isVirtualized) {
+        const idx = filteredSegments.findIndex((s) => s.id === found.id);
+        if (idx !== -1) virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
+      } else {
+        segmentElementsRef.current.get(found.id)?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }
+    }
+  }, [currentTime, segments, activeSegmentId, filteredSegments, isVirtualized, virtualizer, segmentElementsRef]);
 
-  useEffect(() => {
-    if (!activeSegmentId) return;
-    if (isVirtualized) {
-      const idx = filteredSegments.findIndex((s) => s.id === activeSegmentId);
-      if (idx !== -1) virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
-    } else {
-      segmentElementsRef.current.get(activeSegmentId)?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }
-  }, [activeSegmentId, isVirtualized, filteredSegments, virtualizer, segmentElementsRef]);
-
-  useEffect(() => {
-    if (typeof selectedLocator?.startOffsetMs !== "number") return;
-    const target = selectedLocator.startOffsetMs / 1000;
-    if (audioRef.current) {
-      audioRef.current.currentTime = target;
-      setCurrentTime(target);
-      audioRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    }
-    const idx = filteredSegments.findIndex(
-      (s) => Math.abs(s.startOffsetMs - (selectedLocator.startOffsetMs ?? 0)) < 1000,
-    );
-    if (idx !== -1) {
-      const matched = filteredSegments[idx];
-      setActiveSegmentId(matched.id);
-      if (isVirtualized) virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
-      else segmentElementsRef.current.get(matched.id)?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }
-  }, [
-    selectedLocator,
-    filteredSegments,
-    isVirtualized,
-    virtualizer,
-    segmentElementsRef,
-    audioRef,
-    setCurrentTime,
-    setIsPlaying,
-    setActiveSegmentId,
-  ]);
+  return { activeSegmentId, setActiveSegmentId };
 }
 
 export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentViewerProps) {
@@ -769,28 +723,35 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
     playbackRate,
     volume,
     isMuted,
-    setCurrentTime,
-    setDuration,
-    setIsPlaying,
+    seekTo,
   } = player;
 
   // Transcript state
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
 
-  // Local segments state to support instant optimistic speaker renames
+  // Local segments state to support instant optimistic speaker renames without useEffect
+  const [prevSourceId, setPrevSourceId] = useState(source.id);
   const [customSegments, setCustomSegments] = useState<SourceSegment[] | null>(null);
 
-  // Reset custom segments when source changes
-  useEffect(() => {
+  if (source.id !== prevSourceId) {
+    setPrevSourceId(source.id);
     setCustomSegments(null);
-  }, [source.id]);
+  }
 
   const { isLoadingAudio, isAudioError, audioSrc } = useAudioDownload(source.id, source.url);
 
   // Normalize segments
   const effectiveSourceSegments = customSegments ?? source.segments;
   const { segments, totalWords } = useAudioSegmentList(source, effectiveSourceSegments);
+
+  const fallbackDuration = useMemo(() => {
+    if (segments.length === 0) return 0;
+    const last = segments[segments.length - 1];
+    const maxMs = last.endOffsetMs ?? last.startOffsetMs + 5000;
+    return maxMs > 0 ? Math.ceil(maxMs / 1000) : 0;
+  }, [segments]);
+
+  const effectiveDuration = duration > 0 ? duration : fallbackDuration;
 
   const {
     editingSpeaker,
@@ -816,27 +777,41 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
     initialRect: { width: 800, height: 600 },
   });
 
-  useAudioSegmentSync({
+  const { activeSegmentId, setActiveSegmentId } = useAudioSegmentSync({
     segments,
     currentTime,
-    activeSegmentId,
-    setActiveSegmentId,
-    duration,
-    setDuration,
     filteredSegments,
     isVirtualized,
     virtualizer,
     segmentElementsRef,
-    selectedLocator,
-    audioRef,
-    setCurrentTime,
-    setIsPlaying,
   });
+
+  // Handle citation jumping
+  useEffect(() => {
+    if (typeof selectedLocator?.startOffsetMs !== "number") return;
+    const target = selectedLocator.startOffsetMs / 1000;
+    if (audioRef.current) audioRef.current.currentTime = target;
+    audioRef.current?.play().catch(() => {});
+    const idx = filteredSegments.findIndex(
+      (s) => Math.abs(s.startOffsetMs - (selectedLocator.startOffsetMs ?? 0)) < 1000,
+    );
+    if (idx !== -1) {
+      const matched = filteredSegments[idx];
+      setActiveSegmentId(matched.id);
+      if (isVirtualized) {
+        virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
+      } else {
+        segmentElementsRef.current.get(matched.id)?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }
+    }
+  }, [selectedLocator, filteredSegments, isVirtualized, virtualizer, setActiveSegmentId]);
 
   const { handleTimeUpdate, handleLoadedMetadata, handlePlay, handlePause, handleEnded } = player;
   const {
     togglePlayPause,
-    seekTo,
     handleScrubberChange,
     handleScrubberStart,
     handleScrubberEnd,
@@ -900,15 +875,17 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
       <AudioPlayerBar
         segmentsCount={segments.length}
         totalWords={totalWords}
-        isLoadingAudio={isLoadingAudio}
-        isAudioError={isAudioError}
+        playbackState={{
+          isLoadingAudio,
+          isAudioError,
+          isPlaying,
+          isMuted,
+        }}
         audioSrc={audioSrc}
         currentTime={currentTime}
-        duration={duration}
-        isPlaying={isPlaying}
+        duration={effectiveDuration}
         playbackRate={playbackRate}
         volume={volume}
-        isMuted={isMuted}
         onScrubberChange={handleScrubberChange}
         onScrubberStart={handleScrubberStart}
         onScrubberEnd={handleScrubberEnd}

@@ -43,12 +43,19 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
 
   // A new job invalidates previous review-session state.
   const jobId = job?.id ?? null;
-  useEffect(() => {
+  const [prevJobId, setPrevJobId] = useState<string | null>(jobId);
+  if (jobId !== prevJobId) {
+    setPrevJobId(jobId);
     setSelectedUrls(new Set());
     setImportResults(new Map());
     setLocalError(null);
     setClearError(null);
-    initializedSelectionForJob.current = null;
+  }
+
+  useEffect(() => {
+    if (!jobId) {
+      initializedSelectionForJob.current = null;
+    }
   }, [jobId]);
 
   const phase: WebSearchPhase = useMemo(() => {

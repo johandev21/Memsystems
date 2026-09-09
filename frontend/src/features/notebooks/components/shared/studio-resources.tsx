@@ -170,24 +170,18 @@ function ResourceButton({
       <Tooltip>
         <TooltipTrigger
           render={
-            <span
-              role="button"
-              tabIndex={disabled ? -1 : 0}
+            <button
+              type="button"
+              disabled={disabled}
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center relative",
+                "flex h-10 w-10 shrink-0 items-center justify-center relative cursor-pointer",
                 "text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground",
                 disabled && "opacity-50 cursor-not-allowed",
               )}
               onClick={() => !disabled && onGenerate(resource.kind)}
-              onKeyDown={(event) => {
-                if (!disabled && (event.key === "Enter" || event.key === " ")) {
-                  event.preventDefault();
-                  onGenerate(resource.kind);
-                }
-              }}
             >
               <resource.icon className="h-5 w-5" />
-            </span>
+            </button>
           }
         >
           <span className="sr-only">{resource.label}</span>

@@ -46,34 +46,36 @@ function GenericMaterialSkeleton() {
   );
 }
 
+const SKELETON_COMPONENTS: Partial<Record<StudyMaterialKind, React.ComponentType>> = {
+  quiz: QuizSkeleton,
+  simple_flashcard: FlashcardSkeleton,
+  slides: SlidesSkeleton,
+  roadmap: RoadmapSkeleton,
+  mind_map: MindMapSkeleton,
+  practice_problems: PracticeProblemsSkeleton,
+  case_study: CaseStudySkeleton,
+};
+
+function KindSkeleton({ kind }: { kind?: StudyMaterialKind | null }) {
+  const Component = kind ? SKELETON_COMPONENTS[kind] : undefined;
+  if (!Component) return <GenericMaterialSkeleton />;
+  return <Component />;
+}
+
 export function MaterialViewerSkeleton({ kind }: MaterialViewerSkeletonProps) {
+  const label = kind ? `Loading ${kind.replace("_", " ")}` : "Loading study material";
+
   return (
     <div
       data-slot="material-viewer-skeleton"
       className="flex h-full flex-col overflow-hidden bg-surface-1 text-text-primary motion-reduce:animate-none"
       role="status"
       aria-busy="true"
-      aria-label={kind ? `Loading ${kind.replace("_", " ")}` : "Loading study material"}
+      aria-label={label}
     >
       <ViewerHeaderSkeleton />
       <div className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6">
-        {kind === "quiz" ? (
-          <QuizSkeleton />
-        ) : kind === "simple_flashcard" ? (
-          <FlashcardSkeleton />
-        ) : kind === "slides" ? (
-          <SlidesSkeleton />
-        ) : kind === "roadmap" ? (
-          <RoadmapSkeleton />
-        ) : kind === "mind_map" ? (
-          <MindMapSkeleton />
-        ) : kind === "practice_problems" ? (
-          <PracticeProblemsSkeleton />
-        ) : kind === "case_study" ? (
-          <CaseStudySkeleton />
-        ) : (
-          <GenericMaterialSkeleton />
-        )}
+        <KindSkeleton kind={kind} />
       </div>
       <span className="sr-only">Loading study material…</span>
     </div>
