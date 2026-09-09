@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/shared/utils/cn";
 import { ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS } from "./option-row";
@@ -11,7 +11,11 @@ import {
   RoadmapPhasesSection,
   RoadmapStepTwo,
 } from "./roadmap-form-sections";
-import { PHASE_PRESETS, type DetailLevel } from "./roadmap-options";
+import {
+  DEFAULT_ROADMAP_OPTIONS,
+  PHASE_PRESETS,
+  type DetailLevel,
+} from "./roadmap-options";
 import type { BaseMaterialFormProps } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
@@ -26,42 +30,25 @@ export function RoadmapBriefForm({
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
-  const initialPhaseCount = value.roadmapOptions?.phaseCount ?? 5;
-  const [phaseCount, setPhaseCount] = useState<number>(initialPhaseCount);
-  const [isAutoMode, setIsAutoMode] = useState<boolean>(initialPhaseCount === 0);
-  const [isCustomMode, setIsCustomMode] = useState<boolean>(
-    initialPhaseCount > 0 && !PHASE_PRESETS.includes(initialPhaseCount),
-  );
-  const [customVal, setCustomVal] = useState<string>(
-    initialPhaseCount > 0 && !PHASE_PRESETS.includes(initialPhaseCount)
-      ? String(initialPhaseCount)
-      : "12",
-  );
+  const currentOptions = value.roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS;
+  const phaseCount = currentOptions.phaseCount;
+  const detailLevel = currentOptions.detailLevel;
+  const isAutoMode = phaseCount === 0;
 
-  const [detailLevel, setDetailLevel] = useState<DetailLevel>(
-    value.roadmapOptions?.detailLevel ?? "detailed",
+  const isPreset = phaseCount > 0 && PHASE_PRESETS.includes(phaseCount);
+  const [isCustomMode, setIsCustomMode] = useState<boolean>(!isAutoMode && !isPreset);
+  const [customVal, setCustomVal] = useState<string>(() =>
+    !isAutoMode && !isPreset ? String(phaseCount) : "12",
   );
-
-  useEffect(() => {
-    onChange({
-      roadmapOptions: {
-        phaseCount: isAutoMode ? 0 : phaseCount,
-        detailLevel,
-      },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phaseCount, isAutoMode, detailLevel]);
 
   const updateRoadmapOptions = (patch: {
     phaseCount?: number;
     detailLevel?: DetailLevel;
   }) => {
-    const nextCount = patch.phaseCount ?? (isAutoMode ? 0 : phaseCount);
-    const nextDetail = patch.detailLevel ?? detailLevel;
     onChange({
       roadmapOptions: {
-        phaseCount: nextCount,
-        detailLevel: nextDetail,
+        phaseCount: patch.phaseCount !== undefined ? patch.phaseCount : phaseCount,
+        detailLevel: patch.detailLevel ?? detailLevel,
       },
     });
   };
@@ -71,7 +58,6 @@ export function RoadmapBriefForm({
     const parsed = Number.parseInt(raw, 10);
     if (!Number.isNaN(parsed) && parsed > 0) {
       const clamped = Math.min(50, Math.max(1, parsed));
-      setPhaseCount(clamped);
       updateRoadmapOptions({ phaseCount: clamped });
     }
   };
@@ -81,7 +67,6 @@ export function RoadmapBriefForm({
     if (Number.isNaN(parsed) || parsed < 1) parsed = 5;
     if (parsed > 50) parsed = 50;
     setCustomVal(String(parsed));
-    setPhaseCount(parsed);
     updateRoadmapOptions({ phaseCount: parsed });
   };
 
@@ -102,23 +87,17 @@ export function RoadmapBriefForm({
               phaseCount={phaseCount}
               customVal={customVal}
               onSelectAuto={() => {
-                setIsAutoMode(true);
                 setIsCustomMode(false);
-                setPhaseCount(0);
                 updateRoadmapOptions({ phaseCount: 0 });
               }}
               onSelectPreset={(cnt) => {
-                setIsAutoMode(false);
                 setIsCustomMode(false);
-                setPhaseCount(cnt);
                 updateRoadmapOptions({ phaseCount: cnt });
               }}
               onEnableCustom={() => {
-                setIsAutoMode(false);
                 setIsCustomMode(true);
                 const parsed = Number.parseInt(customVal, 10) || 12;
                 const clamped = Math.min(50, Math.max(1, parsed));
-                setPhaseCount(clamped);
                 updateRoadmapOptions({ phaseCount: clamped });
               }}
               onCustomChange={handleCustomChange}
@@ -128,7 +107,6 @@ export function RoadmapBriefForm({
             <RoadmapDetailLevelSection
               detailLevel={detailLevel}
               onSelectDetailLevel={(nextDetail) => {
-                setDetailLevel(nextDetail);
                 updateRoadmapOptions({ detailLevel: nextDetail });
               }}
             />
@@ -151,7 +129,12 @@ export function RoadmapBriefForm({
             <span className="text-xs text-text-faint">Configure custom instructions next</span>
             <Button
               type="button"
-              onClick={() => setStep(2)}
+              onClick={() => {
+                if (!value.roadmapOptions) {
+                  updateRoadmapOptions({});
+                }
+                setStep(2);
+              }}
               className={cn(
                 "h-9 cursor-pointer gap-1.5 rounded-full px-5 text-sm font-medium transition-colors",
                 CTA_BUTTON_CLASS,
@@ -174,9 +157,15 @@ export function RoadmapBriefForm({
           onBriefChange={(brief) => patchFormData({ brief })}
           onFolderIdChange={(folderId) => patchFormData({ folderId })}
           onBack={() => setStep(1)}
-          onSubmit={onSubmit}
+          onSubmit={() => {
+            if (!value.roadmapOptions) {
+              updateRoadmapOptions({});
+            }
+            onSubmit();
+          }}
         />
       )}
     </div>
   );
 }
+

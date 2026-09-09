@@ -62,3 +62,14 @@ export const DETAIL_OPTIONS = [
   { id: "basic" as DetailLevel, title: "Basic", desc: "Concise bullets" },
   { id: "detailed" as DetailLevel, title: "Detailed", desc: "Rich bullets + body" },
 ] as const;
+
+export const DEFAULT_SLIDES_OPTIONS: {
+  slideCount: number;
+  theme: Exclude<SlidesThemeOption, "accent">;
+  detailLevel: DetailLevel;
+} = {
+  slideCount: 8,
+  theme: "dark",
+  detailLevel: "detailed",
+};
+

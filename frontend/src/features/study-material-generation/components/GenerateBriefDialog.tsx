@@ -15,6 +15,8 @@ import type {
   SlidesOptions,
   PracticeProblemsOptions,
 } from "./forms/types";
+import { DEFAULT_ROADMAP_OPTIONS } from "./forms/roadmap-options";
+import { DEFAULT_SLIDES_OPTIONS } from "./forms/slides-theme-options";
 import { BriefForm } from "./BriefForm";
 import { cn } from "@/shared/utils/cn";
 
@@ -38,7 +40,7 @@ export function GenerateBriefDialog({
   const setCollapsed = useGenerationStore((s) => s.setCollapsed);
   const { data: connection } = useConnectionStatus();
 
-  const { value, updateBriefForm, resetAfterSubmit } = useGenerationBriefState();
+  const { value, updateBriefForm, resetAfterSubmit } = useGenerationBriefState(kind);
   const {
     brief,
     sourceIds,
@@ -73,9 +75,11 @@ export function GenerateBriefDialog({
         questionCount,
         difficulty,
         cardStyle,
-        roadmapOptions,
+        roadmapOptions:
+          kind === "roadmap" ? (roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS) : roadmapOptions,
         mindMapOptions,
-        slidesOptions,
+        slidesOptions:
+          kind === "slides" ? (slidesOptions ?? DEFAULT_SLIDES_OPTIONS) : slidesOptions,
         studyGuideOptions,
         practiceProblemsOptions,
         caseStudyOptions,
@@ -135,7 +139,20 @@ export function GenerateBriefDialog({
   );
 }
 
-function useGenerationBriefState() {
+function getInitialBriefState(kind?: StudyMaterialKind | null) {
+  return {
+    brief: "",
+    sourceIds: [] as string[],
+    folderId: null as string | null,
+    questionCount: 10,
+    difficulty: "medium" as const,
+    roadmapOptions: kind === "roadmap" ? { ...DEFAULT_ROADMAP_OPTIONS } : undefined,
+    slidesOptions: kind === "slides" ? { ...DEFAULT_SLIDES_OPTIONS } : undefined,
+  };
+}
+
+function useGenerationBriefState(kind?: StudyMaterialKind | null) {
+  const [prevKind, setPrevKind] = useState(kind);
   const [value, setValue] = useState<{
     brief: string;
     sourceIds: string[];
@@ -149,27 +166,17 @@ function useGenerationBriefState() {
     studyGuideOptions?: StudyGuideGenerationOptions;
     practiceProblemsOptions?: PracticeProblemsOptions;
     caseStudyOptions?: CaseStudyGenerationOptions;
-  }>({
-    brief: "",
-    sourceIds: [],
-    folderId: null,
-    questionCount: 10,
-    difficulty: "medium",
-  });
+  }>(() => getInitialBriefState(kind));
+
+  if (prevKind !== kind) {
+    setPrevKind(kind);
+    setValue(getInitialBriefState(kind));
+  }
 
   const updateBriefForm = (next: Partial<typeof value>) =>
     setValue((current) => ({ ...current, ...next }));
-  const resetAfterSubmit = () =>
-    setValue((current) => ({
-      ...current,
-      brief: "",
-      roadmapOptions: undefined,
-      mindMapOptions: undefined,
-      slidesOptions: undefined,
-      studyGuideOptions: undefined,
-      practiceProblemsOptions: undefined,
-      caseStudyOptions: undefined,
-    }));
+  const resetAfterSubmit = () => setValue(getInitialBriefState(kind));
 
   return { value, updateBriefForm, resetAfterSubmit };
 }
+

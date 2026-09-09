@@ -14,3 +14,12 @@ export const DETAIL_OPTIONS = [
     desc: "In-depth topics & learning objectives",
   },
 ] as const;
+
+export const DEFAULT_ROADMAP_OPTIONS: {
+  phaseCount: number;
+  detailLevel: DetailLevel;
+} = {
+  phaseCount: 5,
+  detailLevel: "detailed",
+};
+
