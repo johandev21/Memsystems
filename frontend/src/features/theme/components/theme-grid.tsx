@@ -12,7 +12,7 @@ export function ThemeGrid() {
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold tracking-[-0.01em]">Themes</h3>
+        <h3 className="text-base font-semibold tracking-[-0.01em]">Themes</h3>
         <span className="text-xs text-muted-foreground">
           6 palettes · each has light &amp; dark
         </span>
@@ -65,14 +65,14 @@ function ThemeCard({ label, description, preview, selected, onSelect }: ThemeCar
       <span className="flex items-center justify-between gap-2 px-0.5">
         <span className="min-w-0">
           <span
-            className={`block truncate text-sm font-medium ${selected ? "text-foreground" : "text-foreground"}`}
+            className={`block truncate text-base font-medium ${selected ? "text-foreground" : "text-foreground"}`}
           >
             {label}
           </span>
-          <span className="block truncate text-xs text-muted-foreground">{description}</span>
+          <span className="block text-sm leading-5 text-muted-foreground">{description}</span>
         </span>
         <span
-          className={`ml-auto flex size-6 shrink-0 items-center justify-center rounded-full border text-[10px] transition-colors ${
+          className={`ml-auto flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
             selected
               ? "border-primary bg-primary text-primary-foreground"
               : "border-transparent bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"

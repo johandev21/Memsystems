@@ -16,7 +16,7 @@ export function SchemeSelector() {
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold tracking-[-0.01em]">Color scheme</h3>
+        <h3 className="text-base font-semibold tracking-[-0.01em]">Color scheme</h3>
         <span className="text-xs text-muted-foreground">Light / Dark / System</span>
       </div>
       <div
@@ -42,7 +42,7 @@ export function SchemeSelector() {
             >
               <SchemePreview scheme={opt.value} />
               <span
-                className={`inline-flex items-center gap-1.5 text-xs font-medium ${selected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium ${selected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
               >
                 <Icon className="size-3.5" aria-hidden="true" />
                 {opt.label}
@@ -100,18 +100,8 @@ function SystemSchemePreview({
   return (
     <div className="relative h-20 w-full overflow-hidden rounded-xl border border-border/80 shadow-xs">
       <div className="absolute inset-0 flex">
-        <SchemeHalfPane
-          bg={light}
-          accent={accentLight}
-          mixTarget="black"
-          accentPercent="25%"
-        />
-        <SchemeHalfPane
-          bg={dark}
-          accent={accentDark}
-          mixTarget="white"
-          accentPercent="35%"
-        />
+        <SchemeHalfPane bg={light} accent={accentLight} mixTarget="black" accentPercent="25%" />
+        <SchemeHalfPane bg={dark} accent={accentDark} mixTarget="white" accentPercent="35%" />
       </div>
       <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-black/15 dark:bg-white/15" />
     </div>

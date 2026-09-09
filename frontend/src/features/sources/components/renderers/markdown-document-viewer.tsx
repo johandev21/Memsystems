@@ -82,7 +82,7 @@ const markdownComponents = {
     <HeadingWithId level={6}>{children}</HeadingWithId>
   ),
   p: ({ children }: { children?: ReactNode }) => (
-    <p className="text-foreground/90 leading-relaxed font-sans my-3 wrap-break-words text-sm sm:text-base select-text">
+    <p className="my-3 wrap-break-words select-text">
       {children}
     </p>
   ),
@@ -98,7 +98,7 @@ const markdownComponents = {
     <ol className="list-decimal pl-6 my-3 space-y-1.5 text-foreground/90">{children}</ol>
   ),
   li: ({ children }: { children?: ReactNode }) => (
-    <li className="leading-relaxed font-sans pl-1">{children}</li>
+    <li className="pl-1">{children}</li>
   ),
   hr: () => <hr className="my-6 border-t border-border/40" />,
   table: ({ children }: { children?: ReactNode }) => (
@@ -307,7 +307,7 @@ const MarkdownChunk = memo(function MarkdownChunk({
 
 function MarkdownDocumentShell({ children }: { children: ReactNode }) {
   return (
-    <div className="prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed font-sans text-foreground">
+    <div className="typeset typeset-chat max-w-none">
       {children}
     </div>
   );

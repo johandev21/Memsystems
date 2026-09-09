@@ -3,6 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import { MarkdownDocumentViewer } from "./markdown-document-viewer";
 
 describe("MarkdownDocumentViewer", () => {
+  it("inherits chat typography for paragraphs and list items without desktop size overrides", () => {
+    const { container } = render(
+      <MarkdownDocumentViewer content={"Source paragraph\n\n- Source item"} />,
+    );
+    const typography = container.querySelector(".typeset.typeset-chat");
+    expect(typography).not.toBeNull();
+    expect(typography?.querySelector("p")?.className).not.toMatch(/text-(sm|base)|leading-/);
+    expect(typography?.querySelector("li")?.className).not.toMatch(/text-(sm|base)|leading-/);
+    expect(typography?.className).not.toContain("sm:text-base");
+  });
+
   it("renders genuine markdown headings, lists, blockquotes, and tables", () => {
     const markdownContent = [
       "# Main Title",
