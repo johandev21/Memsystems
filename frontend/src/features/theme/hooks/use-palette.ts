@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { PaletteContext } from "../components/palette-provider";
+import { PaletteContext } from "../components/palette-context";
 
 export function usePalette() {
   const ctx = useContext(PaletteContext);

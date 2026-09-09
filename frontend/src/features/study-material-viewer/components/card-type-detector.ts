@@ -84,7 +84,11 @@ export function parseExpectedAnswers(back: string, blankCount: number): string[]
     parts = [trimmed];
   }
 
-  const cleaned = parts.map((part) => part.trim()).filter((part) => part.length > 0);
+  const cleaned = parts.reduce<string[]>((result, part) => {
+    const value = part.trim();
+    if (value.length > 0) result.push(value);
+    return result;
+  }, []);
   if (cleaned.length === 0) return Array(blankCount).fill("");
   if (cleaned.length >= blankCount) return cleaned.slice(0, blankCount);
   return [...cleaned, ...Array(blankCount - cleaned.length).fill("")];

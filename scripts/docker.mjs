@@ -9,7 +9,7 @@ const validModes = new Set(['dev', 'prod'])
 const validActions = new Set(['up', 'down', 'logs', 'ps', 'migrate', 'reset'])
 
 if (!validModes.has(mode) || !validActions.has(action)) {
-  console.error('Usage: node scripts/docker.mjs <dev|prod> <up|down|logs|ps|migrate|reset> [--force]')
+    console.error('Usage: node scripts/docker.mjs <dev|prod> <up|down|logs|ps|migrate|reset> [--force]')
   process.exit(1)
 }
 
@@ -73,6 +73,25 @@ if (mode === 'prod') {
     console.error('APP_ORIGIN must be a valid absolute URL.')
     process.exit(1)
   }
+
+}
+
+const dockerEnvVals = parseEnv(envPath)
+const firecrawlApiUrlRaw = (dockerEnvVals.get('FIRECRAWL_API_URL') || '').trim()
+if (firecrawlApiUrlRaw) {
+  let parsedFirecrawlUrl
+  try {
+    parsedFirecrawlUrl = new URL(firecrawlApiUrlRaw)
+  } catch {
+    parsedFirecrawlUrl = undefined
+  }
+  if (
+    !parsedFirecrawlUrl ||
+    (parsedFirecrawlUrl.protocol !== 'http:' && parsedFirecrawlUrl.protocol !== 'https:')
+  ) {
+    console.error(`FIRECRAWL_API_URL must be a valid http(s) URL (got "${firecrawlApiUrlRaw}").`)
+    process.exit(1)
+  }
 }
 
 const isWslAvailable = process.platform === 'win32'
@@ -82,7 +101,11 @@ function toWslPath(winPath) {
   if (!m) return p
   return `/mnt/${m[1].toLowerCase()}/${m[2]}`
 }
-const composeArgs = ['compose', '--env-file', envPath, '-f', `compose.${mode}.yml`]
+
+// Single compose file per mode: Firecrawl Cloud is the only provider.
+const composeFiles = [`compose.${mode}.yml`]
+const composeArgs = ['compose', '--env-file', envPath]
+for (const f of composeFiles) composeArgs.push('-f', f)
 const useWsl = isWslAvailable && existsSync('\\\\wsl$\\Ubuntu-24.04')
 
 function runDockerCapture(args) {
@@ -117,12 +140,17 @@ function runComposeDown(otherMode) {
   const otherEnvPath = resolve(`.env.docker.${otherMode}`)
   const otherExamplePath = resolve(`.env.docker.${otherMode}.example`)
   const otherPath = existsSync(otherEnvPath) ? otherEnvPath : otherExamplePath
+  // No overlays: single compose file per mode.
+  const otherFiles = [`compose.${otherMode}.yml`]
   // Use same useWsl logic for down
   let cmd = 'docker'
-  let args = ['compose', '--env-file', otherPath, '-f', `compose.${otherMode}.yml`, 'down', '--remove-orphans']
+  let args = ['compose', '--env-file', otherPath]
+  for (const f of otherFiles) args.push('-f', f)
+  args.push('down', '--remove-orphans')
   if (useWsl) {
     const wslProjectDir = toWslPath(process.cwd())
-    const inner = `cd ${JSON.stringify(wslProjectDir)} && docker compose --env-file ${JSON.stringify(`.env.docker.${otherMode}`)} -f ${JSON.stringify(`compose.${otherMode}.yml`)} down --remove-orphans`
+    const fileFlags = otherFiles.map((f) => `-f ${JSON.stringify(f)}`).join(' ')
+    const inner = `cd ${JSON.stringify(wslProjectDir)} && docker compose --env-file ${JSON.stringify(`.env.docker.${otherMode}`)} ${fileFlags} down --remove-orphans`
     cmd = 'wsl'
     args = ['-d', 'Ubuntu-24.04', 'bash', '-c', inner]
   }
@@ -166,13 +194,16 @@ if (action === 'up') {
   // Host postgres check for DB_PORT (dev 5433, prod 5434, host 5432)
   const envVals = parseEnv(envPath)
   const dbPort = envVals.get('DB_PORT') || '5432'
-  if (useWsl) {
-    const ssCheck = spawnSync('wsl', ['-d', 'Ubuntu-24.04', 'bash', '-c', `ss -tlnp 2>/dev/null | grep -E ':\\${dbPort}\\b' || true`], { encoding: 'utf8', shell: false })
+  function isHostPortTakenByNonDockerProxy(port) {
+    const ssCheck = spawnSync('wsl', ['-d', 'Ubuntu-24.04', 'bash', '-c', `ss -tlnp 2>/dev/null | grep -E ':${port}\\b' || true`], { encoding: 'utf8', shell: false })
     const ssOut = (ssCheck.stdout || '').trim()
     const isDockerProxy = ssOut.includes('docker-proxy')
     const isListening = ssOut.length > 0
+    return isListening && !isDockerProxy
+  }
+  if (useWsl) {
     // If listening and not docker-proxy, it's host postgres on same port
-    if (isListening && !isDockerProxy) {
+    if (isHostPortTakenByNonDockerProxy(dbPort)) {
       console.error(`\nHost port conflict: host is already listening on ${dbPort} (likely host postgres on 5432)`)
       console.error(`Your ${mode} DB wants host port ${dbPort} but it's taken.`)
       if (dbPort === '5432') {
@@ -183,6 +214,25 @@ if (action === 'up') {
       process.exit(1)
     }
   }
+
+  // Non-blocking Firecrawl reachability probe: warn only, never fail `up`.
+  if (firecrawlApiUrlRaw) {
+    try {
+      const probeController = new AbortController()
+      const probeTimer = setTimeout(() => probeController.abort(), 2000)
+      try {
+        await fetch(firecrawlApiUrlRaw, { signal: probeController.signal })
+      } finally {
+        clearTimeout(probeTimer)
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      console.warn(
+        `Warning: FIRECRAWL_API_URL "${firecrawlApiUrlRaw}" appears unreachable (${detail}). Continuing 'up' — web ingestion will fail until Firecrawl is running.`,
+      )
+    }
+  }
+
 }
 
 const actionCommands = {
@@ -206,7 +256,8 @@ for (const actionArgs of actionCommands) {
   let args = [...composeArgs, ...actionArgs]
   if (useWsl) {
     const wslProjectDir = toWslPath(process.cwd())
-    const inner = `cd ${JSON.stringify(wslProjectDir)} && docker compose --env-file ${JSON.stringify(`.env.docker.${mode}`)} -f ${JSON.stringify(`compose.${mode}.yml`)} ${actionArgs.map((a) => JSON.stringify(a)).join(' ')}`
+    const fileFlags = composeFiles.map((f) => `-f ${JSON.stringify(f)}`).join(' ')
+    const inner = `cd ${JSON.stringify(wslProjectDir)} && docker compose --env-file ${JSON.stringify(`.env.docker.${mode}`)} ${fileFlags} ${actionArgs.map((a) => JSON.stringify(a)).join(' ')}`
     cmd = 'wsl'
     args = ['-d', 'Ubuntu-24.04', 'bash', '-c', inner]
   }

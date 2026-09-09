@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
-import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BriefChoiceField } from "./brief-choice-field";
+import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 type StudyGuideFormat = "detailed" | "revision";
 
@@ -45,12 +46,10 @@ export function StudyGuideBriefForm({
   const [sectionCount, setSectionCount] = useState<number>(
     value.studyGuideOptions?.sectionCount ?? 6,
   );
-  const [isCustomMode, setIsCustomMode] = useState(
-    (() => {
-      const initial = value.studyGuideOptions?.sectionCount ?? 6;
-      return !SECTION_PRESETS.includes(initial as (typeof SECTION_PRESETS)[number]);
-    })(),
-  );
+  const [isCustomMode, setIsCustomMode] = useState(() => {
+    const initial = value.studyGuideOptions?.sectionCount ?? 6;
+    return !SECTION_PRESETS.includes(initial as (typeof SECTION_PRESETS)[number]);
+  });
   const [customVal, setCustomVal] = useState<string>(String(sectionCount));
 
   const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
@@ -90,61 +89,17 @@ export function StudyGuideBriefForm({
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 font-medium text-text-primary">
-            <span className="text-sm font-semibold">Study Guide Setup</span>
-          </div>
-          <Badge variant="outline" className="text-xs font-normal">
-            Step {step} of 2
-          </Badge>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div
-            onClick={() => setStep(1)}
-            className={cn(
-              "h-1.5 rounded-full transition-all cursor-pointer",
-              step >= 1 ? "bg-primary" : "bg-surface-4",
-            )}
-          />
-          <div
-            onClick={() => setStep(2)}
-            className={cn(
-              "h-1.5 rounded-full transition-all cursor-pointer",
-              step === 2 ? "bg-primary" : "bg-surface-4",
-            )}
-          />
-        </div>
-      </div>
+      <BriefWizardHeader title="Study Guide Setup" step={step} onStepChange={setStep} />
 
       {step === 1 ? (
         <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium text-text-primary">1. Format</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {FORMAT_OPTIONS.map((opt) => {
-                  const selected = format === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setFormat(opt.id)}
-                      className={cn(
-                        optionRowClass(selected),
-                        "p-3 flex items-start gap-3 cursor-pointer text-left",
-                      )}
-                    >
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-xs font-semibold">{opt.title}</span>
-                        <span className="block text-xs leading-tight opacity-80">{opt.desc}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <BriefChoiceField
+              label="1. Format"
+              options={FORMAT_OPTIONS}
+              value={format}
+              onChange={setFormat}
+            />
 
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">

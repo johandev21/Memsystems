@@ -1,31 +1,15 @@
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MarkdownRenderer } from "@/components/ui/markdown";
+import { cn } from "@/shared/utils/cn";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { createContext, memo, useCallback, useContext, useMemo } from "react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/shared/utils/cn";
-import { MarkdownRenderer } from "@/components/ui/markdown";
+import { memo, useCallback, useMemo } from "react";
+import { ReasoningContext, useReasoning } from "./reasoning-context";
 
+import { useReasoningLifecycle } from "../hooks/use-reasoning-lifecycle";
 import { MarkdownCodeBlock } from "./markdown-code-block";
 import { MarkdownTable } from "./markdown-table";
 import { Shimmer } from "./shimmer";
-import { useReasoningLifecycle } from "../hooks/use-reasoning-lifecycle";
-
-interface ReasoningContextValue {
-  isStreaming: boolean;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  duration: number | undefined;
-}
-
-const ReasoningContext = createContext<ReasoningContextValue | null>(null);
-
-export const useReasoning = () => {
-  const context = useContext(ReasoningContext);
-  if (!context) {
-    throw new Error("Reasoning components must be used within Reasoning");
-  }
-  return context;
-};
 
 export type ReasoningProps = ComponentProps<typeof Collapsible> & {
   isStreaming?: boolean;

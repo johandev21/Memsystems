@@ -175,7 +175,7 @@ interface IconItemProps {
   isSelected: boolean;
   isFocused: boolean;
   onClick: (name: string) => void;
-  onMouseEnter: () => void;
+  onMouseEnter: (name: string) => void;
 }
 
 const IconItem = memo(function IconItem({
@@ -196,7 +196,7 @@ const IconItem = memo(function IconItem({
       title={label}
       tabIndex={-1}
       onClick={() => onClick(name)}
-      onMouseEnter={onMouseEnter}
+      onMouseEnter={() => onMouseEnter(name)}
       className={cn(
         "flex size-9 cursor-pointer items-center justify-center rounded-md border border-transparent bg-transparent text-foreground outline-none transition-colors duration-150",
         isSelected
@@ -244,7 +244,8 @@ export function IconPicker({
       setDebouncedQuery("");
       setVisibleCount(BATCH_SIZE);
       setFocusedIndex(-1);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
@@ -292,6 +293,14 @@ export function IconPicker({
       setOpen(false);
     },
     [onChange],
+  );
+
+  const handleIconMouseEnter = useCallback(
+    (iconName: string) => {
+      const index = currentIcons.indexOf(iconName);
+      setFocusedIndex(index >= 0 ? index : -1);
+    },
+    [currentIcons],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -410,7 +419,7 @@ export function IconPicker({
                       isSelected={value === iconName}
                       isFocused={focusedIndex === index}
                       onClick={handleSelect}
-                      onMouseEnter={() => setFocusedIndex(index)}
+                      onMouseEnter={handleIconMouseEnter}
                     />
                   ))}
                 </div>
@@ -444,7 +453,7 @@ export function IconPicker({
                           isSelected={value === iconName}
                           isFocused={focusedIndex === globalIdx}
                           onClick={handleSelect}
-                          onMouseEnter={() => setFocusedIndex(globalIdx >= 0 ? globalIdx : -1)}
+                          onMouseEnter={handleIconMouseEnter}
                         />
                       );
                     })}

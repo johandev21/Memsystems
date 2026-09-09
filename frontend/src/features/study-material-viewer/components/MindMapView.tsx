@@ -366,9 +366,10 @@ function MindMapFlow({ content, materialTitle }: MindMapViewProps) {
     });
     if (focusNodeIds.size === 0) focusNodeIds.add(viewportFocus.id);
 
-    const focusNodes = graph.nodes
-      .filter((node) => focusNodeIds.has(node.id))
-      .map((node) => ({ id: node.id }));
+    const focusNodes = graph.nodes.reduce<{ id: string }[]>((nodes, node) => {
+      if (focusNodeIds.has(node.id)) nodes.push({ id: node.id });
+      return nodes;
+    }, []);
     if (focusNodes.length === 0) return;
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

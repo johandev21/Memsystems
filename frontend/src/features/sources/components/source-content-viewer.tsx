@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { sourceQueryOptions } from "../api/sources";
 import type { Source, SourceWithContent } from "../types";
-import { SourceReaderSkeleton } from "./skeletons";
+import { SourceReaderSkeleton } from "./skeletons/source-reader-skeleton";
 import {
   isSourceProcessing,
   processingStageLabel,
@@ -31,17 +31,15 @@ import {
 } from "../utils/source-processing";
 import { cn } from "@/shared/utils/cn";
 import { fetchApi } from "@/shared/api";
-import {
-  ArticleDocumentViewer,
-  AudioDocumentViewer,
-  detectDocumentType,
-  ImageDocumentViewer,
-  MarkdownDocumentViewer,
-  PlainTextDocumentViewer,
-  PptxDocumentViewer,
-  TabularDocumentViewer,
-  VideoDocumentViewer,
-} from "./renderers";
+import { ArticleDocumentViewer } from "./renderers/article-document-viewer";
+import { AudioDocumentViewer } from "./renderers/audio-document-viewer";
+import { detectDocumentType } from "./renderers/document-type-detector";
+import { ImageDocumentViewer } from "./renderers/image-document-viewer";
+import { MarkdownDocumentViewer } from "./renderers/markdown-document-viewer";
+import { PlainTextDocumentViewer } from "./renderers/plain-text-document-viewer";
+import { PptxDocumentViewer } from "./renderers/pptx-document-viewer";
+import { TabularDocumentViewer } from "./renderers/tabular-document-viewer";
+import { VideoDocumentViewer } from "./renderers/video-document-viewer";
 import type { SourceSegmentLocator } from "../types";
 
 interface SourceContentViewerProps {

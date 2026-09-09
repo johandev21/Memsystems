@@ -1,9 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { AiService } from '../ai/ai.service';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { CRAWLER_SERVICE, type CrawlerService } from '../crawler/crawler.types';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import { SOURCE_LIMIT, SourcesService } from './sources.service';
 
 const MIN_WEB_SEARCH_SOURCE_TEXT_LENGTH = 1000;
+
+/** Number of candidates requested per search (current behaviour, kept). */
+export const WEB_SEARCH_RESULT_LIMIT = 10;
 
 export interface WebSearchCandidate {
   title: string;
@@ -13,12 +16,11 @@ export interface WebSearchCandidate {
 
 export interface WebSearchSearchInput {
   query: string;
-  modelId: string;
 }
 
 export interface WebSearchSearchResponse {
   query: string;
-  modelId: string;
+  /** Firecrawl search returns no AI summary; always null. */
   summary: string | null;
   sources: WebSearchCandidate[];
 }
@@ -31,7 +33,6 @@ export interface WebSearchImportCandidate {
 
 export interface WebSearchImportInput {
   candidates: WebSearchImportCandidate[];
-  modelId: string;
   query: string;
 }
 
@@ -57,8 +58,16 @@ export class WebSearchService {
   constructor(
     private readonly notebooksService: NotebooksService,
     private readonly sourcesService: SourcesService,
-    private readonly aiService: AiService,
-  ) {}
+    @Optional()
+    @Inject(CRAWLER_SERVICE)
+    private readonly crawler?: CrawlerService,
+  ) {
+    if (!this.crawler) {
+      this.logger.warn(
+        'No crawler registered: web search is unavailable until CrawlerModule is wired.',
+      );
+    }
+  }
 
   async search(
     notebookId: string,
@@ -67,28 +76,32 @@ export class WebSearchService {
     this.logger.log(`web-search search start`, {
       notebookId,
       query: input.query,
-      modelId: input.modelId,
     });
 
     await this.notebooksService.assertNotebookOwner(notebookId);
 
-    const result = await this.aiService.searchWeb(input.query, input.modelId);
+    if (!this.crawler) {
+      throw new Error('Web search is unavailable: no crawler is configured.');
+    }
+    const found = await this.crawler.search(
+      input.query,
+      WEB_SEARCH_RESULT_LIMIT,
+    );
 
     const existingUrls =
       await this.sourcesService.listUrlsForNotebook(notebookId);
     const existing = new Set(existingUrls);
-    const sources = result.sources.filter((s) => !existing.has(s.url));
+    const sources = found.filter((s) => !existing.has(s.url));
 
     this.logger.log(`web-search search done`, {
-      foundCount: result.sources.length,
+      foundCount: found.length,
       deduplicatedCount: sources.length,
       existingCount: existing.size,
     });
 
     return {
       query: input.query,
-      modelId: input.modelId,
-      summary: result.summary,
+      summary: null,
       sources,
     };
   }
@@ -99,7 +112,6 @@ export class WebSearchService {
   ): Promise<WebSearchImportResponse> {
     this.logger.log(`web-search import start`, {
       notebookId,
-      modelId: input.modelId,
       candidateCount: input.candidates.length,
       query: input.query,
     });
@@ -115,6 +127,8 @@ export class WebSearchService {
 
     for (const candidate of input.candidates) {
       const fallbackTitle = candidate.url;
+      // Descriptions arrive from Firecrawl unbounded; cap for metadata.
+      const description = candidate.description?.slice(0, 500) ?? null;
 
       if (count >= SOURCE_LIMIT) {
         this.logger.warn(`web-search import: limit reached, skipping`, {
@@ -151,9 +165,9 @@ export class WebSearchService {
             addedVia: 'ai_search',
             metadata: {
               searchQuery: input.query,
-              modelId: input.modelId,
+              provider: 'firecrawl',
               searchedAt: new Date().toISOString(),
-              description: candidate.description ?? null,
+              description,
             },
           },
         });

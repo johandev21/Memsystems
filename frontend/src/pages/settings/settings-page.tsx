@@ -165,7 +165,7 @@ function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <form id="gateway-key-form" onSubmit={handleSave} className="min-w-0 flex-1">
-          <div className="relative flex h-10 items-center rounded-xl border border-border/70 bg-background shadow-[0_1px_2px_rgb(15_23_42/0.03)] transition-all focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/10">
+          <div className="relative flex h-10 items-center rounded-xl border border-border/70 bg-background shadow-[0_1px_2px_rgb(15_23_42/0.03)] transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/10">
             <KeyRound className="ml-3 size-3.5 shrink-0 text-muted-foreground/70" />
             <input
               id="gateway-key-input"

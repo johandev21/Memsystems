@@ -124,8 +124,8 @@ function CaseStudyReader({
       <section className="space-y-3" aria-label="Learning Objectives">
         <h2 className="text-xl font-semibold">Learning Objectives</h2>
         <ul className="list-disc space-y-2 pl-5">
-          {study.learningObjectives.map((objective, i) => (
-            <li key={i}>
+          {study.learningObjectives.map((objective) => (
+            <li key={objective}>
               <CaseMarkdown text={objective} />
             </li>
           ))}
@@ -145,8 +145,8 @@ function CaseStudyReader({
         <section aria-label="Relevant Facts" className="space-y-3">
           <h2 className="text-xl font-semibold">Relevant Facts</h2>
           <ul className="list-disc space-y-2 pl-5">
-            {study.facts.map((fact, i) => (
-              <li key={i}>
+            {study.facts.map((fact) => (
+              <li key={fact}>
                 <CaseMarkdown text={fact} />
               </li>
             ))}
@@ -279,8 +279,8 @@ function CaseQuestion({
               <div className="space-y-1">
                 <h3 className="text-base font-semibold">Key Points</h3>
                 <ul className="list-disc space-y-2 pl-5">
-                  {analysis.keyPoints.map((point, i) => (
-                    <li key={i}>
+                  {analysis.keyPoints.map((point) => (
+                    <li key={point}>
                       <CaseMarkdown text={point} />
                     </li>
                   ))}
@@ -290,8 +290,8 @@ function CaseQuestion({
             {analysis.conceptApplications.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-base font-semibold">Concepts From Your Sources</h3>
-                {analysis.conceptApplications.map((app, i) => (
-                  <div key={i} className="space-y-2">
+                {analysis.conceptApplications.map((app) => (
+                  <div key={app.concept} className="space-y-2">
                     <p className="font-medium">{app.concept}</p>
                     <CaseMarkdown text={app.application} />
                     {app.sourceIds.length > 0 && (
@@ -310,8 +310,8 @@ function CaseQuestion({
               <div className="space-y-1">
                 <h3 className="text-base font-semibold">Assumptions</h3>
                 <ul className="list-disc space-y-2 pl-5">
-                  {analysis.assumptions.map((item, i) => (
-                    <li key={i}>
+                  {analysis.assumptions.map((item) => (
+                    <li key={item}>
                       <CaseMarkdown text={item} />
                     </li>
                   ))}
@@ -322,8 +322,8 @@ function CaseQuestion({
               <div className="space-y-1">
                 <h3 className="text-base font-semibold">Tradeoffs</h3>
                 <ul className="list-disc space-y-2 pl-5">
-                  {analysis.tradeoffs.map((item, i) => (
-                    <li key={i}>
+                  {analysis.tradeoffs.map((item) => (
+                    <li key={item}>
                       <CaseMarkdown text={item} />
                     </li>
                   ))}
@@ -333,8 +333,8 @@ function CaseQuestion({
             {analysis.alternativePerspectives.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-base font-semibold">Alternative Perspectives</h3>
-                {analysis.alternativePerspectives.map((alt, i) => (
-                  <div key={i} className="space-y-2">
+                {analysis.alternativePerspectives.map((alt) => (
+                  <div key={alt.viewpoint} className="space-y-2">
                     <p className="font-medium">{alt.viewpoint}</p>
                     <CaseMarkdown text={alt.reasoning} />
                     {alt.sourceIds.length > 0 && (
@@ -365,7 +365,7 @@ function CaseQuestion({
                 <legend className="text-base font-semibold">Self-Assessment Checklist</legend>
                 {analysis.checklist.map((item, i) => (
                   <label
-                    key={i}
+                    key={item}
                     className="flex cursor-pointer items-start gap-3 py-1 text-base leading-relaxed"
                   >
                     <input

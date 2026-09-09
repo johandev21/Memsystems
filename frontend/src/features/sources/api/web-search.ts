@@ -13,7 +13,6 @@ export interface WebSearchJob {
   id: string;
   notebookId: string;
   query: string;
-  modelId: string;
   status: WebSearchJobStatus;
   summary: string | null;
   candidates: WebSearchCandidate[];
@@ -54,8 +53,8 @@ export function webSearchJobQueryOptions(notebookId: string) {
   });
 }
 
-export const startWebSearchJob = (notebookId: string, input: { query: string; modelId: string }) =>
-  apiPost<{ query: string; modelId: string }, WebSearchJob>(
+export const startWebSearchJob = (notebookId: string, input: { query: string }) =>
+  apiPost<{ query: string }, WebSearchJob>(
     `/api/notebooks/${notebookId}/sources/web-search`,
     input,
   );
@@ -67,14 +66,12 @@ export const importWebSources = (
   notebookId: string,
   input: {
     candidates: { url: string; title?: string; description?: string | null }[];
-    modelId: string;
     query: string;
   },
 ) =>
   apiPost<
     {
       candidates: { url: string; title?: string; description?: string | null }[];
-      modelId: string;
       query: string;
     },
     WebSearchImportResponse

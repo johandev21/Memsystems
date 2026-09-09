@@ -1,22 +1,20 @@
-import { useState, useEffect } from "react";
-import {
-  RotateCw,
-  Eye,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-  ThumbsUp,
-  ThumbsDown,
-  BookOpen,
-  Check,
-  X,
-  MessageSquare,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
+import {
+  BookOpen,
+  Eye,
+  MessageSquare,
+  RotateCw,
+  Sparkles,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { detectCardFormat } from "../card-type-detector";
 import { ClozeInteractive } from "../ClozeInteractive";
+import { FlashcardNavigation } from "./flashcard-navigation";
 
 export interface FlashcardVariantCProps {
   cards: Array<{ front: string; back: string }>;
@@ -180,47 +178,14 @@ export function FlashcardVariantC({
       </div>
 
       {/* Navigation Pill Row */}
-      <div className="flex items-center justify-center gap-3 w-full py-1">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onPrev}
-          disabled={cards.length <= 1}
-          aria-label="Previous Card"
-          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
-        >
-          <ChevronLeft className="size-5" />
-        </Button>
-
-        <button
-          type="button"
-          onClick={() => triggerRating("incorrect")}
-          className="h-10 px-4 rounded-full border border-surface-border-subtle bg-surface-2 hover:bg-surface-3 text-destructive text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
-        >
-          <X className="size-3.5" />
-          <span>{incorrectCount}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => triggerRating("correct")}
-          className="h-10 px-4 rounded-full border border-surface-border-subtle bg-surface-2 hover:bg-surface-3 text-success text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
-        >
-          <span>{correctCount}</span>
-          <Check className="size-3.5" />
-        </button>
-
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onNext}
-          disabled={cards.length <= 1}
-          aria-label="Next Card"
-          className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-all"
-        >
-          <ChevronRight className="size-5" />
-        </Button>
-      </div>
+      <FlashcardNavigation
+        cardCount={cards.length}
+        incorrectCount={incorrectCount}
+        correctCount={correctCount}
+        onPrev={onPrev}
+        onNext={onNext}
+        onRate={triggerRating}
+      />
 
       {/* Feedback Bar */}
       <div className="w-full flex items-center justify-between pt-1">

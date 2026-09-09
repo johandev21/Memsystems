@@ -168,8 +168,8 @@ function GuideList({
         {title}
       </Heading>
       <ul className="list-disc space-y-2 pl-5">
-        {items.map((item, index) => (
-          <li key={index}>
+        {items.map((item) => (
+          <li key={item}>
             <GuideMarkdown text={item} />
           </li>
         ))}

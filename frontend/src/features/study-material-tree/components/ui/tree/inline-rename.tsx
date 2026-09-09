@@ -1,6 +1,6 @@
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTreeControllerContext } from "../controller";
+import { useTreeControllerContext } from "../controller-state";
 
 type InlineRenameProps = {
   initialValue: string;

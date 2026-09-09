@@ -1,5 +1,5 @@
 import type { TreeNode } from "../../model/tree";
-import { useTreeControllerContext } from "../controller";
+import { useTreeControllerContext } from "../controller-state";
 import { Row } from "./row";
 
 type BranchProps = {

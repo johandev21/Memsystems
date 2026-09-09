@@ -46,7 +46,6 @@ const addTranscriptSchema = z.object({
 
 const webSearchSchema = z.object({
   query: z.string().min(1, 'Query is required').max(500),
-  modelId: z.string().min(1, 'modelId is required'),
 });
 
 const webSearchImportCandidateSchema = z.object({
@@ -60,7 +59,6 @@ const webSearchImportSchema = z.object({
     .array(webSearchImportCandidateSchema)
     .min(1, 'At least one candidate is required')
     .max(50, 'Up to 50 candidates allowed per import'),
-  modelId: z.string().min(1, 'modelId is required'),
   query: z.string().max(500).optional(),
 });
 
@@ -203,7 +201,6 @@ export class SourcesController {
   ) {
     return this.webSearchService.import(notebookId, {
       candidates: body.candidates,
-      modelId: body.modelId,
       query: body.query ?? '',
     });
   }

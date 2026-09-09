@@ -269,11 +269,9 @@ function VirtualizedMarkdownDocument({
         overscan={5}
         targetIndex={targetIndex}
         highlightedIndex={highlightedIndex}
-        getItemKey={(chunk, index) =>
-          `md-chunk-${index}-${chunk.slice(0, 20).replace(/[^a-z0-9]/gi, "_")}`
-        }
-        renderItem={(chunk, index, isHighlighted) => (
-          <MarkdownChunk key={index} chunk={chunk} isHighlighted={isHighlighted} />
+        getItemKey={(chunk) => `md-chunk-${chunk}`}
+        renderItem={(chunk, _index, isHighlighted) => (
+          <MarkdownChunk key={`md-chunk-${chunk}`} chunk={chunk} isHighlighted={isHighlighted} />
         )}
       />
     </MarkdownDocumentShell>

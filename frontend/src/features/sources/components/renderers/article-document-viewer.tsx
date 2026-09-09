@@ -50,7 +50,7 @@ function VirtualizedArticleDocument({
         scrollElement={scrollElement}
         estimateSize={() => 60}
         overscan={5}
-        getItemKey={(block, index) => block.id || `block-${index}`}
+        getItemKey={(block) => block.id || `paragraph-${block.text}`}
         renderItem={(block) => <ArticleBlockView block={block} />}
       />
     </ArticleDocumentShell>
@@ -60,8 +60,8 @@ function VirtualizedArticleDocument({
 function StaticArticleDocument({ blocks }: { blocks: ArticleBlock[] }) {
   return (
     <ArticleDocumentShell>
-      {blocks.map((block, index) => (
-        <ArticleBlockView key={block.id || index} block={block} />
+      {blocks.map((block) => (
+        <ArticleBlockView key={block.id || `paragraph-${block.text}`} block={block} />
       ))}
     </ArticleDocumentShell>
   );

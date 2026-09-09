@@ -1,3 +1,20 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import type { FolderDTO } from "@/features/study-material-tree";
+import type { StudyMaterialDTO } from "@/features/study-material-viewer";
+import { cn } from "@/shared/utils/cn";
 import {
   DndContext,
   DragOverlay,
@@ -11,33 +28,16 @@ import {
 } from "@dnd-kit/core";
 import { ChevronsUpDown, Command, Folder, FolderOpen, FolderPlus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuShortcut,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { cn } from "@/shared/utils/cn";
-import type { FolderDTO } from "@/features/study-material-tree";
-import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import type { TreeCommandExecutor } from "../model/commands";
 import { getItemName, type TreeState } from "../model/tree";
+import { TreeControllerProvider } from "./controller";
 import {
   findTreeNode,
   getTreeDragData,
   getTreeDropData,
-  TreeControllerProvider,
-  useTreeControllerContext,
   useStudyMaterialsTreeController,
-} from "./controller";
+  useTreeControllerContext,
+} from "./controller-state";
 import { Branch } from "./tree/branch";
 import { DragPreview } from "./tree/drag-preview";
 import { TreeHeader } from "./tree/header";
@@ -302,5 +302,5 @@ function DeleteTreeItemDialog({
 }
 
 // Re-export for convenience
+export type { CommandResult, TreeCommand, TreeCommandExecutor } from "../model/commands";
 export type { TreeNode, TreeState } from "../model/tree";
-export type { TreeCommand, TreeCommandExecutor, CommandResult } from "../model/commands";

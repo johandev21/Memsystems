@@ -1,22 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import { Check, ExternalLink, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { modelsQueryOptions, type ModelOption } from "@/features/ai";
-import { useModelPersistence } from "@/features/notebooks";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
 import type { WebSearchImportResultItem } from "../api/web-search";
 import { useWebSearch } from "../hooks/use-web-search";
-import { useWebSearchModel } from "../hooks/use-web-search-model";
 
 function getHostname(url: string): string {
   try {
@@ -26,19 +15,6 @@ function getHostname(url: string): string {
   }
 }
 
-function supportsWebSearch(model: ModelOption): boolean {
-  return model.supportsWebSearch === true || model.capabilities?.webSearch === true;
-}
-
-const TOOL_CAPABILITY_ERROR =
-  /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool/i;
-
-function friendlySearchError(error: string, modelName?: string): string {
-  if (!TOOL_CAPABILITY_ERROR.test(error)) return error;
-  const selected = modelName ?? "This model";
-  return `${selected} doesn't support web search through the gateway. Choose a compatible model and try again.`;
-}
-
 export function WebSearchComposer({
   notebookId,
   remainingSourceSlots,
@@ -46,21 +22,17 @@ export function WebSearchComposer({
   notebookId: string;
   remainingSourceSlots: number;
 }) {
-  const { data: models } = useQuery(modelsQueryOptions);
-  const { model: selectedModel, setModel } = useModelPersistence(notebookId);
   const webSearch = useWebSearch(notebookId, remainingSourceSlots);
   const [expanded, setExpanded] = useState(false);
   const [clearAnnouncement, setClearAnnouncement] = useState("");
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
-  const { currentModel, isSupported } = useWebSearchModel(models, selectedModel);
-  const compatibleModels = useMemo(() => (models ?? []).filter(supportsWebSearch), [models]);
 
   useEffect(() => {
     if (clearAnnouncement) searchInputRef.current?.focus();
   }, [clearAnnouncement]);
 
   const handleSubmit = () => {
-    if (isSupported && selectedModel) webSearch.runSearch(selectedModel);
+    webSearch.runSearch();
   };
 
   const handleClearResults = async () => {
@@ -73,9 +45,10 @@ export function WebSearchComposer({
 
   const failedUrls = useMemo(
     () =>
-      [...webSearch.importResults.entries()]
-        .filter(([, result]) => result.status === "scrape_failed")
-        .map(([url]) => url),
+      [...webSearch.importResults.entries()].reduce<string[]>((urls, [url, result]) => {
+        if (result.status === "scrape_failed") urls.push(url);
+        return urls;
+      }, []),
     [webSearch.importResults],
   );
   const importedCount = useMemo(
@@ -83,9 +56,7 @@ export function WebSearchComposer({
       [...webSearch.importResults.values()].filter((result) => result.status === "added").length,
     [webSearch.importResults],
   );
-  const friendlyError = webSearch.searchError
-    ? friendlySearchError(webSearch.searchError, currentModel?.displayName)
-    : null;
+  const friendlyError = webSearch.searchError;
   const isAtSourceLimit = remainingSourceSlots === 0;
 
   return (
@@ -108,7 +79,7 @@ export function WebSearchComposer({
           value={webSearch.query}
           onChange={(event) => webSearch.setQuery(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey && isSupported) {
+            if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
               handleSubmit();
             }
@@ -125,7 +96,6 @@ export function WebSearchComposer({
             className="h-8 rounded-xl px-4"
             onClick={handleSubmit}
             disabled={
-              !isSupported ||
               isAtSourceLimit ||
               webSearch.clearing ||
               !webSearch.query.trim() ||
@@ -151,14 +121,6 @@ export function WebSearchComposer({
             Remove a source before searching for more sources to add.
           </AlertDescription>
         </Alert>
-      )}
-
-      {!isAtSourceLimit && !isSupported && (
-        <ModelCompatibilityNotice
-          models={compatibleModels}
-          selectedModel={selectedModel}
-          onModelChange={setModel}
-        />
       )}
 
       <div aria-live="polite" aria-atomic="true">
@@ -223,7 +185,6 @@ export function WebSearchComposer({
           expanded={expanded}
           onExpandedChange={setExpanded}
           remainingSourceSlots={remainingSourceSlots}
-          selectedModel={selectedModel}
           importedCount={importedCount}
           failedUrls={failedUrls}
           onClearResults={handleClearResults}
@@ -233,53 +194,11 @@ export function WebSearchComposer({
   );
 }
 
-function ModelCompatibilityNotice({
-  models,
-  selectedModel,
-  onModelChange,
-}: {
-  models: ModelOption[];
-  selectedModel?: string | null;
-  onModelChange: (modelId: string) => void;
-}) {
-  return (
-    <Alert>
-      <AlertTitle>Choose a model that can search the web</AlertTitle>
-      <AlertDescription>
-        Your current model cannot run web searches. Changing this also updates the model used in
-        this notebook's chat.
-      </AlertDescription>
-      {models.length > 0 ? (
-        <Select
-          value={models.some((model) => model.id === selectedModel) ? selectedModel : null}
-          onValueChange={(value) => value && onModelChange(value)}
-        >
-          <SelectTrigger className="mt-3 w-full border-border bg-background sm:w-auto">
-            <SelectValue placeholder="Choose model" />
-          </SelectTrigger>
-          <SelectContent align="start">
-            {models.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
-                {model.displayName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <p className="mt-2 text-xs text-muted-foreground">
-          No web-search model is currently available. Check your AI connection settings.
-        </p>
-      )}
-    </Alert>
-  );
-}
-
 function SearchResults({
   webSearch,
   expanded,
   onExpandedChange,
   remainingSourceSlots,
-  selectedModel,
   importedCount,
   failedUrls,
   onClearResults,
@@ -288,7 +207,6 @@ function SearchResults({
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   remainingSourceSlots: number;
-  selectedModel?: string | null;
   importedCount: number;
   failedUrls: string[];
   onClearResults: () => Promise<void>;
@@ -438,8 +356,8 @@ function SearchResults({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => selectedModel && webSearch.retryFailed(selectedModel)}
-              disabled={!selectedModel || webSearch.importing || webSearch.clearing}
+              onClick={() => webSearch.retryFailed()}
+              disabled={webSearch.importing || webSearch.clearing}
             >
               {webSearch.importing ? <Loader2 className="animate-spin" /> : null}
               Retry failed
@@ -448,9 +366,9 @@ function SearchResults({
           <Button
             type="button"
             size="sm"
-            onClick={() => selectedModel && webSearch.importSelected(selectedModel)}
+            onClick={() => webSearch.importSelected()}
             disabled={
-              !selectedModel || selectedCount === 0 || webSearch.importing || webSearch.clearing
+              selectedCount === 0 || webSearch.importing || webSearch.clearing
             }
           >
             {webSearch.importing ? <Loader2 className="animate-spin" /> : null}

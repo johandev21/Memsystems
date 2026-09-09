@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "preview": "vite preview",
     "format": "oxfmt src",
-    "format:check": "oxfmt --list-different src"
+    "format:check": "oxfmt --list-different src",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.208",

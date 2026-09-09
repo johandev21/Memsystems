@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Search, BookOpen, Globe, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -247,10 +247,11 @@ export function FlashcardSourcePopover({
   onChange: (ids: string[]) => void;
 }) {
   const [search, setSearch] = useState("");
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const filtered = sources.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
 
-  const allSelected = filtered.length > 0 && filtered.every((s) => selectedIds.includes(s.id));
+  const allSelected = filtered.length > 0 && filtered.every((s) => selectedIdSet.has(s.id));
 
   const toggleAll = () => {
     if (allSelected) {
@@ -263,7 +264,7 @@ export function FlashcardSourcePopover({
   };
 
   const toggleOne = (id: string) => {
-    if (selectedIds.includes(id)) {
+    if (selectedIdSet.has(id)) {
       onChange(selectedIds.filter((i) => i !== id));
     } else {
       onChange([...selectedIds, id]);
@@ -308,7 +309,7 @@ export function FlashcardSourcePopover({
     return (
       <div className="max-h-[220px] overflow-y-auto p-2 space-y-1">
         {filtered.map((src) => {
-          const checked = selectedIds.includes(src.id);
+          const checked = selectedIdSet.has(src.id);
           return (
             <div
               key={src.id}

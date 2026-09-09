@@ -1,17 +1,16 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { FolderPicker } from "@/features/notebooks";
 import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
-import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import { CTA_BUTTON_CLASS } from "./option-row";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
-import { optionRowClass } from "./option-row";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 const PROBLEM_PRESETS = [4, 6, 8, 12] as const;
 const MAX_PROBLEMS = 30;
@@ -81,32 +80,7 @@ export function PracticeProblemsBriefForm({
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 font-medium text-text-primary">
-            <span className="text-sm font-semibold">Practice Problems Setup</span>
-          </div>
-          <Badge variant="outline" className="text-xs font-normal">
-            Step {step} of 2
-          </Badge>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div
-            onClick={() => setStep(1)}
-            className={cn(
-              "h-1.5 rounded-full transition-all cursor-pointer",
-              step >= 1 ? "bg-primary" : "bg-surface-4",
-            )}
-          />
-          <div
-            onClick={() => setStep(2)}
-            className={cn(
-              "h-1.5 rounded-full transition-all cursor-pointer",
-              step === 2 ? "bg-primary" : "bg-surface-4",
-            )}
-          />
-        </div>
-      </div>
+      <BriefWizardHeader title="Practice Problems Setup" step={step} onStepChange={setStep} />
 
       {step === 1 ? (
         <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">

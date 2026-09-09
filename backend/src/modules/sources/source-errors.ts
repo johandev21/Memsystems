@@ -10,7 +10,9 @@ export type WebScrapeErrorCode =
   | 'invalid_content_type'
   | 'robots_denied'
   | 'not_readerable'
-  | 'extraction_failed';
+  | 'extraction_failed'
+  | 'unauthorized'
+  | 'rate_limited';
 
 export class WebScrapeError extends BadRequestError {
   constructor(

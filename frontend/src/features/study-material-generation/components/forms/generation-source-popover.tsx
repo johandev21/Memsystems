@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { BookOpen, ChevronDown, FileText, Globe, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,12 +25,14 @@ export function GenerationSourcePopover({
   emptyMessage,
 }: GenerationSourcePopoverProps) {
   const [search, setSearch] = useState("");
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
   const filteredSources = sources.filter((source) =>
     source.title.toLowerCase().includes(search.toLowerCase()),
   );
   const allFilteredSourcesSelected =
     filteredSources.length > 0 &&
-    filteredSources.every((source) => selectedIds.includes(source.id));
+    filteredSources.every((source) => selectedIdSet.has(source.id));
 
   const toggleAllSources = () => {
     if (allFilteredSourcesSelected) {
@@ -43,7 +45,7 @@ export function GenerationSourcePopover({
 
   const toggleSource = (id: string) => {
     onChange(
-      selectedIds.includes(id) ? selectedIds.filter((item) => item !== id) : [...selectedIds, id],
+      selectedIdSet.has(id) ? selectedIds.filter((item) => item !== id) : [...selectedIds, id],
     );
   };
 
@@ -97,7 +99,7 @@ export function GenerationSourcePopover({
         ) : (
           <div className="max-h-[220px] space-y-1 overflow-y-auto p-2">
             {filteredSources.map((source) => {
-              const checked = selectedIds.includes(source.id);
+              const checked = selectedIdSet.has(source.id);
               return (
                 <button
                   key={source.id}

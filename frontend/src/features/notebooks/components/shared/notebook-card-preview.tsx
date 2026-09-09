@@ -82,7 +82,7 @@ export function NotebookCardPreview({
             <img
               src={bannerPreviewUrl}
               alt="Notebook Banner Preview"
-              className="h-full w-full object-cover pointer-events-none transition-all duration-75"
+              className="h-full w-full object-cover pointer-events-none transition-[object-position] duration-75"
               style={{
                 objectPosition: `${Math.round(focalPoint.x * 100)}% ${Math.round(focalPoint.y * 100)}%`,
               }}

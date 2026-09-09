@@ -1,10 +1,10 @@
-import { useDroppable } from "@dnd-kit/core";
-import { ChevronDown, ChevronUp, FolderOpen, FolderPlus, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardHeader } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/shared/utils/cn";
-import { getTreeDragData, ROOT_DROP_ID, useTreeControllerContext } from "../controller";
+import { useDroppable } from "@dnd-kit/core";
+import { ChevronDown, ChevronsUpDown, ChevronUp, FolderOpen, FolderPlus } from "lucide-react";
+import { getTreeDragData, ROOT_DROP_ID, useTreeControllerContext } from "../controller-state";
 
 export interface TreeHeaderProps {
   isPanelExpanded?: boolean;

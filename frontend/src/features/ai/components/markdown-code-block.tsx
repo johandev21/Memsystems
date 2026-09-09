@@ -25,21 +25,45 @@ export function MarkdownCodeBlock({
 }: MarkdownCodeBlockProps) {
   const match = /language-([\w-]+)/.exec(className || "");
   const language = (match ? match[1] : "text") as BundledLanguage;
-
-  if (!className && typeof children === "string" && !children.includes("\n")) {
-    return (
-      <code className="rounded border border-border/40 bg-muted px-1.5 py-0.5 font-mono text-sm font-medium text-foreground">
-        {children}
-      </code>
-    );
-  }
-
   const rawCode = getRawText(children).replace(/\n$/, "");
 
+  if (!className && !rawCode.includes("\n")) {
+    return <MarkdownInlineCode>{rawCode}</MarkdownInlineCode>;
+  }
+
+  return (
+    <MarkdownBlockCode
+      code={rawCode}
+      language={language}
+      containerClassName={containerClassName}
+      showLineNumbers={showLineNumbers}
+    />
+  );
+}
+
+function MarkdownInlineCode({ children }: { children: string }) {
+  return (
+    <code className="rounded border border-border/40 bg-muted px-1.5 py-0.5 font-mono text-sm font-medium text-foreground">
+      {children}
+    </code>
+  );
+}
+
+function MarkdownBlockCode({
+  code,
+  language,
+  containerClassName,
+  showLineNumbers,
+}: {
+  code: string;
+  language: BundledLanguage;
+  containerClassName?: string;
+  showLineNumbers: boolean;
+}) {
   return (
     <CodeBlock
       className={cn("my-4", containerClassName)}
-      code={rawCode}
+      code={code}
       language={language}
       showLineNumbers={showLineNumbers}
     >

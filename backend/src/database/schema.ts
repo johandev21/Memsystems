@@ -88,6 +88,7 @@ export const jobStatusEnum = pgEnum('job_status', [
 export interface SourceMetadata {
   searchQuery?: string;
   modelId?: string;
+  provider?: string;
   searchedAt?: string;
   description?: string | null;
 }

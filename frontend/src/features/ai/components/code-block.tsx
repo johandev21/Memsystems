@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/utils/cn";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import type { ComponentProps, CSSProperties, HTMLAttributes } from "react";
 import {
@@ -11,8 +13,6 @@ import {
   useState,
 } from "react";
 import type { BundledLanguage, ThemedToken } from "shiki";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/shared/utils/cn";
 import {
   addKeysToTokens,
   createRawTokens,
@@ -91,8 +91,6 @@ interface CodeBlockContextType {
 const CodeBlockContext = createContext<CodeBlockContextType>({
   code: "",
 });
-
-export { highlightCode };
 
 const CodeBlockBody = memo(
   ({
@@ -226,29 +224,27 @@ export const CodeBlockContent = ({
     [code, language, rawTokens],
   );
 
-  const [asyncTokens, setAsyncTokens] = useState<TokenizedCode | null>(null);
-  const asyncKeyRef = useRef({ code, language });
-
-  if (asyncKeyRef.current.code !== code || asyncKeyRef.current.language !== language) {
-    asyncKeyRef.current = { code, language };
-    setAsyncTokens(null);
-  }
+  const asyncKey = `${language}\0${code}`;
+  const [asyncState, setAsyncState] = useState<{ key: string; tokens: TokenizedCode | null }>(() => ({
+    key: asyncKey,
+    tokens: null,
+  }));
 
   useEffect(() => {
     let cancelled = false;
 
     highlightCode(code, language, (result) => {
       if (!cancelled) {
-        setAsyncTokens(result);
+        setAsyncState({ key: asyncKey, tokens: result });
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [code, language]);
+  }, [asyncKey, code, language]);
 
-  const tokenized = asyncTokens ?? syncTokens;
+  const tokenized = asyncState.key === asyncKey ? asyncState.tokens ?? syncTokens : syncTokens;
 
   return (
     <div className="relative overflow-auto">

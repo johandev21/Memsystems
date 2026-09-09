@@ -78,9 +78,12 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
 
     // Fallback: simple CSV / TSV delimited text
     const delim = section.includes("\t") ? "\t" : ",";
-    const rows = lines
-      .filter((l) => !l.startsWith("#") && !l.startsWith("**"))
-      .map((l) => l.split(delim).map((c) => c.trim().replace(/^"|"$/g, "")));
+    const rows = lines.reduce<string[][]>((result, line) => {
+      if (!line.startsWith("#") && !line.startsWith("**")) {
+        result.push(line.split(delim).map((cell) => cell.trim().replace(/^"|"$/g, "")));
+      }
+      return result;
+    }, []);
 
     if (rows.length > 0) {
       const headers = rows[0];

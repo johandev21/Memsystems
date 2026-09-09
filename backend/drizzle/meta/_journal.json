@@ -57,6 +57,20 @@
       "when": 1788919200000,
       "tag": "0007_app_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788898300849,
+      "tag": "0008_e5-384",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788960000000,
+      "tag": "0009_gateway-1536",
+      "breakpoints": true
     }
   ]
 }

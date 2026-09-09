@@ -1,7 +1,18 @@
+import { Button } from "@/components/ui/button";
+import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/shared/utils/cn";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
-  Brain,
   BookOpen,
+  Brain,
   Briefcase,
   FileQuestion,
   Folder,
@@ -14,25 +25,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/shared/utils/cn";
+import { getCommandPendingKey } from "../../model/commands";
 import type { TreeNode } from "../../model/tree";
 import {
   DRAG_ID_PREFIX,
   FOLDER_DROP_ID_PREFIX,
   getTreeDragData,
   useTreeControllerContext,
-} from "../controller";
-import { getCommandPendingKey } from "../../model/commands";
+} from "../controller-state";
 import { InlineRename } from "./inline-rename";
 import { RowMenu } from "./row-menu";
 

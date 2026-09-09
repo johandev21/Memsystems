@@ -39,8 +39,8 @@ export function buildStudyMaterialTree(state: TreeState): TreeNode[] {
   }
 
   const visit = (parentId: string | null): TreeNode[] => {
-    const foldersForParent = [...(foldersByParent.get(parentId) ?? [])].sort(byCreatedAtThenId);
-    const materialsForParent = [...(materialsByParent.get(parentId) ?? [])].sort(byCreatedAtThenId);
+    const foldersForParent = (foldersByParent.get(parentId) ?? []).toSorted(byCreatedAtThenId);
+    const materialsForParent = (materialsByParent.get(parentId) ?? []).toSorted(byCreatedAtThenId);
 
     return [
       ...foldersForParent.map((folder) => ({

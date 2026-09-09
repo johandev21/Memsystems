@@ -73,7 +73,7 @@ export function AssistantMessage({
     return [];
   }, [versions, message]);
 
-  const [selectedVersionIndex, setSelectedVersionIndex] = useState<number>(
+  const [selectedVersionIndex, setSelectedVersionIndex] = useState<number>(() =>
     Math.max(0, versionList.length - 1),
   );
   const [copied, setCopied] = useState(false);
@@ -288,9 +288,9 @@ function AssistantResponses({
   messageId: string;
   content: ReturnType<typeof useAssistantMessageContent>;
 }) {
-  return content.preparedParts.map((part, index) => (
+  return content.preparedParts.map((part) => (
     <MessageResponse
-      key={`${messageId}-${index}`}
+      key={`${messageId}-${part.markdown}`}
       components={content.messageComponents}
       isStreaming={content.isStreaming}
     >

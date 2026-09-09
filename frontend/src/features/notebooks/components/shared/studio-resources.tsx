@@ -253,7 +253,7 @@ function ActiveGenerationCard({
 }) {
   if (generation.status === "error") {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 shadow-xs transition-all animate-in fade-in slide-in-from-top-1">
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 shadow-xs transition-colors animate-in fade-in slide-in-from-top-1">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-destructive/30 shadow-2xs text-destructive shrink-0">
             <CircleAlert className="h-4.5 w-4.5" />
@@ -288,7 +288,7 @@ function ActiveGenerationCard({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/60 dark:bg-muted/30 p-3 shadow-xs transition-all animate-in fade-in slide-in-from-top-1">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/60 dark:bg-muted/30 p-3 shadow-xs transition-colors animate-in fade-in slide-in-from-top-1">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-border/50 shadow-2xs text-foreground shrink-0">
           <RefreshCw className="h-4.5 w-4.5 animate-spin text-primary" />

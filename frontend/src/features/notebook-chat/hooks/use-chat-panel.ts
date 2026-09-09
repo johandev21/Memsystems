@@ -85,7 +85,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   );
 
   const selectedModelRef = useRef(selectedModel);
-  selectedModelRef.current = selectedModel;
+  useEffect(() => {
+    selectedModelRef.current = selectedModel;
+  }, [selectedModel]);
 
   const transport = useMemo(() => {
     return new DefaultChatTransport({

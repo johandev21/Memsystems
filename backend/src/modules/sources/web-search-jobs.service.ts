@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { WebSearchResult } from '../ai/ai.service';
 import { Job } from '../jobs/job-handler.interface';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import { WebSearchJobPayload } from './web-search.handler';
+import { WebSearchSearchResponse } from './web-search.service';
 
 export interface FormattedWebSearchJob {
   id: string;
   notebookId: string;
   query: string;
-  modelId: string;
   status: 'pending' | 'processing' | 'ready' | 'failed';
   summary: string | null;
   candidates: { title: string; url: string; description: string | null }[];
@@ -19,13 +18,12 @@ export interface FormattedWebSearchJob {
 }
 
 export function formatWebSearchJob(
-  job: Job<WebSearchJobPayload, WebSearchResult>,
+  job: Job<WebSearchJobPayload, WebSearchSearchResponse>,
 ): FormattedWebSearchJob {
   return {
     id: job.id,
     notebookId: job.payload.notebookId,
     query: job.payload.query,
-    modelId: job.payload.modelId,
     status: job.status === 'cancelled' ? 'failed' : job.status,
     summary: job.result?.summary ?? null,
     candidates: (job.result?.sources ?? []).map((s) => ({
@@ -48,19 +46,18 @@ export class WebSearchJobsService {
 
   async enqueue(
     notebookId: string,
-    input: { query: string; modelId: string },
+    input: { query: string },
   ): Promise<FormattedWebSearchJob> {
     await this.notebooksService.assertNotebookOwner(notebookId);
 
     const job = await this.jobQueue.enqueue<
       WebSearchJobPayload,
-      WebSearchResult
+      WebSearchSearchResponse
     >(
       'web_search',
       {
         notebookId,
         query: input.query,
-        modelId: input.modelId,
       },
       {
         groupKey: `web_search:${notebookId}`,
@@ -75,7 +72,7 @@ export class WebSearchJobsService {
     await this.notebooksService.assertNotebookOwner(notebookId);
     const job = await this.jobQueue.getLatestByGroup<
       WebSearchJobPayload,
-      WebSearchResult
+      WebSearchSearchResponse
     >(`web_search:${notebookId}`);
     return job ? formatWebSearchJob(job) : null;
   }

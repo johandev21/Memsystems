@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, ImagePlus, Move, Pencil, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ImageUploadDialog } from "../dialogs/image-upload-dialog";
 import { EDIT_NOTEBOOK_EVENT } from "../dialogs/notebook-settings-dialog";
@@ -26,6 +26,139 @@ export interface NotebookBannerProps {
 
 const DEFAULT_FOCAL_POINT = { x: 0.5, y: 0.5 };
 
+function BannerImage({
+  visibleBannerUrl,
+  visibleFocalPoint,
+  imageError,
+  onImageError,
+}: {
+  visibleBannerUrl: string | null | undefined;
+  visibleFocalPoint: { x: number; y: number };
+  imageError: boolean;
+  onImageError: () => void;
+}) {
+  if (visibleBannerUrl && !imageError) {
+    return (
+      <img
+        src={visibleBannerUrl}
+        alt=""
+        className="pointer-events-none absolute inset-0 size-full object-cover"
+        style={{
+          objectPosition: `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
+        }}
+        draggable={false}
+        onError={onImageError}
+      />
+    );
+  }
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-muted">
+      {imageError ? <AlertCircle className="size-6 text-muted-foreground/50" /> : null}
+    </div>
+  );
+}
+
+function BannerEditToolbar({
+  visibleBannerUrl,
+  isSaving,
+  onOpenImageDialog,
+  onRemoveBanner,
+  onCancel,
+  onSave,
+}: {
+  visibleBannerUrl: string | null | undefined;
+  isSaving: boolean;
+  onOpenImageDialog: () => void;
+  onRemoveBanner: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <>
+      <div className="absolute left-3 top-3 flex items-center gap-1.5">
+        <Button variant="secondary" size="sm" onClick={onOpenImageDialog}>
+          <ImagePlus data-icon="inline-start" />
+          {visibleBannerUrl ? "Change" : "Add banner"}
+        </Button>
+        {visibleBannerUrl ? (
+          <Button variant="secondary" size="icon-sm" aria-label="Remove banner" onClick={onRemoveBanner}>
+            <Trash2 />
+          </Button>
+        ) : null}
+        {visibleBannerUrl ? (
+          <span className="pointer-events-none hidden items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs backdrop-blur-sm sm:flex">
+            <Move className="size-3" /> Drag to reposition
+          </span>
+        ) : null}
+      </div>
+      <div className="absolute right-3 top-3 flex items-center gap-1.5">
+        <Button variant="secondary" size="icon-sm" aria-label="Cancel edits" onClick={onCancel}>
+          <X />
+        </Button>
+        <Button size="sm" disabled={isSaving} onClick={onSave}>
+          <Check data-icon="inline-start" />
+          {isSaving ? "Saving…" : "Save"}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function BannerTitleCard({
+  isEditing,
+  draftTitle,
+  onDraftTitleChange,
+  formattedDate,
+  draftIcon,
+  onDraftIconChange,
+  icon,
+  title,
+  isUntitled,
+}: {
+  isEditing: boolean;
+  draftTitle: string;
+  onDraftTitleChange: (value: string) => void;
+  formattedDate: string;
+  draftIcon: string;
+  onDraftIconChange: (value: string) => void;
+  icon?: string;
+  title: string;
+  isUntitled: boolean;
+}) {
+  return (
+    <div
+      className="absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-2xl border border-white/20 bg-background/85 p-3 shadow-lg backdrop-blur-md sm:bottom-4 sm:left-4"
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      {isEditing ? (
+        <IconPicker
+          value={draftIcon}
+          onChange={(value) => onDraftIconChange(value ?? "notebook")}
+          triggerVariant="minimal"
+        />
+      ) : (
+        <NotebookIcon name={icon} className="size-10 shrink-0 text-foreground" />
+      )}
+      <div className="flex min-w-0 flex-col gap-0.5 pr-1">
+        {isEditing ? (
+          <Input
+            value={draftTitle}
+            onChange={(event) => onDraftTitleChange(event.target.value)}
+            maxLength={200}
+            aria-label="Notebook title"
+            className="h-7 min-w-0 rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent p-0 text-sm font-medium shadow-none selection:bg-primary/25 selection:text-foreground focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/40 focus-visible:ring-0"
+          />
+        ) : (
+          <span className="truncate text-sm font-medium tracking-tight">
+            {isUntitled ? "Untitled Notebook" : title}
+          </span>
+        )}
+        <span className="text-xs font-medium text-muted-foreground/80">{formattedDate}</span>
+      </div>
+    </div>
+  );
+}
+
 export function NotebookBanner({
   notebookId,
   title,
@@ -45,7 +178,7 @@ export function NotebookBanner({
   const [draftDescription, setDraftDescription] = useState(description ?? "");
   const [draftIcon, setDraftIcon] = useState(icon ?? "notebook");
   const [draftFocalPoint, setDraftFocalPoint] = useState(bannerFocalPoint ?? DEFAULT_FOCAL_POINT);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const bannerFileRef = useRef<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [bannerRemoved, setBannerRemoved] = useState(false);
 
@@ -55,7 +188,7 @@ export function NotebookBanner({
     setDraftDescription(description ?? "");
     setDraftIcon(icon ?? "notebook");
     setDraftFocalPoint(bannerFocalPoint ?? DEFAULT_FOCAL_POINT);
-    setBannerFile(null);
+    bannerFileRef.current = null;
     setPreviewUrl(null);
     setBannerRemoved(false);
     setImageError(false);
@@ -101,8 +234,14 @@ export function NotebookBanner({
 
   const handleSelectFile = (file: File) => {
     if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
-    setBannerFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    bannerFileRef.current = file;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setPreviewUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
     setBannerRemoved(false);
     setDraftFocalPoint(DEFAULT_FOCAL_POINT);
     setImageError(false);
@@ -129,7 +268,7 @@ export function NotebookBanner({
         draftFocalPoint.x !== (bannerFocalPoint?.x ?? 0.5) ||
         draftFocalPoint.y !== (bannerFocalPoint?.y ?? 0.5);
 
-      if (fieldsChanged && !bannerFile) {
+      if (fieldsChanged && !bannerFileRef.current) {
         requests.push(
           fetchApi(`/api/notebooks/${notebookId}`, {
             method: "PATCH",
@@ -160,10 +299,10 @@ export function NotebookBanner({
         );
       }
 
-      if (bannerFile) {
+      if (bannerFileRef.current) {
         const body = new FormData();
         body.append("id", notebookId);
-        body.append("file", bannerFile);
+        body.append("file", bannerFileRef.current);
         body.append("focalPointX", draftFocalPoint.x.toString());
         body.append("focalPointY", draftFocalPoint.y.toString());
         body.append("focalPoint", JSON.stringify(draftFocalPoint));
@@ -191,7 +330,7 @@ export function NotebookBanner({
       ]);
       toast.success("Notebook updated");
       setIsEditing(false);
-      setBannerFile(null);
+      bannerFileRef.current = null;
       setPreviewUrl(null);
       setBannerRemoved(false);
     } catch {
@@ -218,64 +357,34 @@ export function NotebookBanner({
         )}
       >
         {visibleBannerUrl && !imageError ? (
-          <img
-            src={visibleBannerUrl}
-            alt=""
-            className="pointer-events-none absolute inset-0 size-full object-cover"
-            style={{
-              objectPosition: `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
-            }}
-            draggable={false}
-            onError={() => setImageError(true)}
+          <BannerImage
+            visibleBannerUrl={visibleBannerUrl}
+            visibleFocalPoint={visibleFocalPoint}
+            imageError={imageError}
+            onImageError={() => setImageError(true)}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted">
-            {imageError ? <AlertCircle className="size-6 text-muted-foreground/50" /> : null}
-          </div>
+          <BannerImage
+            visibleBannerUrl={null}
+            visibleFocalPoint={visibleFocalPoint}
+            imageError={imageError}
+            onImageError={() => setImageError(true)}
+          />
         )}
 
         {isEditing ? (
-          <>
-            <div className="absolute left-3 top-3 flex items-center gap-1.5">
-              <Button variant="secondary" size="sm" onClick={() => setImageDialogOpen(true)}>
-                <ImagePlus data-icon="inline-start" />
-                {visibleBannerUrl ? "Change" : "Add banner"}
-              </Button>
-              {visibleBannerUrl ? (
-                <Button
-                  variant="secondary"
-                  size="icon-sm"
-                  aria-label="Remove banner"
-                  onClick={() => {
-                    setBannerFile(null);
-                    setPreviewUrl(null);
-                    setBannerRemoved(true);
-                  }}
-                >
-                  <Trash2 />
-                </Button>
-              ) : null}
-              {visibleBannerUrl ? (
-                <span className="pointer-events-none hidden items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs backdrop-blur-sm sm:flex">
-                  <Move className="size-3" /> Drag to reposition
-                </span>
-              ) : null}
-            </div>
-            <div className="absolute right-3 top-3 flex items-center gap-1.5">
-              <Button
-                variant="secondary"
-                size="icon-sm"
-                aria-label="Cancel edits"
-                onClick={handleCancel}
-              >
-                <X />
-              </Button>
-              <Button size="sm" disabled={isSaving} onClick={handleSave}>
-                <Check data-icon="inline-start" />
-                {isSaving ? "Saving…" : "Save"}
-              </Button>
-            </div>
-          </>
+          <BannerEditToolbar
+            visibleBannerUrl={visibleBannerUrl}
+            isSaving={isSaving}
+            onOpenImageDialog={() => setImageDialogOpen(true)}
+            onRemoveBanner={() => {
+              bannerFileRef.current = null;
+              setPreviewUrl(null);
+              setBannerRemoved(true);
+            }}
+            onCancel={handleCancel}
+            onSave={handleSave}
+          />
         ) : (
           <Button
             variant="secondary"
@@ -289,36 +398,17 @@ export function NotebookBanner({
           </Button>
         )}
 
-        <div
-          className="absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-2xl border border-white/20 bg-background/85 p-3 shadow-lg backdrop-blur-md sm:bottom-4 sm:left-4"
-          onMouseDown={(event) => event.stopPropagation()}
-        >
-          {isEditing ? (
-            <IconPicker
-              value={draftIcon}
-              onChange={(value) => setDraftIcon(value ?? "notebook")}
-              triggerVariant="minimal"
-            />
-          ) : (
-            <NotebookIcon name={icon} className="size-10 shrink-0 text-foreground" />
-          )}
-          <div className="flex min-w-0 flex-col gap-0.5 pr-1">
-            {isEditing ? (
-              <Input
-                value={draftTitle}
-                onChange={(event) => setDraftTitle(event.target.value)}
-                maxLength={200}
-                aria-label="Notebook title"
-                className="h-7 min-w-0 rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent p-0 text-sm font-medium shadow-none selection:bg-primary/25 selection:text-foreground focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/40 focus-visible:ring-0"
-              />
-            ) : (
-              <span className="truncate text-sm font-medium tracking-tight">
-                {isUntitled ? "Untitled Notebook" : title}
-              </span>
-            )}
-            <span className="text-xs font-medium text-muted-foreground/80">{formattedDate}</span>
-          </div>
-        </div>
+        <BannerTitleCard
+          isEditing={isEditing}
+          draftTitle={draftTitle}
+          onDraftTitleChange={setDraftTitle}
+          formattedDate={formattedDate}
+          draftIcon={draftIcon}
+          onDraftIconChange={setDraftIcon}
+          icon={icon}
+          title={title}
+          isUntitled={isUntitled}
+        />
       </div>
 
       <NotebookDescription

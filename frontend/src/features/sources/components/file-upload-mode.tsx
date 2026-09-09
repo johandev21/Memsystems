@@ -7,7 +7,7 @@ import {
   ACCEPTED_SOURCE_EXTENSIONS,
   ACCEPTED_SOURCE_MIME_TYPES,
   isClientSupportedSourceFile,
-} from "../utils";
+} from "../utils/source-upload-actions";
 
 interface FileUploadModeProps {
   onSelectUrlMode: () => void;

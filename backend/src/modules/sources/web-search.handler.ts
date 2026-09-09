@@ -1,18 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { WebSearchResult } from '../ai/ai.service';
 import { Job, JobHandler } from '../jobs/job-handler.interface';
-import { WebSearchService } from './web-search.service';
+import {
+  WebSearchSearchResponse,
+  WebSearchService,
+} from './web-search.service';
 
 export interface WebSearchJobPayload {
   notebookId: string;
   query: string;
-  modelId: string;
 }
 
 @Injectable()
 export class WebSearchHandler implements JobHandler<
   WebSearchJobPayload,
-  WebSearchResult
+  WebSearchSearchResponse
 > {
   readonly type = 'web_search';
   readonly concurrency = 2;
@@ -22,11 +23,10 @@ export class WebSearchHandler implements JobHandler<
   constructor(private readonly webSearchService: WebSearchService) {}
 
   async process(
-    job: Job<WebSearchJobPayload, WebSearchResult>,
-  ): Promise<WebSearchResult> {
+    job: Job<WebSearchJobPayload, WebSearchSearchResponse>,
+  ): Promise<WebSearchSearchResponse> {
     return this.webSearchService.search(job.payload.notebookId, {
       query: job.payload.query,
-      modelId: job.payload.modelId,
     });
   }
 }

@@ -80,7 +80,7 @@ export function ClozeInteractive({ front, back, onAnswerChecked }: ClozeInteract
     <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-6 text-center">
       <p className="text-lg font-semibold leading-relaxed text-text-primary break-words sm:text-xl">
         {segments.map((segment, index) => (
-          <Fragment key={index}>
+          <Fragment key={segment}>
             {segment}
             {index < blankCount && (
               <Input

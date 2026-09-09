@@ -54,7 +54,7 @@ export function createFileParts(files: File[]): (FileUIPart & { id: string })[] 
     id: nanoid(),
     mediaType: file.type,
     type: "file" as const,
-    url: URL.createObjectURL(file),
+    url: "",
   }));
 }
 

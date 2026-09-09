@@ -12,7 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/ui/markdown";
@@ -36,6 +36,295 @@ interface ParsedImageSection {
   headingLevel?: number;
   locator?: SourceSegmentLocator;
   warning?: string;
+}
+
+function ImageViewerToolbar({
+  segmentsWithRegionsCount,
+  viewMode,
+  onViewModeChange,
+}: {
+  segmentsWithRegionsCount: number;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-muted/20 px-3 py-2 text-xs">
+      <div className="flex items-center gap-1.5">
+        <Badge variant="outline" className="gap-1 font-normal text-muted-foreground">
+          <ImageIcon className="size-3 text-primary" />
+          Image Document
+        </Badge>
+        {segmentsWithRegionsCount > 0 && (
+          <Badge variant="secondary" className="font-normal text-[11px]">
+            {segmentsWithRegionsCount} visual {segmentsWithRegionsCount === 1 ? "region" : "regions"}
+          </Badge>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1">
+        <div className="flex items-center rounded-lg border border-border/60 bg-background p-0.5">
+          <Button
+            type="button"
+            variant={viewMode === "split" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => onViewModeChange("split")}
+            className="h-6 px-2 text-xs font-medium cursor-pointer"
+            title="Split View"
+          >
+            <Columns2 className="size-3 mr-1" />
+            Split
+          </Button>
+          <Button
+            type="button"
+            variant={viewMode === "image" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => onViewModeChange("image")}
+            className="h-6 px-2 text-xs font-medium cursor-pointer"
+            title="Image Only"
+          >
+            <ImageIcon className="size-3 mr-1" />
+            Image
+          </Button>
+          <Button
+            type="button"
+            variant={viewMode === "notes" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => onViewModeChange("notes")}
+            className="h-6 px-2 text-xs font-medium cursor-pointer"
+            title="Notes Only"
+          >
+            <FileText className="size-3 mr-1" />
+            Notes
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageZoomBar({
+  zoom,
+  showOverlaysToggle,
+  showOverlays,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+  onToggleOverlays,
+}: {
+  zoom: number;
+  showOverlaysToggle: boolean;
+  showOverlays: boolean;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  onToggleOverlays: () => void;
+}) {
+  return (
+    <div className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-lg border border-border/80 bg-background/90 p-1 shadow-md backdrop-blur-xs">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onZoomOut}
+        disabled={zoom <= 0.5}
+        className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
+        title="Zoom Out"
+      >
+        <ZoomOut className="size-3.5" />
+      </Button>
+      <span className="min-w-[36px] text-center text-[11px] font-medium text-muted-foreground">
+        {Math.round(zoom * 100)}%
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onZoomIn}
+        disabled={zoom >= 3}
+        className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
+        title="Zoom In"
+      >
+        <ZoomIn className="size-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onResetZoom}
+        className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
+        title="Reset Zoom (100%)"
+      >
+        <RotateCcw className="size-3.5" />
+      </Button>
+      {showOverlaysToggle && (
+        <Button
+          type="button"
+          variant={showOverlays ? "secondary" : "ghost"}
+          size="icon"
+          onClick={onToggleOverlays}
+          className="size-7 cursor-pointer"
+          title={showOverlays ? "Hide Region Highlights" : "Show Region Highlights"}
+        >
+          <Layers className="size-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function ImageRegionOverlays({
+  segmentsWithRegions,
+  activeSegmentId,
+  hoveredSegmentId,
+  selectedRegion,
+  onSelectSegment,
+  onHoverSegment,
+}: {
+  segmentsWithRegions: ParsedImageSection[];
+  activeSegmentId: string | null;
+  hoveredSegmentId: string | null;
+  selectedRegion?: ImageRegion | null;
+  onSelectSegment: (id: string) => void;
+  onHoverSegment: (id: string | null) => void;
+}) {
+  return (
+    <>
+      {segmentsWithRegions.map((section) => {
+        const region = section.locator?.imageRegion;
+        if (!region) return null;
+
+        const isActive = activeSegmentId === section.id;
+        const isHovered = hoveredSegmentId === section.id;
+        const isCitationTarget = isMatchingRegion(region, selectedRegion);
+
+        return (
+          <button
+            key={section.id}
+            type="button"
+            data-testid="image-region-box"
+            onClick={() => onSelectSegment(section.id)}
+            onMouseEnter={() => onHoverSegment(section.id)}
+            onMouseLeave={() => onHoverSegment(null)}
+            className={cn(
+              "absolute rounded transition-all cursor-pointer pointer-events-auto",
+              isActive || isCitationTarget
+                ? "border-2 border-primary bg-primary/30 ring-2 ring-primary/60 shadow-lg z-30"
+                : isHovered
+                  ? "border-2 border-primary bg-primary/20 ring-1 ring-primary/40 z-20"
+                  : "border border-primary/60 bg-primary/10 hover:border-primary hover:bg-primary/20 z-10",
+            )}
+            style={{
+              left: `${Math.max(0, Math.min(100, region.x * 100))}%`,
+              top: `${Math.max(0, Math.min(100, region.y * 100))}%`,
+              width: `${Math.max(0, Math.min(100, region.width * 100))}%`,
+              height: `${Math.max(0, Math.min(100, region.height * 100))}%`,
+            }}
+            aria-label={`Region #${section.ordinal}: ${section.kind}`}
+          >
+            <span
+              className={cn(
+                "absolute -top-3.5 -left-0.5 rounded px-1 py-0 text-[10px] font-bold shadow-xs whitespace-nowrap",
+                isActive || isCitationTarget
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-primary/80 text-primary-foreground",
+              )}
+            >
+              #{section.ordinal}
+            </span>
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
+function ImageNoteCard({
+  section,
+  isActive,
+  isHovered,
+  onHover,
+  onSelect,
+  noteRefs,
+}: {
+  section: ParsedImageSection;
+  isActive: boolean;
+  isHovered: boolean;
+  onHover: (id: string | null) => void;
+  onSelect: (id: string) => void;
+  noteRefs: { current: Map<string, HTMLDivElement> };
+}) {
+  const hasRegion = Boolean(section.locator?.imageRegion);
+  return (
+    <div
+      ref={(el) => {
+        if (el) noteRefs.current.set(section.id, el);
+        else noteRefs.current.delete(section.id);
+      }}
+      onMouseEnter={() => onHover(section.id)}
+      onMouseLeave={() => onHover(null)}
+      onClick={() => onSelect(section.id)}
+      className={cn(
+        "group rounded-xl border p-3.5 transition-all cursor-pointer",
+        isActive
+          ? "border-primary bg-primary/5 ring-1 ring-primary/30 shadow-xs"
+          : isHovered
+            ? "border-primary/50 bg-muted/40"
+            : "border-border/60 bg-card/40 hover:border-border hover:bg-card/70",
+      )}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-bold text-muted-foreground">#{section.ordinal}</span>
+
+          {section.kind === "visual_description" && (
+            <Badge
+              variant="secondary"
+              className="gap-1 bg-primary/10 text-primary border-primary/20 text-[11px]"
+            >
+              <Eye className="size-3" />
+              Visual Description
+            </Badge>
+          )}
+
+          {section.kind === "formula" && (
+            <Badge variant="outline" className="text-[11px] text-muted-foreground">
+              Formula
+            </Badge>
+          )}
+
+          {section.kind === "heading" && (
+            <Badge variant="outline" className="text-[11px] text-muted-foreground">
+              Heading
+            </Badge>
+          )}
+        </div>
+
+        {hasRegion && (
+          <span className="text-[10px] text-muted-foreground group-hover:text-primary flex items-center gap-0.5 transition-colors">
+            <Layers className="size-3" />
+            Region #{section.ordinal}
+          </span>
+        )}
+      </div>
+
+      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed">
+        {section.kind === "heading" ? (
+          <h3 className="font-bold text-foreground text-base tracking-tight my-1">
+            {section.content.replace(/^#{1,6}\s+/, "")}
+          </h3>
+        ) : (
+          <MarkdownRenderer>{section.content}</MarkdownRenderer>
+        )}
+      </div>
+
+      {section.warning && (
+        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-warning">
+          <AlertTriangle className="size-3" />
+          <span>{section.warning}</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentViewerProps) {
@@ -126,60 +415,11 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-background text-foreground">
-      {/* Top Toolbar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-muted/20 px-3 py-2 text-xs">
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="gap-1 font-normal text-muted-foreground">
-            <ImageIcon className="size-3 text-primary" />
-            Image Document
-          </Badge>
-          {segmentsWithRegions.length > 0 && (
-            <Badge variant="secondary" className="font-normal text-[11px]">
-              {segmentsWithRegions.length} visual{" "}
-              {segmentsWithRegions.length === 1 ? "region" : "regions"}
-            </Badge>
-          )}
-        </div>
-
-        {/* View Mode Switcher */}
-        <div className="flex items-center gap-1">
-          <div className="flex items-center rounded-lg border border-border/60 bg-background p-0.5">
-            <Button
-              type="button"
-              variant={viewMode === "split" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("split")}
-              className="h-6 px-2 text-xs font-medium cursor-pointer"
-              title="Split View"
-            >
-              <Columns2 className="size-3 mr-1" />
-              Split
-            </Button>
-            <Button
-              type="button"
-              variant={viewMode === "image" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("image")}
-              className="h-6 px-2 text-xs font-medium cursor-pointer"
-              title="Image Only"
-            >
-              <ImageIcon className="size-3 mr-1" />
-              Image
-            </Button>
-            <Button
-              type="button"
-              variant={viewMode === "notes" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("notes")}
-              className="h-6 px-2 text-xs font-medium cursor-pointer"
-              title="Notes Only"
-            >
-              <FileText className="size-3 mr-1" />
-              Notes
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ImageViewerToolbar
+        segmentsWithRegionsCount={segmentsWithRegions.length}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
 
       {/* Main Workspace Panels */}
       <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
@@ -191,56 +431,15 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
               viewMode === "split" ? "w-full lg:w-1/2" : "w-full",
             )}
           >
-            {/* Image Zoom & Tool Bar */}
-            <div className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-lg border border-border/80 bg-background/90 p-1 shadow-md backdrop-blur-xs">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleZoomOut}
-                disabled={zoom <= 0.5}
-                className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
-                title="Zoom Out"
-              >
-                <ZoomOut className="size-3.5" />
-              </Button>
-              <span className="min-w-[36px] text-center text-[11px] font-medium text-muted-foreground">
-                {Math.round(zoom * 100)}%
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleZoomIn}
-                disabled={zoom >= 3}
-                className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
-                title="Zoom In"
-              >
-                <ZoomIn className="size-3.5" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleResetZoom}
-                className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
-                title="Reset Zoom (100%)"
-              >
-                <RotateCcw className="size-3.5" />
-              </Button>
-              {segmentsWithRegions.length > 0 && (
-                <Button
-                  type="button"
-                  variant={showOverlays ? "secondary" : "ghost"}
-                  size="icon"
-                  onClick={() => setShowOverlays((v) => !v)}
-                  className="size-7 cursor-pointer"
-                  title={showOverlays ? "Hide Region Highlights" : "Show Region Highlights"}
-                >
-                  <Layers className="size-3.5" />
-                </Button>
-              )}
-            </div>
+            <ImageZoomBar
+              zoom={zoom}
+              showOverlaysToggle={segmentsWithRegions.length > 0}
+              showOverlays={showOverlays}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onResetZoom={handleResetZoom}
+              onToggleOverlays={() => setShowOverlays((v) => !v)}
+            />
 
             {/* Image Container Viewport */}
             <div
@@ -271,56 +470,16 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
                     className="max-h-[85vh] max-w-full rounded-md object-contain shadow-xs border border-border/40"
                   />
 
-                  {/* Bounding Box Highlights */}
-                  {showOverlays &&
-                    segmentsWithRegions.map((section) => {
-                      const region = section.locator?.imageRegion;
-                      if (!region) return null;
-
-                      const isActive = activeSegmentId === section.id;
-                      const isHovered = hoveredSegmentId === section.id;
-                      const isCitationTarget = isMatchingRegion(
-                        region,
-                        selectedLocator?.imageRegion,
-                      );
-
-                      return (
-                        <button
-                          key={section.id}
-                          type="button"
-                          data-testid="image-region-box"
-                          onClick={() => handleSelectSegment(section.id)}
-                          onMouseEnter={() => setHoveredSegmentId(section.id)}
-                          onMouseLeave={() => setHoveredSegmentId(null)}
-                          className={cn(
-                            "absolute rounded transition-all cursor-pointer pointer-events-auto",
-                            isActive || isCitationTarget
-                              ? "border-2 border-primary bg-primary/30 ring-2 ring-primary/60 shadow-lg z-30"
-                              : isHovered
-                                ? "border-2 border-primary bg-primary/20 ring-1 ring-primary/40 z-20"
-                                : "border border-primary/60 bg-primary/10 hover:border-primary hover:bg-primary/20 z-10",
-                          )}
-                          style={{
-                            left: `${Math.max(0, Math.min(100, region.x * 100))}%`,
-                            top: `${Math.max(0, Math.min(100, region.y * 100))}%`,
-                            width: `${Math.max(0, Math.min(100, region.width * 100))}%`,
-                            height: `${Math.max(0, Math.min(100, region.height * 100))}%`,
-                          }}
-                          aria-label={`Region #${section.ordinal}: ${section.kind}`}
-                        >
-                          <span
-                            className={cn(
-                              "absolute -top-3.5 -left-0.5 rounded px-1 py-0 text-[10px] font-bold shadow-xs whitespace-nowrap",
-                              isActive || isCitationTarget
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-primary/80 text-primary-foreground",
-                            )}
-                          >
-                            #{section.ordinal}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  {showOverlays && (
+                    <ImageRegionOverlays
+                      segmentsWithRegions={segmentsWithRegions}
+                      activeSegmentId={activeSegmentId}
+                      hoveredSegmentId={hoveredSegmentId}
+                      selectedRegion={selectedLocator?.imageRegion}
+                      onSelectSegment={handleSelectSegment}
+                      onHoverSegment={(id) => setHoveredSegmentId(id)}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -366,88 +525,17 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
                   No extracted text or visual analysis available for this image.
                 </div>
               ) : (
-                sections.map((section) => {
-                  const isActive = activeSegmentId === section.id;
-                  const isHovered = hoveredSegmentId === section.id;
-                  const hasRegion = Boolean(section.locator?.imageRegion);
-
-                  return (
-                    <div
-                      key={section.id}
-                      ref={(el) => {
-                        if (el) noteElementsRef.current.set(section.id, el);
-                        else noteElementsRef.current.delete(section.id);
-                      }}
-                      onMouseEnter={() => setHoveredSegmentId(section.id)}
-                      onMouseLeave={() => setHoveredSegmentId(null)}
-                      onClick={() => handleSelectSegment(section.id)}
-                      className={cn(
-                        "group rounded-xl border p-3.5 transition-all cursor-pointer",
-                        isActive
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30 shadow-xs"
-                          : isHovered
-                            ? "border-primary/50 bg-muted/40"
-                            : "border-border/60 bg-card/40 hover:border-border hover:bg-card/70",
-                      )}
-                    >
-                      {/* Section Card Header */}
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-muted-foreground">
-                            #{section.ordinal}
-                          </span>
-
-                          {section.kind === "visual_description" && (
-                            <Badge
-                              variant="secondary"
-                              className="gap-1 bg-primary/10 text-primary border-primary/20 text-[11px]"
-                            >
-                              <Eye className="size-3" />
-                              Visual Description
-                            </Badge>
-                          )}
-
-                          {section.kind === "formula" && (
-                            <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                              Formula
-                            </Badge>
-                          )}
-
-                          {section.kind === "heading" && (
-                            <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                              Heading
-                            </Badge>
-                          )}
-                        </div>
-
-                        {hasRegion && (
-                          <span className="text-[10px] text-muted-foreground group-hover:text-primary flex items-center gap-0.5 transition-colors">
-                            <Layers className="size-3" />
-                            Region #{section.ordinal}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Section Card Content */}
-                      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed">
-                        {section.kind === "heading" ? (
-                          <h3 className="font-bold text-foreground text-base tracking-tight my-1">
-                            {section.content.replace(/^#{1,6}\s+/, "")}
-                          </h3>
-                        ) : (
-                          <MarkdownRenderer>{section.content}</MarkdownRenderer>
-                        )}
-                      </div>
-
-                      {section.warning && (
-                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-warning">
-                          <AlertTriangle className="size-3" />
-                          <span>{section.warning}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
+                sections.map((section) => (
+                  <ImageNoteCard
+                    key={section.id}
+                    section={section}
+                    isActive={activeSegmentId === section.id}
+                    isHovered={hoveredSegmentId === section.id}
+                    onHover={(id) => setHoveredSegmentId(id)}
+                    onSelect={handleSelectSegment}
+                    noteRefs={noteElementsRef}
+                  />
+                ))
               )}
             </div>
           </div>

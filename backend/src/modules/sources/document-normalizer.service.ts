@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { JSDOM } from 'jsdom';
 import { ScrapedPage } from './web-scraper.service';
+import type {
+  FirecrawlDocumentInput,
+  FirecrawlMetaInput,
+} from '../crawler/crawler.types';
 import type { VisionExtractionResult } from './vision-extraction.port';
 import type { TranscriptionResult } from './transcription.port';
 import type { YouTubeAcquisitionResult } from './youtube-acquisition.service';
@@ -15,6 +19,7 @@ export type ExtractionMethod =
   | 'file'
   | 'readability'
   | 'playwright'
+  | 'firecrawl'
   | 'vision'
   | 'audio'
   | 'transcription'
@@ -96,7 +101,7 @@ export interface FileDocumentInput {
 /** Bump when normalization rules change; used for idempotent re-processing. */
 export const NORMALIZATION_VERSION = 1;
 /** Bump when the extraction adapters change; used for re-processing decisions. */
-export const EXTRACTOR_VERSION = '1';
+export const EXTRACTOR_VERSION = '2-firecrawl';
 
 /** Inline citation markers that have already been removed by DOM cleaning are
  * stripped again only when directly anchored to sentence punctuation, so
@@ -119,6 +124,19 @@ function stripProvenCitations(text: string): string {
 
 export function contentHashOf(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex');
+}
+
+function asMetadataString(
+  metadata: Record<string, unknown>,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 function singleSection(content: string): DocumentSection[] {
@@ -360,6 +378,35 @@ export class DocumentNormalizerService {
   }
 
   /** Vision extraction: maps structured visual/text segments into sections with kind & imageRegion locator. */
+  fromFirecrawlResult(
+    doc: FirecrawlDocumentInput,
+    meta: FirecrawlMetaInput,
+  ): NormalizedDocument {
+    const raw = doc.markdown ?? '';
+    const normalized = normalizeProse(raw);
+    const sections = sectionsFromMarkdown(raw);
+    const metadata = doc.metadata ?? {};
+
+    return {
+      title:
+        doc.title?.trim() || asMetadataString(metadata, 'title') || 'Untitled',
+      text: normalized,
+      markdown: raw,
+      sourceUrl: meta.sourceUrl,
+      canonicalUrl: meta.canonicalUrl,
+      fetchedUrl: meta.fetchedUrl,
+      language: asMetadataString(metadata, 'language'),
+      author: asMetadataString(metadata, 'author'),
+      siteName: asMetadataString(metadata, 'siteName'),
+      publishedAt: asMetadataString(metadata, 'publishedTime', 'publishedAt'),
+      modifiedAt: asMetadataString(metadata, 'modifiedTime', 'modifiedAt'),
+      extractionMethod: 'firecrawl',
+      contentType: meta.contentType,
+      contentHash: contentHashOf(normalized),
+      sections,
+    };
+  }
+
   fromImageResult(
     result: VisionExtractionResult,
     options: ImageDocumentOptions = {},

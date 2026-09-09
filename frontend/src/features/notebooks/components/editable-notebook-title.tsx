@@ -89,7 +89,7 @@ export function EditableNotebookTitle({ id }: { id: string }) {
     <button
       type="button"
       onClick={() => setIsEditing(true)}
-      className="text-sm font-semibold px-2 py-0.5 border border-transparent hover:border-foreground/20 cursor-text select-none text-foreground transition-all duration-150 rounded-xl min-w-0 max-w-full truncate block text-left"
+      className="text-sm font-semibold px-2 py-0.5 border border-transparent hover:border-foreground/20 cursor-text select-none text-foreground transition-colors duration-150 rounded-xl min-w-0 max-w-full truncate block text-left"
     >
       <span className="block truncate max-w-[55vw] sm:max-w-[60vw] lg:max-w-none">
         {currentTitle}

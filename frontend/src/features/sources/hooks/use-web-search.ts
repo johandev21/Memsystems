@@ -69,20 +69,17 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
   const searchError =
     job?.status === "failed" ? (job.lastError ?? "Web search failed") : localError;
 
-  const runSearch = useCallback(
-    async (modelId: string) => {
-      const query = queryDraft.trim();
-      if (!query) return;
-      setLocalError(null);
-      try {
-        const job = await startWebSearchJob(notebookId, { query, modelId });
-        queryClient.setQueryData(webSearchJobQueryOptions(notebookId).queryKey, job);
-      } catch (err) {
-        setLocalError(err instanceof Error ? err.message : "Web search failed");
-      }
-    },
-    [notebookId, queryClient, queryDraft],
-  );
+  const runSearch = useCallback(async () => {
+    const query = queryDraft.trim();
+    if (!query) return;
+    setLocalError(null);
+    try {
+      const job = await startWebSearchJob(notebookId, { query });
+      queryClient.setQueryData(webSearchJobQueryOptions(notebookId).queryKey, job);
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Web search failed");
+    }
+  }, [notebookId, queryClient, queryDraft]);
 
   const toggleCandidate = useCallback(
     (url: string) => {
@@ -102,81 +99,73 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
 
   const clearSelection = useCallback(() => setSelectedUrls(new Set()), []);
 
-  const importSelected = useCallback(
-    async (modelId: string) => {
-      const selected = candidates.filter((c) => selectedUrls.has(c.url));
-      if (selected.length === 0 || importing) return;
+  const importSelected = useCallback(async () => {
+    const selected = candidates.filter((c) => selectedUrls.has(c.url));
+    if (selected.length === 0 || importing) return;
 
-      setImporting(true);
-      try {
-        const result = await importWebSources(notebookId, {
-          candidates: selected.map((c) => ({
-            url: c.url,
-            title: c.title,
-            description: c.description,
-          })),
-          modelId,
-          query: job?.query ?? "",
-        });
-        const nextResults = new Map<string, WebSearchImportResultItem>();
-        for (const r of result.results) {
-          nextResults.set(r.url, r);
-        }
-        setImportResults(nextResults);
-        setSelectedUrls((previous) => {
-          const next = new Set(previous);
-          for (const item of result.results) next.delete(item.url);
-          return next;
-        });
-        await queryClient.invalidateQueries({
-          queryKey: ["sources", notebookId],
-        });
-      } catch (err) {
-        setLocalError(err instanceof Error ? err.message : "Import failed");
-      } finally {
-        setImporting(false);
-      }
-    },
-    [candidates, importing, job?.query, notebookId, queryClient, selectedUrls],
-  );
-
-  const retryFailed = useCallback(
-    async (modelId: string) => {
-      const failed = candidates.filter((c) => {
-        const r = importResults.get(c.url);
-        return r?.status === "scrape_failed";
+    setImporting(true);
+    try {
+      const result = await importWebSources(notebookId, {
+        candidates: selected.map((c) => ({
+          url: c.url,
+          title: c.title,
+          description: c.description,
+        })),
+        query: job?.query ?? "",
       });
-      if (failed.length === 0 || importing) return;
-
-      setImporting(true);
-      try {
-        const result = await importWebSources(notebookId, {
-          candidates: failed.map((c) => ({
-            url: c.url,
-            title: c.title,
-            description: c.description,
-          })),
-          modelId,
-          query: job?.query ?? "",
-        });
-        setImportResults((prev) => {
-          const next = new Map(prev);
-          for (const r of result.results) {
-            next.set(r.url, r);
-          }
-          return next;
-        });
-        await queryClient.invalidateQueries({
-          queryKey: ["sources", notebookId],
-        });
-      } catch (err) {
-        setLocalError(err instanceof Error ? err.message : "Retry failed");
-      } finally {
-        setImporting(false);
+      const nextResults = new Map<string, WebSearchImportResultItem>();
+      for (const r of result.results) {
+        nextResults.set(r.url, r);
       }
-    },
-    [candidates, importResults, importing, job?.query, notebookId, queryClient],
-  );
+      setImportResults(nextResults);
+      setSelectedUrls((previous) => {
+        const next = new Set(previous);
+        for (const item of result.results) next.delete(item.url);
+        return next;
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["sources", notebookId],
+      });
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  }, [candidates, importing, job?.query, notebookId, queryClient, selectedUrls]);
+
+  const retryFailed = useCallback(async () => {
+    const failed = candidates.filter((c) => {
+      const r = importResults.get(c.url);
+      return r?.status === "scrape_failed";
+    });
+    if (failed.length === 0 || importing) return;
+
+    setImporting(true);
+    try {
+      const result = await importWebSources(notebookId, {
+        candidates: failed.map((c) => ({
+          url: c.url,
+          title: c.title,
+          description: c.description,
+        })),
+        query: job?.query ?? "",
+      });
+      setImportResults((prev) => {
+        const next = new Map(prev);
+        for (const r of result.results) {
+          next.set(r.url, r);
+        }
+        return next;
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["sources", notebookId],
+      });
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Retry failed");
+    } finally {
+      setImporting(false);
+    }
+  }, [candidates, importResults, importing, job?.query, notebookId, queryClient]);
 
   const clearResults = useCallback(async (): Promise<boolean> => {
     if (clearInFlight.current) return false;

@@ -27,10 +27,12 @@ async function resizeBannerImage(
   quality = 0.85,
 ): Promise<File> {
   return new Promise((resolve) => {
-    const img = new window.Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
+    const reader = new FileReader();
+    reader.onerror = () => resolve(file);
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = () => resolve(file);
+      img.onload = () => {
       let { width, height } = img;
       if (width > maxWidth || height > maxHeight) {
         const ratio = Math.min(maxWidth / width, maxHeight / height);
@@ -63,12 +65,10 @@ async function resizeBannerImage(
         quality,
       );
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(file);
-    };
-    img.src = url;
-  });
+    img.src = reader.result as string;
+  };
+  reader.readAsDataURL(file);
+});
 }
 
 export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUploadDialogProps) {

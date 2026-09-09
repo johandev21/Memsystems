@@ -60,6 +60,13 @@ export function reconcileExpandedIds(
   return next;
 }
 
+export function computeExpandedForNotebook(
+  notebookId: string,
+  folders: readonly FolderDTO[],
+): Set<string> {
+  return getInitialExpandedIds(folders, loadPersisted(notebookId));
+}
+
 /**
  * Persists expanded folder IDs per notebook, prunes stale IDs,
  * and expands newly encountered top-level folders by default.
@@ -68,57 +75,30 @@ export function usePersistentExpandedFolders(
   notebookId: string,
   folders: readonly FolderDTO[],
 ): [Set<string>, (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void] {
-  const storageKey = getStorageKey(notebookId);
+  const [openIds, setOpenIds] = useState<Set<string>>(() =>
+    computeExpandedForNotebook(notebookId, folders),
+  );
 
-  const [openIds, setOpenIds] = useState<Set<string>>(() => {
-    const persisted = loadPersisted(notebookId);
-    if (persisted) {
-      // Prune stale on init
-      const existing = new Set(folders.filter((f) => !f.deletedAt).map((f) => f.id));
-      const pruned = new Set([...persisted].filter((id) => existing.has(id)));
-      // If persisted was non-empty but pruned became empty due to stale, keep pruned (user had no valid expansion)
-      // Also expand new top-level if no persisted? Actually if persisted existed, we should not auto-expand new top-level yet — that will be handled in effect.
-      return pruned;
-    }
-    // No persisted: expand top-level folders by default
-    return new Set(folders.filter((f) => f.parentId === null && !f.deletedAt).map((f) => f.id));
-  });
+  const [prevNotebookId, setPrevNotebookId] = useState(notebookId);
+  const prevFolderIdsRef = useRef<Set<string> | null>(null);
+  const folderIdsNotebookRef = useRef<string>(notebookId);
 
-  const prevFolderIdsRef = useRef<Set<string>>(getActiveFolderIds(folders));
-  const prevNotebookIdRef = useRef<string>(notebookId);
-
-  // When notebookId changes, load persisted for new notebook
-  useEffect(() => {
-    if (prevNotebookIdRef.current !== notebookId) {
-      prevNotebookIdRef.current = notebookId;
-      const persisted = loadPersisted(notebookId);
-      if (persisted) {
-        const existing = new Set(folders.filter((f) => !f.deletedAt).map((f) => f.id));
-        const pruned = new Set([...persisted].filter((id) => existing.has(id)));
-        // Expand newly encountered top-level for new notebook if persisted empty? Actually if persisted null, expand top-level.
-        if (pruned.size === 0 && !persisted.size) {
-          // no persisted, expand top-level
-          const topLevel = folders
-            .filter((f) => f.parentId === null && !f.deletedAt)
-            .map((f) => f.id);
-          setOpenIds(new Set(topLevel));
-        } else {
-          setOpenIds(pruned);
-        }
-      } else {
-        const topLevel = folders
-          .filter((f) => f.parentId === null && !f.deletedAt)
-          .map((f) => f.id);
-        setOpenIds(new Set(topLevel));
-      }
-      prevFolderIdsRef.current = getActiveFolderIds(folders);
-      return;
-    }
-  }, [notebookId, folders, storageKey]);
+  // Adjust persisted expansion when the notebook changes (render-phase
+  // adjustment, no effect). localStorage read here mirrors the initializer.
+  if (prevNotebookId !== notebookId) {
+    setPrevNotebookId(notebookId);
+    setOpenIds(computeExpandedForNotebook(notebookId, folders));
+  }
 
   // Handle folder list changes: prune stale and expand newly encountered top-level
   useEffect(() => {
     const currentIds = getActiveFolderIds(folders);
+    if (prevFolderIdsRef.current === null || folderIdsNotebookRef.current !== notebookId) {
+      folderIdsNotebookRef.current = notebookId;
+      prevFolderIdsRef.current = currentIds;
+      return;
+    }
+
     const prevIds = prevFolderIdsRef.current;
 
     // Detect newly encountered top-level folders (IDs that weren't in prev set)
@@ -145,7 +125,7 @@ export function usePersistentExpandedFolders(
     prevFolderIdsRef.current = currentIds;
     // We intentionally do not include openIds in deps to avoid loop; we manage via state update
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folders]);
+  }, [folders, notebookId]);
 
   // Persist whenever openIds changes
   useEffect(() => {

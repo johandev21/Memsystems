@@ -1,14 +1,6 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { isThemeName, THEME_STORAGE_KEY, THEMES, type ThemeName } from "../utils/themes";
-
-export interface PaletteContextValue {
-  theme: ThemeName;
-  setTheme: (theme: ThemeName) => void;
-  themes: typeof THEMES;
-  isHydrated: boolean;
-}
-
-export const PaletteContext = createContext<PaletteContextValue | null>(null);
+import { PaletteContext, type PaletteContextValue } from "./palette-context";
 
 function getInitialTheme(): ThemeName {
   if (typeof window === "undefined") return "default";
