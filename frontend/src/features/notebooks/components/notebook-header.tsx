@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
-import { Logo } from "@/components/layout";
+import { Logo, SettingsLink } from "@/components/layout";
 import { EditableNotebookTitle } from "./editable-notebook-title";
 
 export function NotebookHeader({ id }: { id: string }) {
@@ -22,13 +21,7 @@ export function NotebookHeader({ id }: { id: string }) {
       </div>
 
       <div className="shrink-0">
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <Settings className="size-5" />
-        </Link>
+        <SettingsLink />
       </div>
     </header>
   );
