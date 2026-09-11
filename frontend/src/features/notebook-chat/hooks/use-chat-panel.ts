@@ -9,10 +9,12 @@ import { useConnectionStatus } from "@/features/ai";
 import { useModelPersistence } from "@/features/notebooks";
 import {
   type ChatMessageDTO,
+  type ChatRequest,
   type CitedSourceDTO,
   chatMessagesQueryOptions,
   clearChatHistory,
 } from "../api/chat";
+import i18n from "@/shared/i18n";
 import { modelsQueryOptions } from "@/features/ai";
 import { notebookQueryOptions } from "@/features/notebooks";
 
@@ -97,6 +99,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       credentials: "include",
       prepareSendMessagesRequest: ({ messages }) => {
         const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+        const language = (i18n.resolvedLanguage ?? i18n.language ?? "en").split("-")[0];
         return {
           body: {
             model: selectedModelRef.current,
@@ -107,7 +110,8 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
               parts: m.parts,
               metadata: m.metadata,
             })),
-          },
+            language,
+          } satisfies ChatRequest,
         };
       },
     });

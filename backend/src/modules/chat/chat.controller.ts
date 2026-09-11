@@ -51,6 +51,7 @@ const chatRequestSchema = z.object({
   model: z.string().min(1),
   message: messageSchema.optional(),
   regenerateMessageId: z.string().optional(),
+  language: z.string().min(1).max(35).optional(),
 });
 
 @Controller('notebooks/:id/chat')
@@ -102,6 +103,7 @@ export class ChatController {
           messageId: lastUserMessage?.id,
           regenerateMessageId: body.regenerateMessageId,
           model: body.model,
+          language: body.language,
           abortSignal: generationController.signal,
         },
       );

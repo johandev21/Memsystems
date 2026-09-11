@@ -52,6 +52,7 @@ interface GenerationState {
       practiceProblemsOptions?: PracticeProblemsGenerationOptions;
       caseStudyOptions?: CaseStudyGenerationOptions;
       slidesOptions?: SlidesGenerationOptions;
+      language?: string;
     },
     queryClient: QueryClient,
     onComplete?: (materialId: string) => void,
@@ -62,6 +63,10 @@ interface GenerationState {
 
 export const GENERATION_STALL_TIMEOUT_MS = 5 * 60 * 1000;
 export const GENERATION_ERROR_AUTO_DISMISS_MS = 30_000;
+
+function activeBaseLanguage(): string {
+  return (i18n.resolvedLanguage ?? i18n.language ?? "en").split("-")[0];
+}
 
 function createTempGenerationId(): string {
   return `temp-${Math.random().toString(36).substring(7)}-${Date.now()}`;
@@ -199,7 +204,10 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
       }));
       scheduleStallCheck(tempId, input.kind);
 
-      const { stream, requestIdPromise } = startGeneration(notebookId, input);
+      const { stream, requestIdPromise } = startGeneration(notebookId, {
+        ...input,
+        language: activeBaseLanguage(),
+      });
 
       let requestId: string;
       try {

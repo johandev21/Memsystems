@@ -7,6 +7,7 @@ import { studyMaterials } from '../../database/schema';
 import { AiService } from '../ai/ai.service';
 import type { GatewayRequestOptions } from '../ai/providers/gateway.provider';
 import { toClientStreamError } from '../ai/stream-error';
+import { languageDirective } from '../../common/i18n/language';
 import { DRIZZLE } from '../database/database.module';
 import { getPromptTemplate } from './prompts';
 import type {
@@ -69,6 +70,7 @@ export class StreamHandler {
       brief: string;
       folderId?: string | null;
       model?: string;
+      language?: string;
       questionCount?: number;
       difficulty?: 'easy' | 'medium' | 'hard';
       cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
@@ -102,7 +104,8 @@ export class StreamHandler {
     onError: (error: string) => void,
   ) {
     const promptTemplate = getPromptTemplate(input.kind);
-    const systemPrompt = promptTemplate.instructions;
+    const systemPrompt =
+      promptTemplate.instructions + languageDirective(input.language);
     const concatenatedSources = sourceTexts
       .map(
         (s) =>

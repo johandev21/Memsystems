@@ -19,6 +19,7 @@ export interface StartGenerationInput {
   sourceIds: string[];
   folderId?: string | null;
   model?: string;
+  language?: string;
   questionCount?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
