@@ -85,7 +85,11 @@ describe('AiController gateway keys', () => {
     await c.updateSettings({ gatewayApiKey: 'ag_live_new' });
     expect(
       (c as any).userSettingsService.setGatewayApiKey,
-    ).toHaveBeenCalledWith('single-user', 'ag_live_new');
+    ).toHaveBeenCalledWith('ag_live_new');
+    expect((c as any).modelSyncService.refreshModels).toHaveBeenCalledWith(
+      'key-saved',
+      'ag_live_new',
+    );
   });
 
   it('rejects invalid gateway keys without storing them', async () => {
@@ -109,7 +113,10 @@ describe('AiController gateway keys', () => {
     await c.updateSettings({ gatewayApiKey: null });
     expect(
       (c as any).userSettingsService.removeGatewayApiKey,
-    ).toHaveBeenCalledWith('single-user');
+    ).toHaveBeenCalledWith();
+    expect((c as any).modelSyncService.refreshModels).toHaveBeenCalledWith(
+      'key-removed',
+    );
   });
 
   it('rejects the legacy per-provider payload with a migration message', async () => {
@@ -127,6 +134,6 @@ describe('AiController gateway keys', () => {
     await c.deleteSettings();
     expect(
       (c as any).userSettingsService.removeGatewayApiKey,
-    ).toHaveBeenCalledWith('single-user');
+    ).toHaveBeenCalledWith();
   });
 });

@@ -367,7 +367,7 @@ describe('ChatService streaming lifecycle', () => {
       model: 'anthropic/claude-fable-5.1',
     });
 
-    expect(aiService.getGatewayRequestOptions).toHaveBeenCalledWith('user-1');
+    expect(aiService.getGatewayRequestOptions).toHaveBeenCalledWith();
     expect(aiService.getGatewayRequestOptions).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),

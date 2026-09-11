@@ -93,9 +93,14 @@ export class AiController {
     if (body.gatewayApiKey !== undefined) {
       if (body.gatewayApiKey == null || body.gatewayApiKey.trim() === '') {
         await this.userSettingsService.removeGatewayApiKey();
+        await this.modelSyncService.refreshModels('key-removed');
       } else {
-        await this.verifyGatewayKey(body.gatewayApiKey.trim());
-        await this.userSettingsService.setGatewayApiKey(body.gatewayApiKey);
+        const key = body.gatewayApiKey.trim();
+        await this.verifyGatewayKey(key);
+        await this.userSettingsService.setGatewayApiKey(key);
+        // Keep the catalog fresh immediately; background startup/cron syncs
+        // also fall back to the stored key.
+        await this.modelSyncService.refreshModels('key-saved', key);
       }
       this.connectionService.invalidateCache();
     }
@@ -106,6 +111,7 @@ export class AiController {
   @Delete('connection/settings')
   async deleteSettings() {
     await this.userSettingsService.removeGatewayApiKey();
+    await this.modelSyncService.refreshModels('key-removed');
     this.connectionService.invalidateCache();
     return this.connectionService.snapshot();
   }

@@ -161,15 +161,8 @@ describe('TranscriptionService', () => {
 
     const result = await service.transcribe(input);
     expect(result.title).toBe('lecture_01');
-    expect(result.rawText).toBe('[Audio: lecture_01.mp3]');
-    expect(result.segments).toEqual([
-      {
-        speaker: 'Speaker A',
-        content: '[Audio: lecture_01.mp3]',
-        startOffsetMs: 0,
-        endOffsetMs: 1000,
-      },
-    ]);
+    expect(result.rawText).toBe('');
+    expect(result.segments).toEqual([]);
     expect(result.warnings?.[0]).toContain('Audio model unavailable');
   });
 
@@ -187,7 +180,9 @@ describe('TranscriptionService', () => {
 
     const result = await service.transcribe(input);
     expect(result.title).toBe('interview');
-    expect(result.segments[0].content).toBe('[Audio: interview.wav]');
+    expect(result.rawText).toBe('');
+    expect(result.segments).toEqual([]);
+    expect(result.warnings?.[0]).toContain('Audio model unavailable');
   });
 
   it('invokes AI model and parses structured segments when audio model is available', async () => {
@@ -275,7 +270,8 @@ describe('TranscriptionService', () => {
 
     const result = await service.transcribe(input);
     expect(result.title).toBe('pod');
-    expect(result.segments[0].content).toBe('[Audio: pod.wav]');
+    expect(result.rawText).toBe('');
+    expect(result.segments).toEqual([]);
     expect(result.warnings?.[0]).toContain('Provider rate limit reached');
   });
 });
