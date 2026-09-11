@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
 export interface VideoPlayerViewProps {
@@ -25,6 +26,7 @@ export function VideoPlayerView({
   onTimeUpdate,
   onLoadedMetadata,
 }: VideoPlayerViewProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <>
       {isYouTube && youtubeVideoId ? (
@@ -53,15 +55,19 @@ export function VideoPlayerView({
       {isLoadingVideo && !isYouTube && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs text-white gap-2">
           <Loader2 className="size-7 animate-spin text-primary" />
-          <span className="text-xs font-medium">Loading video…</span>
+          <span className="text-xs font-medium">{t("videoPlayer.loadingVideo")}</span>
         </div>
       )}
 
       {isVideoError && !videoSrc && !isYouTube && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-warning gap-2 p-4 text-center">
           <AlertTriangle className="size-7 text-destructive" />
-          <span className="text-sm font-semibold text-foreground">Video stream unavailable</span>
-          <span className="text-xs text-muted-foreground">The source file could not be loaded.</span>
+          <span className="text-sm font-semibold text-foreground">
+            {t("videoPlayer.streamUnavailable")}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {t("videoPlayer.videoLoadFailed")}
+          </span>
         </div>
       )}
     </>

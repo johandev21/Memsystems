@@ -7,6 +7,7 @@ import {
   RotateCcwIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Message,
@@ -67,6 +68,7 @@ export function AssistantMessage({
   onRegenerate,
   showRegenerate = true,
 }: AssistantMessageProps) {
+  const { t } = useTranslation("chat");
   const versionList = useMemo(() => {
     if (versions && versions.length > 0) return versions;
     if (message) return [message];
@@ -129,12 +131,15 @@ export function AssistantMessage({
                 disabled={activeIndex === 0}
                 onClick={() => setSelectedVersionIndex((i) => Math.max(0, i - 1))}
                 className="flex size-6 items-center justify-center rounded-md transition-colors hover:bg-surface-2 hover:text-text-primary disabled:pointer-events-none disabled:opacity-30 cursor-pointer active:scale-95"
-                aria-label="Previous version"
+                aria-label={t("assistant.previousVersion")}
               >
                 <ChevronLeftIcon className="size-3.5" />
               </button>
               <span className="min-w-[3.25rem] text-center text-xs font-medium">
-                {activeIndex + 1} of {versionList.length}
+                {t("assistant.branchPage", {
+                  current: activeIndex + 1,
+                  total: versionList.length,
+                })}
               </span>
               <button
                 type="button"
@@ -143,7 +148,7 @@ export function AssistantMessage({
                   setSelectedVersionIndex((i) => Math.min(versionList.length - 1, i + 1))
                 }
                 className="flex size-6 items-center justify-center rounded-md transition-colors hover:bg-surface-2 hover:text-text-primary disabled:pointer-events-none disabled:opacity-30 cursor-pointer active:scale-95"
-                aria-label="Next version"
+                aria-label={t("assistant.nextVersion")}
               >
                 <ChevronRightIcon className="size-3.5" />
               </button>
@@ -162,7 +167,7 @@ export function AssistantMessage({
                       disabled={content.isStreaming}
                       onClick={onRegenerate}
                       className="flex size-7 items-center justify-center rounded-lg transition-colors hover:bg-surface-2 hover:text-text-primary disabled:opacity-40 cursor-pointer active:scale-95"
-                      aria-label="Regenerate response"
+                      aria-label={t("assistant.regenerateResponse")}
                     >
                       <RotateCcwIcon
                         className={cn("size-3.5", content.isStreaming && "animate-spin")}
@@ -170,7 +175,7 @@ export function AssistantMessage({
                     </button>
                   }
                 />
-                <TooltipContent>Regenerate response</TooltipContent>
+                <TooltipContent>{t("assistant.regenerateResponse")}</TooltipContent>
               </Tooltip>
             )}
 
@@ -181,7 +186,7 @@ export function AssistantMessage({
                     type="button"
                     onClick={handleCopy}
                     className="flex size-7 items-center justify-center rounded-lg transition-colors hover:bg-surface-2 hover:text-text-primary cursor-pointer active:scale-95"
-                    aria-label="Copy message"
+                    aria-label={t("assistant.copyMessage")}
                   >
                     {copied ? (
                       <CheckIcon className="size-3.5 text-primary" />
@@ -191,7 +196,9 @@ export function AssistantMessage({
                   </button>
                 }
               />
-              <TooltipContent>{copied ? "Copied!" : "Copy message"}</TooltipContent>
+              <TooltipContent>
+                {copied ? t("assistant.copied") : t("assistant.copyMessage")}
+              </TooltipContent>
             </Tooltip>
           </div>
         </div>

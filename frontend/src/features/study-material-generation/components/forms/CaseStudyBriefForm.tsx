@@ -7,6 +7,7 @@ import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
@@ -16,8 +17,16 @@ const QUESTION_PRESETS = [2, 4, 6, 8] as const;
 const MAX_QUESTIONS = 10;
 
 const PERSPECTIVE_OPTIONS = [
-  { id: false, title: "Single lens", desc: "One focused analysis" },
-  { id: true, title: "Compare alternatives", desc: "Contrast viewpoints sources support" },
+  {
+    id: false,
+    titleKey: "caseStudy.perspective.single.title",
+    descKey: "caseStudy.perspective.single.desc",
+  },
+  {
+    id: true,
+    titleKey: "caseStudy.perspective.compare.title",
+    descKey: "caseStudy.perspective.compare.desc",
+  },
 ] as const;
 
 export function CaseStudyBriefForm({
@@ -25,9 +34,10 @@ export function CaseStudyBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Case Study",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   const [step, setStep] = useState<1 | 2>(1);
   const [questionCount, setQuestionCount] = useState<number>(
     value.caseStudyOptions?.questionCount ?? value.questionCount ?? 4,
@@ -48,7 +58,7 @@ export function CaseStudyBriefForm({
   const hasInstructions = value.brief.trim().length > 0 || focus.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  const questionLabel = `${questionCount} ${questionCount === 1 ? "Question" : "Questions"}`;
+  const questionLabel = t("caseStudy.questionCount", { count: questionCount });
 
   const update = (patch: Partial<BriefFormData>) => {
     onChange(patch);
@@ -93,7 +103,11 @@ export function CaseStudyBriefForm({
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <BriefWizardHeader title="Case Study Setup" step={step} onStepChange={setStep} />
+      <BriefWizardHeader
+        title={t("wizard.title", { kind: t("kinds.case_study") })}
+        step={step}
+        onStepChange={setStep}
+      />
 
       {step === 1 ? (
         <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
@@ -101,7 +115,7 @@ export function CaseStudyBriefForm({
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
                 <Label className="text-sm font-medium text-text-primary">
-                  1. Discussion Questions
+                  {t("caseStudy.discussionQuestionsLabel")}
                 </Label>
                 <span className="text-xs font-medium text-primary">{questionLabel}</span>
               </div>
@@ -138,7 +152,7 @@ export function CaseStudyBriefForm({
                       onChange={(e) => handleCustomChange(e.target.value)}
                       onBlur={handleCustomBlur}
                       placeholder="1-10"
-                      aria-label="Custom question count"
+                      aria-label={t("caseStudy.customQuestionAria")}
                       className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
                       autoFocus
                     />
@@ -158,20 +172,22 @@ export function CaseStudyBriefForm({
                       "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
                     )}
                   >
-                    Custom
+                    {t("actions.custom")}
                   </button>
                 )}
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium text-text-primary">2. Perspective</Label>
+              <Label className="text-sm font-medium text-text-primary">
+                {t("caseStudy.perspectiveLabel")}
+              </Label>
               <div className="grid grid-cols-2 gap-2">
                 {PERSPECTIVE_OPTIONS.map((opt) => {
                   const selected = comparePerspectives === opt.id;
                   return (
                     <button
-                      key={opt.title}
+                      key={opt.titleKey}
                       type="button"
                       aria-pressed={selected}
                       onClick={() => {
@@ -184,8 +200,10 @@ export function CaseStudyBriefForm({
                       )}
                     >
                       <span className="flex-1 min-w-0">
-                        <span className="block text-xs font-semibold">{opt.title}</span>
-                        <span className="block text-xs leading-tight opacity-80">{opt.desc}</span>
+                        <span className="block text-xs font-semibold">{t(opt.titleKey)}</span>
+                        <span className="block text-xs leading-tight opacity-80">
+                          {t(opt.descKey)}
+                        </span>
                       </span>
                     </button>
                   );
@@ -195,20 +213,20 @@ export function CaseStudyBriefForm({
 
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-text-primary">
-                3. Knowledge Sources
+                {t("fields.knowledgeSourcesStep3")}
                 {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <GenerationSourcePopover
                 sources={sources}
                 selectedIds={value.sourceIds}
                 onChange={(sourceIds) => update({ sourceIds })}
-                emptyMessage="No sources in notebook. Case study will generate using general knowledge."
+                emptyMessage={t("knowledge.emptySources", { kind: t("kinds.case_study") })}
               />
             </div>
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-transparent">
-            <span className="text-xs text-text-faint">Configure focus areas next</span>
+            <span className="text-xs text-text-faint">{t("wizard.nextHintFocus")}</span>
             <Button
               type="button"
               onClick={() => setStep(2)}
@@ -217,7 +235,7 @@ export function CaseStudyBriefForm({
                 CTA_BUTTON_CLASS,
               )}
             >
-              Next Step
+              {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </Button>
           </div>
@@ -230,7 +248,7 @@ export function CaseStudyBriefForm({
                 htmlFor="brief-case-study-focus"
                 className="text-sm font-medium text-text-primary"
               >
-                Concepts to Apply
+                {t("caseStudy.conceptsToApplyLabel")}
               </Label>
               <Textarea
                 id="brief-case-study-focus"
@@ -239,7 +257,7 @@ export function CaseStudyBriefForm({
                   setFocus(e.target.value);
                   updateCaseStudyOptions({ focus: e.target.value });
                 }}
-                placeholder="e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives..."
+                placeholder={t("caseStudy.conceptsPlaceholder")}
                 className="min-h-[80px] max-h-[160px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
@@ -247,21 +265,23 @@ export function CaseStudyBriefForm({
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="brief-case-study" className="text-sm font-medium text-text-primary">
-                Custom Instructions
+                {t("fields.customInstructions")}
                 {!hasSources && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <Textarea
                 id="brief-case-study"
                 value={value.brief}
                 onChange={(e) => update({ brief: e.target.value })}
-                placeholder="Describe what topics or focus areas to include in this case study..."
+                placeholder={t("caseStudy.instructionsPlaceholder")}
                 className="min-h-[80px] max-h-[160px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+              <Label className="text-xs font-medium text-text-tertiary">
+                {t("fields.destinationFolder")}
+              </Label>
               <FolderPicker
                 notebookId={notebookId}
                 value={value.folderId}
@@ -279,7 +299,7 @@ export function CaseStudyBriefForm({
               className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
             >
               <ArrowLeft className="size-4" />
-              Back
+              {t("actions.back")}
             </Button>
             <Button
               type="button"
@@ -290,7 +310,7 @@ export function CaseStudyBriefForm({
               disabled={!canSubmit}
               onClick={onSubmit}
             >
-              {submitLabel}
+              {submitLabel ?? t("actions.generateKind", { kind: t("kinds.case_study") })}
             </Button>
           </div>
         </div>

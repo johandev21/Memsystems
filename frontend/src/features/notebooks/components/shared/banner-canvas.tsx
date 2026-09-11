@@ -1,5 +1,6 @@
 import { AlertCircle, Check, ImagePlus, Move, Pencil, Trash2, X } from "lucide-react";
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { Input } from "@/components/ui/input";
@@ -79,31 +80,43 @@ export function BannerEditToolbar({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <>
       <div className="absolute left-3 top-3 flex items-center gap-1.5">
         <Button variant="secondary" size="sm" onClick={onOpenImageDialog}>
           <ImagePlus data-icon="inline-start" />
-          {visibleBannerUrl ? "Change" : "Add banner"}
+          {visibleBannerUrl ? t("banner.change") : t("banner.add")}
         </Button>
         {visibleBannerUrl ? (
-          <Button variant="secondary" size="icon-sm" aria-label="Remove banner" onClick={onRemoveBanner}>
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            aria-label={t("banner.remove")}
+            onClick={onRemoveBanner}
+          >
             <Trash2 />
           </Button>
         ) : null}
         {visibleBannerUrl ? (
           <span className="pointer-events-none hidden items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs backdrop-blur-sm sm:flex">
-            <Move className="size-3" /> Drag to reposition
+            <Move className="size-3" /> {t("banner.dragToReposition")}
           </span>
         ) : null}
       </div>
       <div className="absolute right-3 top-3 flex items-center gap-1.5">
-        <Button variant="secondary" size="icon-sm" aria-label="Cancel edits" onClick={onCancel}>
+        <Button
+          variant="secondary"
+          size="icon-sm"
+          aria-label={t("banner.cancelEdits")}
+          onClick={onCancel}
+        >
           <X />
         </Button>
         <Button size="sm" disabled={isSaving} onClick={onSave}>
           <Check data-icon="inline-start" />
-          {isSaving ? "Saving…" : "Save"}
+          {isSaving ? t("banner.saving") : t("banner.save")}
         </Button>
       </div>
     </>
@@ -131,6 +144,8 @@ export function BannerTitleCard({
   title: string;
   isUntitled: boolean;
 }) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <div
       className="absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-2xl border border-white/20 bg-background/85 p-3 shadow-lg backdrop-blur-md sm:bottom-4 sm:left-4"
@@ -151,12 +166,12 @@ export function BannerTitleCard({
             value={draftTitle}
             onChange={(event) => onDraftTitleChange(event.target.value)}
             maxLength={200}
-            aria-label="Notebook title"
+            aria-label={t("banner.titleAria")}
             className="h-7 min-w-0 rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent p-0 text-sm font-medium shadow-none selection:bg-primary/25 selection:text-foreground focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/40 focus-visible:ring-0"
           />
         ) : (
           <span className="truncate text-sm font-medium tracking-tight">
-            {isUntitled ? "Untitled Notebook" : title}
+            {isUntitled ? t("banner.untitledNotebook") : title}
           </span>
         )}
         <span className="text-xs font-medium text-muted-foreground/80">{formattedDate}</span>
@@ -189,11 +204,13 @@ export function BannerCanvas({
   title,
   isUntitled,
 }: BannerCanvasProps) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <div
       ref={containerRef}
       role="region"
-      aria-label="Notebook banner"
+      aria-label={t("banner.canvas")}
       tabIndex={0}
       onKeyDown={onKeyDown}
       onMouseDown={focalPointDrag.handleMouseDown}
@@ -228,8 +245,8 @@ export function BannerCanvas({
           variant="secondary"
           size="icon-sm"
           onClick={onBeginEditing}
-          aria-label="Edit notebook"
-          title="Edit notebook"
+          aria-label={t("banner.editNotebook")}
+          title={t("banner.editNotebook")}
           className="absolute right-3 top-3 bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-[opacity,background-color] hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100"
         >
           <Pencil />

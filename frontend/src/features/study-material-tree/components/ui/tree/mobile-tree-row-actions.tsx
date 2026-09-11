@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTranslation } from "react-i18next";
 import type { TreeNode } from "../../model/tree";
 import { useTreeControllerContext } from "../controller-state";
 
@@ -29,6 +30,7 @@ export function MobileTreeRowActions({
   pendingMove,
   pendingDelete,
 }: MobileTreeRowActionsProps) {
+  const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
   if (!visible) return null;
   const isFolder = node.type === "folder";
@@ -45,7 +47,7 @@ export function MobileTreeRowActions({
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label={`Actions for ${node.name}`}
+              aria-label={t("row.actionsFor", { name: node.name })}
               className="size-6 shrink-0 rounded-md hover:bg-accent hover:text-accent-foreground"
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
@@ -59,21 +61,21 @@ export function MobileTreeRowActions({
                 onClick={() => controller.createFolder(node.id)}
                 disabled={isPending}
               >
-                New folder
+                {t("actions.newFolder")}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
               onClick={() => controller.beginRename(node.id)}
               disabled={pendingRename}
             >
-              Rename
+              {t("actions.rename")}
             </DropdownMenuItem>
             {node.type === "material" && (
               <DropdownMenuItem
                 onClick={() => controller.duplicateMaterial(node.id)}
                 disabled={pendingDuplicate}
               >
-                Duplicate
+                {t("actions.duplicate")}
               </DropdownMenuItem>
             )}
           </DropdownMenuGroup>
@@ -83,12 +85,16 @@ export function MobileTreeRowActions({
               onClick={() => controller.moveToRoot(node.id)}
               disabled={node.parentId === null || pendingMove}
             >
-              Move to Study Materials
+              {t("actions.moveToRoot")}
             </DropdownMenuItem>
             {isFolder && (
               <>
-                <DropdownMenuItem onClick={controller.expandAll}>Expand all</DropdownMenuItem>
-                <DropdownMenuItem onClick={controller.collapseAll}>Collapse all</DropdownMenuItem>
+                <DropdownMenuItem onClick={controller.expandAll}>
+                  {t("actions.expandAll")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={controller.collapseAll}>
+                  {t("actions.collapseAll")}
+                </DropdownMenuItem>
               </>
             )}
           </DropdownMenuGroup>
@@ -99,7 +105,7 @@ export function MobileTreeRowActions({
               onClick={() => controller.requestDelete(node)}
               disabled={pendingDelete}
             >
-              Delete
+              {t("actions.delete")}
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

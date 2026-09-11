@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ParseKeys, TFunction } from "i18next";
 import {
   Brain,
   BookOpen,
@@ -13,18 +14,29 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGenerationStore } from "@/features/study-material-generation";
-import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-material-viewer";
+import type { StudyMaterialKind } from "@/features/study-material-viewer";
 import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
+
+const KIND_LABEL_KEYS = {
+  quiz: "studio.resources.quiz",
+  simple_flashcard: "studio.resources.flashcards",
+  roadmap: "studio.resources.roadmap",
+  mind_map: "studio.resources.mindMap",
+  slides: "studio.resources.slides",
+  study_guide: "studio.resources.studyGuide",
+  practice_problems: "studio.resources.practiceProblems",
+  case_study: "studio.resources.caseStudy",
+} as const satisfies Record<StudyMaterialKind, ParseKeys<"notebooks">>;
 
 type ResourceConfig = {
   key: string;
   kind: StudyMaterialKind;
   icon: LucideIcon;
-  label: string;
   colorClasses: string;
 };
 
@@ -33,56 +45,48 @@ const RESOURCES: ResourceConfig[] = [
     key: "studyGuide",
     kind: "study_guide",
     icon: BookOpen,
-    label: "Study Guide",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "quiz",
     kind: "quiz",
     icon: HelpCircle,
-    label: "Quiz",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "flashcards",
     kind: "simple_flashcard",
     icon: Brain,
-    label: "Flashcards",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "roadmap",
     kind: "roadmap",
     icon: MapIcon,
-    label: "Roadmap",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "mindMap",
     kind: "mind_map",
     icon: Network,
-    label: "Mind Map",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "practiceProblems",
     kind: "practice_problems",
     icon: ListChecks,
-    label: "Practice Problems",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "slides",
     kind: "slides",
     icon: Presentation,
-    label: "Slides",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
     key: "caseStudy",
     kind: "case_study",
     icon: Briefcase,
-    label: "Case Study",
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
 ];
@@ -164,7 +168,9 @@ function ResourceButton({
   collapsed?: boolean;
   isGenerating?: boolean;
 }) {
+  const { t } = useTranslation("notebooks");
   const disabled = !isInScope(resource.kind);
+  const label = t(KIND_LABEL_KEYS[resource.kind]);
   if (collapsed) {
     return (
       <Tooltip>
@@ -184,10 +190,10 @@ function ResourceButton({
             </button>
           }
         >
-          <span className="sr-only">{resource.label}</span>
+          <span className="sr-only">{label}</span>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>
-          {resource.label} {isGenerating ? "(Generating...)" : ""}
+          {isGenerating ? t("studio.tooltipGenerating", { label }) : label}
         </TooltipContent>
       </Tooltip>
     );
@@ -204,7 +210,7 @@ function ResourceButton({
         disabled && "opacity-50 cursor-not-allowed",
       )}
     >
-      <span className="min-w-0 truncate text-sm font-medium leading-tight">{resource.label}</span>
+      <span className="min-w-0 truncate text-sm font-medium leading-tight">{label}</span>
       <resource.icon className="h-4.5 w-4.5 shrink-0" strokeWidth={1.75} />
     </button>
   );
@@ -245,6 +251,8 @@ function ActiveGenerationCard({
   totalSourceCount: number;
   onCancel: (generationId: string) => void;
 }) {
+  const { t } = useTranslation("notebooks");
+
   if (generation.status === "error") {
     return (
       <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 shadow-xs transition-colors animate-in fade-in slide-in-from-top-1">
@@ -254,17 +262,19 @@ function ActiveGenerationCard({
           </div>
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-xs font-semibold text-foreground truncate">
-              Failed to generate {KIND_LABELS[generation.kind] || generation.kind}
+              {t("studio.failedToGenerate", {
+                kind: t(KIND_LABEL_KEYS[generation.kind]),
+              })}
             </span>
             <span className="text-xs text-muted-foreground truncate wrap-break-words">
-              {generation.error || "Generation failed"}
+              {generation.error || t("studio.generationFailed")}
             </span>
             <button
               type="button"
               onClick={() => onCancel(generation.id)}
               className="mt-1 self-start text-xs font-medium text-primary hover:underline cursor-pointer"
             >
-              Dismiss
+              {t("studio.dismiss")}
             </button>
           </div>
         </div>
@@ -273,7 +283,7 @@ function ActiveGenerationCard({
           size="icon"
           className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg"
           onClick={() => onCancel(generation.id)}
-          title="Dismiss error"
+          title={t("studio.dismissError")}
         >
           <X className="h-3.5 w-3.5" />
         </Button>
@@ -289,10 +299,12 @@ function ActiveGenerationCard({
         </div>
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-xs font-semibold text-foreground truncate">
-            Generating {KIND_LABELS[generation.kind] || generation.kind}...
+            {t("studio.generating", {
+              kind: t(KIND_LABEL_KEYS[generation.kind]),
+            })}
           </span>
           <span className="text-xs text-muted-foreground truncate wrap-break-words">
-            {getGenerationSubtitle(generation, totalSourceCount)}
+            {getGenerationSubtitle(generation, totalSourceCount, t)}
           </span>
         </div>
       </div>
@@ -301,7 +313,7 @@ function ActiveGenerationCard({
         size="icon"
         className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg"
         onClick={() => onCancel(generation.id)}
-        title="Cancel generation"
+        title={t("studio.cancelGeneration")}
       >
         <X className="h-3.5 w-3.5" />
       </Button>
@@ -309,10 +321,14 @@ function ActiveGenerationCard({
   );
 }
 
-function getGenerationSubtitle(generation: Generation, totalSourceCount: number) {
+function getGenerationSubtitle(
+  generation: Generation,
+  totalSourceCount: number,
+  t: TFunction<"notebooks">,
+) {
   const sourceCount = generation.sourceIds?.length ?? totalSourceCount;
-  if (sourceCount > 0) return `based on ${sourceCount} source${sourceCount > 1 ? "s" : ""}`;
-  return generation.brief ? "based on brief" : "processing sources";
+  if (sourceCount > 0) return t("resources.basedOnSources", { count: sourceCount });
+  return generation.brief ? t("resources.basedOnBrief") : t("resources.processingSources");
 }
 
 function isInScope(kind: StudyMaterialKind): boolean {

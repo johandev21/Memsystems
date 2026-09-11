@@ -8,6 +8,7 @@ import {
   MessageSquare,
   XCircle,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/ui/markdown";
@@ -24,6 +25,8 @@ export function AttemptFeedbackCard({
     missingPoints: string[];
   };
 }) {
+  const { t } = useTranslation("viewer");
+
   return (
     <div
       className={cn(
@@ -40,7 +43,7 @@ export function AttemptFeedbackCard({
           <>
             <CheckCircle2 className="h-5 w-5 text-emerald-400" />
             <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-xs font-semibold">
-              Correct
+              {t("practice.evaluation.correct")}
             </Badge>
           </>
         )}
@@ -48,7 +51,7 @@ export function AttemptFeedbackCard({
           <>
             <AlertCircle className="h-5 w-5 text-amber-400" />
             <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-xs font-semibold">
-              Partially Correct
+              {t("practice.evaluation.partiallyCorrect")}
             </Badge>
           </>
         )}
@@ -56,7 +59,7 @@ export function AttemptFeedbackCard({
           <>
             <XCircle className="h-5 w-5 text-rose-400" />
             <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/40 text-xs font-semibold">
-              Needs Revision
+              {t("practice.evaluation.needsRevision")}
             </Badge>
           </>
         )}
@@ -68,7 +71,7 @@ export function AttemptFeedbackCard({
 
       {evaluation.strengths.length > 0 && (
         <div className="space-y-1.5 pt-1">
-          <h5 className="text-sm font-semibold text-text-primary">Key Strengths</h5>
+          <h5 className="text-sm font-semibold text-text-primary">{t("practice.keyStrengths")}</h5>
           <ul className="list-disc list-inside space-y-1 text-sm text-text-secondary">
             {evaluation.strengths.map((str) => (
               <li key={str}>{str}</li>
@@ -79,7 +82,9 @@ export function AttemptFeedbackCard({
 
       {evaluation.missingPoints.length > 0 && (
         <div className="space-y-1.5 pt-1">
-          <h5 className="text-sm font-semibold text-text-primary">Areas for Improvement</h5>
+          <h5 className="text-sm font-semibold text-text-primary">
+            {t("practice.areasForImprovement")}
+          </h5>
           <ul className="list-disc list-inside space-y-1 text-sm text-text-secondary">
             {evaluation.missingPoints.map((missing) => (
               <li key={missing}>{missing}</li>
@@ -104,14 +109,19 @@ export function HintsSection({
   onRevealNext: () => void;
   onAskSocratic: () => void;
 }) {
+  const { t } = useTranslation("viewer");
+
   return (
     <section className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="space-y-0.5">
-          <h3 className="text-base font-semibold text-text-primary">Hints</h3>
+          <h3 className="text-base font-semibold text-text-primary">{t("practice.hints")}</h3>
           {showCount && (
             <span className="text-xs text-text-secondary">
-              {Math.min(hintsRevealed, hints.length)} of {hints.length} hints revealed
+              {t("practice.hintsRevealed", {
+                revealed: Math.min(hintsRevealed, hints.length),
+                total: hints.length,
+              })}
             </span>
           )}
         </div>
@@ -122,10 +132,10 @@ export function HintsSection({
           size="sm"
           onClick={onAskSocratic}
           className="self-start text-xs text-text-secondary hover:text-text-primary gap-1.5"
-          title="Ask AI in chat for a Socratic hint without revealing the solution"
+          title={t("practice.socraticTitle")}
         >
           <HelpCircle className="h-3.5 w-3.5" />
-          Ask for Socratic Hint in Chat
+          {t("practice.socraticButton")}
         </Button>
       </div>
 
@@ -138,7 +148,9 @@ export function HintsSection({
               key={hint}
               className="rounded-xl border border-surface-border-subtle bg-surface-2 p-4 text-sm text-text-secondary space-y-1"
             >
-              <span className="text-xs font-semibold text-text-secondary">Hint {idx + 1}</span>
+              <span className="text-xs font-semibold text-text-secondary">
+                {t("practice.hint", { number: idx + 1 })}
+              </span>
               <p>{hint}</p>
             </div>
           );
@@ -152,7 +164,7 @@ export function HintsSection({
             onClick={onRevealNext}
             className="mt-2 text-xs text-text-secondary hover:text-text-primary"
           >
-            Reveal hint {hintsRevealed + 1} of {hints.length}
+            {t("practice.revealHint", { current: hintsRevealed + 1, total: hints.length })}
           </Button>
         )}
       </div>
@@ -181,10 +193,12 @@ export function SolutionSection({
   onExplainStep: (stepNumber: number, title: string, explanation: string) => void;
   onOpenSource: (id: string) => void;
 }) {
+  const { t } = useTranslation("viewer");
+
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-text-primary">Solution</h3>
+        <h3 className="text-base font-semibold text-text-primary">{t("practice.solution")}</h3>
 
         {difficulty === "medium" && (
           <Button
@@ -197,12 +211,12 @@ export function SolutionSection({
             {isRevealed ? (
               <>
                 <EyeOff className="h-3.5 w-3.5" />
-                Hide Solution
+                {t("practice.hideSolution")}
               </>
             ) : (
               <>
                 <Eye className="h-3.5 w-3.5" />
-                Reveal Full Solution
+                {t("practice.revealSolution")}
               </>
             )}
           </Button>
@@ -213,11 +227,9 @@ export function SolutionSection({
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 space-y-3">
           <div className="flex items-center gap-2 text-amber-400 font-medium text-sm">
             <Lock className="h-4 w-4" />
-            Challenge Mode: Solution Locked
+            {t("practice.challengeLocked")}
           </div>
-          <p className="text-sm text-text-secondary">
-            In Challenge mode, the reference solution unlocks once you evaluate your answer with AI.
-          </p>
+          <p className="text-sm text-text-secondary">{t("practice.challengeNotice")}</p>
           <Button
             type="button"
             variant="outline"
@@ -225,21 +237,21 @@ export function SolutionSection({
             onClick={onGiveUp}
             className="text-xs text-text-secondary hover:text-text-primary"
           >
-            Give up and reveal solution
+            {t("practice.giveUp")}
           </Button>
         </div>
       ) : null}
 
       {difficulty === "medium" && !isRevealed ? (
-        <p className="text-sm text-text-secondary">
-          The solution is hidden to give you time to think and write your own attempt.
-        </p>
+        <p className="text-sm text-text-secondary">{t("practice.solutionHidden")}</p>
       ) : null}
 
       {isRevealed && (
         <div className="space-y-6 pt-1">
           <div className="rounded-xl border border-surface-border-subtle bg-surface-2 p-5 space-y-2">
-            <h4 className="text-sm font-semibold text-text-primary">Reference Answer</h4>
+            <h4 className="text-sm font-semibold text-text-primary">
+              {t("practice.referenceAnswer")}
+            </h4>
             <div className="text-base text-text-primary leading-relaxed font-medium">
               <MarkdownRenderer>{answer}</MarkdownRenderer>
             </div>
@@ -247,7 +259,9 @@ export function SolutionSection({
 
           {steps.length > 0 && (
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-text-primary">Worked Steps</h4>
+              <h4 className="text-sm font-semibold text-text-primary">
+                {t("practice.workedSteps")}
+              </h4>
 
               <div className="space-y-3">
                 {steps.map((step, sIdx) => (
@@ -257,7 +271,7 @@ export function SolutionSection({
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <h5 className="text-sm font-semibold text-text-primary">
-                        Step {sIdx + 1}: {step.title}
+                        {t("practice.step", { number: sIdx + 1, title: step.title })}
                       </h5>
 
                       <Button
@@ -266,10 +280,10 @@ export function SolutionSection({
                         size="sm"
                         onClick={() => onExplainStep(sIdx + 1, step.title, step.explanation)}
                         className="self-start text-xs text-text-secondary hover:text-text-primary gap-1"
-                        title="Ask AI in chat to explain this step"
+                        title={t("practice.explainStepTitle")}
                       >
                         <MessageSquare className="h-3 w-3" />
-                        Explain this step in Chat
+                        {t("practice.explainStep")}
                       </Button>
                     </div>
 
@@ -279,7 +293,9 @@ export function SolutionSection({
 
                     {step.sourceIds.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                        <span className="text-xs text-text-secondary">Step Sources:</span>
+                        <span className="text-xs text-text-secondary">
+                          {t("practice.stepSources")}
+                        </span>
                         {step.sourceIds.map((srcId) => {
                           const src = sourceMap.get(srcId);
                           return (
@@ -291,7 +307,7 @@ export function SolutionSection({
                               onClick={() => onOpenSource(srcId)}
                               className="h-6 px-2 text-xs text-text-secondary hover:text-text-primary"
                             >
-                              {src?.title || "Source unavailable"}
+                              {src?.title || t("common.sourceUnavailable")}
                             </Button>
                           );
                         })}

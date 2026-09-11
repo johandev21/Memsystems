@@ -1,0 +1,59 @@
+{
+  "command": {
+    "description": "Busca un comando…",
+    "title": "Paleta de comandos"
+  },
+  "confirmDelete": {
+    "cancel": "Cancelar",
+    "confirm": "Eliminar"
+  },
+  "dialog": {
+    "close": "Cerrar"
+  },
+  "errors": {
+    "generation": {
+      "problemCount": "La cantidad de problemas debe estar entre {{min}} y {{max}}.",
+      "questionCount": "La cantidad de preguntas debe estar entre {{min}} y {{max}}.",
+      "requestNotFound": "Solicitud de generación no encontrada.",
+      "sourceOrBrief": {
+        "caseStudy": "Selecciona una fuente o escribe un resumen para tu caso de estudio.",
+        "practiceProblems": "Selecciona una fuente o escribe un resumen para tus problemas de práctica.",
+        "studyGuide": "Selecciona una fuente o escribe un resumen para tu guía de estudio."
+      },
+      "sourcesUnavailable": "Las fuentes seleccionadas no están disponibles o no tienen contenido legible. Actualiza tu selección e inténtalo de nuevo."
+    }
+  },
+  "iconPicker": {
+    "ariaLabel": "Iconos",
+    "categories": {
+      "communication": "Comunicación",
+      "files": "Archivos",
+      "media": "Multimedia",
+      "objects": "Objetos",
+      "popular": "Populares",
+      "system": "Sistema",
+      "tech": "Tecnología"
+    },
+    "clearSearch": "Limpiar búsqueda",
+    "noResults": "No se encontraron iconos",
+    "results": "Resultados",
+    "scrollForMore": "Desplázate para ver más iconos…",
+    "searchPlaceholder": "Busca un icono",
+    "selectedIcon": "Icono seleccionado: {{name}}",
+    "selectIcon": "Seleccionar icono",
+    "tryAnother": "Intenta buscar otra palabra clave"
+  },
+  "messageScroller": {
+    "toEnd": "Desplazarse al final",
+    "toStart": "Desplazarse al inicio"
+  },
+  "routeProgress": {
+    "loading": "Cargando página"
+  },
+  "settingsLink": {
+    "ariaLabel": "Ajustes"
+  },
+  "spinner": {
+    "loading": "Cargando"
+  }
+}

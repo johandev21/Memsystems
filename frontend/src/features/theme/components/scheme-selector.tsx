@@ -1,28 +1,30 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import { getThemeMeta } from "../utils/themes";
 import { usePaletteOptional } from "../hooks/use-palette";
 
 const SCHEME_OPTIONS = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
+  { value: "light", labelKey: "scheme.light", icon: Sun },
+  { value: "dark", labelKey: "scheme.dark", icon: Moon },
+  { value: "system", labelKey: "scheme.system", icon: Monitor },
 ] as const;
 
 export function SchemeSelector() {
+  const { t } = useTranslation("theme");
   const { theme, setTheme } = useTheme();
   const current = theme ?? "system";
 
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-base font-semibold tracking-[-0.01em]">Color scheme</h3>
-        <span className="text-xs text-muted-foreground">Light / Dark / System</span>
+        <h3 className="text-base font-semibold tracking-[-0.01em]">{t("scheme.title")}</h3>
+        <span className="text-xs text-muted-foreground">{t("scheme.summary")}</span>
       </div>
       <div
         className="grid grid-cols-1 gap-3 sm:grid-cols-3"
         role="radiogroup"
-        aria-label="Color scheme"
+        aria-label={t("scheme.title")}
       >
         {SCHEME_OPTIONS.map((opt) => {
           const Icon = opt.icon;
@@ -45,7 +47,7 @@ export function SchemeSelector() {
                 className={`inline-flex items-center gap-1.5 text-sm font-medium ${selected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
               >
                 <Icon className="size-3.5" aria-hidden="true" />
-                {opt.label}
+                {t(opt.labelKey)}
                 {selected ? (
                   <span className="ml-auto size-1.5 rounded-full bg-primary" aria-hidden="true" />
                 ) : null}

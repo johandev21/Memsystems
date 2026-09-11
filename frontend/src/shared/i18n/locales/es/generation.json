@@ -1,0 +1,322 @@
+{
+  "actions": {
+    "auto": "Auto",
+    "autoDecides": "Auto (la IA decide)",
+    "back": "Atrás",
+    "custom": "Personalizado",
+    "generate": "Generar",
+    "generateKind": "Generar {{kind}}",
+    "generateNow": "Generar {{kind}} ahora",
+    "nextStep": "Siguiente paso",
+    "view": "Ver"
+  },
+  "caseStudy": {
+    "conceptsPlaceholder": "p. ej. Aplica marcos de triaje y compara eficiencia frente a equidad...",
+    "conceptsToApplyLabel": "Conceptos para aplicar",
+    "customQuestionAria": "Cantidad personalizada de preguntas",
+    "discussionQuestionsLabel": "1. Preguntas de debate",
+    "instructionsPlaceholder": "Describe los temas o áreas de enfoque que debe incluir este caso práctico...",
+    "perspective": {
+      "compare": {
+        "desc": "Contrasta los puntos de vista que respaldan las fuentes",
+        "title": "Comparar alternativas"
+      },
+      "single": {
+        "desc": "Un análisis enfocado",
+        "title": "Una sola perspectiva"
+      }
+    },
+    "perspectiveLabel": "2. Perspectiva",
+    "questionCount_one": "{{count}} pregunta",
+    "questionCount_many": "{{count}} preguntas",
+    "questionCount_other": "{{count}} preguntas"
+  },
+  "dialog": {
+    "gatewayDescription": "Se requiere una clave de AI Gateway para generar materiales de estudio.",
+    "title": "Generar {{kind}}"
+  },
+  "errors": {
+    "connectionClosed": "La conexión se cerró antes de terminar.",
+    "noRequestId": "El servidor no devolvió un ID de solicitud",
+    "timedOut": "La generación agotó el tiempo de espera del servidor. Inténtalo de nuevo."
+  },
+  "fields": {
+    "customInstructions": "Instrucciones personalizadas",
+    "destinationFolder": "Carpeta de destino",
+    "detailLevelStep2": "2. Nivel de detalle",
+    "detailLevelStep3": "3. Nivel de detalle",
+    "folder": "Carpeta",
+    "instructions": "Instrucciones",
+    "knowledgeSources": "Fuentes de conocimiento",
+    "knowledgeSourcesStep3": "3. Fuentes de conocimiento",
+    "sources": "Fuentes",
+    "targetDifficulty": "1. Dificultad objetivo"
+  },
+  "flashcards": {
+    "cardFormatLabel": "Formato de tarjeta",
+    "cardsLabel": "Tarjetas",
+    "cardStyle": {
+      "cloze": {
+        "desc": "Frase con palabras faltantes",
+        "title": "Rellenar espacios en blanco"
+      },
+      "definition": {
+        "desc": "Pares de término → definición",
+        "title": "Definición"
+      },
+      "mixed": {
+        "desc": "Combinación de preguntas y respuestas, definiciones y espacios en blanco",
+        "title": "Mixto"
+      },
+      "qa": {
+        "desc": "Formato clásico de pregunta → respuesta",
+        "title": "Preguntas y respuestas"
+      }
+    },
+    "count_one": "{{count}} tarjeta",
+    "count_many": "{{count}} tarjetas",
+    "count_other": "{{count}} tarjetas",
+    "countMax": "{{count}} tarjetas (máx. {{max}})",
+    "countMax_one": "{{count}} tarjeta (máx. {{max}})",
+    "countMax_many": "{{count}} tarjetas (máx. {{max}})",
+    "countMax_other": "{{count}} tarjetas (máx. {{max}})",
+    "difficulty": {
+      "easy": {
+        "desc": "Definiciones simples y recuerdo",
+        "title": "Básico"
+      },
+      "hard": {
+        "desc": "Análisis profundo y aplicación",
+        "title": "Avanzado"
+      },
+      "medium": {
+        "desc": "Comprensión conceptual",
+        "title": "Estándar"
+      }
+    },
+    "difficultyLabel": "Dificultad",
+    "instructionsPlaceholder": "¿Qué temas deben cubrir estas tarjetas?"
+  },
+  "kinds": {
+    "case_study": "Caso práctico",
+    "mind_map": "Mapa mental",
+    "practice_problems": "Problemas de práctica",
+    "quiz": "Cuestionario",
+    "roadmap": "Ruta de aprendizaje",
+    "simple_flashcard": "Tarjetas",
+    "slides": "Diapositivas",
+    "study_guide": "Guía de estudio"
+  },
+  "knowledge": {
+    "defaultEmptySources": "No hay fuentes en el cuaderno. El material se generará con conocimientos generales.",
+    "defaultPlaceholder": "¿Qué debe cubrir? Describe temas, áreas de enfoque o tono...",
+    "emptySources": "No hay fuentes en el cuaderno. {{kind}} se generará con conocimientos generales.",
+    "noneSelected": "Ninguna seleccionada (conocimientos generales)",
+    "searchAriaLabel": "Buscar fuentes",
+    "searchPlaceholder": "Buscar fuentes...",
+    "selectAll": "Seleccionar todo",
+    "selected_one": "{{count}} fuente seleccionada",
+    "selected_many": "{{count}} fuentes seleccionadas",
+    "selected_other": "{{count}} fuentes seleccionadas",
+    "selectedCount": "{{count}} seleccionadas",
+    "selectedCount_one": "{{count}} seleccionada",
+    "selectedCount_many": "{{count}} seleccionadas",
+    "selectedCount_other": "{{count}} seleccionadas"
+  },
+  "mindMap": {
+    "colorGroups": {
+      "grouped": {
+        "desc": "Colorea los conceptos relacionados por tema",
+        "title": "Colores agrupados"
+      },
+      "plain": {
+        "desc": "Usa la apariencia estándar de los nodos",
+        "title": "Simple"
+      }
+    },
+    "customCountAria": "Cantidad personalizada de nodos",
+    "detail": {
+      "basic": {
+        "desc": "Conceptos clave y relaciones esenciales",
+        "title": "Básico"
+      },
+      "detailed": {
+        "desc": "Etiquetas más ricas y conexiones explicativas",
+        "title": "Detallado"
+      }
+    },
+    "instructionsPlaceholder": "¿Qué debe explicar este mapa? Describe el tema, la pregunta o las conexiones...",
+    "mapSizeLabel": "1. Tamaño del mapa",
+    "nodeCount_one": "{{count}} nodo",
+    "nodeCount_many": "{{count}} nodos",
+    "nodeCount_other": "{{count}} nodos",
+    "nodeCountMax": "{{count}} nodos (máx. {{max}})",
+    "nodeCountMax_one": "{{count}} nodo (máx. {{max}})",
+    "nodeCountMax_many": "{{count}} nodos (máx. {{max}})",
+    "nodeCountMax_other": "{{count}} nodos (máx. {{max}})",
+    "visualGroupingLabel": "3. Agrupación visual"
+  },
+  "practice": {
+    "difficulty": {
+      "easy": {
+        "desc": "Fundamentos y pasos únicos",
+        "title": "Calentamiento"
+      },
+      "hard": {
+        "desc": "Varios pasos y transferencia",
+        "title": "Desafío"
+      },
+      "medium": {
+        "desc": "Aplicación equilibrada",
+        "title": "Estándar"
+      }
+    },
+    "instructionsPlaceholder": "Temas, habilidades, tipos de problemas (cálculos, razonamiento de código, explicaciones)...",
+    "problemCount_one": "{{count}} problema",
+    "problemCount_many": "{{count}} problemas",
+    "problemCount_other": "{{count}} problemas",
+    "problemCountMax": "{{count}} problemas (máx. {{max}})",
+    "problemCountMax_one": "{{count}} problema (máx. {{max}})",
+    "problemCountMax_many": "{{count}} problemas (máx. {{max}})",
+    "problemCountMax_other": "{{count}} problemas (máx. {{max}})",
+    "problemsLabel": "2. Cantidad de problemas"
+  },
+  "quiz": {
+    "difficulty": {
+      "easy": {
+        "desc": "Recuerdo básico y definiciones",
+        "title": "Calentamiento"
+      },
+      "hard": {
+        "desc": "Razonamiento profundo y casos límite",
+        "title": "Desafío"
+      },
+      "medium": {
+        "desc": "Aplicación equilibrada",
+        "title": "Estándar"
+      }
+    },
+    "instructionsPlaceholder": "Proporciona áreas de enfoque, temas o instrucciones específicas para este cuestionario...",
+    "questionCount_one": "{{count}} pregunta",
+    "questionCount_many": "{{count}} preguntas",
+    "questionCount_other": "{{count}} preguntas",
+    "questionCountMax": "{{count}} preguntas (máx. {{max}})",
+    "questionCountMax_one": "{{count}} pregunta (máx. {{max}})",
+    "questionCountMax_many": "{{count}} preguntas (máx. {{max}})",
+    "questionCountMax_other": "{{count}} preguntas (máx. {{max}})",
+    "questionPreset": "{{count}} preg.",
+    "questionPreset_one": "{{count}} preg.",
+    "questionPreset_many": "{{count}} preg.",
+    "questionPreset_other": "{{count}} preg.",
+    "questionsLabel": "2. Cantidad de preguntas"
+  },
+  "roadmap": {
+    "autoLabel": "Auto (la IA decide las fases óptimas)",
+    "detail": {
+      "basic": {
+        "desc": "Solo títulos de fases e hitos",
+        "title": "Básico"
+      },
+      "detailed": {
+        "desc": "Temas en profundidad y objetivos de aprendizaje",
+        "title": "Detallado"
+      }
+    },
+    "instructionsPlaceholder": "¿Qué quieres aprender? Describe el tema, el objetivo o la habilidad que buscas...",
+    "phaseCount_one": "{{count}} fase",
+    "phaseCount_many": "{{count}} fases",
+    "phaseCount_other": "{{count}} fases",
+    "phaseCountMax": "{{count}} fases (máx. {{max}})",
+    "phaseCountMax_one": "{{count}} fase (máx. {{max}})",
+    "phaseCountMax_many": "{{count}} fases (máx. {{max}})",
+    "phaseCountMax_other": "{{count}} fases (máx. {{max}})",
+    "phasesLabel": "1. Cantidad de fases"
+  },
+  "slides": {
+    "count_one": "{{count}} diapositiva",
+    "count_many": "{{count}} diapositivas",
+    "count_other": "{{count}} diapositivas",
+    "countMax": "{{count}} diapositivas (máx. {{max}})",
+    "countMax_one": "{{count}} diapositiva (máx. {{max}})",
+    "countMax_many": "{{count}} diapositivas (máx. {{max}})",
+    "countMax_other": "{{count}} diapositivas (máx. {{max}})",
+    "customCountAria": "Cantidad personalizada de diapositivas",
+    "detail": {
+      "basic": {
+        "desc": "Viñetas concisas",
+        "title": "Básico"
+      },
+      "detailed": {
+        "desc": "Viñetas detalladas + texto",
+        "title": "Detallado"
+      }
+    },
+    "instructionsPlaceholder": "¿Qué debe explicar esta presentación? Describe el tema, el público o el hilo narrativo...",
+    "numberOfSlidesLabel": "1. Cantidad de diapositivas",
+    "themes": {
+      "academic": {
+        "desc": "Estilo de clase clásico",
+        "title": "Académico"
+      },
+      "dark": {
+        "desc": "Presentación pizarra, acento cian",
+        "title": "Oscuro"
+      },
+      "editorial": {
+        "desc": "Papel cálido, estilo serif",
+        "title": "Editorial"
+      },
+      "light": {
+        "desc": "Brillante, apto para imprimir",
+        "title": "Claro"
+      },
+      "technical": {
+        "desc": "Azul marino profundo, detalle neón",
+        "title": "Técnico"
+      },
+      "warm": {
+        "desc": "Energía intensa de brasas",
+        "title": "Cálido"
+      }
+    },
+    "themeTooltip": "{{title}}: {{desc}}",
+    "visualThemeLabel": "2. Tema visual"
+  },
+  "standard": {
+    "briefLabel": "Instrucciones breves para {{kind}} (opcional)",
+    "briefPlaceholder": "Describe los temas o áreas de enfoque que debe incluir {{kind}}..."
+  },
+  "studyGuide": {
+    "customSectionAria": "Cantidad personalizada de secciones",
+    "format": {
+      "detailed": {
+        "desc": "Explicaciones, ejemplos y conclusiones",
+        "title": "Detallada"
+      },
+      "revision": {
+        "desc": "Conceptos esenciales para un repaso rápido",
+        "title": "Hoja de repaso"
+      }
+    },
+    "formatLabel": "1. Formato",
+    "instructionsPlaceholder": "Describe los temas o áreas de enfoque que debe incluir esta guía de estudio...",
+    "sectionCount_one": "{{count}} sección",
+    "sectionCount_many": "{{count}} secciones",
+    "sectionCount_other": "{{count}} secciones",
+    "sectionsLabel": "2. Secciones"
+  },
+  "toasts": {
+    "cancelled": "Generación cancelada",
+    "failed": "No se pudo generar {{kind}}: {{message}}",
+    "startFailed": "La generación falló: {{message}}",
+    "success": "¡Generación de {{kind}} completada!"
+  },
+  "wizard": {
+    "nextHintFocus": "Configura las áreas de enfoque a continuación",
+    "nextHintInstructions": "Configura las instrucciones personalizadas a continuación",
+    "nextHintKnowledge": "Configura las fuentes de conocimiento y el resumen a continuación",
+    "stepAria": "Paso {{step}}",
+    "stepOfTwo": "Paso {{step}} de 2",
+    "title": "Configuración de {{kind}}"
+  }
+}

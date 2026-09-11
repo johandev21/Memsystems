@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 export interface SearchResultsHeaderProps {
@@ -23,16 +24,17 @@ export function SearchResultsHeader({
   onClearResults,
   onToggleSelectAll,
 }: SearchResultsHeaderProps) {
+  const { t } = useTranslation("sources");
   const subtitle =
     remainingSourceSlots < candidatesCount
-      ? `${remainingSourceSlots} source slot${remainingSourceSlots === 1 ? "" : "s"} available`
-      : `${selectedCount} selected`;
+      ? t("webSearchResults.sourceSlotsAvailable", { count: remainingSourceSlots })
+      : t("webSearchResults.selectedCount", { count: selectedCount });
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
       <div>
         <p className="text-sm font-semibold text-foreground">
-          {candidatesCount} source{candidatesCount === 1 ? "" : "s"} found
+          {t("webSearchResults.sourceFound", { count: candidatesCount })}
         </p>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </div>
@@ -45,7 +47,7 @@ export function SearchResultsHeader({
           onClick={onClearResults}
           disabled={importing || clearing}
         >
-          {clearing ? "Clearing…" : "Clear results"}
+          {clearing ? t("webSearch.clearing") : t("webSearch.clearResults")}
         </Button>
         <Button
           type="button"
@@ -55,7 +57,7 @@ export function SearchResultsHeader({
           onClick={onToggleSelectAll}
           disabled={importing || clearing || selectableCount === 0}
         >
-          {allSelectableSelected ? "Deselect all" : "Select all"}
+          {allSelectableSelected ? t("webSearch.deselectAll") : t("webSearch.selectAll")}
         </Button>
       </div>
     </div>

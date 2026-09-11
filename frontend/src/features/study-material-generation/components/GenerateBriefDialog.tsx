@@ -8,7 +8,9 @@ import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/fea
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useModelPersistence } from "@/features/notebooks";
 import { useGenerationStore } from "../hooks/use-generation-store";
-import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-material-viewer";
+import { type StudyMaterialKind } from "@/features/study-material-viewer";
+import { useTranslation } from "react-i18next";
+import { kindLabelKey } from "../kind-label";
 import type {
   RoadmapOptions,
   MindMapOptions,
@@ -36,6 +38,7 @@ export function GenerateBriefDialog({
   onComplete,
 }: GenerateBriefDialogProps) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation("generation");
   const startBackgroundGeneration = useGenerationStore((s) => s.startBackgroundGeneration);
   const setCollapsed = useGenerationStore((s) => s.setCollapsed);
   const { data: connection } = useConnectionStatus();
@@ -95,7 +98,7 @@ export function GenerateBriefDialog({
 
   if (kind === null) return null;
 
-  const label = KIND_LABELS[kind] || kind;
+  const label = t(kindLabelKey(kind));
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -118,7 +121,7 @@ export function GenerateBriefDialog({
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-text-primary">
-            Generate {label}
+            {t("dialog.title", { kind: label })}
           </DialogTitle>
         </DialogHeader>
         {isConnectionUsable(connection) ? (
@@ -128,11 +131,11 @@ export function GenerateBriefDialog({
             value={value}
             onChange={updateBriefForm}
             onSubmit={handleSubmit}
-            submitLabel="Generate"
+            submitLabel={t("actions.generate")}
             disabled={false}
           />
         ) : (
-          <GatewayKeyPrompt description="An AI Gateway key is required to generate study materials." />
+          <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
         )}
       </DialogContent>
     </Dialog>

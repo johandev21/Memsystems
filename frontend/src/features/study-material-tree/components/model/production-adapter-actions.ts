@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import i18n from "@/shared/i18n";
 import { createFolder, updateFolder, deleteFolder } from "../../api/folders";
 import {
   duplicateStudyMaterial,
@@ -26,7 +27,7 @@ export async function executeCreateFolder(
   parentId: string | null | undefined,
 ): Promise<CommandResult> {
   const result = await createFolder(ctx.notebookId, {
-    name: "Untitled folder",
+    name: i18n.t("defaults.untitledFolder", { ns: "tree" }),
     parentId: parentId ?? undefined,
   });
   ctx.queryClient.setQueryData<FolderDTO[]>(
@@ -46,7 +47,7 @@ export async function executeRenameItem(
   name: string,
 ): Promise<CommandResult> {
   const trimmed = name.trim();
-  if (!trimmed) return { ok: false, error: "Name cannot be empty" };
+  if (!trimmed) return { ok: false, error: i18n.t("errors.nameEmpty", { ns: "tree" }) };
 
   const folderExists = ctx.isFolder(id);
   const materialExists = ctx.isMaterial(id);
@@ -76,7 +77,8 @@ export async function executeRenameItem(
       if (snapshot) {
         ctx.queryClient.setQueryData(["study-material-folders", ctx.notebookId], snapshot);
       }
-      const message = err instanceof Error ? err.message : "Failed to rename folder";
+      const message =
+        err instanceof Error ? err.message : i18n.t("errors.renameFolderFailed", { ns: "tree" });
       toast.error(message);
       return { ok: false, error: message };
     }
@@ -105,7 +107,8 @@ export async function executeRenameItem(
       if (snapshot) {
         ctx.queryClient.setQueryData(["study-materials", ctx.notebookId], snapshot);
       }
-      const message = err instanceof Error ? err.message : "Failed to rename material";
+      const message =
+        err instanceof Error ? err.message : i18n.t("errors.renameMaterialFailed", { ns: "tree" });
       toast.error(message);
       return { ok: false, error: message };
     }
@@ -136,7 +139,8 @@ export async function executeRenameItem(
         void ctx.refetchTree();
         return { ok: true };
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to rename";
+        const message =
+          err instanceof Error ? err.message : i18n.t("errors.renameFailed", { ns: "tree" });
         toast.error(message);
         return { ok: false, error: message };
       }
@@ -175,7 +179,8 @@ export async function executeDeleteItem(
       if (materialSnapshot) {
         ctx.queryClient.setQueryData(["study-materials", ctx.notebookId], materialSnapshot);
       }
-      const message = err instanceof Error ? err.message : "Failed to delete folder";
+      const message =
+        err instanceof Error ? err.message : i18n.t("errors.deleteFolderFailed", { ns: "tree" });
       toast.error(message);
       return { ok: false, error: message };
     }
@@ -196,7 +201,8 @@ export async function executeDeleteItem(
       if (materialSnapshot) {
         ctx.queryClient.setQueryData(["study-materials", ctx.notebookId], materialSnapshot);
       }
-      const message = err instanceof Error ? err.message : "Failed to delete material";
+      const message =
+        err instanceof Error ? err.message : i18n.t("errors.deleteMaterialFailed", { ns: "tree" });
       toast.error(message);
       return { ok: false, error: message };
     }
@@ -212,7 +218,8 @@ export async function executeDeleteItem(
         void ctx.refetchTree();
         return { ok: true };
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to delete";
+        const message =
+          err instanceof Error ? err.message : i18n.t("errors.deleteFailed", { ns: "tree" });
         toast.error(message);
         return { ok: false, error: message };
       }
@@ -237,7 +244,8 @@ export async function executeDuplicateMaterial(
     void ctx.refetchTree();
     return { ok: true, newId: result.id };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to duplicate material";
+    const message =
+      err instanceof Error ? err.message : i18n.t("errors.duplicateFailed", { ns: "tree" });
     toast.error(message);
     return { ok: false, error: message };
   }
@@ -334,7 +342,8 @@ export async function executeMoveItem(
     if (materialSnapshot) {
       ctx.queryClient.setQueryData(["study-materials", ctx.notebookId], materialSnapshot);
     }
-    const message = err instanceof Error ? err.message : "Failed to move item";
+    const message =
+      err instanceof Error ? err.message : i18n.t("errors.moveFailed", { ns: "tree" });
     toast.error(message);
     return { ok: false, error: message };
   }

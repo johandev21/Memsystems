@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 export const SEND_CHAT_PROMPT_EVENT = "send-chat-prompt";
 
@@ -15,33 +16,50 @@ export function usePracticeChatPrompts(currentProblem: {
   givens: string[];
   constraints: string[];
 }) {
+  const { t } = useTranslation("viewer");
+
   const handleDiscussInChat = useCallback(() => {
     const givensText =
       currentProblem.givens.length > 0
-        ? `\nGivens:\n${currentProblem.givens.map((g) => `- ${g}`).join("\n")}`
+        ? t("practice.prompts.givens", {
+            values: currentProblem.givens.map((g) => `- ${g}`).join("\n"),
+          })
         : "";
     const constraintsText =
       currentProblem.constraints.length > 0
-        ? `\nConstraints:\n${currentProblem.constraints.map((c) => `- ${c}`).join("\n")}`
+        ? t("practice.prompts.constraints", {
+            values: currentProblem.constraints.map((c) => `- ${c}`).join("\n"),
+          })
         : "";
     dispatchChatPrompt(
-      `I'm working on this practice problem and would like to discuss it:\n\n**Problem:**\n${currentProblem.prompt}\n${givensText}${constraintsText}\n\nCan you help me understand the core concepts and guide me on how to approach solving it?`,
+      t("practice.prompts.discuss", {
+        problem: currentProblem.prompt,
+        givens: givensText,
+        constraints: constraintsText,
+      }),
     );
-  }, [currentProblem]);
+  }, [currentProblem, t]);
 
   const handleAskSocraticHint = useCallback(() => {
     dispatchChatPrompt(
-      `I'm working on this practice problem and I'm feeling a bit stuck:\n\n**Problem:**\n${currentProblem.prompt}\n\nWithout giving away the complete answer or worked steps, could you give me a Socratic hint or guiding question to help me figure out the next step myself?`,
+      t("practice.prompts.socratic", {
+        problem: currentProblem.prompt,
+      }),
     );
-  }, [currentProblem]);
+  }, [currentProblem, t]);
 
   const handleExplainStepInChat = useCallback(
     (stepNumber: number, title: string, explanation: string) => {
       dispatchChatPrompt(
-        `I'm reviewing the worked steps for this practice problem:\n\n**Problem:**\n${currentProblem.prompt}\n\n**Step ${stepNumber}: ${title}**\n${explanation}\n\nCan you explain this step in more detail, clarify why this method was chosen, and walk me through the reasoning?`,
+        t("practice.prompts.explainStep", {
+          problem: currentProblem.prompt,
+          number: stepNumber,
+          title,
+          explanation,
+        }),
       );
     },
-    [currentProblem],
+    [currentProblem, t],
   );
 
   return { handleDiscussInChat, handleAskSocraticHint, handleExplainStepInChat };

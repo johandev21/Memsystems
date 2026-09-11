@@ -1,0 +1,62 @@
+{
+  "appearance": {
+    "description": "Elige el aspecto de Memsystems. El tema define la paleta y el esquema de color define el modo claro u oscuro.",
+    "title": "Apariencia"
+  },
+  "gateway": {
+    "apiKey": {
+      "confirmRemove": "Confirmar eliminación",
+      "hide": "Ocultar clave del gateway",
+      "label": "Clave de API del Gateway",
+      "placeholder": "Pega tu clave del Gateway de IA de Vercel…",
+      "remove": "Eliminar",
+      "removeConfirm": "Eliminar tu clave desconecta todos los modelos. Haz clic de nuevo para confirmar.",
+      "removing": "Eliminando…",
+      "replace": "Reemplazar",
+      "save": "Guardar clave",
+      "saved": "Guardada",
+      "saving": "Guardando…",
+      "show": "Mostrar clave del gateway"
+    },
+    "description": {
+      "checkFailed": "No se pudo comprobar la conexión",
+      "checking": "Comprobando el estado del gateway…",
+      "connected": "Tu clave del Gateway de IA de Vercel conecta los modelos en todos los cuadernos.",
+      "missing": "Añade tu clave del Gateway de IA abajo para conectar todos los modelos."
+    },
+    "lastChecked": "Última comprobación: {{date}}",
+    "refresh": {
+      "action": "Actualizar modelos",
+      "refreshing": "Actualizando modelos…"
+    },
+    "refreshHint": "Se actualiza automáticamente cada 6 horas.",
+    "stats": {
+      "balance": "Saldo (créditos)",
+      "models": "Modelos",
+      "used": "Créditos usados"
+    },
+    "status": {
+      "checking": "Comprobando",
+      "connected": "Conectado",
+      "degraded": "Degradado",
+      "notConnected": "Sin conexión"
+    },
+    "title": "Gateway de IA",
+    "toast": {
+      "modelsRefreshed": "Lista de modelos actualizada",
+      "refreshFailed": "No se pudo actualizar la lista de modelos",
+      "removed": "Clave del gateway eliminada",
+      "removeFailed": "No se pudo eliminar esta clave",
+      "saved": "Clave del gateway guardada",
+      "saveFailed": "No se pudo guardar esta clave"
+    },
+    "whatIsIt": "¿Qué es el gateway?"
+  },
+  "language": {
+    "description": "Elige el idioma que se usa en toda la aplicación.",
+    "title": "Idioma"
+  },
+  "page": {
+    "title": "Ajustes"
+  }
+}

@@ -4,10 +4,12 @@ export const THEME_NAMES = ["default", "tide", "grove", "dune", "ember", "plum"]
 
 export type ThemeName = (typeof THEME_NAMES)[number];
 
+export type ThemeDescriptionKey = `descriptions.${ThemeName}`;
+
 export interface ThemeMeta {
   id: ThemeName;
   label: string;
-  description: string;
+  descriptionKey: ThemeDescriptionKey;
   /** Hue family for preview gradient generation */
   hue: number;
   /** Light mode preview accents */
@@ -23,7 +25,7 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "default",
     label: "Default",
-    description: "Neutral — what you see today",
+    descriptionKey: "descriptions.default",
     hue: 0,
     preview: {
       light: "oklch(0.985 0 0)",
@@ -35,7 +37,7 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "tide",
     label: "Tide",
-    description: "Cool slate, calm and focused",
+    descriptionKey: "descriptions.tide",
     hue: 260,
     preview: {
       light: "oklch(0.984 0.008 260)",
@@ -47,7 +49,7 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "grove",
     label: "Grove",
-    description: "Sage moss, warm and grounded",
+    descriptionKey: "descriptions.grove",
     hue: 145,
     preview: {
       light: "oklch(0.986 0.009 145)",
@@ -59,7 +61,7 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "dune",
     label: "Dune",
-    description: "Warm sand, soft and inviting",
+    descriptionKey: "descriptions.dune",
     hue: 75,
     preview: {
       light: "oklch(0.985 0.01 75)",
@@ -71,7 +73,7 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "ember",
     label: "Ember",
-    description: "Burnished terracotta, confident",
+    descriptionKey: "descriptions.ember",
     hue: 30,
     preview: {
       light: "oklch(0.985 0.008 35)",
@@ -83,7 +85,7 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "plum",
     label: "Plum",
-    description: "Dusted violet, focused evening",
+    descriptionKey: "descriptions.plum",
     hue: 300,
     preview: {
       light: "oklch(0.985 0.009 300)",

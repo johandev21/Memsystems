@@ -1,5 +1,6 @@
 import { ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type { CitedSourceDTO } from "../api/chat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,10 @@ interface ReferencePopoverProps {
 }
 
 export function ReferencePopover({ reference, children }: ReferencePopoverProps) {
+  const { t } = useTranslation("chat");
   const safeUrl = getSafeReferenceUrl(reference.url);
-  const kindLabel = reference.kind === "unknown" ? "Source" : capitalize(reference.kind);
+  const kindLabel =
+    reference.kind === "unknown" ? t("referencePopover.unknownKind") : capitalize(reference.kind);
   const locatorLabel = getReferenceLocatorLabel(reference);
 
   return (
@@ -35,7 +38,10 @@ export function ReferencePopover({ reference, children }: ReferencePopoverProps)
             type="button"
             size="icon-xs"
             variant="secondary"
-            aria-label={`Reference ${reference.number}: ${reference.title}`}
+            aria-label={t("referencePopover.triggerAria", {
+              number: reference.number,
+              title: reference.title,
+            })}
             className="relative -top-px mx-0.5 inline-flex h-5 w-auto min-w-5 rounded-full px-1 align-baseline text-[0.6875rem] leading-none text-muted-foreground hover:text-foreground"
           />
         }
@@ -71,11 +77,15 @@ function ReferencePopoverHeader({
   kindLabel,
   locatorLabel,
 }: ReferencePopoverHeaderProps) {
+  const { t } = useTranslation("chat");
+
   return (
     <PopoverHeader>
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant="secondary">{kindLabel}</Badge>
-        {!reference.isAvailable && <Badge variant="outline">Source unavailable</Badge>}
+        {!reference.isAvailable && (
+          <Badge variant="outline">{t("referencePopover.sourceUnavailable")}</Badge>
+        )}
       </div>
       <PopoverTitle>{reference.title}</PopoverTitle>
       {locatorLabel && (
@@ -97,6 +107,8 @@ function ReferenceOpenSourceButton({
   reference,
   safeUrl,
 }: ReferenceOpenSourceButtonProps) {
+  const { t } = useTranslation("chat");
+
   if (!reference.isAvailable) return null;
 
   const hasCustomLocator = Boolean(
@@ -129,7 +141,7 @@ function ReferenceOpenSourceButton({
         className="cursor-pointer"
         onClick={handleOpenSourceViewer}
       >
-        Open source
+        {t("referencePopover.openSource")}
         <ExternalLinkIcon data-icon="inline-end" />
       </Button>
     );
@@ -143,16 +155,16 @@ function ReferenceOpenSourceButton({
             href={safeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Open source"
+            aria-label={t("referencePopover.openSource")}
           >
-            Open source
+            {t("referencePopover.openSource")}
           </a>
         }
         nativeButton={false}
         size="sm"
         variant="ghost"
       >
-        Open source
+        {t("referencePopover.openSource")}
         <ExternalLinkIcon data-icon="inline-end" />
       </Button>
     );
@@ -167,7 +179,7 @@ function ReferenceOpenSourceButton({
         className="cursor-pointer"
         onClick={handleOpenSourceViewer}
       >
-        Open source
+        {t("referencePopover.openSource")}
         <ExternalLinkIcon data-icon="inline-end" />
       </Button>
     );
@@ -181,11 +193,13 @@ interface MessageReferencesProps {
 }
 
 export function MessageReferences({ references }: MessageReferencesProps) {
+  const { t } = useTranslation("chat");
+
   if (references.length === 0) return null;
 
   return (
     <div
-      aria-label="References"
+      aria-label={t("referencePopover.referencesAria")}
       className="not-typeset mt-2 flex flex-wrap items-center gap-1"
       data-not-typeset
     >

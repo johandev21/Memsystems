@@ -1,5 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
 import { SourceRow } from "./source-row";
 
@@ -32,6 +33,7 @@ export function SourcesList({
   retryingId,
   cancellingId,
 }: SourcesListProps) {
+  const { t } = useTranslation("sources");
   const isVirtualized = (sources?.length ?? 0) > 25 && scrollElement !== undefined;
 
   const virtualizer = useVirtualizer({
@@ -54,7 +56,7 @@ export function SourcesList({
         className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive"
       >
         <AlertTriangle className="size-3.5 shrink-0" />
-        <span>Failed to load sources</span>
+        <span>{t("sourcesList.failedToLoad")}</span>
       </div>
     );
   }
@@ -62,9 +64,9 @@ export function SourcesList({
   if (hasNoSources) {
     return (
       <div className="px-4 py-10 text-center">
-        <p className="text-sm font-medium text-foreground">No sources yet</p>
+        <p className="text-sm font-medium text-foreground">{t("sourcesList.emptyTitle")}</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Add material to ground your chats and study materials.
+          {t("sourcesList.emptyDescription")}
         </p>
       </div>
     );

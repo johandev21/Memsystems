@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/utils/cn";
 import type { IndexedCard } from "./types";
@@ -18,6 +19,7 @@ export function FlashcardSidebar({
   currentIndex,
   onSelectIndex,
 }: FlashcardSidebarProps) {
+  const { t } = useTranslation("viewer");
   return (
     <div className="w-56 md:w-64 flex flex-col shrink-0 bg-surface-1">
       <div className="p-3 border-b border-surface-border-subtle">
@@ -25,7 +27,7 @@ export function FlashcardSidebar({
           <Search className="size-3.5 absolute left-3 top-3 text-text-faint" />
           <Input
             type="text"
-            placeholder="Search cards..."
+            placeholder={t("flashcard.searchCards")}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="h-8 pl-8 text-xs rounded-2xl bg-surface-2 border-surface-border-strong focus-visible:ring-surface-border-strong"

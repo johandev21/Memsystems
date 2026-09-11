@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import i18n from "@/shared/i18n";
 
 export interface CaseStudyQuestionProgress {
   response: string;
@@ -123,9 +124,7 @@ export function useCaseStudyProgress(materialId: string): UseCaseStudyProgressRe
       if (writeStored(materialId, next)) {
         setStorageError(null);
       } else {
-        setStorageError(
-          "Progress could not be saved on this device. Your current session is kept in memory.",
-        );
+        setStorageError(i18n.t("caseStudy.storageSaveError", { ns: "viewer" }));
       }
     },
     [entries, materialId],
@@ -186,7 +185,7 @@ export function useCaseStudyProgress(materialId: string): UseCaseStudyProgressRe
       localStorage.removeItem(storageKey(materialId));
       setStorageError(null);
     } catch {
-      setStorageError("Reset failed on this device, but the session was cleared in memory.");
+      setStorageError(i18n.t("caseStudy.storageResetError", { ns: "viewer" }));
     }
     setEntries({});
   }, [materialId]);

@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   Headphones,
@@ -32,6 +33,7 @@ export function AudioPlayerBar({
   onToggleMute,
   onVolumeChange,
 }: AudioPlayerBarProps) {
+  const { t } = useTranslation("sourceRenderers");
   const { isLoadingAudio, isAudioError, isPlaying, isMuted } = playbackState;
   return (
     <div className="shrink-0 border-b border-border/70 bg-card/60 backdrop-blur-md p-3 sm:p-4 shadow-xs">
@@ -40,11 +42,11 @@ export function AudioPlayerBar({
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="gap-1 font-normal text-muted-foreground">
               <Headphones className="size-3 text-primary" />
-              Audio Recording
+              {t("audioPlayer.audioRecording")}
             </Badge>
             {segmentsCount > 0 && (
               <Badge variant="secondary" className="font-normal text-[11px]">
-                {segmentsCount} {segmentsCount === 1 ? "segment" : "segments"} · {totalWords} words
+                {t("audioPlayer.summary", { count: segmentsCount, words: totalWords })}
               </Badge>
             )}
           </div>
@@ -52,13 +54,13 @@ export function AudioPlayerBar({
           {isLoadingAudio && (
             <div className="flex items-center gap-1.5 text-xs text-primary animate-pulse">
               <Loader2 className="size-3.5 animate-spin" />
-              <span>Loading audio stream…</span>
+              <span>{t("audioPlayer.loadingStream")}</span>
             </div>
           )}
           {isAudioError && !audioSrc && (
             <div className="flex items-center gap-1 text-xs text-warning">
               <AlertTriangle className="size-3.5" />
-              <span>Audio stream unavailable</span>
+              <span>{t("audioPlayer.streamUnavailable")}</span>
             </div>
           )}
         </div>
@@ -68,7 +70,7 @@ export function AudioPlayerBar({
             <input
               type="range"
               data-testid="seek-slider"
-              aria-label="Seek time"
+              aria-label={t("audioPlayer.seekTime")}
               min={0}
               max={duration || 100}
               step={0.1}
@@ -94,8 +96,8 @@ export function AudioPlayerBar({
               variant="ghost"
               size="icon"
               data-testid="skip-backward-button"
-              aria-label="Skip backward 10 seconds"
-              title="Skip backward 10s"
+              aria-label={t("audioPlayer.skipBackwardAria")}
+              title={t("audioPlayer.skipBackwardTitle")}
               onClick={() => onSkip(-10)}
               className="size-8 cursor-pointer text-muted-foreground hover:text-foreground"
             >
@@ -107,8 +109,8 @@ export function AudioPlayerBar({
               variant="default"
               size="icon"
               data-testid="play-pause-button"
-              aria-label={isPlaying ? "Pause" : "Play"}
-              title={isPlaying ? "Pause" : "Play"}
+              aria-label={isPlaying ? t("audioPlayer.pause") : t("audioPlayer.play")}
+              title={isPlaying ? t("audioPlayer.pause") : t("audioPlayer.play")}
               onClick={onTogglePlay}
               className="size-9 rounded-full cursor-pointer shadow-sm transition-transform active:scale-95"
             >
@@ -120,8 +122,8 @@ export function AudioPlayerBar({
               variant="ghost"
               size="icon"
               data-testid="skip-forward-button"
-              aria-label="Skip forward 10 seconds"
-              title="Skip forward 10s"
+              aria-label={t("audioPlayer.skipForwardAria")}
+              title={t("audioPlayer.skipForwardTitle")}
               onClick={() => onSkip(10)}
               className="size-8 cursor-pointer text-muted-foreground hover:text-foreground"
             >
@@ -138,7 +140,7 @@ export function AudioPlayerBar({
                 data-testid="playback-speed-button"
                 onClick={onCycleRate}
                 className="h-7 px-2 text-xs font-mono cursor-pointer"
-                title="Click to cycle speed (0.75x, 1x, 1.25x, 1.5x, 2x)"
+                title={t("audioPlayer.cycleSpeed")}
               >
                 {playbackRate}x
               </Button>
@@ -150,8 +152,8 @@ export function AudioPlayerBar({
                 variant="ghost"
                 size="icon"
                 data-testid="volume-button"
-                aria-label={isMuted ? "Unmute" : "Mute"}
-                title={isMuted ? "Unmute" : "Mute"}
+                aria-label={isMuted ? t("audioPlayer.unmute") : t("audioPlayer.mute")}
+                title={isMuted ? t("audioPlayer.unmute") : t("audioPlayer.mute")}
                 onClick={onToggleMute}
                 className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
               >
@@ -164,7 +166,7 @@ export function AudioPlayerBar({
               <input
                 type="range"
                 data-testid="volume-slider"
-                aria-label="Volume"
+                aria-label={t("audioPlayer.volume")}
                 min={0}
                 max={1}
                 step={0.05}

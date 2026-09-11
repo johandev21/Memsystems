@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { Source } from "../api/sources";
 import { useUploadStore } from "./use-upload-store";
@@ -20,6 +21,7 @@ export function useAddSourceActions(
   sourceState: ReturnType<typeof useAddSourceDialogState>,
   onCloseAndReset: () => void,
 ) {
+  const { t } = useTranslation("sources");
   const queryClient = useQueryClient();
   const addPendingUpload = useUploadStore((state) => state.addPendingUpload);
   const updatePendingUpload = useUploadStore((state) => state.updatePendingUpload);
@@ -81,13 +83,13 @@ export function useAddSourceActions(
           handleSourceCreated(
             uploadId,
             source,
-            isYouTube ? "YouTube video source added" : "URL source added",
+            isYouTube ? t("toasts.youtubeAdded") : t("toasts.urlAdded"),
           ),
         onAbort: () => removePendingUpload(uploadId),
         onError: (error) =>
           handleUploadError(
             uploadId,
-            isYouTube ? "Failed to add YouTube video source" : "Failed to add URL source",
+            isYouTube ? t("toasts.youtubeAddFailed") : t("toasts.urlAddFailed"),
             error,
           ),
       },
@@ -148,40 +150,40 @@ export function useAddSourceActions(
           uploadId,
           source,
           isVideo
-            ? "Video source added"
+            ? t("toasts.videoAdded")
             : isAudio
-              ? "Audio source added"
+              ? t("toasts.audioAdded")
               : isImage
-                ? "Image source added"
+                ? t("toasts.imageAdded")
                 : isSlides
-                  ? "Presentation source added"
+                  ? t("toasts.presentationAdded")
                   : isEbook
-                    ? "eBook source added"
+                    ? t("toasts.ebookAdded")
                     : isTex
-                      ? "LaTeX source added"
+                      ? t("toasts.latexAdded")
                       : isBib
-                        ? "BibTeX source added"
-                        : "File source added",
+                        ? t("toasts.bibtexAdded")
+                        : t("toasts.fileAdded"),
         ),
       onAbort: () => removePendingUpload(uploadId),
       onError: (error) =>
         handleUploadError(
           uploadId,
           isVideo
-            ? "Failed to upload video"
+            ? t("toasts.videoUploadFailed")
             : isAudio
-              ? "Failed to upload audio"
+              ? t("toasts.audioUploadFailed")
               : isImage
-                ? "Failed to upload image"
+                ? t("toasts.imageUploadFailed")
                 : isSlides
-                  ? "Failed to upload presentation"
+                  ? t("toasts.presentationUploadFailed")
                   : isEbook
-                    ? "Failed to upload eBook"
+                    ? t("toasts.ebookUploadFailed")
                     : isTex
-                      ? "Failed to upload LaTeX file"
+                      ? t("toasts.latexUploadFailed")
                       : isBib
-                        ? "Failed to upload BibTeX file"
-                        : "Failed to upload file",
+                        ? t("toasts.bibtexUploadFailed")
+                        : t("toasts.fileUploadFailed"),
           error,
         ),
     });
@@ -190,7 +192,7 @@ export function useAddSourceActions(
   const handleStartTextUpload = () => {
     if (!textBody.trim()) return;
 
-    const title = textTitle.trim() || "Pasted text";
+    const title = textTitle.trim() || t("toasts.pastedText");
     const abortController = new AbortController();
     onCloseAndReset();
 
@@ -205,9 +207,9 @@ export function useAddSourceActions(
       notebookId,
       uploadId,
       abortController,
-      onSuccess: (source) => handleSourceCreated(uploadId, source, "Text source added"),
+      onSuccess: (source) => handleSourceCreated(uploadId, source, t("toasts.textAdded")),
       onAbort: () => removePendingUpload(uploadId),
-      onError: (error) => handleUploadError(uploadId, "Failed to add text source", error),
+      onError: (error) => handleUploadError(uploadId, t("toasts.textAddFailed"), error),
     });
   };
 

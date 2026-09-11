@@ -7,6 +7,7 @@ import {
 import { cn } from "@/shared/utils/cn";
 import { ImageIcon, Monitor, PlusIcon } from "lucide-react";
 import { type ComponentProps, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { capturePromptInputScreenshot } from "../../utils/prompt-input-screenshot";
 import { usePromptInputAttachments } from "./prompt-input-context";
 import { PromptInputButton, type PromptInputButtonProps } from "./prompt-input-buttons";
@@ -16,11 +17,13 @@ export type PromptInputActionAddAttachmentsProps = ComponentProps<typeof Dropdow
 };
 
 export const PromptInputActionAddAttachments = ({
-  label = "Add photos or files",
+  label,
   className,
   ...props
 }: PromptInputActionAddAttachmentsProps) => {
+  const { t } = useTranslation("ai");
   const attachments = usePromptInputAttachments();
+  const resolvedLabel = label ?? t("promptInput.addPhotosOrFiles");
 
   const handleSelect = useCallback(
     (e: unknown) => {
@@ -36,7 +39,7 @@ export const PromptInputActionAddAttachments = ({
       {...props}
       onSelect={handleSelect}
     >
-      <ImageIcon className="mr-2 size-4 shrink-0" /> {label}
+      <ImageIcon className="mr-2 size-4 shrink-0" /> {resolvedLabel}
     </DropdownMenuItem>
   );
 };
@@ -46,11 +49,13 @@ export type PromptInputActionAddScreenshotProps = ComponentProps<typeof Dropdown
 };
 
 export const PromptInputActionAddScreenshot = ({
-  label = "Take screenshot",
+  label,
   onSelect,
   ...props
 }: PromptInputActionAddScreenshotProps) => {
+  const { t } = useTranslation("ai");
   const attachments = usePromptInputAttachments();
+  const resolvedLabel = label ?? t("promptInput.takeScreenshot");
 
   const handleSelect = useCallback(
     async (event: unknown) => {
@@ -82,7 +87,7 @@ export const PromptInputActionAddScreenshot = ({
   return (
     <DropdownMenuItem {...props} onSelect={handleSelect}>
       <Monitor className="mr-2 size-4" />
-      {label}
+      {resolvedLabel}
     </DropdownMenuItem>
   );
 };

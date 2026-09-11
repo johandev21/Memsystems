@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ export function AddSourceDialog({
   notebookId: string;
   children: ReactElement;
 }) {
+  const { t } = useTranslation("sources");
   const { data: sources } = useQuery(sourcesQueryOptions(notebookId));
   const [open, setOpen] = useState(false);
   const sourceState = useAddSourceDialogState();
@@ -73,10 +75,10 @@ export function AddSourceDialog({
       >
         <DialogHeader className="shrink-0 px-5 pb-2 pt-6 sm:px-6">
           <DialogTitle className="text-center text-xl font-semibold text-foreground">
-            Add Knowledge Sources
+            {t("addSourceDialog.title")}
           </DialogTitle>
           <DialogDescription className="text-center">
-            Search the web or bring in your own material.
+            {t("addSourceDialog.description")}
           </DialogDescription>
         </DialogHeader>
 

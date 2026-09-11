@@ -1,5 +1,6 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -71,6 +72,7 @@ async function resizeBannerImage(
 }
 
 export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUploadDialogProps) {
+  const { t } = useTranslation("notebooks");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,11 +99,13 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
 
   const handleFileSelect = async (file: File) => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      toast.error(`Unsupported image format (${file.type}). Use JPG, PNG, or WebP.`);
+      toast.error(t("upload.unsupportedFormat", { type: file.type }));
       return;
     }
     if (file.size > MAX_BANNER_BYTES) {
-      toast.error(`Image is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max 2MB.`);
+      toast.error(
+        t("upload.tooLarge", { size: (file.size / (1024 * 1024)).toFixed(1) }),
+      );
       return;
     }
     const processedFile = await resizeBannerImage(file);
@@ -114,18 +118,17 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
       <DialogContent className="sm:max-w-[480px] p-6 gap-5 rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">
-            Upload Banner Image
+            {t("upload.title")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Select an image file from your computer. You can drag & zoom it directly on the banner
-            canvas afterwards.
+            {t("upload.description")}
           </DialogDescription>
         </DialogHeader>
 
         <input
           ref={fileInputRef}
           type="file"
-          aria-label="Upload notebook banner image"
+          aria-label={t("upload.inputAria")}
           accept={ACCEPTED_IMAGE_TYPES.join(",")}
           className="sr-only"
           onChange={(e) => {
@@ -155,13 +158,13 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
 
           <div className="flex flex-col items-center gap-1 text-center">
             <p className="text-xs font-semibold text-foreground">
-              Click to browse or drag & drop image
+              {t("upload.browseOrDrop")}
             </p>
-            <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 2MB</p>
+            <p className="text-xs text-muted-foreground">{t("upload.formats")}</p>
           </div>
 
           <span className="mt-1 inline-flex items-center justify-center rounded-md bg-secondary text-secondary-foreground text-xs font-medium px-3 py-1.5 shadow-xs pointer-events-none">
-            Browse files
+            {t("upload.browse")}
           </span>
         </div>
       </DialogContent>

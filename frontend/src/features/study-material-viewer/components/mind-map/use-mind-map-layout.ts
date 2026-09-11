@@ -7,6 +7,7 @@ import {
 } from "@xyflow/react";
 import type { MapItem, MindMapFlowNode, MindMapViewProps } from "./mind-map-types";
 import { buildGraph, createTree } from "./mind-map-tree";
+import i18n from "@/shared/i18n";
 
 export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
   const { root, depths } = useMemo(() => createTree(content), [content]);
@@ -58,7 +59,14 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
         return;
       }
 
-      const prompt = `I'm studying the mind-map concept "${item.label}"${materialTitle ? ` from the study material "${materialTitle}"` : ""}.\n\nPlease explain this concept in depth with practical examples, related ideas, and key insights I should remember.`;
+      const mindMapContext = materialTitle
+        ? i18n.t("mindMap.prompt.context", { ns: "viewer", title: materialTitle })
+        : "";
+      const prompt = i18n.t("mindMap.prompt.study", {
+        ns: "viewer",
+        label: item.label,
+        mindMapContext,
+      });
       window.dispatchEvent(
         new CustomEvent("send-chat-prompt", {
           detail: {

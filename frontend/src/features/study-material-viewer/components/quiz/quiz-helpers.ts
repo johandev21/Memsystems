@@ -1,3 +1,5 @@
+import i18n from "@/shared/i18n";
+
 export interface QuizQuestionOption {
   id: string;
   text: string;
@@ -30,25 +32,39 @@ export function handleExplainInChat(question: QuizQuestion, selectedIdx: number 
   const selectedOption = selectedIdx !== undefined ? question.options[selectedIdx] : null;
   const correctOption = question.options[correctIdx];
   const isCorrect = selectedIdx === correctIdx;
+  const status = i18n.t(
+    isCorrect ? "quiz.prompts.statusCorrect" : "quiz.prompts.statusIncorrect",
+    { ns: "viewer" },
+  );
+  const selectedLine = selectedOption
+    ? i18n.t("quiz.prompts.selectedAnswer", {
+        ns: "viewer",
+        text: selectedOption.text,
+        status,
+      })
+    : i18n.t("quiz.prompts.noAnswer", { ns: "viewer" });
+  const explanationLine = selectedOption?.explanation
+    ? i18n.t("quiz.prompts.providedExplanation", {
+        ns: "viewer",
+        text: formatExplanationText(selectedOption.explanation),
+      })
+    : i18n.t("quiz.prompts.correctExplanation", {
+        ns: "viewer",
+        text: formatExplanationText(correctOption.explanation),
+      });
+  const incorrectLine =
+    selectedOption && !isCorrect
+      ? i18n.t("quiz.prompts.whyIncorrect", { ns: "viewer", text: selectedOption.text })
+      : "";
 
-  const promptText = `I'm reviewing a quiz question and would like a deeper explanation of the concepts.
-
-Question: ${question.prompt}
-${
-  selectedOption
-    ? `My Selected Answer: "${selectedOption.text}" (${isCorrect ? "Correct" : "Incorrect"})`
-    : "No answer selected"
-}
-Correct Answer: "${correctOption.text}"
-${
-  selectedOption?.explanation
-    ? `Provided Explanation: "${formatExplanationText(selectedOption.explanation)}"`
-    : `Correct Explanation: "${formatExplanationText(correctOption.explanation)}"`
-}
-
-Please explain why "${correctOption.text}" is correct${
-    selectedOption && !isCorrect ? `, why "${selectedOption.text}" was incorrect` : ""
-  }, and break down the underlying concepts in detail.`;
+  const promptText = i18n.t("quiz.prompts.explain", {
+    ns: "viewer",
+    question: question.prompt,
+    selected: selectedLine,
+    answer: correctOption.text,
+    explanation: explanationLine,
+    incorrect: incorrectLine,
+  });
 
   window.dispatchEvent(
     new CustomEvent("send-chat-prompt", {

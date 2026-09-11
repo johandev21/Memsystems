@@ -16,6 +16,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { TreeNode } from "../../model/tree";
 import { useTreeControllerContext } from "../controller-state";
 
@@ -24,6 +25,7 @@ type RowMenuProps = {
 };
 
 export function RowMenu({ node }: RowMenuProps) {
+  const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
   const isFolder = node.type === "folder";
 
@@ -36,7 +38,7 @@ export function RowMenu({ node }: RowMenuProps) {
             onClick={() => controller.createFolder(node.id)}
           >
             <FolderPlus />
-            New folder
+            {t("actions.newFolder")}
             <ContextMenuShortcut className="flex items-center gap-1 tracking-normal font-sans text-xs text-muted-foreground group-focus/context-menu-item:text-accent-foreground">
               <Command className="size-4 shrink-0" aria-hidden="true" />
               <span className="font-sans font-medium">N</span>
@@ -49,7 +51,7 @@ export function RowMenu({ node }: RowMenuProps) {
           onClick={() => controller.beginRename(node.id)}
         >
           <Pencil />
-          Rename
+          {t("actions.rename")}
           <ContextMenuShortcut className="tracking-normal font-sans text-xs text-muted-foreground group-focus/context-menu-item:text-accent-foreground">
             <span className="font-sans font-medium">F2</span>
             <span className="sr-only">F2</span>
@@ -61,7 +63,7 @@ export function RowMenu({ node }: RowMenuProps) {
             onClick={() => controller.duplicateMaterial(node.id)}
           >
             <Copy />
-            Duplicate
+            {t("actions.duplicate")}
           </ContextMenuItem>
         )}
       </ContextMenuGroup>
@@ -73,7 +75,7 @@ export function RowMenu({ node }: RowMenuProps) {
           onClick={() => controller.moveToRoot(node.id)}
         >
           <FolderInput />
-          Move to Study Materials
+          {t("actions.moveToRoot")}
         </ContextMenuItem>
         {isFolder && (
           <>
@@ -82,14 +84,14 @@ export function RowMenu({ node }: RowMenuProps) {
               onClick={controller.expandAll}
             >
               <FolderOpen />
-              Expand all
+              {t("actions.expandAll")}
             </ContextMenuItem>
             <ContextMenuItem
               data-slot="study-materials-tree-row-menu-item"
               onClick={controller.collapseAll}
             >
               <Folder />
-              Collapse all
+              {t("actions.collapseAll")}
             </ContextMenuItem>
           </>
         )}
@@ -102,7 +104,7 @@ export function RowMenu({ node }: RowMenuProps) {
           onClick={() => controller.requestDelete(node)}
         >
           <Trash2 />
-          Delete
+          {t("actions.delete")}
           <ContextMenuShortcut className="flex items-center tracking-normal text-destructive/75 group-focus/context-menu-item:text-destructive">
             <Delete className="size-5 shrink-0" aria-hidden="true" />
             <span className="sr-only">Backspace</span>

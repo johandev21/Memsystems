@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
@@ -23,6 +24,8 @@ export function PracticeStepperHeader({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const { t } = useTranslation("viewer");
+
   return (
     <div className="sticky top-0 z-10 bg-surface-1/95 backdrop-blur-sm px-4 py-3 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -31,7 +34,7 @@ export function PracticeStepperHeader({
             {difficultyLabel}
           </Badge>
           <span className="text-sm font-medium text-text-secondary">
-            Problem {activeIdx + 1} of {totalProblems}
+            {t("practice.problemOf", { current: activeIdx + 1, total: totalProblems })}
           </span>
         </div>
 
@@ -50,7 +53,7 @@ export function PracticeStepperHeader({
                       ? "bg-primary text-primary-foreground font-semibold shadow-xs border-transparent"
                       : "bg-surface-2 border-surface-border-subtle text-text-secondary hover:bg-surface-3 hover:text-text-primary",
                   )}
-                  title={`Go to problem ${idx + 1}`}
+                  title={t("practice.goToProblem", { number: idx + 1 })}
                 >
                   {idx + 1}
                 </button>
@@ -66,10 +69,10 @@ export function PracticeStepperHeader({
               onClick={onPrev}
               disabled={activeIdx === 0}
               className="h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary"
-              title="Previous problem"
+              title={t("practice.previousProblem")}
             >
               <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">Previous</span>
+              <span className="hidden sm:inline ml-1">{t("common.previous")}</span>
             </Button>
             <Button
               type="button"
@@ -78,9 +81,9 @@ export function PracticeStepperHeader({
               onClick={onNext}
               disabled={activeIdx === totalProblems - 1}
               className="h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary"
-              title="Next problem"
+              title={t("practice.nextProblem")}
             >
-              <span className="hidden sm:inline mr-1">Next</span>
+              <span className="hidden sm:inline mr-1">{t("common.next")}</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

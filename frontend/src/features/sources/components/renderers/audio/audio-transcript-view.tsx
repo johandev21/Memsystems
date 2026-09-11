@@ -1,4 +1,5 @@
 import type { Virtualizer } from "@tanstack/react-virtual";
+import { useTranslation } from "react-i18next";
 import type { ParsedAudioSegment } from "../../../utils/audio-transcript-parser";
 
 export interface AudioTranscriptViewProps {
@@ -20,6 +21,7 @@ export function AudioTranscriptView({
   virtualizer,
   renderTranscriptCard,
 }: AudioTranscriptViewProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div
       ref={transcriptContainerRef}
@@ -28,8 +30,8 @@ export function AudioTranscriptView({
       {filteredSegments.length === 0 ? (
         <div className="py-16 text-center text-xs text-muted-foreground">
           {searchQuery
-            ? `No transcript segments match "${searchQuery}".`
-            : "No transcript segments available for this audio file."}
+            ? t("audioTranscript.noSegmentsMatch", { query: searchQuery })
+            : t("audioTranscript.noSegments")}
         </div>
       ) : isVirtualized ? (
         <div

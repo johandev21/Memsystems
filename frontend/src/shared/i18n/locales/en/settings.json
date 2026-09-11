@@ -1,0 +1,62 @@
+{
+  "appearance": {
+    "description": "Choose how Memsystems looks. Theme sets the palette, color scheme sets light or dark.",
+    "title": "Appearance"
+  },
+  "gateway": {
+    "apiKey": {
+      "confirmRemove": "Confirm Remove",
+      "hide": "Hide gateway key",
+      "label": "Gateway API Key",
+      "placeholder": "Paste your Vercel AI Gateway key…",
+      "remove": "Remove",
+      "removeConfirm": "Removing your key disconnects every model. Click again to confirm.",
+      "removing": "Removing…",
+      "replace": "Replace",
+      "save": "Save Key",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "show": "Show gateway key"
+    },
+    "description": {
+      "checkFailed": "Failed to check connection",
+      "checking": "Checking gateway status…",
+      "connected": "Your Vercel AI Gateway key connects models across all notebooks.",
+      "missing": "Add your AI Gateway key below to connect every model."
+    },
+    "lastChecked": "Last checked {{date}}",
+    "refresh": {
+      "action": "Refresh Models",
+      "refreshing": "Refreshing Models…"
+    },
+    "refreshHint": "Refreshes automatically every 6 hours.",
+    "stats": {
+      "balance": "Balance (Credits)",
+      "models": "Models",
+      "used": "Credits Used"
+    },
+    "status": {
+      "checking": "Checking",
+      "connected": "Connected",
+      "degraded": "Degraded",
+      "notConnected": "Not connected"
+    },
+    "title": "AI Gateway",
+    "toast": {
+      "modelsRefreshed": "Model list refreshed",
+      "refreshFailed": "Could not refresh the model list",
+      "removed": "Gateway key removed",
+      "removeFailed": "Could not remove this key",
+      "saved": "Gateway key saved",
+      "saveFailed": "Could not save this key"
+    },
+    "whatIsIt": "What is the gateway?"
+  },
+  "language": {
+    "description": "Choose the language used across the app.",
+    "title": "Language"
+  },
+  "page": {
+    "title": "Settings"
+  }
+}

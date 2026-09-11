@@ -1,0 +1,132 @@
+{
+  "banner": {
+    "add": "Add banner",
+    "cancelEdits": "Cancel edits",
+    "canvas": "Notebook banner",
+    "change": "Change",
+    "dragToReposition": "Drag to reposition",
+    "editNotebook": "Edit notebook",
+    "noImage": "No banner image set",
+    "previewAlt": "Notebook Banner Preview",
+    "previewRegion": "Notebook banner preview",
+    "remove": "Remove banner",
+    "removeBanner": "Remove Banner",
+    "save": "Save",
+    "saving": "Saving…",
+    "titleAria": "Notebook title",
+    "titlePlaceholder": "Notebook Title",
+    "titleRequired": "Title is required",
+    "untitledNotebook": "Untitled Notebook",
+    "updated": "Notebook updated",
+    "updateFailed": "Failed to update notebook",
+    "upload": "Upload",
+    "uploadHint": "Upload an image to customize your notebook",
+    "uploadImage": "Upload Banner Image"
+  },
+  "description": {
+    "addDetailed": "Add a detailed description for your notebook...",
+    "ariaLabel": "Notebook description",
+    "label": "Description",
+    "less": "Less",
+    "more": "More",
+    "placeholder": "Describe what this notebook is for…"
+  },
+  "folders": {
+    "create": "Create",
+    "created": "Folder \"{{name}}\" created",
+    "createFailed": "Failed to create folder",
+    "newFolderPlaceholder": "New folder name...",
+    "notebookRoot": "Notebook Root"
+  },
+  "notebook": {
+    "editTitle": "Edit notebook title",
+    "renamed": "Notebook renamed",
+    "renameFailed": "Failed to rename notebook"
+  },
+  "panels": {
+    "addSource": "Add source",
+    "backToMaterial": "Back to Material",
+    "chat": "Chat",
+    "collapseSources": "Collapse sources",
+    "collapseStudio": "Collapse studio",
+    "expandSources": "Expand sources",
+    "expandStudio": "Expand studio",
+    "sections": "Notebook sections",
+    "sources": "Sources",
+    "studio": "Studio"
+  },
+  "recent": {
+    "allSeen_one": "You've seen all {{count}} notebook",
+    "allSeen_other": "You've seen all {{count}} notebooks",
+    "createFailed": "Failed to create notebook",
+    "emptyDescription": "Your notebooks will live here. Create one to start learning.",
+    "emptyTitle": "No notebooks yet",
+    "heroSubtitle": "Pick up where you left off, or start something fresh.",
+    "heroTitle": "Make progress on what matters.",
+    "loadingMore": "Loading more…",
+    "loadMoreFailed": "Couldn't load more notebooks.",
+    "newNotebook": "New notebook",
+    "retry": "Retry",
+    "title": "Recent Notebooks",
+    "updated": "Updated {{time}}",
+    "updatedJustNow": "Updated just now",
+    "viewAll": "View all"
+  },
+  "resources": {
+    "basedOnBrief": "based on brief",
+    "basedOnSources_one": "based on {{count}} source",
+    "basedOnSources_other": "based on {{count}} sources",
+    "processingSources": "processing sources"
+  },
+  "settings": {
+    "ariaLabel": "Notebook settings",
+    "cancel": "Cancel",
+    "clearChat": "Clear chat",
+    "delete": "Delete notebook",
+    "deleteConfirm": "Permanently delete “{{title}}” and all associated sources and notes?",
+    "deleted": "Notebook deleted",
+    "deleteFailed": "Failed to delete notebook",
+    "deleting": "Deleting…",
+    "description": "Edit or manage this notebook.",
+    "edit": "Edit notebook",
+    "thisNotebook": "this notebook",
+    "title": "Notebook"
+  },
+  "sources": {
+    "noSources": "No sources yet. Add a source first to generate a study material."
+  },
+  "studio": {
+    "cancelGeneration": "Cancel generation",
+    "dismiss": "Dismiss",
+    "dismissError": "Dismiss error",
+    "failedToGenerate": "Failed to generate {{kind}}",
+    "generating": "Generating {{kind}}...",
+    "generationFailed": "Generation failed",
+    "resources": {
+      "caseStudy": "Case Study",
+      "flashcards": "Flashcards",
+      "mindMap": "Mind Map",
+      "practiceProblems": "Practice Problems",
+      "quiz": "Quiz",
+      "roadmap": "Roadmap",
+      "slides": "Slides",
+      "studyGuide": "Study Guide"
+    },
+    "tooltipGenerating": "{{label}} (Generating...)"
+  },
+  "upload": {
+    "browse": "Browse files",
+    "browseOrDrop": "Click to browse or drag & drop image",
+    "description": "Select an image file from your computer. You can drag & zoom it directly on the banner canvas afterwards.",
+    "formats": "JPG, PNG, WebP up to 2MB",
+    "inputAria": "Upload notebook banner image",
+    "title": "Upload Banner Image",
+    "tooLarge": "Image is too large ({{size}}MB). Max 2MB.",
+    "unsupportedFormat": "Unsupported image format ({{type}}). Use JPG, PNG, or WebP."
+  },
+  "viewer": {
+    "goBack": "Go back",
+    "loadFailed": "Failed to load study material",
+    "select": "Select a study material to view its contents"
+  }
+}

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { FileText } from "lucide-react";
 
 export interface NoTranscriptViewProps {
@@ -12,6 +13,7 @@ export function NoTranscriptView({
   player,
   onAddTranscripts,
 }: NoTranscriptViewProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div className="flex h-full w-full flex-col @min-[720px]:items-center @min-[720px]:justify-center @min-[720px]:p-6 overflow-y-auto overscroll-contain">
       <div className="w-full @min-[720px]:max-w-4xl @min-[1100px]:max-w-5xl flex flex-col shrink-0">
@@ -25,7 +27,7 @@ export function NoTranscriptView({
         <div className="hidden @min-[720px]:flex items-center justify-between w-full px-2 py-3 text-text-muted">
           <div className="flex items-center gap-2">
             <FileText className="size-4 text-text-secondary" />
-            <span className="text-xs">No transcript attached to this video</span>
+            <span className="text-xs">{t("videoTranscript.noTranscriptAttached")}</span>
           </div>
           <button
             type="button"
@@ -34,7 +36,7 @@ export function NoTranscriptView({
             className="inline-flex items-center gap-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 px-3.5 py-1.5 text-xs font-medium text-text-primary border border-surface-border shadow-2xs transition-colors cursor-pointer"
           >
             <FileText className="size-3.5 text-primary" />
-            Add Transcripts
+            {t("videoTranscript.addTranscripts")}
           </button>
         </div>
       </div>
@@ -43,9 +45,11 @@ export function NoTranscriptView({
         <div className="flex size-12 items-center justify-center rounded-xl bg-surface-2 text-text-muted mb-3">
           <FileText className="size-6 text-text-secondary" />
         </div>
-        <h4 className="text-sm font-semibold text-text-primary mb-1">No Transcripts</h4>
+        <h4 className="text-sm font-semibold text-text-primary mb-1">
+          {t("videoTranscript.noTranscripts")}
+        </h4>
         <p className="text-xs text-text-muted max-w-[260px] leading-relaxed mb-4">
-          Add or paste a transcript to follow along with synchronized timestamps and search.
+          {t("videoTranscript.noTranscriptsDescription")}
         </p>
         <button
           type="button"
@@ -54,7 +58,7 @@ export function NoTranscriptView({
           className="inline-flex items-center gap-1.5 rounded-lg bg-surface-2 px-3.5 py-2 text-xs font-medium text-text-primary border border-surface-border shadow-xs hover:bg-surface-3 transition-colors cursor-pointer"
         >
           <FileText className="size-3.5 text-primary" />
-          Add Transcripts
+          {t("videoTranscript.addTranscripts")}
         </button>
       </div>
     </div>

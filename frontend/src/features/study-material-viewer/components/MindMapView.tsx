@@ -12,6 +12,7 @@ import type {
   MindMapViewProps,
   MindMapFlowNode,
 } from "./mind-map/mind-map-types";
+import { useTranslation } from "react-i18next";
 import { MindMapNode, HighlightEdge } from "./mind-map/mind-map-node";
 import { EmptyMindMap, MindMapControls } from "./mind-map/mind-map-controls";
 import { useMindMapLayout } from "./mind-map/use-mind-map-layout";
@@ -22,6 +23,7 @@ const nodeTypes = { mindMap: MindMapNode };
 const edgeTypes = { highlight: HighlightEdge };
 
 function MindMapFlow(props: MindMapViewProps) {
+  const { t } = useTranslation("viewer");
   const {
     root,
     nodes,
@@ -72,8 +74,7 @@ function MindMapFlow(props: MindMapViewProps) {
       />
 
       <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-surface-border-subtle bg-surface-2 px-3 py-2 text-xs text-text-faint sm:flex">
-        <span className="size-1.5 rounded-full bg-surface-border-strong" /> Drag to pan · Scroll to
-        zoom · Click a node to explore
+        <span className="size-1.5 rounded-full bg-surface-border-strong" /> {t("mindMap.hint")}
       </div>
     </div>
   );

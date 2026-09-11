@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import type { Source } from "@/features/sources";
 
@@ -9,6 +10,7 @@ export interface SourceRefsProps {
 }
 
 export function SourceRefs({ ids, sources, sourcesLoaded, openSource }: SourceRefsProps) {
+  const { t } = useTranslation("viewer");
   if (ids.length === 0) return null;
   return (
     <ul className="space-y-1">
@@ -26,7 +28,9 @@ export function SourceRefs({ ids, sources, sourcesLoaded, openSource }: SourceRe
               </Button>
             ) : (
               <span className="text-text-tertiary">
-                {sourcesLoaded ? "Source unavailable" : "Source reference unavailable until loaded"}
+                {sourcesLoaded
+                  ? t("common.sourceUnavailable")
+                  : t("common.sourceReferenceUnavailable")}
               </span>
             )}
           </li>

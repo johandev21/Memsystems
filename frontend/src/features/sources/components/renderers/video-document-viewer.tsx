@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { FileText } from "lucide-react";
 import type { VideoDocumentViewerProps, ParsedVideoSegment } from "./video/video-types";
@@ -16,6 +17,7 @@ import { extractYouTubeId, isYouTubeUrl } from "../../utils/detect-document-type
 export type { VideoDocumentViewerProps, ParsedVideoSegment };
 
 export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentViewerProps) {
+  const { t } = useTranslation("sourceRenderers");
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -163,17 +165,17 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
           <div className="flex flex-col flex-1 min-h-0 min-w-0 bg-surface-0 overflow-hidden">
             <div className="shrink-0 flex items-center justify-between border-b border-surface-border bg-surface-0 px-3 py-2.5 @min-[720px]:px-4">
               <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                Transcript
+                {t("videoTranscript.transcript")}
               </span>
               <button
                 type="button"
                 data-testid="add-transcripts-button"
                 onClick={() => setIsAddTranscriptOpen(true)}
                 className="inline-flex items-center gap-1 text-[11px] font-medium text-text-faint hover:text-text-primary transition-colors cursor-pointer"
-                title="Add or replace transcripts"
+                title={t("videoTranscript.addOrReplaceTitle")}
               >
                 <FileText className="size-3 text-primary" />
-                Add / Replace
+                {t("videoTranscript.addReplace")}
               </button>
             </div>
 

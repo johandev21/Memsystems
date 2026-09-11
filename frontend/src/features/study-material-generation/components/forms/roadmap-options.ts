@@ -5,13 +5,13 @@ export const PHASE_PRESETS = [3, 5, 7, 10];
 export const DETAIL_OPTIONS = [
   {
     id: "basic" as DetailLevel,
-    title: "Basic",
-    desc: "Phase titles & milestones only",
+    titleKey: "roadmap.detail.basic.title",
+    descKey: "roadmap.detail.basic.desc",
   },
   {
     id: "detailed" as DetailLevel,
-    title: "Detailed",
-    desc: "In-depth topics & learning objectives",
+    titleKey: "roadmap.detail.detailed.title",
+    descKey: "roadmap.detail.detailed.desc",
   },
 ] as const;
 
@@ -22,4 +22,3 @@ export const DEFAULT_ROADMAP_OPTIONS: {
   phaseCount: 5,
   detailLevel: "detailed",
 };
-

@@ -1,0 +1,25 @@
+{
+  "descriptions": {
+    "default": "Neutro — lo que ves hoy",
+    "dune": "Arena cálida, suave y acogedora",
+    "ember": "Terracota bruñida, con carácter",
+    "grove": "Musgo salvia, cálido y terroso",
+    "plum": "Violeta empolvado, para concentrarse de noche",
+    "tide": "Pizarra fría, tranquilo y enfocado"
+  },
+  "grid": {
+    "ariaLabel": "Tema",
+    "hint_one": "{{count}} paleta · cada una con modo claro y oscuro",
+    "hint_many": "{{count}} paletas · cada una con modo claro y oscuro",
+    "hint_other": "{{count}} paletas · cada una con modo claro y oscuro",
+    "selected": "{{name}}, seleccionado",
+    "title": "Temas"
+  },
+  "scheme": {
+    "dark": "Oscuro",
+    "light": "Claro",
+    "summary": "Claro / Oscuro / Sistema",
+    "system": "Sistema",
+    "title": "Esquema de color"
+  }
+}

@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/shared/utils/cn";
@@ -17,6 +18,7 @@ export function NotebookDescription({
   onChange,
   onCancel,
 }: NotebookDescriptionProps) {
+  const { t } = useTranslation("notebooks");
   const descriptionId = useId();
   const { captionRef, isExpanded, isOverflowing, setIsExpanded } =
     useDescriptionOverflow(description);
@@ -36,10 +38,10 @@ export function NotebookDescription({
                 onCancel();
               }
             }}
-            placeholder="Describe what this notebook is for…"
+            placeholder={t("description.placeholder")}
             rows={1}
             maxLength={500}
-            aria-label="Notebook description"
+            aria-label={t("description.ariaLabel")}
             className="min-h-7 max-h-24 resize-none rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent px-0 py-1 text-sm leading-relaxed text-foreground/80 shadow-none placeholder:text-foreground/45 focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/30 focus-visible:ring-0"
           />
           {showCharacterCount ? (
@@ -77,7 +79,7 @@ export function NotebookDescription({
             onClick={() => setIsExpanded((expanded) => !expanded)}
             className="h-auto rounded-none border-0 p-0 text-xs font-medium text-foreground/85 underline-offset-4 hover:text-foreground focus-visible:border-0 focus-visible:ring-0 focus-visible:underline active:translate-y-0"
           >
-            {isExpanded ? "Less" : "More"}
+            {isExpanded ? t("description.less") : t("description.more")}
           </Button>
         ) : null}
       </div>

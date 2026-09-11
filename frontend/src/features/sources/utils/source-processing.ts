@@ -1,3 +1,4 @@
+import i18n from "@/shared/i18n";
 import type {
   Source,
   SourceModality,
@@ -38,23 +39,26 @@ export function processingStageLabel(
   stage?: SourceProcessingStage | null,
   modality?: SourceModality | null,
 ): string {
-  if (status === "pending") return "Queued for processing";
-  if (status === "ready") return "Ready";
-  if (status === "failed") return "Processing failed";
-  if (status === "cancelled") return "Cancelled";
+  if (status === "pending")
+    return i18n.t("processing.queued", { ns: "sources" });
+  if (status === "ready") return i18n.t("processing.ready", { ns: "sources" });
+  if (status === "failed") return i18n.t("processing.failed", { ns: "sources" });
+  if (status === "cancelled") return i18n.t("processing.cancelled", { ns: "sources" });
 
   switch (stage) {
     case "uploading":
-      return "Uploading original…";
+      return i18n.t("processing.uploading", { ns: "sources" });
     case "extracting":
-      return "Extracting content…";
+      return i18n.t("processing.extracting", { ns: "sources" });
     case "transcribing":
-      return modality === "video" ? "Transcribing video…" : "Transcribing audio…";
+      return modality === "video"
+        ? i18n.t("processing.transcribingVideo", { ns: "sources" })
+        : i18n.t("processing.transcribingAudio", { ns: "sources" });
     case "analyzing_visuals":
-      return "Analyzing visuals…";
+      return i18n.t("processing.analyzingVisuals", { ns: "sources" });
     case "indexing":
-      return "Indexing source…";
+      return i18n.t("processing.indexing", { ns: "sources" });
     default:
-      return "Processing source…";
+      return i18n.t("processing.processing", { ns: "sources" });
   }
 }

@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { detectCardFormat } from "../../utils/card-type-detector";
 import { ClozeInteractive } from "../ClozeInteractive";
 import { FlashcardNavigation } from "./flashcard-navigation";
@@ -34,9 +35,11 @@ export function FlashcardVariantC({
   onFlip,
   onNext,
   onPrev,
-  deckTitle = "Flashcards Study Deck",
+  deckTitle,
   sourceCount = 6,
 }: FlashcardVariantCProps) {
+  const { t } = useTranslation("viewer");
+  const resolvedDeckTitle = deckTitle ?? t("flashcard.defaultDeckTitle");
   const currentCard = cards[currentIndex] || { front: "", back: "" };
   const cardFormat = detectCardFormat(currentCard);
 
@@ -87,18 +90,19 @@ export function FlashcardVariantC({
       <div className="w-full flex items-center justify-between pb-2 border-b border-surface-border-subtle">
         <div className="flex items-center gap-3">
           <h2 className="text-base font-bold tracking-tight text-text-primary truncate max-w-xs">
-            {deckTitle}
+            {resolvedDeckTitle}
           </h2>
           <Badge
             variant="outline"
             className="rounded-full bg-surface-2 text-text-tertiary text-xs px-2.5 py-0.5 font-normal gap-1"
           >
-            <BookOpen className="size-3 text-text-tertiary" /> {sourceCount} sources
+            <BookOpen className="size-3 text-text-tertiary" />{" "}
+            {t("flashcard.sourceCount", { count: sourceCount })}
           </Badge>
         </div>
 
         <span className="text-xs font-medium text-text-faint">
-          {currentIndex + 1} / {cards.length}
+          {t("flashcard.position", { current: currentIndex + 1, total: cards.length })}
         </span>
       </div>
 
@@ -146,11 +150,17 @@ export function FlashcardVariantC({
               </div>
 
               <div className="flex items-center justify-center pt-4 border-t border-surface-border-subtle text-xs font-medium text-text-faint gap-1.5">
-                <Eye className="size-4 text-text-faint" /> Click or press{" "}
-                <kbd className="px-1.5 py-0.5 bg-surface-4 rounded-md border border-surface-border-strong text-xs font-mono font-semibold">
-                  Space
-                </kbd>{" "}
-                to reveal answer
+                <Eye className="size-4 text-text-faint" />{" "}
+                <Trans
+                  i18nKey="flashcard.revealAnswer"
+                  ns="viewer"
+                  values={{ key: "Space" }}
+                  components={{
+                    kbd: (
+                      <kbd className="px-1.5 py-0.5 bg-surface-4 rounded-md border border-surface-border-strong text-xs font-mono font-semibold" />
+                    ),
+                  }}
+                />
               </div>
             </div>
           ) : (
@@ -172,12 +182,12 @@ export function FlashcardVariantC({
                   }}
                   className="rounded-full h-8 px-3 text-xs font-medium gap-1.5 cursor-pointer bg-surface-2"
                 >
-                  <Sparkles className="size-3.5 text-text-tertiary" /> Explain{" "}
+                  <Sparkles className="size-3.5 text-text-tertiary" /> {t("common.explain")}{" "}
                   <kbd className="text-xs font-mono bg-surface-4 px-1 rounded">E</kbd>
                 </Button>
 
                 <div className="flex items-center gap-1.5 text-text-faint">
-                  <RotateCw className="size-3.5" /> Space to toggle
+                  <RotateCw className="size-3.5" /> {t("flashcard.spaceToToggle")}
                 </div>
               </div>
             </div>
@@ -209,7 +219,7 @@ export function FlashcardVariantC({
                 "bg-surface-3 text-text-secondary border-surface-border font-medium",
             )}
           >
-            <ThumbsUp className="size-3.5" /> Good content
+            <ThumbsUp className="size-3.5" /> {t("flashcard.goodContent")}
           </Button>
 
           <Button
@@ -223,7 +233,7 @@ export function FlashcardVariantC({
                 "bg-surface-3 text-text-secondary border-surface-border font-medium",
             )}
           >
-            <ThumbsDown className="size-3.5" /> Bad content
+            <ThumbsDown className="size-3.5" /> {t("flashcard.badContent")}
           </Button>
         </div>
       </div>
@@ -233,7 +243,7 @@ export function FlashcardVariantC({
         <div className="w-full rounded-2xl border border-surface-border-subtle bg-surface-2 p-4 shadow-lg space-y-2 animate-in fade-in duration-150">
           <div className="flex items-center justify-between border-b border-surface-border-subtle pb-1.5">
             <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-              <MessageSquare className="size-3.5 text-text-tertiary" /> Static Explain Prompt
+              <MessageSquare className="size-3.5 text-text-tertiary" /> {t("flashcard.staticExplainPrompt")}
             </span>
             <Button
               type="button"
@@ -246,8 +256,10 @@ export function FlashcardVariantC({
             </Button>
           </div>
           <p className="text-xs text-text-faint leading-relaxed">
-            &quot;On the front: &apos;{currentCard.front}&apos;. On the back: &apos;
-            {currentCard.back}&apos;. Explain this topic in more detail.&quot;
+            {t("flashcard.explainInline", {
+              front: currentCard.front,
+              back: currentCard.back,
+            })}
           </p>
         </div>
       )}

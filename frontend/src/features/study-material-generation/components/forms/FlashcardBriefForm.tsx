@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,21 +14,41 @@ import { GenerationSourcePopover } from "./generation-source-popover";
 const CARD_COUNT_PRESETS = [10, 15, 20] as const;
 
 const DIFFICULTIES = [
-  { id: "easy", title: "Basic", description: "Simple definitions & recall" },
-  { id: "medium", title: "Standard", description: "Conceptual understanding" },
-  { id: "hard", title: "Advanced", description: "Deep analysis & application" },
+  {
+    id: "easy",
+    titleKey: "flashcards.difficulty.easy.title",
+    descKey: "flashcards.difficulty.easy.desc",
+  },
+  {
+    id: "medium",
+    titleKey: "flashcards.difficulty.medium.title",
+    descKey: "flashcards.difficulty.medium.desc",
+  },
+  {
+    id: "hard",
+    titleKey: "flashcards.difficulty.hard.title",
+    descKey: "flashcards.difficulty.hard.desc",
+  },
 ] as const;
 
 type DifficultyId = (typeof DIFFICULTIES)[number]["id"];
 
 const CARD_STYLES = [
-  { id: "qa", title: "Q & A", description: "Classic question → answer format" },
-  { id: "definition", title: "Definition", description: "Term → definition pairs" },
-  { id: "cloze", title: "Fill-in-the-Blank", description: "Sentence with missing word(s)" },
+  { id: "qa", titleKey: "flashcards.cardStyle.qa.title", descKey: "flashcards.cardStyle.qa.desc" },
+  {
+    id: "definition",
+    titleKey: "flashcards.cardStyle.definition.title",
+    descKey: "flashcards.cardStyle.definition.desc",
+  },
+  {
+    id: "cloze",
+    titleKey: "flashcards.cardStyle.cloze.title",
+    descKey: "flashcards.cardStyle.cloze.desc",
+  },
   {
     id: "mixed",
-    title: "Mixed",
-    description: "Combination of Q&A, Definitions, and Fill-in-the-Blank",
+    titleKey: "flashcards.cardStyle.mixed.title",
+    descKey: "flashcards.cardStyle.mixed.desc",
   },
 ] as const;
 
@@ -52,10 +73,12 @@ function CardCountSelector({
   onCustomChange: (raw: string) => void;
   onCustomBlur: () => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <Label className="text-sm font-medium text-text-primary">Cards</Label>
+        <Label className="text-sm font-medium text-text-primary">{t("flashcards.cardsLabel")}</Label>
         <span className="text-xs font-medium text-primary">{cardLabel}</span>
       </div>
 
@@ -102,7 +125,7 @@ function CardCountSelector({
               "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
             )}
           >
-            Custom
+            {t("actions.custom")}
           </button>
         )}
       </div>
@@ -115,9 +138,10 @@ export function FlashcardBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Flashcards",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   const [cardCount, setCardCount] = useState<number>(value.questionCount ?? 10);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customVal, setCustomVal] = useState("25");
@@ -130,9 +154,10 @@ export function FlashcardBriefForm({
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  const cardLabel = `${cardCount} ${
-    cardCount === 1 ? "Card" : "Cards"
-  }${cardCount >= 50 ? " (Max 50)" : ""}`;
+  const cardLabel =
+    cardCount >= 50
+      ? t("flashcards.countMax", { count: cardCount, max: 50 })
+      : t("flashcards.count", { count: cardCount });
 
   const update = (patch: Partial<BriefFormData>) => {
     onChange(patch);
@@ -160,7 +185,9 @@ export function FlashcardBriefForm({
   return (
     <div className="flex flex-col gap-4 font-sans text-text-tertiary animate-in fade-in duration-150">
       <div className="flex flex-col gap-2">
-        <Label className="text-sm font-medium text-text-primary">Card Format</Label>
+        <Label className="text-sm font-medium text-text-primary">
+          {t("flashcards.cardFormatLabel")}
+        </Label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {CARD_STYLES.map((style) => {
             const selected = cardStyle === style.id;
@@ -178,7 +205,7 @@ export function FlashcardBriefForm({
                   selected ? "font-semibold" : "font-medium",
                 )}
               >
-                {style.title}
+                {t(style.titleKey)}
               </button>
             );
           })}
@@ -187,7 +214,9 @@ export function FlashcardBriefForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <Label className="text-sm font-medium text-text-primary">Difficulty</Label>
+          <Label className="text-sm font-medium text-text-primary">
+            {t("flashcards.difficultyLabel")}
+          </Label>
           <div className="flex gap-2">
             {DIFFICULTIES.map((d) => {
               const selected = difficulty === d.id;
@@ -205,7 +234,7 @@ export function FlashcardBriefForm({
                     selected ? "font-semibold" : "font-medium",
                   )}
                 >
-                  {d.title}
+                  {t(d.titleKey)}
                 </button>
               );
             })}
@@ -236,13 +265,14 @@ export function FlashcardBriefForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="brief-flashcards" className="text-sm font-medium text-text-primary">
-          Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
+          {t("fields.instructions")}
+          {!hasSources && <span className="text-destructive ml-0.5">*</span>}
         </Label>
         <Textarea
           id="brief-flashcards"
           value={value.brief}
           onChange={(e) => update({ brief: e.target.value })}
-          placeholder="What topics should these flashcards cover?"
+          placeholder={t("flashcards.instructionsPlaceholder")}
           className="min-h-[80px] max-h-[200px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
           disabled={disabled}
         />
@@ -250,18 +280,19 @@ export function FlashcardBriefForm({
 
       <div className="flex flex-col gap-2">
         <Label className="text-sm font-medium text-text-primary">
-          Sources{!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
+          {t("fields.sources")}
+          {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
         </Label>
         <GenerationSourcePopover
           sources={sources}
           selectedIds={value.sourceIds}
           onChange={(sourceIds) => update({ sourceIds })}
-          emptyMessage="No sources in notebook. Flashcards will generate using general knowledge."
+          emptyMessage={t("knowledge.emptySources", { kind: t("kinds.simple_flashcard") })}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs font-medium text-text-tertiary">Folder</Label>
+        <Label className="text-xs font-medium text-text-tertiary">{t("fields.folder")}</Label>
         <FolderPicker
           notebookId={notebookId}
           value={value.folderId}
@@ -279,7 +310,7 @@ export function FlashcardBriefForm({
         disabled={!canSubmit}
         onClick={onSubmit}
       >
-        {submitLabel}
+        {submitLabel ?? t("actions.generateKind", { kind: t("kinds.simple_flashcard") })}
       </Button>
     </div>
   );

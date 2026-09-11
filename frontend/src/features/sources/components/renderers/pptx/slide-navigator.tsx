@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 
 export interface SlideNavigatorProps {
@@ -13,9 +14,12 @@ export function SlideNavigator({
   selectedSlideNumber,
   onSelect,
 }: SlideNavigatorProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div className="hidden sm:flex w-20 shrink-0 flex-col border-r border-border/40 bg-muted/20 overflow-y-auto p-2 gap-1.5">
-      <span className="text-[10px] font-semibold text-muted-foreground px-1 py-1">Slides</span>
+      <span className="text-[10px] font-semibold text-muted-foreground px-1 py-1">
+        {t("pptxSlideNavigator.slides")}
+      </span>
       {slideNumbers.map((num) => {
         const isActive = activeSlideNumber === num;
         const isCitationTarget = selectedSlideNumber === num;

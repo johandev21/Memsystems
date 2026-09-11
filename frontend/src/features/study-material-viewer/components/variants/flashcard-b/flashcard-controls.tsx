@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Check, X, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 
@@ -23,6 +24,7 @@ export function FlashcardControls({
   onRate,
   onFeedback,
 }: FlashcardControlsProps) {
+  const { t } = useTranslation("viewer");
   return (
     <div className="space-y-4 pt-2">
       <div className="flex items-center justify-center gap-3 w-full">
@@ -31,6 +33,7 @@ export function FlashcardControls({
           variant="secondary"
           onClick={onPrev}
           disabled={cardsLength <= 1}
+          aria-label={t("flashcard.previousCard")}
           className="size-9 p-0 rounded-full cursor-pointer"
         >
           <ChevronLeft className="size-4" />
@@ -57,6 +60,7 @@ export function FlashcardControls({
           variant="secondary"
           onClick={onNext}
           disabled={cardsLength <= 1}
+          aria-label={t("flashcard.nextCard")}
           className="size-9 p-0 rounded-full cursor-pointer"
         >
           <ChevronRight className="size-4" />
@@ -75,7 +79,7 @@ export function FlashcardControls({
               feedback === "good" && "text-text-secondary font-semibold",
             )}
           >
-            <ThumbsUp className="size-3" /> Good
+            <ThumbsUp className="size-3" /> {t("flashcard.good")}
           </Button>
           <Button
             type="button"
@@ -87,7 +91,7 @@ export function FlashcardControls({
               feedback === "bad" && "text-text-secondary font-semibold",
             )}
           >
-            <ThumbsDown className="size-3" /> Bad
+            <ThumbsDown className="size-3" /> {t("flashcard.bad")}
           </Button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle } from "lucide-react";
 import type { SourceSegmentLocator, SourceWithContent } from "../../types";
@@ -16,6 +17,7 @@ export interface PptxDocumentViewerProps {
 }
 
 export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentViewerProps) {
+  const { t } = useTranslation("sourceRenderers");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSlideNumber, setSelectedSlideNumber] = useState<number | null>(null);
   const segmentContainerRef = useRef<HTMLDivElement>(null);
@@ -104,9 +106,11 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
         <div className="flex size-12 items-center justify-center rounded-full bg-warning/10 text-warning">
           <AlertTriangle className="size-6" />
         </div>
-        <h3 className="text-sm font-semibold text-foreground">No slides extracted</h3>
+        <h3 className="text-sm font-semibold text-foreground">
+          {t("pptxViewer.noSlidesExtracted")}
+        </h3>
         <p className="max-w-sm text-xs text-muted-foreground">
-          {warningMessage || "This presentation has no extractable slide content."}
+          {warningMessage || t("pptxViewer.noContent")}
         </p>
       </div>
     );

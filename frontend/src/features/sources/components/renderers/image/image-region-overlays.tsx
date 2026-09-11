@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import type { ImageRegion } from "../../../types";
 import type { ParsedImageSection } from "./image-types";
@@ -20,6 +21,7 @@ export function ImageRegionOverlays({
   onSelectSegment,
   onHoverSegment,
 }: ImageRegionOverlaysProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <>
       {segmentsWithRegions.map((section) => {
@@ -52,7 +54,10 @@ export function ImageRegionOverlays({
               width: `${Math.max(0, Math.min(100, region.width * 100))}%`,
               height: `${Math.max(0, Math.min(100, region.height * 100))}%`,
             }}
-            aria-label={`Region #${section.ordinal}: ${section.kind}`}
+            aria-label={t("imageRegion.ariaLabel", {
+              ordinal: section.ordinal,
+              kind: section.kind,
+            })}
           >
             <span
               className={cn(

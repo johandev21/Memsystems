@@ -3,6 +3,7 @@ import { type UIMessage, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
 import { useModelPersistence } from "@/features/notebooks";
@@ -58,6 +59,7 @@ export function formatChatMessages(history?: ChatMessageDTO[]): UIMessage[] {
 }
 
 export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTMLElement | null>) {
+  const { t } = useTranslation("chat");
   const { data: notebook } = useQuery(notebookQueryOptions(notebookId));
   const { data: models } = useQuery(modelsQueryOptions);
   const { data: chatHistory } = useQuery(chatMessagesQueryOptions(notebookId));
@@ -195,10 +197,10 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       queryClient.invalidateQueries({ queryKey: ["notebooks", "home"] });
       queryClient.invalidateQueries({ queryKey: ["notebooks", "all"] });
       setIsClearDialogOpen(false);
-      toast.success("Chat history cleared");
+      toast.success(t("clearHistory.cleared"));
     },
-    onError: (err: Error) => {
-      toast.error(err.message);
+    onError: () => {
+      toast.error(t("clearHistory.clearFailed"));
     },
   });
 
@@ -237,10 +239,13 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     [isLoading, sendMessage],
   );
 
-  const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
-  }, []);
+  const handleCopy = useCallback(
+    (text: string) => {
+      navigator.clipboard.writeText(text);
+      toast.success(t("message.copiedToClipboard"));
+    },
+    [t],
+  );
 
   const handleRegenerate = useCallback(() => {
     abortedMessagesRef.current = null;
@@ -258,7 +263,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
         if (detail.focusChat) {
           setChatAnnouncement(
-            detail.concept ? `Opening chat for ${detail.concept}.` : "Opening chat.",
+            detail.concept
+              ? t("announcement.openingChatFor", { concept: detail.concept })
+              : t("announcement.openingChat"),
           );
           window.setTimeout(() => setChatAnnouncement(null), 4000);
           window.requestAnimationFrame(() => {
@@ -286,7 +293,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     return () => {
       window.removeEventListener("send-chat-prompt", handleSendPromptEvent);
     };
-  }, [handleSubmit, panelRef]);
+  }, [handleSubmit, panelRef, t]);
 
   return {
     notebook,

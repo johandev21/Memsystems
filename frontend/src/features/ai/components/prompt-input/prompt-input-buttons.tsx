@@ -11,6 +11,7 @@ import {
   type ReactNode,
   useCallback,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 export type PromptInputToolsProps = HTMLAttributes<HTMLDivElement>;
 
@@ -83,6 +84,7 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
+  const { t } = useTranslation("ai");
   const isGenerating = status === "submitted" || status === "streaming";
 
   let Icon = <ArrowUpIcon aria-hidden="true" className="size-4" />;
@@ -109,7 +111,7 @@ export const PromptInputSubmit = ({
 
   const button = (
     <InputGroupButton
-      aria-label={isGenerating ? "Stop" : "Submit"}
+      aria-label={isGenerating ? t("promptInput.stop") : t("promptInput.submit")}
       className={cn("cursor-pointer", className)}
       onClick={handleClick}
       size={size}

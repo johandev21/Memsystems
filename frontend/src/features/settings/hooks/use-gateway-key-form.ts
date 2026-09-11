@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { saveGatewayKey, deleteGatewayKey } from "../api/gateway";
 
 export const MASKED_GATEWAY_KEY = "••••••••••••••••••••••••••••••••";
 
 export function useGatewayKeyForm(hasKey: boolean) {
+  const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const [prevHasKey, setPrevHasKey] = useState(hasKey);
   const [input, setInput] = useState(hasKey ? MASKED_GATEWAY_KEY : "");
@@ -39,11 +41,11 @@ export function useGatewayKeyForm(hasKey: boolean) {
     try {
       await saveGatewayKey(input.trim());
       setSaved(true);
-      toast.success("Gateway key saved");
+      toast.success(t("gateway.toast.saved"));
       invalidate();
       window.setTimeout(() => setSaved(false), 1800);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save this key");
+      toast.error(error instanceof Error ? error.message : t("gateway.toast.saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -57,13 +59,13 @@ export function useGatewayKeyForm(hasKey: boolean) {
     setIsRemoving(true);
     try {
       await deleteGatewayKey();
-      toast.success("Gateway key removed");
+      toast.success(t("gateway.toast.removed"));
       setInput("");
       setShowKey(false);
       setConfirmRemove(false);
       invalidate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not remove this key");
+      toast.error(error instanceof Error ? error.message : t("gateway.toast.removeFailed"));
     } finally {
       setIsRemoving(false);
     }

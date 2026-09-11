@@ -7,10 +7,12 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import type { MindMapFlowNode } from "./mind-map-types";
 
 export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
+  const { t } = useTranslation("viewer");
   const isRoot = data.depth === 0;
   const hasChildren = data.item.children.length > 0;
 
@@ -39,7 +41,11 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
       {hasChildren && (
         <button
           type="button"
-          aria-label={data.expanded ? `Collapse ${data.item.label}` : `Expand ${data.item.label}`}
+          aria-label={
+            data.expanded
+              ? t("mindMap.collapse", { label: data.item.label })
+              : t("mindMap.expand", { label: data.item.label })
+          }
           onClick={(event) => {
             event.stopPropagation();
             data.onToggle(data.item.id);

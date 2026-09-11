@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { fetchApi } from "@/shared/api";
 import type { Source, SourceWithContent } from "../../types";
@@ -26,6 +27,7 @@ export function useSourceReaderControls({
   onClose: () => void;
   source?: SourceWithContent;
 }): ReaderControls {
+  const { t } = useTranslation("sources");
   const [downloading, setDownloading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(() =>
     Boolean(defaultFullscreen || forceFullscreen),
@@ -49,12 +51,12 @@ export function useSourceReaderControls({
     setDownloading(true);
     try {
       const response = await fetchApi(`/api/sources/${source.id}/download`);
-      if (!response.ok) throw new Error("Failed to retrieve download link");
+      if (!response.ok) throw new Error(t("reader.downloadLinkFailed"));
       const { url } = await response.json();
       window.open(url, "_blank", "noopener,noreferrer");
-      toast.success("Download started");
+      toast.success(t("reader.downloadStarted"));
     } catch {
-      toast.error("Download failed");
+      toast.error(t("reader.downloadFailed"));
     } finally {
       setDownloading(false);
     }

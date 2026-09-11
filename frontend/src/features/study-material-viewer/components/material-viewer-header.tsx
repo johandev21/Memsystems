@@ -1,4 +1,5 @@
 import { ArrowLeft, Maximize2, Minimize2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 export interface MaterialViewerHeaderProps {
@@ -20,6 +21,8 @@ export function MaterialViewerHeader({
   onClose,
   onToggleFullscreen,
 }: MaterialViewerHeaderProps) {
+  const { t } = useTranslation("viewer");
+
   return (
     <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -30,7 +33,7 @@ export function MaterialViewerHeader({
             size="sm"
             onClick={onClose}
             className="h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary cursor-pointer flex items-center gap-1.5 rounded-lg shrink-0"
-            title="Return to Studio overview"
+            title={t("header.returnToStudio")}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
@@ -50,17 +53,17 @@ export function MaterialViewerHeader({
             className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
             title={
               isFullscreen
-                ? "Exit Fullscreen (Esc)"
+                ? t("header.exitFullscreenTitle")
                 : hasChatHandoff
-                  ? "Return to Fullscreen"
-                  : "Fullscreen Mode"
+                  ? t("header.returnToFullscreen")
+                  : t("header.fullscreenMode")
             }
             aria-label={
               isFullscreen
-                ? "Exit Fullscreen"
+                ? t("header.exitFullscreen")
                 : hasChatHandoff
-                  ? "Return to Fullscreen"
-                  : "Fullscreen Mode"
+                  ? t("header.returnToFullscreen")
+                  : t("header.fullscreenMode")
             }
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -73,7 +76,7 @@ export function MaterialViewerHeader({
             size="icon"
             onClick={onClose}
             className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg"
-            title="Close"
+            title={t("common.close")}
           >
             <X className="h-4 w-4" />
           </Button>

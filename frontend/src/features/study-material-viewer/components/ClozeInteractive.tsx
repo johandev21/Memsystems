@@ -1,5 +1,6 @@
 import { Fragment, useState, useId, type KeyboardEvent } from "react";
 import { Check, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/utils/cn";
@@ -24,6 +25,7 @@ export function ClozeInteractive(props: ClozeInteractiveProps) {
 }
 
 function ClozeInteractiveForm({ front, back, onAnswerChecked }: ClozeInteractiveProps) {
+  const { t } = useTranslation("viewer");
   const parsed = parseClozeCard(front, back);
   const { segments, expectedAnswers, blankCount } = parsed;
 
@@ -88,8 +90,16 @@ function ClozeInteractiveForm({ front, back, onAnswerChecked }: ClozeInteractive
                 value={values[index] ?? ""}
                 onChange={(event) => handleInputChange(index, event.target.value)}
                 onKeyDown={handleInputKeyDown}
-                placeholder={blankCount === 1 ? "Type the missing word…" : `Blank ${index + 1}`}
-                aria-label={blankCount === 1 ? "Your Answer" : `Answer for blank ${index + 1}`}
+                placeholder={
+                  blankCount === 1
+                    ? t("cloze.missingWordPlaceholder")
+                    : t("cloze.blankPlaceholder", { number: index + 1 })
+                }
+                aria-label={
+                  blankCount === 1
+                    ? t("cloze.yourAnswer")
+                    : t("cloze.blankAria", { number: index + 1 })
+                }
                 aria-invalid={isChecked && !results[index]}
                 aria-describedby={isChecked ? feedbackId : undefined}
                 className={cn(
@@ -109,7 +119,7 @@ function ClozeInteractiveForm({ front, back, onAnswerChecked }: ClozeInteractive
           disabled={!canCheck}
           className="h-10 w-full shrink-0 rounded-xl"
         >
-          Check Answer
+          {t("cloze.checkAnswer")}
         </Button>
       </div>
       <div id={feedbackId} role="status" className="w-full text-sm">
@@ -128,6 +138,7 @@ function ClozeFeedback({
   expectedAnswers: string[];
   results: boolean[] | null;
 }) {
+  const { t } = useTranslation("viewer");
   if (status === "idle") return null;
   const isCorrect = status === "correct";
   const Icon = isCorrect ? Check : X;
@@ -145,20 +156,22 @@ function ClozeFeedback({
             isCorrect ? "size-5 shrink-0 text-success" : "size-5 shrink-0 text-destructive"
           }
         />
-        {isCorrect ? "Correct Answer" : "Incorrect Answer"}
+        {isCorrect ? t("cloze.correctAnswer") : t("cloze.incorrectAnswer")}
       </p>
       {!isCorrect && (
         <div className="text-text-secondary break-words">
           {failed.length > 0 ? (
             failed.map(({ index, expected }) => (
               <p key={index}>
-                {expectedAnswers.length > 1 ? `Blank ${index + 1}: ` : "Correct Answer: "}
+                {expectedAnswers.length > 1
+                  ? t("cloze.blankAnswer", { number: index + 1 })
+                  : t("cloze.correctAnswerLabel")}{" "}
                 <span className="font-medium text-text-primary">{expected}</span>
               </p>
             ))
           ) : (
             <p>
-              Correct Answer:{" "}
+              {t("cloze.correctAnswerLabel")}{" "}
               <span className="font-medium text-text-primary">
                 {expectedAnswers.filter(Boolean).join(", ")}
               </span>

@@ -3,6 +3,7 @@ import { cn } from "@/shared/utils/cn";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getCommandPendingKey } from "../../model/commands";
 import type { TreeNode } from "../../model/tree";
 import {
@@ -284,6 +285,7 @@ function TreeRowDragHandle({
   dragProps,
   onSelect,
 }: TreeRowDragHandleProps) {
+  const { t } = useTranslation("tree");
   if (!visible) return null;
   const handlePointerDown = dragProps.onPointerDown as
     | ((event: React.PointerEvent) => void)
@@ -292,7 +294,7 @@ function TreeRowDragHandle({
     <button
       type="button"
       data-slot="study-materials-tree-drag-handle"
-      aria-label="Drag to move"
+      aria-label={t("row.dragHandle")}
       tabIndex={-1}
       disabled={disabled}
       className={cn(

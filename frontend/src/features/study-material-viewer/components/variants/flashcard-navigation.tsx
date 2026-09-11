@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function FlashcardNavigation({
   cardCount,
@@ -16,6 +17,7 @@ export function FlashcardNavigation({
   onNext: () => void;
   onRate: (rating: "correct" | "incorrect") => void;
 }) {
+  const { t } = useTranslation("viewer");
   return (
     <div className="flex items-center justify-center gap-3 w-full py-1">
       <Button
@@ -23,7 +25,7 @@ export function FlashcardNavigation({
         variant="secondary"
         onClick={onPrev}
         disabled={cardCount <= 1}
-        aria-label="Previous Card"
+        aria-label={t("flashcard.previousCard")}
         className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-colors"
       >
         <ChevronLeft className="size-5" />
@@ -52,7 +54,7 @@ export function FlashcardNavigation({
         variant="secondary"
         onClick={onNext}
         disabled={cardCount <= 1}
-        aria-label="Next Card"
+        aria-label={t("flashcard.nextCard")}
         className="size-10 p-0 rounded-full cursor-pointer hover:bg-surface-3 transition-colors"
       >
         <ChevronRight className="size-5" />

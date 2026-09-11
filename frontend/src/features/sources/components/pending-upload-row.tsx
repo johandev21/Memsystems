@@ -12,6 +12,7 @@ import {
   Video,
   X,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import type { PendingSourceUpload } from "../hooks/use-upload-store";
 import { processingStageLabel } from "../utils/source-processing";
@@ -90,6 +91,7 @@ function UploadHeader({
   isTerminal: boolean;
   onCancel: (id: string) => void;
 }) {
+  const { t } = useTranslation("sources");
   const Icon = getKindIcon(upload);
   return (
     <div className="flex items-center justify-between gap-2">
@@ -102,8 +104,10 @@ function UploadHeader({
         type="button"
         onClick={() => onCancel(upload.id)}
         className="flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-        title={isTerminal ? "Dismiss" : "Cancel source processing"}
-        aria-label={isTerminal ? "Dismiss source status" : "Cancel source processing"}
+        title={isTerminal ? t("pendingUpload.dismiss") : t("pendingUpload.cancelProcessing")}
+        aria-label={
+          isTerminal ? t("pendingUpload.dismissStatus") : t("pendingUpload.cancelProcessing")
+        }
       >
         <X className="size-3.5" />
       </button>
@@ -120,15 +124,16 @@ function UploadProgressBar() {
 }
 
 export function PendingUploadRow({ upload, onCancel }: PendingUploadRowProps) {
+  const { t } = useTranslation("sources");
   const isError = upload.status === "failed";
   const isCancelled = upload.status === "cancelled";
   const isTerminal = isError || isCancelled;
   const statusText = isError
-    ? upload.errorMessage || "Source processing failed"
+    ? upload.errorMessage || t("pendingUpload.processingFailed")
     : isCancelled
-      ? "Cancelled"
+      ? t("pendingUpload.cancelled")
       : upload.status === "uploading"
-        ? "Saving source…"
+        ? t("pendingUpload.saving")
         : processingStageLabel(upload.status, upload.processingStage, upload.modality);
 
   return (

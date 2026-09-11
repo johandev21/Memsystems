@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import i18n from "@/shared/i18n";
 import type { FolderDTO } from "../../types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import {
@@ -84,10 +85,11 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
           case "moveItem":
             return await executeMoveItem(ctx, command.id, command.targetFolderId);
           default:
-            return { ok: false, error: "Unknown command" };
+            return { ok: false, error: i18n.t("errors.unknownCommand", { ns: "tree" }) };
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Command failed";
+        const message =
+          err instanceof Error ? err.message : i18n.t("errors.commandFailed", { ns: "tree" });
         toast.error(message);
         return { ok: false, error: message };
       } finally {

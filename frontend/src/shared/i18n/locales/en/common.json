@@ -1,0 +1,59 @@
+{
+  "command": {
+    "description": "Search for a command...",
+    "title": "Command Palette"
+  },
+  "confirmDelete": {
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "dialog": {
+    "close": "Close"
+  },
+  "errors": {
+    "generation": {
+      "problemCount": "Problem count must be between {{min}} and {{max}}.",
+      "questionCount": "Question count must be between {{min}} and {{max}}.",
+      "requestNotFound": "Generation request not found.",
+      "sourceOrBrief": {
+        "caseStudy": "Select a source or enter a brief for your case study.",
+        "practiceProblems": "Select a source or enter a brief for your practice problems.",
+        "studyGuide": "Select a source or enter a brief for your study guide."
+      },
+      "sourcesUnavailable": "Selected sources are unavailable or have no readable content. Update your selection and retry."
+    }
+  },
+  "iconPicker": {
+    "ariaLabel": "Icons",
+    "categories": {
+      "communication": "Communication",
+      "files": "Files",
+      "media": "Media",
+      "objects": "Objects",
+      "popular": "Popular",
+      "system": "System",
+      "tech": "Tech"
+    },
+    "clearSearch": "Clear search",
+    "noResults": "No icons found",
+    "results": "Results",
+    "scrollForMore": "Scroll down for more icons...",
+    "searchPlaceholder": "Search for an icon",
+    "selectedIcon": "Selected icon: {{name}}",
+    "selectIcon": "Select icon",
+    "tryAnother": "Try searching for another keyword"
+  },
+  "messageScroller": {
+    "toEnd": "Scroll to end",
+    "toStart": "Scroll to start"
+  },
+  "routeProgress": {
+    "loading": "Loading page"
+  },
+  "settingsLink": {
+    "ariaLabel": "Settings"
+  },
+  "spinner": {
+    "loading": "Loading"
+  }
+}

@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { createNotebook, notebooksInfiniteQueryOptions } from "../api/notebooks";
 import type { Notebook } from "../types";
@@ -22,6 +23,7 @@ export interface UseRecentNotebooksResult {
 }
 
 export function useRecentNotebooks(): UseRecentNotebooksResult {
+  const { t } = useTranslation("notebooks");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
@@ -62,9 +64,8 @@ export function useRecentNotebooks(): UseRecentNotebooksResult {
         to: "/notebooks/$notebookId",
         params: { notebookId: newNotebook.id },
       });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to create notebook: ${message}`);
+    } catch {
+      toast.error(t("recent.createFailed"));
       setIsCreating(false);
     }
   };

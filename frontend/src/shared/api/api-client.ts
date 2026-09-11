@@ -1,5 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
-import { createApiErrorMessage, type ApiErrorResponse } from "./api-error";
+import {
+  createApiErrorMessage,
+  resolveApiErrorMessage,
+  type ApiErrorResponse,
+} from "./api-error";
 
 export function getApiUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
@@ -27,7 +31,8 @@ export function createQueryOptions<TData>(
     queryFn: async () => {
       const res = await fetchApi(url);
       if (!res.ok) {
-        throw new Error(createApiErrorMessage(res));
+        const data = (await res.json().catch(() => ({}))) as ApiErrorResponse;
+        throw new Error(resolveApiErrorMessage(data, createApiErrorMessage(res)));
       }
       return res.json() as Promise<TData>;
     },
@@ -45,7 +50,7 @@ export async function apiPost<TInput, TResponse>(url: string, input: TInput): Pr
   });
   const data = (await res.json().catch(() => ({}))) as ApiErrorResponse;
   if (!res.ok) {
-    throw new Error(data.error ?? createApiErrorMessage(res));
+    throw new Error(resolveApiErrorMessage(data, createApiErrorMessage(res)));
   }
   return data as TResponse;
 }
@@ -58,7 +63,7 @@ export async function apiPatch<TInput, TResponse>(url: string, input: TInput): P
   });
   const data = (await res.json().catch(() => ({}))) as ApiErrorResponse;
   if (!res.ok) {
-    throw new Error(data.error ?? createApiErrorMessage(res));
+    throw new Error(resolveApiErrorMessage(data, createApiErrorMessage(res)));
   }
   return data as TResponse;
 }
@@ -67,6 +72,6 @@ export async function apiDelete(url: string): Promise<void> {
   const res = await fetchApi(url, { method: "DELETE" });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as ApiErrorResponse;
-    throw new Error(data.error ?? createApiErrorMessage(res));
+    throw new Error(resolveApiErrorMessage(data, createApiErrorMessage(res)));
   }
 }

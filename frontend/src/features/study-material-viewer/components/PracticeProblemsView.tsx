@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
+import type { ParseKeys } from "i18next";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { sourcesQueryOptions, type Source } from "@/features/sources";
 import {
   PracticeProblemsContent,
@@ -32,11 +34,12 @@ export function PracticeProblemsView({
   onClose,
   registerBeforeClose,
 }: PracticeProblemsViewProps) {
+  const { t } = useTranslation("viewer");
   const parsed = PracticeProblemsContent.safeParse(content);
   if (!parsed.success) {
     return (
       <p role="alert" className="p-6 text-sm text-text-secondary">
-        These practice problems could not be read. Try reopening them or generating a new set.
+        {t("practice.parseError")}
       </p>
     );
   }
@@ -53,15 +56,23 @@ export function PracticeProblemsView({
   );
 }
 
-const DIFFICULTY_LABELS: Record<PracticeProblemsDifficulty, { label: string; className: string }> =
-  {
-    easy: {
-      label: "Warmup",
-      className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-    },
-    medium: { label: "Standard", className: "bg-primary/15 text-primary border-primary/30" },
-    hard: { label: "Challenge", className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  };
+const DIFFICULTY_CONFIG: Record<
+  PracticeProblemsDifficulty,
+  { labelKey: ParseKeys<"viewer">; className: string }
+> = {
+  easy: {
+    labelKey: "practice.difficulty.easy",
+    className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  },
+  medium: {
+    labelKey: "practice.difficulty.medium",
+    className: "bg-primary/15 text-primary border-primary/30",
+  },
+  hard: {
+    labelKey: "practice.difficulty.hard",
+    className: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  },
+};
 
 function PracticeProblemsReader({
   set,
@@ -78,6 +89,7 @@ function PracticeProblemsReader({
   onClose?: () => void;
   registerBeforeClose?: (fn: () => boolean) => void;
 }) {
+  const { t } = useTranslation("viewer");
   const { model: selectedModel } = useModelPersistence(notebookId);
   const {
     activeIdx,
@@ -140,13 +152,13 @@ function PracticeProblemsReader({
   const { handleDiscussInChat, handleAskSocraticHint, handleExplainStepInChat } =
     usePracticeChatPrompts(currentProblem);
 
-  const difficultyConfig = DIFFICULTY_LABELS[difficulty] ?? DIFFICULTY_LABELS.medium;
+  const difficultyConfig = DIFFICULTY_CONFIG[difficulty] ?? DIFFICULTY_CONFIG.medium;
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-surface-1 text-text-primary">
       <PracticeStepperHeader
         difficultyClassName={difficultyConfig.className}
-        difficultyLabel={difficultyConfig.label}
+        difficultyLabel={t(difficultyConfig.labelKey)}
         activeIdx={activeIdx}
         totalProblems={totalProblems}
         problems={set.problems}

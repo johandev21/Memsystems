@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
+import i18n from "@/shared/i18n";
 import type {
   ProblemEvaluationResult,
   PracticeProblemsContentType,
@@ -115,7 +116,7 @@ export function usePracticeProblemsSession(
       if (!modelId) {
         updateProblemState(problemId, {
           isEvaluating: false,
-          evaluationError: "Select a model to evaluate your answer.",
+          evaluationError: i18n.t("practice.selectModel", { ns: "viewer" }),
         });
         return;
       }
@@ -143,7 +144,8 @@ export function usePracticeProblemsSession(
           isSolutionRevealed: difficulty === "hard" ? true : state.isSolutionRevealed,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to evaluate answer";
+        const message =
+          err instanceof Error ? err.message : i18n.t("practice.evaluateFailed", { ns: "viewer" });
         console.error("[EVAL-DEBUG] response failed", {
           materialId,
           problemId,

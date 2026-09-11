@@ -1,4 +1,5 @@
 import { File, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import type { SourceWithContent } from "../../types";
 import {
@@ -15,6 +16,7 @@ export function SourceProcessingState({
   source: SourceWithContent;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("sources");
   const status = sourceProcessingStatus(source);
   const active = isSourceProcessing(source);
   const error = sourceProcessingError(source);
@@ -31,28 +33,29 @@ export function SourceProcessingState({
       </h2>
       <p className="max-w-sm text-xs text-muted-foreground">
         {active
-          ? "This source will become available here when processing finishes."
-          : error || "This source is not available for reading."}
+          ? t("reader.processingWillBeAvailable")
+          : error || t("reader.notAvailable")}
       </p>
       <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
-        Back to Sources
+        {t("states.backToSources")}
       </Button>
     </div>
   );
 }
 
 export function SourceReaderError({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation("sources");
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
       <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
         <File className="size-6" />
       </div>
-      <h2 className="text-lg font-bold">Failed to load document</h2>
+      <h2 className="text-lg font-bold">{t("reader.failedToLoad")}</h2>
       <p className="max-w-xs text-xs text-muted-foreground">
-        Unable to load source details. Please try again.
+        {t("reader.loadFailedDescription")}
       </p>
       <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
-        Back to Sources
+        {t("states.backToSources")}
       </Button>
     </div>
   );

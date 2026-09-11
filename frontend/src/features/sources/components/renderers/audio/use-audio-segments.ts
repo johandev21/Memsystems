@@ -8,6 +8,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { toast } from "sonner";
+import i18n from "@/shared/i18n";
 import { fetchApi } from "@/shared/api";
 import type { SourceSegment, SourceWithContent } from "../../../types";
 import {
@@ -98,7 +99,7 @@ export function useSpeakerRename(
     }));
     setCustomSegments(currentList);
     setEditingSpeaker(null);
-    toast.success(`Renamed speaker to "${trimmed}"`);
+    toast.success(i18n.t("audioSegment.renamed", { ns: "sourceRenderers", name: trimmed }));
     try {
       await fetchApi(`/api/sources/${sourceId}/speakers`, {
         method: "PATCH",

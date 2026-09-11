@@ -1,0 +1,81 @@
+{
+  "announcement": {
+    "openingChat": "Abriendo el chat.",
+    "openingChatFor": "Abriendo el chat para {{concept}}."
+  },
+  "assistant": {
+    "branchPage": "{{current}} de {{total}}",
+    "copied": "¡Copiado!",
+    "copyMessage": "Copiar mensaje",
+    "nextVersion": "Versión siguiente",
+    "previousVersion": "Versión anterior",
+    "regenerateResponse": "Regenerar respuesta"
+  },
+  "clearHistory": {
+    "cancel": "Cancelar",
+    "cleared": "Historial del chat borrado",
+    "clearFailed": "No se pudo borrar el historial del chat",
+    "clearing": "Borrando...",
+    "confirm": "Borrar historial",
+    "description": "¿Seguro que quieres borrar todos los mensajes del chat en este cuaderno?",
+    "title": "Borrar el historial del chat"
+  },
+  "composer": {
+    "attachmentAlt": "Archivo adjunto",
+    "attachPhoto": "Adjuntar foto",
+    "imageAlt": "Imagen",
+    "noModelsFound": "No se encontraron modelos",
+    "placeholder": "Escribe un mensaje...",
+    "removeAttachment": "Quitar archivo adjunto",
+    "searchPlaceholder": "Buscar modelos...",
+    "selectModelTitle": "Seleccionar modelo",
+    "sendMessage": "Enviar mensaje",
+    "stopResponse": "Detener respuesta"
+  },
+  "empty": {
+    "blankCanvas": "Empieza con un lienzo en blanco",
+    "welcomeDescription": "Haz preguntas o genera materiales de estudio a partir de las fuentes que hayas añadido.\n\nUsa el compositor de chat de abajo para empezar.",
+    "welcomeTitle": "Te damos la bienvenida a tu cuaderno: \"{{title}}\""
+  },
+  "errorCard": {
+    "addCredits": "Añadir créditos",
+    "openSettings": "Abrir ajustes",
+    "retry": "Reintentar",
+    "tip": "Consejo: los modelos más económicos tienen límites de frecuencia menos estrictos."
+  },
+  "header": {
+    "title": "Chat"
+  },
+  "locator": {
+    "lines": "Líneas {{value}}",
+    "linesRange": "Líneas {{start}}–{{end}}",
+    "page": "Página {{number}}",
+    "sheet": "Hoja \"{{name}}\"",
+    "slide": "Diapositiva {{number}}",
+    "timestamp": "Marca de tiempo",
+    "visualRegion": "Región visual"
+  },
+  "message": {
+    "copiedToClipboard": "Copiado al portapapeles"
+  },
+  "panel": {
+    "gatewayBusy": "El Gateway de IA está ocupado: es posible que las respuestas fallen. Esperar un poco y volver a intentarlo suele funcionar.",
+    "gatewayKeyDescription": "Se necesita una clave del Gateway de IA para chatear con tu asistente de estudio.",
+    "notebookFallback": "Cuaderno"
+  },
+  "pending": {
+    "thinking": "Pensando…",
+    "waiting": "Esperando respuesta…"
+  },
+  "referencePopover": {
+    "noExcerpt": "No hay ningún extracto disponible para esta referencia.",
+    "openSource": "Abrir fuente",
+    "referencesAria": "Referencias",
+    "sourceUnavailable": "Fuente no disponible",
+    "triggerAria": "Referencia {{number}}: {{title}}",
+    "unknownKind": "Fuente"
+  },
+  "userMessage": {
+    "attachedImageAlt": "Imagen adjunta"
+  }
+}

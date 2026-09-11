@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { foldersQueryOptions } from "../../api/folders";
 import { studyMaterialsQueryOptions } from "@/features/study-material-viewer";
 import { StudyMaterialsTree, type StudyMaterialsTreeSize } from "./study-materials-tree";
@@ -19,6 +20,7 @@ export interface StudyMaterialsTreeContainerProps {
 }
 
 function useStudyMaterialsTreeData(notebookId: string) {
+  const { t } = useTranslation("tree");
   const foldersQuery = useQuery({
     ...foldersQueryOptions(notebookId),
     enabled: Boolean(notebookId),
@@ -36,7 +38,7 @@ function useStudyMaterialsTreeData(notebookId: string) {
   const errorMessage =
     (foldersQuery.error as Error | undefined)?.message ??
     (materialsQuery.error as Error | undefined)?.message ??
-    "Failed to load study materials";
+    t("errors.loadFailed");
   const isFetching = foldersQuery.isFetching || materialsQuery.isFetching;
   const hasData = foldersQuery.isSuccess && materialsQuery.isSuccess;
 
@@ -158,11 +160,12 @@ function getTreeContentHeight(variant: StudyMaterialsTreeContainerProps["variant
 }
 
 function TreeUpdatingIndicator() {
+  const { t } = useTranslation("tree");
   return (
     <div
       data-slot="study-materials-tree-updating"
       className="h-1 w-full overflow-hidden bg-muted"
-      aria-label="Updating study materials"
+      aria-label={t("tree.updating")}
       aria-busy="true"
     >
       <div className="h-full w-1/3 animate-pulse bg-primary/40" />
@@ -171,11 +174,12 @@ function TreeUpdatingIndicator() {
 }
 
 function TreeRefreshError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation("tree");
   return (
     <div className="p-2 text-xs text-destructive">
-      Failed to refresh.{" "}
+      {t("errors.refreshFailed")}{" "}
       <button onClick={onRetry} className="underline">
-        Retry
+        {t("errors.retry")}
       </button>
     </div>
   );

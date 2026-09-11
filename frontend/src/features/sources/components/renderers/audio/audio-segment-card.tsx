@@ -1,5 +1,6 @@
 import { Check, Edit2, User, X } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import { formatTime, type ParsedAudioSegment } from "../../../utils/audio-transcript-parser";
 
@@ -58,6 +59,7 @@ export function AudioSegmentCard({
   onCancelRename,
   onSpeakerKeyDown,
 }: AudioSegmentCardProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div
       data-testid="transcript-segment"
@@ -79,7 +81,7 @@ export function AudioSegmentCard({
               onTimestampClick(segment);
             }}
             className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-            title="Seek audio to this timestamp"
+            title={t("audioSegment.seekAudioTitle")}
           >
             [{formatTime(segment.startOffsetMs / 1000)}]
           </button>
@@ -91,7 +93,7 @@ export function AudioSegmentCard({
                     type="text"
                     autoFocus
                     data-testid="speaker-rename-input"
-                    aria-label="Rename speaker"
+                    aria-label={t("audioSegment.renameSpeakerAria")}
                     value={editingValue}
                     onChange={(e) => onRenameChange(e.target.value)}
                     onKeyDown={onSpeakerKeyDown}
@@ -102,7 +104,7 @@ export function AudioSegmentCard({
                     data-testid="speaker-rename-save"
                     onClick={onSaveRename}
                     className="size-5 flex items-center justify-center rounded bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
-                    title="Save speaker name"
+                    title={t("audioSegment.saveSpeakerName")}
                   >
                     <Check className="size-3" />
                   </button>
@@ -110,7 +112,7 @@ export function AudioSegmentCard({
                     type="button"
                     onClick={onCancelRename}
                     className="size-5 flex items-center justify-center rounded bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
-                    title="Cancel rename"
+                    title={t("audioSegment.cancelRename")}
                   >
                     <X className="size-3" />
                   </button>
@@ -124,7 +126,7 @@ export function AudioSegmentCard({
                     "group/speaker inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer",
                     speakerColor,
                   )}
-                  title="Click to rename speaker"
+                  title={t("audioSegment.renameSpeakerTitle")}
                 >
                   <User className="size-2.5" />
                   <span>{segment.speaker}</span>

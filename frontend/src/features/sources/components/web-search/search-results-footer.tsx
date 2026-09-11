@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 export interface SearchResultsFooterProps {
@@ -22,9 +23,15 @@ export function SearchResultsFooter({
   onRetryFailed,
   onImportSelected,
 }: SearchResultsFooterProps) {
+  const { t } = useTranslation("sources");
   const statusText = hasImportResults
-    ? `${importedCount} added${failedUrls.length > 0 ? ` · ${failedUrls.length} failed` : ""}`
-    : `${selectedCount} selected`;
+    ? failedUrls.length > 0
+      ? t("webSearchResults.addedAndFailed", {
+          added: importedCount,
+          failed: failedUrls.length,
+        })
+      : t("webSearchResults.addedCount", { count: importedCount })
+    : t("webSearchResults.selectedCount", { count: selectedCount });
 
   return (
     <div className="flex flex-col gap-2 border-t border-border/60 bg-muted/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -41,7 +48,7 @@ export function SearchResultsFooter({
             disabled={importing || clearing}
           >
             {importing ? <Loader2 className="animate-spin" /> : null}
-            Retry failed
+            {t("webSearchResults.retryFailed")}
           </Button>
         )}
         <Button
@@ -51,7 +58,7 @@ export function SearchResultsFooter({
           disabled={selectedCount === 0 || importing || clearing}
         >
           {importing ? <Loader2 className="animate-spin" /> : null}
-          {importing ? "Adding" : "Add selected"}
+          {importing ? t("webSearchResults.adding") : t("webSearchResults.addSelected")}
         </Button>
       </div>
     </div>

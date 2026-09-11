@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/shared/utils/cn";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS } from "./option-row";
@@ -24,9 +25,10 @@ export function RoadmapBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Roadmap",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
@@ -71,12 +73,18 @@ export function RoadmapBriefForm({
   };
 
   const phaseLabel = isAutoMode
-    ? "Auto (AI Decides optimal phases)"
-    : `${phaseCount} ${phaseCount === 1 ? "Phase" : "Phases"}${phaseCount >= 50 ? " (Max 50)" : ""}`;
+    ? t("roadmap.autoLabel")
+    : phaseCount >= 50
+      ? t("roadmap.phaseCountMax", { count: phaseCount, max: 50 })
+      : t("roadmap.phaseCount", { count: phaseCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <BriefWizardHeader title="Roadmap Setup" step={step} onStepChange={setStep} />
+      <BriefWizardHeader
+        title={t("wizard.title", { kind: t("kinds.roadmap") })}
+        step={step}
+        onStepChange={setStep}
+      />
       {step === 1 ? (
         <div className="flex min-h-[380px] flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
@@ -113,20 +121,20 @@ export function RoadmapBriefForm({
 
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-text-primary">
-                3. Knowledge Sources
+                {t("fields.knowledgeSourcesStep3")}
                 {!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
               </Label>
               <GenerationSourcePopover
                 sources={sources}
                 selectedIds={value.sourceIds}
                 onChange={(sourceIds) => patchFormData({ sourceIds })}
-                emptyMessage="No sources in notebook. Roadmap will generate using general knowledge."
+                emptyMessage={t("knowledge.emptySources", { kind: t("kinds.roadmap") })}
               />
             </div>
           </div>
 
           <div className="flex items-center justify-between border-t border-transparent pt-2">
-            <span className="text-xs text-text-faint">Configure custom instructions next</span>
+            <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
             <Button
               type="button"
               onClick={() => {
@@ -140,7 +148,7 @@ export function RoadmapBriefForm({
                 CTA_BUTTON_CLASS,
               )}
             >
-              Next Step
+              {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </Button>
           </div>
@@ -153,7 +161,7 @@ export function RoadmapBriefForm({
           hasSources={hasSources}
           disabled={disabled}
           canSubmit={canSubmit}
-          submitLabel={submitLabel}
+          submitLabel={submitLabel ?? t("actions.generateKind", { kind: t("kinds.roadmap") })}
           onBriefChange={(brief) => patchFormData({ brief })}
           onFolderIdChange={(folderId) => patchFormData({ folderId })}
           onBack={() => setStep(1)}

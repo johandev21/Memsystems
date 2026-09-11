@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/shared/utils/cn";
 import type { SourceSegmentLocator } from "../../types";
@@ -30,6 +31,7 @@ export function PlainTextDocumentViewer({
   selectedLocator,
   scrollElement,
 }: PlainTextDocumentViewerProps) {
+  const { t } = useTranslation("sourceRenderers");
   const containerRef = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
 
@@ -103,7 +105,7 @@ export function PlainTextDocumentViewer({
   if (blocks.length === 0) {
     return (
       <div className="py-12 text-center text-xs text-muted-foreground">
-        No text content available.
+        {t("plainTextViewer.noContent")}
       </div>
     );
   }

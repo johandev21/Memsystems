@@ -8,6 +8,7 @@ import {
   useCallback,
   useRef,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useOptionalPromptInputController,
   usePromptInputAttachments,
@@ -19,9 +20,10 @@ export const PromptInputTextarea = ({
   onChange,
   onKeyDown,
   className,
-  placeholder = "What would you like to know?",
+  placeholder,
   ...props
 }: PromptInputTextareaProps) => {
+  const { t } = useTranslation("ai");
   const controller = useOptionalPromptInputController();
   const attachments = usePromptInputAttachments();
   const isComposingRef = useRef(false);
@@ -105,7 +107,7 @@ export const PromptInputTextarea = ({
       onCompositionStart={handleCompositionStart}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
-      placeholder={placeholder}
+      placeholder={placeholder ?? t("promptInput.placeholder")}
       {...props}
       {...controlledProps}
     />

@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FolderPicker } from "@/features/notebooks";
 import { cn } from "@/shared/utils/cn";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
 import { DETAIL_OPTIONS, PHASE_PRESETS, type DetailLevel } from "./roadmap-options";
 
@@ -32,10 +33,12 @@ export function RoadmapPhasesSection({
   onCustomChange,
   onCustomBlur,
 }: RoadmapPhasesSectionProps) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-text-primary">1. Number of Phases</Label>
+        <Label className="text-sm font-medium text-text-primary">{t("roadmap.phasesLabel")}</Label>
         <span className="text-xs font-medium text-primary">{phaseLabel}</span>
       </div>
 
@@ -49,7 +52,7 @@ export function RoadmapPhasesSection({
             isAutoMode ? "font-semibold" : "font-medium",
           )}
         >
-          Auto
+          {t("actions.auto")}
         </button>
 
         {PHASE_PRESETS.map((cnt) => {
@@ -95,7 +98,7 @@ export function RoadmapPhasesSection({
               "flex h-9 items-center justify-center gap-1 text-center text-xs font-medium",
             )}
           >
-            Custom
+            {t("actions.custom")}
           </button>
         )}
       </div>
@@ -110,9 +113,11 @@ export function RoadmapDetailLevelSection({
   detailLevel: DetailLevel;
   onSelectDetailLevel: (detailLevel: DetailLevel) => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-sm font-medium text-text-primary">2. Detail Level</Label>
+      <Label className="text-sm font-medium text-text-primary">{t("fields.detailLevelStep2")}</Label>
       <div className="grid grid-cols-2 gap-2">
         {DETAIL_OPTIONS.map((opt) => {
           const selected = detailLevel === opt.id;
@@ -135,7 +140,7 @@ export function RoadmapDetailLevelSection({
                       selected ? "text-primary-foreground" : "text-text-tertiary",
                     )}
                   >
-                    {opt.title}
+                    {t(opt.titleKey)}
                   </span>
                 </div>
                 <span
@@ -144,7 +149,7 @@ export function RoadmapDetailLevelSection({
                     selected ? "text-primary-foreground/80" : "text-text-faint",
                   )}
                 >
-                  {opt.desc}
+                  {t(opt.descKey)}
                 </span>
               </div>
             </button>
@@ -182,26 +187,30 @@ export function RoadmapStepTwo({
   onBack,
   onSubmit,
 }: RoadmapStepTwoProps) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-2 duration-150">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="brief-roadmap" className="text-sm font-medium text-text-primary">
-            Custom Instructions
+            {t("fields.customInstructions")}
             {!hasSources && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
           <Textarea
             id="brief-roadmap"
             value={brief}
             onChange={(e) => onBriefChange(e.target.value)}
-            placeholder="What do you want to learn? Describe the topic, goal, or target skill..."
+            placeholder={t("roadmap.instructionsPlaceholder")}
             className="max-h-[200px] min-h-[120px] w-full resize-none text-xs"
             disabled={disabled}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+          <Label className="text-xs font-medium text-text-tertiary">
+            {t("fields.destinationFolder")}
+          </Label>
           <FolderPicker
             notebookId={notebookId}
             value={folderId}
@@ -219,7 +228,7 @@ export function RoadmapStepTwo({
           className="h-9 cursor-pointer gap-1.5 px-4 text-sm text-text-faint hover:text-text-secondary"
         >
           <ArrowLeft className="size-4" />
-          Back
+          {t("actions.back")}
         </Button>
 
         <Button

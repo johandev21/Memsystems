@@ -1,0 +1,82 @@
+{
+  "conversation": {
+    "emptyDescription": "Inicia una conversación para ver mensajes aquí",
+    "emptyTitle": "Aún no hay mensajes"
+  },
+  "errors": {
+    "auth": {
+      "message": "Tu clave fue rechazada. Revisa tus claves en Ajustes.",
+      "title": "La conexión necesita atención"
+    },
+    "badRequest": {
+      "message": "La solicitud no era válida.",
+      "title": "No se pudo enviar"
+    },
+    "capability": {
+      "fileTitle": "Los archivos adjuntos no son compatibles",
+      "imageTitle": "Los archivos de imagen no son compatibles",
+      "message": "Este modelo no admite búsqueda web. Cambia a un modelo que la admita e inténtalo de nuevo.",
+      "structuredTitle": "La salida estructurada no es compatible",
+      "webSearchTitle": "La búsqueda web no es compatible"
+    },
+    "entitlement": {
+      "message": "Tu cuenta del gateway no puede usar este modelo. Prueba un modelo gratuito o añade créditos.",
+      "modelMessage": "{{model}} no está incluido en tu plan. Tu cuenta del gateway no puede usarlo: prueba un modelo gratuito o añade créditos.",
+      "title": "El modelo no está incluido en tu plan"
+    },
+    "generic": {
+      "message": "La solicitud falló antes de terminar. Reintentar suele funcionar.",
+      "title": "Algo salió mal"
+    },
+    "rateLimited": {
+      "message": "Este modelo tiene un límite de solicitudes en tu plan. Espera unos segundos e inténtalo de nuevo, o cambia a otro modelo.",
+      "modelMessage": "{{model}} tiene un límite de solicitudes en tu plan. Espera unos segundos e inténtalo de nuevo, o cambia a otro modelo.",
+      "title": "La IA está ocupada ahora mismo"
+    },
+    "retired": {
+      "message": "Este modelo se retiró del gateway. Elige un modelo actual arriba y reintenta.",
+      "title": "El modelo ya no está disponible"
+    },
+    "substituted": {
+      "message": "El gateway respondió con un modelo distinto del que elegiste. No se presentó nada como si funcionara: reintenta o cambia a un modelo que incluya tu plan.",
+      "title": "Se sirvió otro modelo"
+    }
+  },
+  "gatewayKeyPrompt": {
+    "description": "Añade tu clave del Gateway de IA en Ajustes para desbloquear los modelos.",
+    "openSettings": "Abrir Ajustes",
+    "title": "Se requiere la clave del Gateway de IA"
+  },
+  "markdownTable": {
+    "ariaLabel": "Tabla desplazable"
+  },
+  "message": {
+    "branchPage": "{{current}} de {{total}}",
+    "nextBranch": "Rama siguiente",
+    "previousBranch": "Rama anterior"
+  },
+  "modelSelector": {
+    "providerLogo": "Logotipo de {{provider}}",
+    "title": "Selector de modelo"
+  },
+  "promptInput": {
+    "addPhotosOrFiles": "Añadir fotos o archivos",
+    "placeholder": "¿Qué te gustaría saber?",
+    "stop": "Detener",
+    "submit": "Enviar",
+    "takeScreenshot": "Capturar pantalla",
+    "uploadFiles": "Subir archivos"
+  },
+  "reasoning": {
+    "thinking": "Pensando...",
+    "thoughtBrief": "Pensó durante unos segundos",
+    "thoughtFor_one": "Pensó durante {{count}} segundo",
+    "thoughtFor_many": "Pensó durante {{count}} segundos",
+    "thoughtFor_other": "Pensó durante {{count}} segundos"
+  },
+  "sources": {
+    "used_one": "Se usó {{count}} fuente",
+    "used_many": "Se usaron {{count}} fuentes",
+    "used_other": "Se usaron {{count}} fuentes"
+  }
+}

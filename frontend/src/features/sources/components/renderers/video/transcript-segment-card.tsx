@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ImageIcon } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { formatTime, type ParsedVideoSegment } from "../../../utils/video-transcript-parser";
@@ -15,6 +16,7 @@ export function TranscriptSegmentCard({
   isSelectedCitation,
   onSeek,
 }: TranscriptSegmentCardProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div
       data-testid="transcript-segment"
@@ -35,7 +37,7 @@ export function TranscriptSegmentCard({
             onSeek(segment);
           }}
           className="inline-flex items-center rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] font-medium text-text-muted hover:bg-surface-3 hover:text-text-primary transition-colors cursor-pointer"
-          title="Seek video to this timestamp"
+          title={t("videoTranscript.seekVideoTitle")}
         >
           [{formatTime(segment.startOffsetMs / 1000)}]
         </button>
@@ -46,7 +48,7 @@ export function TranscriptSegmentCard({
             className="inline-flex items-center gap-1 rounded-full border border-surface-border bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-text-secondary"
           >
             <ImageIcon className="size-2.5 text-text-faint" />
-            Visual Note
+            {t("videoTranscript.visualNote")}
           </span>
         )}
       </div>

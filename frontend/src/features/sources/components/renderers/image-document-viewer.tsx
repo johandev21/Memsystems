@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/shared/api";
 import type {
@@ -18,6 +19,7 @@ import { ExtractedNotesPanel } from "./image/extracted-notes-panel";
 export type { ImageDocumentViewerProps };
 
 export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentViewerProps) {
+  const { t } = useTranslation("sourceRenderers");
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [zoom, setZoom] = useState(1);
   const [showOverlays, setShowOverlays] = useState(true);
@@ -100,7 +102,7 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
     source.errorMessage ||
     sections.find((s) => s.warning)?.warning ||
     (source.rawText?.toLowerCase().includes("unreadable")
-      ? "Some content in this image could not be fully transcribed."
+      ? t("imageViewer.partialTranscriptionWarning")
       : null);
 
   return (

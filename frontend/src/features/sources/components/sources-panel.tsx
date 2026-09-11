@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   type Source,
@@ -25,6 +26,7 @@ export function SourcesPanel({
   onSelectSource: (id: string) => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation("sources");
   const {
     data: sources,
     isPending,
@@ -87,7 +89,7 @@ export function SourcesPanel({
       <div className="p-2">
         <AddSourceDialog notebookId={notebookId}>
           <div className="cursor-pointer rounded-2xl border-2 border-dashed border-border p-4 text-center text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5">
-            Add sources (PDF, Web, Text) to inform your AI study assistant
+            {t("panel.addSourcesPrompt")}
           </div>
         </AddSourceDialog>
       </div>
@@ -95,8 +97,8 @@ export function SourcesPanel({
       <ConfirmDeleteDialog
         open={sourceToDelete !== null}
         onOpenChange={(open) => !open && setSourceToDelete(null)}
-        title="Delete Source"
-        description={`Are you sure you want to delete "${sourceToDelete?.title ?? ""}"?`}
+        title={t("panel.deleteTitle")}
+        description={t("panel.deleteDescription", { title: sourceToDelete?.title ?? "" })}
         onConfirm={() => {
           if (!sourceToDelete) return;
           deleteMutation.mutate(sourceToDelete.id);

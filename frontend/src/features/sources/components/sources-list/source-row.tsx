@@ -1,4 +1,5 @@
 import { AlertCircle, Loader2, RotateCcw, Trash2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import type { Source } from "../../api/sources";
 import {
@@ -30,6 +31,7 @@ export function SourceRow({
   retrying,
   cancelling,
 }: SourceRowProps) {
+  const { t } = useTranslation("sources");
   const Icon = getSourceIcon(source);
   const status = sourceProcessingStatus(source);
   const active = isSourceProcessing(source);
@@ -70,8 +72,8 @@ export function SourceRow({
         {failed && (
           <button
             type="button"
-            aria-label="Retry source processing"
-            title="Retry source processing"
+            aria-label={t("sourceRow.retryProcessing")}
+            title={t("sourceRow.retryProcessing")}
             onClick={(event) => {
               event.stopPropagation();
               onRetry();
@@ -88,8 +90,8 @@ export function SourceRow({
         {active && (
           <button
             type="button"
-            aria-label="Cancel source processing"
-            title="Cancel source processing"
+            aria-label={t("pendingUpload.cancelProcessing")}
+            title={t("pendingUpload.cancelProcessing")}
             onClick={(event) => {
               event.stopPropagation();
               onCancel();
@@ -105,8 +107,8 @@ export function SourceRow({
         )}
         <button
           type="button"
-          aria-label="Delete source"
-          title="Delete source"
+          aria-label={t("sourceRow.delete")}
+          title={t("sourceRow.delete")}
           onClick={(event) => {
             event.stopPropagation();
             onDelete();

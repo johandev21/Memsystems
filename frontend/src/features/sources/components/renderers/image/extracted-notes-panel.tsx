@@ -1,4 +1,5 @@
 import { AlertTriangle, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
 import type { ParsedImageSection, ViewMode } from "./image-types";
@@ -27,6 +28,7 @@ export function ExtractedNotesPanel({
   onSelectSegment,
   onHoverSegment,
 }: ExtractedNotesPanelProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div
       ref={notesContainerRef}
@@ -37,10 +39,12 @@ export function ExtractedNotesPanel({
     >
       <div className="mb-4 space-y-2 border-b border-border/40 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-bold tracking-tight text-foreground">Extracted Notes</h2>
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            {t("imageNotesPanel.extractedNotes")}
+          </h2>
           <Badge variant="secondary" className="gap-1 font-normal text-xs">
             <Sparkles className="size-3 text-primary" />
-            AI Vision Analysis
+            {t("imageNotesPanel.aiVisionAnalysis")}
           </Badge>
         </div>
 
@@ -48,7 +52,7 @@ export function ExtractedNotesPanel({
           <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
             <AlertTriangle className="size-4 shrink-0 text-warning mt-0.5" />
             <div>
-              <div className="font-semibold">Notice</div>
+              <div className="font-semibold">{t("imageNotesPanel.notice")}</div>
               <div className="text-muted-foreground">{warningMessage}</div>
             </div>
           </div>
@@ -58,7 +62,7 @@ export function ExtractedNotesPanel({
       <div className="space-y-4">
         {sections.length === 0 ? (
           <div className="py-12 text-center text-xs text-muted-foreground">
-            No extracted text or visual analysis available for this image.
+            {t("imageNotesPanel.noContent")}
           </div>
         ) : (
           sections.map((section) => (

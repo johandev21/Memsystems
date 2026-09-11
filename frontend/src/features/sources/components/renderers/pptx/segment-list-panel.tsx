@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
@@ -20,6 +21,7 @@ export function PptxSegmentItem({
   searchQuery,
   onSelect,
 }: PptxSegmentItemProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <button
       type="button"
@@ -35,7 +37,10 @@ export function PptxSegmentItem({
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0">
-          Slide {seg.slideNumber} · #{seg.ordinal}
+          {t("pptxSegmentList.segmentBadge", {
+            number: seg.slideNumber,
+            ordinal: seg.ordinal,
+          })}
         </Badge>
       </div>
       <p className="line-clamp-3 text-xs leading-relaxed text-foreground/80">
@@ -74,16 +79,19 @@ export function SegmentListPanel({
   segmentRefs,
   onSegmentClick,
 }: SegmentListPanelProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div className="hidden lg:flex w-72 shrink-0 flex-col border-l border-border/40 bg-muted/10 overflow-hidden">
       <div className="shrink-0 border-b border-border/40 px-3 py-2">
-        <h3 className="text-xs font-semibold text-foreground">Slide Segments</h3>
-        <p className="text-[11px] text-muted-foreground">{filteredSegments.length} segments</p>
+        <h3 className="text-xs font-semibold text-foreground">{t("pptxSegmentList.title")}</h3>
+        <p className="text-[11px] text-muted-foreground">
+          {t("pptxSegmentList.segmentCount", { count: filteredSegments.length })}
+        </p>
       </div>
       <div ref={containerRef} className="flex-1 overflow-y-auto p-2">
         {filteredSegments.length === 0 ? (
           <p className="py-8 text-center text-xs text-muted-foreground">
-            No segments match &quot;{searchQuery}&quot;.
+            {t("pptxSegmentList.noSegmentsMatch", { query: searchQuery })}
           </p>
         ) : isVirtualized ? (
           <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>

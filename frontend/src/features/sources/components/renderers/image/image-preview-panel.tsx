@@ -1,4 +1,5 @@
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import type { ImageRegion } from "../../../types";
 import type { ParsedImageSection, ViewMode } from "./image-types";
@@ -46,6 +47,7 @@ export function ImagePreviewPanel({
   onSelectSegment,
   onHoverSegment,
 }: ImagePreviewPanelProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div
       className={cn(
@@ -70,14 +72,14 @@ export function ImagePreviewPanel({
         {isLoadingImage ? (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Loader2 className="size-6 animate-spin text-primary" />
-            <span className="text-xs">Loading image…</span>
+            <span className="text-xs">{t("imagePreview.loadingImage")}</span>
           </div>
         ) : isImageError || !imageUrl ? (
           <div className="flex flex-col items-center gap-2 p-6 text-center text-muted-foreground">
             <AlertTriangle className="size-8 text-warning" />
-            <span className="text-sm font-medium">Image preview unavailable</span>
+            <span className="text-sm font-medium">{t("imagePreview.imagePreviewUnavailable")}</span>
             <span className="text-xs text-muted-foreground">
-              The original image could not be loaded directly.
+              {t("imagePreview.imageLoadFailed")}
             </span>
           </div>
         ) : (

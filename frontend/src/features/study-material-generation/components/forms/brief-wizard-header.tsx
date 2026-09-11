@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
+import { useTranslation } from "react-i18next";
 
 export function BriefWizardHeader({
   title,
@@ -10,6 +11,8 @@ export function BriefWizardHeader({
   step: 1 | 2;
   onStepChange: (step: 1 | 2) => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between text-xs">
@@ -17,13 +20,13 @@ export function BriefWizardHeader({
           <span className="text-sm font-semibold">{title}</span>
         </div>
         <Badge variant="outline" className="text-xs font-normal">
-          Step {step} of 2
+          {t("wizard.stepOfTwo", { step })}
         </Badge>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          aria-label="Step 1"
+          aria-label={t("wizard.stepAria", { step: 1 })}
           onClick={() => onStepChange(1)}
           className={cn(
             "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",
@@ -32,7 +35,7 @@ export function BriefWizardHeader({
         />
         <button
           type="button"
-          aria-label="Step 2"
+          aria-label={t("wizard.stepAria", { step: 2 })}
           onClick={() => onStepChange(2)}
           className={cn(
             "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",

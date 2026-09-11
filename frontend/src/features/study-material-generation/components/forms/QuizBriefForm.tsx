@@ -7,6 +7,7 @@ import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
@@ -19,9 +20,13 @@ import type { BaseMaterialFormProps, BriefFormData } from "./types";
 const QUESTION_PRESETS = [5, 10, 15, 20] as const;
 
 const DIFFICULTIES = [
-  { id: "easy", title: "Warmup", description: "Basic recall & definitions" },
-  { id: "medium", title: "Standard", description: "Balanced application" },
-  { id: "hard", title: "Challenge", description: "Deep reasoning & edge cases" },
+  { id: "easy", titleKey: "quiz.difficulty.easy.title", descKey: "quiz.difficulty.easy.desc" },
+  {
+    id: "medium",
+    titleKey: "quiz.difficulty.medium.title",
+    descKey: "quiz.difficulty.medium.desc",
+  },
+  { id: "hard", titleKey: "quiz.difficulty.hard.title", descKey: "quiz.difficulty.hard.desc" },
 ] as const;
 
 type DifficultyId = (typeof DIFFICULTIES)[number]["id"];
@@ -35,9 +40,10 @@ export function QuizBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Quiz Now",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -56,9 +62,10 @@ export function QuizBriefForm({
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  const questionLabel = `${questionCount} ${
-    questionCount === 1 ? "Question" : "Questions"
-  }${questionCount >= 50 ? " (Max 50)" : ""}`;
+  const questionLabel =
+    questionCount >= 50
+      ? t("quiz.questionCountMax", { count: questionCount, max: 50 })
+      : t("quiz.questionCount", { count: questionCount });
 
   // Handlers
   const update = (patch: Partial<BriefFormData>) => {
@@ -120,20 +127,20 @@ export function QuizBriefForm({
 
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium text-text-primary">
-              3. Knowledge Sources
+              {t("fields.knowledgeSourcesStep3")}
               {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
             </Label>
             <GenerationSourcePopover
               sources={sources}
               selectedIds={value.sourceIds}
               onChange={(sourceIds) => update({ sourceIds })}
-              emptyMessage="No sources in notebook. Quiz will generate using general knowledge."
+              emptyMessage={t("knowledge.emptySources", { kind: t("kinds.quiz") })}
             />
           </div>
         </div>
 
         <div className="flex justify-between items-center pt-2 border-t border-transparent">
-          <span className="text-xs text-text-faint">Configure custom instructions next</span>
+          <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
           <Button
             type="button"
             onClick={() => setStep(2)}
@@ -142,7 +149,7 @@ export function QuizBriefForm({
               CTA_BUTTON_CLASS,
             )}
           >
-            Next Step
+            {t("actions.nextStep")}
             <ArrowRight className="size-4" />
           </Button>
         </div>
@@ -156,21 +163,24 @@ export function QuizBriefForm({
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <Label htmlFor="brief-quiz" className="text-sm font-medium text-text-primary">
-              Custom Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
+              {t("fields.customInstructions")}
+              {!hasSources && <span className="text-destructive ml-0.5">*</span>}
             </Label>
             <Textarea
               id="brief-quiz"
               ref={textareaRef}
               value={value.brief}
               onChange={(e) => update({ brief: e.target.value })}
-              placeholder="Provide specific focus areas, topics, or instructions for this quiz..."
+              placeholder={t("quiz.instructionsPlaceholder")}
               className="min-h-[120px] max-h-[200px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
               disabled={disabled}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+            <Label className="text-xs font-medium text-text-tertiary">
+              {t("fields.destinationFolder")}
+            </Label>
             <FolderPicker
               notebookId={notebookId}
               value={value.folderId}
@@ -188,7 +198,7 @@ export function QuizBriefForm({
             className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
           >
             <ArrowLeft className="size-4" />
-            Back
+            {t("actions.back")}
           </Button>
 
           <Button
@@ -200,7 +210,7 @@ export function QuizBriefForm({
             disabled={!canSubmit}
             onClick={onSubmit}
           >
-            {submitLabel}
+            {submitLabel ?? t("actions.generateNow", { kind: t("kinds.quiz") })}
           </Button>
         </div>
       </div>
@@ -209,7 +219,11 @@ export function QuizBriefForm({
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <BriefWizardHeader title="Quiz Setup" step={step} onStepChange={setStep} />
+      <BriefWizardHeader
+        title={t("wizard.title", { kind: t("kinds.quiz") })}
+        step={step}
+        onStepChange={setStep}
+      />
       {step === 1 ? renderStepOne() : renderStepTwo()}
     </div>
   );
@@ -222,9 +236,11 @@ function DifficultySelector({
   value: DifficultyId;
   onChange: (val: DifficultyId) => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-sm font-medium text-text-primary">1. Target Difficulty</Label>
+      <Label className="text-sm font-medium text-text-primary">{t("fields.targetDifficulty")}</Label>
       <div className="grid grid-cols-3 gap-3">
         {DIFFICULTIES.map((d) => (
           <button
@@ -244,7 +260,7 @@ function DifficultySelector({
                   value === d.id ? "text-primary-foreground" : "text-text-tertiary",
                 )}
               >
-                {d.title}
+                {t(d.titleKey)}
               </span>
             </div>
             <span
@@ -253,7 +269,7 @@ function DifficultySelector({
                 value === d.id ? "text-primary-foreground/80" : "text-text-faint",
               )}
             >
-              {d.description}
+              {t(d.descKey)}
             </span>
           </button>
         ))}
@@ -281,10 +297,12 @@ function QuestionSelector({
   onCustomChange: (raw: string) => void;
   onCustomBlur: () => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <Label className="text-sm font-medium text-text-primary">2. Number of Questions</Label>
+        <Label className="text-sm font-medium text-text-primary">{t("quiz.questionsLabel")}</Label>
         <span className="text-xs font-medium text-primary">{questionLabel}</span>
       </div>
 
@@ -303,7 +321,7 @@ function QuestionSelector({
                 selected ? "font-semibold" : "font-medium",
               )}
             >
-              {cnt} Qs
+              {t("quiz.questionPreset", { count: cnt })}
             </button>
           );
         })}
@@ -332,7 +350,7 @@ function QuestionSelector({
               "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
             )}
           >
-            Custom
+            {t("actions.custom")}
           </button>
         )}
       </div>

@@ -8,6 +8,7 @@ import {
 import { NotebookBanner } from "@/features/notebooks";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks";
 import { useEffect, useLayoutEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
 import { ChatEmptyState } from "./chat-empty-state";
@@ -16,6 +17,7 @@ import { ClearHistoryDialog } from "./clear-history-dialog";
 import { Composer } from "./composer";
 
 export function ChatPanel({ notebookId }: { notebookId: string }) {
+  const { t } = useTranslation("chat");
   const panelRef = useRef<HTMLDivElement>(null);
   const composerWrapperRef = useRef<HTMLDivElement>(null);
   const conversationWrapperRef = useRef<HTMLDivElement>(null);
@@ -73,9 +75,11 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
   const hasAssistantPlaceholder =
     lastMessage?.role === "assistant" && (lastMessage.parts?.length ?? 0) > 0;
   const showPendingIndicator = status === "submitted" && !hasAssistantPlaceholder;
-  const pendingLabel = selectedModelSupportsReasoning ? "Thinking…" : "Waiting for response…";
+  const pendingLabel = selectedModelSupportsReasoning
+    ? t("pending.thinking")
+    : t("pending.waiting");
 
-  const notebookTitle = notebook?.title ?? "Notebook";
+  const notebookTitle = notebook?.title ?? t("panel.notebookFallback");
   const isUntitled = notebookTitle.toLowerCase() === "untitled";
   const showBannerAsUntitled = isUntitled && messageCount === 0;
   const hasMessages = messageCount > 0;
@@ -265,6 +269,8 @@ function ChatComposerArea({
   onModelChange,
   composerTextareaRef,
 }: ChatComposerAreaProps) {
+  const { t } = useTranslation("chat");
+
   return (
     <div
       ref={composerWrapperRef}
@@ -276,7 +282,7 @@ function ChatComposerArea({
             role="status"
             className="mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
           >
-            AI Gateway is busy — responses may fail. Waiting a bit and retrying usually works.
+            {t("panel.gatewayBusy")}
           </div>
         )}
         <ClearHistoryDialog
@@ -298,7 +304,7 @@ function ChatComposerArea({
             textareaRef={composerTextareaRef}
           />
         ) : (
-          <GatewayKeyPrompt description="An AI Gateway key is required to chat with your study assistant." />
+          <GatewayKeyPrompt description={t("panel.gatewayKeyDescription")} />
         )}
       </div>
     </div>

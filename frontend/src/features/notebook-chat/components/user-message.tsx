@@ -1,4 +1,5 @@
 import type { UIMessage } from "@ai-sdk/react";
+import { useTranslation } from "react-i18next";
 import { Message, MessageContent, MessageResponse } from "@/features/ai";
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
@@ -18,6 +19,7 @@ const isFilePart = (part: UIMessage["parts"][number]): part is FilePart => {
 };
 
 export function UserMessage({ message }: { message: UIMessage }) {
+  const { t } = useTranslation("chat");
   const textParts = message.parts.filter(isTextPart);
   const fileParts = message.parts.filter(isFilePart);
 
@@ -33,7 +35,7 @@ export function UserMessage({ message }: { message: UIMessage }) {
               >
                 <img
                   src={file.url}
-                  alt={file.filename || "Attached image"}
+                  alt={file.filename || t("userMessage.attachedImageAlt")}
                   className="max-h-60 w-auto rounded-xl object-contain"
                 />
               </div>

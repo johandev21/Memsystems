@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { MaterialViewer, MaterialViewerSkeleton } from "@/features/study-material-viewer";
 import {
   type StudyMaterialDTO,
@@ -26,12 +27,14 @@ export function RightPane({
   forceFullscreen,
   defaultFullscreen,
 }: RightPaneProps) {
+  const { t } = useTranslation("notebooks");
+
   switch (mode.kind) {
     case "select":
       return (
         <div className="flex h-full flex-col items-center justify-center p-8 text-center gap-2">
           <p className="text-sm font-medium text-muted-foreground">
-            Select a study material to view its contents
+            {t("viewer.select")}
           </p>
         </div>
       );
@@ -100,15 +103,17 @@ function StudyMaterialPane({
 }
 
 function StudyMaterialError({ message, onClose }: { message?: string; onClose: () => void }) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <div className="flex h-full flex-col items-center justify-center p-8 text-center gap-4">
-      <p className="text-sm text-destructive">{message || "Failed to load study material"}</p>
+      <p className="text-sm text-destructive">{message || t("viewer.loadFailed")}</p>
       <button
         type="button"
         onClick={onClose}
         className="text-xs text-primary hover:underline cursor-pointer"
       >
-        Go back
+        {t("viewer.goBack")}
       </button>
     </div>
   );

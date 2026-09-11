@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { BookOpen, ChevronDown, FileText, Globe, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,6 +25,7 @@ export function GenerationSourcePopover({
   onChange,
   emptyMessage,
 }: GenerationSourcePopoverProps) {
+  const { t } = useTranslation("generation");
   const [search, setSearch] = useState("");
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
@@ -62,8 +64,8 @@ export function GenerationSourcePopover({
               <BookOpen className="size-4 shrink-0 text-primary" />
               <span className="truncate">
                 {selectedIds.length === 0
-                  ? "None selected (General Knowledge)"
-                  : `${selectedIds.length} source${selectedIds.length === 1 ? "" : "s"} selected`}
+                  ? t("knowledge.noneSelected")
+                  : t("knowledge.selected", { count: selectedIds.length })}
               </span>
             </span>
             <ChevronDown className="size-4 shrink-0 text-text-faint" />
@@ -79,8 +81,8 @@ export function GenerationSourcePopover({
             <Search className="size-4 shrink-0 text-text-faint" />
             <input
               type="text"
-              placeholder="Search sources..."
-              aria-label="Search sources"
+              placeholder={t("knowledge.searchPlaceholder")}
+              aria-label={t("knowledge.searchAriaLabel")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint"
@@ -91,7 +93,7 @@ export function GenerationSourcePopover({
             onClick={toggleAllSources}
             className="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-xs text-text-tertiary"
           >
-            Select all{" "}
+            {t("knowledge.selectAll")}{" "}
             <Checkbox checked={allFilteredSourcesSelected} onCheckedChange={toggleAllSources} />
           </button>
         </div>
@@ -129,7 +131,7 @@ export function GenerationSourcePopover({
           </div>
         )}
         <div className="bg-surface-2 p-2.5 text-xs text-text-faint">
-          {selectedIds.length} selected
+          {t("knowledge.selectedCount", { count: selectedIds.length })}
         </div>
       </PopoverContent>
     </Popover>

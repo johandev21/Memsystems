@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { cn } from "@/shared/utils/cn";
 import { CURATED_CATEGORIES, formatIconLabel, type CuratedCategory } from "./icon-picker-data";
@@ -68,20 +69,24 @@ export function IconPickerGrid({
   onMouseEnter,
   categories = CURATED_CATEGORIES,
 }: IconPickerGridProps) {
+  const { t } = useTranslation();
+
   if (isSearching) {
     if (matchingIcons.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
           <Search className="size-8 mb-2 stroke-1 opacity-50" />
-          <p className="text-xs font-medium">No icons found</p>
-          <p className="text-xs opacity-75 mt-0.5">Try searching for another keyword</p>
+          <p className="text-xs font-medium">{t("iconPicker.noResults")}</p>
+          <p className="text-xs opacity-75 mt-0.5">{t("iconPicker.tryAnother")}</p>
         </div>
       );
     }
 
     return (
       <div className="grid gap-2">
-        <div className="px-0.5 text-xs font-medium text-muted-foreground">Results</div>
+        <div className="px-0.5 text-xs font-medium text-muted-foreground">
+          {t("iconPicker.results")}
+        </div>
         <div className="grid grid-cols-6 gap-1">
           {displayedMatchingIcons.map((iconName, index) => (
             <IconItem
@@ -96,7 +101,7 @@ export function IconPickerGrid({
         </div>
         {displayedMatchingIcons.length < matchingIcons.length && (
           <div className="py-1 text-center text-xs text-muted-foreground">
-            Scroll down for more icons...
+            {t("iconPicker.scrollForMore")}
           </div>
         )}
       </div>
@@ -106,9 +111,9 @@ export function IconPickerGrid({
   return (
     <div className="flex flex-col gap-2.5">
       {categories.map((category) => (
-        <div key={category.name} className="flex flex-col gap-1">
+        <div key={category.labelKey} className="flex flex-col gap-1">
           <div className="px-0.5 text-xs font-medium text-muted-foreground">
-            {category.name}
+            {t(category.labelKey)}
           </div>
           <div className="grid grid-cols-6 gap-1">
             {category.icons.map((iconName) => {

@@ -1,4 +1,5 @@
 import { AlertTriangle, Eye, Layers } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownRenderer } from "@/components/ui/markdown";
 import { cn } from "@/shared/utils/cn";
@@ -21,6 +22,7 @@ export function ImageNoteCard({
   onSelect,
   noteRefs,
 }: ImageNoteCardProps) {
+  const { t } = useTranslation("sourceRenderers");
   const hasRegion = Boolean(section.locator?.imageRegion);
   return (
     <div
@@ -59,19 +61,19 @@ export function ImageNoteCard({
               className="gap-1 bg-primary/10 text-primary border-primary/20 text-[11px]"
             >
               <Eye className="size-3" />
-              Visual Description
+              {t("imageNote.visualDescription")}
             </Badge>
           )}
 
           {section.kind === "formula" && (
             <Badge variant="outline" className="text-[11px] text-muted-foreground">
-              Formula
+              {t("imageNote.formula")}
             </Badge>
           )}
 
           {section.kind === "heading" && (
             <Badge variant="outline" className="text-[11px] text-muted-foreground">
-              Heading
+              {t("imageNote.heading")}
             </Badge>
           )}
         </div>
@@ -79,7 +81,7 @@ export function ImageNoteCard({
         {hasRegion && (
           <span className="text-[10px] text-muted-foreground group-hover:text-primary flex items-center gap-0.5 transition-colors">
             <Layers className="size-3" />
-            Region #{section.ordinal}
+            {t("imageNote.regionLabel", { ordinal: section.ordinal })}
           </span>
         )}
       </div>

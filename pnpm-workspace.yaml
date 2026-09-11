@@ -18,5 +18,4 @@ allowBuilds:
   utf-8-validate: true
   sharp: true
   unrs-resolver: true
-
-
+  '@swc/core': true

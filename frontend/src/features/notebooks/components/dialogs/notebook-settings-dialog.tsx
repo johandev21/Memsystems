@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Eraser, Pencil, Settings, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -32,6 +33,7 @@ export interface NotebookSettingsDialogProps {
 }
 
 export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogProps) {
+  const { t } = useTranslation("notebooks");
   const { data: notebook } = useQuery(notebookQueryOptions(notebookId));
   const [open, setOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -56,10 +58,10 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
     try {
       await deleteNotebook(notebookId);
       await queryClient.invalidateQueries({ queryKey: ["notebooks"] });
-      toast.success("Notebook deleted");
+      toast.success(t("settings.deleted"));
       navigate({ to: "/" });
     } catch {
-      toast.error("Failed to delete notebook");
+      toast.error(t("settings.deleteFailed"));
     } finally {
       setIsDeleting(false);
     }
@@ -74,7 +76,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
               variant="ghost"
               size="icon"
               className="size-7 cursor-pointer"
-              aria-label="Notebook settings"
+              aria-label={t("settings.ariaLabel")}
             />
           }
         >
@@ -82,9 +84,9 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
         </PopoverTrigger>
         <PopoverContent align="end" sideOffset={8} className="w-64 gap-2 rounded-2xl p-2">
           <PopoverHeader className="px-2 py-1.5">
-            <PopoverTitle className="text-sm">Notebook</PopoverTitle>
+            <PopoverTitle className="text-sm">{t("settings.title")}</PopoverTitle>
             <PopoverDescription className="text-xs">
-              Edit or manage this notebook.
+              {t("settings.description")}
             </PopoverDescription>
           </PopoverHeader>
           <div className="flex flex-col gap-1">
@@ -94,7 +96,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
               onClick={handleEdit}
             >
               <Pencil data-icon="inline-start" />
-              Edit notebook
+              {t("settings.edit")}
             </Button>
             <Button
               variant="ghost"
@@ -102,7 +104,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
               onClick={handleClearChat}
             >
               <Eraser data-icon="inline-start" />
-              Clear chat
+              {t("settings.clearChat")}
             </Button>
             <Button
               variant="ghost"
@@ -110,7 +112,7 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
               onClick={handleOpenDelete}
             >
               <Trash2 data-icon="inline-start" />
-              Delete notebook
+              {t("settings.delete")}
             </Button>
           </div>
         </PopoverContent>
@@ -119,16 +121,17 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete notebook</AlertDialogTitle>
+            <AlertDialogTitle>{t("settings.delete")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Permanently delete “{notebook?.title ?? "this notebook"}” and all associated sources
-              and notes?
+              {t("settings.deleteConfirm", {
+                title: notebook?.title ?? t("settings.thisNotebook"),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t("settings.cancel")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? "Deleting…" : "Delete notebook"}
+              {isDeleting ? t("settings.deleting") : t("settings.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,5 +1,7 @@
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import type { TFunction } from "i18next";
 import { useEffect, useId, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import {
@@ -10,10 +12,15 @@ import {
   type QuizQuestionOption,
 } from "./quiz-helpers";
 
-function getOptionStatus(checked: boolean, correct: boolean, selected: boolean): string | null {
+function getOptionStatus(
+  checked: boolean,
+  correct: boolean,
+  selected: boolean,
+  t: TFunction<"viewer", undefined>,
+): string | null {
   if (!checked) return null;
-  if (correct) return selected ? "Your Answer · Correct" : "Correct Answer";
-  if (selected) return "Your Answer was incorrect";
+  if (correct) return selected ? t("quiz.options.yourAnswerCorrect") : t("quiz.options.correctAnswer");
+  if (selected) return t("quiz.options.yourAnswerIncorrect");
   return null;
 }
 
@@ -97,7 +104,8 @@ function QuizOption({
 }) {
   const id = useId();
   const showFeedback = checked && (review || selected || correct);
-  const status = getOptionStatus(checked, correct, selected);
+  const { t } = useTranslation("viewer");
+  const status = getOptionStatus(checked, correct, selected, t);
 
   return (
     <div
@@ -160,6 +168,7 @@ export function QuizQuestionStepper({
   onBackToResults?: () => void;
 }) {
   const q = questions[currentIdx];
+  const { t } = useTranslation("viewer");
   const selectedIdx = selectedOptions[q.id];
   const isChecked = isReviewMode || selectedIdx !== undefined;
   const correctIdx = getCorrectOptionIndex(q);
@@ -177,19 +186,17 @@ export function QuizQuestionStepper({
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-3 text-text-primary sm:py-6">
       {isReviewMode && (
         <Button variant="ghost" size="sm" onClick={onBackToResults} className="self-start">
-          <ArrowLeft aria-hidden="true" className="size-4" /> Back to Results
+          <ArrowLeft aria-hidden="true" className="size-4" /> {t("quiz.backToResults")}
         </Button>
       )}
       <div className="space-y-3">
         <div className="flex flex-wrap justify-between gap-2 text-sm text-text-secondary">
-          <span>Question {currentIdx + 1}</span>
-          <span>
-            {answeredCount} of {questions.length} Answered
-          </span>
+          <span>{t("quiz.question", { number: currentIdx + 1 })}</span>
+          <span>{t("quiz.answeredOf", { answered: answeredCount, total: questions.length })}</span>
         </div>
         <div
           role="progressbar"
-          aria-label="Questions Answered"
+          aria-label={t("quiz.questionsAnswered")}
           aria-valuemin={0}
           aria-valuemax={questions.length}
           aria-valuenow={answeredCount}
@@ -211,19 +218,17 @@ export function QuizQuestionStepper({
           {q.prompt}
         </h2>
         {!isChecked && (
-          <p className="text-sm text-text-secondary">
-            Selecting an answer checks it immediately. You cannot change it afterward.
-          </p>
+          <p className="text-sm text-text-secondary">{t("quiz.selectNotice")}</p>
         )}
         {isReviewMode && selectedIdx === undefined && (
-          <p className="text-sm text-text-secondary">You left this question unanswered.</p>
+          <p className="text-sm text-text-secondary">{t("quiz.unansweredNotice")}</p>
         )}
       </div>
       <div role="status" aria-live="polite" className="sr-only">
         {!isReviewMode && selectedIdx !== undefined
           ? selectedIdx === correctIdx
-            ? "Your answer is correct."
-            : "Your answer is incorrect. The correct answer is " + q.options[correctIdx]?.text
+            ? t("quiz.correctStatus")
+            : t("quiz.incorrectStatus", { answer: q.options[correctIdx]?.text })
           : ""}
       </div>
       <fieldset aria-labelledby={id} className="min-w-0 space-y-3 border-0 p-0">
@@ -244,18 +249,18 @@ export function QuizQuestionStepper({
       <footer className="flex flex-wrap items-center justify-between gap-3 pt-2">
         {isChecked && (
           <Button variant="ghost" onClick={() => handleExplainInChat(q, selectedIdx)}>
-            Explain
+            {t("common.explain")}
           </Button>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button variant="ghost" onClick={onPrev} disabled={currentIdx === 0}>
-            <ChevronLeft aria-hidden="true" className="size-4" /> Previous
+            <ChevronLeft aria-hidden="true" className="size-4" /> {t("common.previous")}
           </Button>
           {isLast && !isReviewMode ? (
-            <Button onClick={onSubmit}>Submit Quiz</Button>
+            <Button onClick={onSubmit}>{t("quiz.submit")}</Button>
           ) : (
             <Button onClick={onNext} disabled={isLast}>
-              Next <ChevronRight aria-hidden="true" className="size-4" />
+              {t("common.next")} <ChevronRight aria-hidden="true" className="size-4" />
             </Button>
           )}
         </div>

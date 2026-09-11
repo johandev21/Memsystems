@@ -1,8 +1,10 @@
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useGatewayKeyForm } from "../hooks/use-gateway-key-form";
 
 export function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
+  const { t } = useTranslation("settings");
   const {
     input,
     setInput,
@@ -23,7 +25,7 @@ export function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
   return (
     <form id="gateway-key-form" onSubmit={handleSave} className="flex flex-col gap-2">
       <label htmlFor="gateway-key-input" className="text-sm font-medium text-foreground">
-        Gateway API Key
+        {t("gateway.apiKey.label")}
       </label>
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
         <div className="flex-1">
@@ -32,7 +34,7 @@ export function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
               id="gateway-key-input"
               form="gateway-key-form"
               type={showKey ? "text" : "password"}
-              placeholder="Paste your Vercel AI Gateway key…"
+              placeholder={t("gateway.apiKey.placeholder")}
               value={input}
               onChange={(event) => {
                 setInput(event.target.value);
@@ -55,7 +57,7 @@ export function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
                 }}
                 className="mr-1 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                Replace
+                {t("gateway.apiKey.replace")}
               </Button>
             )}
             {input && !isMasked && (
@@ -66,7 +68,7 @@ export function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
                 disabled={busy}
                 onClick={() => setShowKey((current) => !current)}
                 className="mr-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label={showKey ? "Hide gateway key" : "Show gateway key"}
+                aria-label={showKey ? t("gateway.apiKey.hide") : t("gateway.apiKey.show")}
               >
                 {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
               </Button>
@@ -83,7 +85,11 @@ export function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
               disabled={!isDirty || busy}
               className="h-10 px-4 text-sm font-semibold"
             >
-              {isSaving ? "Saving…" : saved ? "Saved" : "Save Key"}
+              {isSaving
+                ? t("gateway.apiKey.saving")
+                : saved
+                  ? t("gateway.apiKey.saved")
+                  : t("gateway.apiKey.save")}
             </Button>
           )}
           {hasKey && (
@@ -95,14 +101,18 @@ export function GatewayKeyForm({ hasKey }: { hasKey: boolean }) {
               disabled={busy}
               className="h-10 px-4 text-sm font-medium"
             >
-              {isRemoving ? "Removing…" : confirmRemove ? "Confirm Remove" : "Remove"}
+              {isRemoving
+                ? t("gateway.apiKey.removing")
+                : confirmRemove
+                  ? t("gateway.apiKey.confirmRemove")
+                  : t("gateway.apiKey.remove")}
             </Button>
           )}
         </div>
       </div>
       {confirmRemove && (
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Removing your key disconnects every model. Click again to confirm.
+          {t("gateway.apiKey.removeConfirm")}
         </p>
       )}
     </form>

@@ -1,5 +1,6 @@
 import { Search, X } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,9 +24,11 @@ export function IconPicker({
   onChange,
   disabled = false,
   className,
-  placeholder = "Search for an icon",
+  placeholder,
   triggerVariant = "default",
 }: IconPickerProps) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("iconPicker.searchPlaceholder");
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -146,7 +149,7 @@ export function IconPicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         disabled={disabled}
-        aria-label={value ? `Selected icon: ${value}` : "Select icon"}
+        aria-label={value ? t("iconPicker.selectedIcon", { name: value }) : t("iconPicker.selectIcon")}
         aria-expanded={open}
         aria-haspopup="dialog"
         className={cn(
@@ -183,7 +186,7 @@ export function IconPicker({
             aria-autocomplete="list"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             className="h-9 rounded-md border-border/70 bg-background/30 pr-8 pl-3 text-xs shadow-none focus-visible:border-ring/70 focus-visible:bg-background/50 focus-visible:ring-1 focus-visible:ring-ring/20"
           />
           {searchQuery ? (
@@ -195,7 +198,7 @@ export function IconPicker({
                 inputRef.current?.focus();
               }}
               className="absolute right-2.5 flex size-5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/50"
-              aria-label="Clear search"
+              aria-label={t("iconPicker.clearSearch")}
             >
               <X className="size-3" />
             </button>
@@ -209,7 +212,7 @@ export function IconPicker({
           ref={scrollContainerRef}
           onScroll={handleScroll}
           role="listbox"
-          aria-label="Icons"
+          aria-label={t("iconPicker.ariaLabel")}
           className="max-h-[280px] overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
         >
           <IconPickerGrid

@@ -1,23 +1,27 @@
 import { formatDistanceToNow } from "date-fns";
+import type { TFunction } from "i18next";
 import { ArrowUpRight, NotebookText, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { getDateLocale } from "@/shared/utils";
 import { useRecentNotebooks, type RecentNotebooksPagination } from "../hooks/use-recent-notebooks";
 import { NotebookCard } from "./notebook-card";
 import { NotebookIcon } from "./notebook-icon";
 import type { Notebook } from "../types";
 
 export function RecentNotebooksSection() {
+  const { t } = useTranslation("notebooks");
   const { notebooks, isLoading, isCreating, onCreate, pagination } = useRecentNotebooks();
 
   return (
     <>
       <NotebooksHero onCreate={onCreate} isCreating={isCreating} />
       <section className="flex flex-col gap-4 py-6">
-        <RecentNotebooksSectionHeader title="Recent Notebooks" />
+        <RecentNotebooksSectionHeader title={t("recent.title")} />
         <RecentNotebooksContent
           isLoading={isLoading}
           notebooks={notebooks}
@@ -37,15 +41,15 @@ function NotebooksHero({
   onCreate: () => void;
   isCreating: boolean;
 }) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <section className="flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-2">
         <h1 className="max-w-md font-heading text-2xl leading-snug font-semibold tracking-[-0.03em] text-foreground">
-          Make progress on what matters.
+          {t("recent.heroTitle")}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Pick up where you left off, or start something fresh.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("recent.heroSubtitle")}</p>
       </div>
       <Button
         onClick={onCreate}
@@ -53,7 +57,7 @@ function NotebooksHero({
         className="w-full sm:w-auto cursor-pointer"
       >
         {isCreating ? <Spinner className="mr-2" /> : <Plus className="mr-2 size-4" />}
-        New notebook
+        {t("recent.newNotebook")}
       </Button>
     </section>
   );
@@ -62,12 +66,14 @@ function NotebooksHero({
 function RecentNotebooksSectionHeader({
   title,
   viewAllHref,
-  viewAllLabel = "View all",
+  viewAllLabel,
 }: {
   title: string;
   viewAllHref?: string;
   viewAllLabel?: string;
 }) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <div className="flex items-center justify-between">
       <h2 className="text-lg font-semibold text-foreground">{title}</h2>
@@ -76,7 +82,7 @@ function RecentNotebooksSectionHeader({
           to={viewAllHref}
           className="inline-flex items-center gap-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          {viewAllLabel}
+          {viewAllLabel ?? t("recent.viewAll")}
           <ArrowUpRight className="size-3.5" />
         </Link>
       )}
@@ -139,6 +145,8 @@ function RecentNotebooksLoading() {
 }
 
 function RecentNotebooksLoadingMore() {
+  const { t } = useTranslation("notebooks");
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -148,7 +156,7 @@ function RecentNotebooksLoadingMore() {
       </div>
       <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
         <Spinner />
-        <span>Loading more…</span>
+        <span>{t("recent.loadingMore")}</span>
       </div>
     </div>
   );
@@ -161,21 +169,25 @@ function RecentNotebooksEmpty({
   isCreating: boolean;
   onCreate: () => void;
 }) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <EmptyState
       icon={<NotebookText className="size-7 text-muted-foreground" />}
-      title="No notebooks yet"
-      description="Your notebooks will live here. Create one to start learning."
+      title={t("recent.emptyTitle")}
+      description={t("recent.emptyDescription")}
     >
       <Button onClick={onCreate} disabled={isCreating} size="sm" className="cursor-pointer">
         {isCreating ? <Spinner className="mr-2" /> : <Plus className="mr-2 size-4" />}
-        New notebook
+        {t("recent.newNotebook")}
       </Button>
     </EmptyState>
   );
 }
 
 function RecentNotebookGrid({ notebooks }: { notebooks: Notebook[] }) {
+  const { t, i18n } = useTranslation("notebooks");
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {notebooks.map((notebook) => (
@@ -184,7 +196,7 @@ function RecentNotebookGrid({ notebooks }: { notebooks: Notebook[] }) {
           id={notebook.id}
           title={notebook.title}
           description={notebook.description}
-          updatedAt={formatUpdatedAt(notebook.updatedAt)}
+          updatedAt={formatUpdatedAt(notebook.updatedAt, t, i18n.resolvedLanguage)}
           imageUrl={notebook.bannerUrl ?? undefined}
           bannerFocalPoint={notebook.bannerFocalPoint}
           icon={<NotebookIcon name={notebook.icon} />}
@@ -201,6 +213,7 @@ function RecentNotebooksPaginationFooter({
   pagination: RecentNotebooksPagination;
   totalCount: number;
 }) {
+  const { t } = useTranslation("notebooks");
   const { hasNextPage, isFetchingNextPage, isFetchNextPageError, onRetry, sentinelRef } =
     pagination;
 
@@ -210,24 +223,29 @@ function RecentNotebooksPaginationFooter({
       {isFetchingNextPage ? <RecentNotebooksLoadingMore /> : null}
       {!isFetchingNextPage && isFetchNextPageError ? (
         <div className="flex items-center justify-center gap-3 py-4 text-sm text-muted-foreground">
-          <span>Couldn&apos;t load more notebooks.</span>
+          <span>{t("recent.loadMoreFailed")}</span>
           <Button variant="outline" size="sm" onClick={onRetry} className="cursor-pointer">
-            Retry
+            {t("recent.retry")}
           </Button>
         </div>
       ) : null}
       {!hasNextPage && !isFetchNextPageError && totalCount > 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          You&apos;ve seen all {totalCount} notebooks
+          {t("recent.allSeen", { count: totalCount })}
         </p>
       ) : null}
     </>
   );
 }
 
-function formatUpdatedAt(date: string): string {
+function formatUpdatedAt(
+  date: string,
+  t: TFunction<"notebooks">,
+  language: string | undefined,
+): string {
   const d = new Date(date);
   const diff = Date.now() - d.getTime();
-  if (diff < 60_000) return "Updated just now";
-  return `Updated ${formatDistanceToNow(d, { addSuffix: true })}`;
+  if (diff < 60_000) return t("recent.updatedJustNow");
+  const locale = getDateLocale(language);
+  return t("recent.updated", { time: formatDistanceToNow(d, { addSuffix: true, locale }) });
 }

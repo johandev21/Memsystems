@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { WebSearchImportResultItem } from "../api/web-search";
@@ -15,6 +16,7 @@ export function WebSearchComposer({
   notebookId: string;
   remainingSourceSlots: number;
 }) {
+  const { t } = useTranslation("sources");
   const webSearch = useWebSearch(notebookId, remainingSourceSlots);
   const [expanded, setExpanded] = useState(false);
   const [clearAnnouncement, setClearAnnouncement] = useState("");
@@ -33,7 +35,7 @@ export function WebSearchComposer({
     const cleared = await webSearch.clearResults();
     if (!cleared) return;
     setExpanded(false);
-    setClearAnnouncement("Search results cleared");
+    setClearAnnouncement(t("webSearch.resultsCleared"));
   };
 
   const failedUrls = useMemo(
@@ -61,17 +63,17 @@ export function WebSearchComposer({
       </div>
       <div>
         <h3 id="web-source-search-title" className="font-medium text-foreground">
-          Find sources on the web
+          {t("webSearch.title")}
         </h3>
         <p className="mt-1 text-sm leading-5 text-muted-foreground">
-          Describe what you want to research. You can review every result before adding it.
+          {t("webSearch.intro")}
         </p>
       </div>
 
       <div className="rounded-2xl border border-composer-border bg-composer-bg p-2 shadow-[var(--composer-glow),inset_0_1px_0_var(--composer-highlight)] transition-[border-color,box-shadow] focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15">
         <textarea
           ref={searchInputRef}
-          aria-label="What would you like to research?"
+          aria-label={t("webSearch.inputLabel")}
           value={webSearch.query}
           onChange={(event) => webSearch.setQuery(event.target.value)}
           onKeyDown={(event) => {
@@ -80,7 +82,7 @@ export function WebSearchComposer({
               handleSubmit();
             }
           }}
-          placeholder="What would you like to research?"
+          placeholder={t("webSearch.inputPlaceholder")}
           disabled={isAtSourceLimit}
           className="field-sizing-content min-h-16 w-full resize-none bg-transparent px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-60"
         />
@@ -101,10 +103,10 @@ export function WebSearchComposer({
             {webSearch.phase === "searching" ? (
               <>
                 <Loader2 className="animate-spin" />
-                Searching
+                {t("webSearch.searching")}
               </>
             ) : (
-              "Search"
+              t("webSearch.search")
             )}
           </Button>
         </div>
@@ -112,9 +114,9 @@ export function WebSearchComposer({
 
       {isAtSourceLimit && (
         <Alert>
-          <AlertTitle>Source limit reached</AlertTitle>
+          <AlertTitle>{t("webSearch.limitReached")}</AlertTitle>
           <AlertDescription>
-            Remove a source before searching for more sources to add.
+            {t("webSearch.limitReachedDescription")}
           </AlertDescription>
         </Alert>
       )}
@@ -123,14 +125,14 @@ export function WebSearchComposer({
         {webSearch.phase === "searching" && (
           <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin" />
-            Searching for reliable sources. You can close this dialog and return later.
+            {t("webSearch.searchingHint")}
           </div>
         )}
       </div>
 
       {friendlyError && (
         <Alert variant="destructive">
-          <AlertTitle>Web search failed</AlertTitle>
+          <AlertTitle>{t("webSearch.errorTitle")}</AlertTitle>
           <AlertDescription>{friendlyError}</AlertDescription>
           <AlertAction>
             <Button
@@ -141,7 +143,7 @@ export function WebSearchComposer({
               onClick={handleClearResults}
               disabled={webSearch.clearing}
             >
-              {webSearch.clearing ? "Clearing…" : "Clear results"}
+              {webSearch.clearing ? t("webSearch.clearing") : t("webSearch.clearResults")}
             </Button>
           </AlertAction>
         </Alert>
@@ -149,7 +151,7 @@ export function WebSearchComposer({
 
       {webSearch.clearError && (
         <Alert variant="destructive">
-          <AlertTitle>Results weren't cleared</AlertTitle>
+          <AlertTitle>{t("webSearch.failedTitle")}</AlertTitle>
           <AlertDescription>{webSearch.clearError}</AlertDescription>
         </Alert>
       )}
@@ -157,9 +159,9 @@ export function WebSearchComposer({
       {webSearch.phase === "done" && webSearch.candidates.length === 0 && (
         <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="font-medium text-foreground">No useful sources found</p>
+            <p className="font-medium text-foreground">{t("webSearch.emptyTitle")}</p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Try a more specific topic, add a date, or name the kind of source you need.
+              {t("webSearch.emptyDescription")}
             </p>
           </div>
           <Button
@@ -170,7 +172,7 @@ export function WebSearchComposer({
             onClick={handleClearResults}
             disabled={webSearch.clearing}
           >
-            {webSearch.clearing ? "Clearing…" : "Clear results"}
+            {webSearch.clearing ? t("webSearch.clearing") : t("webSearch.clearResults")}
           </Button>
         </div>
       )}

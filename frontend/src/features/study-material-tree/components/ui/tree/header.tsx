@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/shared/utils/cn";
 import { useDroppable } from "@dnd-kit/core";
 import { ChevronDown, ChevronsUpDown, ChevronUp, FolderOpen, FolderPlus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { getTreeDragData, ROOT_DROP_ID, useTreeControllerContext } from "../controller-state";
 
 export interface TreeHeaderProps {
@@ -12,6 +13,7 @@ export interface TreeHeaderProps {
 }
 
 export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) {
+  const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
   const { active, isOver, setNodeRef } = useDroppable({
     id: ROOT_DROP_ID,
@@ -38,11 +40,11 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
       >
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="truncate font-sans text-sm font-semibold text-foreground">
-            Study Materials
+            {t("header.title")}
           </span>
           {controller.activeDragItemId && (
             <span className="text-xs text-muted-foreground">
-              {isOver && isValidRootTarget ? "Drop to move to root" : "Drag to a folder"}
+              {isOver && isValidRootTarget ? t("header.dropToRoot") : t("header.dragToFolder")}
             </span>
           )}
         </div>
@@ -53,14 +55,14 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="New folder"
+                  aria-label={t("header.newFolder")}
                   onClick={() => controller.createFolder(null)}
                 >
                   <FolderPlus />
                 </Button>
               }
             />
-            <TooltipContent>New folder</TooltipContent>
+            <TooltipContent>{t("header.newFolder")}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger
@@ -68,14 +70,14 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="Expand all folders"
+                  aria-label={t("header.expandAllFolders")}
                   onClick={controller.expandAll}
                 >
                   <FolderOpen />
                 </Button>
               }
             />
-            <TooltipContent>Expand all folders</TooltipContent>
+            <TooltipContent>{t("header.expandAllFolders")}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger
@@ -83,20 +85,20 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="Collapse all folders"
+                  aria-label={t("header.collapseAllFolders")}
                   onClick={controller.collapseAll}
                 >
                   <ChevronsUpDown />
                 </Button>
               }
             />
-            <TooltipContent>Collapse all folders</TooltipContent>
+            <TooltipContent>{t("header.collapseAllFolders")}</TooltipContent>
           </Tooltip>
           {onPanelToggle && (
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label={isPanelExpanded ? "Collapse study materials" : "Expand study materials"}
+              aria-label={isPanelExpanded ? t("header.collapsePanel") : t("header.expandPanel")}
               onClick={onPanelToggle}
               className="ml-1"
             >

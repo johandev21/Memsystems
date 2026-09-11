@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
 import { Button } from "@/components/ui/button";
@@ -23,27 +25,29 @@ function GatewayStatusBadge({
   degraded: boolean;
   isPending: boolean;
 }) {
+  const { t } = useTranslation("settings");
+
   if (isPending)
     return (
       <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-sm font-medium text-muted-foreground">
-        Checking
+        {t("gateway.status.checking")}
       </span>
     );
   if (connected)
     return (
       <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-1 text-sm font-semibold text-success">
-        Connected
+        {t("gateway.status.connected")}
       </span>
     );
   if (degraded)
     return (
       <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-sm font-semibold text-amber-700 dark:text-amber-300">
-        Degraded
+        {t("gateway.status.degraded")}
       </span>
     );
   return (
     <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-sm font-medium text-muted-foreground">
-      Not connected
+      {t("gateway.status.notConnected")}
     </span>
   );
 }
@@ -68,10 +72,12 @@ function GatewayCardHeader({
   degraded: boolean;
   isPending: boolean;
 }) {
+  const { t } = useTranslation("settings");
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <h2 id="gateway-heading" className="text-base font-semibold tracking-tight">
-        AI Gateway
+        {t("gateway.title")}
       </h2>
       <GatewayStatusBadge connected={connected} degraded={degraded} isPending={isPending} />
     </div>
@@ -91,11 +97,17 @@ function GatewayStatsGrid({
   used: string | null;
   rawUsed?: string;
 }) {
+  const { t } = useTranslation("settings");
+
   return (
     <dl className="grid gap-3 sm:flex sm:gap-12">
-      <GatewayStat label="Models" value={String(modelCount)} />
-      <GatewayStat label="Balance (Credits)" value={balance ?? "—"} title={rawBalance} />
-      <GatewayStat label="Credits Used" value={used ?? "—"} title={rawUsed} />
+      <GatewayStat label={t("gateway.stats.models")} value={String(modelCount)} />
+      <GatewayStat
+        label={t("gateway.stats.balance")}
+        value={balance ?? "—"}
+        title={rawBalance}
+      />
+      <GatewayStat label={t("gateway.stats.used")} value={used ?? "—"} title={rawUsed} />
     </dl>
   );
 }
@@ -111,6 +123,8 @@ function GatewayCardFooter({
   disabled: boolean;
   onRefresh: () => void;
 }) {
+  const { t } = useTranslation("settings");
+
   return (
     <div className="flex flex-col items-start gap-2 text-xs text-muted-foreground">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -123,10 +137,14 @@ function GatewayCardFooter({
           className="h-10 px-0 text-sm sm:h-8"
         >
           {isRefreshing && <RefreshCw className="size-3.5 motion-safe:animate-spin" />}
-          {isRefreshing ? "Refreshing Models…" : "Refresh Models"}
+          {isRefreshing
+            ? t("gateway.refresh.refreshing")
+            : t("gateway.refresh.action")}
         </Button>
-        <span>Refreshes automatically every 6 hours.</span>
-        {checkedAt && <span>Last checked {new Date(checkedAt).toLocaleString()}</span>}
+        <span>{t("gateway.refreshHint")}</span>
+        {checkedAt && (
+          <span>{t("gateway.lastChecked", { date: new Date(checkedAt).toLocaleString() })}</span>
+        )}
       </div>
       <a
         href="https://vercel.com/docs/ai-gateway"
@@ -134,7 +152,7 @@ function GatewayCardFooter({
         rel="noreferrer"
         className="inline-flex items-center gap-1 text-sm transition-colors hover:text-foreground hover:underline"
       >
-        What is the gateway?
+        {t("gateway.whatIsIt")}
       </a>
     </div>
   );
@@ -152,16 +170,18 @@ function GatewayDegradedAlert({ detail }: { detail: string }) {
 }
 
 function getGatewayDescription(
+  t: TFunction<"settings">,
   isPending: boolean,
   usable: boolean,
   detail?: string | null,
 ): string {
-  if (isPending) return "Checking gateway status…";
-  if (usable) return "Your Vercel AI Gateway key connects models across all notebooks.";
-  return detail ?? "Add your AI Gateway key below to connect every model.";
+  if (isPending) return t("gateway.description.checking");
+  if (usable) return t("gateway.description.connected");
+  return detail ?? t("gateway.description.missing");
 }
 
 export function GatewayCard() {
+  const { t } = useTranslation("settings");
   const { data: connection, isPending } = useConnectionStatus();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -186,15 +206,15 @@ export function GatewayCard() {
       await refreshGatewayModels();
       await queryClient.invalidateQueries({ queryKey: ["connection-status"] });
       await queryClient.invalidateQueries({ queryKey: ["models"] });
-      toast.success("Model list refreshed");
+      toast.success(t("gateway.toast.modelsRefreshed"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not refresh the model list");
+      toast.error(error instanceof Error ? error.message : t("gateway.toast.refreshFailed"));
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const description = getGatewayDescription(isPending, usable, connection?.detail);
+  const description = getGatewayDescription(t, isPending, usable, connection?.detail);
 
   return (
     <div className="flex flex-col gap-5">

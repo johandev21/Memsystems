@@ -1,6 +1,7 @@
 import type { FileUIPart } from "ai";
 import { CheckIcon, ChevronDownIcon, ImageIcon, XIcon } from "lucide-react";
 import { type RefObject, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -51,6 +52,7 @@ export function Composer({
   onModelChange,
   textareaRef,
 }: ComposerProps) {
+  const { t } = useTranslation("chat");
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -79,7 +81,7 @@ export function Composer({
           ref={textareaRef}
           value={input}
           onChange={(e) => onInputChange(e.currentTarget.value)}
-          placeholder="Type a message..."
+          placeholder={t("composer.placeholder")}
           className="min-h-12 max-h-48 select-text border-0 px-3 py-2 text-base leading-6 focus:ring-0 focus-visible:ring-0 sm:text-sm"
         />
       </PromptInputBody>
@@ -103,9 +105,9 @@ export function Composer({
                 </PromptInputButton>
               }
             />
-            <ModelSelectorContent title="Select Model">
+            <ModelSelectorContent title={t("composer.selectModelTitle")}>
               <ModelSelectorInput
-                placeholder="Search models..."
+                placeholder={t("composer.searchPlaceholder")}
                 value={search}
                 onValueChange={setSearch}
               />
@@ -123,11 +125,11 @@ export function Composer({
             <PromptInputActionMenu>
               <PromptInputActionMenuTrigger
                 className="size-8 rounded-xl"
-                tooltip="Attach photo"
-                aria-label="Attach photo"
+                tooltip={t("composer.attachPhoto")}
+                aria-label={t("composer.attachPhoto")}
               />
               <PromptInputActionMenuContent>
-                <PromptInputActionAddAttachments label="Attach photo" />
+                <PromptInputActionAddAttachments label={t("composer.attachPhoto")} />
               </PromptInputActionMenuContent>
             </PromptInputActionMenu>
           )}
@@ -137,7 +139,7 @@ export function Composer({
           onStop={onStop}
           disabled={!hasInput && !isLoading}
           tooltip={{
-            content: isLoading ? "Stop response" : "Send message",
+            content: isLoading ? t("composer.stopResponse") : t("composer.sendMessage"),
             shortcut: isLoading ? undefined : "Enter",
           }}
           className="size-8 rounded-xl shadow-none transition-[background-color,color,box-shadow] duration-150 enabled:shadow-sm [@media(pointer:coarse)]:size-9"
@@ -148,6 +150,7 @@ export function Composer({
 }
 
 function ComposerAttachmentList() {
+  const { t } = useTranslation("chat");
   const attachments = usePromptInputAttachments();
   if (attachments.files.length === 0) return null;
 
@@ -161,18 +164,20 @@ function ComposerAttachmentList() {
           {file.mediaType?.startsWith("image/") ? (
             <img
               src={file.url}
-              alt={file.filename || "Attachment"}
+              alt={file.filename || t("composer.attachmentAlt")}
               className="size-7 rounded object-cover"
             />
           ) : (
             <ImageIcon className="size-4 text-muted-foreground" />
           )}
-          <span className="max-w-[120px] truncate text-xs">{file.filename || "Image"}</span>
+          <span className="max-w-[120px] truncate text-xs">
+            {file.filename || t("composer.imageAlt")}
+          </span>
           <button
             type="button"
             onClick={() => attachments.remove(file.id)}
             className="ml-1 rounded-full p-0.5 text-muted-foreground hover:bg-surface-3 hover:text-foreground cursor-pointer"
-            aria-label="Remove attachment"
+            aria-label={t("composer.removeAttachment")}
           >
             <XIcon className="size-3.5" />
           </button>
@@ -191,9 +196,11 @@ function ComposerModelList({
   selectedModel: string;
   onSelect: (model: string) => void;
 }) {
+  const { t } = useTranslation("chat");
+
   return (
     <ModelSelectorList>
-      <ModelSelectorEmpty>No models found</ModelSelectorEmpty>
+      <ModelSelectorEmpty>{t("composer.noModelsFound")}</ModelSelectorEmpty>
       {Object.entries(groups).map(([provider, models]) => (
         <ModelGroup
           key={provider}

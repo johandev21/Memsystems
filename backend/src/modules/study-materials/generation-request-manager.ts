@@ -83,7 +83,9 @@ export class GenerationRequestManager {
       .from(generationRequests)
       .where(eq(generationRequests.id, requestId));
     if (!request) {
-      throw new NotFoundError('Generation request');
+      throw new NotFoundError('Generation request', {
+        messageKey: 'errors.generation.requestNotFound',
+      });
     }
     if (request.status === 'streaming') {
       await this.db

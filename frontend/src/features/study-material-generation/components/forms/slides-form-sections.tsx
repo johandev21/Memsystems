@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/shared/utils/cn";
+import { useTranslation } from "react-i18next";
 import { optionRowClass } from "./option-row";
 import {
   MAX_SLIDE_COUNT,
@@ -34,10 +35,14 @@ export function SlideCountSection({
   onCustomChange,
   onCustomBlur,
 }: SlideCountSectionProps) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-text-primary">1. Number of Slides</Label>
+        <Label className="text-sm font-medium text-text-primary">
+          {t("slides.numberOfSlidesLabel")}
+        </Label>
         <span className="text-xs font-medium text-primary">{countLabel}</span>
       </div>
       <div className="grid grid-cols-6 gap-2">
@@ -51,7 +56,7 @@ export function SlideCountSection({
             isAutoMode ? "font-semibold" : "font-medium",
           )}
         >
-          Auto
+          {t("actions.auto")}
         </button>
         {SLIDE_PRESETS.map((preset) => {
           const selected = !isAutoMode && !isCustomMode && slideCount === preset;
@@ -80,7 +85,7 @@ export function SlideCountSection({
               value={customValue}
               onChange={(e) => onCustomChange(e.target.value)}
               onBlur={onCustomBlur}
-              aria-label="Custom slide count"
+              aria-label={t("slides.customCountAria")}
               className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-1 text-center text-xs font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong"
               autoFocus
             />
@@ -95,7 +100,7 @@ export function SlideCountSection({
               "flex h-9 items-center justify-center text-xs font-medium",
             )}
           >
-            Custom
+            {t("actions.custom")}
           </button>
         )}
       </div>
@@ -112,12 +117,17 @@ export function SlideThemeSection({
   theme,
   onThemeChange,
 }: SlideThemeSectionProps) {
+  const { t } = useTranslation("generation");
+  const themeDesc = THEME_OPTIONS.find((opt) => opt.id === theme)?.descKey;
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-text-primary">2. Visual Theme</Label>
+        <Label className="text-sm font-medium text-text-primary">
+          {t("slides.visualThemeLabel")}
+        </Label>
         <span className="text-xs font-medium text-text-muted">
-          {THEME_OPTIONS.find((t) => t.id === theme)?.desc}
+          {themeDesc ? t(themeDesc) : null}
         </span>
       </div>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -171,12 +181,15 @@ export function SlideThemeSection({
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-center text-xs font-semibold">
-                      {opt.title}
+                      {t(opt.titleKey)}
                     </span>
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {opt.title}: {opt.desc}
+                  {t("slides.themeTooltip", {
+                    title: t(opt.titleKey),
+                    desc: t(opt.descKey),
+                  })}
                 </TooltipContent>
               </Tooltip>
             );

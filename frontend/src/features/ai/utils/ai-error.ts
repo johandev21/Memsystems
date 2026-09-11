@@ -1,3 +1,5 @@
+import i18n from "@/shared/i18n";
+
 export type AiErrorAction = "retry" | "settings" | "topup" | "model";
 
 export interface ClassifiedAiError {
@@ -21,10 +23,11 @@ const CAPABILITY_PATTERNS =
   /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool|tools? (?:are|is) not supported/i;
 
 function rateLimited(model?: string): ClassifiedAiError {
-  const subject = model ? `${model} is` : "This model is";
   return {
-    title: "AI is busy right now",
-    message: `${subject} rate-limited on your plan. Wait a few seconds and retry, or switch to another model.`,
+    title: i18n.t("errors.rateLimited.title", { ns: "ai" }),
+    message: model
+      ? i18n.t("errors.rateLimited.modelMessage", { ns: "ai", model })
+      : i18n.t("errors.rateLimited.message", { ns: "ai" }),
     showTopUp: true,
     showSettings: false,
     showModelHint: true,
@@ -33,10 +36,10 @@ function rateLimited(model?: string): ClassifiedAiError {
 
 function entitlement(model?: string): ClassifiedAiError {
   return {
-    title: "Model not included in your plan",
+    title: i18n.t("errors.entitlement.title", { ns: "ai" }),
     message: model
-      ? `${model} isn't included in your plan. Your gateway account can't use it — try a free-tier model or add credits.`
-      : "Your gateway account can't use this model. Try a free-tier model or add credits.",
+      ? i18n.t("errors.entitlement.modelMessage", { ns: "ai", model })
+      : i18n.t("errors.entitlement.message", { ns: "ai" }),
     showTopUp: true,
     showSettings: false,
     showModelHint: true,
@@ -45,9 +48,8 @@ function entitlement(model?: string): ClassifiedAiError {
 
 function substituted(): ClassifiedAiError {
   return {
-    title: "Wrong model served",
-    message:
-      "The gateway answered with a different model than the one you picked. Nothing was presented as working — retry, or switch to a model your plan includes.",
+    title: i18n.t("errors.substituted.title", { ns: "ai" }),
+    message: i18n.t("errors.substituted.message", { ns: "ai" }),
     showTopUp: true,
     showSettings: false,
     showModelHint: true,
@@ -56,8 +58,8 @@ function substituted(): ClassifiedAiError {
 
 function retired(): ClassifiedAiError {
   return {
-    title: "Model no longer available",
-    message: "This model was retired from the gateway. Pick a current model above and retry.",
+    title: i18n.t("errors.retired.title", { ns: "ai" }),
+    message: i18n.t("errors.retired.message", { ns: "ai" }),
     showTopUp: false,
     showSettings: false,
     showModelHint: false,
@@ -66,8 +68,8 @@ function retired(): ClassifiedAiError {
 
 function needsSettings(): ClassifiedAiError {
   return {
-    title: "Connection needs attention",
-    message: "Your key was rejected. Check your keys in Settings.",
+    title: i18n.t("errors.auth.title", { ns: "ai" }),
+    message: i18n.t("errors.auth.message", { ns: "ai" }),
     showTopUp: false,
     showSettings: true,
     showModelHint: false,
@@ -75,17 +77,15 @@ function needsSettings(): ClassifiedAiError {
 }
 
 function capability(message?: string): ClassifiedAiError {
-  const safeMessage =
-    message ??
-    "This model doesn't support web search. Switch to a model that supports web search and try again.";
+  const safeMessage = message ?? i18n.t("errors.capability.message", { ns: "ai" });
   const lowerMessage = message?.toLowerCase() ?? "";
   const title = lowerMessage.includes("image attachment")
-    ? "Image attachments aren't supported"
+    ? i18n.t("errors.capability.imageTitle", { ns: "ai" })
     : lowerMessage.includes("file attachment")
-      ? "File attachments aren't supported"
+      ? i18n.t("errors.capability.fileTitle", { ns: "ai" })
       : lowerMessage.includes("structured output")
-        ? "Structured output isn't supported"
-        : "Web search isn't supported";
+        ? i18n.t("errors.capability.structuredTitle", { ns: "ai" })
+        : i18n.t("errors.capability.webSearchTitle", { ns: "ai" });
   return {
     title,
     message: safeMessage,
@@ -97,8 +97,8 @@ function capability(message?: string): ClassifiedAiError {
 
 function generic(): ClassifiedAiError {
   return {
-    title: "Something went wrong",
-    message: "The request failed before finishing. Retrying usually works.",
+    title: i18n.t("errors.generic.title", { ns: "ai" }),
+    message: i18n.t("errors.generic.message", { ns: "ai" }),
     showTopUp: false,
     showSettings: false,
     showModelHint: false,
@@ -146,8 +146,8 @@ export function classifyAiError(rawMessage: string | undefined | null): Classifi
           return needsSettings();
         case "bad_request":
           return {
-            title: "Couldn't send that",
-            message: inner || "The request was invalid.",
+            title: i18n.t("errors.badRequest.title", { ns: "ai" }),
+            message: inner || i18n.t("errors.badRequest.message", { ns: "ai" }),
             showTopUp: false,
             showSettings: false,
             showModelHint: false,

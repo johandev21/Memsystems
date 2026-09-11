@@ -1,4 +1,5 @@
 import { ArrowLeft, Maximize2, MoreVertical, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DocumentType } from "../../utils/detect-document-type";
@@ -27,6 +28,7 @@ function SkeletonHeader({
   forceFullscreen?: boolean;
   isEffectivelyFullscreen: boolean;
 }) {
+  const { t } = useTranslation("sources");
   return (
     <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none border-b border-border/40">
       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -36,8 +38,8 @@ function SkeletonHeader({
           size="icon"
           onClick={onClose}
           className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0"
-          aria-label="Back to sources"
-          title="Back to sources"
+          aria-label={t("reader.backToSources")}
+          title={t("reader.backToSources")}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -67,7 +69,7 @@ function SkeletonHeader({
             size="icon"
             onClick={onClose}
             className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
-            title="Close"
+            title={t("reader.close")}
           >
             <X className="h-4 w-4" />
           </Button>

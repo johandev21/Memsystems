@@ -1,0 +1,74 @@
+{
+  "actions": {
+    "collapseAll": "Collapse all",
+    "delete": "Delete",
+    "duplicate": "Duplicate",
+    "expandAll": "Expand all",
+    "moveToRoot": "Move to Study Materials",
+    "newFolder": "New folder",
+    "rename": "Rename"
+  },
+  "defaults": {
+    "folder": "folder",
+    "item": "Item",
+    "studyMaterial": "Study material",
+    "untitledFolder": "Untitled folder"
+  },
+  "deleteDialog": {
+    "description": "Delete \"{{name}}\"?",
+    "folderTitle": "Delete folder",
+    "materialTitle": "Delete study material",
+    "prototypeDescription": "Delete \"{{name}}\" from this in-memory prototype?"
+  },
+  "errors": {
+    "commandFailed": "Command failed",
+    "connection": "Please check your connection and try again.",
+    "deleteFailed": "Failed to delete",
+    "deleteFolderFailed": "Failed to delete folder",
+    "deleteMaterialFailed": "Failed to delete material",
+    "duplicateFailed": "Failed to duplicate material",
+    "invalidMove": "Invalid move",
+    "loadFailed": "Failed to load study materials",
+    "materialNotFound": "Material not found",
+    "moveFailed": "Failed to move item",
+    "nameEmpty": "Name cannot be empty",
+    "refreshFailed": "Failed to refresh.",
+    "renameFailed": "Failed to rename",
+    "renameFolderFailed": "Failed to rename folder",
+    "renameMaterialFailed": "Failed to rename material",
+    "retry": "Retry",
+    "retrying": "Retrying...",
+    "unknownCommand": "Unknown command"
+  },
+  "header": {
+    "collapseAllFolders": "Collapse all folders",
+    "collapsePanel": "Collapse study materials",
+    "dragToFolder": "Drag to a folder",
+    "dropToRoot": "Drop to move to root",
+    "expandAllFolders": "Expand all folders",
+    "expandPanel": "Expand study materials",
+    "newFolder": "New folder",
+    "title": "Study Materials"
+  },
+  "lastAction": {
+    "created": "Created {{name}}.",
+    "deleted": "Deleted {{name}} from the local prototype.",
+    "duplicated": "Duplicated {{name}}.",
+    "moved": "Moved {{name}} to {{targetName}}.",
+    "ready": "Ready to move study materials in memory.",
+    "renamed": "Renamed {{previousName}} to {{nextName}}."
+  },
+  "row": {
+    "actionsFor": "Actions for {{name}}",
+    "dragHandle": "Drag to move",
+    "itemName": "Item name"
+  },
+  "tree": {
+    "ariaLabel": "Study materials",
+    "emptyDescription": "Create a folder to begin.",
+    "emptyDescriptionPrototype": "Create a folder to begin the in-memory prototype.",
+    "emptyTitle": "No study materials",
+    "loading": "Loading study materials",
+    "updating": "Updating study materials"
+  }
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { SOURCE_LIMIT } from "../../api/sources";
 
 export interface SourceLimitMeterProps {
@@ -6,10 +7,11 @@ export interface SourceLimitMeterProps {
 }
 
 export function SourceLimitMeter({ count, usedPercent }: SourceLimitMeterProps) {
+  const { t } = useTranslation("sources");
   return (
     <div className="flex flex-col gap-2 px-2">
       <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-        <span>Sources used</span>
+        <span>{t("menu.sourcesUsed")}</span>
         <span className="text-foreground">
           {count} / {SOURCE_LIMIT}
         </span>

@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { usePromptInputDropTarget } from "../../hooks/use-prompt-input-drop-target";
 import { convertFilePartsForSubmit } from "../../utils/prompt-input-files";
 import { usePromptInputFiles } from "./use-prompt-input-files";
@@ -71,16 +72,18 @@ export function PromptInputFormShell({
   children: ReactNode;
   formProps: HTMLAttributes<HTMLFormElement>;
 }) {
+  const { t } = useTranslation("ai");
+
   return (
     <>
       <input
         accept={accept}
-        aria-label="Upload files"
+        aria-label={t("promptInput.uploadFiles")}
         className="hidden"
         multiple={multiple}
         onChange={handleChange}
         ref={inputRef}
-        title="Upload files"
+        title={t("promptInput.uploadFiles")}
         type="file"
       />
       <form

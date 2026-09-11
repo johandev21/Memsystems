@@ -1,0 +1,150 @@
+{
+  "articleViewer": {
+    "noContent": "No hay contenido de artículo disponible."
+  },
+  "audioPlayer": {
+    "audioRecording": "Grabación de audio",
+    "cycleSpeed": "Haz clic para cambiar la velocidad (0,75x, 1x, 1,25x, 1,5x, 2x)",
+    "loadingStream": "Cargando transmisión de audio…",
+    "mute": "Silenciar",
+    "pause": "Pausar",
+    "play": "Reproducir",
+    "seekTime": "Buscar en el tiempo",
+    "skipBackwardAria": "Retroceder 10 segundos",
+    "skipBackwardTitle": "Retroceder 10 s",
+    "skipForwardAria": "Avanzar 10 segundos",
+    "skipForwardTitle": "Avanzar 10 s",
+    "streamUnavailable": "Transmisión de audio no disponible",
+    "summary_one": "{{count}} segmento · {{words}} palabras",
+    "summary_many": "{{count}} segmentos · {{words}} palabras",
+    "summary_other": "{{count}} segmentos · {{words}} palabras",
+    "unmute": "Activar sonido",
+    "volume": "Volumen"
+  },
+  "audioSegment": {
+    "cancelRename": "Cancelar renombrado",
+    "renamed": "Hablante renombrado a \"{{name}}\"",
+    "renameSpeakerAria": "Renombrar hablante",
+    "renameSpeakerTitle": "Haz clic para renombrar al hablante",
+    "saveSpeakerName": "Guardar nombre del hablante",
+    "seekAudioTitle": "Ir al audio en esta marca de tiempo"
+  },
+  "audioTranscript": {
+    "aiTranscription": "Transcripción con IA",
+    "noSegments": "No hay segmentos de transcripción disponibles para este archivo de audio.",
+    "noSegmentsMatch": "Ningún segmento de transcripción coincide con \"{{query}}\".",
+    "searchAria": "Buscar texto de la transcripción o hablante",
+    "searchPlaceholder": "Buscar texto de la transcripción o hablante…"
+  },
+  "common": {
+    "clearSearch": "Borrar búsqueda"
+  },
+  "imageNote": {
+    "formula": "Fórmula",
+    "heading": "Encabezado",
+    "regionLabel": "Región #{{ordinal}}",
+    "visualDescription": "Descripción visual"
+  },
+  "imageNotesPanel": {
+    "aiVisionAnalysis": "Análisis visual con IA",
+    "extractedNotes": "Notas extraídas",
+    "noContent": "No hay texto extraído ni análisis visual disponibles para esta imagen.",
+    "notice": "Aviso"
+  },
+  "imagePreview": {
+    "imageLoadFailed": "No se pudo cargar la imagen original directamente.",
+    "imagePreviewUnavailable": "Vista previa de imagen no disponible",
+    "loadingImage": "Cargando imagen…"
+  },
+  "imageRegion": {
+    "ariaLabel": "Región #{{ordinal}}: {{kind}}"
+  },
+  "imageToolbar": {
+    "image": "Imagen",
+    "imageDocument": "Documento de imagen",
+    "imageOnlyTitle": "Solo imagen",
+    "notes": "Notas",
+    "notesOnlyTitle": "Solo notas",
+    "split": "Dividida",
+    "splitViewTitle": "Vista dividida",
+    "visualRegions_one": "{{count}} región visual",
+    "visualRegions_many": "{{count}} regiones visuales",
+    "visualRegions_other": "{{count}} regiones visuales"
+  },
+  "imageViewer": {
+    "partialTranscriptionWarning": "Parte del contenido de esta imagen no se pudo transcribir por completo."
+  },
+  "imageZoom": {
+    "hideRegionHighlights": "Ocultar resaltados de región",
+    "resetZoom": "Restablecer zoom (100%)",
+    "showRegionHighlights": "Mostrar resaltados de región",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar"
+  },
+  "markdownViewer": {
+    "noContent": "No hay contenido de texto disponible."
+  },
+  "plainTextViewer": {
+    "noContent": "No hay contenido de texto disponible."
+  },
+  "pptxHeader": {
+    "presentation": "Presentación",
+    "slideCount_one": "{{count}} diapositiva",
+    "slideCount_many": "{{count}} diapositivas",
+    "slideCount_other": "{{count}} diapositivas"
+  },
+  "pptxSearch": {
+    "clearSearch": "Borrar búsqueda",
+    "searchAria": "Buscar diapositivas",
+    "searchPlaceholder": "Buscar diapositivas…"
+  },
+  "pptxSegmentList": {
+    "noSegmentsMatch": "Ningún segmento coincide con \"{{query}}\".",
+    "segmentBadge": "Diapositiva {{number}} · n.º {{ordinal}}",
+    "segmentCount_one": "{{count}} segmento",
+    "segmentCount_many": "{{count}} segmentos",
+    "segmentCount_other": "{{count}} segmentos",
+    "title": "Segmentos de diapositiva"
+  },
+  "pptxSlideContent": {
+    "blockCount_one": "{{count}} bloque",
+    "blockCount_many": "{{count}} bloques",
+    "blockCount_other": "{{count}} bloques",
+    "noContentMatch": "Ningún contenido coincide con \"{{query}}\" en esta diapositiva.",
+    "slideLabel": "Diapositiva {{number}}",
+    "slideRef": "[Diapositiva {{number}}]"
+  },
+  "pptxSlideNavigator": {
+    "slides": "Diapositivas"
+  },
+  "pptxViewer": {
+    "noContent": "Esta presentación no tiene contenido de diapositivas que se pueda extraer.",
+    "noSlidesExtracted": "No se extrajeron diapositivas"
+  },
+  "tabularViewer": {
+    "columnSummary": "{{rows}} filas • {{cols}} columnas",
+    "defaultDatasetName": "Conjunto de datos",
+    "filterPlaceholder": "Filtrar filas de la tabla...",
+    "locator": "Ubicación: {{range}}",
+    "nextPage": "Página siguiente",
+    "noMatchingRows": "No se encontraron filas coincidentes.",
+    "pagination": "Mostrando {{start}}–{{end}} de {{total}} filas",
+    "previousPage": "Página anterior"
+  },
+  "videoPlayer": {
+    "loadingVideo": "Cargando vídeo…",
+    "streamUnavailable": "Transmisión de vídeo no disponible",
+    "videoLoadFailed": "No se pudo cargar el archivo de origen."
+  },
+  "videoTranscript": {
+    "addOrReplaceTitle": "Añadir o reemplazar transcripciones",
+    "addReplace": "Añadir / Reemplazar",
+    "addTranscripts": "Añadir transcripciones",
+    "noTranscriptAttached": "No hay ninguna transcripción adjunta a este vídeo",
+    "noTranscripts": "Sin transcripciones",
+    "noTranscriptsDescription": "Añade o pega una transcripción para seguirla con marcas de tiempo sincronizadas y búsqueda.",
+    "seekVideoTitle": "Ir al vídeo en esta marca de tiempo",
+    "transcript": "Transcripción",
+    "visualNote": "Nota visual"
+  }
+}

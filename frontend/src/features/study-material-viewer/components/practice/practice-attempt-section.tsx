@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AttemptFeedbackCard } from "./practice-solution-section";
@@ -24,21 +25,25 @@ export function AttemptSection({
   onEvaluate: () => void;
   onGiveUp: () => void;
 }) {
+  const { t } = useTranslation("viewer");
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <label htmlFor="student-attempt-input" className="text-base font-semibold text-text-primary">
-          Your Attempt
+          {t("practice.yourAttempt")}
         </label>
-        {evaluation && <span className="text-xs text-text-secondary">Evaluated with AI</span>}
+        {evaluation && (
+          <span className="text-xs text-text-secondary">{t("practice.evaluatedWithAi")}</span>
+        )}
       </div>
 
       <Textarea
         id="student-attempt-input"
-        aria-label="Your attempt"
+        aria-label={t("practice.attemptAria")}
         value={studentAnswer}
         onChange={(e) => onAnswerChange(e.target.value)}
-        placeholder="Write your solution, calculations, or reasoning here..."
+        placeholder={t("practice.attemptPlaceholder")}
         className="min-h-[140px] text-base leading-relaxed resize-y border-surface-border bg-surface-2 focus-visible:border-surface-border-strong"
       />
 
@@ -55,10 +60,10 @@ export function AttemptSection({
             {isEvaluating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Evaluating with AI...
+                {t("practice.evaluating")}
               </>
             ) : (
-              <>{evaluation ? "Re-evaluate" : "Evaluate answer"}</>
+              <>{evaluation ? t("practice.reevaluate") : t("practice.evaluate")}</>
             )}
           </Button>
 
@@ -70,7 +75,7 @@ export function AttemptSection({
               onClick={onGiveUp}
               className="text-xs text-text-secondary hover:text-text-primary"
             >
-              Give up and reveal solution
+              {t("practice.giveUp")}
             </Button>
           )}
         </div>

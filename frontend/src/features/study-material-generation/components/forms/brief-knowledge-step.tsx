@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FolderPicker } from "@/features/notebooks";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { GenerationSourcePopover, type GenerationSource } from "./generation-source-popover";
 import { CTA_BUTTON_CLASS } from "./option-row";
 import { cn } from "@/shared/utils/cn";
@@ -34,46 +35,53 @@ export function BriefKnowledgeStep({
   canSubmit,
   submitLabel,
   disabled = false,
-  placeholder = "What should this cover? Describe topics, focus areas, or tone...",
+  placeholder,
   textareaId = "brief-custom-instructions",
-  emptySourcesMessage = "No sources in notebook. Material will generate using general knowledge.",
+  emptySourcesMessage,
   onPatch,
   onBack,
   onSubmit,
 }: BriefKnowledgeStepProps) {
+  const { t } = useTranslation("generation");
+  const resolvedPlaceholder = placeholder ?? t("knowledge.defaultPlaceholder");
+  const resolvedEmptySourcesMessage =
+    emptySourcesMessage ?? t("knowledge.defaultEmptySources");
+
   return (
     <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-2 duration-150">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label className="text-sm font-medium text-text-primary">
-            Knowledge Sources
+            {t("fields.knowledgeSources")}
             {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
           </Label>
           <GenerationSourcePopover
             sources={sources}
             selectedIds={value.sourceIds}
             onChange={(sourceIds) => onPatch({ sourceIds })}
-            emptyMessage={emptySourcesMessage}
+            emptyMessage={resolvedEmptySourcesMessage}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={textareaId} className="text-sm font-medium text-text-primary">
-            Custom Instructions
+            {t("fields.customInstructions")}
             {!hasSources && <span className="text-destructive ml-0.5">*</span>}
           </Label>
           <Textarea
             id={textareaId}
             value={value.brief}
             onChange={(e) => onPatch({ brief: e.target.value })}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             className="min-h-[120px] max-h-[200px] text-xs resize-none w-full"
             disabled={disabled}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+          <Label className="text-xs font-medium text-text-tertiary">
+            {t("fields.destinationFolder")}
+          </Label>
           <FolderPicker
             notebookId={notebookId}
             value={value.folderId}
@@ -91,7 +99,7 @@ export function BriefKnowledgeStep({
           className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
         >
           <ArrowLeft className="size-4" />
-          Back
+          {t("actions.back")}
         </Button>
 
         <Button

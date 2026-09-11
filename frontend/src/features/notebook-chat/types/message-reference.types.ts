@@ -1,3 +1,4 @@
+import i18n from "@/shared/i18n";
 import type { CitedSourceDTO } from "../api/chat";
 
 const REFERENCE_HREF_PREFIX = "#reference-";
@@ -139,7 +140,7 @@ export function getReferenceExcerpt(reference: CitedSourceDTO): string {
   return (
     reference.quote?.trim() ||
     reference.description?.trim() ||
-    "No excerpt is available for this reference."
+    i18n.t("referencePopover.noExcerpt", { ns: "chat" })
   );
 }
 
@@ -149,8 +150,12 @@ export function getReferenceLocatorLabel(reference: CitedSourceDTO): string | nu
   if (!locator) return null;
 
   const labels: string[] = [];
-  if (isPositiveNumber(locator.pageNumber)) labels.push(`Page ${locator.pageNumber}`);
-  if (isPositiveNumber(locator.slideNumber)) labels.push(`Slide ${locator.slideNumber}`);
+  if (isPositiveNumber(locator.pageNumber)) {
+    labels.push(i18n.t("locator.page", { ns: "chat", number: locator.pageNumber }));
+  }
+  if (isPositiveNumber(locator.slideNumber)) {
+    labels.push(i18n.t("locator.slide", { ns: "chat", number: locator.slideNumber }));
+  }
 
   if (isNonNegativeNumber(locator.startOffsetMs) || isNonNegativeNumber(locator.endOffsetMs)) {
     const start = isNonNegativeNumber(locator.startOffsetMs)
@@ -159,12 +164,21 @@ export function getReferenceLocatorLabel(reference: CitedSourceDTO): string | nu
     const end = isNonNegativeNumber(locator.endOffsetMs)
       ? formatTimestamp(locator.endOffsetMs)
       : null;
-    labels.push(start && end ? `${start}–${end}` : (start ?? end ?? "Timestamp"));
+    labels.push(
+      start && end
+        ? `${start}–${end}`
+        : (start ?? end ?? i18n.t("locator.timestamp", { ns: "chat" })),
+    );
   }
 
   if (locator.sheetName || locator.cellRange) {
     labels.push(
-      [locator.sheetName ? `Sheet "${locator.sheetName}"` : null, locator.cellRange]
+      [
+        locator.sheetName
+          ? i18n.t("locator.sheet", { ns: "chat", name: locator.sheetName })
+          : null,
+        locator.cellRange,
+      ]
         .filter(Boolean)
         .join(" · "),
     );
@@ -173,13 +187,22 @@ export function getReferenceLocatorLabel(reference: CitedSourceDTO): string | nu
   if (locator.symbol || isPositiveNumber(locator.lineStart) || isPositiveNumber(locator.lineEnd)) {
     const lines =
       isPositiveNumber(locator.lineStart) || isPositiveNumber(locator.lineEnd)
-        ? `Lines ${locator.lineStart ?? locator.lineEnd}${locator.lineStart != null && locator.lineEnd != null ? `–${locator.lineEnd}` : ""}`
+        ? locator.lineStart != null && locator.lineEnd != null
+          ? i18n.t("locator.linesRange", {
+              ns: "chat",
+              start: locator.lineStart,
+              end: locator.lineEnd,
+            })
+          : i18n.t("locator.lines", {
+              ns: "chat",
+              value: locator.lineStart ?? locator.lineEnd ?? 0,
+            })
         : null;
     labels.push([locator.symbol, lines].filter(Boolean).join(" · "));
   }
 
   if (locator.imageRegion) {
-    labels.push("Visual region");
+    labels.push(i18n.t("locator.visualRegion", { ns: "chat" }));
   }
 
   return labels.length > 0 ? labels.join(" · ") : null;

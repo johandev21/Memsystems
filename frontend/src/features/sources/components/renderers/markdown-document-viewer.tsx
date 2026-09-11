@@ -1,4 +1,5 @@
 import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "@/features/ai";
@@ -242,9 +243,10 @@ export function MarkdownDocumentViewer({
 }
 
 function EmptyMarkdownState() {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div className="py-12 text-center text-xs text-muted-foreground">
-      No text content available.
+      {t("markdownViewer.noContent")}
     </div>
   );
 }

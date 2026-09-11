@@ -1,4 +1,5 @@
 import { type ReactNode, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
@@ -29,9 +30,10 @@ export function ArticleDocumentViewer({ content, scrollElement }: ArticleDocumen
 }
 
 function EmptyArticleState() {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div className="py-12 text-center text-xs text-muted-foreground">
-      No article content available.
+      {t("articleViewer.noContent")}
     </div>
   );
 }

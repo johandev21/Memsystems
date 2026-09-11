@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import { ClozeInteractive } from "../../ClozeInteractive";
@@ -21,10 +22,11 @@ export function ActiveCardStage({
   onToggleExplain,
   onAnswerChecked,
 }: ActiveCardStageProps) {
+  const { t } = useTranslation("viewer");
   return (
     <div className="space-y-6">
       <div className="text-xs font-medium text-text-faint border-b border-surface-border-subtle pb-3 flex items-center justify-between">
-        <span>ACTIVE CARD</span>
+        <span>{t("flashcard.activeCard")}</span>
       </div>
 
       <div
@@ -62,7 +64,7 @@ export function ActiveCardStage({
                   onClick={onToggleExplain}
                   className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-surface-2"
                 >
-                  <Sparkles className="size-3 text-text-tertiary" /> Explain
+                  <Sparkles className="size-3 text-text-tertiary" /> {t("common.explain")}
                 </Button>
               </div>
             </div>
@@ -95,7 +97,7 @@ export function ActiveCardStage({
                   onClick={onToggleExplain}
                   className="rounded-full h-7 px-3 text-xs gap-1 cursor-pointer bg-surface-2"
                 >
-                  <Sparkles className="size-3 text-text-tertiary" /> Explain
+                  <Sparkles className="size-3 text-text-tertiary" /> {t("common.explain")}
                 </Button>
               </div>
             </div>

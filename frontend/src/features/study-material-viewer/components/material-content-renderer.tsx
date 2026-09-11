@@ -4,6 +4,7 @@ import type {
   RoadmapEditorContentType,
   SlidesEditorContentType,
 } from "@/features/study-material-generation";
+import { useTranslation } from "react-i18next";
 import type { MindMapContentType } from "../shapes/mind-map";
 import type { StudyMaterialDTO } from "../types";
 import { CaseStudyView } from "./CaseStudyView";
@@ -32,6 +33,8 @@ export function MaterialContentRenderer({
   beforeCloseRef,
   onClose,
 }: MaterialContentRendererProps) {
+  const { t } = useTranslation("viewer");
+
   switch (material.kind) {
     case "case_study":
       return (
@@ -106,6 +109,6 @@ export function MaterialContentRenderer({
         />
       );
     default:
-      return <div className="p-8 text-center text-text-tertiary">Unsupported material type</div>;
+      return <div className="p-8 text-center text-text-tertiary">{t("unsupportedMaterial")}</div>;
   }
 }

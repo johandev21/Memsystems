@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslation } from "react-i18next";
 import type { Source } from "@/features/sources";
 import type {
   CaseStudyAnalysisType,
@@ -30,18 +31,25 @@ export function CaseQuestion({
   openSource,
   progress,
 }: CaseQuestionProps) {
+  const { t } = useTranslation("viewer");
   const checklistLength = analysis?.checklist.length ?? 0;
   const entry = progress.getEntry(question.id, contentHash, checklistLength);
 
   return (
-    <section aria-label={`Question ${index + 1}`} className="space-y-6">
-      <h2 className="text-xl font-semibold sm:text-2xl">Question {index + 1}</h2>
+    <section aria-label={t("caseStudy.question", { number: index + 1 })} className="space-y-6">
+      <h2 className="text-xl font-semibold sm:text-2xl">
+        {t("caseStudy.question", { number: index + 1 })}
+      </h2>
       <CaseMarkdown text={question.prompt} />
-      {question.hint && <p className="text-sm text-text-tertiary">Hint: {question.hint}</p>}
+      {question.hint && (
+        <p className="text-sm text-text-tertiary">
+          {t("caseStudy.hint", { hint: question.hint })}
+        </p>
+      )}
 
       <div className="space-y-2">
         <label htmlFor={`case-response-${question.id}`} className="text-base font-semibold">
-          Your Response
+          {t("caseStudy.yourResponse")}
         </label>
         <Textarea
           id={`case-response-${question.id}`}
@@ -49,7 +57,7 @@ export function CaseQuestion({
           onChange={(e) =>
             progress.saveResponse(question.id, e.target.value, contentHash, checklistLength)
           }
-          placeholder="Write your analysis before revealing the sample reasoning."
+          placeholder={t("caseStudy.responsePlaceholder")}
           className="min-h-40 text-base leading-relaxed md:text-base"
         />
       </div>
@@ -65,16 +73,16 @@ export function CaseQuestion({
             aria-expanded={entry.revealed}
             aria-controls={`case-analysis-${question.id}`}
           >
-            {entry.revealed ? "Hide Analysis" : "Reveal Analysis"}
+            {entry.revealed ? t("caseStudy.hideAnalysis") : t("caseStudy.revealAnalysis")}
           </Button>
           <div id={`case-analysis-${question.id}`} hidden={!entry.revealed} className="space-y-6">
             <div className="space-y-2">
-              <h3 className="text-base font-semibold">Sample Reasoning</h3>
+              <h3 className="text-base font-semibold">{t("caseStudy.sampleReasoning")}</h3>
               <CaseMarkdown text={analysis.reasoning} />
             </div>
             {analysis.keyPoints.length > 0 && (
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Key Points</h3>
+                <h3 className="text-base font-semibold">{t("caseStudy.keyPoints")}</h3>
                 <ul className="list-disc space-y-2 pl-5">
                   {analysis.keyPoints.map((point) => (
                     <li key={point}>
@@ -86,7 +94,7 @@ export function CaseQuestion({
             )}
             {analysis.conceptApplications.length > 0 && (
               <div className="space-y-2">
-                <h3 className="text-base font-semibold">Concepts From Your Sources</h3>
+                <h3 className="text-base font-semibold">{t("caseStudy.conceptsFromSources")}</h3>
                 {analysis.conceptApplications.map((app) => (
                   <div key={app.concept} className="space-y-2">
                     <p className="font-medium">{app.concept}</p>
@@ -105,7 +113,7 @@ export function CaseQuestion({
             )}
             {analysis.assumptions.length > 0 && (
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Assumptions</h3>
+                <h3 className="text-base font-semibold">{t("caseStudy.assumptions")}</h3>
                 <ul className="list-disc space-y-2 pl-5">
                   {analysis.assumptions.map((item) => (
                     <li key={item}>
@@ -117,7 +125,7 @@ export function CaseQuestion({
             )}
             {analysis.tradeoffs.length > 0 && (
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Tradeoffs</h3>
+                <h3 className="text-base font-semibold">{t("caseStudy.tradeoffs")}</h3>
                 <ul className="list-disc space-y-2 pl-5">
                   {analysis.tradeoffs.map((item) => (
                     <li key={item}>
@@ -129,7 +137,9 @@ export function CaseQuestion({
             )}
             {analysis.alternativePerspectives.length > 0 && (
               <div className="space-y-2">
-                <h3 className="text-base font-semibold">Alternative Perspectives</h3>
+                <h3 className="text-base font-semibold">
+                  {t("caseStudy.alternativePerspectives")}
+                </h3>
                 {analysis.alternativePerspectives.map((alt) => (
                   <div key={alt.viewpoint} className="space-y-2">
                     <p className="font-medium">{alt.viewpoint}</p>
@@ -148,7 +158,7 @@ export function CaseQuestion({
             )}
             {analysis.sourceIds.length > 0 && (
               <div className="space-y-2">
-                <h3 className="text-base font-semibold">Supporting Sources</h3>
+                <h3 className="text-base font-semibold">{t("common.supportingSources")}</h3>
                 <SourceRefs
                   ids={analysis.sourceIds}
                   sources={sources}
@@ -159,7 +169,7 @@ export function CaseQuestion({
             )}
             {analysis.checklist.length > 0 && (
               <fieldset className="space-y-2">
-                <legend className="text-base font-semibold">Self-Assessment Checklist</legend>
+                <legend className="text-base font-semibold">{t("caseStudy.selfAssessment")}</legend>
                 {analysis.checklist.map((item, i) => (
                   <label
                     key={item}
@@ -187,9 +197,7 @@ export function CaseQuestion({
           </div>
         </div>
       ) : (
-        <p className="text-sm text-text-tertiary">
-          No sample analysis was included for this question.
-        </p>
+        <p className="text-sm text-text-tertiary">{t("caseStudy.noSampleAnalysis")}</p>
       )}
     </section>
   );

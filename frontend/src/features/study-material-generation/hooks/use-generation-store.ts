@@ -13,8 +13,9 @@ import type {
   SlidesGenerationOptions,
   PracticeProblemsGenerationOptions,
 } from "../api/generation";
-import { KIND_LABELS } from "@/features/study-material-viewer";
 import { classifyChatError } from "@/features/ai";
+import i18n from "@/shared/i18n";
+import { kindLabelKey } from "../kind-label";
 
 export interface ActiveGeneration {
   id: string;
@@ -133,7 +134,13 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
     set((state) => ({
       generations: updateGenerationError(state.generations, id, message),
     }));
-    toast.error(`Failed to generate ${kindLabel(kind)}: ${message}`);
+    toast.error(
+      i18n.t("toasts.failed", {
+        ns: "generation",
+        kind: kindLabel(kind),
+        message,
+      }),
+    );
     scheduleErrorDismiss(id);
   }
 
@@ -155,7 +162,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
           failGeneration(
             id,
             kind,
-            "Generation timed out waiting for the server. Please try again.",
+            i18n.t("errors.timedOut", { ns: "generation" }),
           );
         } else {
           // Chunk arrived recently; re-arm for the remaining time.
@@ -198,7 +205,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
       try {
         requestId = await requestIdPromise;
         if (!requestId) {
-          throw new Error("No request ID returned from server");
+          throw new Error(i18n.t("errors.noRequestId", { ns: "generation" }));
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -206,7 +213,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         set((state) => {
           return { generations: updateGenerationError(state.generations, tempId, msg) };
         });
-        toast.error(`Generation failed: ${msg}`);
+        toast.error(i18n.t("toasts.startFailed", { ns: "generation", message: msg }));
         scheduleErrorDismiss(tempId);
         return;
       }
@@ -297,23 +304,26 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
               });
 
               const label = kindLabel(input.kind);
-              toast.success(`${label} generated successfully!`, {
-                action:
-                  viewMaterialId && onComplete
-                    ? {
-                        label: "View",
-                        onClick: () => onComplete(viewMaterialId),
-                      }
-                    : undefined,
-                duration: 8000,
-              });
+              toast.success(
+                i18n.t("toasts.success", { ns: "generation", kind: label }),
+                {
+                  action:
+                    viewMaterialId && onComplete
+                      ? {
+                          label: i18n.t("actions.view", { ns: "generation" }),
+                          onClick: () => onComplete(viewMaterialId),
+                        }
+                      : undefined,
+                  duration: 8000,
+                },
+              );
             } else if (event.type === "error") {
               settled = true;
               throw event.error;
             }
           }
           if (!settled && get().generations[requestId]) {
-            failGeneration(requestId, input.kind, "Connection closed before finishing.");
+            failGeneration(requestId, input.kind, i18n.t("errors.connectionClosed", { ns: "generation" }));
           }
         } catch (err) {
           const rawMessage = err instanceof Error ? err.message : String(err);
@@ -333,7 +343,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
       if (!isTemp) {
         try {
           await cancelGeneration(notebookId, id);
-          toast.info("Generation cancelled");
+          toast.info(i18n.t("toasts.cancelled", { ns: "generation" }));
         } catch {
           // ignore
         }
@@ -347,5 +357,5 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
 });
 
 function kindLabel(kind: StudyMaterialKind): string {
-  return KIND_LABELS[kind];
+  return i18n.t(kindLabelKey(kind), { ns: "generation" });
 }

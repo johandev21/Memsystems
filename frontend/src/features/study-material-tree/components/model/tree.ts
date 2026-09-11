@@ -1,5 +1,6 @@
 import type { FolderDTO } from "../../types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
+import i18n from "@/shared/i18n";
 
 export type StudyMaterialTreeFolder = FolderDTO;
 export type StudyMaterialTreeMaterial = StudyMaterialDTO;
@@ -188,7 +189,7 @@ export function createFolder(
     id,
     notebookId: "notebook-placeholder",
     parentId,
-    name: "Untitled folder",
+    name: i18n.t("defaults.untitledFolder", { ns: "tree" }),
     deletedAt: null,
     createdAt: now,
     updatedAt: now,

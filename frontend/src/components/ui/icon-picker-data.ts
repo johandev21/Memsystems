@@ -2,8 +2,17 @@ import { dynamicIconImports } from "lucide-react/dynamic";
 
 export const ALL_ICON_NAMES = Object.keys(dynamicIconImports);
 
+export type IconCategoryKey =
+  | "iconPicker.categories.communication"
+  | "iconPicker.categories.files"
+  | "iconPicker.categories.media"
+  | "iconPicker.categories.objects"
+  | "iconPicker.categories.popular"
+  | "iconPicker.categories.system"
+  | "iconPicker.categories.tech";
+
 export interface CuratedCategory {
-  name: string;
+  labelKey: IconCategoryKey;
   icons: string[];
 }
 
@@ -16,7 +25,7 @@ export function formatIconLabel(name: string): string {
 
 export const CURATED_CATEGORIES: CuratedCategory[] = [
   {
-    name: "Popular",
+    labelKey: "iconPicker.categories.popular",
     icons: [
       "notebook",
       "book-open",
@@ -55,7 +64,7 @@ export const CURATED_CATEGORIES: CuratedCategory[] = [
     ],
   },
   {
-    name: "Tech",
+    labelKey: "iconPicker.categories.tech",
     icons: [
       "code",
       "cpu",
@@ -76,7 +85,7 @@ export const CURATED_CATEGORIES: CuratedCategory[] = [
     ],
   },
   {
-    name: "Files",
+    labelKey: "iconPicker.categories.files",
     icons: [
       "file-text",
       "file",
@@ -93,7 +102,7 @@ export const CURATED_CATEGORIES: CuratedCategory[] = [
     ],
   },
   {
-    name: "Communication",
+    labelKey: "iconPicker.categories.communication",
     icons: [
       "message-square",
       "mail",
@@ -108,7 +117,7 @@ export const CURATED_CATEGORIES: CuratedCategory[] = [
     ],
   },
   {
-    name: "Objects",
+    labelKey: "iconPicker.categories.objects",
     icons: [
       "hammer",
       "wrench",
@@ -125,7 +134,7 @@ export const CURATED_CATEGORIES: CuratedCategory[] = [
     ],
   },
   {
-    name: "System",
+    labelKey: "iconPicker.categories.system",
     icons: [
       "settings",
       "sliders",
@@ -142,7 +151,7 @@ export const CURATED_CATEGORIES: CuratedCategory[] = [
     ],
   },
   {
-    name: "Media",
+    labelKey: "iconPicker.categories.media",
     icons: [
       "image",
       "music",

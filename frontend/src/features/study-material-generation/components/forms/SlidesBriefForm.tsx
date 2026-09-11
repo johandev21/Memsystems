@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefKnowledgeStep } from "./brief-knowledge-step";
 import { BriefWizardHeader } from "./brief-wizard-header";
@@ -23,9 +24,10 @@ export function SlidesBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Slides",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
@@ -34,6 +36,11 @@ export function SlidesBriefForm({
   const theme = normalizeTheme(currentOptions.theme as SlidesThemeOption | undefined);
   const detailLevel = currentOptions.detailLevel;
   const isAutoMode = slideCount === 0;
+  const detailOptions = DETAIL_OPTIONS.map((opt) => ({
+    id: opt.id,
+    title: t(opt.titleKey),
+    desc: t(opt.descKey),
+  }));
 
   const isPreset = slideCount > 0 && SLIDE_PRESETS.includes(slideCount);
   const [isCustomMode, setIsCustomMode] = useState<boolean>(!isAutoMode && !isPreset);
@@ -69,12 +76,18 @@ export function SlidesBriefForm({
   };
 
   const countLabel = isAutoMode
-    ? "Auto (AI decides)"
-    : `${slideCount} ${slideCount === 1 ? "Slide" : "Slides"}${slideCount >= MAX_SLIDE_COUNT ? ` (Max ${MAX_SLIDE_COUNT})` : ""}`;
+    ? t("actions.autoDecides")
+    : slideCount >= MAX_SLIDE_COUNT
+      ? t("slides.countMax", { count: slideCount, max: MAX_SLIDE_COUNT })
+      : t("slides.count", { count: slideCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <BriefWizardHeader title="Slides Setup" step={step} onStepChange={setStep} />
+      <BriefWizardHeader
+        title={t("wizard.title", { kind: t("kinds.slides") })}
+        step={step}
+        onStepChange={setStep}
+      />
 
       {step === 1 ? (
         <div className="flex min-h-[380px] flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
@@ -111,8 +124,8 @@ export function SlidesBriefForm({
             />
 
             <BriefChoiceField
-              label="3. Detail Level"
-              options={DETAIL_OPTIONS}
+              label={t("fields.detailLevelStep3")}
+              options={detailOptions}
               value={detailLevel}
               onChange={(id) => {
                 updateSlidesOptions({ detailLevel: id });
@@ -121,9 +134,7 @@ export function SlidesBriefForm({
           </div>
 
           <div className="flex items-center justify-between border-t border-transparent pt-2">
-            <span className="text-xs text-text-faint">
-              Configure knowledge sources & brief next
-            </span>
+            <span className="text-xs text-text-faint">{t("wizard.nextHintKnowledge")}</span>
             <Button
               type="button"
               onClick={() => {
@@ -137,7 +148,7 @@ export function SlidesBriefForm({
                 CTA_BUTTON_CLASS,
               )}
             >
-              Next Step
+              {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </Button>
           </div>
@@ -150,11 +161,11 @@ export function SlidesBriefForm({
           hasSources={hasSources}
           hasInstructions={hasInstructions}
           canSubmit={canSubmit}
-          submitLabel={submitLabel}
+          submitLabel={submitLabel ?? t("actions.generateKind", { kind: t("kinds.slides") })}
           disabled={disabled}
-          placeholder="What should this deck explain? Describe the topic, audience, or narrative arc..."
+          placeholder={t("slides.instructionsPlaceholder")}
           textareaId="brief-slides"
-          emptySourcesMessage="No sources in notebook. Slides will generate using general knowledge."
+          emptySourcesMessage={t("knowledge.emptySources", { kind: t("kinds.slides") })}
           onPatch={patchFormData}
           onBack={() => setStep(1)}
           onSubmit={() => {

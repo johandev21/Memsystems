@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ImageUploadDialog } from "../dialogs/image-upload-dialog";
 import { EDIT_NOTEBOOK_EVENT } from "../dialogs/notebook-settings-dialog";
@@ -34,6 +35,7 @@ export function NotebookBanner({
   updatedAt,
   isUntitled,
 }: NotebookBannerProps) {
+  const { t, i18n } = useTranslation("notebooks");
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,12 +90,12 @@ export function NotebookBanner({
 
   const formattedDate = useMemo(
     () =>
-      new Date(updatedAt).toLocaleDateString(undefined, {
+      new Date(updatedAt).toLocaleDateString(i18n.resolvedLanguage ?? "en", {
         month: "short",
         day: "numeric",
         year: "numeric",
       }),
-    [updatedAt],
+    [updatedAt, i18n.resolvedLanguage],
   );
 
   const visibleBannerUrl = draft.bannerRemoved ? null : (draft.previewUrl ?? bannerUrl ?? null);
@@ -155,7 +157,7 @@ export function NotebookBanner({
   const handleSave = async () => {
     const trimmedTitle = draft.title.trim();
     if (!trimmedTitle) {
-      toast.error("Title is required");
+      toast.error(t("banner.titleRequired"));
       return;
     }
     setIsSaving(true);
@@ -171,12 +173,12 @@ export function NotebookBanner({
         bannerFile: bannerFileRef.current,
         queryClient,
       });
-      toast.success("Notebook updated");
+      toast.success(t("banner.updated"));
       setIsEditing(false);
       bannerFileRef.current = null;
       dispatch({ type: "RESET", payload: createInitialDraft() });
     } catch {
-      toast.error("Failed to update notebook");
+      toast.error(t("banner.updateFailed"));
     } finally {
       setIsSaving(false);
     }

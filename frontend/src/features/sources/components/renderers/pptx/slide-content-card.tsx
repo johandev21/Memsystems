@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
 import type { ParsedSlideSegment } from "../../../utils/slide-segment-parser";
@@ -43,6 +44,7 @@ export function SlideContentCard({
   selectedSlideNumber,
   slideRefs,
 }: SlideContentCardProps) {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div
       ref={(el) => {
@@ -55,15 +57,15 @@ export function SlideContentCard({
     >
       <div className="mb-3 flex items-center justify-between">
         <Badge variant="outline" className="font-mono text-[11px]">
-          Slide {activeSlideNumber}
+          {t("pptxSlideContent.slideLabel", { number: activeSlideNumber })}
         </Badge>
         <span className="text-[11px] text-muted-foreground">
-          {currentSlideSegments.length} {currentSlideSegments.length === 1 ? "block" : "blocks"}
+          {t("pptxSlideContent.blockCount", { count: currentSlideSegments.length })}
         </span>
       </div>
       {currentSlideSegments.length === 0 ? (
         <p className="text-xs text-muted-foreground py-8 text-center">
-          No content matches &quot;{searchQuery}&quot; on this slide.
+          {t("pptxSlideContent.noContentMatch", { query: searchQuery })}
         </p>
       ) : (
         <div className="space-y-3">
@@ -99,7 +101,7 @@ export function SlideContentCard({
                   </p>
                 )}
                 <span className="mt-2 inline-flex text-[10px] font-mono text-muted-foreground">
-                  [Slide {seg.slideNumber}]
+                  {t("pptxSlideContent.slideRef", { number: seg.slideNumber })}
                 </span>
               </div>
             );

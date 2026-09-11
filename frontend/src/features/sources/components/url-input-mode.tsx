@@ -8,6 +8,7 @@ import {
   Video,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,34 +31,6 @@ interface UrlInputModeProps {
   busy: boolean;
 }
 
-function getPlaceholder(isYouTube: boolean, isArXiv: boolean, isAcademicDoi: boolean): string {
-  if (isYouTube) return "https://youtube.com/watch?v=... or https://youtu.be/...";
-  if (isArXiv) return "e.g. 2301.12345 or https://arxiv.org/abs/2301.12345";
-  if (isAcademicDoi) return "e.g. 10.1000/182 or https://doi.org/10.1000/182";
-  return "https://example.com/article, YouTube URL, arXiv ID, or DOI...";
-}
-
-function getTitlePlaceholder(isYouTube: boolean, isArXiv: boolean, isAcademicDoi: boolean): string {
-  if (isYouTube) return "Defaults to video title";
-  if (isArXiv) return "Defaults to paper title";
-  if (isAcademicDoi) return "Defaults to publication title";
-  return "Defaults to webpage title";
-}
-
-function getSubmitLabel(isYouTube: boolean, isArXiv: boolean, isAcademicDoi: boolean): string {
-  if (isYouTube) return "Add YouTube Video Source";
-  if (isArXiv) return "Add arXiv Paper Source";
-  if (isAcademicDoi) return "Add DOI Academic Source";
-  return "Add Website Source";
-}
-
-function getPendingLabel(isYouTube: boolean, isArXiv: boolean, isAcademicDoi: boolean): string {
-  if (isYouTube) return "Adding YouTube video...";
-  if (isArXiv) return "Acquiring arXiv paper...";
-  if (isAcademicDoi) return "Resolving DOI...";
-  return "Extracting website...";
-}
-
 function UrlTypeBadge({
   isYouTube,
   isArXiv,
@@ -67,6 +40,7 @@ function UrlTypeBadge({
   isArXiv: boolean;
   isAcademicDoi: boolean;
 }) {
+  const { t } = useTranslation("sources");
   if (isYouTube) {
     return (
       <Badge
@@ -75,7 +49,7 @@ function UrlTypeBadge({
         className="gap-1 border-red-500/30 bg-red-500/10 text-xs font-normal text-red-600 dark:text-red-400"
       >
         <Video className="size-3 text-red-600 dark:text-red-400" />
-        YouTube Video
+        {t("urlMode.youtubeBadge")}
       </Badge>
     );
   }
@@ -87,7 +61,7 @@ function UrlTypeBadge({
         className="gap-1 border-indigo-500/30 bg-indigo-500/10 text-xs font-normal text-indigo-600 dark:text-indigo-400"
       >
         <BookOpen className="size-3 text-indigo-600 dark:text-indigo-400" />
-        arXiv Paper
+        {t("urlMode.arxivBadge")}
       </Badge>
     );
   }
@@ -99,7 +73,7 @@ function UrlTypeBadge({
         className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-xs font-normal text-emerald-600 dark:text-emerald-400"
       >
         <GraduationCap className="size-3 text-emerald-600 dark:text-emerald-400" />
-        DOI Identifier
+        {t("urlMode.doiBadge")}
       </Badge>
     );
   }
@@ -121,6 +95,7 @@ function AdvancedYouTubeSection({
   onOauthTokenChange,
   busy,
 }: AdvancedYouTubeSectionProps) {
+  const { t } = useTranslation("sources");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +120,7 @@ function AdvancedYouTubeSection({
         onClick={() => setShowAdvanced(!showAdvanced)}
         className="flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
-        <span>Custom Captions & OAuth Options</span>
+        <span>{t("urlMode.advancedOptions")}</span>
         {showAdvanced ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
       </button>
 
@@ -153,7 +128,7 @@ function AdvancedYouTubeSection({
         <div className="flex flex-col gap-3 pt-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="caption-file" className="text-xs">
-              Upload Subtitles / Captions (.srt, .vtt, .txt, .json)
+              {t("urlMode.captionFileLabel")}
             </Label>
             <Input
               id="caption-file"
@@ -168,13 +143,15 @@ function AdvancedYouTubeSection({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="caption-text" className="text-xs">
-                Or Paste Subtitle / Transcript Text
+                {t("urlMode.captionLabel")}
               </Label>
               {captionText.length > 0 && (
                 <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
                   <span>
-                    {lineCount.toLocaleString()} {lineCount === 1 ? "line" : "lines"} ·{" "}
-                    {captionText.length.toLocaleString()} chars
+                    {t("stats.linesAndChars", {
+                      count: lineCount,
+                      chars: captionText.length,
+                    })}
                   </span>
                   <button
                     type="button"
@@ -182,14 +159,14 @@ function AdvancedYouTubeSection({
                     disabled={busy}
                     className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
                   >
-                    Clear
+                    {t("urlMode.clear")}
                   </button>
                 </div>
               )}
             </div>
             <Textarea
               id="caption-text"
-              placeholder="00:00:01.000 --> 00:00:04.000&#10;Speaker: Text content..."
+              placeholder={t("urlMode.captionPlaceholder")}
               value={captionText}
               onChange={(e) => onCaptionTextChange(e.target.value)}
               disabled={busy}
@@ -201,7 +178,7 @@ function AdvancedYouTubeSection({
           {onOauthTokenChange && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="oauth-token" className="text-xs">
-                Google OAuth Access Token (Optional, for private videos)
+                {t("urlMode.oauthLabel")}
               </Label>
               <Input
                 id="oauth-token"
@@ -234,9 +211,39 @@ export function UrlInputMode({
   isPending,
   busy,
 }: UrlInputModeProps) {
+  const { t } = useTranslation("sources");
   const isYouTube = isYouTubeUrl(urlValue);
   const isArXiv = isArXivUrl(urlValue);
   const isAcademicDoi = isDoi(urlValue);
+
+  const placeholder = isYouTube
+    ? t("urlMode.placeholderYouTube")
+    : isArXiv
+      ? t("urlMode.placeholderArxiv")
+      : isAcademicDoi
+        ? t("urlMode.placeholderDoi")
+        : t("urlMode.placeholderGeneric");
+  const titlePlaceholder = isYouTube
+    ? t("urlMode.titlePlaceholderYouTube")
+    : isArXiv
+      ? t("urlMode.titlePlaceholderArxiv")
+      : isAcademicDoi
+        ? t("urlMode.titlePlaceholderDoi")
+        : t("urlMode.titlePlaceholderGeneric");
+  const submitLabel = isYouTube
+    ? t("urlMode.addYouTube")
+    : isArXiv
+      ? t("urlMode.addArxiv")
+      : isAcademicDoi
+        ? t("urlMode.addDoi")
+        : t("urlMode.addWebsite");
+  const pendingLabel = isYouTube
+    ? t("urlMode.addingYouTube")
+    : isArXiv
+      ? t("urlMode.addingArxiv")
+      : isAcademicDoi
+        ? t("urlMode.addingDoi")
+        : t("urlMode.addingWebsite");
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -252,12 +259,12 @@ export function UrlInputMode({
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back
+        {t("urlMode.back")}
       </button>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="source-url">URL or Academic Identifier</Label>
+          <Label htmlFor="source-url">{t("urlMode.urlLabel")}</Label>
           <UrlTypeBadge
             isYouTube={isYouTube}
             isArXiv={isArXiv}
@@ -267,7 +274,7 @@ export function UrlInputMode({
         <Input
           id="source-url"
           type="text"
-          placeholder={getPlaceholder(isYouTube, isArXiv, isAcademicDoi)}
+          placeholder={placeholder}
           value={urlValue}
           onChange={(e) => onUrlValueChange(e.target.value)}
           autoFocus
@@ -275,22 +282,18 @@ export function UrlInputMode({
           disabled={busy}
         />
         {isArXiv && (
-          <p className="text-xs text-muted-foreground">
-            Imports paper metadata and PDF full-text from arXiv.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("urlMode.arxivInfo")}</p>
         )}
         {isAcademicDoi && (
-          <p className="text-xs text-muted-foreground">
-            Resolves citation metadata, BibTeX, and accessible open-access articles.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("urlMode.doiInfo")}</p>
         )}
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="source-url-title">Title (Optional)</Label>
+        <Label htmlFor="source-url-title">{t("urlMode.titleLabel")}</Label>
         <Input
           id="source-url-title"
-          placeholder={getTitlePlaceholder(isYouTube, isArXiv, isAcademicDoi)}
+          placeholder={titlePlaceholder}
           value={urlTitle}
           onChange={(e) => onUrlTitleChange(e.target.value)}
           disabled={busy}
@@ -311,10 +314,10 @@ export function UrlInputMode({
         {isPending ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            {getPendingLabel(isYouTube, isArXiv, isAcademicDoi)}
+            {pendingLabel}
           </>
         ) : (
-          getSubmitLabel(isYouTube, isArXiv, isAcademicDoi)
+          submitLabel
         )}
       </Button>
     </form>

@@ -1,0 +1,24 @@
+{
+  "descriptions": {
+    "default": "Neutral — what you see today",
+    "dune": "Warm sand, soft and inviting",
+    "ember": "Burnished terracotta, confident",
+    "grove": "Sage moss, warm and grounded",
+    "plum": "Dusted violet, focused evening",
+    "tide": "Cool slate, calm and focused"
+  },
+  "grid": {
+    "ariaLabel": "Theme",
+    "hint_one": "{{count}} palette · each has light & dark",
+    "hint_other": "{{count}} palettes · each has light & dark",
+    "selected": "{{name}}, selected",
+    "title": "Themes"
+  },
+  "scheme": {
+    "dark": "Dark",
+    "light": "Light",
+    "summary": "Light / Dark / System",
+    "system": "System",
+    "title": "Color scheme"
+  }
+}

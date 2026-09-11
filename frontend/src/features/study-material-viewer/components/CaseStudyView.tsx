@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { sourcesQueryOptions } from "@/features/sources";
 import {
@@ -24,11 +25,12 @@ export function CaseStudyView({
   notebookId,
   onOpenSource,
 }: CaseStudyViewProps) {
+  const { t } = useTranslation("viewer");
   const parsed = CaseStudyContent.safeParse(content);
   if (!parsed.success) {
     return (
       <p role="alert" className="p-6 text-text-secondary">
-        This case study could not be read. Try reopening it or generating a new case.
+        {t("caseStudy.parseError")}
       </p>
     );
   }
@@ -53,6 +55,7 @@ function CaseStudyReader({
   notebookId: string;
   onOpenSource?: () => void;
 }) {
+  const { t } = useTranslation("viewer");
   const progress = useCaseStudyProgress(materialId);
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -110,19 +113,19 @@ function CaseStudyReader({
       <CaseStudyScenario study={study} />
 
       {referencedIds.length > 0 && sources.isPending && (
-        <p role="status">Loading source references…</p>
+        <p role="status">{t("common.loadingReferences")}</p>
       )}
       {referencedIds.length > 0 && sources.isError && (
         <div role="alert" className="text-sm text-text-secondary">
-          Source references could not be loaded.{" "}
+          {t("common.referencesError")}{" "}
           <Button variant="outline" size="sm" onClick={() => void sources.refetch()}>
-            Retry References
+            {t("common.retryReferences")}
           </Button>
         </div>
       )}
 
       <p role={progress.storageError ? "alert" : "status"} className="text-sm text-text-secondary">
-        {progress.storageError ?? "Progress is saved on this device."}
+        {progress.storageError ?? t("caseStudy.progressSaved")}
       </p>
 
       {study.questions.map((question, index) => (
@@ -143,9 +146,7 @@ function CaseStudyReader({
         <footer className="space-y-3">
           {confirmReset ? (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <p className="w-full">
-                Clear all responses, checklist selections, and revealed analyses on this device?
-              </p>
+              <p className="w-full">{t("caseStudy.resetConfirm")}</p>
               <Button
                 variant="destructive"
                 size="sm"
@@ -154,15 +155,15 @@ function CaseStudyReader({
                   setConfirmReset(false);
                 }}
               >
-                Confirm Reset
+                {t("caseStudy.confirmReset")}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setConfirmReset(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setConfirmReset(true)}>
-              Reset Progress
+              {t("caseStudy.resetProgress")}
             </Button>
           )}
         </footer>

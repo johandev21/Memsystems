@@ -2,7 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/shared/utils/cn";
 import { ArrowRight } from "lucide-react";
+import type { ParseKeys } from "i18next";
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { BriefKnowledgeStep } from "./brief-knowledge-step";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
@@ -14,16 +16,28 @@ type DetailLevel = "basic" | "detailed";
 const NODE_PRESETS = [10, 20, 30];
 const MAX_NODE_COUNT = 100;
 const DETAIL_OPTIONS = [
-  { id: "basic" as DetailLevel, title: "Basic", desc: "Key concepts and essential relationships" },
+  {
+    id: "basic" as DetailLevel,
+    titleKey: "mindMap.detail.basic.title",
+    descKey: "mindMap.detail.basic.desc",
+  },
   {
     id: "detailed" as DetailLevel,
-    title: "Detailed",
-    desc: "Richer labels and explanatory connections",
+    titleKey: "mindMap.detail.detailed.title",
+    descKey: "mindMap.detail.detailed.desc",
   },
 ] as const;
 const COLOR_OPTIONS = [
-  { id: false, title: "Plain", desc: "Use the standard node appearance" },
-  { id: true, title: "Grouped colors", desc: "Color related concepts by theme" },
+  {
+    id: false,
+    titleKey: "mindMap.colorGroups.plain.title",
+    descKey: "mindMap.colorGroups.plain.desc",
+  },
+  {
+    id: true,
+    titleKey: "mindMap.colorGroups.grouped.title",
+    descKey: "mindMap.colorGroups.grouped.desc",
+  },
 ] as const;
 
 function OptionButton({
@@ -74,15 +88,17 @@ function NodeCountSelector({
   onCustomChange: (value: string) => void;
   onCustomBlur: () => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-text-primary">1. Map Size</Label>
+        <Label className="text-sm font-medium text-text-primary">{t("mindMap.mapSizeLabel")}</Label>
         <span className="text-xs font-medium text-primary">{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <OptionButton selected={isAutoMode} onClick={onAuto}>
-          Auto
+          {t("actions.auto")}
         </OptionButton>
         {NODE_PRESETS.map((count) => (
           <OptionButton
@@ -102,13 +118,13 @@ function NodeCountSelector({
             onChange={(event) => onCustomChange(event.target.value)}
             onBlur={onCustomBlur}
             placeholder="1-100"
-            aria-label="Custom node count"
+            aria-label={t("mindMap.customCountAria")}
             className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-xs font-semibold text-text-primary outline-none focus:ring-1 focus:ring-surface-border-strong"
             autoFocus
           />
         ) : (
           <OptionButton selected={false} onClick={onCustom}>
-            Custom
+            {t("actions.custom")}
           </OptionButton>
         )}
       </div>
@@ -123,10 +139,12 @@ function OptionCards<T extends string | boolean>({
   onSelect,
 }: {
   label: string;
-  options: readonly { id: T; title: string; desc: string }[];
+  options: readonly { id: T; titleKey: ParseKeys<"generation">; descKey: ParseKeys<"generation"> }[];
   selectedId: T;
   onSelect: (id: T) => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
       <Label className="text-sm font-medium text-text-primary">{label}</Label>
@@ -145,14 +163,14 @@ function OptionCards<T extends string | boolean>({
               )}
             >
               <span className="min-w-0">
-                <span className="block text-xs font-semibold">{option.title}</span>
+                <span className="block text-xs font-semibold">{t(option.titleKey)}</span>
                 <span
                   className={cn(
                     "mt-0.5 block text-xs leading-tight",
                     selected ? "opacity-80" : "text-text-faint",
                   )}
                 >
-                  {option.desc}
+                  {t(option.descKey)}
                 </span>
               </span>
             </button>
@@ -168,9 +186,10 @@ export function MindMapBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Mind Map",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
@@ -225,12 +244,18 @@ export function MindMapBriefForm({
   };
 
   const mapSizeLabel = isAutoMode
-    ? "Auto (AI decides)"
-    : `${nodeCount} nodes${nodeCount >= MAX_NODE_COUNT ? " (max 100)" : ""}`;
+    ? t("actions.autoDecides")
+    : nodeCount >= MAX_NODE_COUNT
+      ? t("mindMap.nodeCountMax", { count: nodeCount, max: MAX_NODE_COUNT })
+      : t("mindMap.nodeCount", { count: nodeCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <BriefWizardHeader title="Mind Map Setup" step={step} onStepChange={setStep} />
+      <BriefWizardHeader
+        title={t("wizard.title", { kind: t("kinds.mind_map") })}
+        step={step}
+        onStepChange={setStep}
+      />
       {step === 1 ? (
         <div className="flex min-h-[380px] flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
@@ -267,7 +292,7 @@ export function MindMapBriefForm({
             />
 
             <OptionCards
-              label="2. Detail Level"
+              label={t("fields.detailLevelStep2")}
               options={DETAIL_OPTIONS}
               selectedId={detailLevel}
               onSelect={(level) => {
@@ -277,7 +302,7 @@ export function MindMapBriefForm({
             />
 
             <OptionCards
-              label="3. Visual Grouping"
+              label={t("mindMap.visualGroupingLabel")}
               options={COLOR_OPTIONS}
               selectedId={colorGroups}
               onSelect={(color) => {
@@ -288,7 +313,7 @@ export function MindMapBriefForm({
           </div>
 
           <div className="flex items-center justify-between border-t border-transparent pt-2">
-            <span className="text-xs text-text-faint">Configure custom instructions next</span>
+            <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
             <Button
               type="button"
               onClick={() => {
@@ -300,7 +325,7 @@ export function MindMapBriefForm({
                 CTA_BUTTON_CLASS,
               )}
             >
-              Next Step
+              {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </Button>
           </div>
@@ -313,11 +338,11 @@ export function MindMapBriefForm({
           hasSources={hasSources}
           hasInstructions={hasInstructions}
           canSubmit={canSubmit}
-          submitLabel={submitLabel}
+          submitLabel={submitLabel ?? t("actions.generateKind", { kind: t("kinds.mind_map") })}
           disabled={disabled}
-          placeholder="What should this map explain? Describe the topic, question, or connections..."
+          placeholder={t("mindMap.instructionsPlaceholder")}
           textareaId="brief-mindmap"
-          emptySourcesMessage="No sources in notebook. Mind map will generate using general knowledge."
+          emptySourcesMessage={t("knowledge.emptySources", { kind: t("kinds.mind_map") })}
           onPatch={patchFormData}
           onBack={() => setStep(1)}
           onSubmit={() => {

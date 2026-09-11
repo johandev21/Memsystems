@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { notebookQueryOptions, updateNotebook } from "../api/notebooks";
 
 export function EditableNotebookTitle({ id }: { id: string }) {
+  const { t } = useTranslation("notebooks");
   const queryClient = useQueryClient();
   const { data: notebook } = useQuery(notebookQueryOptions(id));
   const [isEditing, setIsEditing] = useState(false);
@@ -29,11 +31,11 @@ export function EditableNotebookTitle({ id }: { id: string }) {
     onSuccess: (updated) => {
       queryClient.setQueryData(["notebooks", id], updated);
       queryClient.invalidateQueries({ queryKey: ["notebooks"] });
-      toast.success("Notebook renamed");
+      toast.success(t("notebook.renamed"));
       setIsEditing(false);
     },
     onError: () => {
-      toast.error("Failed to rename notebook");
+      toast.error(t("notebook.renameFailed"));
       setTitle(currentTitle);
       setIsEditing(false);
     },
@@ -58,7 +60,7 @@ export function EditableNotebookTitle({ id }: { id: string }) {
       <input
         ref={inputRef}
         type="text"
-        aria-label="Edit notebook title"
+        aria-label={t("notebook.editTitle")}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onBlur={handleSave}

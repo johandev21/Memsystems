@@ -1,4 +1,5 @@
 import { Check, ExternalLink } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/shared/utils/cn";
 import type { WebSearchCandidate, WebSearchImportResultItem } from "../../api/web-search";
@@ -19,6 +20,7 @@ export function SearchCandidateRow({
   selectionDisabled,
   onToggleCandidate,
 }: SearchCandidateRowProps) {
+  const { t } = useTranslation("sources");
   const settled = result && (result.status === "added" || result.status === "duplicate");
 
   return (
@@ -32,7 +34,7 @@ export function SearchCandidateRow({
       {settled ? (
         <span
           className="mt-0.5 flex size-4 shrink-0 items-center justify-center"
-          title="Added"
+          title={t("webSearchResults.added")}
         >
           <Check className="size-3.5 text-success" />
         </span>
@@ -41,7 +43,7 @@ export function SearchCandidateRow({
           checked={selected}
           onCheckedChange={() => onToggleCandidate(candidate.url)}
           disabled={selectionDisabled}
-          aria-label={`Select ${candidate.title}`}
+          aria-label={t("webSearchResults.selectLabel", { title: candidate.title })}
           className="mt-0.5"
         />
       )}
@@ -54,7 +56,7 @@ export function SearchCandidateRow({
         >
           <span className="truncate">{candidate.title}</span>
           <ExternalLink aria-hidden="true" className="size-3 shrink-0" />
-          <span className="sr-only">Opens in a new tab</span>
+          <span className="sr-only">{t("webSearchResults.opensNewTab")}</span>
         </a>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {getHostname(candidate.url)}
@@ -74,8 +76,10 @@ export function SearchCandidateRow({
             )}
           >
             {result.status === "scrape_failed"
-              ? `Could not add: ${result.error ?? "source could not be fetched"}`
-              : "Not added because the source limit was reached"}
+              ? t("webSearchResults.addError", {
+                  error: result.error ?? t("webSearchResults.fetchFailed"),
+                })
+              : t("webSearchResults.limitReached")}
           </p>
         )}
       </div>

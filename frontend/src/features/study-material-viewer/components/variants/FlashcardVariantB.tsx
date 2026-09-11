@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { detectCardFormat } from "../../utils/card-type-detector";
 import { FlashcardDeckHeader } from "./flashcard-b/flashcard-deck-header";
 import { FlashcardSidebar } from "./flashcard-b/flashcard-sidebar";
@@ -23,9 +24,11 @@ export function FlashcardVariantB({
   onSelectIndex,
   onNext,
   onPrev,
-  deckTitle = "Flashcards Study Deck",
+  deckTitle,
   sourceCount = 6,
 }: FlashcardVariantBProps) {
+  const { t } = useTranslation("viewer");
+  const resolvedDeckTitle = deckTitle ?? t("flashcard.defaultDeckTitle");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSideBySide, setShowSideBySide] = useState(true);
   const [incorrectCount, setIncorrectCount] = useState(2);
@@ -80,7 +83,7 @@ export function FlashcardVariantB({
   return (
     <div className="flex flex-col w-full min-h-[500px] bg-surface-1 border border-surface-border rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200">
       <FlashcardDeckHeader
-        deckTitle={deckTitle}
+        deckTitle={resolvedDeckTitle}
         sourceCount={sourceCount}
         showSideBySide={showSideBySide}
         onToggleLayout={() => setShowSideBySide(!showSideBySide)}
@@ -107,7 +110,7 @@ export function FlashcardVariantB({
 
           <div className="text-xs font-medium text-text-faint flex items-center justify-end">
             <span>
-              Card {currentIndex + 1} of {cards.length}
+              {t("flashcard.cardOf", { current: currentIndex + 1, total: cards.length })}
             </span>
           </div>
 

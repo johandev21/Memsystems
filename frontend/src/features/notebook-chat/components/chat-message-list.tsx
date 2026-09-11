@@ -1,6 +1,7 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { ExternalLink, Loader2, RotateCcw, Settings2 } from "lucide-react";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { CitedSourceDTO } from "../api/chat";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { AssistantMessage } from "./assistant-message";
@@ -28,12 +29,14 @@ export function ChatMessageList({
   messages,
   citedSourcesMap,
   showPendingIndicator,
-  pendingLabel = "Waiting for response…",
+  pendingLabel,
   error,
   onCopy,
   onRegenerate,
 }: ChatMessageListProps) {
+  const { t } = useTranslation("chat");
   const turns = useMemo(() => groupMessagesIntoTurns(messages), [messages]);
+  const resolvedPendingLabel = pendingLabel ?? t("pending.waiting");
 
   const lastUserMessageId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -79,7 +82,7 @@ export function ChatMessageList({
             className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse"
           >
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>{pendingLabel}</span>
+            <span>{resolvedPendingLabel}</span>
           </div>
         </MessageScrollerItem>
       )}
@@ -93,6 +96,7 @@ export function ChatMessageList({
 }
 
 function ChatErrorCard({ message, onRegenerate }: { message?: string; onRegenerate: () => void }) {
+  const { t } = useTranslation("chat");
   const classified = useMemo(() => classifyChatError(message), [message]);
 
   return (
@@ -100,7 +104,7 @@ function ChatErrorCard({ message, onRegenerate }: { message?: string; onRegenera
       <p className="font-semibold">{classified.title}</p>
       <p className="mt-1 leading-5 opacity-90">{classified.message}</p>
       {classified.showModelHint && (
-        <p className="mt-1 leading-5 opacity-75">Tip: cheaper models are throttled less often.</p>
+        <p className="mt-1 leading-5 opacity-75">{t("errorCard.tip")}</p>
       )}
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <button
@@ -109,7 +113,7 @@ function ChatErrorCard({ message, onRegenerate }: { message?: string; onRegenera
           className="flex items-center gap-1 rounded-lg bg-destructive px-2.5 py-1 font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors cursor-pointer"
         >
           <RotateCcw className="size-3" />
-          Retry
+          {t("errorCard.retry")}
         </button>
         {classified.showTopUp && (
           <a
@@ -118,7 +122,7 @@ function ChatErrorCard({ message, onRegenerate }: { message?: string; onRegenera
             rel="noreferrer"
             className="flex items-center gap-1 rounded-lg px-2 py-1 font-medium underline underline-offset-2 hover:opacity-80"
           >
-            Add credits
+            {t("errorCard.addCredits")}
             <ExternalLink className="size-3" />
           </a>
         )}
@@ -128,7 +132,7 @@ function ChatErrorCard({ message, onRegenerate }: { message?: string; onRegenera
             className="flex items-center gap-1 rounded-lg px-2 py-1 font-medium underline underline-offset-2 hover:opacity-80"
           >
             <Settings2 className="size-3" />
-            Open settings
+            {t("errorCard.openSettings")}
           </a>
         )}
       </div>

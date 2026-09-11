@@ -7,6 +7,7 @@ import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
@@ -14,19 +15,6 @@ import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 type StudyGuideFormat = "detailed" | "revision";
-
-const FORMAT_OPTIONS = [
-  {
-    id: "detailed" as StudyGuideFormat,
-    title: "Detailed",
-    desc: "Explanations, examples & takeaways",
-  },
-  {
-    id: "revision" as StudyGuideFormat,
-    title: "Revision sheet",
-    desc: "Essential concepts for quick review",
-  },
-] as const;
 
 const SECTION_PRESETS = [4, 6, 8, 12] as const;
 const MAX_SECTIONS = 12;
@@ -36,9 +24,22 @@ export function StudyGuideBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Study Guide",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
+  const formatOptions = [
+    {
+      id: "detailed" as StudyGuideFormat,
+      title: t("studyGuide.format.detailed.title"),
+      desc: t("studyGuide.format.detailed.desc"),
+    },
+    {
+      id: "revision" as StudyGuideFormat,
+      title: t("studyGuide.format.revision.title"),
+      desc: t("studyGuide.format.revision.desc"),
+    },
+  ] as const;
   const [step, setStep] = useState<1 | 2>(1);
   const [format, setFormat] = useState<StudyGuideFormat>(
     value.studyGuideOptions?.format ?? "detailed",
@@ -58,7 +59,7 @@ export function StudyGuideBriefForm({
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  const sectionLabel = `${sectionCount} ${sectionCount === 1 ? "Section" : "Sections"}`;
+  const sectionLabel = t("studyGuide.sectionCount", { count: sectionCount });
 
   const update = (patch: Partial<BriefFormData>) => {
     onChange(patch);
@@ -99,14 +100,18 @@ export function StudyGuideBriefForm({
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <BriefWizardHeader title="Study Guide Setup" step={step} onStepChange={setStep} />
+      <BriefWizardHeader
+        title={t("wizard.title", { kind: t("kinds.study_guide") })}
+        step={step}
+        onStepChange={setStep}
+      />
 
       {step === 1 ? (
         <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
             <BriefChoiceField
-              label="1. Format"
-              options={FORMAT_OPTIONS}
+              label={t("studyGuide.formatLabel")}
+              options={formatOptions}
               value={format}
               onChange={(nextFormat) => {
                 setFormat(nextFormat);
@@ -116,7 +121,9 @@ export function StudyGuideBriefForm({
 
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <Label className="text-sm font-medium text-text-primary">2. Sections</Label>
+                <Label className="text-sm font-medium text-text-primary">
+                  {t("studyGuide.sectionsLabel")}
+                </Label>
                 <span className="text-xs font-medium text-primary">{sectionLabel}</span>
               </div>
               <div className="grid grid-cols-5 gap-2">
@@ -152,7 +159,7 @@ export function StudyGuideBriefForm({
                       onChange={(e) => handleCustomChange(e.target.value)}
                       onBlur={handleCustomBlur}
                       placeholder="1-12"
-                      aria-label="Custom section count"
+                      aria-label={t("studyGuide.customSectionAria")}
                       className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
                       autoFocus
                     />
@@ -172,7 +179,7 @@ export function StudyGuideBriefForm({
                       "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
                     )}
                   >
-                    Custom
+                    {t("actions.custom")}
                   </button>
                 )}
               </div>
@@ -180,20 +187,22 @@ export function StudyGuideBriefForm({
 
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-text-primary">
-                3. Knowledge Sources
+                {t("fields.knowledgeSourcesStep3")}
                 {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <GenerationSourcePopover
                 sources={sources}
                 selectedIds={value.sourceIds}
                 onChange={(sourceIds) => update({ sourceIds })}
-                emptyMessage="No sources in notebook. Study guide will generate using general knowledge."
+                emptyMessage={t("knowledge.emptySources", {
+                  kind: t("kinds.study_guide"),
+                })}
               />
             </div>
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-transparent">
-            <span className="text-xs text-text-faint">Configure custom instructions next</span>
+            <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
             <Button
               type="button"
               onClick={() => setStep(2)}
@@ -202,7 +211,7 @@ export function StudyGuideBriefForm({
                 CTA_BUTTON_CLASS,
               )}
             >
-              Next Step
+              {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </Button>
           </div>
@@ -212,21 +221,23 @@ export function StudyGuideBriefForm({
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="brief-study-guide" className="text-sm font-medium text-text-primary">
-                Custom Instructions
+                {t("fields.customInstructions")}
                 {!hasSources && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <Textarea
                 id="brief-study-guide"
                 value={value.brief}
                 onChange={(e) => update({ brief: e.target.value })}
-                placeholder="Describe what topics or focus areas to include in this study guide..."
+                placeholder={t("studyGuide.instructionsPlaceholder")}
                 className="min-h-[120px] max-h-[200px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+              <Label className="text-xs font-medium text-text-tertiary">
+                {t("fields.destinationFolder")}
+              </Label>
               <FolderPicker
                 notebookId={notebookId}
                 value={value.folderId}
@@ -244,7 +255,7 @@ export function StudyGuideBriefForm({
               className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
             >
               <ArrowLeft className="size-4" />
-              Back
+              {t("actions.back")}
             </Button>
             <Button
               type="button"
@@ -255,7 +266,7 @@ export function StudyGuideBriefForm({
               disabled={!canSubmit}
               onClick={onSubmit}
             >
-              {submitLabel}
+              {submitLabel ?? t("actions.generateKind", { kind: t("kinds.study_guide") })}
             </Button>
           </div>
         </div>

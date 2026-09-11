@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   dismissWebSearchJob,
   importWebSources,
@@ -25,6 +26,7 @@ export interface WebSearchState {
 }
 
 export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIVE_INFINITY) {
+  const { t } = useTranslation("sources");
   const queryClient = useQueryClient();
   const jobQuery = useQuery(webSearchJobQueryOptions(notebookId));
   const job = jobQuery.data ?? null;
@@ -74,7 +76,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
   }, [candidates, jobId, selectionLimit]);
 
   const searchError =
-    job?.status === "failed" ? (job.lastError ?? "Web search failed") : localError;
+    job?.status === "failed" ? (job.lastError ?? t("webSearch.searchFailed")) : localError;
 
   const runSearch = useCallback(async () => {
     const query = queryDraft.trim();
@@ -84,9 +86,9 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
       const job = await startWebSearchJob(notebookId, { query });
       queryClient.setQueryData(webSearchJobQueryOptions(notebookId).queryKey, job);
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Web search failed");
+      setLocalError(err instanceof Error ? err.message : t("webSearch.searchFailed"));
     }
-  }, [notebookId, queryClient, queryDraft]);
+  }, [notebookId, queryClient, queryDraft, t]);
 
   const toggleCandidate = useCallback(
     (url: string) => {
@@ -134,11 +136,11 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
         queryKey: ["sources", notebookId],
       });
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Import failed");
+      setLocalError(err instanceof Error ? err.message : t("webSearch.importFailed"));
     } finally {
       setImporting(false);
     }
-  }, [candidates, importing, job?.query, notebookId, queryClient, selectedUrls]);
+  }, [candidates, importing, job?.query, notebookId, queryClient, selectedUrls, t]);
 
   const retryFailed = useCallback(async () => {
     const failed = candidates.filter((c) => {
@@ -168,11 +170,11 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
         queryKey: ["sources", notebookId],
       });
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Retry failed");
+      setLocalError(err instanceof Error ? err.message : t("webSearch.retryFailed"));
     } finally {
       setImporting(false);
     }
-  }, [candidates, importResults, importing, job?.query, notebookId, queryClient]);
+  }, [candidates, importResults, importing, job?.query, notebookId, queryClient, t]);
 
   const clearResults = useCallback(async (): Promise<boolean> => {
     if (clearInFlight.current) return false;
@@ -187,13 +189,13 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
       setLocalError(null);
       return true;
     } catch {
-      setClearError("Couldn't clear these results. Try again.");
+      setClearError(t("webSearch.clearFailed"));
       return false;
     } finally {
       clearInFlight.current = false;
       setClearing(false);
     }
-  }, [notebookId, queryClient]);
+  }, [notebookId, queryClient, t]);
 
   const state: WebSearchState = {
     query: queryDraft,

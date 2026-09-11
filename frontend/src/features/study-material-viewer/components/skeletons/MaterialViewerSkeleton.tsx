@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 import type { StudyMaterialKind } from "../../types";
 import { CaseStudySkeleton } from "./CaseStudySkeleton";
 import { FlashcardSkeleton } from "./FlashcardSkeleton";
@@ -63,7 +64,37 @@ function KindSkeleton({ kind }: { kind?: StudyMaterialKind | null }) {
 }
 
 export function MaterialViewerSkeleton({ kind }: MaterialViewerSkeletonProps) {
-  const label = kind ? `Loading ${kind.replace("_", " ")}` : "Loading study material";
+  const { t } = useTranslation("viewer");
+  let label: string;
+  switch (kind) {
+    case "quiz":
+      label = t("skeleton.kind.quiz");
+      break;
+    case "simple_flashcard":
+      label = t("skeleton.kind.simple_flashcard");
+      break;
+    case "slides":
+      label = t("skeleton.kind.slides");
+      break;
+    case "roadmap":
+      label = t("skeleton.kind.roadmap");
+      break;
+    case "mind_map":
+      label = t("skeleton.kind.mind_map");
+      break;
+    case "practice_problems":
+      label = t("skeleton.kind.practice_problems");
+      break;
+    case "case_study":
+      label = t("skeleton.kind.case_study");
+      break;
+    case "study_guide":
+      label = t("skeleton.kind.study_guide");
+      break;
+    default:
+      label = t("skeleton.loadingDefault");
+      break;
+  }
 
   return (
     <div
@@ -77,7 +108,7 @@ export function MaterialViewerSkeleton({ kind }: MaterialViewerSkeletonProps) {
       <div className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6">
         <KindSkeleton kind={kind} />
       </div>
-      <span className="sr-only">Loading study material…</span>
+      <span className="sr-only">{t("skeleton.loadingSr")}</span>
     </div>
   );
 }

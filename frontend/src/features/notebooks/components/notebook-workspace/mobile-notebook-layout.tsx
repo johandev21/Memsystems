@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ChatPanel } from "@/features/notebook-chat";
 import { SourceContentViewer, SourcesPanel } from "@/features/sources";
@@ -27,6 +28,7 @@ export function MobileNotebookLayout({
   selectedLocator,
   onSelectSource,
 }: MobileNotebookLayoutProps) {
+  const { t } = useTranslation("notebooks");
   const [activeTab, setActiveTab] = useMobileChatNavigation();
   const [suspendedMaterialId, setSuspendedMaterialId] = useState<string | null>(null);
 
@@ -66,7 +68,7 @@ export function MobileNotebookLayout({
               onClick={() => window.dispatchEvent(new CustomEvent("restore-study-material"))}
             >
               <ArrowLeft className="size-3.5" />
-              Back to Material
+              {t("panels.backToMaterial")}
             </Button>
           </div>
         )}

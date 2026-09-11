@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTranslation } from "react-i18next";
 
 export function PracticeExitDialog({
   isOpen,
@@ -18,20 +19,19 @@ export function PracticeExitDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation("viewer");
+
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Leave Practice Session?</AlertDialogTitle>
-          <AlertDialogDescription>
-            You have answers or evaluations in this session. If you leave now, your session
-            progress will be lost.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("practice.exitDialog.title")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("practice.exitDialog.description")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Stay and Practice</AlertDialogCancel>
+          <AlertDialogCancel onClick={onCancel}>{t("practice.exitDialog.stay")}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} variant="destructive">
-            Leave Anyway
+            {t("practice.exitDialog.leave")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
