@@ -124,6 +124,9 @@
         "tabularCorrupted": "El archivo de datos parece estar dañado o no ser válido.",
         "zipCorrupted": "El archivo comprimido parece estar dañado o no ser válido."
       },
+      "processing": {
+        "noArtifact": "La fuente no tiene un artefacto original procesable"
+      },
       "source": {
         "notFound": "Fuente no encontrada"
       },
@@ -247,6 +250,14 @@
       },
       "studyMaterialNotFound": "Material de estudio no encontrado",
       "titleEmpty": "El título no puede estar vacío"
+    },
+    "validation": {
+      "invalid": "Valor no válido para {{field}}.",
+      "invalidFormat": "Formato no válido para {{field}}.",
+      "invalidType": "Valor no válido para {{field}}: se esperaba {{expected}}.",
+      "invalidValue": "Valor no válido para {{field}}.",
+      "tooBig": "Valor no válido para {{field}}: debe ser como máximo {{maximum}}.",
+      "tooSmall": "Valor no válido para {{field}}: debe ser al menos {{minimum}}."
     }
   },
   "iconPicker": {

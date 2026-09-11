@@ -35,7 +35,7 @@ import { PptxParserService } from './pptx-parser.service';
 import { EpubParserService } from './epub-parser.service';
 import { TabularInspectorService } from './tabular-inspector.service';
 import { TabularParserService } from './tabular-parser.service';
-import { DomainError } from '../../common/errors/domain-error';
+import { DomainError, InternalError } from '../../common/errors/domain-error';
 
 export interface SourceProcessingJobPayload {
   sourceId: string;
@@ -285,7 +285,9 @@ export class SourceProcessingHandler implements JobHandler<
           source.title,
         );
       } else {
-        throw new Error('Source has no processable original artifact');
+        throw new InternalError('Source has no processable original artifact', {
+          messageKey: 'errors.sources.processing.noArtifact',
+        });
       }
 
       if (!(await this.queue.isActive(job.id))) {

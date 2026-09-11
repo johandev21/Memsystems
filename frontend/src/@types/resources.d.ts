@@ -287,6 +287,9 @@ export default interface Resources {
           "tabularCorrupted": "The data file appears to be corrupt or invalid.",
           "zipCorrupted": "The archive appears to be corrupt or invalid."
         },
+        "processing": {
+          "noArtifact": "Source has no processable original artifact"
+        },
         "source": {
           "notFound": "Source not found"
         },
@@ -410,6 +413,14 @@ export default interface Resources {
         },
         "studyMaterialNotFound": "Study material not found",
         "titleEmpty": "Title cannot be empty"
+      },
+      "validation": {
+        "invalid": "Invalid value for {{field}}.",
+        "invalidFormat": "Invalid format for {{field}}.",
+        "invalidType": "Invalid value for {{field}}: expected {{expected}}.",
+        "invalidValue": "Invalid value for {{field}}.",
+        "tooBig": "Invalid value for {{field}}: must be at most {{maximum}}.",
+        "tooSmall": "Invalid value for {{field}}: must be at least {{minimum}}."
       }
     },
     "iconPicker": {
