@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { fetchGatewayCredits, refreshGatewayModels } from "../api/gateway";
 import { GatewayKeyForm } from "./gateway-key-form";
 
-function formatCredits(value: string | null | undefined): string | null {
+function formatCredits(value: string | null | undefined, locale: string): string | null {
   if (value == null || value === "") return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return value;
-  return parsed.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  return parsed.toLocaleString(locale, { maximumFractionDigits: 4 });
 }
 
 function GatewayStatusBadge({
@@ -123,7 +123,7 @@ function GatewayCardFooter({
   disabled: boolean;
   onRefresh: () => void;
 }) {
-  const { t } = useTranslation("settings");
+  const { t, i18n } = useTranslation("settings");
 
   return (
     <div className="flex flex-col items-start gap-2 text-xs text-muted-foreground">
@@ -143,7 +143,11 @@ function GatewayCardFooter({
         </Button>
         <span>{t("gateway.refreshHint")}</span>
         {checkedAt && (
-          <span>{t("gateway.lastChecked", { date: new Date(checkedAt).toLocaleString() })}</span>
+          <span>
+            {t("gateway.lastChecked", {
+              date: new Date(checkedAt).toLocaleString(i18n.resolvedLanguage ?? "en"),
+            })}
+          </span>
         )}
       </div>
       <a
@@ -181,7 +185,7 @@ function getGatewayDescription(
 }
 
 export function GatewayCard() {
-  const { t } = useTranslation("settings");
+  const { t, i18n } = useTranslation("settings");
   const { data: connection, isPending } = useConnectionStatus();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -197,8 +201,9 @@ export function GatewayCard() {
   const degraded = connection?.degraded ?? false;
   const usable = connected || degraded;
   const modelCount = connection?.models.length ?? 0;
-  const balance = formatCredits(credits?.balance);
-  const used = formatCredits(credits?.totalUsed);
+  const locale = i18n.resolvedLanguage ?? "en";
+  const balance = formatCredits(credits?.balance, locale);
+  const used = formatCredits(credits?.totalUsed, locale);
 
   const handleRefreshModels = async () => {
     setIsRefreshing(true);

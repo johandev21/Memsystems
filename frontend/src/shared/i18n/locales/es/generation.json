@@ -32,7 +32,7 @@
     "questionCount_other": "{{count}} preguntas"
   },
   "dialog": {
-    "gatewayDescription": "Se requiere una clave de AI Gateway para generar materiales de estudio.",
+    "gatewayDescription": "Se requiere una clave del Gateway de IA para generar materiales de estudio.",
     "title": "Generar {{kind}}"
   },
   "errors": {
