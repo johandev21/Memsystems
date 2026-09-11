@@ -47,7 +47,7 @@ describe('GenerationService message keys', () => {
     await expect(
       service.generate('notebook-1', { ...baseInput, sourceIds: ['source-1'] }),
     ).rejects.toMatchObject({
-      message: 'errors.generation.sourcesUnavailable',
+      messageKey: 'errors.generation.sourcesUnavailable',
       code: 'bad_request',
     });
   });
@@ -58,7 +58,7 @@ describe('GenerationService message keys', () => {
     await expect(
       service.generate('notebook-1', baseInput),
     ).rejects.toMatchObject({
-      message: 'errors.generation.sourceOrBrief.studyGuide',
+      messageKey: 'errors.generation.sourceOrBrief.studyGuide',
       code: 'bad_request',
     });
   });
@@ -74,7 +74,7 @@ describe('GenerationService message keys', () => {
         questionCount: 31,
       }),
     ).rejects.toMatchObject({
-      message: 'errors.generation.problemCount',
+      messageKey: 'errors.generation.problemCount',
       code: 'bad_request',
       params: { min: 1, max: 30 },
     });
@@ -89,7 +89,7 @@ describe('GenerationService message keys', () => {
         kind: 'practice_problems',
       }),
     ).rejects.toMatchObject({
-      message: 'errors.generation.sourceOrBrief.practiceProblems',
+      messageKey: 'errors.generation.sourceOrBrief.practiceProblems',
       code: 'bad_request',
     });
   });
@@ -105,7 +105,7 @@ describe('GenerationService message keys', () => {
         questionCount: 11,
       }),
     ).rejects.toMatchObject({
-      message: 'errors.generation.questionCount',
+      messageKey: 'errors.generation.questionCount',
       code: 'bad_request',
       params: { min: 1, max: 10 },
     });

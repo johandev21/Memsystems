@@ -2,6 +2,10 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { CRAWLER_SERVICE, type CrawlerService } from '../crawler/crawler.types';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import { SOURCE_LIMIT, SourcesService } from './sources.service';
+import {
+  DomainError,
+  ServiceUnavailableError,
+} from '../../common/errors/domain-error';
 
 const MIN_WEB_SEARCH_SOURCE_TEXT_LENGTH = 1000;
 
@@ -81,7 +85,10 @@ export class WebSearchService {
     await this.notebooksService.assertNotebookOwner(notebookId);
 
     if (!this.crawler) {
-      throw new Error('Web search is unavailable: no crawler is configured.');
+      throw new ServiceUnavailableError(
+        'Web search is unavailable: no crawler is configured.',
+        { messageKey: 'errors.sources.webSearch.unavailable' },
+      );
     }
     const found = await this.crawler.search(
       input.query,
@@ -186,6 +193,10 @@ export class WebSearchService {
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to scrape source';
+        const storedError =
+          err instanceof DomainError && err.messageKey
+            ? err.messageKey
+            : message;
         this.logger.error(`web-search import: scrape failed`, {
           url: candidate.url,
           error:
@@ -195,7 +206,7 @@ export class WebSearchService {
           url: candidate.url,
           title: candidate.title ?? fallbackTitle,
           status: 'scrape_failed',
-          error: message,
+          error: storedError,
         });
       }
     }

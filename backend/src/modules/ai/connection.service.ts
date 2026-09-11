@@ -104,12 +104,16 @@ export class ConnectionService {
     const resolved = resolveModelId(modelId);
     const catalog = this.modelSyncService.getModels();
     if (!catalog.some((model) => model.id === resolved)) {
-      throw new ServiceUnavailableError(`Model ${modelId} is not supported.`);
+      throw new ServiceUnavailableError(`Model ${modelId} is not supported.`, {
+        messageKey: 'errors.ai.model.notSupported',
+        params: { model: modelId },
+      });
     }
     const apiKey = await this.userSettingsService.getGatewayApiKey();
     if (!apiKey) {
       throw new ServiceUnavailableError(
         'AI Gateway is not connected. Add your AI Gateway key in Settings.',
+        { messageKey: 'errors.ai.gateway.notConnected' },
       );
     }
     const health = await this.checkHealth(
@@ -122,6 +126,7 @@ export class ConnectionService {
     if (!health.ok && !health.degraded)
       throw new ServiceUnavailableError(
         health.detail ?? 'AI Gateway connection failed',
+        { messageKey: 'errors.ai.gateway.connectionFailed' },
       );
   }
 

@@ -62,15 +62,22 @@ export type EvaluateProblemRequest = z.infer<
 export function validatePracticeProblems(content: unknown) {
   const result = PracticeProblemsContent.safeParse(content);
   if (!result.success)
-    throw new BadRequestError('Invalid practice problems content');
+    throw new BadRequestError('Invalid practice problems content', {
+      messageKey: 'errors.studyMaterials.practiceProblems.invalidContent',
+    });
   const set = result.data;
   if (new Set(set.problems.map((p) => p.id)).size !== set.problems.length) {
-    throw new BadRequestError('Practice problem IDs must be unique');
+    throw new BadRequestError('Practice problem IDs must be unique', {
+      messageKey: 'errors.studyMaterials.practiceProblems.problemIdsUnique',
+    });
   }
   for (const problem of set.problems) {
     if (new Set(problem.steps.map((s) => s.id)).size !== problem.steps.length) {
       throw new BadRequestError(
         'Worked step IDs must be unique within a problem',
+        {
+          messageKey: 'errors.studyMaterials.practiceProblems.stepIdsUnique',
+        },
       );
     }
   }
@@ -93,6 +100,9 @@ export function validatePracticeProblemSources(
   if (bad) {
     throw new BadRequestError(
       'Practice problems reference an unselected or unavailable source',
+      {
+        messageKey: 'errors.studyMaterials.practiceProblems.sourceUnavailable',
+      },
     );
   }
   return { ...set, sourceIds: [...allowed] };
@@ -116,6 +126,7 @@ export function prepareGeneratedPracticeProblems(
   if (set.problems.length !== settings.problemCount) {
     throw new BadRequestError(
       'Practice problem count does not match the request',
+      { messageKey: 'errors.studyMaterials.practiceProblems.countMismatch' },
     );
   }
   return { ...set, difficulty: settings.difficulty };

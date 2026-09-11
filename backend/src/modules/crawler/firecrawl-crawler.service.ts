@@ -209,6 +209,7 @@ export class FirecrawlCrawlerService implements CrawlerService {
       throw new WebScrapeError(
         `Firecrawl rejected the API key — check FIRECRAWL_API_KEY.`,
         'unauthorized',
+        { messageKey: 'errors.sources.parse.crawlFailed' },
       );
     }
     if (isRateLimitError(error)) {
@@ -218,6 +219,7 @@ export class FirecrawlCrawlerService implements CrawlerService {
       throw new WebScrapeError(
         `Firecrawl rate limit hit for ${subject}: slow down and retry later.`,
         'rate_limited',
+        { messageKey: 'errors.sources.parse.crawlFailed' },
       );
     }
     if (isTimeoutError(error)) {
@@ -227,6 +229,7 @@ export class FirecrawlCrawlerService implements CrawlerService {
       throw new WebScrapeError(
         `Scrape timed out after ${this.timeoutMs}ms: ${subject}`,
         'timeout',
+        { messageKey: 'errors.sources.parse.crawlFailed' },
       );
     }
     const detail = error instanceof Error ? error.message : String(error);
@@ -236,6 +239,7 @@ export class FirecrawlCrawlerService implements CrawlerService {
     throw new WebScrapeError(
       `Scrape failed for ${subject}: ${detail}`,
       'fetch_failed',
+      { messageKey: 'errors.sources.parse.crawlFailed' },
     );
   }
 }

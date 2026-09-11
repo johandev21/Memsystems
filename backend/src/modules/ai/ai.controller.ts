@@ -56,6 +56,7 @@ export class AiController {
     if (!apiKey) {
       throw new ServiceUnavailableError(
         'Add your AI Gateway key in Settings to view credits.',
+        { messageKey: 'errors.ai.gateway.creditsKeyMissing' },
       );
     }
     try {
@@ -66,6 +67,7 @@ export class AiController {
         error instanceof Error
           ? error.message
           : 'Could not load gateway credits.',
+        { messageKey: 'errors.ai.gateway.creditsLoadFailed' },
       );
     }
   }
@@ -84,7 +86,9 @@ export class AiController {
       body.apiKey !== undefined ||
       body.openaiApiKey !== undefined
     ) {
-      throw new BadRequestError(LEGACY_REMOVED_MESSAGE);
+      throw new BadRequestError(LEGACY_REMOVED_MESSAGE, {
+        messageKey: 'errors.ai.settings.legacyProviderKeys',
+      });
     }
     if (body.gatewayApiKey !== undefined) {
       if (body.gatewayApiKey == null || body.gatewayApiKey.trim() === '') {
@@ -119,20 +123,24 @@ export class AiController {
       if (classified.kind === 'auth') {
         throw new UnauthorizedError(
           'That gateway key was rejected. Check the key and try again.',
+          { messageKey: 'errors.ai.gateway.keyRejected' },
         );
       }
       if (classified.kind === 'rate_limited') {
         throw new RateLimitedError(
           'The AI service is busy right now. Please retry in a moment.',
+          { messageKey: 'errors.ai.gateway.busy' },
         );
       }
       if (classified.kind === 'entitlement') {
         throw new EntitlementError(
           'That gateway key has no model access on its plan.',
+          { messageKey: 'errors.ai.gateway.noModelAccess' },
         );
       }
       throw new ServiceUnavailableError(
         classified.detail ?? 'Could not verify the gateway key.',
+        { messageKey: 'errors.ai.gateway.verifyFailed' },
       );
     }
   }

@@ -59,13 +59,17 @@ function extractNotesText(xml: string, warnings: string[]): string | undefined {
 export class PptxParserService {
   parse(buffer: Buffer): PptxParseResult {
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('PPTX buffer is empty.');
+      throw new BadRequestError('PPTX buffer is empty.', {
+        messageKey: 'errors.sources.inspect.pptxEmpty',
+      });
     }
     if (buffer.length >= 8) {
       const sig0 = buffer.readUInt32BE(0);
       const sig1 = buffer.readUInt32BE(4);
       if (sig0 === 0xd0cf11e0 && sig1 === 0xa11b1ae1) {
-        throw new BadRequestError('Legacy PPT not supported, requires PPTX');
+        throw new BadRequestError('Legacy PPT not supported, requires PPTX', {
+          messageKey: 'errors.sources.inspect.pptxLegacy',
+        });
       }
     }
     if (
@@ -75,7 +79,9 @@ export class PptxParserService {
       buffer[2] !== 0x03 ||
       buffer[3] !== 0x04
     ) {
-      throw new BadRequestError('Invalid PPTX ZIP header.');
+      throw new BadRequestError('Invalid PPTX ZIP header.', {
+        messageKey: 'errors.sources.parse.pptxCorrupted',
+      });
     }
 
     const warnings: string[] = [];
@@ -86,6 +92,7 @@ export class PptxParserService {
       if (err instanceof BadRequestError) throw err;
       throw new BadRequestError(
         `Failed to unzip PPTX: ${err instanceof Error ? err.message : String(err)}`,
+        { messageKey: 'errors.sources.parse.pptxCorrupted' },
       );
     }
 
@@ -133,6 +140,10 @@ export class PptxParserService {
     if (orderedNumbers.length > 500) {
       throw new BadRequestError(
         `PPTX slide count (${orderedNumbers.length}) exceeds maximum allowed limit of 500.`,
+        {
+          messageKey: 'errors.sources.inspect.pptxTooManySlides',
+          params: { count: orderedNumbers.length, max: 500 },
+        },
       );
     }
 

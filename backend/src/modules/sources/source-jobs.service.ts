@@ -61,7 +61,10 @@ export class SourceJobsService {
       .from(sources)
       .where(eq(sources.id, sourceId));
 
-    if (!source) throw new NotFoundError('Source');
+    if (!source)
+      throw new NotFoundError('Source', {
+        messageKey: 'errors.sources.source.notFound',
+      });
 
     if (this.needsProcessing(source)) {
       return this.enqueueProcessing(sourceId);
@@ -93,7 +96,10 @@ export class SourceJobsService {
       .select()
       .from(sources)
       .where(eq(sources.id, sourceId));
-    if (!source) throw new NotFoundError('Source');
+    if (!source)
+      throw new NotFoundError('Source', {
+        messageKey: 'errors.sources.source.notFound',
+      });
 
     const job = await this.jobQueue.enqueue<
       SourceProcessingJobPayload,

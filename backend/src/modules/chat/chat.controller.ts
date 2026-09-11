@@ -75,7 +75,9 @@ export class ChatController {
       (p) => (p as { type: string }).type === 'file',
     );
     if (!content.trim() && !hasFiles) {
-      throw new BadRequestError('Empty user message');
+      throw new BadRequestError('Empty user message', {
+        messageKey: 'errors.chat.message.empty',
+      });
     }
 
     const lastUserMessage = [...body.messages]

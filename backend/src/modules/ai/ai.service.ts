@@ -43,19 +43,29 @@ function toSearchDomainError(error: unknown, modelName: string): Error {
   if (classified.kind === 'rate_limited') {
     return new RateLimitedError(
       'The AI service is busy right now. Please retry in a moment.',
-      { cause: error instanceof Error ? error : undefined },
+      {
+        cause: error instanceof Error ? error : undefined,
+        messageKey: 'errors.ai.gateway.busy',
+      },
     );
   }
   if (classified.kind === 'entitlement') {
     return new EntitlementError(
       'This model is not available on your plan. Try another model or add credits.',
-      { cause: error instanceof Error ? error : undefined },
+      {
+        cause: error instanceof Error ? error : undefined,
+        messageKey: 'errors.ai.gateway.entitlement',
+      },
     );
   }
   if (classified.kind === 'capability') {
     return new CapabilityUnsupportedError(
       `${modelName} doesn't support web search. Switch to a model that supports web search and try again.`,
-      { cause: error instanceof Error ? error : undefined },
+      {
+        cause: error instanceof Error ? error : undefined,
+        messageKey: 'errors.ai.model.capabilityUnsupported',
+        params: { model: modelName, capability: 'web search' },
+      },
     );
   }
   return error instanceof Error ? error : new Error(String(error));
@@ -85,11 +95,15 @@ export class AiService {
     const resolved = resolveModelId(modelId);
     const catalog = this.modelSyncService.getModels();
     if (!catalog.some((model) => model.id === resolved)) {
-      throw new BadRequestError(`Model ${modelId} is not supported.`);
+      throw new BadRequestError(`Model ${modelId} is not supported.`, {
+        messageKey: 'errors.ai.model.notSupported',
+        params: { model: modelId },
+      });
     }
     if (!(await this.hasEffectiveAuth())) {
       throw new BadRequestError(
         'AI Gateway is not connected. Add your AI Gateway key in Settings.',
+        { messageKey: 'errors.ai.gateway.notConnected' },
       );
     }
     // The global gateway key lives in the singleton app_settings row.
@@ -97,6 +111,7 @@ export class AiService {
     if (!apiKey) {
       throw new BadRequestError(
         'AI Gateway is not connected. Add your AI Gateway key in Settings.',
+        { messageKey: 'errors.ai.gateway.notConnected' },
       );
     }
     return createGatewayProvider({
@@ -138,6 +153,10 @@ export class AiService {
     const modelName = selected?.displayName ?? modelId;
     throw new CapabilityUnsupportedError(
       `${modelName} doesn't support ${label}. Switch to a model that supports ${label} and try again.`,
+      {
+        messageKey: 'errors.ai.model.capabilityUnsupported',
+        params: { model: modelName, capability: label },
+      },
     );
   }
 
@@ -156,6 +175,10 @@ export class AiService {
     if (!webSearchTool) {
       throw new BadRequestError(
         `Model ${modelId} does not support web search.`,
+        {
+          messageKey: 'errors.ai.model.webSearchUnsupported',
+          params: { model: modelId },
+        },
       );
     }
 

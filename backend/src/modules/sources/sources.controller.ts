@@ -105,7 +105,9 @@ export class SourcesController {
     @Body('title') title?: string,
   ) {
     if (!file) {
-      throw new BadRequestError('File is required');
+      throw new BadRequestError('File is required', {
+        messageKey: 'errors.sources.create.fileRequired',
+      });
     }
     return this.sourcesService.createFile(
       notebookId,

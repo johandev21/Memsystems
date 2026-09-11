@@ -14,6 +14,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { BadRequestError } from '../../common/errors/domain-error';
 import { NotebooksService } from './notebooks.service';
 
 const createNotebookSchema = z.object({
@@ -102,7 +103,9 @@ export class NotebooksController {
     }
 
     if (!file) {
-      throw new Error('File is required');
+      throw new BadRequestError('File is required', {
+        messageKey: 'errors.notebooks.banner.fileRequired',
+      });
     }
 
     return this.notebooksService.uploadBanner(

@@ -29,13 +29,18 @@ export const StudyGuideContent = z.object({
 
 export function validateStudyGuide(content: unknown) {
   const result = StudyGuideContent.safeParse(content);
-  if (!result.success) throw new BadRequestError('Invalid study guide content');
+  if (!result.success)
+    throw new BadRequestError('Invalid study guide content', {
+      messageKey: 'errors.studyMaterials.studyGuide.invalidContent',
+    });
   const guide = result.data;
   if (
     new Set(guide.sections.map((section) => section.id)).size !==
     guide.sections.length
   ) {
-    throw new BadRequestError('Study guide section IDs must be unique');
+    throw new BadRequestError('Study guide section IDs must be unique', {
+      messageKey: 'errors.studyMaterials.studyGuide.sectionIdsUnique',
+    });
   }
   return guide;
 }
@@ -53,6 +58,7 @@ export function validateStudyGuideSources(
   ) {
     throw new BadRequestError(
       'Study guide references an unselected or unavailable source',
+      { messageKey: 'errors.studyMaterials.studyGuide.sourceUnavailable' },
     );
   }
   return { ...guide, sourceIds: [...allowed] };
@@ -76,11 +82,13 @@ export function prepareGeneratedStudyGuide(
   ) {
     throw new BadRequestError(
       'Detailed study guides require examples, misconceptions, and takeaways in each section',
+      { messageKey: 'errors.studyMaterials.studyGuide.detailedRequiresExtras' },
     );
   }
   if (guide.sections.length !== settings.sectionCount) {
     throw new BadRequestError(
       'Study guide section count does not match the request',
+      { messageKey: 'errors.studyMaterials.studyGuide.countMismatch' },
     );
   }
   return { ...guide, format: settings.format };

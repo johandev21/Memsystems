@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resolveDynamicMessage } from "@/shared/api/api-error";
 import {
   dismissWebSearchJob,
   importWebSources,
@@ -76,7 +77,9 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
   }, [candidates, jobId, selectionLimit]);
 
   const searchError =
-    job?.status === "failed" ? (job.lastError ?? t("webSearch.searchFailed")) : localError;
+    job?.status === "failed"
+      ? resolveDynamicMessage(job.lastError, t("webSearch.searchFailed"))
+      : localError;
 
   const runSearch = useCallback(async () => {
     const query = queryDraft.trim();

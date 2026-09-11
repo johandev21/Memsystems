@@ -1,6 +1,7 @@
 import { Check, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
+import { resolveDynamicMessage } from "@/shared/api/api-error";
 import { cn } from "@/shared/utils/cn";
 import type { WebSearchCandidate, WebSearchImportResultItem } from "../../api/web-search";
 import { getHostname } from "./web-search-utils";
@@ -70,14 +71,12 @@ export function SearchCandidateRow({
           <p
             className={cn(
               "mt-1 text-xs",
-              result.status === "scrape_failed"
-                ? "text-destructive"
-                : "text-muted-foreground",
+              result.status === "scrape_failed" ? "text-destructive" : "text-muted-foreground",
             )}
           >
             {result.status === "scrape_failed"
               ? t("webSearchResults.addError", {
-                  error: result.error ?? t("webSearchResults.fetchFailed"),
+                  error: resolveDynamicMessage(result.error, t("webSearchResults.fetchFailed")),
                 })
               : t("webSearchResults.limitReached")}
           </p>

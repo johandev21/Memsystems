@@ -1,9 +1,6 @@
 import i18n from "@/shared/i18n/i18n";
 
-type DynamicTranslate = (
-  key: string,
-  options?: Record<string, string | number>,
-) => string;
+type DynamicTranslate = (key: string, options?: Record<string, string | number>) => string;
 
 const translateDynamic = i18n.t as unknown as DynamicTranslate;
 
@@ -32,12 +29,15 @@ export function createApiErrorMessage(res: Response, fallback?: string): string 
   return `Request failed (${res.status})`;
 }
 
-export function resolveApiErrorMessage(
-  data: ApiErrorResponse,
-  fallback: string,
-): string {
+export function resolveApiErrorMessage(data: ApiErrorResponse, fallback: string): string {
   const key = data.error;
   if (!key) return fallback;
   if (!i18n.exists(key)) return key;
   return translateDynamic(key, data.params);
+}
+
+export function resolveDynamicMessage(value: string | null | undefined, fallback: string): string {
+  if (!value) return fallback;
+  if (!i18n.exists(value)) return value;
+  return translateDynamic(value);
 }

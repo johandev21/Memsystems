@@ -136,9 +136,12 @@ export class StorageService {
         input.expectedLength !== undefined &&
         total !== input.expectedLength
       ) {
-        throw new BadRequestError('Upload size does not match the upload target', {
-          messageKey: 'errors.sources.upload.sizeMismatch',
-        });
+        throw new BadRequestError(
+          'Upload size does not match the upload target',
+          {
+            messageKey: 'errors.sources.upload.sizeMismatch',
+          },
+        );
       }
       output.end();
       await once(output, 'finish');

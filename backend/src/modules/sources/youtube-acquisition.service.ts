@@ -144,6 +144,10 @@ export class YouTubeAcquisitionService {
     if (!videoId) {
       throw new BadRequestError(
         `Invalid YouTube URL or video ID: "${urlOrVideoId}"`,
+        {
+          messageKey: 'errors.sources.youtube.invalidUrl',
+          params: { url: urlOrVideoId },
+        },
       );
     }
 
@@ -171,6 +175,12 @@ export class YouTubeAcquisitionService {
         if (!fallbackOnError) {
           throw new BadRequestError(
             `Failed to parse user-provided caption: ${err instanceof Error ? err.message : String(err)}`,
+            {
+              messageKey: 'errors.sources.youtube.captionParseFailed',
+              params: {
+                reason: err instanceof Error ? err.message : String(err),
+              },
+            },
           );
         }
       }
@@ -227,6 +237,12 @@ export class YouTubeAcquisitionService {
         if (!fallbackOnError) {
           throw new BadRequestError(
             `OAuth caption acquisition failed: ${err instanceof Error ? err.message : String(err)}`,
+            {
+              messageKey: 'errors.sources.youtube.oauthCaptionFailed',
+              params: {
+                reason: err instanceof Error ? err.message : String(err),
+              },
+            },
           );
         }
       }

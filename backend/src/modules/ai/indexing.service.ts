@@ -113,6 +113,10 @@ export class IndexingService {
     if (embeddings.length !== chunks.length) {
       throw new InternalError(
         `Embedding count mismatch: expected ${chunks.length}, received ${embeddings.length}`,
+        {
+          messageKey: 'errors.ai.indexing.embeddingCountMismatch',
+          params: { expected: chunks.length, received: embeddings.length },
+        },
       );
     }
 

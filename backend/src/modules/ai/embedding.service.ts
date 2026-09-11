@@ -22,6 +22,7 @@ export class EmbeddingService {
     if (!apiKey) {
       throw new ServiceUnavailableError(
         'Embedding model is not configured. Add your AI Gateway key in Settings.',
+        { messageKey: 'errors.ai.embedding.notConfigured' },
       );
     }
     const gateway = createGateway({ apiKey });

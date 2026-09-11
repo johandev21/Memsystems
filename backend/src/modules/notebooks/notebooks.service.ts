@@ -85,7 +85,9 @@ export class NotebooksService {
       .where(eq(notebooks.id, notebookId))
       .limit(1);
     if (!notebook) {
-      throw new NotFoundError('Notebook');
+      throw new NotFoundError('Notebook', {
+        messageKey: 'errors.notebooks.notebook.notFound',
+      });
     }
   }
 
@@ -145,7 +147,9 @@ export class NotebooksService {
       .from(notebooks)
       .where(eq(notebooks.id, id));
     if (!row) {
-      throw new NotFoundError('Notebook');
+      throw new NotFoundError('Notebook', {
+        messageKey: 'errors.notebooks.notebook.notFound',
+      });
     }
     return this.formatNotebook(row);
   }
@@ -187,7 +191,9 @@ export class NotebooksService {
       .where(eq(notebooks.id, id))
       .returning();
     if (!row) {
-      throw new NotFoundError('Notebook');
+      throw new NotFoundError('Notebook', {
+        messageKey: 'errors.notebooks.notebook.notFound',
+      });
     }
     const res = toResponse(row);
     res.bannerUrl = row.banner
@@ -205,7 +211,9 @@ export class NotebooksService {
       .from(notebooks)
       .where(eq(notebooks.id, id));
     if (!row) {
-      throw new NotFoundError('Notebook');
+      throw new NotFoundError('Notebook', {
+        messageKey: 'errors.notebooks.notebook.notFound',
+      });
     }
     if (row.banner) {
       await this.storageService.deleteObject(row.banner).catch(() => {});
@@ -247,14 +255,22 @@ export class NotebooksService {
     await this.assertNotebookOwner(notebookId);
 
     if (fileBuffer.length === 0) {
-      throw new BadRequestError('Uploaded file is empty');
+      throw new BadRequestError('Uploaded file is empty', {
+        messageKey: 'errors.notebooks.banner.fileEmpty',
+      });
     }
     if (fileBuffer.length > MAX_BANNER_BYTES) {
-      throw new BadRequestError('Banner image exceeds maximum size of 2 MB');
+      throw new BadRequestError('Banner image exceeds maximum size of 2 MB', {
+        messageKey: 'errors.notebooks.banner.tooLarge',
+      });
     }
     if (!ACCEPTED_IMAGE_TYPES.includes(fileType)) {
       throw new BadRequestError(
         `Unsupported file type: ${fileType || 'unknown'}. Accepted: JPEG, PNG, WebP`,
+        {
+          messageKey: 'errors.notebooks.banner.unsupportedType',
+          params: { fileType: fileType || 'unknown' },
+        },
       );
     }
 

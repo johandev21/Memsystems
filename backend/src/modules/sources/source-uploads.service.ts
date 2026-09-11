@@ -174,9 +174,12 @@ export class SourceUploadsService {
     const declaredLength = request.headers['content-length'];
     const contentLength = declaredLength ? Number(declaredLength) : undefined;
     if (contentLength !== undefined && contentLength !== target.size) {
-      throw new BadRequestError('Upload size does not match the upload target', {
-        messageKey: 'errors.sources.upload.sizeMismatch',
-      });
+      throw new BadRequestError(
+        'Upload size does not match the upload target',
+        {
+          messageKey: 'errors.sources.upload.sizeMismatch',
+        },
+      );
     }
     const isAudio = isAudioFile(target.contentType, target.filename);
     const isImage = isImageFile(target.contentType, target.filename);
@@ -287,8 +290,8 @@ export class SourceUploadsService {
       const digest = metadata.metadata.sha256?.toLowerCase();
       if (target.sha256 && digest && digest !== target.sha256) {
         throw new BadRequestError('Upload integrity check failed', {
-        messageKey: 'errors.sources.upload.integrityFailed',
-      });
+          messageKey: 'errors.sources.upload.integrityFailed',
+        });
       }
       // S3 metadata does not expose a provider-independent object digest. The
       // exact byte count remains mandatory; clients may additionally provide
@@ -417,9 +420,9 @@ export class SourceUploadsService {
         .where(eq(sourceUploadIntents.id, token))
         .for('update');
       if (!row)
-      throw new NotFoundError('Upload target', {
-        messageKey: 'errors.sources.upload.notFound',
-      });
+        throw new NotFoundError('Upload target', {
+          messageKey: 'errors.sources.upload.notFound',
+        });
       if (row.notebookId !== notebookId) {
         throw new ForbiddenError(
           'Upload target does not belong to this notebook',
@@ -427,8 +430,8 @@ export class SourceUploadsService {
       }
       if (row.status === 'consumed') {
         throw new BadRequestError('Upload target has already been finalized', {
-        messageKey: 'errors.sources.upload.alreadyFinalized',
-      });
+          messageKey: 'errors.sources.upload.alreadyFinalized',
+        });
       }
       if (row.status === 'expired' || row.expiresAt.getTime() <= Date.now()) {
         await tx
@@ -444,8 +447,8 @@ export class SourceUploadsService {
       }
       if (row.status === 'consuming') {
         throw new BadRequestError('Upload target is already being finalized', {
-        messageKey: 'errors.sources.upload.alreadyFinalizing',
-      });
+          messageKey: 'errors.sources.upload.alreadyFinalizing',
+        });
       }
       if (!row.uploadedBytes || row.uploadedBytes !== row.expectedBytes) {
         throw new BadRequestError(
@@ -465,8 +468,8 @@ export class SourceUploadsService {
         .returning();
       if (!claimed) {
         throw new BadRequestError('Upload target is already being finalized', {
-        messageKey: 'errors.sources.upload.alreadyFinalizing',
-      });
+          messageKey: 'errors.sources.upload.alreadyFinalizing',
+        });
       }
       return { row: claimed };
     });
@@ -497,9 +500,12 @@ export class SourceUploadsService {
     uploaded: { size: number; sha256: string },
   ): void {
     if (uploaded.size !== target.size) {
-      throw new BadRequestError('Upload size does not match the upload target', {
-        messageKey: 'errors.sources.upload.sizeMismatch',
-      });
+      throw new BadRequestError(
+        'Upload size does not match the upload target',
+        {
+          messageKey: 'errors.sources.upload.sizeMismatch',
+        },
+      );
     }
     if (target.sha256 && uploaded.sha256 && target.sha256 !== uploaded.sha256) {
       throw new BadRequestError('Upload integrity check failed', {

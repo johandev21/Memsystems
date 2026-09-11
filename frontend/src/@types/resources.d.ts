@@ -174,6 +174,38 @@ export default interface Resources {
       "close": "Close"
     },
     "errors": {
+      "ai": {
+        "embedding": {
+          "notConfigured": "Embedding model is not configured. Add your AI Gateway key in Settings."
+        },
+        "gateway": {
+          "busy": "The AI service is busy right now. Please retry in a moment.",
+          "connectionFailed": "AI Gateway connection failed",
+          "creditsKeyMissing": "Add your AI Gateway key in Settings to view credits.",
+          "creditsLoadFailed": "Could not load gateway credits.",
+          "entitlement": "This model is not available on your plan. Try another model or add credits.",
+          "keyRejected": "That gateway key was rejected. Check the key and try again.",
+          "noModelAccess": "That gateway key has no model access on its plan.",
+          "notConnected": "AI Gateway is not connected. Add your AI Gateway key in Settings.",
+          "verifyFailed": "Could not verify the gateway key."
+        },
+        "indexing": {
+          "embeddingCountMismatch": "Embedding count mismatch: expected {{expected}}, received {{received}}"
+        },
+        "model": {
+          "capabilityUnsupported": "{{model}} doesn't support {{capability}}. Switch to a model that supports {{capability}} and try again.",
+          "notSupported": "Model {{model}} is not supported.",
+          "webSearchUnsupported": "Model {{model}} does not support web search."
+        },
+        "settings": {
+          "legacyProviderKeys": "Per-provider keys were removed. Add your AI Gateway key in Settings."
+        }
+      },
+      "chat": {
+        "message": {
+          "empty": "Empty user message"
+        }
+      },
       "generation": {
         "problemCount": "Problem count must be between {{min}} and {{max}}.",
         "questionCount": "Question count must be between {{min}} and {{max}}.",
@@ -185,7 +217,38 @@ export default interface Resources {
         },
         "sourcesUnavailable": "Selected sources are unavailable or have no readable content. Update your selection and retry."
       },
+      "notebooks": {
+        "banner": {
+          "fileEmpty": "Uploaded file is empty",
+          "fileRequired": "File is required",
+          "tooLarge": "Banner image exceeds maximum size of 2 MB",
+          "unsupportedType": "Unsupported file type: {{fileType}}. Accepted: JPEG, PNG, WebP"
+        },
+        "notebook": {
+          "notFound": "Notebook not found"
+        }
+      },
       "sources": {
+        "artifact": {
+          "invalidKey": "Invalid source artifact key",
+          "invalidSize": "Invalid source artifact size",
+          "sizeMismatch": "Source artifact size does not match upload metadata",
+          "unavailable": "Source artifact is unavailable"
+        },
+        "create": {
+          "fileEmpty": "Uploaded file is empty",
+          "fileRequired": "File is required",
+          "fileTooLarge": "File exceeds maximum size of {{maxBytes}} bytes",
+          "textEmpty": "rawText must be non-empty",
+          "textTooLarge": "rawText exceeds maximum size of {{maxBytes}} bytes",
+          "urlTooLittleContent": "Page has too little content ({{length}} chars, need at least {{minLength}})"
+        },
+        "download": {
+          "noFile": "Source has no downloadable file"
+        },
+        "extract": {
+          "unsupportedFileType": "Unsupported file type: {{contentType}}"
+        },
         "inspect": {
           "audioCorrupted": "The audio file appears to be corrupt or invalid.",
           "audioEmpty": "The audio file is empty.",
@@ -216,6 +279,24 @@ export default interface Resources {
           "videoTooLarge": "The video file ({{sizeMb}} MB) is too large. Maximum size is 1 GB.",
           "videoTooLong": "The video duration ({{durationS}}s) is too long. Maximum is 4 hours.",
           "videoUnsupported": "Unsupported video format ({{hint}}). Use MP4, WebM, MOV, or MKV."
+        },
+        "parse": {
+          "crawlFailed": "We couldn't fetch this webpage. Please try again.",
+          "epubCorrupted": "The ebook file appears to be corrupt or invalid.",
+          "pptxCorrupted": "The presentation file appears to be corrupt or invalid.",
+          "tabularCorrupted": "The data file appears to be corrupt or invalid.",
+          "zipCorrupted": "The archive appears to be corrupt or invalid."
+        },
+        "source": {
+          "notFound": "Source not found"
+        },
+        "speaker": {
+          "emptyMap": "Speaker map must not be empty",
+          "noCurrentVersion": "Source has no current version to update"
+        },
+        "transcript": {
+          "empty": "Transcript text must not be empty",
+          "parseFailed": "Failed to parse transcript segments from provided text"
         },
         "upload": {
           "alreadyFinalized": "Upload target has already been finalized",
@@ -256,7 +337,79 @@ export default interface Resources {
           "urlInvalid": "Invalid URL: {{url}}",
           "urlRequired": "URL is required",
           "urlTooLong": "URL exceeds maximum length of {{max}} characters"
+        },
+        "webSearch": {
+          "unavailable": "Web search is unavailable right now. Please try again later."
+        },
+        "youtube": {
+          "captionParseFailed": "Failed to parse user-provided caption: {{reason}}",
+          "invalidUrl": "Invalid YouTube URL or video ID: \"{{url}}\"",
+          "oauthCaptionFailed": "OAuth caption acquisition failed: {{reason}}",
+          "oauthDownloadFailed": "Failed to download YouTube caption track {{captionId}} (HTTP {{status}}): {{reason}}",
+          "oauthDownloadTokenRequired": "OAuth access token is required to download YouTube caption",
+          "oauthListFailed": "Failed to list YouTube captions (HTTP {{status}}): {{reason}}",
+          "oauthListTokenRequired": "OAuth access token is required to list YouTube captions"
         }
+      },
+      "storage": {
+        "dev": {
+          "fileNotFound": "File not found",
+          "invalidSignature": "Invalid signature",
+          "linkExpired": "Link expired"
+        }
+      },
+      "studyMaterials": {
+        "aiNotConfigured": "AI service is not configured",
+        "caseStudy": {
+          "analysisQuestionIdsUnique": "Case study analysis question IDs must be unique",
+          "invalidContent": "Invalid case study content",
+          "missingAnalysis": "Case study must include an analysis for each question",
+          "mustBeFictional": "Case study scenarios must be fictional",
+          "questionCountMismatch": "Case study question count does not match the request",
+          "questionIdsUnique": "Case study question IDs must be unique",
+          "sourceUnavailable": "Case study references an unselected or unavailable source",
+          "unknownQuestion": "Case study analysis references an unknown question"
+        },
+        "contentMismatch": "Content does not match kind \"{{kind}}\"",
+        "duplicateDeleted": "Cannot duplicate a deleted study material",
+        "evaluation": {
+          "capability": "{{modelName}} doesn't support answer evaluation. Switch to another model and try again.",
+          "entitlement": "{{modelName}} is not available on your plan. Try another model or add credits.",
+          "rateLimited": "The AI service is busy right now. Please retry in a moment.",
+          "transient": "The AI service is temporarily unavailable. Please try again shortly."
+        },
+        "exportDeleted": "Cannot export a deleted study material",
+        "exportOnlySlides": "Only slides can be exported as PowerPoint",
+        "exportUnavailable": "Slides export is unavailable",
+        "folderAlreadyDeleted": "Folder already deleted",
+        "folderDeleteHasMaterials": "Cannot delete folder: please delete all study materials inside first",
+        "folderInTrash": "Cannot move to a folder in Trash",
+        "folderNameEmpty": "Folder name cannot be empty",
+        "folderNotFound": "Folder not found",
+        "folderNotInNotebook": "Folder does not belong to this notebook",
+        "folderOwnParent": "Folder cannot be its own parent",
+        "folderReparentCycle": "Cannot reparent folder under one of its descendants",
+        "invalidKind": "Invalid study material kind: {{kind}}",
+        "invalidModelOutput": "Invalid output format from model",
+        "notPracticeProblems": "Study material is not a practice problems set",
+        "onlyQuizzesShuffled": "Only quizzes can be shuffled",
+        "practiceProblemNotFound": "Practice problem not found",
+        "practiceProblems": {
+          "countMismatch": "Practice problem count does not match the request",
+          "invalidContent": "Invalid practice problems content",
+          "problemIdsUnique": "Practice problem IDs must be unique",
+          "sourceUnavailable": "Practice problems reference an unselected or unavailable source",
+          "stepIdsUnique": "Worked step IDs must be unique within a problem"
+        },
+        "studyGuide": {
+          "countMismatch": "Study guide section count does not match the request",
+          "detailedRequiresExtras": "Detailed study guides require examples, misconceptions, and takeaways in each section",
+          "invalidContent": "Invalid study guide content",
+          "sectionIdsUnique": "Study guide section IDs must be unique",
+          "sourceUnavailable": "Study guide references an unselected or unavailable source"
+        },
+        "studyMaterialNotFound": "Study material not found",
+        "titleEmpty": "Title cannot be empty"
       }
     },
     "iconPicker": {

@@ -11,6 +11,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { jobs } from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
+import { DomainError } from '../../common/errors/domain-error';
 import {
   EnqueueOptions,
   Job,
@@ -67,6 +68,13 @@ export function loadJobQueueConfig(
 }
 
 const ACTIVE_STATUSES = ['pending', 'processing'] as const;
+
+function resolveJobStoredError(err: unknown): string {
+  if (err instanceof DomainError && err.messageKey) {
+    return err.messageKey;
+  }
+  return err instanceof Error ? err.message : String(err);
+}
 
 @Injectable()
 export class JobQueueService implements OnModuleInit, OnModuleDestroy {
@@ -429,6 +437,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
 
   private async handleFailure(jobRow: JobRow, err: unknown): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
+    const storedError = resolveJobStoredError(err);
     this.logger.error(
       `Job '${jobRow.id}' (${jobRow.type}) failed on attempt ${jobRow.attemptCount}`,
       {
@@ -444,7 +453,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
         .update(jobs)
         .set({
           status: 'failed',
-          lastError: message,
+          lastError: storedError,
           completedAt: new Date(),
         })
         .where(and(eq(jobs.id, jobRow.id), eq(jobs.status, 'processing')));
@@ -456,7 +465,7 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
       .update(jobs)
       .set({
         status: 'pending',
-        lastError: message,
+        lastError: storedError,
         nextAttemptAt: new Date(Date.now() + backoffMs),
       })
       .where(and(eq(jobs.id, jobRow.id), eq(jobs.status, 'processing')));

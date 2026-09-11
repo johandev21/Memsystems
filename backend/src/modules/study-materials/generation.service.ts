@@ -53,10 +53,16 @@ export class GenerationService {
         sourceTexts.length !== new Set(input.sourceIds).size ||
         sourceTexts.some((source) => !source.rawText.trim())
       ) {
-        throw new BadRequestError('errors.generation.sourcesUnavailable');
+        throw new BadRequestError(
+          'Selected sources are unavailable or have no readable content. Update your selection and retry.',
+          { messageKey: 'errors.generation.sourcesUnavailable' },
+        );
       }
       if (!sourceTexts.length && !input.brief.trim()) {
-        throw new BadRequestError('errors.generation.sourceOrBrief.studyGuide');
+        throw new BadRequestError(
+          'Select a source or enter a brief for your study guide.',
+          { messageKey: 'errors.generation.sourceOrBrief.studyGuide' },
+        );
       }
     }
 
@@ -64,13 +70,18 @@ export class GenerationService {
       const problemCount =
         input.practiceProblemsOptions?.problemCount ?? input.questionCount;
       if (problemCount != null && (problemCount < 1 || problemCount > 30)) {
-        throw new BadRequestError('errors.generation.problemCount', {
-          params: { min: 1, max: 30 },
-        });
+        throw new BadRequestError(
+          'Problem count must be between {{min}} and {{max}}.',
+          {
+            messageKey: 'errors.generation.problemCount',
+            params: { min: 1, max: 30 },
+          },
+        );
       }
       if (!sourceTexts.length && !input.brief.trim()) {
         throw new BadRequestError(
-          'errors.generation.sourceOrBrief.practiceProblems',
+          'Select a source or enter a brief for your practice problems.',
+          { messageKey: 'errors.generation.sourceOrBrief.practiceProblems' },
         );
       }
     }
@@ -79,12 +90,19 @@ export class GenerationService {
       const questionCount =
         input.caseStudyOptions?.questionCount ?? input.questionCount;
       if (questionCount != null && (questionCount < 1 || questionCount > 10)) {
-        throw new BadRequestError('errors.generation.questionCount', {
-          params: { min: 1, max: 10 },
-        });
+        throw new BadRequestError(
+          'Question count must be between {{min}} and {{max}}.',
+          {
+            messageKey: 'errors.generation.questionCount',
+            params: { min: 1, max: 10 },
+          },
+        );
       }
       if (!sourceTexts.length && !input.brief.trim()) {
-        throw new BadRequestError('errors.generation.sourceOrBrief.caseStudy');
+        throw new BadRequestError(
+          'Select a source or enter a brief for your case study.',
+          { messageKey: 'errors.generation.sourceOrBrief.caseStudy' },
+        );
       }
     }
 
