@@ -2,14 +2,16 @@ import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import i18n from "@/shared/i18n";
 import { createFolder, updateFolder, deleteFolder } from "../../api/folders";
+// API module import: the viewer barrel pulls every material view + the AI SDK
+// chain, which must stay lazy.
 import {
   duplicateStudyMaterial,
   moveStudyMaterial,
   updateStudyMaterial,
-} from "@/features/study-material-viewer";
+} from "@/features/study-material-viewer/api";
 import { getDescendantFolderIds } from "./tree";
 import type { FolderDTO } from "../../types";
-import type { StudyMaterialDTO } from "@/features/study-material-viewer";
+import type { StudyMaterialDTO } from "@/features/study-material-viewer/types";
 import type { CommandResult } from "./commands";
 
 export interface AdapterContext {
@@ -193,7 +195,7 @@ export async function executeDeleteItem(
       },
     );
     try {
-      const { deleteStudyMaterial } = await import("@/features/study-material-viewer");
+      const { deleteStudyMaterial } = await import("@/features/study-material-viewer/api");
       await deleteStudyMaterial(id);
       void ctx.refetchTree();
       return { ok: true };
@@ -213,7 +215,7 @@ export async function executeDeleteItem(
       return { ok: true };
     } catch {
       try {
-        const { deleteStudyMaterial } = await import("@/features/study-material-viewer");
+        const { deleteStudyMaterial } = await import("@/features/study-material-viewer/api");
         await deleteStudyMaterial(id);
         void ctx.refetchTree();
         return { ok: true };

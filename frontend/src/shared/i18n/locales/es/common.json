@@ -13,7 +13,7 @@
   "errors": {
     "ai": {
       "embedding": {
-        "notConfigured": "El modelo de embeddings no está configurado. Añade tu clave del Gateway de IA en Ajustes."
+        "notConfigured": "El modelo de embeddings no está configurado. Añade tu clave de Voyage AI en Ajustes."
       },
       "gateway": {
         "busy": "El servicio de IA está ocupado ahora mismo. Vuelve a intentarlo en un momento.",
@@ -36,6 +36,14 @@
       },
       "settings": {
         "legacyProviderKeys": "Las claves por proveedor se eliminaron. Añade tu clave del Gateway de IA en Ajustes."
+      },
+      "voyage": {
+        "invalidResponse": "El servicio de embeddings devolvió una respuesta no válida.",
+        "keyRejected": "Esa clave de API de Voyage fue rechazada. Revísala y vuelve a intentarlo.",
+        "rateLimited": "El servicio de embeddings está limitando las peticiones. El trabajo se reintentará automáticamente.",
+        "requestFailed": "La petición de embeddings fue rechazada.",
+        "serverError": "El servicio de embeddings tuvo un problema temporal. Inténtalo de nuevo.",
+        "unreachable": "No se pudo conectar con el servicio de embeddings. Comprueba tu conexión e inténtalo de nuevo."
       }
     },
     "chat": {

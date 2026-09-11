@@ -17,9 +17,9 @@ import {
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useGenerationStore } from "@/features/study-material-generation";
+import { useGenerationStore } from "@/features/study-material-generation/hooks/use-generation-store";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
-import { sourcesQueryOptions } from "@/features/sources";
+import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import { cn } from "@/shared/utils/cn";
 
 const KIND_LABEL_KEYS = {

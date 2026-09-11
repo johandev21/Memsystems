@@ -128,7 +128,36 @@ export class SourceJobsService {
       })
       .from(sources)
       .where(eq(sources.notebookId, notebookId));
+    return this.enqueueReindexes(rows);
+  }
 
+  /**
+   * Operator action: re-index every source in the app. Used after an
+   * embedding-model switch invalidates stored vectors (the jobs' shouldSkip
+   * model check makes re-enqueued work idempotent either way).
+   */
+  async reembedAll(): Promise<number> {
+    const rows = await this.db
+      .select({
+        id: sources.id,
+        kind: sources.kind,
+        s3Key: sources.s3Key,
+        rawText: sources.rawText,
+        currentVersionId: sources.currentVersionId,
+      })
+      .from(sources);
+    return this.enqueueReindexes(rows);
+  }
+
+  private async enqueueReindexes(
+    rows: {
+      id: string;
+      kind: string;
+      s3Key: string | null;
+      rawText: string;
+      currentVersionId: string | null;
+    }[],
+  ): Promise<number> {
     let enqueued = 0;
     for (const row of rows) {
       if (row.kind === 'file' && row.s3Key && !row.currentVersionId) {

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { NotebookSettingsDialog } from "@/features/notebooks";
+import { NotebookSettingsDialog } from "@/features/notebooks/components/dialogs/notebook-settings-dialog";
 
 interface ChatPanelHeaderProps {
   notebookId: string;

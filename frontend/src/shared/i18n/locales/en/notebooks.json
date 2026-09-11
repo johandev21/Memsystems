@@ -63,6 +63,8 @@
     "emptyTitle": "No notebooks yet",
     "heroSubtitle": "Pick up where you left off, or start something fresh.",
     "heroTitle": "Make progress on what matters.",
+    "loadFailedDescription": "Something went wrong while loading your notebooks. Check your connection and try again.",
+    "loadFailedTitle": "Couldn't load notebooks",
     "loadingMore": "Loading more…",
     "loadMoreFailed": "Couldn't load more notebooks.",
     "newNotebook": "New notebook",

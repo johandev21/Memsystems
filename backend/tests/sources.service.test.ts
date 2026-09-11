@@ -7,6 +7,7 @@ import {
   sources,
   sourceVersions,
 } from '../src/database/schema';
+import { EMBEDDING_DIMENSIONS } from '../src/modules/ai/embedding.service';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import { SourceExtractionService } from '../src/modules/sources/source-extraction.service';
@@ -756,7 +757,7 @@ describe.sequential('SourcesService', () => {
             endOffsetMs: 2000,
             speaker: 'Speaker 1',
           },
-          embedding: new Array(1536).fill(0),
+          embedding: new Array(EMBEDDING_DIMENSIONS).fill(0),
         },
       ])
       .returning();

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createDatabaseConnection } from '../src/database/connection';
 import { sourceChunks } from '../src/database/schema';
 import { ChunkingService } from '../src/modules/ai/chunking.service';
+import { EMBEDDING_DIMENSIONS } from '../src/modules/ai/embedding.service';
 import { IndexingService } from '../src/modules/ai/indexing.service';
 import { seedNotebook, seedSource } from './fixtures';
 
@@ -21,17 +22,14 @@ function makeVector(dimensions: number): number[] {
 
 function fakeEmbeddingService(
   impl?: Partial<{
-    generateEmbeddings: (
-      texts: string[],
-      userId: string,
-    ) => Promise<number[][]>;
+    embedDocuments: (texts: string[]) => Promise<number[][]>;
   }>,
 ) {
   return {
-    generateEmbeddings: vi
+    embedDocuments: vi
       .fn()
       .mockImplementation(async (texts: string[]) =>
-        texts.map(() => makeVector(1536)),
+        texts.map(() => makeVector(EMBEDDING_DIMENSIONS)),
       ),
     ...impl,
   } as any;
@@ -66,7 +64,7 @@ describe('IndexingService', () => {
     expect(result.skipped).toBe(false);
     expect(result.chunksCount).toBeGreaterThan(1);
     expect(result.contentHash).toBeNull();
-    expect(embedding.generateEmbeddings).toHaveBeenCalledTimes(1);
+    expect(embedding.embedDocuments).toHaveBeenCalledTimes(1);
 
     const rows = await chunkRows(source.id);
     expect(rows).toHaveLength(result.chunksCount);
@@ -86,7 +84,7 @@ describe('IndexingService', () => {
     expect(before.length).toBeGreaterThan(0);
 
     const failing = fakeEmbeddingService({
-      generateEmbeddings: vi.fn().mockRejectedValue(new Error('provider down')),
+      embedDocuments: vi.fn().mockRejectedValue(new Error('provider down')),
     });
     await expect(makeIndexing(failing).indexSource(source.id)).rejects.toThrow(
       'provider down',
@@ -108,7 +106,7 @@ describe('IndexingService', () => {
     const before = await chunkRows(source.id);
 
     const mismatch = fakeEmbeddingService({
-      generateEmbeddings: vi.fn().mockResolvedValue([makeVector(1536)]),
+      embedDocuments: vi.fn().mockResolvedValue([makeVector(EMBEDDING_DIMENSIONS)]),
     });
     await expect(makeIndexing(mismatch).indexSource(source.id)).rejects.toThrow(
       'Embedding count mismatch',

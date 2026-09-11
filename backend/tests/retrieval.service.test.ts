@@ -24,7 +24,7 @@ describe('RetrievalService citation locations', () => {
     });
     const service = new RetrievalService(
       { execute } as never,
-      { generateEmbedding: vi.fn().mockResolvedValue([0.1, 0.2]) } as never,
+      { embedQuery: vi.fn().mockResolvedValue([0.1, 0.2]) } as never,
     );
 
     await expect(
@@ -64,7 +64,7 @@ describe('RetrievalService citation locations', () => {
           ],
         }),
       } as never,
-      { generateEmbedding: vi.fn().mockResolvedValue([0.1]) } as never,
+      { embedQuery: vi.fn().mockResolvedValue([0.1]) } as never,
     );
 
     const [chunk] = await service.retrieveRelevantChunks(

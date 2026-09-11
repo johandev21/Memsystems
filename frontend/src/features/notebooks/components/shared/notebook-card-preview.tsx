@@ -108,6 +108,7 @@ export function NotebookCardPreview({
               style={{
                 objectPosition: `${Math.round(focalPoint.x * 100)}% ${Math.round(focalPoint.y * 100)}%`,
               }}
+              decoding="async"
             />
 
             <div className="pointer-events-none absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-foreground bg-card/70 backdrop-blur-md">

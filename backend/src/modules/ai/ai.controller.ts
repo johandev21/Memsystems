@@ -11,8 +11,14 @@ import {
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AiService } from './ai.service';
 import { ConnectionService } from './connection.service';
+import {
+  EMBEDDING_DIMENSIONS,
+  EMBEDDING_MODEL,
+  EmbeddingService,
+} from './embedding.service';
 import { ModelSyncService } from './model-sync.service';
 import { classifyGatewayError } from './providers/gateway-errors';
+import { voyageEmbed } from './providers/voyage.client';
 import { UserSettingsService } from './user-settings.service';
 
 const updateSettingsSchema = z.object({
@@ -21,6 +27,10 @@ const updateSettingsSchema = z.object({
   provider: z.string().optional(),
   apiKey: z.string().nullable().optional(),
   openaiApiKey: z.string().nullable().optional(),
+});
+
+const voyageKeySchema = z.object({
+  voyageApiKey: z.string().min(1, 'Voyage API key is required').max(500),
 });
 
 const LEGACY_REMOVED_MESSAGE =
@@ -33,6 +43,7 @@ export class AiController {
     private readonly connectionService: ConnectionService,
     private readonly modelSyncService: ModelSyncService,
     private readonly userSettingsService: UserSettingsService,
+    private readonly embeddingService: EmbeddingService,
   ) {}
 
   @Get('models')
@@ -149,5 +160,45 @@ export class AiController {
         { messageKey: 'errors.ai.gateway.verifyFailed' },
       );
     }
+  }
+
+  @Get('embedding-connection')
+  async getEmbeddingConnection() {
+    const hasKey = Boolean(await this.embeddingService.getVoyageApiKey());
+    return {
+      hasKey,
+      model: EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+    };
+  }
+
+  @Post('embedding-connection')
+  @UsePipes(new ZodValidationPipe(voyageKeySchema))
+  async saveEmbeddingConnection(@Body() body: z.infer<typeof voyageKeySchema>) {
+    // Verify-then-store: one tiny embeddings request proves the key works
+    // before it is persisted (a few tokens, no catalog call needed).
+    await this.verifyVoyageKey(body.voyageApiKey.trim());
+    await this.userSettingsService.setVoyageApiKey(body.voyageApiKey.trim());
+    return this.getEmbeddingConnection();
+  }
+
+  @Delete('embedding-connection')
+  async deleteEmbeddingConnection() {
+    await this.userSettingsService.removeVoyageApiKey();
+    return this.getEmbeddingConnection();
+  }
+
+  /**
+   * Verify-then-store for the Voyage key. The client already maps failures
+   * onto localized domain errors (auth / rate limit / unreachable), so a
+   * rejected key surfaces the same message it will produce at indexing time.
+   */
+  private async verifyVoyageKey(apiKey: string): Promise<void> {
+    await voyageEmbed({
+      apiKey,
+      model: EMBEDDING_MODEL,
+      input: ['ping'],
+      inputType: 'query',
+    });
   }
 }

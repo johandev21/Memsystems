@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { sourcesQueryOptions } from "@/features/sources";
+import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import {
   CaseStudyContent,
   type CaseStudyAnalysisType,

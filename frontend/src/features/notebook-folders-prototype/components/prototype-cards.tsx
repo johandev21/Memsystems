@@ -4,6 +4,7 @@ import { FolderInput, Trash2 } from "lucide-react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { cn } from "@/shared/utils/cn";
 import { getFolderCovers } from "../model/artwork-assets";
+import type { CoverVariants } from "../model/types";
 import { MAX_TITLE_LENGTH } from "../model/title";
 import { useFittedFolderTitle } from "../hooks/use-fitted-folder-title";
 import { EmptyFolderArtwork, SingleFolderArtwork, DoubleFolderArtwork, ManyFolderArtwork, CoveredNotebookArtwork, EmptyNotebookArtwork } from "./exported-artwork";
@@ -11,10 +12,10 @@ import { InlineEditableText } from "./inline-editable-text";
 import "./prototype-cards.css";
 
 type FolderRef = { id: string; name: string };
-type NotebookCover = { id: string; title: string; coverUrl: string | null };
+type NotebookCover = { id: string; title: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
 export type FolderCardProps = { folder: FolderRef; notebooks: NotebookCover[]; autoEdit?: boolean; onOpen: () => void; onRename: (name: string) => void; onCancelEdit?: () => void; onDismissEdit?: (name: string) => void; onRemove: () => void };
-export type NotebookCardProps = { notebook: { id: string; title: string; description: string; coverUrl: string | null; folderId: string | null }; folders: FolderRef[]; autoEdit?: boolean; onMove: (folderId: string | null) => void; onOpen: () => void; onRename: (name: string) => void; onCancelEdit?: () => void; onDismissEdit?: (name: string) => void };
-export type NotebookPreviewProps = { notebook: { title: string; coverUrl: string | null } };
+export type NotebookCardProps = { notebook: { id: string; title: string; description: string; coverUrl: string | null; coverVariants?: CoverVariants | null; folderId: string | null }; folders: FolderRef[]; autoEdit?: boolean; onMove: (folderId: string | null) => void; onOpen: () => void; onRename: (name: string) => void; onCancelEdit?: () => void; onDismissEdit?: (name: string) => void };
+export type NotebookPreviewProps = { notebook: { title: string; coverUrl: string | null; coverVariants?: CoverVariants | null } };
 
 export function FolderCard({ folder, notebooks, autoEdit, onOpen, onRename, onCancelEdit, onDismissEdit, onRemove }: FolderCardProps) {
   const { setNodeRef } = useDroppable({ id: `folder:${folder.id}`, data: { folderId: folder.id } });
@@ -54,7 +55,9 @@ function FolderArtwork({ title, notebooks, onRename, onCancelEdit, onDismissEdit
 }
 
 function NotebookArtwork({ notebook, titleSlot }: NotebookPreviewProps & { titleSlot?: ReactNode }) {
-  return <span className="prototype-artwork" aria-hidden="true">{notebook.coverUrl ? <CoveredNotebookArtwork title={notebook.title} coverUrl={notebook.coverUrl} titleSlot={titleSlot} /> : <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} />}</span>;
+  // Not aria-hidden: the title slot contains the inline-edit control, and an
+  // aria-hidden element must not contain focusable content.
+  return <span className="prototype-artwork">{notebook.coverUrl ? <CoveredNotebookArtwork title={notebook.title} coverUrl={notebook.coverUrl} coverVariants={notebook.coverVariants} titleSlot={titleSlot} /> : <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} />}</span>;
 }
 
 export function NotebookCard({ notebook, folders, autoEdit, onMove, onOpen, onRename, onCancelEdit, onDismissEdit }: NotebookCardProps) {
@@ -76,8 +79,10 @@ export function NotebookCard({ notebook, folders, autoEdit, onMove, onOpen, onRe
   };
 
   const titleSlot = <InlineEditableText value={notebook.title} onSave={onRename} onCancel={onCancelEdit} onDismiss={onDismissEdit} onEditingChange={handleTitleEditingChange} ariaLabel={`notebook ${notebook.title}`} editRequest={editRequest} autoSize maxLength={MAX_TITLE_LENGTH} tooltip={notebook.title} className="prototype-artwork__title-editor" inputClassName="prototype-notebook-title-input"><span>{notebook.title}</span></InlineEditableText>;
+  // A <div>, not <article>: dnd-kit imposes role="button" on the draggable
+  // card, and the button role is not allowed on <article>.
   return <ContextMenu>
-    <ContextMenuTrigger render={<article ref={setNodeRef} {...attributes} {...listeners} className={cn("prototype-notebook-card", isDragging && "prototype-notebook-card--dragging")} onDoubleClick={handleOpen} tabIndex={0} aria-label={notebook.title} onKeyDown={(event) => { if (event.key === "Enter" && !editingTitle) onOpen(); if (event.key === "F2") requestEdit((value) => value + 1); }} />}>
+    <ContextMenuTrigger render={<div ref={setNodeRef} {...attributes} {...listeners} className={cn("prototype-notebook-card", isDragging && "prototype-notebook-card--dragging")} onDoubleClick={handleOpen} tabIndex={0} aria-label={notebook.title} onKeyDown={(event) => { if (event.key === "Enter" && !editingTitle) onOpen(); if (event.key === "F2") requestEdit((value) => value + 1); }} />}>
       <NotebookArtwork notebook={notebook} titleSlot={titleSlot} />
     </ContextMenuTrigger>
     <ContextMenuContent>

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fetchGatewayCredits, refreshGatewayModels } from "../api/gateway";
 import { GatewayKeyForm } from "./gateway-key-form";
 
@@ -229,14 +230,31 @@ export function GatewayCard() {
 
       <GatewayKeyForm hasKey={connection?.gateway.hasKey ?? false} />
 
-      {usable && (
-        <GatewayStatsGrid
-          modelCount={modelCount}
-          balance={balance}
-          rawBalance={credits?.balance}
-          used={used}
-          rawUsed={credits?.totalUsed}
-        />
+      {isPending ? (
+        // Reserve the stats-grid space while the connection query resolves so
+        // the sections below don't shift once the data arrives (CLS).
+        <dl className="grid gap-3 sm:flex sm:gap-12" aria-hidden="true">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="flex items-baseline justify-between gap-4 sm:block">
+              <dt className="text-sm text-muted-foreground">
+                <Skeleton className="h-4 w-20" />
+              </dt>
+              <dd className="text-base font-medium sm:mt-1">
+                <Skeleton className="h-5 w-10" />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        usable && (
+          <GatewayStatsGrid
+            modelCount={modelCount}
+            balance={balance}
+            rawBalance={credits?.balance}
+            used={used}
+            rawUsed={credits?.totalUsed}
+          />
+        )
       )}
 
       <GatewayCardFooter

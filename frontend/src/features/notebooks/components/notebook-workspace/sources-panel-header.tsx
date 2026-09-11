@@ -2,7 +2,7 @@ import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { AddSourceDialog } from "@/features/sources";
+import { AddSourceDialog } from "@/features/sources/components/add-source-dialog";
 import { cn } from "@/shared/utils/cn";
 
 export interface SourcesPanelHeaderProps {

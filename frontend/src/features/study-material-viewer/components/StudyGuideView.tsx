@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/ui/markdown";
-import { type Source } from "@/features/sources";
+import { type Source } from "@/features/sources/api/sources";
 import { useTranslation } from "react-i18next";
 import { StudyGuideContent, type StudyGuideContentType } from "../shapes/study-guide";
 

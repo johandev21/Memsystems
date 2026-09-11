@@ -1,11 +1,18 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { DesktopLayout, REVIEW_STUDIO_SIZE } from "./desktop-layout";
 import { MobileNotebookLayout } from "./mobile-notebook-layout";
-import { GenerateBriefDialog } from "@/features/study-material-generation";
 import { NotebookModelProvider } from "../../context/notebook-model-context";
 import { useNotebookPanels } from "../../hooks/use-notebook-panels";
 import { useSourcesPanel } from "../../hooks/use-sources-panel";
 import { useStudioDialogs } from "../../hooks/use-studio-dialogs";
+
+// Lazy: the generation dialog drags the brief forms, editor schemas and zod
+// into its chunk — none of it is needed until the user opens the dialog.
+const GenerateBriefDialog = lazy(() =>
+  import("@/features/study-material-generation/components/GenerateBriefDialog").then(
+    (m) => ({ default: m.GenerateBriefDialog }),
+  ),
+);
 
 export interface NotebookWorkspaceContainerProps {
   notebookId: string;
@@ -64,13 +71,15 @@ function NotebookWorkspaceInner({ notebookId }: { notebookId: string }) {
       {/* Single instance: both layouts stay mounted (CSS-hidden), so mounting
           the dialog here avoids duplicate stacked dialogs with divergent state. */}
       {dialogs.dialogOpen && (
-        <GenerateBriefDialog
-          notebookId={notebookId}
-          kind={dialogs.generateKind}
-          open={dialogs.dialogOpen}
-          onOpenChange={dialogs.setDialogOpen}
-          onComplete={dialogs.handleGenerateComplete}
-        />
+        <Suspense fallback={null}>
+          <GenerateBriefDialog
+            notebookId={notebookId}
+            kind={dialogs.generateKind}
+            open={dialogs.dialogOpen}
+            onOpenChange={dialogs.setDialogOpen}
+            onComplete={dialogs.handleGenerateComplete}
+          />
+        </Suspense>
       )}
     </>
   );

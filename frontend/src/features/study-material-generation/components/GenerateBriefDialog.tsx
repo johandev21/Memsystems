@@ -6,9 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/features/ai";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useModelPersistence } from "@/features/notebooks";
+import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import { useGenerationStore } from "../hooks/use-generation-store";
-import { type StudyMaterialKind } from "@/features/study-material-viewer";
+import type { StudyMaterialKind } from "@/features/study-material-viewer/types";
 import { useTranslation } from "react-i18next";
 import { kindLabelKey } from "../kind-label";
 import type {

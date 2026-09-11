@@ -569,6 +569,12 @@ export class SourcesService {
     return { enqueued: count };
   }
 
+  /** Re-indexes every source, e.g. after an embedding-model switch. */
+  async reembedAll() {
+    const count = await this.sourceJobsService.reembedAll();
+    return { enqueued: count };
+  }
+
   async getDownload(id: string, expiresInSeconds = 300): Promise<DownloadInfo> {
     const source = await this.fetchOwned(id);
     if (source.kind !== 'file' || !source.s3Key) {

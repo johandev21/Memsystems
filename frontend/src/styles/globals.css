@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "./typeset.css";
-@import "@fontsource/poppins/400.css";
-@import "@fontsource/poppins/500.css";
-@import "@fontsource/poppins/600.css";
+@import "./fonts.css";
 @import "@fontsource-variable/geist-mono";
 @import "katex/dist/katex.min.css";
 @import "tw-animate-css";

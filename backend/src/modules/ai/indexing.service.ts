@@ -108,7 +108,7 @@ export class IndexingService {
     }
 
     const contents = chunks.map((c) => c.content);
-    const embeddings = await this.embeddingService.generateEmbeddings(contents);
+    const embeddings = await this.embeddingService.embedDocuments(contents);
 
     if (embeddings.length !== chunks.length) {
       throw new InternalError(

@@ -176,7 +176,7 @@ export default interface Resources {
     "errors": {
       "ai": {
         "embedding": {
-          "notConfigured": "Embedding model is not configured. Add your AI Gateway key in Settings."
+          "notConfigured": "Embedding model is not configured. Add your Voyage API key in Settings."
         },
         "gateway": {
           "busy": "The AI service is busy right now. Please retry in a moment.",
@@ -199,6 +199,14 @@ export default interface Resources {
         },
         "settings": {
           "legacyProviderKeys": "Per-provider keys were removed. Add your AI Gateway key in Settings."
+        },
+        "voyage": {
+          "invalidResponse": "The embedding service returned an invalid response.",
+          "keyRejected": "That Voyage API key was rejected. Check the key and try again.",
+          "rateLimited": "The embedding service is rate-limiting requests. The job will retry automatically.",
+          "requestFailed": "The embedding request was rejected.",
+          "serverError": "The embedding service had a temporary problem. Please retry.",
+          "unreachable": "Could not reach the embedding service. Check your connection and try again."
         }
       },
       "chat": {
@@ -827,6 +835,8 @@ export default interface Resources {
       "emptyTitle": "No notebooks yet",
       "heroSubtitle": "Pick up where you left off, or start something fresh.",
       "heroTitle": "Make progress on what matters.",
+      "loadFailedDescription": "Something went wrong while loading your notebooks. Check your connection and try again.",
+      "loadFailedTitle": "Couldn't load notebooks",
       "loadMoreFailed": "Couldn't load more notebooks.",
       "loadingMore": "Loading more…",
       "newNotebook": "New notebook",
@@ -898,6 +908,50 @@ export default interface Resources {
     "appearance": {
       "description": "Choose how Memsystems looks. Theme sets the palette, color scheme sets light or dark.",
       "title": "Appearance"
+    },
+    "embeddings": {
+      "apiKey": {
+        "confirmRemove": "Confirm Remove",
+        "hide": "Hide Voyage key",
+        "label": "Voyage API Key",
+        "placeholder": "Paste your Voyage AI key…",
+        "remove": "Remove",
+        "removeConfirm": "Removing your key stops source retrieval from working. Click again to confirm.",
+        "removing": "Removing…",
+        "replace": "Replace",
+        "save": "Save Key",
+        "saved": "Saved",
+        "saving": "Saving…",
+        "show": "Show Voyage key"
+      },
+      "description": {
+        "checking": "Checking embedding provider status…",
+        "connected": "Your Voyage AI key powers retrieval across all notebooks.",
+        "missing": "Add your Voyage AI key below to power source retrieval."
+      },
+      "modelInfo": "Model: {{model}} · {{dimensions}} dimensions",
+      "reembed": {
+        "action": "Re-embed All Sources",
+        "actionRunning": "Queueing…",
+        "hint": "Queues background re-indexing for every source.",
+        "title": "Re-embedding"
+      },
+      "status": {
+        "checking": "Checking",
+        "connected": "Connected",
+        "notConnected": "Not connected"
+      },
+      "title": "Embeddings",
+      "toast": {
+        "reembedFailed": "Could not queue re-embedding",
+        "reembedQueued": "Re-indexing queued for {{count}} sources",
+        "removeFailed": "Could not remove this key",
+        "removed": "Voyage key removed",
+        "requestFailed": "The request failed",
+        "saveFailed": "Could not save this key",
+        "saved": "Voyage key saved"
+      },
+      "whatIsIt": "What is Voyage AI?"
     },
     "gateway": {
       "apiKey": {

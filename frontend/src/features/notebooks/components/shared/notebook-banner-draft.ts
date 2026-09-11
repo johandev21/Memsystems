@@ -1,5 +1,6 @@
 import type { useQueryClient } from "@tanstack/react-query";
 import { updateNotebook, uploadNotebookBanner, deleteNotebookBanner } from "../../api/notebooks";
+import type { BannerUploadPayload } from "../../utils/banner-variants";
 
 export const DEFAULT_FOCAL_POINT = { x: 0.5, y: 0.5 };
 
@@ -63,7 +64,7 @@ export async function saveNotebookBannerChanges({
   bannerUrl,
   bannerFocalPoint,
   draft,
-  bannerFile,
+  bannerUpload,
   queryClient,
 }: {
   notebookId: string;
@@ -73,7 +74,7 @@ export async function saveNotebookBannerChanges({
   bannerUrl?: string | null;
   bannerFocalPoint?: { x: number; y: number } | null;
   draft: BannerDraftState;
-  bannerFile: File | null;
+  bannerUpload: BannerUploadPayload | null;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const requests: Promise<unknown>[] = [];
@@ -84,7 +85,7 @@ export async function saveNotebookBannerChanges({
     draft.focalPoint.x !== (bannerFocalPoint?.x ?? 0.5) ||
     draft.focalPoint.y !== (bannerFocalPoint?.y ?? 0.5);
 
-  if (fieldsChanged && !bannerFile) {
+  if (fieldsChanged && !bannerUpload) {
     requests.push(
       updateNotebook(notebookId, {
         title: draft.title,
@@ -103,8 +104,10 @@ export async function saveNotebookBannerChanges({
     );
   }
 
-  if (bannerFile) {
-    requests.push(uploadNotebookBanner(notebookId, bannerFile, draft.focalPoint));
+  if (bannerUpload) {
+    requests.push(
+      uploadNotebookBanner(notebookId, bannerUpload.file, draft.focalPoint, bannerUpload.variants),
+    );
   } else if (draft.bannerRemoved && bannerUrl) {
     requests.push(deleteNotebookBanner(notebookId));
   }

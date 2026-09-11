@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import type { TFunction } from "i18next";
-import { ArrowUpRight, NotebookText, Plus } from "lucide-react";
+import { ArrowUpRight, CloudOff, NotebookText, Plus, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,32 @@ import { NotebookCard } from "./notebook-card";
 import { NotebookIcon } from "./notebook-icon";
 import type { Notebook } from "../types";
 
+const CARD_ENTRANCE_CLASS =
+  "animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-backwards motion-reduce:animate-none";
+
 export function RecentNotebooksSection() {
   const { t } = useTranslation("notebooks");
-  const { notebooks, isLoading, isCreating, onCreate, pagination } = useRecentNotebooks();
+  const {
+    notebooks,
+    isLoading,
+    isError,
+    isRetrying,
+    onRetryLoad,
+    isCreating,
+    onCreate,
+    pagination,
+  } = useRecentNotebooks();
 
   return (
     <>
       <NotebooksHero onCreate={onCreate} isCreating={isCreating} />
-      <section className="flex flex-col gap-4 py-6">
+      <section className="flex animate-in flex-col gap-4 py-6 slide-in-from-bottom-2 duration-300 delay-100 fill-mode-backwards motion-reduce:animate-none">
         <RecentNotebooksSectionHeader title={t("recent.title")} />
         <RecentNotebooksContent
           isLoading={isLoading}
+          isError={isError}
+          isRetrying={isRetrying}
+          onRetryLoad={onRetryLoad}
           notebooks={notebooks}
           isCreating={isCreating}
           onCreate={onCreate}
@@ -44,7 +59,7 @@ function NotebooksHero({
   const { t } = useTranslation("notebooks");
 
   return (
-    <section className="flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
+    <section className="flex animate-in flex-col gap-4 py-6 slide-in-from-bottom-2 duration-300 motion-reduce:animate-none sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-2">
         <h1 className="max-w-md font-heading text-2xl leading-snug font-semibold tracking-[-0.03em] text-foreground">
           {t("recent.heroTitle")}
@@ -92,18 +107,25 @@ function RecentNotebooksSectionHeader({
 
 function RecentNotebooksContent({
   isLoading,
+  isError,
+  isRetrying,
+  onRetryLoad,
   notebooks,
   isCreating,
   onCreate,
   pagination,
 }: {
   isLoading: boolean;
+  isError: boolean;
+  isRetrying: boolean;
+  onRetryLoad: () => void;
   notebooks: Notebook[];
   isCreating: boolean;
   onCreate: () => void;
   pagination: RecentNotebooksPagination;
 }) {
   if (isLoading) return <RecentNotebooksLoading />;
+  if (isError) return <RecentNotebooksLoadError isRetrying={isRetrying} onRetry={onRetryLoad} />;
   if (!notebooks.length)
     return <RecentNotebooksEmpty isCreating={isCreating} onCreate={onCreate} />;
   return (
@@ -162,6 +184,30 @@ function RecentNotebooksLoadingMore() {
   );
 }
 
+function RecentNotebooksLoadError({
+  isRetrying,
+  onRetry,
+}: {
+  isRetrying: boolean;
+  onRetry: () => void;
+}) {
+  const { t } = useTranslation("notebooks");
+
+  return (
+    <EmptyState
+      className="animate-in fade-in duration-300 motion-reduce:animate-none"
+      icon={<CloudOff className="size-7 text-muted-foreground" />}
+      title={t("recent.loadFailedTitle")}
+      description={t("recent.loadFailedDescription")}
+    >
+      <Button onClick={onRetry} disabled={isRetrying} size="sm" className="cursor-pointer">
+        {isRetrying ? <Spinner className="mr-2" /> : <RefreshCw className="mr-2 size-4" />}
+        {t("recent.retry")}
+      </Button>
+    </EmptyState>
+  );
+}
+
 function RecentNotebooksEmpty({
   isCreating,
   onCreate,
@@ -173,6 +219,7 @@ function RecentNotebooksEmpty({
 
   return (
     <EmptyState
+      className="animate-in fade-in duration-300 motion-reduce:animate-none"
       icon={<NotebookText className="size-7 text-muted-foreground" />}
       title={t("recent.emptyTitle")}
       description={t("recent.emptyDescription")}
@@ -185,12 +232,17 @@ function RecentNotebooksEmpty({
   );
 }
 
+// Stagger only the first rows; below-fold and load-more cards enter immediately.
+function cardEntranceDelay(index: number): number {
+  return index <= 8 ? index * 50 : 0;
+}
+
 function RecentNotebookGrid({ notebooks }: { notebooks: Notebook[] }) {
   const { t, i18n } = useTranslation("notebooks");
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {notebooks.map((notebook) => (
+      {notebooks.map((notebook, index) => (
         <NotebookCard
           key={notebook.id}
           id={notebook.id}
@@ -198,8 +250,11 @@ function RecentNotebookGrid({ notebooks }: { notebooks: Notebook[] }) {
           description={notebook.description}
           updatedAt={formatUpdatedAt(notebook.updatedAt, t, i18n.resolvedLanguage)}
           imageUrl={notebook.bannerUrl ?? undefined}
+          bannerVariants={notebook.bannerVariants}
           bannerFocalPoint={notebook.bannerFocalPoint}
           icon={<NotebookIcon name={notebook.icon} />}
+          className={CARD_ENTRANCE_CLASS}
+          style={{ animationDelay: `${cardEntranceDelay(index)}ms` }}
         />
       ))}
     </div>

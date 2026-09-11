@@ -3,6 +3,50 @@
     "description": "Choose how Memsystems looks. Theme sets the palette, color scheme sets light or dark.",
     "title": "Appearance"
   },
+  "embeddings": {
+    "apiKey": {
+      "confirmRemove": "Confirm Remove",
+      "hide": "Hide Voyage key",
+      "label": "Voyage API Key",
+      "placeholder": "Paste your Voyage AI key…",
+      "remove": "Remove",
+      "removeConfirm": "Removing your key stops source retrieval from working. Click again to confirm.",
+      "removing": "Removing…",
+      "replace": "Replace",
+      "save": "Save Key",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "show": "Show Voyage key"
+    },
+    "description": {
+      "checking": "Checking embedding provider status…",
+      "connected": "Your Voyage AI key powers retrieval across all notebooks.",
+      "missing": "Add your Voyage AI key below to power source retrieval."
+    },
+    "modelInfo": "Model: {{model}} · {{dimensions}} dimensions",
+    "reembed": {
+      "action": "Re-embed All Sources",
+      "actionRunning": "Queueing…",
+      "hint": "Queues background re-indexing for every source.",
+      "title": "Re-embedding"
+    },
+    "status": {
+      "checking": "Checking",
+      "connected": "Connected",
+      "notConnected": "Not connected"
+    },
+    "title": "Embeddings",
+    "toast": {
+      "removed": "Voyage key removed",
+      "removeFailed": "Could not remove this key",
+      "requestFailed": "The request failed",
+      "reembedFailed": "Could not queue re-embedding",
+      "reembedQueued": "Re-indexing queued for {{count}} sources",
+      "saved": "Voyage key saved",
+      "saveFailed": "Could not save this key"
+    },
+    "whatIsIt": "What is Voyage AI?"
+  },
   "gateway": {
     "apiKey": {
       "confirmRemove": "Confirm Remove",

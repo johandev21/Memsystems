@@ -104,10 +104,11 @@ export const PromptInputActionMenuTrigger = ({
   children,
   ...props
 }: PromptInputActionMenuTriggerProps) => (
-  <DropdownMenuTrigger render={<span />}>
-    <PromptInputButton className={className} {...props}>
-      {children ?? <PlusIcon className="size-4" />}
-    </PromptInputButton>
+  // The menu trigger props (aria-haspopup, aria-expanded, tabindex) are merged
+  // directly into the button — rendering the trigger as a <span> wrapper would
+  // put those attributes on an element that does not support them.
+  <DropdownMenuTrigger render={<PromptInputButton className={className} {...props} />}>
+    {children ?? <PlusIcon className="size-4" />}
   </DropdownMenuTrigger>
 );
 

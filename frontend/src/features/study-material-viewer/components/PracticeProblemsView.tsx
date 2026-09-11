@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo } from "react";
 import type { ParseKeys } from "i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { sourcesQueryOptions, type Source } from "@/features/sources";
+import { sourcesQueryOptions, type Source } from "@/features/sources/api/sources";
 import {
   PracticeProblemsContent,
   type PracticeProblemsContentType,
   type PracticeProblemsDifficulty,
 } from "../shapes/practice-problems";
 import { usePracticeProblemsSession } from "../hooks/use-practice-problems-session";
-import { useModelPersistence } from "@/features/notebooks";
+import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import { PracticeStepperHeader } from "./practice/practice-header";
 import { usePracticeChatPrompts } from "./practice/practice-chat";
 import { ProblemStatementSection } from "./practice/problem-statement-section";

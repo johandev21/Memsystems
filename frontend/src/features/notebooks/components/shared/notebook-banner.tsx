@@ -13,6 +13,7 @@ import {
   saveNotebookBannerChanges,
 } from "./notebook-banner-draft";
 import { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
+import type { BannerUploadPayload } from "../../utils/banner-variants";
 
 export interface NotebookBannerProps {
   notebookId: string;
@@ -20,6 +21,7 @@ export interface NotebookBannerProps {
   description?: string | null;
   icon?: string;
   bannerUrl?: string | null;
+  bannerVariants?: { w480: string | null; w960: string | null; w1920: string | null } | null;
   bannerFocalPoint?: { x: number; y: number } | null;
   updatedAt: string;
   isUntitled: boolean;
@@ -31,6 +33,7 @@ export function NotebookBanner({
   description,
   icon,
   bannerUrl,
+  bannerVariants,
   bannerFocalPoint,
   updatedAt,
   isUntitled,
@@ -40,7 +43,7 @@ export function NotebookBanner({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
-  const bannerFileRef = useRef<File | null>(null);
+  const bannerUploadRef = useRef<BannerUploadPayload | null>(null);
 
   const createInitialDraft = useCallback(
     (): BannerDraftState => ({
@@ -59,7 +62,7 @@ export function NotebookBanner({
 
   const resetDraft = useCallback(() => {
     if (draft.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(draft.previewUrl);
-    bannerFileRef.current = null;
+    bannerUploadRef.current = null;
     dispatch({ type: "RESET", payload: createInitialDraft() });
   }, [createInitialDraft, draft.previewUrl]);
 
@@ -137,16 +140,16 @@ export function NotebookBanner({
     }
   };
 
-  const handleSelectFile = (file: File) => {
+  const handleSelectFile = (payload: BannerUploadPayload) => {
     if (draft.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(draft.previewUrl);
-    bannerFileRef.current = file;
+    bannerUploadRef.current = payload;
     const reader = new FileReader();
     reader.onloadend = () => {
       if (typeof reader.result === "string") {
         dispatch({ type: "SET_PREVIEW", previewUrl: reader.result });
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(payload.file);
   };
 
   const handleCancel = () => {
@@ -170,12 +173,12 @@ export function NotebookBanner({
         bannerUrl,
         bannerFocalPoint,
         draft: { ...draft, title: trimmedTitle },
-        bannerFile: bannerFileRef.current,
+        bannerUpload: bannerUploadRef.current,
         queryClient,
       });
       toast.success(t("banner.updated"));
       setIsEditing(false);
-      bannerFileRef.current = null;
+      bannerUploadRef.current = null;
       dispatch({ type: "RESET", payload: createInitialDraft() });
     } catch {
       toast.error(t("banner.updateFailed"));
@@ -190,6 +193,7 @@ export function NotebookBanner({
         containerRef={focalPointDrag.containerRef}
         isEditing={isEditing}
         visibleBannerUrl={visibleBannerUrl}
+        visibleBannerVariants={isEditing && draft.previewUrl ? null : bannerVariants}
         visibleFocalPoint={visibleFocalPoint}
         imageError={draft.imageError}
         onImageError={() => dispatch({ type: "SET_IMAGE_ERROR", error: true })}
@@ -198,7 +202,7 @@ export function NotebookBanner({
         isSaving={isSaving}
         onOpenImageDialog={() => setImageDialogOpen(true)}
         onRemoveBanner={() => {
-          bannerFileRef.current = null;
+          bannerUploadRef.current = null;
           dispatch({ type: "REMOVE_BANNER" });
         }}
         onCancel={handleCancel}

@@ -7,11 +7,11 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BadRequestError } from '../../common/errors/domain-error';
@@ -87,10 +87,23 @@ export class NotebooksController {
   }
 
   @Post(':id/banner')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'file', maxCount: 1 },
+      { name: 'variant480', maxCount: 1 },
+      { name: 'variant960', maxCount: 1 },
+      { name: 'variant1920', maxCount: 1 },
+    ]),
+  )
   async uploadBanner(
     @Param('id') id: string,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles()
+    files?: {
+      file?: Express.Multer.File[];
+      variant480?: Express.Multer.File[];
+      variant960?: Express.Multer.File[];
+      variant1920?: Express.Multer.File[];
+    },
     @Body('focalPoint') focalPointRaw?: string,
   ) {
     let focalPoint: { x: number; y: number } | undefined;
@@ -102,11 +115,24 @@ export class NotebooksController {
       }
     }
 
+    const file = files?.file?.[0];
     if (!file) {
       throw new BadRequestError('File is required', {
         messageKey: 'errors.notebooks.banner.fileRequired',
       });
     }
+
+    const variants = [
+      { width: 480 as const, file: files?.variant480?.[0] },
+      { width: 960 as const, file: files?.variant960?.[0] },
+      { width: 1920 as const, file: files?.variant1920?.[0] },
+    ]
+      .filter((entry) => entry.file !== undefined)
+      .map((entry) => ({
+        width: entry.width,
+        buffer: entry.file!.buffer,
+        contentType: entry.file!.mimetype,
+      }));
 
     return this.notebooksService.uploadBanner(
       id,
@@ -114,6 +140,7 @@ export class NotebooksController {
       file.originalname,
       file.mimetype,
       focalPoint,
+      variants,
     );
   }
 

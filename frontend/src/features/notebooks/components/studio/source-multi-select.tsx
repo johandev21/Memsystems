@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { type Source, sourcesQueryOptions } from "@/features/sources";
+import { type Source, sourcesQueryOptions } from "@/features/sources/api/sources";
 import { cn } from "@/shared/utils/cn";
 
 export interface SourceMultiSelectProps {

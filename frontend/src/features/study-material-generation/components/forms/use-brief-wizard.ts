@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { sourcesQueryOptions } from "@/features/sources";
+import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 export interface UseBriefWizardOptions

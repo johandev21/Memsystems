@@ -5,7 +5,7 @@ import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
-import { ALL_ICON_NAMES, CURATED_CATEGORIES } from "./icon-picker-data";
+import { CURATED_CATEGORIES, loadAllIconNames } from "./icon-picker-data";
 import { IconPickerGrid } from "./icon-picker-grid";
 
 export interface IconPickerProps {
@@ -34,10 +34,22 @@ export function IconPicker({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [allIconNames, setAllIconNames] = useState<string[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const listId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    loadAllIconNames().then((names) => {
+      if (!cancelled) setAllIconNames(names);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -62,12 +74,12 @@ export function IconPicker({
     if (!query) return [];
 
     const normalizedQuery = query.replace(/[\s_]+/g, "-");
-    return ALL_ICON_NAMES.filter((name) => {
+    return allIconNames.filter((name) => {
       if (name.includes(normalizedQuery)) return true;
       const parts = name.split("-");
       return parts.some((part) => part.startsWith(query));
     });
-  }, [debouncedQuery]);
+  }, [allIconNames, debouncedQuery]);
 
   const isSearching = debouncedQuery.trim().length > 0;
 

@@ -3,6 +3,50 @@
     "description": "Elige el aspecto de Memsystems. El tema define la paleta y el esquema de color define el modo claro u oscuro.",
     "title": "Apariencia"
   },
+  "embeddings": {
+    "apiKey": {
+      "confirmRemove": "Confirmar eliminación",
+      "hide": "Ocultar clave de Voyage",
+      "label": "Clave de API de Voyage",
+      "placeholder": "Pega tu clave de Voyage AI…",
+      "remove": "Eliminar",
+      "removeConfirm": "Eliminar tu clave impide buscar en tus fuentes. Haz clic de nuevo para confirmar.",
+      "removing": "Eliminando…",
+      "replace": "Reemplazar",
+      "save": "Guardar clave",
+      "saved": "Guardada",
+      "saving": "Guardando…",
+      "show": "Mostrar clave de Voyage"
+    },
+    "description": {
+      "checking": "Comprobando el estado del proveedor de embeddings…",
+      "connected": "Tu clave de Voyage AI alimenta la búsqueda en todos los cuadernos.",
+      "missing": "Añade tu clave de Voyage AI abajo para habilitar la búsqueda en tus fuentes."
+    },
+    "modelInfo": "Modelo: {{model}} · {{dimensions}} dimensiones",
+    "reembed": {
+      "action": "Regenerar embeddings de todas las fuentes",
+      "actionRunning": "Poniendo en cola…",
+      "hint": "Pone en cola el reindexado en segundo plano de todas las fuentes.",
+      "title": "Regeneración de embeddings"
+    },
+    "status": {
+      "checking": "Comprobando",
+      "connected": "Conectado",
+      "notConnected": "Sin conexión"
+    },
+    "title": "Embeddings",
+    "toast": {
+      "removed": "Clave de Voyage eliminada",
+      "removeFailed": "No se pudo eliminar esta clave",
+      "requestFailed": "La petición falló",
+      "reembedFailed": "No se pudo poner en cola la regeneración",
+      "reembedQueued": "Reindexado en cola para {{count}} fuentes",
+      "saved": "Clave de Voyage guardada",
+      "saveFailed": "No se pudo guardar esta clave"
+    },
+    "whatIsIt": "¿Qué es Voyage AI?"
+  },
   "gateway": {
     "apiKey": {
       "confirmRemove": "Confirmar eliminación",

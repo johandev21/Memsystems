@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/shared/utils/cn";
+import { createBannerVariants, type BannerUploadPayload } from "../../utils/banner-variants";
 
 const MAX_BANNER_BYTES = 2 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -17,58 +18,7 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export interface ImageUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectFile: (file: File) => void;
-}
-
-async function resizeBannerImage(
-  file: File,
-  maxWidth = 1200,
-  maxHeight = 600,
-  quality = 0.85,
-): Promise<File> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onerror = () => resolve(file);
-    reader.onload = () => {
-      const img = new window.Image();
-      img.onerror = () => resolve(file);
-      img.onload = () => {
-      let { width, height } = img;
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        resolve(file);
-        return;
-      }
-      ctx.drawImage(img, 0, 0, width, height);
-      const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-          const resizedFile = new File([blob], file.name, {
-            type: outputType,
-            lastModified: Date.now(),
-          });
-          resolve(resizedFile);
-        },
-        outputType,
-        quality,
-      );
-    };
-    img.src = reader.result as string;
-  };
-  reader.readAsDataURL(file);
-});
+  onSelectFile: (payload: BannerUploadPayload) => void;
 }
 
 export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUploadDialogProps) {
@@ -108,8 +58,8 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
       );
       return;
     }
-    const processedFile = await resizeBannerImage(file);
-    onSelectFile(processedFile);
+    const payload = await createBannerVariants(file);
+    onSelectFile(payload);
     onOpenChange(false);
   };
 

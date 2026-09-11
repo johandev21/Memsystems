@@ -1,5 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import i18n from "@/shared/i18n/i18n";
+import settingsEn from "@/shared/i18n/locales/en/settings.json";
 import { GatewayCard } from "./gateway-card";
 
 const status = vi.hoisted(() => ({ pending: false, connected: false, degraded: false }));
@@ -14,6 +16,12 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 vi.mock("./gateway-key-form", () => ({ GatewayKeyForm: () => null }));
+
+// The settings namespace loads lazily; register the bundle directly so the
+// first render cannot race the namespace fetch.
+beforeAll(() => {
+  i18n.addResourceBundle("en", "settings", settingsEn, true, true);
+});
 
 afterEach(cleanup);
 

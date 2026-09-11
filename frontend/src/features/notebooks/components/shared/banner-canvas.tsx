@@ -6,12 +6,14 @@ import { IconPicker } from "@/components/ui/icon-picker";
 import { Input } from "@/components/ui/input";
 import { NotebookIcon } from "../notebook-icon";
 import type { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
+import { buildBannerSrcSet } from "../../utils/banner-variants";
 import { cn } from "@/shared/utils/cn";
 
 export interface BannerCanvasProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   isEditing: boolean;
   visibleBannerUrl: string | null;
+  visibleBannerVariants?: { w480: string | null; w960: string | null; w1920: string | null } | null;
   visibleFocalPoint: { x: number; y: number };
   imageError: boolean;
   onImageError: () => void;
@@ -35,11 +37,13 @@ export interface BannerCanvasProps {
 
 export function BannerImage({
   visibleBannerUrl,
+  visibleBannerVariants,
   visibleFocalPoint,
   imageError,
   onImageError,
 }: {
   visibleBannerUrl: string | null | undefined;
+  visibleBannerVariants?: { w480: string | null; w960: string | null; w1920: string | null } | null;
   visibleFocalPoint: { x: number; y: number };
   imageError: boolean;
   onImageError: () => void;
@@ -48,12 +52,16 @@ export function BannerImage({
     return (
       <img
         src={visibleBannerUrl}
+        srcSet={buildBannerSrcSet(visibleBannerVariants)}
+        sizes="100vw"
         alt=""
         className="pointer-events-none absolute inset-0 size-full object-cover"
         style={{
           objectPosition: `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
         }}
         draggable={false}
+        fetchPriority="high"
+        decoding="async"
         onError={onImageError}
       />
     );
@@ -184,6 +192,7 @@ export function BannerCanvas({
   containerRef,
   isEditing,
   visibleBannerUrl,
+  visibleBannerVariants,
   visibleFocalPoint,
   imageError,
   onImageError,
@@ -226,6 +235,7 @@ export function BannerCanvas({
     >
       <BannerImage
         visibleBannerUrl={visibleBannerUrl && !imageError ? visibleBannerUrl : null}
+        visibleBannerVariants={visibleBannerVariants}
         visibleFocalPoint={visibleFocalPoint}
         imageError={imageError}
         onImageError={onImageError}

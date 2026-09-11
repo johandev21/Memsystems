@@ -17,6 +17,9 @@ export interface RecentNotebooksPagination {
 export interface UseRecentNotebooksResult {
   notebooks: Notebook[];
   isLoading: boolean;
+  isError: boolean;
+  isRetrying: boolean;
+  onRetryLoad: () => void;
   isCreating: boolean;
   onCreate: () => Promise<void>;
   pagination: RecentNotebooksPagination;
@@ -32,6 +35,9 @@ export function useRecentNotebooks(): UseRecentNotebooksResult {
   const {
     data,
     isLoading,
+    isError,
+    refetch,
+    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -73,6 +79,9 @@ export function useRecentNotebooks(): UseRecentNotebooksResult {
   return {
     notebooks,
     isLoading,
+    isError,
+    isRetrying: isRefetching,
+    onRetryLoad: () => void refetch(),
     isCreating,
     onCreate: handleCreate,
     pagination: {

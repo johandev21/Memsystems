@@ -13,7 +13,7 @@
   "errors": {
     "ai": {
       "embedding": {
-        "notConfigured": "Embedding model is not configured. Add your AI Gateway key in Settings."
+        "notConfigured": "Embedding model is not configured. Add your Voyage API key in Settings."
       },
       "gateway": {
         "busy": "The AI service is busy right now. Please retry in a moment.",
@@ -36,6 +36,14 @@
       },
       "settings": {
         "legacyProviderKeys": "Per-provider keys were removed. Add your AI Gateway key in Settings."
+      },
+      "voyage": {
+        "invalidResponse": "The embedding service returned an invalid response.",
+        "keyRejected": "That Voyage API key was rejected. Check the key and try again.",
+        "rateLimited": "The embedding service is rate-limiting requests. The job will retry automatically.",
+        "requestFailed": "The embedding request was rejected.",
+        "serverError": "The embedding service had a temporary problem. Please retry.",
+        "unreachable": "Could not reach the embedding service. Check your connection and try again."
       }
     },
     "chat": {

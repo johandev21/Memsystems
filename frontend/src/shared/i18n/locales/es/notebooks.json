@@ -64,6 +64,8 @@
     "emptyTitle": "Aún no hay cuadernos",
     "heroSubtitle": "Retoma donde lo dejaste o empieza algo nuevo.",
     "heroTitle": "Avanza en lo que importa.",
+    "loadFailedDescription": "Algo salió mal al cargar tus cuadernos. Comprueba tu conexión e inténtalo de nuevo.",
+    "loadFailedTitle": "No se pudieron cargar los cuadernos",
     "loadingMore": "Cargando más…",
     "loadMoreFailed": "No se pudieron cargar más cuadernos.",
     "newNotebook": "Nuevo cuaderno",

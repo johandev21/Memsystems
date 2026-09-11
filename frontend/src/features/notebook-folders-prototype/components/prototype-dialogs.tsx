@@ -15,7 +15,14 @@ export function NotebookDialog({
   onClose,
   onUpdate,
 }: {
-  notebook: { id: string; title: string; description: string; coverUrl: string | null; icon?: string };
+  notebook: {
+    id: string;
+    title: string;
+    description: string;
+    coverUrl: string | null;
+    coverVariants?: { w480: string; w960: string } | null;
+    icon?: string;
+  };
   onClose: () => void;
   onUpdate: (id: string, patch: { title?: string; description?: string }) => void;
 }) {
@@ -36,7 +43,18 @@ export function NotebookDialog({
           </DialogDescription>
         </DialogHeader>
         {notebook.coverUrl && (
-          <img src={notebook.coverUrl} alt="" className="h-40 w-full rounded-xl object-cover" />
+          <img
+            src={notebook.coverUrl}
+            srcSet={
+              notebook.coverVariants
+                ? `${notebook.coverVariants.w480} 480w, ${notebook.coverVariants.w960} 960w`
+                : undefined
+            }
+            sizes="(min-width: 512px) 448px, calc(100vw - 2rem)"
+            alt=""
+            className="h-40 w-full rounded-xl object-cover"
+            decoding="async"
+          />
         )}
         <p className="text-sm text-muted-foreground">
           Seeded locally from the philosophy notebook collection.

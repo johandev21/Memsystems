@@ -1,15 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { GroupImperativeHandle, PanelImperativeHandle } from "react-resizable-panels";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatPanel, ChatPanelHeader } from "@/features/notebook-chat";
-import { SourceContentViewer, SourcesPanel } from "@/features/sources";
+import { SourcesPanel } from "@/features/sources/components/sources-panel";
+import { SourceReaderSkeleton } from "@/features/sources/components/skeletons/source-reader-skeleton";
 import { StudyMaterialsPanel } from "@/features/study-material-tree";
 import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
 import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
-import type { SourceSegmentLocator } from "@/features/sources";
+import type { SourceSegmentLocator } from "@/features/sources/types";
+
+// Lazy: the source reader graph (every document renderer: pdf/epub, audio,
+// video, pptx, image, …) is only needed once a source is actually opened.
+const SourceContentViewer = lazy(() =>
+  import("@/features/sources/components/source-content-viewer").then(
+    (m) => ({ default: m.SourceContentViewer }),
+  ),
+);
 import { SourcesPanelHeader } from "./sources-panel-header";
 import { StudioPanelHeader } from "./studio-panel-header";
 
@@ -125,11 +134,15 @@ export function DesktopLayout({
         >
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             {selectedSourceId ? (
-              <SourceContentViewer
-                sourceId={selectedSourceId}
-                selectedLocator={selectedLocator}
-                onClose={() => onSelectSource(null)}
-              />
+              <Suspense
+                fallback={<SourceReaderSkeleton onClose={() => onSelectSource(null)} />}
+              >
+                <SourceContentViewer
+                  sourceId={selectedSourceId}
+                  selectedLocator={selectedLocator}
+                  onClose={() => onSelectSource(null)}
+                />
+              </Suspense>
             ) : (
               <>
                 <SourcesPanelHeader

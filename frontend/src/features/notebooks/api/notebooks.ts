@@ -1,6 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { fetchApi, apiDelete, createQueryOptions } from "@/shared/api";
 import type { Notebook, NotebooksResponse } from "../types";
+import type { BannerVariantWidth } from "../utils/banner-variants";
 
 export type { Notebook, NotebooksResponse };
 export type NotebooksPage = NotebooksResponse;
@@ -89,6 +90,7 @@ export async function uploadNotebookBanner(
   id: string,
   file: File,
   focalPoint?: { x: number; y: number },
+  variants?: Partial<Record<BannerVariantWidth, File>>,
 ): Promise<void> {
   const body = new FormData();
   body.append("id", id);
@@ -97,6 +99,10 @@ export async function uploadNotebookBanner(
     body.append("focalPointX", focalPoint.x.toString());
     body.append("focalPointY", focalPoint.y.toString());
     body.append("focalPoint", JSON.stringify(focalPoint));
+  }
+  for (const width of [480, 960, 1920] as const) {
+    const variantFile = variants?.[width];
+    if (variantFile) body.append(`variant${width}`, variantFile);
   }
   const res = await fetchApi(`/api/notebooks/${id}/banner`, { method: "POST", body });
   if (!res.ok) throw new Error(`Failed to upload banner (${res.status})`);

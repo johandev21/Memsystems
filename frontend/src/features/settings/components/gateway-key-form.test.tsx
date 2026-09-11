@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "@/shared/i18n/i18n";
+import settingsEn from "@/shared/i18n/locales/en/settings.json";
 import { GatewayKeyForm } from "./gateway-key-form";
 import { deleteGatewayKey, saveGatewayKey } from "../api/gateway";
 
@@ -10,6 +12,12 @@ vi.mock("../api/gateway", () => ({
   deleteGatewayKey: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+// The settings namespace loads lazily; register the bundle directly so the
+// first render cannot race the namespace fetch.
+beforeAll(() => {
+  i18n.addResourceBundle("en", "settings", settingsEn, true, true);
+});
 
 function renderForm(hasKey = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

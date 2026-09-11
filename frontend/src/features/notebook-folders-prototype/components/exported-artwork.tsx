@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { CoverVariants } from "../model/types";
 
 // Extracted from folder-prototype/Memsystems-export.html, then rounded: 16px outer corners, 14/10px tab corners, 8-10px inner corners. Colors use the application theme.
 const FOLDER_BACK_PATH =
@@ -7,6 +8,33 @@ const FOLDER_FRONT_PATH =
   "M7.95 0Q0 0 0 8L0 15.5A16 16 0 0 0 15.9 31.5L221.6 31.5A16 16 0 0 0 237.5 15.5L237.5 -28.5Q237.5 -44.5 221.6 -44.5L59.33 -44.5Q49.39 -44.5 49.39 -34.5L49.39 -8Q49.39 0 41.44 0Z";
 const FOLDER_FRONT_PATH_EMPTY =
   "M8 0Q0 0 0 8L0 109A16 16 0 0 0 16 125L223 125A16 16 0 0 0 239 109L239 8Q239 0 231 0Z";
+
+// Cover photos render as fill layers behind the artwork chrome; real <img>
+// elements (unlike CSS backgrounds) can use srcset. The prototype artwork is
+// almost entirely above the fold and each file is only a few KB, so these
+// load eagerly with high priority to keep LCP fast.
+function CoverFill({ url, sizes, srcSet }: { url: string; sizes?: string; srcSet?: string }) {
+  return (
+    <img
+      src={url}
+      srcSet={srcSet}
+      sizes={sizes}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      className="absolute inset-0 size-full object-cover"
+      fetchPriority="high"
+      decoding="async"
+    />
+  );
+}
+
+function NotebookCoverSrcSet({ coverVariants }: { coverVariants?: CoverVariants | null }) {
+  return coverVariants ? `${coverVariants.w480} 480w, ${coverVariants.w960} 960w` : undefined;
+}
+
+const FOLDER_COVER_SRCSET = (variants: CoverVariants | null) =>
+  variants ? `${variants.w240} 240w, ${variants.w480} 480w` : undefined;
 
 export function EmptyFolderArtwork({ title, titleFontSize, titleSlot }: { title: string; titleFontSize: number; titleSlot?: ReactNode }) {
   return (
@@ -51,7 +79,7 @@ export function SingleFolderArtwork({
   title: string;
   titleFontSize: number;
   titleSlot?: ReactNode;
-  covers: (string | null)[];
+  covers: (CoverVariants | null)[];
 }) {
   return (
     <span className="box-border w-[239px] h-[168.5px] relative block shrink-0 [z-index:4]">
@@ -67,15 +95,9 @@ export function SingleFolderArtwork({
             fill="var(--notebook-folder-back)"
           ></path>
         </svg>
-        <span
-          className="box-border w-[183px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2]"
-          style={{
-            backgroundImage: covers[0] ? `url(${covers[0]})` : undefined,
-            backgroundColor: covers[0] ? undefined : "var(--notebook-empty-cover)",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: "cover",
-          }}
-        ></span>
+        <span className="box-border w-[183px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2] bg-[var(--notebook-empty-cover)]">
+          {covers[0] ? <CoverFill url={covers[0].w480} sizes="183px" srcSet={FOLDER_COVER_SRCSET(covers[0])} /> : null}
+        </span>
         <svg
           viewBox="0 -44.5 237.5 76"
           preserveAspectRatio="none"
@@ -104,7 +126,7 @@ export function DoubleFolderArtwork({
   title: string;
   titleFontSize: number;
   titleSlot?: ReactNode;
-  covers: (string | null)[];
+  covers: (CoverVariants | null)[];
 }) {
   return (
     <span className="box-border w-[239px] h-[168.5px] relative block shrink-0 [z-index:6]">
@@ -120,24 +142,12 @@ export function DoubleFolderArtwork({
             fill="var(--notebook-folder-back)"
           ></path>
         </svg>
-        <span
-          className="box-border w-[90px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2]"
-          style={{
-            backgroundImage: covers[0] ? `url(${covers[0]})` : undefined,
-            backgroundColor: covers[0] ? undefined : "var(--notebook-empty-cover)",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: "cover",
-          }}
-        ></span>
-        <span
-          className="box-border w-[90px] h-[107px] absolute left-[121px] top-[50px] rounded-[8px] overflow-hidden [z-index:3]"
-          style={{
-            backgroundImage: covers[1] ? `url(${covers[1]})` : undefined,
-            backgroundColor: covers[1] ? undefined : "var(--notebook-empty-cover)",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: "cover",
-          }}
-        ></span>
+        <span className="box-border w-[90px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2] bg-[var(--notebook-empty-cover)]">
+          {covers[0] ? <CoverFill url={covers[0].w480} sizes="90px" srcSet={FOLDER_COVER_SRCSET(covers[0])} /> : null}
+        </span>
+        <span className="box-border w-[90px] h-[107px] absolute left-[121px] top-[50px] rounded-[8px] overflow-hidden [z-index:3] bg-[var(--notebook-empty-cover)]">
+          {covers[1] ? <CoverFill url={covers[1].w480} sizes="90px" srcSet={FOLDER_COVER_SRCSET(covers[1])} /> : null}
+        </span>
         <svg
           viewBox="0 -44.5 237.5 76"
           preserveAspectRatio="none"
@@ -167,7 +177,7 @@ export function ManyFolderArtwork({
   title: string;
   titleFontSize: number;
   titleSlot?: ReactNode;
-  covers: (string | null)[];
+  covers: (CoverVariants | null)[];
   extraCount: number;
 }) {
   return (
@@ -184,24 +194,12 @@ export function ManyFolderArtwork({
             fill="var(--notebook-folder-back)"
           ></path>
         </svg>
-        <span
-          className="box-border w-[67px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2]"
-          style={{
-            backgroundImage: covers[0] ? `url(${covers[0]})` : undefined,
-            backgroundColor: covers[0] ? undefined : "var(--notebook-empty-cover)",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: "cover",
-          }}
-        ></span>
-        <span
-          className="box-border w-[67px] h-[107px] absolute left-[99px] top-[50px] rounded-[8px] overflow-hidden [z-index:3]"
-          style={{
-            backgroundImage: covers[1] ? `url(${covers[1]})` : undefined,
-            backgroundColor: covers[1] ? undefined : "var(--notebook-empty-cover)",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: "cover",
-          }}
-        ></span>
+        <span className="box-border w-[67px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2] bg-[var(--notebook-empty-cover)]">
+          {covers[0] ? <CoverFill url={covers[0].w480} sizes="67px" srcSet={FOLDER_COVER_SRCSET(covers[0])} /> : null}
+        </span>
+        <span className="box-border w-[67px] h-[107px] absolute left-[99px] top-[50px] rounded-[8px] overflow-hidden [z-index:3] bg-[var(--notebook-empty-cover)]">
+          {covers[1] ? <CoverFill url={covers[1].w480} sizes="67px" srcSet={FOLDER_COVER_SRCSET(covers[1])} /> : null}
+        </span>
         <span className="box-border w-[41px] h-[82px] absolute left-[170px] top-[50px] bg-[var(--notebook-overflow-surface)] rounded-[8px] overflow-hidden [z-index:4]">
           <span className="text-[16.8px]/[24px] box-border absolute left-[19.5px] top-[12px] text-[color:var(--notebook-overflow-foreground)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap] [z-index:0]">
             {extraCount}
@@ -229,16 +227,22 @@ export function ManyFolderArtwork({
   );
 }
 
-export function CoveredNotebookArtwork({ title, coverUrl, titleSlot }: { title: string; coverUrl: string; titleSlot?: ReactNode }) {
+export function CoveredNotebookArtwork({
+  title,
+  coverUrl,
+  coverVariants,
+  titleSlot,
+}: {
+  title: string;
+  coverUrl: string;
+  coverVariants?: CoverVariants | null;
+  titleSlot?: ReactNode;
+}) {
   return (
     <span
       className="box-border w-[239px] h-[137px] relative block shrink-0 prototype-notebook-surface rounded-[14px] overflow-hidden [z-index:0]"
-      style={{
-        backgroundImage: `url(${coverUrl})`,
-        backgroundRepeat: "no-repeat",
-        backgroundSize: "cover",
-      }}
     >
+      <CoverFill url={coverUrl} sizes="239px" srcSet={NotebookCoverSrcSet({ coverVariants })} />
       <span className="box-border w-fit max-w-[calc(100%_-_12px)] h-fit absolute left-[6px] top-[88px] flex flex-row gap-[6px] p-[0px_8px] justify-start items-center bg-[var(--notebook-label-surface)] rounded-[8px] [z-index:0]">
         <span className="box-border w-[24px] shrink-0 h-[24px] overflow-hidden relative">
           <svg

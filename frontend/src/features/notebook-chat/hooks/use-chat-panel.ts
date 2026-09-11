@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
-import { useModelPersistence } from "@/features/notebooks";
+import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import {
   type ChatMessageDTO,
   type ChatRequest,
@@ -16,7 +16,7 @@ import {
 } from "../api/chat";
 import i18n from "@/shared/i18n";
 import { modelsQueryOptions } from "@/features/ai";
-import { notebookQueryOptions } from "@/features/notebooks";
+import { notebookQueryOptions } from "@/features/notebooks/api";
 
 const DEFAULT_MODEL_ID = "openai/gpt-5.6-sol";
 

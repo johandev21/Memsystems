@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderPicker, SourceMultiSelect } from "@/features/notebooks";
+import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
+import { SourceMultiSelect } from "@/features/notebooks/components/studio/source-multi-select";
 import { kindLabelKey } from "../../kind-label";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 

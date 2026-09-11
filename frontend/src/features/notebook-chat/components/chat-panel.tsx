@@ -5,8 +5,8 @@ import {
   GatewayKeyPrompt,
   isConnectionUsable,
 } from "@/features/ai";
-import { NotebookBanner } from "@/features/notebooks";
-import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks";
+import { NotebookBanner } from "@/features/notebooks/components/shared/notebook-banner";
+import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks/components/dialogs/notebook-settings-dialog";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
@@ -195,6 +195,7 @@ function ChatContent({
             description={notebook.description}
             icon={notebook.icon ?? undefined}
             bannerUrl={notebook.bannerUrl}
+            bannerVariants={notebook.bannerVariants}
             bannerFocalPoint={notebook.bannerFocalPoint}
             updatedAt={notebook.updatedAt}
             isUntitled={showBannerAsUntitled}

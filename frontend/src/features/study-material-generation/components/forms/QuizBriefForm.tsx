@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderPicker } from "@/features/notebooks";
-import { sourcesQueryOptions } from "@/features/sources";
+import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
+import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";

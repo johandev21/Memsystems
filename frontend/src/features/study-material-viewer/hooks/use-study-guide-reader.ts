@@ -1,6 +1,6 @@
 import { useId, type MouseEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { sourcesQueryOptions } from "@/features/sources";
+import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import type { StudyGuideContentType } from "../shapes/study-guide";
 
 export function useStudyGuideReader(

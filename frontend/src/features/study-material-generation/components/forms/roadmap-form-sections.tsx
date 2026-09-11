@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderPicker } from "@/features/notebooks";
+import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
 import { cn } from "@/shared/utils/cn";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";

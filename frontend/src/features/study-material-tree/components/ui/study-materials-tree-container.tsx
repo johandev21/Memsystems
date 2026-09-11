@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { foldersQueryOptions } from "../../api/folders";
-import { studyMaterialsQueryOptions } from "@/features/study-material-viewer";
+import { studyMaterialsQueryOptions } from "@/features/study-material-viewer/api";
 import { StudyMaterialsTree, type StudyMaterialsTreeSize } from "./study-materials-tree";
 import { StudyMaterialsTreeSkeleton } from "./study-materials-tree-skeleton";
 import { StudyMaterialsTreeError } from "./study-materials-tree-error";

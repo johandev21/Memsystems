@@ -1,5 +1,6 @@
 import { useParams } from "@tanstack/react-router";
-import { NotebookHeader, NotebookWorkspaceContainer } from "@/features/notebooks";
+import { NotebookHeader } from "@/features/notebooks/components/notebook-header";
+import { NotebookWorkspaceContainer } from "@/features/notebooks/components/notebook-workspace/notebook-workspace-container";
 
 export function NotebookPage({ notebookId: propNotebookId }: { notebookId?: string } = {}) {
   const params = useParams({ strict: false });

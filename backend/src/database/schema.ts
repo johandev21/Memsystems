@@ -148,6 +148,11 @@ export const notebooks = pgTable('notebooks', {
   description: varchar('description', { length: 500 }).default('').notNull(),
   icon: varchar('icon', { length: 50 }).default('notebook').notNull(),
   banner: varchar('banner', { length: 2000 }),
+  bannerVariants: jsonb('banner_variants').$type<{
+    w480?: string;
+    w960?: string;
+    w1920?: string;
+  } | null>(),
   bannerFocalPoint: jsonb('banner_focal_point').$type<{
     x: number;
     y: number;
@@ -520,7 +525,7 @@ export const sourceChunks = pgTable(
     chunkingVersion: integer('chunking_version'),
     contentHash: varchar('content_hash', { length: 64 }),
     content: text('content').notNull(),
-    embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+    embedding: vector('embedding', { dimensions: 1024 }).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
@@ -700,6 +705,8 @@ export const appSettings = pgTable('app_settings', {
   // Global Vercel AI Gateway key (AES-256-GCM encrypted, see
   // UserSettingsService). Funds every model for the single-user app.
   gatewayApiKey: text('gateway_api_key'),
+  // Global Voyage AI key (AES-256-GCM encrypted) for embeddings.
+  voyageApiKey: text('voyage_api_key'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()

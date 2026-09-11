@@ -1,1 +1,1 @@
-export { default, defaultNS, resources } from "./i18n";
+export { default, defaultNS } from "./i18n";

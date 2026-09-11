@@ -53,7 +53,7 @@ export class RetrievalService {
     query: string,
     topK: number = DEFAULT_TOP_K,
   ): Promise<RetrievedChunk[]> {
-    const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+    const queryEmbedding = await this.embeddingService.embedQuery(query);
 
     const vectorLiteral = `[${queryEmbedding.join(',')}]`;
 

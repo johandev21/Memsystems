@@ -171,6 +171,11 @@ export class SourcesController {
     return this.sourcesService.reindexNotebook(notebookId);
   }
 
+  @Post('sources/reembed-all')
+  async reembedAllSources() {
+    return this.sourcesService.reembedAll();
+  }
+
   @Post('notebooks/:notebookId/sources/reindex-all')
   async reindexAllSources(@Param('notebookId') notebookId: string) {
     return this.sourcesService.reindexNotebook(notebookId);
