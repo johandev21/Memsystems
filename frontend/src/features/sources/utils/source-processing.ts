@@ -6,6 +6,13 @@ import type {
   SourceProcessingStatus,
 } from "../types";
 
+type DynamicTranslate = (
+  key: string,
+  options?: Record<string, string | number>,
+) => string;
+
+const translateDynamic = i18n.t as unknown as DynamicTranslate;
+
 export const SOURCE_POLL_INTERVAL_MS = 1_500;
 
 export function sourceProcessingStatus(source: Source): SourceProcessingStatus {
@@ -20,12 +27,14 @@ export function isSourceProcessing(source: Source): boolean {
 }
 
 export function sourceProcessingError(source: Source): string | undefined {
-  return (
+  const raw =
     source.processingErrorMessage ??
     source.processingError?.message ??
     source.errorMessage ??
-    undefined
-  );
+    undefined;
+  if (!raw) return undefined;
+  if (i18n.exists(raw)) return translateDynamic(raw);
+  return raw;
 }
 
 export function sourceProcessingErrorCode(source: Source): string | undefined {

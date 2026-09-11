@@ -281,12 +281,18 @@ export class SourcePolicyService {
    */
   async validateUrl(input: string): Promise<ValidatedUrl> {
     if (typeof input !== 'string' || input.length === 0) {
-      throw new WebScrapeError('URL is required', 'invalid_url');
+      throw new WebScrapeError('URL is required', 'invalid_url', {
+        messageKey: 'errors.sources.web.urlRequired',
+      });
     }
     if (input.length > this.config.maxUrlLength) {
       throw new WebScrapeError(
         `URL exceeds maximum length of ${this.config.maxUrlLength} characters`,
         'invalid_url',
+        {
+          messageKey: 'errors.sources.web.urlTooLong',
+          params: { max: this.config.maxUrlLength },
+        },
       );
     }
 
@@ -294,25 +300,38 @@ export class SourcePolicyService {
     try {
       url = new URL(input);
     } catch {
-      throw new WebScrapeError(`Invalid URL: ${input}`, 'invalid_url');
+      throw new WebScrapeError(`Invalid URL: ${input}`, 'invalid_url', {
+        messageKey: 'errors.sources.web.urlInvalid',
+        params: { url: input },
+      });
     }
 
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       throw new WebScrapeError(
         `Unsupported protocol: ${url.protocol.replace(':', '') || 'unknown'}`,
         'invalid_url',
+        {
+          messageKey: 'errors.sources.web.protocolUnsupported',
+          params: { protocol: url.protocol.replace(':', '') || 'unknown' },
+        },
       );
     }
 
     const hostname = stripIpv6Brackets(url.hostname);
     if (!hostname) {
-      throw new WebScrapeError('Invalid hostname: empty', 'invalid_url');
+      throw new WebScrapeError('Invalid hostname: empty', 'invalid_url', {
+        messageKey: 'errors.sources.web.hostnameEmpty',
+      });
     }
     const isIpLiteral = isIPv4(hostname) || isIPv6(hostname);
     if (!isIpLiteral && !HOSTNAME_RE.test(hostname)) {
       throw new WebScrapeError(
         `Invalid hostname: ${url.hostname}`,
         'invalid_url',
+        {
+          messageKey: 'errors.sources.web.hostnameInvalid',
+          params: { hostname: url.hostname },
+        },
       );
     }
 
@@ -321,6 +340,13 @@ export class SourcePolicyService {
       throw new WebScrapeError(
         `Port ${port} is not allowed. Allowed ports: ${this.config.allowedPorts.join(', ')}`,
         'blocked_url',
+        {
+          messageKey: 'errors.sources.web.portNotAllowed',
+          params: {
+            port,
+            allowedPorts: this.config.allowedPorts.join(', '),
+          },
+        },
       );
     }
 
@@ -328,6 +354,7 @@ export class SourcePolicyService {
       throw new WebScrapeError(
         'URLs with embedded credentials are not allowed',
         'blocked_url',
+        { messageKey: 'errors.sources.web.credentialsNotAllowed' },
       );
     }
 
@@ -338,6 +365,10 @@ export class SourcePolicyService {
       throw new WebScrapeError(
         `URL resolves to a private or restricted address: ${hostname}`,
         'blocked_url',
+        {
+          messageKey: 'errors.sources.web.privateAddress',
+          params: { hostname },
+        },
       );
     }
 

@@ -117,7 +117,9 @@ export class VideoInspectorService {
     }
 
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('Video buffer is empty.');
+      throw new BadRequestError('Video buffer is empty.', {
+        messageKey: 'errors.sources.inspect.videoEmpty',
+      });
     }
 
     const effectiveSize = sizeBytes ?? buffer.length;
@@ -125,6 +127,10 @@ export class VideoInspectorService {
       const displaySize = Math.max(effectiveSize, buffer.length);
       throw new BadRequestError(
         `Video file size (${(displaySize / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size of 1 GB.`,
+        {
+          messageKey: 'errors.sources.inspect.videoTooLarge',
+          params: { sizeMb: (displaySize / (1024 * 1024)).toFixed(2) },
+        },
       );
     }
 
@@ -133,6 +139,10 @@ export class VideoInspectorService {
       const hint = declaredContentType || effectiveFilename || 'unknown';
       throw new BadRequestError(
         `Unsupported video format (${hint}). Supported formats are MP4, WebM, QuickTime (MOV), and Matroska (MKV).`,
+        {
+          messageKey: 'errors.sources.inspect.videoUnsupported',
+          params: { hint },
+        },
       );
     }
 
@@ -144,6 +154,10 @@ export class VideoInspectorService {
     ) {
       throw new BadRequestError(
         `Video duration (${(metadata.durationMs / 1000).toFixed(1)}s) exceeds maximum allowed duration of 4 hours.`,
+        {
+          messageKey: 'errors.sources.inspect.videoTooLong',
+          params: { durationS: (metadata.durationMs / 1000).toFixed(1) },
+        },
       );
     }
 
@@ -258,10 +272,13 @@ export class VideoInspectorService {
       }
     } catch (err) {
       if (err instanceof BadRequestError) {
-        throw err;
+        throw new BadRequestError(err.message, {
+          messageKey: 'errors.sources.inspect.videoCorrupted',
+        });
       }
       throw new BadRequestError(
         `Corrupted or invalid ${mimeType} video header: ${err instanceof Error ? err.message : String(err)}`,
+        { messageKey: 'errors.sources.inspect.videoCorrupted' },
       );
     }
   }

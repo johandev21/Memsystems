@@ -71,7 +71,9 @@ export class PptxInspectorService {
     }
 
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('PPTX buffer is empty.');
+      throw new BadRequestError('PPTX buffer is empty.', {
+        messageKey: 'errors.sources.inspect.pptxEmpty',
+      });
     }
 
     const effectiveSize = sizeBytes ?? buffer.length;
@@ -79,6 +81,10 @@ export class PptxInspectorService {
       const displaySize = Math.max(effectiveSize, buffer.length);
       throw new BadRequestError(
         `PPTX file size (${(displaySize / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size of 200 MB.`,
+        {
+          messageKey: 'errors.sources.inspect.pptxTooLarge',
+          params: { sizeMb: (displaySize / (1024 * 1024)).toFixed(2) },
+        },
       );
     }
 
@@ -87,7 +93,9 @@ export class PptxInspectorService {
       const sig0 = buffer.readUInt32BE(0);
       const sig1 = buffer.readUInt32BE(4);
       if (sig0 === 0xd0cf11e0 && sig1 === 0xa11b1ae1) {
-        throw new BadRequestError('Legacy PPT not supported, requires PPTX');
+        throw new BadRequestError('Legacy PPT not supported, requires PPTX', {
+          messageKey: 'errors.sources.inspect.pptxLegacy',
+        });
       }
     }
 
@@ -102,6 +110,10 @@ export class PptxInspectorService {
       const hint = effectiveFilename || declaredContentType || 'unknown';
       throw new BadRequestError(
         `Unsupported PPTX format (${hint}). Expected PPTX ZIP container with PK\\x03\\x04 header.`,
+        {
+          messageKey: 'errors.sources.inspect.pptxUnsupported',
+          params: { hint },
+        },
       );
     }
 
@@ -127,6 +139,10 @@ export class PptxInspectorService {
       if (count > MAX_PPTX_SLIDES) {
         throw new BadRequestError(
           `PPTX slide count (${count}) exceeds maximum allowed limit of ${MAX_PPTX_SLIDES}.`,
+          {
+            messageKey: 'errors.sources.inspect.pptxTooManySlides',
+            params: { count, max: MAX_PPTX_SLIDES },
+          },
         );
       }
 
@@ -164,6 +180,7 @@ export class PptxInspectorService {
       if (err instanceof BadRequestError) throw err;
       throw new BadRequestError(
         `Corrupted or invalid PPTX file: ${err instanceof Error ? err.message : String(err)}`,
+        { messageKey: 'errors.sources.inspect.pptxCorrupted' },
       );
     }
 

@@ -35,6 +35,7 @@ import { PptxParserService } from './pptx-parser.service';
 import { EpubParserService } from './epub-parser.service';
 import { TabularInspectorService } from './tabular-inspector.service';
 import { TabularParserService } from './tabular-parser.service';
+import { DomainError } from '../../common/errors/domain-error';
 
 export interface SourceProcessingJobPayload {
   sourceId: string;
@@ -322,12 +323,20 @@ export class SourceProcessingHandler implements JobHandler<
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const messageKey =
+        error instanceof DomainError && error.messageKey
+          ? error.messageKey
+          : undefined;
       if (
         !(error instanceof SourceProcessingCancelledError) &&
         job.attemptCount >= job.maxAttempts &&
         (await this.queue.isActive(job.id))
       ) {
-        await this.versions.markFailed(sourceId, 'extraction_failed', message);
+        await this.versions.markFailed(
+          sourceId,
+          messageKey ?? 'extraction_failed',
+          messageKey ?? message,
+        );
       }
       throw error;
     }

@@ -1,4 +1,5 @@
 import { BadRequestError } from '../../common/errors/domain-error';
+import type { DomainErrorOptions } from '../../common/errors/domain-error';
 
 export type WebScrapeErrorCode =
   | 'invalid_url'
@@ -18,8 +19,9 @@ export class WebScrapeError extends BadRequestError {
   constructor(
     message: string,
     public readonly code: WebScrapeErrorCode,
+    options?: DomainErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'WebScrapeError';
   }
 }
