@@ -2,6 +2,10 @@ packages:
   - "frontend"
   - "backend"
 
+# Corepack enforces packageManager before pnpm starts. Disable pnpm's duplicate
+# resolver so frozen installs use the same application lockfile on every OS.
+pmOnFail: ignore
+
 minimumReleaseAge: 0
 trustPolicy: no-downgrade
 trustPolicyExclude:

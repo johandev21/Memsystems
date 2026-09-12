@@ -1,7 +1,7 @@
 {
   "name": "memsystems-monorepo",
   "private": true,
-  "packageManager": "pnpm@11.17.0",
+  "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "turbo run dev",
     "dev:backend": "turbo run dev --filter=backend",
@@ -30,4 +30,3 @@
     "turbo": "^2.4.0"
   }
 }
-
