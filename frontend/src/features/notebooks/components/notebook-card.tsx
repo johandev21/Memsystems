@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/shared/utils/cn";
+import { chatMessagesQueryOptions } from "@/features/notebook-chat/api/chat";
+import { notebookQueryOptions } from "../api";
 import { buildBannerSrcSet } from "../utils/banner-variants";
 
 interface NotebookCardProps {
@@ -29,11 +32,22 @@ export function NotebookCard({
   style,
 }: NotebookCardProps) {
   const [isBannerLoaded, setIsBannerLoaded] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Warm the notebook + chat history caches on intent so opening a notebook
+  // renders its banner and messages immediately instead of waiting on a
+  // request waterfall.
+  const prefetch = useCallback(() => {
+    void queryClient.prefetchQuery(notebookQueryOptions(id));
+    void queryClient.prefetchQuery(chatMessagesQueryOptions(id));
+  }, [id, queryClient]);
 
   return (
     <Link
       to="/notebooks/$notebookId"
       params={{ notebookId: id }}
+      onMouseEnter={prefetch}
+      onFocus={prefetch}
       className={cn(
         "group relative flex flex-col overflow-hidden bg-card ring-1 ring-foreground/10 hover:ring-primary/35 hover:shadow-md transition-all duration-200 cursor-pointer block rounded-[min(var(--radius-4xl),24px)]",
         className,

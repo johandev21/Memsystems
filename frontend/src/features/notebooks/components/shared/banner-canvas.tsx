@@ -1,4 +1,5 @@
 import { AlertCircle, Check, ImagePlus, Move, Pencil, Trash2, X } from "lucide-react";
+import { useState } from "react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -48,20 +49,32 @@ export function BannerImage({
   imageError: boolean;
   onImageError: () => void;
 }) {
+  // Keyed by URL so a changed banner (e.g. an edit preview) fades in again
+  // instead of reusing the previous image's "loaded" state.
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const isLoaded = loadedUrl === visibleBannerUrl;
+
   if (visibleBannerUrl && !imageError) {
     return (
       <img
         src={visibleBannerUrl}
         srcSet={buildBannerSrcSet(visibleBannerVariants)}
-        sizes="100vw"
+        sizes="(min-width: 928px) 896px, 100vw"
         alt=""
-        className="pointer-events-none absolute inset-0 size-full object-cover"
+        className={cn(
+          "pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-200 motion-reduce:transition-none",
+          isLoaded ? "opacity-100" : "opacity-0",
+        )}
         style={{
           objectPosition: `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
         }}
         draggable={false}
         fetchPriority="high"
         decoding="async"
+        ref={(element) => {
+          if (element?.complete && element.naturalWidth > 0) setLoadedUrl(visibleBannerUrl);
+        }}
+        onLoad={() => setLoadedUrl(visibleBannerUrl)}
         onError={onImageError}
       />
     );
