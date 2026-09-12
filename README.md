@@ -95,13 +95,15 @@ Desde la raíz del repositorio:
 pnpm install
 ```
 
-Copia `backend/.env.example` a `backend/.env.local` y `frontend/.env.example` a `frontend/.env.local` y completa los valores necesarios. Como mínimo, configura:
+Copia `backend/.env.example` a `backend/.env.local` y completa los valores necesarios. Como mínimo, configura:
 
 - `DATABASE_URL`: conexión a PostgreSQL.
 
-Para guardar una clave de AI Gateway desde la aplicación, configura también `CREDENTIALS_ENCRYPTION_KEY`.
+Para guardar una clave de AI Gateway o de Voyage desde la aplicación, configura también `CREDENTIALS_ENCRYPTION_KEY`.
 
 Para el desarrollo local se puede usar el almacenamiento en disco incluido en el proyecto. La configuración correspondiente está en `backend/.env.example`.
+
+El frontend no necesita un `.env.local`: sus únicas variables (`VITE_HOST`, `NESTJS_BACKEND_URL`, `VITE_USE_POLLING`, `VITE_POLLING_INTERVAL`) son opcionales y se leen del entorno del proceso, no de los archivos `.env` de Vite. Están documentadas en `frontend/.env.example`.
 
 ## Desarrollo
 
@@ -156,7 +158,7 @@ Servicios expuestos:
 
 - Aplicación: `http://localhost:3000`
 - Backend para depuración: `http://localhost:4000/api`
-- PostgreSQL para herramientas locales: `localhost:5432`
+- PostgreSQL para herramientas locales: `localhost:5433` (definido por `DB_PORT`)
 
 Los puertos se pueden cambiar con `APP_PORT`, `API_PORT` y `DB_PORT`. Si cambias `APP_PORT`, actualiza también `APP_ORIGIN` para que ambos señalen al mismo origen público.
 
@@ -221,7 +223,7 @@ El backend también permite ejecutar las pruebas en modo observación:
 pnpm --filter backend run test:watch
 ```
 
-Las pruebas utilizan una base de datos PostgreSQL independiente. Revisa [docs/testing.md](docs/testing.md) antes de ejecutarlas.
+Las pruebas utilizan una base de datos PostgreSQL independiente: copia `backend/.env.test.example` a `backend/.env.test` y revisa [docs/testing.md](docs/testing.md) antes de ejecutarlas.
 
 ## Estructura del proyecto
 
