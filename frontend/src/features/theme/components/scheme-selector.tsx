@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 import { getThemeMeta } from "../utils/themes";
@@ -43,14 +43,25 @@ export function SchemeSelector() {
               }`}
             >
               <SchemePreview scheme={opt.value} />
-              <span
-                className={`inline-flex items-center gap-1.5 text-sm font-medium ${selected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
-              >
-                <Icon className="size-3.5" aria-hidden="true" />
-                {t(opt.labelKey)}
-                {selected ? (
-                  <span className="ml-auto size-1.5 rounded-full bg-primary" aria-hidden="true" />
-                ) : null}
+              <span className="flex items-center justify-between gap-2 px-0.5">
+                <span className="inline-flex min-w-0 items-center gap-1.5 text-base font-medium text-foreground">
+                  <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{t(opt.labelKey)}</span>
+                </span>
+                <span
+                  className={`ml-auto flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-transparent bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {selected ? (
+                    <Check className="size-3.5" />
+                  ) : (
+                    <span className="size-1.5 rounded-full bg-muted-foreground/40" />
+                  )}
+                </span>
               </span>
             </button>
           );

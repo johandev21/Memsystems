@@ -8,6 +8,9 @@ import { LanguageSelector } from "./language-selector";
 afterEach(cleanup);
 
 beforeEach(async () => {
+  // Namespaces load lazily; without the app-level Suspense boundary the first
+  // render would suspend on a cold worker.
+  await i18n.loadNamespaces("settings");
   await i18n.changeLanguage("en");
 });
 
