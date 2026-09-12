@@ -19,6 +19,18 @@
   --notebook-focus-ring: var(--ring);
   --notebook-folder-radius: 16px;
   --notebook-folder-highlight: color-mix(in oklab, var(--background) 86%, white);
+  /*
+   * Hover and selection states follow the Finder reference: hover fills a
+   * neutral surface behind the tile, selection draws an outline around it.
+   * The state layer is a pseudo-element that overflows the card, so the
+   * artwork keeps its exact geometry and the surface tokens keep every
+   * palette automatic.
+   */
+  --notebook-item-inset: 6px;
+  --notebook-item-radius: 22px;
+  --notebook-item-hover-surface: var(--surface-2);
+  --notebook-item-selected-ring: color-mix(in oklab, var(--notebook-interaction) 45%, transparent);
+  --notebook-item-transition: 140ms;
 
   background: var(--background);
   color: var(--foreground);
@@ -56,6 +68,35 @@
 .prototype-notebook-card,
 .prototype-notebook-preview {
   height: 137px;
+}
+
+.prototype-folder-card,
+.prototype-notebook-card {
+  cursor: pointer;
+}
+.prototype-folder-card::before,
+.prototype-notebook-card::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--notebook-item-inset));
+  z-index: -1;
+  border-radius: var(--notebook-item-radius);
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1.5px transparent;
+  pointer-events: none;
+  transition:
+    background-color var(--notebook-item-transition) var(--ease-out),
+    box-shadow var(--notebook-item-transition) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .prototype-folder-card:not([data-selected="true"]):hover::before,
+  .prototype-notebook-card:not([data-selected="true"]):hover::before {
+    background-color: var(--notebook-item-hover-surface);
+  }
+}
+.prototype-folder-card[data-selected="true"]::before,
+.prototype-notebook-card[data-selected="true"]::before {
+  box-shadow: inset 0 0 0 1.5px var(--notebook-item-selected-ring);
 }
 
 .prototype-artwork {
@@ -104,8 +145,11 @@
 
 .prototype-folder-card:focus-visible,
 .prototype-notebook-card:focus-visible {
-  outline: 2px solid var(--notebook-focus-ring);
-  outline-offset: 4px;
+  outline: none;
+}
+.prototype-folder-card:focus-visible::before,
+.prototype-notebook-card:focus-visible::before {
+  box-shadow: inset 0 0 0 2px var(--notebook-focus-ring);
 }
 .prototype-notebook-card--dragging {
   opacity: 0.35;
@@ -179,7 +223,7 @@
     grid-auto-columns: 239px;
     grid-auto-flow: column;
     overflow-x: auto;
-    padding: 6px;
-    margin: -6px;
+    padding: 8px;
+    margin: -8px;
   }
 }

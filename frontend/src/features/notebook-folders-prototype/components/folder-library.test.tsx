@@ -9,12 +9,21 @@ vi.mock("../hooks/use-fitted-folder-title", () => ({
 
 const handlers = {
   onSortChange: () => {},
+  selectedKey: null,
+  onSelectItem: () => {},
   onOpenFolder: () => {},
   onMoveNotebook: () => {},
   onRenameFolder: () => {},
   onRemoveFolder: () => {},
   onOpenNotebook: () => {},
   onUpdateNotebook: () => {},
+};
+
+const folder = {
+  id: "folder-1",
+  name: "Philosophy",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
 describe("FolderLibrary draft wiring", () => {
@@ -82,5 +91,75 @@ describe("FolderLibrary draft wiring", () => {
     fireEvent.blur(input);
     expect(onCommitDraft).not.toHaveBeenCalled();
     expect(onRenameFolder).toHaveBeenCalledWith("folder-1", "Ideas");
+  });
+});
+
+describe("FolderLibrary selection", () => {
+  it("reports the selected item key on card click", () => {
+    const onSelectItem = vi.fn();
+    render(
+      <DndContext>
+        <FolderLibrary
+          folders={[folder]}
+          notebooks={[]}
+          activeFolderId={null}
+          sortKey="name"
+          draftId={null}
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+          onSelectItem={onSelectItem}
+        />
+      </DndContext>,
+    );
+    fireEvent.click(screen.getByRole("article", { name: /Philosophy/ }));
+    expect(onSelectItem).toHaveBeenCalledWith("folder:folder-1");
+  });
+
+  it("marks the selected card and clears the selection on background click", () => {
+    const onSelectItem = vi.fn();
+    const { container } = render(
+      <DndContext>
+        <FolderLibrary
+          folders={[folder]}
+          notebooks={[]}
+          activeFolderId={null}
+          sortKey="name"
+          draftId={null}
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+          selectedKey="folder:folder-1"
+          onSelectItem={onSelectItem}
+        />
+      </DndContext>,
+    );
+    expect(screen.getByRole("article", { name: /Philosophy/ }).getAttribute("data-selected")).toBe("true");
+    const grid = container.querySelector(".prototype-library-grid");
+    if (!grid) throw new Error("library grid not found");
+    fireEvent.click(grid);
+    expect(onSelectItem).toHaveBeenCalledWith(null);
+  });
+
+  it("clears the selection on Escape from a card", () => {
+    const onSelectItem = vi.fn();
+    render(
+      <DndContext>
+        <FolderLibrary
+          folders={[folder]}
+          notebooks={[]}
+          activeFolderId={null}
+          sortKey="name"
+          draftId={null}
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+          selectedKey="folder:folder-1"
+          onSelectItem={onSelectItem}
+        />
+      </DndContext>,
+    );
+    fireEvent.keyDown(screen.getByRole("article", { name: /Philosophy/ }), { key: "Escape" });
+    expect(onSelectItem).toHaveBeenCalledWith(null);
   });
 });

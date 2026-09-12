@@ -12,6 +12,8 @@ export function NotebookFoldersPrototype() {
   const interaction = usePrototypeInteractions();
   const { library } = interaction;
   const [sortKey, setSortKey] = useState<LibrarySortKey>("name");
+  // Keep the freshly created item selected while its inline rename is active.
+  const draftKey = interaction.draft ? `${interaction.draft.kind}:${interaction.draft.id}` : null;
   return (
     <DndContext
       sensors={interaction.sensors}
@@ -31,9 +33,14 @@ export function NotebookFoldersPrototype() {
         sortKey={sortKey}
         onSortChange={setSortKey}
         draftId={interaction.draft?.id ?? null}
+        selectedKey={interaction.selectedKey ?? draftKey}
         onCommitDraft={interaction.commitDraft}
         onCancelDraft={interaction.cancelDraft}
-        onOpenFolder={library.setActiveFolderId}
+        onSelectItem={interaction.selectItem}
+        onOpenFolder={(id) => {
+          interaction.selectItem(null);
+          library.setActiveFolderId(id);
+        }}
         onMoveNotebook={library.moveNotebook}
         onRenameFolder={library.renameFolder}
         onRemoveFolder={library.removeFolder}

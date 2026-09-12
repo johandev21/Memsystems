@@ -139,3 +139,40 @@ describe("card open guard", () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("selection", () => {
+  it("selects a folder on click without opening it", () => {
+    const onSelect = vi.fn();
+    const onOpen = vi.fn();
+    render(
+      <DndContext>
+        <FolderCard folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} onSelect={onSelect} onOpen={onOpen} onRename={() => {}} onRemove={() => {}} />
+      </DndContext>,
+    );
+    fireEvent.click(screen.getByRole("article", { name: /Philosophy/ }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("marks the selected folder card", () => {
+    render(
+      <DndContext>
+        <FolderCard folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} selected onOpen={() => {}} onRename={() => {}} onRemove={() => {}} />
+      </DndContext>,
+    );
+    expect(screen.getByRole("article", { name: /Philosophy/ }).getAttribute("data-selected")).toBe("true");
+  });
+
+  it("selects a notebook on click without opening it", () => {
+    const onSelect = vi.fn();
+    const onOpen = vi.fn();
+    render(
+      <DndContext>
+        <NotebookCard notebook={{ id: "notebook-1", title: "Notebook", description: "", coverUrl: null, folderId: null }} folders={[]} onSelect={onSelect} onMove={() => {}} onOpen={onOpen} onRename={() => {}} />
+      </DndContext>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Notebook" }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+});

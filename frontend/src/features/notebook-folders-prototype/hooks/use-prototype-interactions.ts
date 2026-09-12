@@ -12,12 +12,14 @@ export function usePrototypeInteractions() {
   const library = useNotebookFoldersPrototype();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const draggedNotebook = library.notebooks.find((notebook) => notebook.id === draggedId);
   const previewNotebook = library.notebooks.find((notebook) => notebook.id === previewId);
 
   function handleDragStart(event: DragStartEvent) {
     setDraggedId(String(event.active.id));
+    setSelectedKey(null);
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
@@ -35,6 +37,8 @@ export function usePrototypeInteractions() {
     draggedNotebook,
     previewNotebook,
     draft: library.draft,
+    selectedKey,
+    selectItem: setSelectedKey,
     handleDragStart,
     handleDragEnd,
     cancelDrag: () => setDraggedId(null),

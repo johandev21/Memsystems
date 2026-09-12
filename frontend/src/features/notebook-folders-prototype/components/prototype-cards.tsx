@@ -13,11 +13,11 @@ import "./prototype-cards.css";
 
 type FolderRef = { id: string; name: string };
 type NotebookCover = { id: string; title: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
-export type FolderCardProps = { folder: FolderRef; notebooks: NotebookCover[]; autoEdit?: boolean; onOpen: () => void; onRename: (name: string) => void; onCancelEdit?: () => void; onDismissEdit?: (name: string) => void; onRemove: () => void };
-export type NotebookCardProps = { notebook: { id: string; title: string; description: string; coverUrl: string | null; coverVariants?: CoverVariants | null; folderId: string | null }; folders: FolderRef[]; autoEdit?: boolean; onMove: (folderId: string | null) => void; onOpen: () => void; onRename: (name: string) => void; onCancelEdit?: () => void; onDismissEdit?: (name: string) => void };
+export type FolderCardProps = { folder: FolderRef; notebooks: NotebookCover[]; selected?: boolean; autoEdit?: boolean; onSelect?: () => void; onOpen: () => void; onRename: (name: string) => void; onCancelEdit?: () => void; onDismissEdit?: (name: string) => void; onRemove: () => void };
+export type NotebookCardProps = { notebook: { id: string; title: string; description: string; coverUrl: string | null; coverVariants?: CoverVariants | null; folderId: string | null }; folders: FolderRef[]; selected?: boolean; autoEdit?: boolean; onSelect?: () => void; onMove: (folderId: string | null) => void; onOpen: () => void; onRename: (name: string) => void; onCancelEdit?: () => void; onDismissEdit?: (name: string) => void };
 export type NotebookPreviewProps = { notebook: { title: string; coverUrl: string | null; coverVariants?: CoverVariants | null } };
 
-export function FolderCard({ folder, notebooks, autoEdit, onOpen, onRename, onCancelEdit, onDismissEdit, onRemove }: FolderCardProps) {
+export function FolderCard({ folder, notebooks, selected, autoEdit, onSelect, onOpen, onRename, onCancelEdit, onDismissEdit, onRemove }: FolderCardProps) {
   const { setNodeRef } = useDroppable({ id: `folder:${folder.id}`, data: { folderId: folder.id } });
   const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -36,7 +36,7 @@ export function FolderCard({ folder, notebooks, autoEdit, onOpen, onRename, onCa
   };
 
   return <ContextMenu>
-    <ContextMenuTrigger render={<article ref={setNodeRef} className="prototype-folder-card" onDoubleClick={handleOpen} tabIndex={0} aria-label={`${folder.name}, ${notebooks.length} notebooks`} onKeyDown={(event) => { if (event.key === "Enter" && !editingTitle) onOpen(); if (event.key === "F2") requestEdit((value) => value + 1); }} />}>
+    <ContextMenuTrigger render={<article ref={setNodeRef} className="prototype-folder-card" data-selected={selected ? "true" : undefined} onClick={() => { if (!editingTitle) onSelect?.(); }} onContextMenu={() => onSelect?.()} onDoubleClick={handleOpen} tabIndex={0} aria-label={`${folder.name}, ${notebooks.length} notebooks`} onKeyDown={(event) => { if (event.key === "Enter" && !editingTitle) onOpen(); if (event.key === "F2") requestEdit((value) => value + 1); }} />}>
       <FolderArtwork title={folder.name} notebooks={notebooks} onRename={onRename} onCancelEdit={onCancelEdit} onDismissEdit={onDismissEdit} onEditingChange={handleTitleEditingChange} editRequest={editRequest} />
     </ContextMenuTrigger>
     <ContextMenuContent>
@@ -60,7 +60,7 @@ function NotebookArtwork({ notebook, titleSlot }: NotebookPreviewProps & { title
   return <span className="prototype-artwork">{notebook.coverUrl ? <CoveredNotebookArtwork title={notebook.title} coverUrl={notebook.coverUrl} coverVariants={notebook.coverVariants} titleSlot={titleSlot} /> : <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} />}</span>;
 }
 
-export function NotebookCard({ notebook, folders, autoEdit, onMove, onOpen, onRename, onCancelEdit, onDismissEdit }: NotebookCardProps) {
+export function NotebookCard({ notebook, folders, selected, autoEdit, onSelect, onMove, onOpen, onRename, onCancelEdit, onDismissEdit }: NotebookCardProps) {
   const { attributes, listeners, isDragging, setNodeRef } = useDraggable({ id: notebook.id, data: { notebookId: notebook.id } });
   const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -82,7 +82,7 @@ export function NotebookCard({ notebook, folders, autoEdit, onMove, onOpen, onRe
   // A <div>, not <article>: dnd-kit imposes role="button" on the draggable
   // card, and the button role is not allowed on <article>.
   return <ContextMenu>
-    <ContextMenuTrigger render={<div ref={setNodeRef} {...attributes} {...listeners} className={cn("prototype-notebook-card", isDragging && "prototype-notebook-card--dragging")} onDoubleClick={handleOpen} tabIndex={0} aria-label={notebook.title} onKeyDown={(event) => { if (event.key === "Enter" && !editingTitle) onOpen(); if (event.key === "F2") requestEdit((value) => value + 1); }} />}>
+    <ContextMenuTrigger render={<div ref={setNodeRef} {...attributes} {...listeners} className={cn("prototype-notebook-card", isDragging && "prototype-notebook-card--dragging")} data-selected={selected ? "true" : undefined} onClick={() => { if (!editingTitle) onSelect?.(); }} onContextMenu={() => onSelect?.()} onDoubleClick={handleOpen} tabIndex={0} aria-label={notebook.title} onKeyDown={(event) => { if (event.key === "Enter" && !editingTitle) onOpen(); if (event.key === "F2") requestEdit((value) => value + 1); }} />}>
       <NotebookArtwork notebook={notebook} titleSlot={titleSlot} />
     </ContextMenuTrigger>
     <ContextMenuContent>
