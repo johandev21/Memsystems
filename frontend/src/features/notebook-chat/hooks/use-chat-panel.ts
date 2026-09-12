@@ -64,7 +64,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   const { t } = useTranslation("chat");
   const { data: notebook } = useQuery(notebookQueryOptions(notebookId));
   const { data: models } = useQuery(modelsQueryOptions);
-  const { data: chatHistory } = useQuery(chatMessagesQueryOptions(notebookId));
+  const chatHistoryQuery = useQuery(chatMessagesQueryOptions(notebookId));
+  const chatHistory = chatHistoryQuery.data;
+  const isHistoryPending = chatHistoryQuery.isPending;
   const { data: connection } = useConnectionStatus();
 
   const modelOptions = useMemo(() => models ?? [], [models]);
@@ -182,6 +184,23 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;
+
+  // Only a user message sent during this session is allowed to pull the
+  // viewport. Messages hydrated from persisted history must never anchor, or
+  // opening a notebook would scroll straight past the banner to the last turn.
+  const hydratedMessageIds = useMemo(
+    () => new Set((chatHistory ?? []).map((message) => message.id)),
+    [chatHistory],
+  );
+  const anchorMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message?.role === "user") {
+        return hydratedMessageIds.has(message.id) ? null : message.id;
+      }
+    }
+    return null;
+  }, [messages, hydratedMessageIds]);
 
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState("");
@@ -309,8 +328,10 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     citedSourcesMap,
     status,
     isLoading,
+    isHistoryPending,
     error,
     messageCount,
+    anchorMessageId,
     input,
     setInput,
     isClearDialogOpen,

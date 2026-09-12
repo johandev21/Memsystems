@@ -1,7 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
 import type { RefObject } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "@/shared/i18n/i18n";
 import type { ChatMessageDTO } from "../api/chat";
+
+// The hook suspends on `useTranslation("chat")` until that namespace is
+// loaded; preloading keeps the first render from suspending.
+beforeAll(async () => {
+  await i18n.loadNamespaces("chat");
+});
 
 const mocks = vi.hoisted(() => ({
   sendMessage: vi.fn(),
@@ -38,6 +45,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
     ...actual,
     useQuery: (options: { queryKey?: readonly unknown[] }) => ({
       data: options.queryKey?.[0] === "chat" ? mocks.chatHistory : undefined,
+      isPending: options.queryKey?.[0] === "chat" && mocks.chatHistory === undefined,
     }),
     useQueryClient: () => ({
       invalidateQueries: mocks.invalidateQueries,
@@ -306,5 +314,52 @@ describe("useChatPanel send-chat-prompt handling", () => {
 
     expect(result.current.input).toBe("Study this slide");
     expect(mocks.sendMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("useChatPanel initial anchor", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.chatHistory = undefined;
+    mocks.chatState.messages = [];
+    mocks.chatState.status = "ready";
+    mocks.useChatOptions = undefined;
+  });
+
+  it("reports history pending and no anchor until the first result", () => {
+    const { result } = renderHook(() => useChatPanel("notebook-1"));
+
+    expect(result.current.isHistoryPending).toBe(true);
+    expect(result.current.anchorMessageId).toBeNull();
+  });
+
+  it("does not anchor user messages hydrated from persisted history", () => {
+    const history: ChatMessageDTO[] = [
+      createMessage({ id: "user-1", role: "user", content: "Old question" }),
+      createMessage({ id: "asst-1", role: "assistant", content: "Old answer" }),
+    ];
+    mocks.chatHistory = history;
+    mocks.chatState.messages = history.map((message) => ({
+      id: message.id,
+      role: message.role,
+      parts: [{ type: "text", text: message.content }],
+    }));
+
+    const { result } = renderHook(() => useChatPanel("notebook-1"));
+
+    expect(result.current.isHistoryPending).toBe(false);
+    expect(result.current.anchorMessageId).toBeNull();
+  });
+
+  it("anchors the latest user message sent during this session", () => {
+    mocks.chatHistory = [createMessage({ id: "user-1", role: "user", content: "Old question" })];
+    mocks.chatState.messages = [
+      { id: "user-1", role: "user", parts: [{ type: "text", text: "Old question" }] },
+      { id: "user-2", role: "user", parts: [{ type: "text", text: "New question" }] },
+    ];
+
+    const { result } = renderHook(() => useChatPanel("notebook-1"));
+
+    expect(result.current.anchorMessageId).toBe("user-2");
   });
 });

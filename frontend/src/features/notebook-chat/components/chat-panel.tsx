@@ -11,6 +11,8 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
+import { CHAT_ENTRANCE_CLASS } from "../utils/chat-entrance";
+import { ChatConversationSkeleton } from "./chat-conversation-skeleton";
 import { ChatEmptyState } from "./chat-empty-state";
 import { ChatMessageList } from "./chat-message-list";
 import { ClearHistoryDialog } from "./clear-history-dialog";
@@ -31,8 +33,10 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
     citedSourcesMap,
     status,
     isLoading,
+    isHistoryPending,
     error,
     messageCount,
+    anchorMessageId,
     input,
     setInput,
     isClearDialogOpen,
@@ -98,7 +102,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
         className="relative flex w-full min-h-0 flex-1 flex-col"
         style={{ ["--composer-height" as string]: "96px" } as React.CSSProperties}
       >
-        <Conversation key={notebookId} className="flex-1 min-h-0">
+        <Conversation key={notebookId} className="flex-1 min-h-0" defaultScrollPosition="start">
           <ChatContent
             notebook={notebook}
             notebookTitle={notebookTitle}
@@ -107,11 +111,13 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
               showBannerAsUntitled,
               hasMessages,
               isLoading,
+              isHistoryPending,
               showPendingIndicator,
             }}
             messages={messages}
             citedSourcesMap={citedSourcesMap}
             pendingLabel={pendingLabel}
+            anchorMessageId={anchorMessageId}
             error={error}
             onCopy={handleCopy}
             onRegenerate={handleRegenerate}
@@ -152,6 +158,7 @@ interface ChatContentFlags {
   showBannerAsUntitled: boolean;
   hasMessages: boolean;
   isLoading: boolean;
+  isHistoryPending: boolean;
   showPendingIndicator: boolean;
 }
 
@@ -162,6 +169,7 @@ interface ChatContentProps {
   messages: ReturnType<typeof useChatPanel>["messages"];
   citedSourcesMap: ReturnType<typeof useChatPanel>["citedSourcesMap"];
   pendingLabel: string;
+  anchorMessageId: ReturnType<typeof useChatPanel>["anchorMessageId"];
   error: ReturnType<typeof useChatPanel>["error"];
   onCopy: (content: string) => void;
   onRegenerate: () => void;
@@ -174,11 +182,22 @@ function ChatContent({
   messages,
   citedSourcesMap,
   pendingLabel,
+  anchorMessageId,
   error,
   onCopy,
   onRegenerate,
 }: ChatContentProps) {
-  const { isUntitled, showBannerAsUntitled, hasMessages, isLoading, showPendingIndicator } = flags;
+  const {
+    isUntitled,
+    showBannerAsUntitled,
+    hasMessages,
+    isLoading,
+    isHistoryPending,
+    showPendingIndicator,
+  } = flags;
+  // Show the skeleton until the first history result settles, but never block
+  // a user who starts typing straight away: any optimistic message wins.
+  const showHistorySkeleton = isHistoryPending && !hasMessages;
   return (
     <ConversationContent
       className="mx-auto w-full max-w-4xl pb-32"
@@ -189,34 +208,46 @@ function ChatContent({
     >
       {notebook && (
         <MessageScrollerItem messageId="notebook-banner">
-          <NotebookBanner
-            notebookId={notebook.id}
-            title={notebook.title}
-            description={notebook.description}
-            icon={notebook.icon ?? undefined}
-            bannerUrl={notebook.bannerUrl}
-            bannerVariants={notebook.bannerVariants}
-            bannerFocalPoint={notebook.bannerFocalPoint}
-            updatedAt={notebook.updatedAt}
-            isUntitled={showBannerAsUntitled}
-          />
-          {!hasMessages && (
-            <ChatEmptyState
-              notebookTitle={notebookTitle}
-              description={notebook?.description ?? null}
-              isUntitled={isUntitled}
+          <div className={CHAT_ENTRANCE_CLASS}>
+            <NotebookBanner
+              notebookId={notebook.id}
+              title={notebook.title}
+              description={notebook.description}
+              icon={notebook.icon ?? undefined}
+              bannerUrl={notebook.bannerUrl}
+              bannerVariants={notebook.bannerVariants}
+              bannerFocalPoint={notebook.bannerFocalPoint}
+              updatedAt={notebook.updatedAt}
+              isUntitled={showBannerAsUntitled}
             />
-          )}
+            {!hasMessages && !showHistorySkeleton && (
+              <ChatEmptyState
+                notebookTitle={notebookTitle}
+                description={notebook?.description ?? null}
+                isUntitled={isUntitled}
+              />
+            )}
+          </div>
         </MessageScrollerItem>
       )}
 
-      {!notebook && !hasMessages && (
+      {showHistorySkeleton && (
+        <MessageScrollerItem messageId="chat-history-skeleton">
+          <div className={CHAT_ENTRANCE_CLASS}>
+            <ChatConversationSkeleton withBanner={!notebook} />
+          </div>
+        </MessageScrollerItem>
+      )}
+
+      {!notebook && !hasMessages && !showHistorySkeleton && (
         <MessageScrollerItem messageId="chat-empty-state">
-          <ChatEmptyState
-            notebookTitle={notebookTitle}
-            description={null}
-            isUntitled={isUntitled}
-          />
+          <div className={CHAT_ENTRANCE_CLASS}>
+            <ChatEmptyState
+              notebookTitle={notebookTitle}
+              description={null}
+              isUntitled={isUntitled}
+            />
+          </div>
         </MessageScrollerItem>
       )}
 
@@ -226,6 +257,7 @@ function ChatContent({
           citedSourcesMap={citedSourcesMap}
           showPendingIndicator={showPendingIndicator}
           pendingLabel={pendingLabel}
+          anchorMessageId={anchorMessageId}
           error={error}
           onCopy={onCopy}
           onRegenerate={onRegenerate}

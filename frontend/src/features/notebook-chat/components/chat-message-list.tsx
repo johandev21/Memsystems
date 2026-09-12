@@ -1,6 +1,6 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { ExternalLink, Loader2, RotateCcw, Settings2 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { CitedSourceDTO } from "../api/chat";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
@@ -8,6 +8,7 @@ import { AssistantMessage } from "./assistant-message";
 import { UserMessage } from "./user-message";
 import { groupMessagesIntoTurns } from "../types/chat-turn.types";
 import { GATEWAY_TOP_UP_URL, classifyChatError } from "../utils/chat-error";
+import { CHAT_ENTRANCE_CLASS, chatEntranceDelay } from "../utils/chat-entrance";
 
 export interface ChatMessageListProps {
   messages: UIMessage[];
@@ -20,9 +21,20 @@ export interface ChatMessageListProps {
   showPendingIndicator: boolean;
   /** Truthful copy for the pending phase, e.g. "Thinking…" vs "Waiting…". */
   pendingLabel?: string;
+  /**
+   * Id of the user message that is allowed to pull the viewport. Only set for
+   * messages sent during this session; hydrated history leaves it null so the
+   * conversation opens at the banner instead of jumping to the last turn.
+   */
+  anchorMessageId?: string | null;
   error?: Error | null;
   onCopy: (text: string) => void;
   onRegenerate: () => void;
+}
+
+function entranceStyle(index: number): CSSProperties | undefined {
+  const delay = chatEntranceDelay(index);
+  return delay > 0 ? { animationDelay: `${delay}ms` } : undefined;
 }
 
 export function ChatMessageList({
@@ -30,6 +42,7 @@ export function ChatMessageList({
   citedSourcesMap,
   showPendingIndicator,
   pendingLabel,
+  anchorMessageId,
   error,
   onCopy,
   onRegenerate,
@@ -38,40 +51,36 @@ export function ChatMessageList({
   const turns = useMemo(() => groupMessagesIntoTurns(messages), [messages]);
   const resolvedPendingLabel = pendingLabel ?? t("pending.waiting");
 
-  const lastUserMessageId = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i]?.role === "user") {
-        return messages[i].id;
-      }
-    }
-    return null;
-  }, [messages]);
-
   return (
     <>
       {turns.map((turn, index) => {
         const isLast = index === turns.length - 1;
+        const animateStyle = entranceStyle(index);
         if (turn.type === "user") {
           return (
             <MessageScrollerItem
               key={turn.id}
               messageId={turn.id}
-              scrollAnchor={turn.id === lastUserMessageId}
+              scrollAnchor={turn.id === anchorMessageId}
             >
-              <UserMessage message={turn.message} />
+              <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
+                <UserMessage message={turn.message} />
+              </div>
             </MessageScrollerItem>
           );
         }
 
         return (
           <MessageScrollerItem key={turn.id} messageId={turn.id}>
-            <AssistantMessage
-              versions={turn.versions}
-              citedSourcesMap={citedSourcesMap}
-              onCopy={onCopy}
-              onRegenerate={onRegenerate}
-              showRegenerate={isLast}
-            />
+            <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
+              <AssistantMessage
+                versions={turn.versions}
+                citedSourcesMap={citedSourcesMap}
+                onCopy={onCopy}
+                onRegenerate={onRegenerate}
+                showRegenerate={isLast}
+              />
+            </div>
           </MessageScrollerItem>
         );
       })}

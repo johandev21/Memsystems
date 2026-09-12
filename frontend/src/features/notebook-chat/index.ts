@@ -1,6 +1,7 @@
 export * from "./components/chat-panel";
 export * from "./components/chat-panel-header";
 export * from "./components/chat-empty-state";
+export * from "./components/chat-conversation-skeleton";
 export * from "./components/chat-message-list";
 export * from "./components/assistant-message";
 export * from "./components/composer";
