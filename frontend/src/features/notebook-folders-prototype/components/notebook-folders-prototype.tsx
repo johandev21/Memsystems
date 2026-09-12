@@ -4,7 +4,7 @@ import { usePrototypeInteractions } from "../hooks/use-prototype-interactions";
 import type { LibrarySortKey } from "../model/library-sort";
 import { CreateMenu } from "./create-menu";
 import { FolderLibrary } from "./folder-library";
-import { NotebookPreview } from "./prototype-cards";
+import { FolderPreview, NotebookPreview } from "./prototype-cards";
 import { NotebookDialog } from "./prototype-dialogs";
 
 // Throwaway: explore notebook grouping with a folder shelf and an in-memory library.
@@ -42,6 +42,7 @@ export function NotebookFoldersPrototype() {
           library.setActiveFolderId(id);
         }}
         onMoveNotebook={library.moveNotebook}
+        onMoveFolder={library.moveFolder}
         onRenameFolder={library.renameFolder}
         onRemoveFolder={library.removeFolder}
         onOpenNotebook={interaction.openNotebook}
@@ -50,10 +51,19 @@ export function NotebookFoldersPrototype() {
       <DragOverlay>
         {interaction.draggedNotebook ? (
           <NotebookPreview notebook={interaction.draggedNotebook} />
+        ) : interaction.draggedFolder ? (
+          <FolderPreview
+            folder={interaction.draggedFolder}
+            notebooks={interaction.draggedFolderNotebooks}
+          />
         ) : null}
       </DragOverlay>
       {interaction.previewNotebook && (
-        <NotebookDialog notebook={interaction.previewNotebook} onClose={interaction.closePreview} onUpdate={library.updateNotebook} />
+        <NotebookDialog
+          notebook={interaction.previewNotebook}
+          onClose={interaction.closePreview}
+          onUpdate={library.updateNotebook}
+        />
       )}
     </DndContext>
   );

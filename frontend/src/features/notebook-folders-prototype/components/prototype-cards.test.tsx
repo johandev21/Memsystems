@@ -55,7 +55,13 @@ describe("draft card editing", () => {
     render(
       <DndContext>
         <NotebookCard
-          notebook={{ id: "notebook-1", title: "Untitled notebook", description: "", coverUrl: null, folderId: null }}
+          notebook={{
+            id: "notebook-1",
+            title: "Untitled notebook",
+            description: "",
+            coverUrl: null,
+            folderId: null,
+          }}
           folders={[]}
           autoEdit
           onMove={() => {}}
@@ -82,10 +88,16 @@ describe("card open guard", () => {
     const onOpen = vi.fn();
     render(
       <DndContext>
-        <FolderCard folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} onOpen={onOpen} onRename={() => {}} onRemove={() => {}} />
+        <FolderCard
+          folder={{ id: "folder-1", name: "Philosophy" }}
+          notebooks={[]}
+          onOpen={onOpen}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
       </DndContext>,
     );
-    const card = screen.getByRole("article", { name: /Philosophy/ });
+    const card = screen.getByRole("button", { name: "Philosophy, 0 notebooks" });
     fireEvent.keyDown(card, { key: "F2" });
     fireEvent.doubleClick(card);
     expect(onOpen).not.toHaveBeenCalled();
@@ -95,7 +107,19 @@ describe("card open guard", () => {
     const onOpen = vi.fn();
     render(
       <DndContext>
-        <NotebookCard notebook={{ id: "notebook-1", title: "Notebook", description: "", coverUrl: null, folderId: null }} folders={[]} onMove={() => {}} onOpen={onOpen} onRename={() => {}} />
+        <NotebookCard
+          notebook={{
+            id: "notebook-1",
+            title: "Notebook",
+            description: "",
+            coverUrl: null,
+            folderId: null,
+          }}
+          folders={[]}
+          onMove={() => {}}
+          onOpen={onOpen}
+          onRename={() => {}}
+        />
       </DndContext>,
     );
     const card = screen.getByRole("button", { name: "Notebook" });
@@ -110,10 +134,16 @@ describe("card open guard", () => {
       const onOpen = vi.fn();
       render(
         <DndContext>
-          <FolderCard folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} onOpen={onOpen} onRename={() => {}} onRemove={() => {}} />
+          <FolderCard
+            folder={{ id: "folder-1", name: "Philosophy" }}
+            notebooks={[]}
+            onOpen={onOpen}
+            onRename={() => {}}
+            onRemove={() => {}}
+          />
         </DndContext>,
       );
-      const card = screen.getByRole("article", { name: /Philosophy/ });
+      const card = screen.getByRole("button", { name: "Philosophy, 0 notebooks" });
       fireEvent.keyDown(card, { key: "F2" });
       fireEvent.blur(screen.getByRole("textbox"));
       fireEvent.doubleClick(card);
@@ -132,10 +162,16 @@ describe("card open guard", () => {
     const onOpen = vi.fn();
     render(
       <DndContext>
-        <FolderCard folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} onOpen={onOpen} onRename={() => {}} onRemove={() => {}} />
+        <FolderCard
+          folder={{ id: "folder-1", name: "Philosophy" }}
+          notebooks={[]}
+          onOpen={onOpen}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
       </DndContext>,
     );
-    fireEvent.doubleClick(screen.getByRole("article", { name: /Philosophy/ }));
+    fireEvent.doubleClick(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }));
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });
@@ -146,10 +182,17 @@ describe("selection", () => {
     const onOpen = vi.fn();
     render(
       <DndContext>
-        <FolderCard folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} onSelect={onSelect} onOpen={onOpen} onRename={() => {}} onRemove={() => {}} />
+        <FolderCard
+          folder={{ id: "folder-1", name: "Philosophy" }}
+          notebooks={[]}
+          onSelect={onSelect}
+          onOpen={onOpen}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
       </DndContext>,
     );
-    fireEvent.click(screen.getByRole("article", { name: /Philosophy/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }));
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onOpen).not.toHaveBeenCalled();
   });
@@ -157,10 +200,19 @@ describe("selection", () => {
   it("marks the selected folder card", () => {
     render(
       <DndContext>
-        <FolderCard folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} selected onOpen={() => {}} onRename={() => {}} onRemove={() => {}} />
+        <FolderCard
+          folder={{ id: "folder-1", name: "Philosophy" }}
+          notebooks={[]}
+          selected
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
       </DndContext>,
     );
-    expect(screen.getByRole("article", { name: /Philosophy/ }).getAttribute("data-selected")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Philosophy, 0 notebooks" }).getAttribute("data-selected"),
+    ).toBe("true");
   });
 
   it("selects a notebook on click without opening it", () => {
@@ -168,7 +220,20 @@ describe("selection", () => {
     const onOpen = vi.fn();
     render(
       <DndContext>
-        <NotebookCard notebook={{ id: "notebook-1", title: "Notebook", description: "", coverUrl: null, folderId: null }} folders={[]} onSelect={onSelect} onMove={() => {}} onOpen={onOpen} onRename={() => {}} />
+        <NotebookCard
+          notebook={{
+            id: "notebook-1",
+            title: "Notebook",
+            description: "",
+            coverUrl: null,
+            folderId: null,
+          }}
+          folders={[]}
+          onSelect={onSelect}
+          onMove={() => {}}
+          onOpen={onOpen}
+          onRename={() => {}}
+        />
       </DndContext>,
     );
     fireEvent.click(screen.getByRole("button", { name: "Notebook" }));

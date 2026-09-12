@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { SAMPLE_FOLDERS, SAMPLE_NOTEBOOKS } from "./sample-data";
 import { clampTitle } from "./title";
 import type { Folder, Notebook } from "./types";
+import { canMoveFolder } from "./folder-hierarchy";
 
 type PrototypeState = {
   folders: Folder[];
@@ -60,11 +61,33 @@ export function useNotebookFoldersPrototype() {
       setState((current) => ({
         ...current,
         notebooks: current.notebooks.map((item) =>
-          item.id === notebookId ? { ...item, folderId, updatedAt: new Date().toISOString() } : item,
+          item.id === notebookId
+            ? { ...item, folderId, updatedAt: new Date().toISOString() }
+            : item,
         ),
       }));
     },
     [recordChange, state.folders, state.notebooks],
+  );
+
+  const moveFolder = useCallback(
+    (folderId: string, parentId: string | null) => {
+      const folder = state.folders.find((item) => item.id === folderId);
+      if (
+        !folder ||
+        !canMoveFolder(state.folders, folderId, parentId) ||
+        folder.parentId === parentId
+      )
+        return;
+      recordChange();
+      setState((current) => ({
+        ...current,
+        folders: current.folders.map((item) =>
+          item.id === folderId ? { ...item, parentId, updatedAt: new Date().toISOString() } : item,
+        ),
+      }));
+    },
+    [recordChange, state.folders],
   );
 
   const beginCreate = useCallback(
@@ -75,15 +98,32 @@ export function useNotebookFoldersPrototype() {
       if (kind === "folder") {
         setState((current) => ({
           ...current,
-          folders: [...current.folders, { id, name: PLACEHOLDER_TITLES.folder, createdAt: now, updatedAt: now }],
+          folders: [
+            ...current.folders,
+            {
+              id,
+              name: PLACEHOLDER_TITLES.folder,
+              parentId: activeFolderId,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
         }));
-        setActiveFolderIdState(null);
       } else {
         setState((current) => ({
           ...current,
           notebooks: [
             ...current.notebooks,
-            { id, title: PLACEHOLDER_TITLES.notebook, description: "", icon: "Notebook", coverUrl: null, folderId: activeFolderId, createdAt: now, updatedAt: now },
+            {
+              id,
+              title: PLACEHOLDER_TITLES.notebook,
+              description: "",
+              icon: "Notebook",
+              coverUrl: null,
+              folderId: activeFolderId,
+              createdAt: now,
+              updatedAt: now,
+            },
           ],
         }));
       }
@@ -111,7 +151,9 @@ export function useNotebookFoldersPrototype() {
           : {
               ...current,
               notebooks: current.notebooks.map((notebook) =>
-                notebook.id === draft.id ? { ...notebook, title: nextName, updatedAt: now } : notebook,
+                notebook.id === draft.id
+                  ? { ...notebook, title: nextName, updatedAt: now }
+                  : notebook,
               ),
             },
       );
@@ -126,7 +168,10 @@ export function useNotebookFoldersPrototype() {
     setState((current) =>
       draft.kind === "folder"
         ? { ...current, folders: current.folders.filter((folder) => folder.id !== draft.id) }
-        : { ...current, notebooks: current.notebooks.filter((notebook) => notebook.id !== draft.id) },
+        : {
+            ...current,
+            notebooks: current.notebooks.filter((notebook) => notebook.id !== draft.id),
+          },
     );
     setDraft(null);
   }, [draft]);
@@ -144,7 +189,9 @@ export function useNotebookFoldersPrototype() {
       setState((current) => ({
         ...current,
         folders: current.folders.map((folder) =>
-          folder.id === folderId ? { ...folder, name: trimmedName, updatedAt: new Date().toISOString() } : folder,
+          folder.id === folderId
+            ? { ...folder, name: trimmedName, updatedAt: new Date().toISOString() }
+            : folder,
         ),
       }));
     },
@@ -163,7 +210,12 @@ export function useNotebookFoldersPrototype() {
         ...current,
         notebooks: current.notebooks.map((item) =>
           item.id === notebookId
-            ? { ...item, title: nextTitle, description: nextDescription, updatedAt: new Date().toISOString() }
+            ? {
+                ...item,
+                title: nextTitle,
+                description: nextDescription,
+                updatedAt: new Date().toISOString(),
+              }
             : item,
         ),
       }));
@@ -177,13 +229,22 @@ export function useNotebookFoldersPrototype() {
       if (!folder) return;
 
       recordChange();
+      const now = new Date().toISOString();
       setState((current) => ({
-        folders: current.folders.filter((item) => item.id !== folderId),
+        folders: current.folders
+          .filter((item) => item.id !== folderId)
+          .map((item) =>
+            item.parentId === folderId
+              ? { ...item, parentId: folder.parentId, updatedAt: now }
+              : item,
+          ),
         notebooks: current.notebooks.map((notebook) =>
-          notebook.folderId === folderId ? { ...notebook, folderId: null } : notebook,
+          notebook.folderId === folderId
+            ? { ...notebook, folderId: folder.parentId, updatedAt: now }
+            : notebook,
         ),
       }));
-      if (activeFolderId === folderId) setActiveFolderIdState(null);
+      if (activeFolderId === folderId) setActiveFolderIdState(folder.parentId);
     },
     [activeFolderId, recordChange, state.folders],
   );
@@ -207,6 +268,7 @@ export function useNotebookFoldersPrototype() {
     activeFolderId,
     setActiveFolderId,
     moveNotebook,
+    moveFolder,
     beginCreateFolder,
     beginCreateNotebook,
     draft,

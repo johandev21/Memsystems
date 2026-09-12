@@ -13,6 +13,7 @@ const handlers = {
   onSelectItem: () => {},
   onOpenFolder: () => {},
   onMoveNotebook: () => {},
+  onMoveFolder: () => {},
   onRenameFolder: () => {},
   onRemoveFolder: () => {},
   onOpenNotebook: () => {},
@@ -22,6 +23,7 @@ const handlers = {
 const folder = {
   id: "folder-1",
   name: "Philosophy",
+  parentId: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -32,7 +34,7 @@ describe("FolderLibrary draft wiring", () => {
     render(
       <DndContext>
         <FolderLibrary
-          folders={[{ id: "folder-1", name: "Untitled folder", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]}
+          folders={[{ ...folder, name: "Untitled folder" }]}
           notebooks={[]}
           activeFolderId={null}
           sortKey="name"
@@ -52,7 +54,7 @@ describe("FolderLibrary draft wiring", () => {
     render(
       <DndContext>
         <FolderLibrary
-          folders={[{ id: "folder-1", name: "Untitled folder", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]}
+          folders={[{ ...folder, name: "Untitled folder" }]}
           notebooks={[]}
           activeFolderId={null}
           sortKey="name"
@@ -73,7 +75,7 @@ describe("FolderLibrary draft wiring", () => {
     render(
       <DndContext>
         <FolderLibrary
-          folders={[{ id: "folder-1", name: "Philosophy", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]}
+          folders={[folder]}
           notebooks={[]}
           activeFolderId={null}
           sortKey="name"
@@ -112,7 +114,7 @@ describe("FolderLibrary selection", () => {
         />
       </DndContext>,
     );
-    fireEvent.click(screen.getByRole("article", { name: /Philosophy/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }));
     expect(onSelectItem).toHaveBeenCalledWith("folder:folder-1");
   });
 
@@ -134,7 +136,9 @@ describe("FolderLibrary selection", () => {
         />
       </DndContext>,
     );
-    expect(screen.getByRole("article", { name: /Philosophy/ }).getAttribute("data-selected")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Philosophy, 0 notebooks" }).getAttribute("data-selected"),
+    ).toBe("true");
     const grid = container.querySelector(".prototype-library-grid");
     if (!grid) throw new Error("library grid not found");
     fireEvent.click(grid);
@@ -159,7 +163,75 @@ describe("FolderLibrary selection", () => {
         />
       </DndContext>,
     );
-    fireEvent.keyDown(screen.getByRole("article", { name: /Philosophy/ }), { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }), {
+      key: "Escape",
+    });
     expect(onSelectItem).toHaveBeenCalledWith(null);
+  });
+});
+
+describe("FolderLibrary nesting", () => {
+  const nestedFolders = [
+    { ...folder, id: "root-folder", name: "Root folder" },
+    { ...folder, id: "child-folder", name: "Child folder", parentId: "root-folder" },
+    { ...folder, id: "grandchild-folder", name: "Grandchild", parentId: "child-folder" },
+  ];
+  const nestedNotebook = {
+    id: "nested-notebook",
+    title: "Nested notebook",
+    description: "",
+    icon: "Notebook",
+    coverUrl: null,
+    folderId: "grandchild-folder",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  it("shows only immediate children and counts descendant notebooks", () => {
+    render(
+      <DndContext>
+        <FolderLibrary
+          folders={nestedFolders}
+          notebooks={[nestedNotebook]}
+          activeFolderId={null}
+          sortKey="name"
+          draftId={null}
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+        />
+      </DndContext>,
+    );
+
+    expect(screen.getByRole("button", { name: "Root folder, 1 notebooks" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Child folder,/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Nested notebook" })).toBeNull();
+  });
+
+  it("renders and navigates the full ancestor breadcrumb", () => {
+    const onOpenFolder = vi.fn();
+    render(
+      <DndContext>
+        <FolderLibrary
+          folders={nestedFolders}
+          notebooks={[nestedNotebook]}
+          activeFolderId="grandchild-folder"
+          sortKey="name"
+          draftId={null}
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+          onOpenFolder={onOpenFolder}
+        />
+      </DndContext>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Child folder" }));
+    expect(onOpenFolder).toHaveBeenCalledWith("child-folder");
+    expect(
+      screen
+        .getByText("Grandchild", { selector: '[aria-current="page"]' })
+        .getAttribute("aria-current"),
+    ).toBe("page");
   });
 });
