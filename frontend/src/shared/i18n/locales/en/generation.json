@@ -52,8 +52,8 @@
     "targetDifficulty": "1. Target Difficulty"
   },
   "flashcards": {
-    "cardFormatLabel": "Card Format",
-    "cardsLabel": "Cards",
+    "cardFormatLabel": "1. Card Format",
+    "cardsLabel": "3. Cards",
     "cardStyle": {
       "cloze": {
         "desc": "Sentence with missing word(s)",
@@ -77,6 +77,7 @@
     "countMax": "{{count}} Cards (Max {{max}})",
     "countMax_one": "{{count}} Card (Max {{max}})",
     "countMax_other": "{{count}} Cards (Max {{max}})",
+    "customCountAria": "Custom card count",
     "difficulty": {
       "easy": {
         "desc": "Simple definitions & recall",
@@ -91,7 +92,7 @@
         "title": "Standard"
       }
     },
-    "difficultyLabel": "Difficulty",
+    "difficultyLabel": "2. Difficulty",
     "instructionsPlaceholder": "What topics should these flashcards cover?"
   },
   "kinds": {

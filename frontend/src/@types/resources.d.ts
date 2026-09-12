@@ -519,7 +519,7 @@ export default interface Resources {
       "targetDifficulty": "1. Target Difficulty"
     },
     "flashcards": {
-      "cardFormatLabel": "Card Format",
+      "cardFormatLabel": "1. Card Format",
       "cardStyle": {
         "cloze": {
           "desc": "Sentence with missing word(s)",
@@ -538,12 +538,13 @@ export default interface Resources {
           "title": "Q & A"
         }
       },
-      "cardsLabel": "Cards",
+      "cardsLabel": "3. Cards",
       "countMax": "{{count}} Cards (Max {{max}})",
       "countMax_one": "{{count}} Card (Max {{max}})",
       "countMax_other": "{{count}} Cards (Max {{max}})",
       "count_one": "{{count}} Card",
       "count_other": "{{count}} Cards",
+      "customCountAria": "Custom card count",
       "difficulty": {
         "easy": {
           "desc": "Simple definitions & recall",
@@ -558,7 +559,7 @@ export default interface Resources {
           "title": "Standard"
         }
       },
-      "difficultyLabel": "Difficulty",
+      "difficultyLabel": "2. Difficulty",
       "instructionsPlaceholder": "What topics should these flashcards cover?"
     },
     "kinds": {

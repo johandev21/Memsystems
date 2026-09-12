@@ -53,8 +53,8 @@
     "targetDifficulty": "1. Dificultad objetivo"
   },
   "flashcards": {
-    "cardFormatLabel": "Formato de tarjeta",
-    "cardsLabel": "Tarjetas",
+    "cardFormatLabel": "1. Formato de tarjeta",
+    "cardsLabel": "3. Tarjetas",
     "cardStyle": {
       "cloze": {
         "desc": "Frase con palabras faltantes",
@@ -80,6 +80,7 @@
     "countMax_one": "{{count}} tarjeta (máx. {{max}})",
     "countMax_many": "{{count}} tarjetas (máx. {{max}})",
     "countMax_other": "{{count}} tarjetas (máx. {{max}})",
+    "customCountAria": "Cantidad personalizada de tarjetas",
     "difficulty": {
       "easy": {
         "desc": "Definiciones simples y recuerdo",
@@ -94,7 +95,7 @@
         "title": "Estándar"
       }
     },
-    "difficultyLabel": "Dificultad",
+    "difficultyLabel": "2. Dificultad",
     "instructionsPlaceholder": "¿Qué temas deben cubrir estas tarjetas?"
   },
   "kinds": {
