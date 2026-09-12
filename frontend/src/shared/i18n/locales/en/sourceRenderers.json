@@ -1,0 +1,145 @@
+{
+  "articleViewer": {
+    "noContent": "No article content available."
+  },
+  "audioPlayer": {
+    "audioRecording": "Audio Recording",
+    "cycleSpeed": "Click to cycle speed (0.75x, 1x, 1.25x, 1.5x, 2x)",
+    "loadingStream": "Loading audio stream…",
+    "mute": "Mute",
+    "pause": "Pause",
+    "play": "Play",
+    "seekTime": "Seek time",
+    "skipBackwardAria": "Skip backward 10 seconds",
+    "skipBackwardTitle": "Skip backward 10s",
+    "skipForwardAria": "Skip forward 10 seconds",
+    "skipForwardTitle": "Skip forward 10s",
+    "streamUnavailable": "Audio stream unavailable",
+    "summary_one": "{{count}} segment · {{words}} words",
+    "summary_other": "{{count}} segments · {{words}} words",
+    "unmute": "Unmute",
+    "volume": "Volume"
+  },
+  "audioSegment": {
+    "cancelRename": "Cancel rename",
+    "renamed": "Renamed speaker to \"{{name}}\"",
+    "renameSpeakerAria": "Rename speaker",
+    "renameSpeakerTitle": "Click to rename speaker",
+    "saveSpeakerName": "Save speaker name",
+    "seekAudioTitle": "Seek audio to this timestamp"
+  },
+  "audioTranscript": {
+    "aiTranscription": "AI Transcription",
+    "noSegments": "No transcript segments available for this audio file.",
+    "noSegmentsMatch": "No transcript segments match \"{{query}}\".",
+    "searchAria": "Search transcript text or speaker",
+    "searchPlaceholder": "Search transcript text or speaker…"
+  },
+  "common": {
+    "clearSearch": "Clear search"
+  },
+  "imageNote": {
+    "formula": "Formula",
+    "heading": "Heading",
+    "regionLabel": "Region #{{ordinal}}",
+    "visualDescription": "Visual Description"
+  },
+  "imageNotesPanel": {
+    "aiVisionAnalysis": "AI Vision Analysis",
+    "extractedNotes": "Extracted Notes",
+    "noContent": "No extracted text or visual analysis available for this image.",
+    "notice": "Notice"
+  },
+  "imagePreview": {
+    "imageLoadFailed": "The original image could not be loaded directly.",
+    "imagePreviewUnavailable": "Image preview unavailable",
+    "loadingImage": "Loading image…"
+  },
+  "imageRegion": {
+    "ariaLabel": "Region #{{ordinal}}: {{kind}}"
+  },
+  "imageToolbar": {
+    "image": "Image",
+    "imageDocument": "Image Document",
+    "imageOnlyTitle": "Image Only",
+    "notes": "Notes",
+    "notesOnlyTitle": "Notes Only",
+    "split": "Split",
+    "splitViewTitle": "Split View",
+    "visualRegions_one": "{{count}} visual region",
+    "visualRegions_other": "{{count}} visual regions"
+  },
+  "imageViewer": {
+    "partialTranscriptionWarning": "Some content in this image could not be fully transcribed."
+  },
+  "imageZoom": {
+    "hideRegionHighlights": "Hide Region Highlights",
+    "resetZoom": "Reset Zoom (100%)",
+    "showRegionHighlights": "Show Region Highlights",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out"
+  },
+  "markdownViewer": {
+    "noContent": "No text content available."
+  },
+  "plainTextViewer": {
+    "noContent": "No text content available."
+  },
+  "pptxHeader": {
+    "presentation": "Presentation",
+    "slideCount_one": "{{count}} slide",
+    "slideCount_other": "{{count}} slides"
+  },
+  "pptxSearch": {
+    "clearSearch": "Clear search",
+    "searchAria": "Search slides",
+    "searchPlaceholder": "Search slides…"
+  },
+  "pptxSegmentList": {
+    "noSegmentsMatch": "No segments match \"{{query}}\".",
+    "segmentBadge": "Slide {{number}} · #{{ordinal}}",
+    "segmentCount_one": "{{count}} segment",
+    "segmentCount_other": "{{count}} segments",
+    "title": "Slide Segments"
+  },
+  "pptxSlideContent": {
+    "blockCount_one": "{{count}} block",
+    "blockCount_other": "{{count}} blocks",
+    "noContentMatch": "No content matches \"{{query}}\" on this slide.",
+    "slideLabel": "Slide {{number}}",
+    "slideRef": "[Slide {{number}}]"
+  },
+  "pptxSlideNavigator": {
+    "slides": "Slides"
+  },
+  "pptxViewer": {
+    "noContent": "This presentation has no extractable slide content.",
+    "noSlidesExtracted": "No slides extracted"
+  },
+  "tabularViewer": {
+    "columnSummary": "{{rows}} rows • {{cols}} columns",
+    "defaultDatasetName": "Dataset",
+    "filterPlaceholder": "Filter table rows...",
+    "locator": "Locator: {{range}}",
+    "nextPage": "Next page",
+    "noMatchingRows": "No matching rows found.",
+    "pagination": "Showing {{start}}–{{end}} of {{total}} rows",
+    "previousPage": "Previous page"
+  },
+  "videoPlayer": {
+    "loadingVideo": "Loading video…",
+    "streamUnavailable": "Video stream unavailable",
+    "videoLoadFailed": "The source file could not be loaded."
+  },
+  "videoTranscript": {
+    "addOrReplaceTitle": "Add or replace transcripts",
+    "addReplace": "Add / Replace",
+    "addTranscripts": "Add Transcripts",
+    "noTranscriptAttached": "No transcript attached to this video",
+    "noTranscripts": "No Transcripts",
+    "noTranscriptsDescription": "Add or paste a transcript to follow along with synchronized timestamps and search.",
+    "seekVideoTitle": "Seek video to this timestamp",
+    "transcript": "Transcript",
+    "visualNote": "Visual Note"
+  }
+}

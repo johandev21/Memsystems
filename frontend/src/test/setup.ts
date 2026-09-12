@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { beforeEach } from "vitest";
+import i18n from "@/shared/i18n/i18n";
+
+beforeEach(async () => {
+  await i18n.changeLanguage("en");
+});
+
 if (typeof window !== "undefined") {
   if (typeof Element !== "undefined" && !Element.prototype.getAnimations) {
     (Element.prototype as unknown as Record<string, unknown>).getAnimations = () => [];

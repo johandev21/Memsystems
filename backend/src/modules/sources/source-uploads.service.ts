@@ -72,10 +72,14 @@ export class SourceUploadsService {
     const filename = input.filename.trim();
     const contentType = input.contentType.split(';')[0].trim().toLowerCase();
     if (!filename || filename.length > 500) {
-      throw new BadRequestError('A filename up to 500 characters is required');
+      throw new BadRequestError('A filename up to 500 characters is required', {
+        messageKey: 'errors.sources.upload.filenameRequired',
+      });
     }
     if (!Number.isSafeInteger(input.size) || input.size <= 0) {
-      throw new BadRequestError('Upload size must be a positive integer');
+      throw new BadRequestError('Upload size must be a positive integer', {
+        messageKey: 'errors.sources.upload.sizePositive',
+      });
     }
     const isAudio = isAudioFile(contentType, filename);
     const isImage = isImageFile(contentType, filename);
@@ -99,16 +103,25 @@ export class SourceUploadsService {
     if (input.size > maxBytes) {
       throw new BadRequestError(
         `Upload exceeds maximum size of ${maxBytes} bytes`,
+        {
+          messageKey: 'errors.sources.upload.tooLarge',
+          params: { maxBytes },
+        },
       );
     }
     if (!this.extractionService.isSupportedFile(contentType, filename)) {
       throw new BadRequestError(
         `Unsupported file type: ${contentType || 'unknown'} (${filename})`,
+        {
+          messageKey: 'errors.sources.upload.unsupportedType',
+          params: { contentType: contentType || 'unknown', filename },
+        },
       );
     }
     if (input.sha256 && !/^[0-9a-f]{64}$/i.test(input.sha256)) {
       throw new BadRequestError(
         'sha256 must be a 64-character hexadecimal digest',
+        { messageKey: 'errors.sources.upload.sha256Invalid' },
       );
     }
 
@@ -155,12 +168,18 @@ export class SourceUploadsService {
     if (!this.storageService.isLocalStorage()) {
       throw new BadRequestError(
         'This upload target requires its presigned URL',
+        { messageKey: 'errors.sources.upload.presignedRequired' },
       );
     }
     const declaredLength = request.headers['content-length'];
     const contentLength = declaredLength ? Number(declaredLength) : undefined;
     if (contentLength !== undefined && contentLength !== target.size) {
-      throw new BadRequestError('Upload size does not match the upload target');
+      throw new BadRequestError(
+        'Upload size does not match the upload target',
+        {
+          messageKey: 'errors.sources.upload.sizeMismatch',
+        },
+      );
     }
     const isAudio = isAudioFile(target.contentType, target.filename);
     const isImage = isImageFile(target.contentType, target.filename);
@@ -181,6 +200,10 @@ export class SourceUploadsService {
     if (contentLength !== undefined && contentLength > maxBytes) {
       throw new BadRequestError(
         `Upload exceeds maximum size of ${maxBytes} bytes`,
+        {
+          messageKey: 'errors.sources.upload.tooLarge',
+          params: { maxBytes },
+        },
       );
     }
     let uploaded: { size: number; sha256: string };
@@ -197,9 +220,13 @@ export class SourceUploadsService {
       if (error instanceof BadRequestError) throw error;
       const message = error instanceof Error ? error.message : 'Upload failed';
       if (message.includes('maximum size')) {
-        throw new BadRequestError(message);
+        throw new BadRequestError(message, {
+          messageKey: 'errors.sources.upload.tooLargeGeneric',
+        });
       }
-      throw new BadRequestError('Upload could not be stored');
+      throw new BadRequestError('Upload could not be stored', {
+        messageKey: 'errors.sources.upload.storeFailed',
+      });
     }
 
     try {
@@ -227,7 +254,9 @@ export class SourceUploadsService {
       const current = await this.getTarget(token);
       if (!current.uploaded) {
         await this.storageService.deleteObject(target.key).catch(() => {});
-        throw new BadRequestError('Upload target is no longer available');
+        throw new BadRequestError('Upload target is no longer available', {
+          messageKey: 'errors.sources.upload.targetUnavailable',
+        });
       }
     }
     return { uploaded: true, size: uploaded.size };
@@ -238,6 +267,7 @@ export class SourceUploadsService {
     if (target.notebookId !== notebookId) {
       throw new ForbiddenError(
         'Upload target does not belong to this notebook',
+        { messageKey: 'errors.sources.upload.notebookMismatch' },
       );
     }
 
@@ -249,6 +279,7 @@ export class SourceUploadsService {
       } catch {
         throw new BadRequestError(
           'Upload is incomplete or no longer available',
+          { messageKey: 'errors.sources.upload.incomplete' },
         );
       }
       if (metadata.contentLength !== target.size) {
@@ -258,7 +289,9 @@ export class SourceUploadsService {
       }
       const digest = metadata.metadata.sha256?.toLowerCase();
       if (target.sha256 && digest && digest !== target.sha256) {
-        throw new BadRequestError('Upload integrity check failed');
+        throw new BadRequestError('Upload integrity check failed', {
+          messageKey: 'errors.sources.upload.integrityFailed',
+        });
       }
       // S3 metadata does not expose a provider-independent object digest. The
       // exact byte count remains mandatory; clients may additionally provide
@@ -283,13 +316,17 @@ export class SourceUploadsService {
     const claim = await this.claimForFinalize(notebookId, token);
     if (claim.expired) {
       await this.storageService.deleteObject(target.key).catch(() => {});
-      throw new BadRequestError('Upload target has expired');
+      throw new BadRequestError('Upload target has expired', {
+        messageKey: 'errors.sources.upload.expired',
+      });
     }
 
     const claimedTarget = this.toTarget(claim.row);
     const claimedUpload = claimedTarget.uploaded ?? uploaded;
     if (!claimedUpload) {
-      throw new BadRequestError('Upload is incomplete or no longer available');
+      throw new BadRequestError('Upload is incomplete or no longer available', {
+        messageKey: 'errors.sources.upload.incomplete',
+      });
     }
     try {
       this.assertIntegrity(claimedTarget, claimedUpload);
@@ -336,16 +373,25 @@ export class SourceUploadsService {
       .from(sourceUploadIntents)
       .where(eq(sourceUploadIntents.id, token))
       .limit(1);
-    if (!row) throw new NotFoundError('Upload target');
+    if (!row)
+      throw new NotFoundError('Upload target', {
+        messageKey: 'errors.sources.upload.notFound',
+      });
     if (row.status === 'consumed') {
-      throw new BadRequestError('Upload target has already been finalized');
+      throw new BadRequestError('Upload target has already been finalized', {
+        messageKey: 'errors.sources.upload.alreadyFinalized',
+      });
     }
     if (row.status === 'expired' || row.expiresAt.getTime() <= Date.now()) {
       await this.expire(row);
-      throw new BadRequestError('Upload target has expired');
+      throw new BadRequestError('Upload target has expired', {
+        messageKey: 'errors.sources.upload.expired',
+      });
     }
     if (row.status === 'consuming') {
-      throw new BadRequestError('Upload target is already being finalized');
+      throw new BadRequestError('Upload target is already being finalized', {
+        messageKey: 'errors.sources.upload.alreadyFinalizing',
+      });
     }
     return this.toTarget(row);
   }
@@ -373,14 +419,19 @@ export class SourceUploadsService {
         .from(sourceUploadIntents)
         .where(eq(sourceUploadIntents.id, token))
         .for('update');
-      if (!row) throw new NotFoundError('Upload target');
+      if (!row)
+        throw new NotFoundError('Upload target', {
+          messageKey: 'errors.sources.upload.notFound',
+        });
       if (row.notebookId !== notebookId) {
         throw new ForbiddenError(
           'Upload target does not belong to this notebook',
         );
       }
       if (row.status === 'consumed') {
-        throw new BadRequestError('Upload target has already been finalized');
+        throw new BadRequestError('Upload target has already been finalized', {
+          messageKey: 'errors.sources.upload.alreadyFinalized',
+        });
       }
       if (row.status === 'expired' || row.expiresAt.getTime() <= Date.now()) {
         await tx
@@ -395,11 +446,14 @@ export class SourceUploadsService {
         return { expired: true as const };
       }
       if (row.status === 'consuming') {
-        throw new BadRequestError('Upload target is already being finalized');
+        throw new BadRequestError('Upload target is already being finalized', {
+          messageKey: 'errors.sources.upload.alreadyFinalizing',
+        });
       }
       if (!row.uploadedBytes || row.uploadedBytes !== row.expectedBytes) {
         throw new BadRequestError(
           'Upload is incomplete or no longer available',
+          { messageKey: 'errors.sources.upload.incomplete' },
         );
       }
       const [claimed] = await tx
@@ -413,7 +467,9 @@ export class SourceUploadsService {
         )
         .returning();
       if (!claimed) {
-        throw new BadRequestError('Upload target is already being finalized');
+        throw new BadRequestError('Upload target is already being finalized', {
+          messageKey: 'errors.sources.upload.alreadyFinalizing',
+        });
       }
       return { row: claimed };
     });
@@ -444,10 +500,17 @@ export class SourceUploadsService {
     uploaded: { size: number; sha256: string },
   ): void {
     if (uploaded.size !== target.size) {
-      throw new BadRequestError('Upload size does not match the upload target');
+      throw new BadRequestError(
+        'Upload size does not match the upload target',
+        {
+          messageKey: 'errors.sources.upload.sizeMismatch',
+        },
+      );
     }
     if (target.sha256 && uploaded.sha256 && target.sha256 !== uploaded.sha256) {
-      throw new BadRequestError('Upload integrity check failed');
+      throw new BadRequestError('Upload integrity check failed', {
+        messageKey: 'errors.sources.upload.integrityFailed',
+      });
     }
   }
 }

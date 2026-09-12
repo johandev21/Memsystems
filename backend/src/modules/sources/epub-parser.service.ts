@@ -165,7 +165,9 @@ function resolveHref(basePath: string, href: string): string {
 export class EpubParserService {
   parse(buffer: Buffer): EpubParseResult {
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('EPUB buffer is empty.');
+      throw new BadRequestError('EPUB buffer is empty.', {
+        messageKey: 'errors.sources.inspect.epubEmpty',
+      });
     }
     if (
       buffer.length < 4 ||
@@ -174,7 +176,9 @@ export class EpubParserService {
       buffer[2] !== 0x03 ||
       buffer[3] !== 0x04
     ) {
-      throw new BadRequestError('Invalid EPUB ZIP header.');
+      throw new BadRequestError('Invalid EPUB ZIP header.', {
+        messageKey: 'errors.sources.parse.epubCorrupted',
+      });
     }
 
     const warnings: string[] = [];
@@ -185,6 +189,7 @@ export class EpubParserService {
       if (err instanceof BadRequestError) throw err;
       throw new BadRequestError(
         `Failed to unzip EPUB: ${err instanceof Error ? err.message : String(err)}`,
+        { messageKey: 'errors.sources.parse.epubCorrupted' },
       );
     }
 
@@ -214,6 +219,7 @@ export class EpubParserService {
     if (!opfPath || !parsed.entries.has(opfPath)) {
       throw new BadRequestError(
         'Invalid EPUB: cannot locate OPF package file.',
+        { messageKey: 'errors.sources.parse.epubCorrupted' },
       );
     }
 
@@ -329,6 +335,10 @@ export class EpubParserService {
     if (chapters.length > 500) {
       throw new BadRequestError(
         `EPUB chapter count (${chapters.length}) exceeds maximum allowed limit of 500.`,
+        {
+          messageKey: 'errors.sources.inspect.epubTooManyChapters',
+          params: { count: chapters.length, max: 500 },
+        },
       );
     }
 

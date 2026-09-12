@@ -3,17 +3,20 @@ import { type UIMessage, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
-import { useModelPersistence } from "@/features/notebooks";
+import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import {
   type ChatMessageDTO,
+  type ChatRequest,
   type CitedSourceDTO,
   chatMessagesQueryOptions,
   clearChatHistory,
 } from "../api/chat";
+import i18n from "@/shared/i18n";
 import { modelsQueryOptions } from "@/features/ai";
-import { notebookQueryOptions } from "@/features/notebooks";
+import { notebookQueryOptions } from "@/features/notebooks/api";
 
 const DEFAULT_MODEL_ID = "openai/gpt-5.6-sol";
 
@@ -58,9 +61,12 @@ export function formatChatMessages(history?: ChatMessageDTO[]): UIMessage[] {
 }
 
 export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTMLElement | null>) {
+  const { t } = useTranslation("chat");
   const { data: notebook } = useQuery(notebookQueryOptions(notebookId));
   const { data: models } = useQuery(modelsQueryOptions);
-  const { data: chatHistory } = useQuery(chatMessagesQueryOptions(notebookId));
+  const chatHistoryQuery = useQuery(chatMessagesQueryOptions(notebookId));
+  const chatHistory = chatHistoryQuery.data;
+  const isHistoryPending = chatHistoryQuery.isPending;
   const { data: connection } = useConnectionStatus();
 
   const modelOptions = useMemo(() => models ?? [], [models]);
@@ -85,7 +91,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   );
 
   const selectedModelRef = useRef(selectedModel);
-  selectedModelRef.current = selectedModel;
+  useEffect(() => {
+    selectedModelRef.current = selectedModel;
+  }, [selectedModel]);
 
   const transport = useMemo(() => {
     return new DefaultChatTransport({
@@ -93,6 +101,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       credentials: "include",
       prepareSendMessagesRequest: ({ messages }) => {
         const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+        const language = (i18n.resolvedLanguage ?? i18n.language ?? "en").split("-")[0];
         return {
           body: {
             model: selectedModelRef.current,
@@ -103,7 +112,8 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
               parts: m.parts,
               metadata: m.metadata,
             })),
-          },
+            language,
+          } satisfies ChatRequest,
         };
       },
     });
@@ -175,6 +185,23 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;
 
+  // Only a user message sent during this session is allowed to pull the
+  // viewport. Messages hydrated from persisted history must never anchor, or
+  // opening a notebook would scroll straight past the banner to the last turn.
+  const hydratedMessageIds = useMemo(
+    () => new Set((chatHistory ?? []).map((message) => message.id)),
+    [chatHistory],
+  );
+  const anchorMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message?.role === "user") {
+        return hydratedMessageIds.has(message.id) ? null : message.id;
+      }
+    }
+    return null;
+  }, [messages, hydratedMessageIds]);
+
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState("");
   const [chatAnnouncement, setChatAnnouncement] = useState<string | null>(null);
@@ -193,10 +220,10 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       queryClient.invalidateQueries({ queryKey: ["notebooks", "home"] });
       queryClient.invalidateQueries({ queryKey: ["notebooks", "all"] });
       setIsClearDialogOpen(false);
-      toast.success("Chat history cleared");
+      toast.success(t("clearHistory.cleared"));
     },
-    onError: (err: Error) => {
-      toast.error(err.message);
+    onError: () => {
+      toast.error(t("clearHistory.clearFailed"));
     },
   });
 
@@ -235,10 +262,13 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     [isLoading, sendMessage],
   );
 
-  const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
-  }, []);
+  const handleCopy = useCallback(
+    (text: string) => {
+      navigator.clipboard.writeText(text);
+      toast.success(t("message.copiedToClipboard"));
+    },
+    [t],
+  );
 
   const handleRegenerate = useCallback(() => {
     abortedMessagesRef.current = null;
@@ -256,7 +286,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
         if (detail.focusChat) {
           setChatAnnouncement(
-            detail.concept ? `Opening chat for ${detail.concept}.` : "Opening chat.",
+            detail.concept
+              ? t("announcement.openingChatFor", { concept: detail.concept })
+              : t("announcement.openingChat"),
           );
           window.setTimeout(() => setChatAnnouncement(null), 4000);
           window.requestAnimationFrame(() => {
@@ -284,7 +316,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     return () => {
       window.removeEventListener("send-chat-prompt", handleSendPromptEvent);
     };
-  }, [handleSubmit, panelRef]);
+  }, [handleSubmit, panelRef, t]);
 
   return {
     notebook,
@@ -296,8 +328,10 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     citedSourcesMap,
     status,
     isLoading,
+    isHistoryPending,
     error,
     messageCount,
+    anchorMessageId,
     input,
     setInput,
     isClearDialogOpen,

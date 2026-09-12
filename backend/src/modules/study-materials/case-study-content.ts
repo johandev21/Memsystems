@@ -61,12 +61,17 @@ export const CaseStudyContent = z.object({
 
 export function validateCaseStudy(content: unknown) {
   const result = CaseStudyContent.safeParse(content);
-  if (!result.success) throw new BadRequestError('Invalid case study content');
+  if (!result.success)
+    throw new BadRequestError('Invalid case study content', {
+      messageKey: 'errors.studyMaterials.caseStudy.invalidContent',
+    });
   const study = result.data;
   if (
     new Set(study.questions.map((q) => q.id)).size !== study.questions.length
   ) {
-    throw new BadRequestError('Case study question IDs must be unique');
+    throw new BadRequestError('Case study question IDs must be unique', {
+      messageKey: 'errors.studyMaterials.caseStudy.questionIdsUnique',
+    });
   }
   const questionIds = new Set(study.questions.map((q) => q.id));
   if (
@@ -75,12 +80,18 @@ export function validateCaseStudy(content: unknown) {
   ) {
     throw new BadRequestError(
       'Case study analysis question IDs must be unique',
+      {
+        messageKey: 'errors.studyMaterials.caseStudy.analysisQuestionIdsUnique',
+      },
     );
   }
   for (const analysis of study.analyses) {
     if (!questionIds.has(analysis.questionId)) {
       throw new BadRequestError(
         'Case study analysis references an unknown question',
+        {
+          messageKey: 'errors.studyMaterials.caseStudy.unknownQuestion',
+        },
       );
     }
   }
@@ -110,6 +121,7 @@ export function validateCaseStudySources(
   if (bad) {
     throw new BadRequestError(
       'Case study references an unselected or unavailable source',
+      { messageKey: 'errors.studyMaterials.caseStudy.sourceUnavailable' },
     );
   }
   return { ...study, sourceIds: [...allowed] };
@@ -129,15 +141,19 @@ export function prepareGeneratedCaseStudy(
   if (study.questions.length !== settings.questionCount) {
     throw new BadRequestError(
       'Case study question count does not match the request',
+      { messageKey: 'errors.studyMaterials.caseStudy.questionCountMismatch' },
     );
   }
   if (study.analyses.length !== study.questions.length) {
     throw new BadRequestError(
       'Case study must include an analysis for each question',
+      { messageKey: 'errors.studyMaterials.caseStudy.missingAnalysis' },
     );
   }
   if (!study.scenario.isFictional) {
-    throw new BadRequestError('Case study scenarios must be fictional');
+    throw new BadRequestError('Case study scenarios must be fictional', {
+      messageKey: 'errors.studyMaterials.caseStudy.mustBeFictional',
+    });
   }
   return { ...study, conceptsFocus: settings.focus };
 }

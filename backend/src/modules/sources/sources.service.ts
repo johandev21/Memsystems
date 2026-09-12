@@ -185,11 +185,17 @@ export class SourcesService {
     const title = input.title.trim();
     const rawText = input.rawText;
     if (rawText.trim().length === 0) {
-      throw new BadRequestError('rawText must be non-empty');
+      throw new BadRequestError('rawText must be non-empty', {
+        messageKey: 'errors.sources.create.textEmpty',
+      });
     }
     if (Buffer.byteLength(rawText, 'utf8') > MAX_RAW_TEXT_BYTES) {
       throw new BadRequestError(
         `rawText exceeds maximum size of ${MAX_RAW_TEXT_BYTES} bytes`,
+        {
+          messageKey: 'errors.sources.create.textTooLarge',
+          params: { maxBytes: MAX_RAW_TEXT_BYTES },
+        },
       );
     }
 
@@ -227,6 +233,13 @@ export class SourcesService {
       throw new WebScrapeError(
         `Page has too little content (${scrapedText.length} chars, need at least ${input.minTextLength})`,
         'not_readerable',
+        {
+          messageKey: 'errors.sources.create.urlTooLittleContent',
+          params: {
+            length: scrapedText.length,
+            minLength: input.minTextLength,
+          },
+        },
       );
     }
 
@@ -291,7 +304,9 @@ export class SourcesService {
   ) {
     await this.notebooksService.assertNotebookOwner(notebookId);
     if (fileBuffer.length === 0) {
-      throw new BadRequestError('Uploaded file is empty');
+      throw new BadRequestError('Uploaded file is empty', {
+        messageKey: 'errors.sources.create.fileEmpty',
+      });
     }
     const isAudio = isAudioFile(fileType, fileName);
     const isImage = isImageFile(fileType, fileName);
@@ -315,11 +330,19 @@ export class SourcesService {
     if (fileBuffer.length > maxBytes) {
       throw new BadRequestError(
         `File exceeds maximum size of ${maxBytes} bytes`,
+        {
+          messageKey: 'errors.sources.create.fileTooLarge',
+          params: { maxBytes },
+        },
       );
     }
     if (!this.sourceExtractionService.isSupportedFile(fileType, fileName)) {
       throw new BadRequestError(
         `Unsupported file type: ${fileType || 'unknown'} (${fileName})`,
+        {
+          messageKey: 'errors.sources.upload.unsupportedType',
+          params: { contentType: fileType || 'unknown', filename: fileName },
+        },
       );
     }
 
@@ -382,10 +405,14 @@ export class SourcesService {
   ) {
     await this.notebooksService.assertNotebookOwner(notebookId);
     if (!input.artifactKey.startsWith('pending-sources/')) {
-      throw new BadRequestError('Invalid source artifact key');
+      throw new BadRequestError('Invalid source artifact key', {
+        messageKey: 'errors.sources.artifact.invalidKey',
+      });
     }
     if (!Number.isSafeInteger(input.fileSize) || input.fileSize <= 0) {
-      throw new BadRequestError('Invalid source artifact size');
+      throw new BadRequestError('Invalid source artifact size', {
+        messageKey: 'errors.sources.artifact.invalidSize',
+      });
     }
     const isAudio = isAudioFile(input.contentType, input.filename);
     const isImage = isImageFile(input.contentType, input.filename);
@@ -409,6 +436,10 @@ export class SourcesService {
     if (input.fileSize > maxBytes) {
       throw new BadRequestError(
         `File exceeds maximum size of ${maxBytes} bytes`,
+        {
+          messageKey: 'errors.sources.create.fileTooLarge',
+          params: { maxBytes },
+        },
       );
     }
     if (
@@ -419,6 +450,13 @@ export class SourcesService {
     ) {
       throw new BadRequestError(
         `Unsupported file type: ${input.contentType || 'unknown'} (${input.filename})`,
+        {
+          messageKey: 'errors.sources.upload.unsupportedType',
+          params: {
+            contentType: input.contentType || 'unknown',
+            filename: input.filename,
+          },
+        },
       );
     }
     let storedSize: number;
@@ -426,11 +464,14 @@ export class SourcesService {
       storedSize = (await this.storageService.objectMetadata(input.artifactKey))
         .contentLength;
     } catch {
-      throw new BadRequestError('Source artifact is unavailable');
+      throw new BadRequestError('Source artifact is unavailable', {
+        messageKey: 'errors.sources.artifact.unavailable',
+      });
     }
     if (storedSize !== input.fileSize) {
       throw new BadRequestError(
         'Source artifact size does not match upload metadata',
+        { messageKey: 'errors.sources.artifact.sizeMismatch' },
       );
     }
 
@@ -528,10 +569,18 @@ export class SourcesService {
     return { enqueued: count };
   }
 
+  /** Re-indexes every source, e.g. after an embedding-model switch. */
+  async reembedAll() {
+    const count = await this.sourceJobsService.reembedAll();
+    return { enqueued: count };
+  }
+
   async getDownload(id: string, expiresInSeconds = 300): Promise<DownloadInfo> {
     const source = await this.fetchOwned(id);
     if (source.kind !== 'file' || !source.s3Key) {
-      throw new BadRequestError('Source has no downloadable file');
+      throw new BadRequestError('Source has no downloadable file', {
+        messageKey: 'errors.sources.download.noFile',
+      });
     }
     const url = await this.storageService.presignDownload(
       source.s3Key,
@@ -547,10 +596,14 @@ export class SourcesService {
   ) {
     const source = await this.fetchOwned(sourceId);
     if (!source.currentVersionId) {
-      throw new BadRequestError('Source has no current version to update');
+      throw new BadRequestError('Source has no current version to update', {
+        messageKey: 'errors.sources.speaker.noCurrentVersion',
+      });
     }
     if (!speakerMap || Object.keys(speakerMap).length === 0) {
-      throw new BadRequestError('Speaker map must not be empty');
+      throw new BadRequestError('Speaker map must not be empty', {
+        messageKey: 'errors.sources.speaker.emptyMap',
+      });
     }
 
     return this.db.transaction(async (tx) => {
@@ -614,7 +667,9 @@ export class SourcesService {
     const source = await this.fetchOwned(sourceId);
     const trimmed = transcriptText.trim();
     if (!trimmed) {
-      throw new BadRequestError('Transcript text must not be empty');
+      throw new BadRequestError('Transcript text must not be empty', {
+        messageKey: 'errors.sources.transcript.empty',
+      });
     }
 
     const captionParser = this.captionParser ?? new CaptionParserService();
@@ -622,6 +677,7 @@ export class SourcesService {
     if (segments.length === 0) {
       throw new BadRequestError(
         'Failed to parse transcript segments from provided text',
+        { messageKey: 'errors.sources.transcript.parseFailed' },
       );
     }
 
@@ -667,7 +723,9 @@ export class SourcesService {
       .from(sources)
       .where(eq(sources.id, id));
     if (!source) {
-      throw new NotFoundError('Source');
+      throw new NotFoundError('Source', {
+        messageKey: 'errors.sources.source.notFound',
+      });
     }
     await this.notebooksService.assertNotebookOwner(source.notebookId);
     return source;

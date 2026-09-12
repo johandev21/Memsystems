@@ -1,0 +1,18 @@
+# Memsystems
+
+> Memsystems is a notebook workspace for research and study: it brings web pages, PDFs, documents, and other sources together with an AI assistant that can answer questions with citations, and generate study materials such as study guides, quizzes, flashcards, roadmaps, mind maps, practice problems, slides, and case studies.
+
+Memsystems is a client-side web application. Human users navigate it through its routes; the workspace layout on each route is a three-pane arrangement (sources, chat, studio). The app exposes WebMCP tools so that AI agents can operate core flows programmatically.
+
+## Main routes
+
+- [Home](/): the notebook library — recent notebooks, banner previews, and quick access to the workspace.
+- [Notebook workspace](/notebooks/): a notebook with its sources list, the AI chat panel with citation references, and the studio panel for generating study materials. Each notebook lives at `/notebooks/{notebookId}`.
+- [Settings](/settings): application settings, including the AI model gateway connection and the embeddings provider configuration.
+- [Notebook folders prototype](/prototype/notebook-folders): an experimental library view with drag-and-drop folders for organizing notebooks.
+
+## For AI agents
+
+- The app is a single-page application; content renders client-side after scripts load. Prefer the accessibility tree for orientation once the page is interactive.
+- WebMCP tools registered on the page cover core notebook interactions; discover them via the WebMCP tool registry rather than guessing form fields.
+- The API is served under `/api` from the same origin. Unauthenticated access is not supported.

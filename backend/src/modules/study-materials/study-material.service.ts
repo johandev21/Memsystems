@@ -21,6 +21,7 @@ import {
   CapabilityUnsupportedError,
   EntitlementError,
   ForbiddenError,
+  InternalError,
   NotFoundError,
   RateLimitedError,
   ServiceUnavailableError,
@@ -147,7 +148,9 @@ export class StudyMaterialService {
     if (input.title !== undefined) {
       const trimmed = input.title.trim();
       if (trimmed.length === 0) {
-        throw new BadRequestError('Title cannot be empty');
+        throw new BadRequestError('Title cannot be empty', {
+          messageKey: 'errors.studyMaterials.titleEmpty',
+        });
       }
       updates.title = trimmed.slice(0, 200);
     }
@@ -270,7 +273,9 @@ export class StudyMaterialService {
   async shuffle(smId: string) {
     const sm = await this.fetchOwned(smId);
     if (sm.kind !== 'quiz') {
-      throw new BadRequestError('Only quizzes can be shuffled');
+      throw new BadRequestError('Only quizzes can be shuffled', {
+        messageKey: 'errors.studyMaterials.onlyQuizzesShuffled',
+      });
     }
     const shuffledContent = shuffleQuizOptions(
       sm.content as z.infer<typeof QuizContent>,
@@ -301,10 +306,14 @@ export class StudyMaterialService {
   ): Promise<{ title: string; buffer: Buffer }> {
     const sm = await this.fetchOwned(smId);
     if (sm.kind !== 'slides') {
-      throw new BadRequestError('Only slides can be exported as PowerPoint');
+      throw new BadRequestError('Only slides can be exported as PowerPoint', {
+        messageKey: 'errors.studyMaterials.exportOnlySlides',
+      });
     }
     if (sm.deletedAt) {
-      throw new BadRequestError('Cannot export a deleted study material');
+      throw new BadRequestError('Cannot export a deleted study material', {
+        messageKey: 'errors.studyMaterials.exportDeleted',
+      });
     }
     // Validate to guarantee the builder receives a well-formed deck.
     // Previews are derived presentation images and are stripped before
@@ -316,7 +325,9 @@ export class StudyMaterialService {
     const { previews, ...deck } = validated;
     void previews;
     if (!this.slidesBuilder) {
-      throw new BadRequestError('Slides export is unavailable');
+      throw new BadRequestError('Slides export is unavailable', {
+        messageKey: 'errors.studyMaterials.exportUnavailable',
+      });
     }
     const buffer = await this.slidesBuilder.buildPptxBuffer(deck);
     return { title: sm.title, buffer };
@@ -325,7 +336,9 @@ export class StudyMaterialService {
   async duplicate(smId: string) {
     const source = await this.fetchOwned(smId);
     if (source.deletedAt) {
-      throw new BadRequestError('Cannot duplicate a deleted study material');
+      throw new BadRequestError('Cannot duplicate a deleted study material', {
+        messageKey: 'errors.studyMaterials.duplicateDeleted',
+      });
     }
 
     // Validate content before copying; ensures kind/content invariant
@@ -356,7 +369,9 @@ export class StudyMaterialService {
       if (!folder) {
         targetFolderId = null;
       } else if (folder.notebookId !== source.notebookId) {
-        throw new ForbiddenError('Folder does not belong to this notebook');
+        throw new ForbiddenError('Folder does not belong to this notebook', {
+          messageKey: 'errors.studyMaterials.folderNotInNotebook',
+        });
       } else if (folder.deletedAt) {
         targetFolderId = null;
       }
@@ -430,13 +445,19 @@ export class StudyMaterialService {
       .from(studyMaterialFolders)
       .where(eq(studyMaterialFolders.id, folderId));
     if (!folder) {
-      throw new NotFoundError('Folder');
+      throw new NotFoundError('Folder', {
+        messageKey: 'errors.studyMaterials.folderNotFound',
+      });
     }
     if (folder.notebookId !== notebookId) {
-      throw new ForbiddenError('Folder does not belong to this notebook');
+      throw new ForbiddenError('Folder does not belong to this notebook', {
+        messageKey: 'errors.studyMaterials.folderNotInNotebook',
+      });
     }
     if (folder.deletedAt) {
-      throw new BadRequestError('Cannot move to a folder in Trash');
+      throw new BadRequestError('Cannot move to a folder in Trash', {
+        messageKey: 'errors.studyMaterials.folderInTrash',
+      });
     }
   }
 
@@ -446,7 +467,9 @@ export class StudyMaterialService {
       .from(studyMaterials)
       .where(eq(studyMaterials.id, smId));
     if (!sm) {
-      throw new NotFoundError('Study material');
+      throw new NotFoundError('Study material', {
+        messageKey: 'errors.studyMaterials.studyMaterialNotFound',
+      });
     }
     await this.notebooksService.assertNotebookOwner(sm.notebookId);
     return this.refreshDerivedContent(sm);
@@ -463,17 +486,22 @@ export class StudyMaterialService {
     if (sm.kind !== 'practice_problems') {
       throw new BadRequestError(
         'Study material is not a practice problems set',
+        { messageKey: 'errors.studyMaterials.notPracticeProblems' },
       );
     }
 
     const validated = validatePracticeProblems(sm.content);
     const problem = validated.problems.find((p) => p.id === input.problemId);
     if (!problem) {
-      throw new NotFoundError('Practice problem');
+      throw new NotFoundError('Practice problem', {
+        messageKey: 'errors.studyMaterials.practiceProblemNotFound',
+      });
     }
 
     if (!this.aiService) {
-      throw new BadRequestError('AI service is not configured');
+      throw new BadRequestError('AI service is not configured', {
+        messageKey: 'errors.studyMaterials.aiNotConfigured',
+      });
     }
 
     const modelId = input.modelId;
@@ -546,7 +574,9 @@ Evaluate this student attempt now.`;
     this.logger.error(
       `[EVAL-DEBUG] output parse failed modelId=${modelId} rawPreview=${JSON.stringify(result.output)?.slice(0, 500)}`,
     );
-    throw new Error('Invalid output format from model');
+    throw new InternalError('Invalid output format from model', {
+      messageKey: 'errors.studyMaterials.invalidModelOutput',
+    });
   }
 }
 
@@ -598,25 +628,39 @@ function toEvaluationDomainError(
   if (classified.kind === 'entitlement') {
     return new EntitlementError(
       `${modelName} is not available on your plan. Try another model or add credits.`,
-      { cause: error instanceof Error ? error : undefined },
+      {
+        cause: error instanceof Error ? error : undefined,
+        messageKey: 'errors.studyMaterials.evaluation.entitlement',
+        params: { modelName },
+      },
     );
   }
   if (classified.kind === 'rate_limited') {
     return new RateLimitedError(
       'The AI service is busy right now. Please retry in a moment.',
-      { cause: error instanceof Error ? error : undefined },
+      {
+        cause: error instanceof Error ? error : undefined,
+        messageKey: 'errors.studyMaterials.evaluation.rateLimited',
+      },
     );
   }
   if (classified.kind === 'transient') {
     return new ServiceUnavailableError(
       'The AI service is temporarily unavailable. Please try again shortly.',
-      { cause: error instanceof Error ? error : undefined },
+      {
+        cause: error instanceof Error ? error : undefined,
+        messageKey: 'errors.studyMaterials.evaluation.transient',
+      },
     );
   }
   if (classified.kind === 'capability') {
     return new CapabilityUnsupportedError(
       `${modelName} doesn't support answer evaluation. Switch to another model and try again.`,
-      { cause: error instanceof Error ? error : undefined },
+      {
+        cause: error instanceof Error ? error : undefined,
+        messageKey: 'errors.studyMaterials.evaluation.capability',
+        params: { modelName },
+      },
     );
   }
   return error instanceof Error ? error : new Error(String(error));

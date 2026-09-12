@@ -1,54 +1,72 @@
 import { Injectable } from '@nestjs/common';
-import { createGateway } from '@ai-sdk/gateway';
-import { embed, embedMany, type EmbeddingModel } from 'ai';
 import { ServiceUnavailableError } from '../../common/errors/domain-error';
-import { GATEWAY_EMBEDDING_MODEL } from './providers/model-catalog';
-import { SINGLE_USER_ID } from './providers/gateway.provider';
+import { voyageEmbed } from './providers/voyage.client';
 import { UserSettingsService } from './user-settings.service';
 
-export const EMBEDDING_MODEL = 'text-embedding-3-small';
-export const EMBEDDING_DIMENSIONS = 1536;
+/**
+ * The app embeds with Voyage AI (https://docs.voyageai.com) instead of the
+ * AI Gateway: a purpose-built embeddings vendor with a one-time 200M-token
+ * free allowance per account. voyage-4 outputs 1024 dims by default, which
+ * matches the pgvector column (see 0012_voyage-1024.sql). All voyage-4
+ * models share one embedding space, so switching within the family needs
+ * no re-index.
+ */
+export const EMBEDDING_MODEL = 'voyage-4';
+export const EMBEDDING_DIMENSIONS = 1024;
+
+/**
+ * Optional server-side fallback key (env/Docker convenience), mirroring
+ * AI_GATEWAY_API_KEY: the stored settings key always wins.
+ */
+export function voyageApiKeyFromEnv(): string | null {
+  const key = process.env.VOYAGE_API_KEY?.trim();
+  return key ? key : null;
+}
 
 @Injectable()
 export class EmbeddingService {
   constructor(private readonly userSettingsService: UserSettingsService) {}
 
-  private async getEmbeddingModel(): Promise<{
-    model: EmbeddingModel;
-    userId: string;
-  }> {
-    // The global gateway key lives in the singleton app_settings row.
-    const apiKey = await this.userSettingsService.getGatewayApiKey();
+  /** The effective Voyage key: stored settings key, else env fallback. */
+  async getVoyageApiKey(): Promise<string | null> {
+    return (
+      (await this.userSettingsService.getVoyageApiKey()) ??
+      voyageApiKeyFromEnv()
+    );
+  }
+
+  private async requireApiKey(): Promise<string> {
+    const apiKey = await this.getVoyageApiKey();
     if (!apiKey) {
       throw new ServiceUnavailableError(
-        'Embedding model is not configured. Add your AI Gateway key in Settings.',
+        'Embedding model is not configured. Add your Voyage API key in Settings.',
+        { messageKey: 'errors.ai.embedding.notConfigured' },
       );
     }
-    const gateway = createGateway({ apiKey });
-    return {
-      model: gateway.embedding(GATEWAY_EMBEDDING_MODEL),
-      userId: SINGLE_USER_ID,
-    };
+    return apiKey;
   }
 
-  async generateEmbedding(text: string): Promise<number[]> {
-    const { model, userId: gatewayUser } = await this.getEmbeddingModel();
-    const result = await embed({
-      model,
-      value: text,
-      providerOptions: { gateway: { user: gatewayUser } },
+  /** Embeds a search query (Voyage `input_type: "query"`). */
+  async embedQuery(text: string): Promise<number[]> {
+    const apiKey = await this.requireApiKey();
+    const embeddings = await voyageEmbed({
+      apiKey,
+      model: EMBEDDING_MODEL,
+      input: [text],
+      inputType: 'query',
     });
-    return result.embedding;
+    return embeddings[0];
   }
 
-  async generateEmbeddings(texts: string[]): Promise<number[][]> {
+  /** Embeds document chunks (Voyage `input_type: "document"`). */
+  async embedDocuments(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) return [];
-    const { model, userId: gatewayUser } = await this.getEmbeddingModel();
-    const result = await embedMany({
-      model,
-      values: texts,
-      providerOptions: { gateway: { user: gatewayUser } },
+    const apiKey = await this.requireApiKey();
+    return voyageEmbed({
+      apiKey,
+      model: EMBEDDING_MODEL,
+      input: texts,
+      inputType: 'document',
     });
-    return result.embeddings;
   }
 }

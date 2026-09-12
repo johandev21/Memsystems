@@ -81,6 +81,7 @@ export class WebScraperService {
       throw new WebScrapeError(
         'Page does not contain article-like content',
         'not_readerable',
+        { messageKey: 'errors.sources.web.notReaderable' },
       );
     }
 
@@ -107,6 +108,7 @@ export class WebScraperService {
       throw new WebScrapeError(
         'Could not extract main content from page',
         'extraction_failed',
+        { messageKey: 'errors.sources.web.extractionFailed' },
       );
     }
 

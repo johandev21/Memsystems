@@ -24,11 +24,14 @@ const END_OF_CENTRAL_DIR_SIG = 0x06054b50;
 
 export function parseZipEntries(buffer: Buffer): ParsedZip {
   if (!buffer || buffer.length < 4) {
-    throw new BadRequestError('Corrupt ZIP header: buffer too small.');
+    throw new BadRequestError('Corrupt ZIP header: buffer too small.', {
+      messageKey: 'errors.sources.parse.zipCorrupted',
+    });
   }
   if (buffer.readUInt32LE(0) !== LOCAL_FILE_HEADER_SIG) {
     throw new BadRequestError(
       'Corrupt ZIP header: missing PK\\x03\\x04 signature.',
+      { messageKey: 'errors.sources.parse.zipCorrupted' },
     );
   }
 
@@ -59,6 +62,7 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
     if (offset + 30 + fileNameLen + extraLen > buffer.length) {
       throw new BadRequestError(
         'Corrupt ZIP header: truncated file name or extra field.',
+        { messageKey: 'errors.sources.parse.zipCorrupted' },
       );
     }
 
@@ -110,6 +114,7 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
     if (dataStart + compressedSize > buffer.length) {
       throw new BadRequestError(
         `Corrupt ZIP entry "${fileName}": truncated compressed data.`,
+        { messageKey: 'errors.sources.parse.zipCorrupted' },
       );
     }
 
@@ -126,6 +131,7 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
       } catch (e) {
         throw new BadRequestError(
           `Failed to decompress ZIP entry "${fileName}": ${e instanceof Error ? e.message : String(e)}`,
+          { messageKey: 'errors.sources.parse.zipCorrupted' },
         );
       }
       // Verify uncompressed size if header had it
@@ -135,6 +141,7 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
     } else {
       throw new BadRequestError(
         `Unsupported ZIP compression method ${method} for entry "${fileName}".`,
+        { messageKey: 'errors.sources.parse.zipCorrupted' },
       );
     }
 
@@ -164,7 +171,9 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
   }
 
   if (entryCount === 0) {
-    throw new BadRequestError('Empty ZIP archive or corrupt header.');
+    throw new BadRequestError('Empty ZIP archive or corrupt header.', {
+      messageKey: 'errors.sources.parse.zipCorrupted',
+    });
   }
 
   return {
@@ -180,6 +189,7 @@ export function assertNotArchiveBomb(parsed: ParsedZip): void {
   if (parsed.entryCount > 1000) {
     throw new BadRequestError(
       `Archive bomb detected: entry count ${parsed.entryCount} exceeds limit of 1000.`,
+      { messageKey: 'errors.sources.parse.zipCorrupted' },
     );
   }
   if (parsed.totalCompressed > 0) {
@@ -187,6 +197,7 @@ export function assertNotArchiveBomb(parsed: ParsedZip): void {
     if (ratio > 100) {
       throw new BadRequestError(
         `Archive bomb detected: uncompressed ratio ${ratio.toFixed(1)}x exceeds limit of 100x.`,
+        { messageKey: 'errors.sources.parse.zipCorrupted' },
       );
     }
     // Also guard absolute uncompressed > 1GB? Not needed but spec says 200MB for pptx/epub
@@ -199,6 +210,7 @@ export function assertNotArchiveBomb(parsed: ParsedZip): void {
     ) {
       throw new BadRequestError(
         `Archive bomb detected: entry "${info.fileName}" ratio exceeds 100x.`,
+        { messageKey: 'errors.sources.parse.zipCorrupted' },
       );
     }
   }

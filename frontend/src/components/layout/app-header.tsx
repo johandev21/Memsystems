@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
 import { Logo } from "./logo";
+import { SettingsLink } from "./settings-link";
 
 export function AppHeader() {
   return (
@@ -12,13 +12,7 @@ export function AppHeader() {
             Memsystems
           </span>
         </Link>
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <Settings className="size-5" />
-        </Link>
+        <SettingsLink />
       </div>
     </header>
   );

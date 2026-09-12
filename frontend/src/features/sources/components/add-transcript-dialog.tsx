@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, FileText, Loader2, Upload } from "lucide-react";
 import { useId, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ export function AddTranscriptDialog({
   onOpenChange,
   onTranscriptsAdded,
 }: AddTranscriptDialogProps) {
+  const { t } = useTranslation("sources");
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [transcriptText, setTranscriptText] = useState("");
@@ -51,7 +53,7 @@ export function AddTranscriptDialog({
       const content = event.target?.result as string;
       if (content) {
         setTranscriptText(content);
-        toast.info(`Loaded "${file.name}"`);
+        toast.info(t("transcriptDialog.fileLoaded", { name: file.name }));
       }
     };
     reader.readAsText(file);
@@ -61,7 +63,7 @@ export function AddTranscriptDialog({
   const handleSave = async () => {
     const trimmed = transcriptText.trim();
     if (!trimmed) {
-      toast.error("Please enter or upload transcript text");
+      toast.error(t("transcriptDialog.emptyError"));
       return;
     }
 
@@ -77,11 +79,11 @@ export function AddTranscriptDialog({
 
       if (!response.ok) {
         const errorData = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(errorData.message || "Failed to save transcript");
+        throw new Error(errorData.message || t("transcriptDialog.saveFailed"));
       }
 
       toast.success(
-        `Added transcript with ${parsedSegments.length} segment${parsedSegments.length === 1 ? "" : "s"}`,
+        t("transcriptDialog.addSuccess", { count: parsedSegments.length }),
       );
       queryClient.invalidateQueries({ queryKey: ["source", sourceId] });
       queryClient.invalidateQueries({ queryKey: ["sources"] });
@@ -89,7 +91,7 @@ export function AddTranscriptDialog({
       onOpenChange(false);
       setTranscriptText("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save transcript");
+      toast.error(err instanceof Error ? err.message : t("transcriptDialog.saveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -101,7 +103,7 @@ export function AddTranscriptDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             <FileText className="size-4 text-primary" />
-            Add Transcripts to Video
+            {t("transcriptDialog.title")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground truncate">
             {sourceTitle}
@@ -111,7 +113,7 @@ export function AddTranscriptDialog({
         <div className="flex flex-col gap-3 py-1">
           <div className="flex items-center justify-between">
             <Label htmlFor="transcript-paste" className="text-xs font-medium">
-              Paste Transcript or Subtitles
+              {t("transcriptDialog.pasteLabel")}
             </Label>
             <div className="flex items-center gap-2">
               <input
@@ -132,7 +134,7 @@ export function AddTranscriptDialog({
                 disabled={isSubmitting}
               >
                 <Upload className="size-3" />
-                Upload .srt / .vtt / .txt
+                {t("transcriptDialog.uploadButton")}
               </Button>
             </div>
           </div>
@@ -140,9 +142,7 @@ export function AddTranscriptDialog({
           <Textarea
             id="transcript-paste"
             data-testid="add-transcript-textarea"
-            placeholder={
-              "(00:00) Introduction\n(00:04) First key topic\n(00:15) Practical steps\n\nOr YouTube transcript copy:\n0:04\nFirst section speech text\n0:15\nSecond section speech text"
-            }
+            placeholder={t("transcriptDialog.placeholder")}
             value={transcriptText}
             onChange={(e) => setTranscriptText(e.target.value)}
             disabled={isSubmitting}
@@ -151,18 +151,14 @@ export function AddTranscriptDialog({
 
           {transcriptText.trim().length > 0 && (
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-              <span>
-                Detected:{" "}
-                <strong className="text-foreground font-semibold">{parsedSegments.length}</strong>{" "}
-                segment{parsedSegments.length === 1 ? "" : "s"}
-              </span>
+              <span>{t("transcriptDialog.detected", { count: parsedSegments.length })}</span>
               <button
                 type="button"
                 onClick={() => setTranscriptText("")}
                 disabled={isSubmitting}
                 className="cursor-pointer text-xs text-muted-foreground transition-colors hover:text-destructive"
               >
-                Clear
+                {t("transcriptDialog.clear")}
               </button>
             </div>
           )}
@@ -176,7 +172,7 @@ export function AddTranscriptDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            Cancel
+            {t("transcriptDialog.cancel")}
           </Button>
           <Button
             type="button"
@@ -189,12 +185,12 @@ export function AddTranscriptDialog({
             {isSubmitting ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                Saving…
+                {t("transcriptDialog.saving")}
               </>
             ) : (
               <>
                 <Check className="size-3.5" />
-                Save Transcripts
+                {t("transcriptDialog.save")}
               </>
             )}
           </Button>

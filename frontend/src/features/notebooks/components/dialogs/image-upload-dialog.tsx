@@ -1,7 +1,7 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/shared/utils/cn";
+import { createBannerVariants, type BannerUploadPayload } from "../../utils/banner-variants";
 
 const MAX_BANNER_BYTES = 2 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -17,61 +18,11 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export interface ImageUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectFile: (file: File) => void;
-}
-
-async function resizeBannerImage(
-  file: File,
-  maxWidth = 1200,
-  maxHeight = 600,
-  quality = 0.85,
-): Promise<File> {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        resolve(file);
-        return;
-      }
-      ctx.drawImage(img, 0, 0, width, height);
-      const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-          const resizedFile = new File([blob], file.name, {
-            type: outputType,
-            lastModified: Date.now(),
-          });
-          resolve(resizedFile);
-        },
-        outputType,
-        quality,
-      );
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(file);
-    };
-    img.src = url;
-  });
+  onSelectFile: (payload: BannerUploadPayload) => void;
 }
 
 export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUploadDialogProps) {
+  const { t } = useTranslation("notebooks");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,15 +49,17 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
 
   const handleFileSelect = async (file: File) => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      toast.error(`Unsupported image format (${file.type}). Use JPG, PNG, or WebP.`);
+      toast.error(t("upload.unsupportedFormat", { type: file.type }));
       return;
     }
     if (file.size > MAX_BANNER_BYTES) {
-      toast.error(`Image is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max 2MB.`);
+      toast.error(
+        t("upload.tooLarge", { size: (file.size / (1024 * 1024)).toFixed(1) }),
+      );
       return;
     }
-    const processedFile = await resizeBannerImage(file);
-    onSelectFile(processedFile);
+    const payload = await createBannerVariants(file);
+    onSelectFile(payload);
     onOpenChange(false);
   };
 
@@ -115,13 +68,24 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
       <DialogContent className="sm:max-w-[480px] p-6 gap-5 rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">
-            Upload Banner Image
+            {t("upload.title")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Select an image file from your computer. You can drag & zoom it directly on the banner
-            canvas afterwards.
+            {t("upload.description")}
           </DialogDescription>
         </DialogHeader>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          aria-label={t("upload.inputAria")}
+          accept={ACCEPTED_IMAGE_TYPES.join(",")}
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileSelect(file);
+          }}
+        />
 
         <div
           role="button"
@@ -138,31 +102,20 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
               : "border-border hover:border-primary/50 hover:bg-muted/50",
           )}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPTED_IMAGE_TYPES.join(",")}
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileSelect(file);
-            }}
-          />
-
           <div className="flex size-12 items-center justify-center rounded-full bg-background border border-border shadow-xs">
             <Upload className="size-5 text-foreground" />
           </div>
 
           <div className="flex flex-col items-center gap-1 text-center">
             <p className="text-xs font-semibold text-foreground">
-              Click to browse or drag & drop image
+              {t("upload.browseOrDrop")}
             </p>
-            <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 2MB</p>
+            <p className="text-xs text-muted-foreground">{t("upload.formats")}</p>
           </div>
 
-          <Button type="button" variant="secondary" size="sm" className="mt-1 cursor-pointer">
-            Browse files
-          </Button>
+          <span className="mt-1 inline-flex items-center justify-center rounded-md bg-secondary text-secondary-foreground text-xs font-medium px-3 py-1.5 shadow-xs pointer-events-none">
+            {t("upload.browse")}
+          </span>
         </div>
       </DialogContent>
     </Dialog>

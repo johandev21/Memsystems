@@ -186,7 +186,10 @@ const contentSchemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
 
 export function validateContent(kind: string, content: unknown) {
   if (!(kind in contentSchemas)) {
-    throw new BadRequestError(`Invalid study material kind: ${kind}`);
+    throw new BadRequestError(`Invalid study material kind: ${kind}`, {
+      messageKey: 'errors.studyMaterials.invalidKind',
+      params: { kind },
+    });
   }
   if (kind === 'study_guide') return validateStudyGuide(content);
   if (kind === 'practice_problems') return validatePracticeProblems(content);
@@ -198,14 +201,20 @@ export function validateContent(kind: string, content: unknown) {
     const resolved = resolveSlideDeck(content);
     const result = SlideDeckSchema.safeParse(resolved);
     if (!result.success) {
-      throw new BadRequestError(`Content does not match kind "${kind}"`);
+      throw new BadRequestError(`Content does not match kind "${kind}"`, {
+        messageKey: 'errors.studyMaterials.contentMismatch',
+        params: { kind },
+      });
     }
     return result.data;
   }
   const schema = contentSchemas[kind as StudyMaterialKind];
   const result = schema.safeParse(content);
   if (!result.success) {
-    throw new BadRequestError(`Content does not match kind "${kind}"`);
+    throw new BadRequestError(`Content does not match kind "${kind}"`, {
+      messageKey: 'errors.studyMaterials.contentMismatch',
+      params: { kind },
+    });
   }
   return result.data;
 }

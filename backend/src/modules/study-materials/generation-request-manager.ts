@@ -19,6 +19,7 @@ export interface StartGenerationInput {
   sourceIds: string[];
   folderId?: string | null;
   model?: string;
+  language?: string;
   questionCount?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
@@ -83,7 +84,9 @@ export class GenerationRequestManager {
       .from(generationRequests)
       .where(eq(generationRequests.id, requestId));
     if (!request) {
-      throw new NotFoundError('Generation request');
+      throw new NotFoundError('Generation request', {
+        messageKey: 'errors.generation.requestNotFound',
+      });
     }
     if (request.status === 'streaming') {
       await this.db

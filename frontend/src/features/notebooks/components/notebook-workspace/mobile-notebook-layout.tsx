@@ -1,16 +1,26 @@
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ChatPanel } from "@/features/notebook-chat";
-import { SourceContentViewer, SourcesPanel } from "@/features/sources";
+import { SourcesPanel } from "@/features/sources/components/sources-panel";
+import { SourceReaderSkeleton } from "@/features/sources/components/skeletons/source-reader-skeleton";
 import { MobileStudyMaterialsPanel } from "@/features/study-material-tree";
 import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
 import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
-import type { SourceSegmentLocator } from "@/features/sources";
+import type { SourceSegmentLocator } from "@/features/sources/types";
 import { MobileTabsHeader } from "./mobile-tabs-header";
+
+// Lazy: the source reader graph (every document renderer: pdf/epub, audio,
+// video, pptx, image, …) is only needed once a source is actually opened.
+const SourceContentViewer = lazy(() =>
+  import("@/features/sources/components/source-content-viewer").then(
+    (m) => ({ default: m.SourceContentViewer }),
+  ),
+);
 
 export interface MobileNotebookLayoutProps {
   notebookId: string;
@@ -27,22 +37,27 @@ export function MobileNotebookLayout({
   selectedLocator,
   onSelectSource,
 }: MobileNotebookLayoutProps) {
+  const { t } = useTranslation("notebooks");
   const [activeTab, setActiveTab] = useMobileChatNavigation();
-  const [isMaterialReviewSuspended, setIsMaterialReviewSuspended] = useState(false);
+  const [suspendedMaterialId, setSuspendedMaterialId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleHandoff = (event: Event) => {
-      const detail = (event as CustomEvent<{ suspended?: boolean }>).detail;
-      if (typeof detail?.suspended === "boolean") setIsMaterialReviewSuspended(detail.suspended);
+      const detail = (event as CustomEvent<{ materialId?: string; suspended?: boolean }>).detail;
+      if (detail?.suspended && detail.materialId) {
+        setSuspendedMaterialId(detail.materialId);
+      } else if (detail?.suspended === false) {
+        setSuspendedMaterialId(null);
+      }
     };
     window.addEventListener("study-material-chat-handoff", handleHandoff);
     return () => window.removeEventListener("study-material-chat-handoff", handleHandoff);
   }, []);
 
-  useEffect(() => {
-    if (dialogs.selectedStudyMaterialId) return;
-    setIsMaterialReviewSuspended(false);
-  }, [dialogs.selectedStudyMaterialId]);
+  const isMaterialReviewSuspended = Boolean(
+    dialogs.selectedStudyMaterialId &&
+      suspendedMaterialId === dialogs.selectedStudyMaterialId,
+  );
 
   useMobileOverlayScrollLock(
     Boolean(selectedSourceId || (dialogs.selectedStudyMaterialId && !isMaterialReviewSuspended)),
@@ -62,7 +77,7 @@ export function MobileNotebookLayout({
               onClick={() => window.dispatchEvent(new CustomEvent("restore-study-material"))}
             >
               <ArrowLeft className="size-3.5" />
-              Back to Material
+              {t("panels.backToMaterial")}
             </Button>
           </div>
         )}
@@ -94,12 +109,14 @@ export function MobileNotebookLayout({
 
       {/* Mobile-only fullscreen viewers — never inline, always overlay */}
       {selectedSourceId && (
-        <SourceContentViewer
-          sourceId={selectedSourceId}
-          selectedLocator={selectedLocator}
-          onClose={() => onSelectSource(null)}
-          forceFullscreen
-        />
+        <Suspense fallback={<SourceReaderSkeleton forceFullscreen onClose={() => onSelectSource(null)} />}>
+          <SourceContentViewer
+            sourceId={selectedSourceId}
+            selectedLocator={selectedLocator}
+            onClose={() => onSelectSource(null)}
+            forceFullscreen
+          />
+        </Suspense>
       )}
       {dialogs.selectedStudyMaterialId && (
         <RightPane

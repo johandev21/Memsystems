@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   Table as TableIcon,
@@ -13,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import i18n from "@/shared/i18n";
 import type { SourceWithContent, SourceSegmentLocator } from "../../types";
 import { cn } from "@/shared/utils/cn";
 
@@ -44,7 +46,7 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
       .filter(Boolean);
     if (lines.length === 0) continue;
 
-    let sheetName = "Dataset";
+    let sheetName: string = i18n.t("tabularViewer.defaultDatasetName", { ns: "sourceRenderers" });
     const titleMatch = lines[0].match(/## Sheet:\s*(.+)/i);
     if (titleMatch) {
       sheetName = titleMatch[1].trim();
@@ -78,9 +80,12 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
 
     // Fallback: simple CSV / TSV delimited text
     const delim = section.includes("\t") ? "\t" : ",";
-    const rows = lines
-      .filter((l) => !l.startsWith("#") && !l.startsWith("**"))
-      .map((l) => l.split(delim).map((c) => c.trim().replace(/^"|"$/g, "")));
+    const rows = lines.reduce<string[][]>((result, line) => {
+      if (!line.startsWith("#") && !line.startsWith("**")) {
+        result.push(line.split(delim).map((cell) => cell.trim().replace(/^"|"$/g, "")));
+      }
+      return result;
+    }, []);
 
     if (rows.length > 0) {
       const headers = rows[0];
@@ -93,7 +98,9 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
     }
   }
 
-  return sheets.length > 0 ? sheets : [{ name: "Dataset", headers: [], rows: [] }];
+  return sheets.length > 0
+    ? sheets
+    : [{ name: i18n.t("tabularViewer.defaultDatasetName", { ns: "sourceRenderers" }), headers: [], rows: [] }];
 }
 
 function inferFrontendType(val: string): "number" | "boolean" | "date" | "string" {
@@ -105,6 +112,7 @@ function inferFrontendType(val: string): "number" | "boolean" | "date" | "string
 }
 
 export function TabularDocumentViewer({ source, selectedLocator }: TabularDocumentViewerProps) {
+  const { t } = useTranslation("sourceRenderers");
   const sheets = useMemo(() => parseMarkdownTableOrDelimited(source.rawText), [source.rawText]);
 
   const [activeSheetIndex, setActiveSheetIndex] = useState(0);
@@ -158,10 +166,13 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
           <div>
             <h3 className="font-semibold text-sm leading-none">{source.title}</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              {activeSheet.rows.length} rows &bull; {activeSheet.headers.length} columns
+              {t("tabularViewer.columnSummary", {
+                rows: activeSheet.rows.length,
+                cols: activeSheet.headers.length,
+              })}
               {selectedLocator?.cellRange && (
                 <span className="ml-2 font-mono text-primary font-medium">
-                  Locator: {selectedLocator.cellRange}
+                  {t("tabularViewer.locator", { range: selectedLocator.cellRange })}
                 </span>
               )}
             </p>
@@ -173,7 +184,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Filter table rows..."
+            placeholder={t("tabularViewer.filterPlaceholder")}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -256,7 +267,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
                     colSpan={activeSheet.headers.length + 1}
                     className="p-8 text-center text-muted-foreground"
                   >
-                    No matching rows found.
+                    {t("tabularViewer.noMatchingRows")}
                   </td>
                 </tr>
               ) : (
@@ -293,8 +304,11 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
         {/* Pagination & Footer controls */}
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/60 bg-muted/20 text-xs text-muted-foreground">
           <span>
-            Showing {filteredRows.length === 0 ? 0 : page * pageSize + 1}–
-            {Math.min((page + 1) * pageSize, filteredRows.length)} of {filteredRows.length} rows
+            {t("tabularViewer.pagination", {
+              start: filteredRows.length === 0 ? 0 : page * pageSize + 1,
+              end: Math.min((page + 1) * pageSize, filteredRows.length),
+              total: filteredRows.length,
+            })}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -304,7 +318,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
               className="size-7"
               disabled={page === 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              aria-label="Previous page"
+              aria-label={t("tabularViewer.previousPage")}
             >
               <ChevronLeft className="size-3.5" />
             </Button>
@@ -318,7 +332,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
               className="size-7"
               disabled={page >= totalPages - 1}
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              aria-label="Next page"
+              aria-label={t("tabularViewer.nextPage")}
             >
               <ChevronRight className="size-3.5" />
             </Button>

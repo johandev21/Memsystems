@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 import type { StudyMaterialKind } from "../../types";
 import { CaseStudySkeleton } from "./CaseStudySkeleton";
 import { FlashcardSkeleton } from "./FlashcardSkeleton";
@@ -46,36 +47,68 @@ function GenericMaterialSkeleton() {
   );
 }
 
+const SKELETON_COMPONENTS: Partial<Record<StudyMaterialKind, React.ComponentType>> = {
+  quiz: QuizSkeleton,
+  simple_flashcard: FlashcardSkeleton,
+  slides: SlidesSkeleton,
+  roadmap: RoadmapSkeleton,
+  mind_map: MindMapSkeleton,
+  practice_problems: PracticeProblemsSkeleton,
+  case_study: CaseStudySkeleton,
+};
+
+function KindSkeleton({ kind }: { kind?: StudyMaterialKind | null }) {
+  const Component = kind ? SKELETON_COMPONENTS[kind] : undefined;
+  if (!Component) return <GenericMaterialSkeleton />;
+  return <Component />;
+}
+
 export function MaterialViewerSkeleton({ kind }: MaterialViewerSkeletonProps) {
+  const { t } = useTranslation("viewer");
+  let label: string;
+  switch (kind) {
+    case "quiz":
+      label = t("skeleton.kind.quiz");
+      break;
+    case "simple_flashcard":
+      label = t("skeleton.kind.simple_flashcard");
+      break;
+    case "slides":
+      label = t("skeleton.kind.slides");
+      break;
+    case "roadmap":
+      label = t("skeleton.kind.roadmap");
+      break;
+    case "mind_map":
+      label = t("skeleton.kind.mind_map");
+      break;
+    case "practice_problems":
+      label = t("skeleton.kind.practice_problems");
+      break;
+    case "case_study":
+      label = t("skeleton.kind.case_study");
+      break;
+    case "study_guide":
+      label = t("skeleton.kind.study_guide");
+      break;
+    default:
+      label = t("skeleton.loadingDefault");
+      break;
+  }
+
   return (
     <div
       data-slot="material-viewer-skeleton"
       className="flex h-full flex-col overflow-hidden bg-surface-1 text-text-primary motion-reduce:animate-none"
       role="status"
       aria-busy="true"
-      aria-label={kind ? `Loading ${kind.replace("_", " ")}` : "Loading study material"}
+      aria-label={label}
     >
       <ViewerHeaderSkeleton />
       <div className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6">
-        {kind === "quiz" ? (
-          <QuizSkeleton />
-        ) : kind === "simple_flashcard" ? (
-          <FlashcardSkeleton />
-        ) : kind === "slides" ? (
-          <SlidesSkeleton />
-        ) : kind === "roadmap" ? (
-          <RoadmapSkeleton />
-        ) : kind === "mind_map" ? (
-          <MindMapSkeleton />
-        ) : kind === "practice_problems" ? (
-          <PracticeProblemsSkeleton />
-        ) : kind === "case_study" ? (
-          <CaseStudySkeleton />
-        ) : (
-          <GenericMaterialSkeleton />
-        )}
+        <KindSkeleton kind={kind} />
       </div>
-      <span className="sr-only">Loading study material…</span>
+      <span className="sr-only">{t("skeleton.loadingSr")}</span>
     </div>
   );
 }

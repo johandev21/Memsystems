@@ -1,0 +1,306 @@
+{
+  "actions": {
+    "auto": "Auto",
+    "autoDecides": "Auto (AI decides)",
+    "back": "Back",
+    "custom": "Custom",
+    "generate": "Generate",
+    "generateKind": "Generate {{kind}}",
+    "generateNow": "Generate {{kind}} Now",
+    "nextStep": "Next Step",
+    "view": "View"
+  },
+  "caseStudy": {
+    "conceptsPlaceholder": "e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives...",
+    "conceptsToApplyLabel": "Concepts to Apply",
+    "customQuestionAria": "Custom question count",
+    "discussionQuestionsLabel": "1. Discussion Questions",
+    "instructionsPlaceholder": "Describe what topics or focus areas to include in this case study...",
+    "perspective": {
+      "compare": {
+        "desc": "Contrast viewpoints sources support",
+        "title": "Compare alternatives"
+      },
+      "single": {
+        "desc": "One focused analysis",
+        "title": "Single lens"
+      }
+    },
+    "perspectiveLabel": "2. Perspective",
+    "questionCount_one": "{{count}} Question",
+    "questionCount_other": "{{count}} Questions"
+  },
+  "dialog": {
+    "gatewayDescription": "An AI Gateway key is required to generate study materials.",
+    "title": "Generate {{kind}}"
+  },
+  "errors": {
+    "connectionClosed": "Connection closed before finishing.",
+    "noRequestId": "No request ID returned from server",
+    "timedOut": "Generation timed out waiting for the server. Please try again."
+  },
+  "fields": {
+    "customInstructions": "Custom Instructions",
+    "destinationFolder": "Destination Folder",
+    "detailLevelStep2": "2. Detail Level",
+    "detailLevelStep3": "3. Detail Level",
+    "folder": "Folder",
+    "instructions": "Instructions",
+    "knowledgeSources": "Knowledge Sources",
+    "knowledgeSourcesStep3": "3. Knowledge Sources",
+    "sources": "Sources",
+    "targetDifficulty": "1. Target Difficulty"
+  },
+  "flashcards": {
+    "cardFormatLabel": "1. Card Format",
+    "cardsLabel": "3. Cards",
+    "cardStyle": {
+      "cloze": {
+        "desc": "Sentence with missing word(s)",
+        "title": "Fill-in-the-Blank"
+      },
+      "definition": {
+        "desc": "Term → definition pairs",
+        "title": "Definition"
+      },
+      "mixed": {
+        "desc": "Combination of Q&A, Definitions, and Fill-in-the-Blank",
+        "title": "Mixed"
+      },
+      "qa": {
+        "desc": "Classic question → answer format",
+        "title": "Q & A"
+      }
+    },
+    "count_one": "{{count}} Card",
+    "count_other": "{{count}} Cards",
+    "countMax": "{{count}} Cards (Max {{max}})",
+    "countMax_one": "{{count}} Card (Max {{max}})",
+    "countMax_other": "{{count}} Cards (Max {{max}})",
+    "customCountAria": "Custom card count",
+    "difficulty": {
+      "easy": {
+        "desc": "Simple definitions & recall",
+        "title": "Basic"
+      },
+      "hard": {
+        "desc": "Deep analysis & application",
+        "title": "Advanced"
+      },
+      "medium": {
+        "desc": "Conceptual understanding",
+        "title": "Standard"
+      }
+    },
+    "difficultyLabel": "2. Difficulty",
+    "instructionsPlaceholder": "What topics should these flashcards cover?"
+  },
+  "kinds": {
+    "case_study": "Case Study",
+    "mind_map": "Mind Map",
+    "practice_problems": "Practice Problems",
+    "quiz": "Quiz",
+    "roadmap": "Roadmap",
+    "simple_flashcard": "Flashcards",
+    "slides": "Slides",
+    "study_guide": "Study Guide"
+  },
+  "knowledge": {
+    "defaultEmptySources": "No sources in notebook. Material will generate using general knowledge.",
+    "defaultPlaceholder": "What should this cover? Describe topics, focus areas, or tone...",
+    "emptySources": "No sources in notebook. {{kind}} will generate using general knowledge.",
+    "noneSelected": "None selected (General Knowledge)",
+    "searchAriaLabel": "Search sources",
+    "searchPlaceholder": "Search sources...",
+    "selectAll": "Select all",
+    "selected_one": "{{count}} source selected",
+    "selected_other": "{{count}} sources selected",
+    "selectedCount": "{{count}} selected",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected"
+  },
+  "mindMap": {
+    "colorGroups": {
+      "grouped": {
+        "desc": "Color related concepts by theme",
+        "title": "Grouped colors"
+      },
+      "plain": {
+        "desc": "Use the standard node appearance",
+        "title": "Plain"
+      }
+    },
+    "customCountAria": "Custom node count",
+    "detail": {
+      "basic": {
+        "desc": "Key concepts and essential relationships",
+        "title": "Basic"
+      },
+      "detailed": {
+        "desc": "Richer labels and explanatory connections",
+        "title": "Detailed"
+      }
+    },
+    "instructionsPlaceholder": "What should this map explain? Describe the topic, question, or connections...",
+    "mapSizeLabel": "1. Map Size",
+    "nodeCount_one": "{{count}} node",
+    "nodeCount_other": "{{count}} nodes",
+    "nodeCountMax": "{{count}} nodes (max {{max}})",
+    "nodeCountMax_one": "{{count}} node (max {{max}})",
+    "nodeCountMax_other": "{{count}} nodes (max {{max}})",
+    "visualGroupingLabel": "3. Visual Grouping"
+  },
+  "practice": {
+    "difficulty": {
+      "easy": {
+        "desc": "Foundations & single steps",
+        "title": "Warmup"
+      },
+      "hard": {
+        "desc": "Multi-step & transfer",
+        "title": "Challenge"
+      },
+      "medium": {
+        "desc": "Balanced application",
+        "title": "Standard"
+      }
+    },
+    "instructionsPlaceholder": "Topics, skills, problem types (calculations, code reasoning, explanations)...",
+    "problemCount_one": "{{count}} Problem",
+    "problemCount_other": "{{count}} Problems",
+    "problemCountMax": "{{count}} Problems (Max {{max}})",
+    "problemCountMax_one": "{{count}} Problem (Max {{max}})",
+    "problemCountMax_other": "{{count}} Problems (Max {{max}})",
+    "problemsLabel": "2. Number of Problems"
+  },
+  "quiz": {
+    "difficulty": {
+      "easy": {
+        "desc": "Basic recall & definitions",
+        "title": "Warmup"
+      },
+      "hard": {
+        "desc": "Deep reasoning & edge cases",
+        "title": "Challenge"
+      },
+      "medium": {
+        "desc": "Balanced application",
+        "title": "Standard"
+      }
+    },
+    "instructionsPlaceholder": "Provide specific focus areas, topics, or instructions for this quiz...",
+    "questionCount_one": "{{count}} Question",
+    "questionCount_other": "{{count}} Questions",
+    "questionCountMax": "{{count}} Questions (Max {{max}})",
+    "questionCountMax_one": "{{count}} Question (Max {{max}})",
+    "questionCountMax_other": "{{count}} Questions (Max {{max}})",
+    "questionPreset": "{{count}} Qs",
+    "questionPreset_one": "{{count}} Q",
+    "questionPreset_other": "{{count}} Qs",
+    "questionsLabel": "2. Number of Questions"
+  },
+  "roadmap": {
+    "autoLabel": "Auto (AI Decides optimal phases)",
+    "detail": {
+      "basic": {
+        "desc": "Phase titles & milestones only",
+        "title": "Basic"
+      },
+      "detailed": {
+        "desc": "In-depth topics & learning objectives",
+        "title": "Detailed"
+      }
+    },
+    "instructionsPlaceholder": "What do you want to learn? Describe the topic, goal, or target skill...",
+    "phaseCount_one": "{{count}} Phase",
+    "phaseCount_other": "{{count}} Phases",
+    "phaseCountMax": "{{count}} Phases (Max {{max}})",
+    "phaseCountMax_one": "{{count}} Phase (Max {{max}})",
+    "phaseCountMax_other": "{{count}} Phases (Max {{max}})",
+    "phasesLabel": "1. Number of Phases"
+  },
+  "slides": {
+    "count_one": "{{count}} Slide",
+    "count_other": "{{count}} Slides",
+    "countMax": "{{count}} Slides (Max {{max}})",
+    "countMax_one": "{{count}} Slide (Max {{max}})",
+    "countMax_other": "{{count}} Slides (Max {{max}})",
+    "customCountAria": "Custom slide count",
+    "detail": {
+      "basic": {
+        "desc": "Concise bullets",
+        "title": "Basic"
+      },
+      "detailed": {
+        "desc": "Rich bullets + body",
+        "title": "Detailed"
+      }
+    },
+    "instructionsPlaceholder": "What should this deck explain? Describe the topic, audience, or narrative arc...",
+    "numberOfSlidesLabel": "1. Number of Slides",
+    "themes": {
+      "academic": {
+        "desc": "Classic lecture style",
+        "title": "Academic"
+      },
+      "dark": {
+        "desc": "Slate deck, cyan accent",
+        "title": "Dark"
+      },
+      "editorial": {
+        "desc": "Warm paper, serif voice",
+        "title": "Editorial"
+      },
+      "light": {
+        "desc": "Bright, print-friendly",
+        "title": "Light"
+      },
+      "technical": {
+        "desc": "Deep navy, neon detail",
+        "title": "Technical"
+      },
+      "warm": {
+        "desc": "Bold ember energy",
+        "title": "Warm"
+      }
+    },
+    "themeTooltip": "{{title}}: {{desc}}",
+    "visualThemeLabel": "2. Visual Theme"
+  },
+  "standard": {
+    "briefLabel": "Brief instructions for {{kind}} (optional)",
+    "briefPlaceholder": "Describe what topics or focus areas to include in this {{kind}}..."
+  },
+  "studyGuide": {
+    "customSectionAria": "Custom section count",
+    "format": {
+      "detailed": {
+        "desc": "Explanations, examples & takeaways",
+        "title": "Detailed"
+      },
+      "revision": {
+        "desc": "Essential concepts for quick review",
+        "title": "Revision sheet"
+      }
+    },
+    "formatLabel": "1. Format",
+    "instructionsPlaceholder": "Describe what topics or focus areas to include in this study guide...",
+    "sectionCount_one": "{{count}} Section",
+    "sectionCount_other": "{{count}} Sections",
+    "sectionsLabel": "2. Sections"
+  },
+  "toasts": {
+    "cancelled": "Generation cancelled",
+    "failed": "Failed to generate {{kind}}: {{message}}",
+    "startFailed": "Generation failed: {{message}}",
+    "success": "{{kind}} generated successfully!"
+  },
+  "wizard": {
+    "nextHintFocus": "Configure focus areas next",
+    "nextHintInstructions": "Configure custom instructions next",
+    "nextHintKnowledge": "Configure knowledge sources & brief next",
+    "stepAria": "Step {{step}}",
+    "stepOfTwo": "Step {{step}} of 2",
+    "title": "{{kind}} Setup"
+  }
+}

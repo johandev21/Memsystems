@@ -1,16 +1,7 @@
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import { createRootRouteWithContext } from "@tanstack/react-router";
 import type { RouterContext } from "@/app/router";
-import { RouteProgressBar } from "@/components/feedback";
+import { RootLayout } from "@/components/layout";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  component: RootComponent,
+  component: RootLayout,
 });
-
-function RootComponent() {
-  return (
-    <>
-      <RouteProgressBar />
-      <Outlet />
-    </>
-  );
-}

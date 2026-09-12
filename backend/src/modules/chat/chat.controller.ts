@@ -51,6 +51,7 @@ const chatRequestSchema = z.object({
   model: z.string().min(1),
   message: messageSchema.optional(),
   regenerateMessageId: z.string().optional(),
+  language: z.string().min(1).max(35).optional(),
 });
 
 @Controller('notebooks/:id/chat')
@@ -75,7 +76,9 @@ export class ChatController {
       (p) => (p as { type: string }).type === 'file',
     );
     if (!content.trim() && !hasFiles) {
-      throw new BadRequestError('Empty user message');
+      throw new BadRequestError('Empty user message', {
+        messageKey: 'errors.chat.message.empty',
+      });
     }
 
     const lastUserMessage = [...body.messages]
@@ -100,6 +103,7 @@ export class ChatController {
           messageId: lastUserMessage?.id,
           regenerateMessageId: body.regenerateMessageId,
           model: body.model,
+          language: body.language,
           abortSignal: generationController.signal,
         },
       );

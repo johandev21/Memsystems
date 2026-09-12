@@ -48,19 +48,27 @@ export function validateIncomingFiles(
   return typeof capacity === "number" ? sized.slice(0, capacity) : sized;
 }
 
+const getBlobUrl = URL.createObjectURL;
+export function createObjectUrl(file: File): string {
+  return getBlobUrl(file);
+}
+
 export function createFileParts(files: File[]): (FileUIPart & { id: string })[] {
   return files.map((file) => ({
     filename: file.name,
     id: nanoid(),
     mediaType: file.type,
     type: "file" as const,
-    url: URL.createObjectURL(file),
+    url: "",
   }));
 }
 
 async function convertBlobUrlToDataUrl(url: string): Promise<string | null> {
   try {
     const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blob URL: ${response.statusText}`);
+    }
     const blob = await response.blob();
     return await new Promise((resolve) => {
       const reader = new FileReader();

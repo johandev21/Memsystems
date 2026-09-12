@@ -31,6 +31,7 @@ export function useReasoningLifecycle({
     prop: durationProp,
   });
   const hasEverStreamedRef = useRef(isStreaming);
+  const wasStreamingRef = useRef(isStreaming);
   const [hasAutoClosed, setHasAutoClosed] = useState(false);
   const startTimeRef = useRef<number | null>(null);
 
@@ -44,9 +45,12 @@ export function useReasoningLifecycle({
     }
   }, [isStreaming, setDuration]);
 
+  // Auto-open once when streaming starts. Must not re-open on every commit
+  // while streaming, or a user collapse mid-generation would be reverted.
   useEffect(() => {
-    if (isStreaming && !isOpen && !isExplicitlyClosed) setIsOpen(true);
-  }, [isStreaming, isOpen, setIsOpen, isExplicitlyClosed]);
+    if (isStreaming && !wasStreamingRef.current && !isExplicitlyClosed) setIsOpen(true);
+    wasStreamingRef.current = isStreaming;
+  }, [isStreaming, setIsOpen, isExplicitlyClosed]);
 
   useEffect(() => {
     if (hasEverStreamedRef.current && !isStreaming && isOpen && !hasAutoClosed) {

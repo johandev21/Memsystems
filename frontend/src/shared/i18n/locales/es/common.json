@@ -1,0 +1,304 @@
+{
+  "command": {
+    "description": "Busca un comando…",
+    "title": "Paleta de comandos"
+  },
+  "confirmDelete": {
+    "cancel": "Cancelar",
+    "confirm": "Eliminar"
+  },
+  "dialog": {
+    "close": "Cerrar"
+  },
+  "errors": {
+    "ai": {
+      "embedding": {
+        "notConfigured": "El modelo de embeddings no está configurado. Añade tu clave de Voyage AI en Ajustes."
+      },
+      "gateway": {
+        "busy": "El servicio de IA está ocupado ahora mismo. Vuelve a intentarlo en un momento.",
+        "connectionFailed": "La conexión con el Gateway de IA falló.",
+        "creditsKeyMissing": "Añade tu clave del Gateway de IA en Ajustes para ver los créditos.",
+        "creditsLoadFailed": "No se pudieron cargar los créditos del Gateway de IA.",
+        "entitlement": "Este modelo no está disponible en tu plan. Prueba con otro modelo o añade créditos.",
+        "keyRejected": "Esa clave del Gateway de IA fue rechazada. Revísala y vuelve a intentarlo.",
+        "noModelAccess": "Esa clave del Gateway de IA no tiene acceso a ningún modelo en su plan.",
+        "notConnected": "El Gateway de IA no está conectado. Añade tu clave del Gateway de IA en Ajustes.",
+        "verifyFailed": "No se pudo verificar la clave del Gateway de IA."
+      },
+      "indexing": {
+        "embeddingCountMismatch": "La cantidad de embeddings no coincide: se esperaban {{expected}} y se recibieron {{received}}."
+      },
+      "model": {
+        "capabilityUnsupported": "{{model}} no admite {{capability}}. Cambia a un modelo que admita {{capability}} y vuelve a intentarlo.",
+        "notSupported": "El modelo {{model}} no es compatible.",
+        "webSearchUnsupported": "El modelo {{model}} no admite la búsqueda web."
+      },
+      "settings": {
+        "legacyProviderKeys": "Las claves por proveedor se eliminaron. Añade tu clave del Gateway de IA en Ajustes."
+      },
+      "voyage": {
+        "invalidResponse": "El servicio de embeddings devolvió una respuesta no válida.",
+        "keyRejected": "Esa clave de API de Voyage fue rechazada. Revísala y vuelve a intentarlo.",
+        "rateLimited": "El servicio de embeddings está limitando las peticiones. El trabajo se reintentará automáticamente.",
+        "requestFailed": "La petición de embeddings fue rechazada.",
+        "serverError": "El servicio de embeddings tuvo un problema temporal. Inténtalo de nuevo.",
+        "unreachable": "No se pudo conectar con el servicio de embeddings. Comprueba tu conexión e inténtalo de nuevo."
+      }
+    },
+    "chat": {
+      "message": {
+        "empty": "Mensaje de usuario vacío."
+      }
+    },
+    "generation": {
+      "problemCount": "La cantidad de problemas debe estar entre {{min}} y {{max}}.",
+      "questionCount": "La cantidad de preguntas debe estar entre {{min}} y {{max}}.",
+      "requestNotFound": "Solicitud de generación no encontrada.",
+      "sourceOrBrief": {
+        "caseStudy": "Selecciona una fuente o escribe un resumen para tu caso de estudio.",
+        "practiceProblems": "Selecciona una fuente o escribe un resumen para tus problemas de práctica.",
+        "studyGuide": "Selecciona una fuente o escribe un resumen para tu guía de estudio."
+      },
+      "sourcesUnavailable": "Las fuentes seleccionadas no están disponibles o no tienen contenido legible. Actualiza tu selección e inténtalo de nuevo."
+    },
+    "notebooks": {
+      "banner": {
+        "fileEmpty": "El archivo subido está vacío",
+        "fileRequired": "Se requiere un archivo",
+        "tooLarge": "La imagen de portada supera el tamaño máximo de 2 MB",
+        "unsupportedType": "Tipo de archivo no compatible: {{fileType}}. Aceptados: JPEG, PNG, WebP"
+      },
+      "notebook": {
+        "notFound": "No se encontró el cuaderno"
+      }
+    },
+    "sources": {
+      "artifact": {
+        "invalidKey": "Clave de artefacto de origen no válida",
+        "invalidSize": "Tamaño de artefacto de origen no válido",
+        "sizeMismatch": "El tamaño del artefacto de origen no coincide con los metadatos de la carga",
+        "unavailable": "El artefacto de origen no está disponible"
+      },
+      "create": {
+        "fileEmpty": "El archivo subido está vacío",
+        "fileRequired": "El archivo es obligatorio",
+        "fileTooLarge": "El archivo supera el tamaño máximo de {{maxBytes}} bytes",
+        "textEmpty": "El texto no puede estar vacío",
+        "textTooLarge": "El texto supera el tamaño máximo de {{maxBytes}} bytes",
+        "urlTooLittleContent": "La página tiene muy poco contenido ({{length}} caracteres, se necesitan al menos {{minLength}})"
+      },
+      "download": {
+        "noFile": "La fuente no tiene ningún archivo descargable"
+      },
+      "extract": {
+        "unsupportedFileType": "Tipo de archivo no compatible: {{contentType}}"
+      },
+      "inspect": {
+        "audioCorrupted": "El archivo de audio parece estar dañado o no ser válido.",
+        "audioEmpty": "El archivo de audio está vacío.",
+        "audioTooLarge": "El archivo de audio ({{sizeMb}} MB) es demasiado grande. El tamaño máximo es 500 MB.",
+        "audioTooLong": "La duración del audio ({{durationS}} s) es demasiado larga. El máximo es 4 horas.",
+        "audioUnsupported": "Formato de audio no compatible ({{hint}}). Usa MP3, WAV, M4A, AAC, WebM u OGG.",
+        "epubEmpty": "El archivo de libro electrónico está vacío.",
+        "epubInvalid": "El archivo de libro electrónico parece estar dañado o no ser válido.",
+        "epubTooLarge": "El archivo de libro electrónico ({{sizeMb}} MB) es demasiado grande. El tamaño máximo es 200 MB.",
+        "epubTooManyChapters": "El libro electrónico tiene demasiados capítulos ({{count}}). El máximo es {{max}}.",
+        "epubUnsupported": "Formato de libro electrónico no compatible ({{hint}}). Usa .epub.",
+        "imageCorrupted": "El archivo de imagen parece estar dañado o no ser válido.",
+        "imageEmpty": "El archivo de imagen está vacío.",
+        "imageTooLarge": "La imagen ({{sizeMb}} MB) es demasiado grande. El tamaño máximo es 20 MB.",
+        "imageTooManyPixels": "Las dimensiones de la imagen ({{width}}×{{height}}) son demasiado grandes. El máximo es 40 megapíxeles.",
+        "imageUnsupported": "Formato de imagen no compatible ({{hint}}). Usa PNG, JPEG o WebP.",
+        "pptxCorrupted": "El archivo de presentación parece estar dañado o no ser válido.",
+        "pptxEmpty": "El archivo de presentación está vacío.",
+        "pptxLegacy": "Los archivos .ppt antiguos no son compatibles. Guarda el archivo como .pptx e inténtalo de nuevo.",
+        "pptxTooLarge": "El archivo de presentación ({{sizeMb}} MB) es demasiado grande. El tamaño máximo es 200 MB.",
+        "pptxTooManySlides": "La presentación tiene demasiadas diapositivas ({{count}}). El máximo es {{max}}.",
+        "pptxUnsupported": "Formato de presentación no compatible ({{hint}}). Usa .pptx.",
+        "tabularCorrupted": "El archivo de datos parece estar dañado o no ser válido.",
+        "tabularEmpty": "El archivo de datos está vacío.",
+        "tabularTooLarge": "El archivo de datos ({{sizeMb}} MB) es demasiado grande. El tamaño máximo es 100 MB.",
+        "videoCorrupted": "El archivo de vídeo parece estar dañado o no ser válido.",
+        "videoEmpty": "El archivo de vídeo está vacío.",
+        "videoTooLarge": "El archivo de vídeo ({{sizeMb}} MB) es demasiado grande. El tamaño máximo es 1 GB.",
+        "videoTooLong": "La duración del vídeo ({{durationS}} s) es demasiado larga. El máximo es 4 horas.",
+        "videoUnsupported": "Formato de vídeo no compatible ({{hint}}). Usa MP4, WebM, MOV o MKV."
+      },
+      "parse": {
+        "crawlFailed": "No pudimos obtener esta página web. Inténtalo de nuevo.",
+        "epubCorrupted": "El archivo de libro electrónico parece estar dañado o no ser válido.",
+        "pptxCorrupted": "El archivo de presentación parece estar dañado o no ser válido.",
+        "tabularCorrupted": "El archivo de datos parece estar dañado o no ser válido.",
+        "zipCorrupted": "El archivo comprimido parece estar dañado o no ser válido."
+      },
+      "processing": {
+        "noArtifact": "La fuente no tiene un artefacto original procesable"
+      },
+      "source": {
+        "notFound": "Fuente no encontrada"
+      },
+      "speaker": {
+        "emptyMap": "El mapa de hablantes no puede estar vacío",
+        "noCurrentVersion": "La fuente no tiene una versión actual que actualizar"
+      },
+      "transcript": {
+        "empty": "El texto de la transcripción no puede estar vacío",
+        "parseFailed": "No se pudieron analizar los segmentos de la transcripción a partir del texto proporcionado"
+      },
+      "upload": {
+        "alreadyFinalized": "El destino de carga ya se ha finalizado",
+        "alreadyFinalizing": "El destino de carga ya se está finalizando",
+        "expired": "El destino de carga ha caducado",
+        "filenameRequired": "Se requiere un nombre de archivo de hasta 500 caracteres",
+        "incomplete": "La carga está incompleta o ya no está disponible",
+        "integrityFailed": "Falló la comprobación de integridad de la carga",
+        "notebookMismatch": "El destino de carga no pertenece a este cuaderno",
+        "notFound": "Destino de carga no encontrado",
+        "presignedRequired": "Este destino de carga requiere su URL prefirmada",
+        "sha256Invalid": "sha256 debe ser un resumen hexadecimal de 64 caracteres",
+        "sizeMismatch": "El tamaño de la carga no coincide con el destino de carga",
+        "sizePositive": "El tamaño de la carga debe ser un entero positivo",
+        "storeFailed": "No se pudo almacenar la carga",
+        "targetUnavailable": "El destino de carga ya no está disponible",
+        "tooLarge": "La carga supera el tamaño máximo de {{maxBytes}} bytes",
+        "tooLargeGeneric": "La carga supera el tamaño máximo permitido",
+        "unsupportedType": "Tipo de archivo no compatible: {{contentType}} ({{filename}})"
+      },
+      "web": {
+        "contentTypeUnsupported": "Tipo de contenido no compatible: {{contentType}}",
+        "credentialsNotAllowed": "No se permiten URL con credenciales incrustadas",
+        "extractionFailed": "No se pudo extraer el contenido principal de la página",
+        "fetchFailed": "No se pudo obtener: HTTP {{status}}",
+        "fetchFailedReason": "No se pudo obtener: {{reason}}",
+        "hostnameEmpty": "Nombre de host no válido: vacío",
+        "hostnameInvalid": "Nombre de host no válido: {{hostname}}",
+        "notReaderable": "La página no contiene contenido similar a un artículo",
+        "portNotAllowed": "El puerto {{port}} no está permitido. Puertos permitidos: {{allowedPorts}}",
+        "privateAddress": "La URL resuelve a una dirección privada o restringida: {{hostname}}",
+        "protocolUnsupported": "Protocolo no compatible: {{protocol}}",
+        "redirectNoLocation": "Redirección (HTTP {{status}}) sin cabecera Location",
+        "responseTooLarge": "La respuesta superó los {{maxBytes}} bytes",
+        "robotsDenied": "Acceso denegado por la política de robots.txt: {{url}}",
+        "timeout": "La solicitud agotó el tiempo de espera tras {{ms}} ms",
+        "tooManyRedirects": "Demasiadas redirecciones (límite {{limit}})",
+        "urlInvalid": "URL no válida: {{url}}",
+        "urlRequired": "Se requiere una URL",
+        "urlTooLong": "La URL supera la longitud máxima de {{max}} caracteres"
+      },
+      "webSearch": {
+        "unavailable": "La búsqueda web no está disponible en este momento. Inténtalo de nuevo más tarde."
+      },
+      "youtube": {
+        "captionParseFailed": "No se pudo analizar el subtítulo proporcionado por el usuario: {{reason}}",
+        "invalidUrl": "URL o ID de vídeo de YouTube no válido: \"{{url}}\"",
+        "oauthCaptionFailed": "Falló la adquisición del subtítulo mediante OAuth: {{reason}}",
+        "oauthDownloadFailed": "No se pudo descargar la pista de subtítulos de YouTube {{captionId}} (HTTP {{status}}): {{reason}}",
+        "oauthDownloadTokenRequired": "Se requiere un token de acceso OAuth para descargar el subtítulo de YouTube",
+        "oauthListFailed": "No se pudieron listar los subtítulos de YouTube (HTTP {{status}}): {{reason}}",
+        "oauthListTokenRequired": "Se requiere un token de acceso OAuth para listar los subtítulos de YouTube"
+      }
+    },
+    "storage": {
+      "dev": {
+        "fileNotFound": "Archivo no encontrado",
+        "invalidSignature": "Firma no válida",
+        "linkExpired": "El enlace expiró"
+      }
+    },
+    "studyMaterials": {
+      "aiNotConfigured": "El servicio de IA no está configurado",
+      "caseStudy": {
+        "analysisQuestionIdsUnique": "Los IDs de las preguntas del análisis del caso de estudio deben ser únicos",
+        "invalidContent": "Contenido de caso de estudio inválido",
+        "missingAnalysis": "El caso de estudio debe incluir un análisis para cada pregunta",
+        "mustBeFictional": "Los escenarios del caso de estudio deben ser ficticios",
+        "questionCountMismatch": "La cantidad de preguntas del caso de estudio no coincide con la solicitud",
+        "questionIdsUnique": "Los IDs de las preguntas del caso de estudio deben ser únicos",
+        "sourceUnavailable": "El caso de estudio hace referencia a una fuente no seleccionada o no disponible",
+        "unknownQuestion": "El análisis del caso de estudio hace referencia a una pregunta desconocida"
+      },
+      "contentMismatch": "El contenido no coincide con el tipo \"{{kind}}\"",
+      "duplicateDeleted": "No se puede duplicar un material de estudio eliminado",
+      "evaluation": {
+        "capability": "{{modelName}} no admite la evaluación de respuestas. Cambia a otro modelo e inténtalo de nuevo.",
+        "entitlement": "{{modelName}} no está disponible en tu plan. Prueba con otro modelo o añade créditos.",
+        "rateLimited": "El servicio de IA está ocupado en este momento. Vuelve a intentarlo en un momento.",
+        "transient": "El servicio de IA no está disponible temporalmente. Inténtalo de nuevo en breve."
+      },
+      "exportDeleted": "No se puede exportar un material de estudio eliminado",
+      "exportOnlySlides": "Solo las diapositivas se pueden exportar como PowerPoint",
+      "exportUnavailable": "La exportación de diapositivas no está disponible",
+      "folderAlreadyDeleted": "La carpeta ya está eliminada",
+      "folderDeleteHasMaterials": "No se puede eliminar la carpeta: primero elimina todos los materiales de estudio que contiene",
+      "folderInTrash": "No se puede mover a una carpeta que está en la papelera",
+      "folderNameEmpty": "El nombre de la carpeta no puede estar vacío",
+      "folderNotFound": "Carpeta no encontrada",
+      "folderNotInNotebook": "La carpeta no pertenece a este cuaderno",
+      "folderOwnParent": "La carpeta no puede ser su propia carpeta padre",
+      "folderReparentCycle": "No se puede mover una carpeta dentro de uno de sus descendientes",
+      "invalidKind": "Tipo de material de estudio inválido: {{kind}}",
+      "invalidModelOutput": "Formato de salida inválido del modelo",
+      "notPracticeProblems": "El material de estudio no es un conjunto de problemas de práctica",
+      "onlyQuizzesShuffled": "Solo se pueden mezclar los cuestionarios",
+      "practiceProblemNotFound": "Problema de práctica no encontrado",
+      "practiceProblems": {
+        "countMismatch": "La cantidad de problemas de práctica no coincide con la solicitud",
+        "invalidContent": "Contenido de problemas de práctica inválido",
+        "problemIdsUnique": "Los IDs de los problemas de práctica deben ser únicos",
+        "sourceUnavailable": "Los problemas de práctica hacen referencia a una fuente no seleccionada o no disponible",
+        "stepIdsUnique": "Los IDs de los pasos deben ser únicos dentro de un problema"
+      },
+      "studyGuide": {
+        "countMismatch": "La cantidad de secciones de la guía de estudio no coincide con la solicitud",
+        "detailedRequiresExtras": "Las guías de estudio detalladas requieren ejemplos, conceptos erróneos y conclusiones en cada sección",
+        "invalidContent": "Contenido de guía de estudio inválido",
+        "sectionIdsUnique": "Los IDs de las secciones de la guía de estudio deben ser únicos",
+        "sourceUnavailable": "La guía de estudio hace referencia a una fuente no seleccionada o no disponible"
+      },
+      "studyMaterialNotFound": "Material de estudio no encontrado",
+      "titleEmpty": "El título no puede estar vacío"
+    },
+    "validation": {
+      "invalid": "Valor no válido para {{field}}.",
+      "invalidFormat": "Formato no válido para {{field}}.",
+      "invalidType": "Valor no válido para {{field}}: se esperaba {{expected}}.",
+      "invalidValue": "Valor no válido para {{field}}.",
+      "tooBig": "Valor no válido para {{field}}: debe ser como máximo {{maximum}}.",
+      "tooSmall": "Valor no válido para {{field}}: debe ser al menos {{minimum}}."
+    }
+  },
+  "iconPicker": {
+    "ariaLabel": "Iconos",
+    "categories": {
+      "communication": "Comunicación",
+      "files": "Archivos",
+      "media": "Multimedia",
+      "objects": "Objetos",
+      "popular": "Populares",
+      "system": "Sistema",
+      "tech": "Tecnología"
+    },
+    "clearSearch": "Limpiar búsqueda",
+    "noResults": "No se encontraron iconos",
+    "results": "Resultados",
+    "scrollForMore": "Desplázate para ver más iconos…",
+    "searchPlaceholder": "Busca un icono",
+    "selectedIcon": "Icono seleccionado: {{name}}",
+    "selectIcon": "Seleccionar icono",
+    "tryAnother": "Intenta buscar otra palabra clave"
+  },
+  "messageScroller": {
+    "toEnd": "Desplazarse al final",
+    "toStart": "Desplazarse al inicio"
+  },
+  "routeProgress": {
+    "loading": "Cargando página"
+  },
+  "settingsLink": {
+    "ariaLabel": "Ajustes"
+  },
+  "spinner": {
+    "loading": "Cargando"
+  }
+}

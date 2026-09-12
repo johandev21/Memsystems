@@ -95,7 +95,9 @@ export class TrashService {
       .from(studyMaterials)
       .where(eq(studyMaterials.id, smId));
     if (!sm) {
-      throw new NotFoundError('Study material');
+      throw new NotFoundError('Study material', {
+        messageKey: 'errors.studyMaterials.studyMaterialNotFound',
+      });
     }
     await this.notebooksService.assertNotebookOwner(sm.notebookId);
   }
@@ -109,7 +111,9 @@ export class TrashService {
       .from(studyMaterialFolders)
       .where(eq(studyMaterialFolders.id, folderId));
     if (!folder) {
-      throw new NotFoundError('Folder');
+      throw new NotFoundError('Folder', {
+        messageKey: 'errors.studyMaterials.folderNotFound',
+      });
     }
     await this.notebooksService.assertNotebookOwner(folder.notebookId);
   }

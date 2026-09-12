@@ -2,7 +2,6 @@ import type { GatewayLanguageModelEntry } from '@ai-sdk/gateway';
 import type { ModelCapabilities, ProviderModel } from './provider';
 
 export const GATEWAY_DEFAULT_MODEL = 'openai/gpt-5.6-sol';
-export const GATEWAY_EMBEDDING_MODEL = 'openai/text-embedding-3-small';
 
 /**
  * Stale model IDs (persisted in localStorage/DB or sent by old clients) and

@@ -14,6 +14,7 @@ import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { once } from 'node:events';
 import { dirname, resolve, sep } from 'node:path';
 import type { Readable } from 'node:stream';
+import { BadRequestError } from '../../common/errors/domain-error';
 
 export interface UploadInput {
   key: string;
@@ -120,8 +121,12 @@ export class StorageService {
         const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         total += bytes.length;
         if (total > input.maxBytes) {
-          throw new Error(
+          throw new BadRequestError(
             `Upload exceeds maximum size of ${input.maxBytes} bytes`,
+            {
+              messageKey: 'errors.sources.upload.tooLarge',
+              params: { maxBytes: input.maxBytes },
+            },
           );
         }
         hash.update(bytes);
@@ -131,7 +136,12 @@ export class StorageService {
         input.expectedLength !== undefined &&
         total !== input.expectedLength
       ) {
-        throw new Error('Upload size does not match the upload target');
+        throw new BadRequestError(
+          'Upload size does not match the upload target',
+          {
+            messageKey: 'errors.sources.upload.sizeMismatch',
+          },
+        );
       }
       output.end();
       await once(output, 'finish');

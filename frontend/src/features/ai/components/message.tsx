@@ -1,13 +1,16 @@
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
-import { createContext, memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer, type MarkdownRendererProps } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "./markdown-code-block";
 import { MarkdownTable } from "./markdown-table";
+import { MessageBranchContext, useMessageBranch } from "./message-branch-context";
+import type { MessageBranchContextType } from "./message-branch-context";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
@@ -66,25 +69,6 @@ export const MessageAction = ({
     <span className="sr-only">{label || tooltip}</span>
   </Button>
 );
-
-interface MessageBranchContextType {
-  currentBranch: number;
-  totalBranches: number;
-  goToPrevious: () => void;
-  goToNext: () => void;
-  branches: ReactElement[];
-  setBranches: (branches: ReactElement[]) => void;
-}
-
-const MessageBranchContext = createContext<MessageBranchContextType | null>(null);
-
-const useMessageBranch = () => {
-  const context = useContext(MessageBranchContext);
-  if (!context) {
-    throw new Error("MessageBranch components must be used within MessageBranch");
-  }
-  return context;
-};
 
 export type MessageBranchProps = HTMLAttributes<HTMLDivElement> & {
   defaultBranch?: number;
@@ -152,18 +136,22 @@ export const MessageBranchContent = ({ children, ...props }: MessageBranchConten
     }
   }, [childrenArray, branches, setBranches]);
 
-  return childrenArray.map((branch, index) => (
-    <div
-      className={cn(
-        "grid gap-2 overflow-hidden [&>div]:pb-0",
-        index === currentBranch ? "block" : "hidden",
-      )}
-      key={branch.key}
-      {...props}
-    >
-      {branch}
-    </div>
-  ));
+  return (
+    <>
+      {childrenArray.map((branch, index) => (
+        <div
+          className={cn(
+            "grid gap-2 overflow-hidden [&>div]:pb-0",
+            index === currentBranch ? "block" : "hidden",
+          )}
+          key={branch.key}
+          {...props}
+        >
+          {branch}
+        </div>
+      ))}
+    </>
+  );
 };
 
 export type MessageBranchSelectorProps = ComponentProps<typeof ButtonGroup>;
@@ -190,11 +178,12 @@ export const MessageBranchSelector = ({ className, ...props }: MessageBranchSele
 export type MessageBranchPreviousProps = ComponentProps<typeof Button>;
 
 export const MessageBranchPrevious = ({ children, ...props }: MessageBranchPreviousProps) => {
+  const { t } = useTranslation("ai");
   const { goToPrevious, totalBranches } = useMessageBranch();
 
   return (
     <Button
-      aria-label="Previous branch"
+      aria-label={t("message.previousBranch")}
       disabled={totalBranches <= 1}
       onClick={goToPrevious}
       size="icon-sm"
@@ -210,11 +199,12 @@ export const MessageBranchPrevious = ({ children, ...props }: MessageBranchPrevi
 export type MessageBranchNextProps = ComponentProps<typeof Button>;
 
 export const MessageBranchNext = ({ children, ...props }: MessageBranchNextProps) => {
+  const { t } = useTranslation("ai");
   const { goToNext, totalBranches } = useMessageBranch();
 
   return (
     <Button
-      aria-label="Next branch"
+      aria-label={t("message.nextBranch")}
       disabled={totalBranches <= 1}
       onClick={goToNext}
       size="icon-sm"
@@ -230,6 +220,7 @@ export const MessageBranchNext = ({ children, ...props }: MessageBranchNextProps
 export type MessageBranchPageProps = HTMLAttributes<HTMLSpanElement>;
 
 export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProps) => {
+  const { t } = useTranslation("ai");
   const { currentBranch, totalBranches } = useMessageBranch();
 
   return (
@@ -237,7 +228,7 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
       className={cn("border-none bg-transparent text-muted-foreground shadow-none", className)}
       {...props}
     >
-      {currentBranch + 1} of {totalBranches}
+      {t("message.branchPage", { current: currentBranch + 1, total: totalBranches })}
     </ButtonGroupText>
   );
 };

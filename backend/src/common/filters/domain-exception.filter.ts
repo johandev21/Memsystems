@@ -9,6 +9,7 @@ import {
 import { Response } from 'express';
 import { MulterError } from 'multer';
 import { DomainError } from '../errors/domain-error';
+import type { DomainErrorParams } from '../errors/domain-error';
 
 @Catch()
 export class DomainExceptionFilter implements ExceptionFilter {
@@ -28,11 +29,17 @@ export class DomainExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof DomainError) {
-      this.logger.warn(`DomainError [${exception.code}]: ${exception.message}`);
-      return response.status(exception.status).json({
-        error: exception.message,
-        code: exception.code,
-      });
+      const error = exception.messageKey ?? exception.message;
+      const payload: {
+        error: string;
+        code: string;
+        params?: DomainErrorParams;
+      } = { error, code: exception.code };
+      if (Object.keys(exception.params).length > 0) {
+        payload.params = exception.params;
+      }
+      this.logger.warn(`DomainError [${exception.code}]: ${error}`);
+      return response.status(exception.status).json(payload);
     }
 
     if (exception instanceof MulterError) {

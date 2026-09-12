@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { getApiUrl } from "@/shared/api";
 
 export interface GatewayKeyStatus {
@@ -29,14 +30,14 @@ export function isConnectionUsable(
   return status.ok || status.degraded === true;
 }
 
-async function fetchConnection(): Promise<ConnectionStatus> {
+async function fetchConnection(detail: string): Promise<ConnectionStatus> {
   const res = await fetch(getApiUrl("/api/ai/connection"), {
     credentials: "include",
   });
   if (!res.ok) {
     return {
       ok: false,
-      detail: "Failed to check connection",
+      detail,
       degraded: false,
       models: [],
       checkedAt: null,
@@ -47,9 +48,11 @@ async function fetchConnection(): Promise<ConnectionStatus> {
 }
 
 export function useConnectionStatus() {
+  const { t } = useTranslation("settings");
+
   return useQuery({
     queryKey: ["connection-status"],
-    queryFn: fetchConnection,
+    queryFn: () => fetchConnection(t("gateway.description.checkFailed")),
     refetchInterval: 15_000,
     retry: 1,
   });

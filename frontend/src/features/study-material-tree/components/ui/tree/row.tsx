@@ -1,40 +1,21 @@
-import { useDraggable, useDroppable } from "@dnd-kit/core";
-import {
-  Brain,
-  BookOpen,
-  Briefcase,
-  FileQuestion,
-  Folder,
-  FolderOpen,
-  GripVertical,
-  ListChecks,
-  Map as MapIcon,
-  Network,
-  Presentation,
-  type LucideIcon,
-} from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/shared/utils/cn";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { GripVertical } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { getCommandPendingKey } from "../../model/commands";
 import type { TreeNode } from "../../model/tree";
 import {
   DRAG_ID_PREFIX,
   FOLDER_DROP_ID_PREFIX,
   getTreeDragData,
   useTreeControllerContext,
-} from "../controller";
-import { getCommandPendingKey } from "../../model/commands";
+} from "../controller-state";
 import { InlineRename } from "./inline-rename";
+import { MobileTreeRowActions } from "./mobile-tree-row-actions";
 import { RowMenu } from "./row-menu";
+import { getTreeIcon } from "./row-icon";
 
 type RowProps = {
   node: TreeNode;
@@ -54,16 +35,21 @@ function useIsCoarsePointer() {
   return isCoarse;
 }
 
-export function Row({ node, depth }: RowProps) {
-  const controller = useTreeControllerContext();
-  const isFolder = node.type === "folder";
-  const isActiveItem = controller.activeDragItemId === node.id;
-  const isSelected = controller.isSelected(node.id);
-  const isRenaming = controller.isRenaming(node.id);
-  const isOpen = isFolder ? controller.isFolderOpen(node.id) : false;
-  const isFocused = controller.isFocused(node.id);
-  const isCoarse = useIsCoarsePointer();
-
+function useTreeRowDragDrop({
+  node,
+  controller,
+  isFolder,
+  isRenaming,
+  isOpen,
+  isCoarse,
+}: {
+  node: TreeNode;
+  controller: ReturnType<typeof useTreeControllerContext>;
+  isFolder: boolean;
+  isRenaming: boolean;
+  isOpen: boolean;
+  isCoarse: boolean;
+}) {
   const pendingMoveForDrag = controller.pendingKeys.has(
     getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }),
   );
@@ -106,76 +92,138 @@ export function Row({ node, depth }: RowProps) {
     [controller, isFolder, node.id, setDraggableNodeRef, setDroppableNodeRef],
   );
 
-  const Icon = getTreeIcon(node, isOpen);
-
-  const pendingRename = controller.pendingKeys.has(
-    getCommandPendingKey({ type: "renameItem", id: node.id, name: "" }),
-  );
-  const pendingDuplicate = controller.pendingKeys.has(
-    getCommandPendingKey({ type: "duplicateMaterial", id: node.id }),
-  );
-  const pendingMove = controller.pendingKeys.has(
-    getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }),
-  );
-  const pendingDelete = controller.pendingKeys.has(
-    getCommandPendingKey({ type: "deleteItem", id: node.id }),
-  );
-  const isPending = pendingRename || pendingDuplicate || pendingMove || pendingDelete;
-
   const rowDragProps = isCoarse ? {} : { ...attributes, ...listeners };
   const handleDragProps = isCoarse && !isRenaming ? { ...attributes, ...listeners } : {};
 
+  return {
+    isDragging,
+    isOver,
+    canAcceptDrop,
+    pendingMoveForDrag,
+    setNodeRefs,
+    rowDragProps,
+    handleDragProps,
+    listeners,
+  };
+}
+
+function useTreeRowPendingCommands(nodeId: string, pendingKeys: Set<string>) {
+  const pendingRename = pendingKeys.has(
+    getCommandPendingKey({ type: "renameItem", id: nodeId, name: "" }),
+  );
+  const pendingDuplicate = pendingKeys.has(
+    getCommandPendingKey({ type: "duplicateMaterial", id: nodeId }),
+  );
+  const pendingMove = pendingKeys.has(
+    getCommandPendingKey({ type: "moveItem", id: nodeId, targetFolderId: null }),
+  );
+  const pendingDelete = pendingKeys.has(getCommandPendingKey({ type: "deleteItem", id: nodeId }));
+  const isPending = pendingRename || pendingDuplicate || pendingMove || pendingDelete;
+
+  return {
+    pendingRename,
+    pendingDuplicate,
+    pendingMove,
+    pendingDelete,
+    isPending,
+  };
+}
+
+function getRowClassName({
+  isSelected,
+  treeHasFocus,
+  isOver,
+  canAcceptDrop,
+  isDragging,
+  isActiveItem,
+  isRenaming,
+  isCoarse,
+}: {
+  isSelected: boolean;
+  treeHasFocus: boolean;
+  isOver: boolean;
+  canAcceptDrop: boolean;
+  isDragging: boolean;
+  isActiveItem: boolean;
+  isRenaming: boolean;
+  isCoarse: boolean;
+}): string {
+  const isDragActive = isDragging || isActiveItem;
+  return cn(
+    "group/tree-row relative flex h-[var(--tree-row-height)] w-full min-w-0 items-center gap-1.5 pr-1 text-left font-sans text-sm outline-none select-none",
+    "text-muted-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring",
+    "hover:bg-muted/70 hover:text-foreground",
+    isSelected && treeHasFocus && "bg-accent/35 text-foreground ring-1 ring-inset ring-ring",
+    isOver && canAcceptDrop && "bg-accent/60 text-accent-foreground",
+    isDragActive && "opacity-35 cursor-grabbing",
+    isRenaming && "cursor-text",
+    !isRenaming && !isDragActive && (isCoarse ? "cursor-default" : "cursor-pointer"),
+  );
+}
+
+export function Row({ node, depth }: RowProps) {
+  const controller = useTreeControllerContext();
+  const isFolder = node.type === "folder";
+  const isActiveItem = controller.activeDragItemId === node.id;
+  const isSelected = controller.isSelected(node.id);
+  const isRenaming = controller.isRenaming(node.id);
+  const isOpen = isFolder ? controller.isFolderOpen(node.id) : false;
+  const isFocused = controller.isFocused(node.id);
+  const isCoarse = useIsCoarsePointer();
+
+  const dnd = useTreeRowDragDrop({
+    node,
+    controller,
+    isFolder,
+    isRenaming,
+    isOpen,
+    isCoarse,
+  });
+
+  const pending = useTreeRowPendingCommands(node.id, controller.pendingKeys);
+  const Icon = getTreeIcon(node, isOpen);
+
   const row = (
     <div
-      ref={setNodeRefs}
-      {...rowDragProps}
+      ref={dnd.setNodeRefs}
+      {...dnd.rowDragProps}
       data-slot="study-materials-tree-row"
       data-size={controller.size}
       data-selected={isSelected ? "true" : undefined}
       data-focused={isFocused ? "true" : undefined}
       data-renaming={isRenaming ? "true" : undefined}
-      data-dragging={isDragging || isActiveItem ? "true" : undefined}
-      data-drop-target={isOver && canAcceptDrop ? "valid" : undefined}
-      data-pending={isPending ? "true" : undefined}
+      data-dragging={dnd.isDragging || isActiveItem ? "true" : undefined}
+      data-drop-target={dnd.isOver && dnd.canAcceptDrop ? "valid" : undefined}
+      data-pending={pending.isPending ? "true" : undefined}
       aria-expanded={isFolder ? isOpen : undefined}
       aria-level={depth + 1}
       aria-selected={isSelected}
-      aria-busy={isPending ? true : undefined}
+      aria-busy={pending.isPending ? true : undefined}
       role="treeitem"
       tabIndex={isFocused ? 0 : -1}
       style={{ paddingLeft: `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` }}
-      className={cn(
-        "group/tree-row relative flex h-[var(--tree-row-height)] w-full min-w-0 items-center gap-1.5 pr-1 text-left font-sans text-sm outline-none select-none",
-        "text-muted-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring",
-        "hover:bg-muted/70 hover:text-foreground",
-        isSelected &&
-          controller.treeHasFocus &&
-          "bg-accent/35 text-foreground ring-1 ring-inset ring-ring",
-        isOver && canAcceptDrop && "bg-accent/60 text-accent-foreground",
-        (isDragging || isActiveItem) && "opacity-35",
-        isRenaming && "cursor-text",
-        !isRenaming &&
-          !isDragging &&
-          !isActiveItem &&
-          (isCoarse ? "cursor-default" : "cursor-pointer"),
-        !isRenaming && (isDragging || isActiveItem) && "cursor-grabbing",
-      )}
+      className={getRowClassName({
+        isSelected,
+        treeHasFocus: controller.treeHasFocus,
+        isOver: dnd.isOver,
+        canAcceptDrop: dnd.canAcceptDrop,
+        isDragging: dnd.isDragging,
+        isActiveItem,
+        isRenaming,
+        isCoarse,
+      })}
       onPointerDown={(event) => {
-        if (isCoarse) {
-          // On coarse pointer, drag starts only from handle; row pointer down only selects
-        } else {
+        if (!isCoarse) {
           (
-            listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void }
+            dnd.listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void }
           )?.onPointerDown?.(event as unknown as React.PointerEvent);
         }
-        if (event.button !== 0) return;
-        if (isRenaming) return;
+        if (event.button !== 0 || isRenaming) return;
         (event.currentTarget as HTMLElement).focus();
         controller.select(node);
       }}
       onClick={(event) => {
         if (isRenaming) return;
-        // Prevent activation when clicking handle or trailing button
         const target = event.target as HTMLElement;
         if (
           target.closest('[data-slot="study-materials-tree-drag-handle"]') ||
@@ -192,10 +240,10 @@ export function Row({ node, depth }: RowProps) {
     >
       <TreeRowDragHandle
         visible={!isRenaming}
-        disabled={pendingMoveForDrag}
-        isDragging={isDragging}
+        disabled={dnd.pendingMoveForDrag}
+        isDragging={dnd.isDragging}
         isCoarse={isCoarse}
-        dragProps={handleDragProps}
+        dragProps={dnd.handleDragProps}
         onSelect={() => controller.select(node)}
       />
       <Icon className="size-[var(--tree-icon-size)] shrink-0" strokeWidth={1.7} />
@@ -203,11 +251,11 @@ export function Row({ node, depth }: RowProps) {
       <MobileTreeRowActions
         node={node}
         visible={!isRenaming}
-        isPending={isPending}
-        pendingRename={pendingRename}
-        pendingDuplicate={pendingDuplicate}
-        pendingMove={pendingMove}
-        pendingDelete={pendingDelete}
+        isPending={pending.isPending}
+        pendingRename={pending.pendingRename}
+        pendingDuplicate={pending.pendingDuplicate}
+        pendingMove={pending.pendingMove}
+        pendingDelete={pending.pendingDelete}
       />
     </div>
   );
@@ -237,6 +285,7 @@ function TreeRowDragHandle({
   dragProps,
   onSelect,
 }: TreeRowDragHandleProps) {
+  const { t } = useTranslation("tree");
   if (!visible) return null;
   const handlePointerDown = dragProps.onPointerDown as
     | ((event: React.PointerEvent) => void)
@@ -245,7 +294,7 @@ function TreeRowDragHandle({
     <button
       type="button"
       data-slot="study-materials-tree-drag-handle"
-      aria-label="Drag to move"
+      aria-label={t("row.dragHandle")}
       tabIndex={-1}
       disabled={disabled}
       className={cn(
@@ -285,126 +334,4 @@ function TreeRowLabel({ node, isRenaming }: { node: TreeNode; isRenaming: boolea
       {node.name}
     </span>
   );
-}
-
-type MobileTreeRowActionsProps = {
-  node: TreeNode;
-  visible: boolean;
-  isPending: boolean;
-  pendingRename: boolean;
-  pendingDuplicate: boolean;
-  pendingMove: boolean;
-  pendingDelete: boolean;
-};
-
-function MobileTreeRowActions({
-  node,
-  visible,
-  isPending,
-  pendingRename,
-  pendingDuplicate,
-  pendingMove,
-  pendingDelete,
-}: MobileTreeRowActionsProps) {
-  const controller = useTreeControllerContext();
-  if (!visible) return null;
-  const isFolder = node.type === "folder";
-  return (
-    <span
-      data-slot="study-materials-tree-row-actions"
-      className="ml-auto hidden shrink-0 items-center [@media(pointer:coarse)]:flex"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Actions for ${node.name}`}
-              className="size-6 shrink-0 rounded-md hover:bg-accent hover:text-accent-foreground"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => event.stopPropagation()}
-            />
-          }
-        />
-        <DropdownMenuContent align="end" side="bottom" className="min-w-52">
-          <DropdownMenuGroup>
-            {isFolder && (
-              <DropdownMenuItem
-                onClick={() => controller.createFolder(node.id)}
-                disabled={isPending}
-              >
-                New folder
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => controller.beginRename(node.id)}
-              disabled={pendingRename}
-            >
-              Rename
-            </DropdownMenuItem>
-            {node.type === "material" && (
-              <DropdownMenuItem
-                onClick={() => controller.duplicateMaterial(node.id)}
-                disabled={pendingDuplicate}
-              >
-                Duplicate
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              onClick={() => controller.moveToRoot(node.id)}
-              disabled={node.parentId === null || pendingMove}
-            >
-              Move to Study Materials
-            </DropdownMenuItem>
-            {isFolder && (
-              <>
-                <DropdownMenuItem onClick={controller.expandAll}>Expand all</DropdownMenuItem>
-                <DropdownMenuItem onClick={controller.collapseAll}>Collapse all</DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => controller.requestDelete(node)}
-              disabled={pendingDelete}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </span>
-  );
-}
-
-function getTreeIcon(node: TreeNode, isOpen: boolean): LucideIcon {
-  if (node.type === "folder") return isOpen ? FolderOpen : Folder;
-
-  switch (node.materialKind) {
-    case "simple_flashcard":
-      return Brain;
-    case "roadmap":
-      return MapIcon;
-    case "study_guide":
-      return BookOpen;
-    case "practice_problems":
-      return ListChecks;
-    case "case_study":
-      return Briefcase;
-    case "slides":
-      return Presentation;
-    case "mind_map":
-      return Network;
-    case "quiz":
-    default:
-      return FileQuestion;
-  }
 }

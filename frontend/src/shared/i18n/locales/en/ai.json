@@ -1,0 +1,80 @@
+{
+  "conversation": {
+    "emptyDescription": "Start a conversation to see messages here",
+    "emptyTitle": "No messages yet"
+  },
+  "errors": {
+    "auth": {
+      "message": "Your key was rejected. Check your keys in Settings.",
+      "title": "Connection needs attention"
+    },
+    "badRequest": {
+      "message": "The request was invalid.",
+      "title": "Couldn't send that"
+    },
+    "capability": {
+      "fileTitle": "File attachments aren't supported",
+      "imageTitle": "Image attachments aren't supported",
+      "message": "This model doesn't support web search. Switch to a model that supports web search and try again.",
+      "structuredTitle": "Structured output isn't supported",
+      "webSearchTitle": "Web search isn't supported"
+    },
+    "entitlement": {
+      "message": "Your gateway account can't use this model. Try a free-tier model or add credits.",
+      "modelMessage": "{{model}} isn't included in your plan. Your gateway account can't use it — try a free-tier model or add credits.",
+      "title": "Model not included in your plan"
+    },
+    "generic": {
+      "message": "The request failed before finishing. Retrying usually works.",
+      "title": "Something went wrong"
+    },
+    "rateLimited": {
+      "message": "This model is rate-limited on your plan. Wait a few seconds and retry, or switch to another model.",
+      "modelMessage": "{{model}} is rate-limited on your plan. Wait a few seconds and retry, or switch to another model.",
+      "title": "AI is busy right now"
+    },
+    "retired": {
+      "message": "This model was retired from the gateway. Pick a current model above and retry.",
+      "title": "Model no longer available"
+    },
+    "substituted": {
+      "message": "The gateway answered with a different model than the one you picked. Nothing was presented as working — retry, or switch to a model your plan includes.",
+      "title": "Wrong model served"
+    }
+  },
+  "gatewayKeyPrompt": {
+    "description": "Add your AI Gateway key in Settings to unlock models.",
+    "openSettings": "Open Settings",
+    "title": "AI Gateway key required"
+  },
+  "markdownTable": {
+    "ariaLabel": "Scrollable table"
+  },
+  "message": {
+    "branchPage": "{{current}} of {{total}}",
+    "nextBranch": "Next branch",
+    "previousBranch": "Previous branch"
+  },
+  "modelSelector": {
+    "providerLogo": "{{provider}} logo",
+    "title": "Model Selector"
+  },
+  "promptInput": {
+    "addPhotosOrFiles": "Add photos or files",
+    "placeholder": "What would you like to know?",
+    "stop": "Stop",
+    "submit": "Submit",
+    "takeScreenshot": "Take screenshot",
+    "uploadFiles": "Upload files"
+  },
+  "reasoning": {
+    "thinking": "Thinking...",
+    "thoughtBrief": "Thought for a few seconds",
+    "thoughtFor_one": "Thought for {{count}} second",
+    "thoughtFor_other": "Thought for {{count}} seconds"
+  },
+  "sources": {
+    "used_one": "Used {{count}} source",
+    "used_other": "Used {{count}} sources"
+  }
+}

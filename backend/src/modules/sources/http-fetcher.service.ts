@@ -54,6 +54,10 @@ export class HttpFetcherService {
         throw new WebScrapeError(
           `Fetch denied by robots.txt policy: ${validated.normalizedUrl}`,
           'robots_denied',
+          {
+            messageKey: 'errors.sources.web.robotsDenied',
+            params: { url: validated.normalizedUrl },
+          },
         );
       }
 
@@ -65,12 +69,20 @@ export class HttpFetcherService {
           throw new WebScrapeError(
             `Redirect (HTTP ${response.status}) without a Location header`,
             'fetch_failed',
+            {
+              messageKey: 'errors.sources.web.redirectNoLocation',
+              params: { status: response.status },
+            },
           );
         }
         if (hop >= this.config.maxRedirects) {
           throw new WebScrapeError(
             `Too many redirects (limit ${this.config.maxRedirects})`,
             'redirect_limit',
+            {
+              messageKey: 'errors.sources.web.tooManyRedirects',
+              params: { limit: this.config.maxRedirects },
+            },
           );
         }
         redirects.push(validated.normalizedUrl);
@@ -82,6 +94,10 @@ export class HttpFetcherService {
         throw new WebScrapeError(
           `Fetch failed: HTTP ${response.status}`,
           'fetch_failed',
+          {
+            messageKey: 'errors.sources.web.fetchFailed',
+            params: { status: response.status },
+          },
         );
       }
 
@@ -90,6 +106,10 @@ export class HttpFetcherService {
         throw new WebScrapeError(
           `Unsupported content-type: ${contentType || 'unknown'}`,
           'invalid_content_type',
+          {
+            messageKey: 'errors.sources.web.contentTypeUnsupported',
+            params: { contentType: contentType || 'unknown' },
+          },
         );
       }
 
@@ -129,11 +149,21 @@ export class HttpFetcherService {
         throw new WebScrapeError(
           `Request timed out after ${this.config.timeoutMs}ms`,
           'timeout',
+          {
+            messageKey: 'errors.sources.web.timeout',
+            params: { ms: this.config.timeoutMs },
+          },
         );
       }
       throw new WebScrapeError(
         `Fetch failed: ${err instanceof Error ? err.message : String(err)}`,
         'fetch_failed',
+        {
+          messageKey: 'errors.sources.web.fetchFailedReason',
+          params: {
+            reason: err instanceof Error ? err.message : String(err),
+          },
+        },
       );
     } finally {
       clearTimeout(timer);
@@ -159,6 +189,10 @@ async function readBoundedBody(
         throw new WebScrapeError(
           `Response exceeded ${maxBytes} bytes`,
           'response_too_large',
+          {
+            messageKey: 'errors.sources.web.responseTooLarge',
+            params: { maxBytes },
+          },
         );
       }
       chunks.push(value);

@@ -1,14 +1,13 @@
 import { useRef, type KeyboardEvent } from "react";
+import type { TFunction } from "i18next";
 import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { useFlashcardSession } from "./useFlashcardSession";
-import { detectCardFormat } from "./card-type-detector";
+import { useFlashcardSession } from "../hooks/use-flashcard-session";
+import { detectCardFormat, type FlashcardItem } from "../utils/card-type-detector";
 import { ClozeInteractive } from "./ClozeInteractive";
 
-export interface FlashcardItem {
-  front: string;
-  back: string;
-}
+export type { FlashcardItem };
 
 export interface FlashcardViewProps {
   materialId: string;
@@ -31,7 +30,150 @@ export function FlashcardView({ materialId, content }: FlashcardViewProps) {
   return <FlashcardSession key={`${materialId}-${JSON.stringify(cards)}`} cards={cards} />;
 }
 
+function getCardTypeLabel(
+  isCloze: boolean,
+  isFlipped: boolean,
+  format: string,
+  t: TFunction<"viewer", undefined>,
+): string {
+  if (isCloze) return t("flashcard.types.fillInTheBlank");
+  if (isFlipped) return t("flashcard.types.answer");
+  if (format === "definition") return t("flashcard.types.definition");
+  return t("flashcard.types.question");
+}
+
+function StandardCardContent({
+  isFlipped,
+  front,
+  back,
+}: {
+  isFlipped: boolean;
+  front: string;
+  back: string;
+}) {
+  const { t } = useTranslation("viewer");
+  return (
+    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 text-center">
+      <div className="flex min-h-24 w-full items-start justify-center">
+        <p
+          className={
+            isFlipped
+              ? "w-full text-sm leading-relaxed text-text-primary whitespace-pre-wrap break-words"
+              : "w-full text-lg font-semibold leading-relaxed text-text-primary whitespace-pre-wrap break-words sm:text-xl"
+          }
+        >
+          {isFlipped ? back : front}
+        </p>
+      </div>
+      <p
+        aria-hidden="true"
+        className="flex min-h-4 items-center gap-1.5 text-xs text-muted-foreground"
+      >
+        <RotateCw aria-hidden="true" className="size-3.5" />
+        {isFlipped ? t("flashcard.clickToFlipBack") : t("flashcard.clickToFlip")}
+      </p>
+    </div>
+  );
+}
+
+function FlashcardControls({
+  onExplain,
+  onPrev,
+  onNext,
+  disabled,
+}: {
+  onExplain: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation("viewer");
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onExplain}
+          className="h-10 whitespace-nowrap rounded-xl"
+        >
+          {t("common.explain")}
+        </Button>
+      </div>
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label={t("flashcard.previousCard")}
+          disabled={disabled}
+          onClick={onPrev}
+          className="h-10 min-w-0 whitespace-nowrap rounded-xl"
+        >
+          <ChevronLeft aria-hidden="true" /> {t("common.previous")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label={t("flashcard.nextCard")}
+          disabled={disabled}
+          onClick={onNext}
+          className="h-10 min-w-0 whitespace-nowrap rounded-xl"
+        >
+          {t("common.next")} <ChevronRight aria-hidden="true" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function FlashcardStage({
+  stageRef,
+  isCloze,
+  isFlipped,
+  currentCardIndex,
+  visit,
+  activeCard,
+  onFlip,
+  onFlipKeyDown,
+}: {
+  stageRef: React.RefObject<HTMLDivElement | null>;
+  isCloze: boolean;
+  isFlipped: boolean;
+  currentCardIndex: number;
+  visit: number;
+  activeCard: FlashcardItem;
+  onFlip: () => void;
+  onFlipKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
+}) {
+  const { t } = useTranslation("viewer");
+  return (
+    <div
+      ref={stageRef}
+      role={isCloze ? undefined : "button"}
+      tabIndex={isCloze ? -1 : 0}
+      aria-label={t("flashcard.cardAria", {
+        number: currentCardIndex + 1,
+        type: t(isFlipped ? "flashcard.types.answer" : "flashcard.types.question"),
+      })}
+      onClick={isCloze ? undefined : onFlip}
+      onKeyDown={isCloze ? undefined : onFlipKeyDown}
+      className={`flex min-h-64 flex-col justify-center gap-6 rounded-2xl bg-surface-2 p-6 select-none sm:min-h-72 sm:p-8 focus-visible:outline-2 focus-visible:outline-ring ${isCloze ? "" : "cursor-pointer transition-colors duration-200 hover:bg-surface-3 hover:ring-1 hover:ring-foreground/10 hover:shadow-sm"}`}
+    >
+      {isCloze ? (
+        <ClozeInteractive key={visit} front={activeCard.front} back={activeCard.back} />
+      ) : (
+        <StandardCardContent
+          isFlipped={isFlipped}
+          front={activeCard.front}
+          back={activeCard.back}
+        />
+      )}
+    </div>
+  );
+}
+
 function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
+  const { t } = useTranslation("viewer");
   const { currentCardIndex, isFlipped, visit, setIsFlipped, handleNext, handlePrev } =
     useFlashcardSession(cards.length);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -81,7 +223,10 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
 
   function handleExplainInChat() {
     if (!activeCard) return;
-    const prompt = `I'm reviewing flashcards based on the source material and I'd like to expand my understanding of one of them.\n\nOn the front it reads: "${activeCard.front}"\n\nThe answer on the back reads: "${activeCard.back}"\n\nExplain this topic in more detail.`;
+    const prompt = t("flashcard.explainPrompt", {
+      front: activeCard.front,
+      back: activeCard.back,
+    });
     window.dispatchEvent(
       new CustomEvent("send-chat-prompt", {
         detail: { prompt, autoSend: false, focusChat: true },
@@ -91,9 +236,7 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
 
   if (!activeCard) {
     return (
-      <p className="mx-auto w-full max-w-2xl text-sm text-text-secondary">
-        No flashcards available.
-      </p>
+      <p className="mx-auto w-full max-w-2xl text-sm text-text-secondary">{t("flashcard.empty")}</p>
     );
   }
 
@@ -101,88 +244,28 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6" onKeyDown={handleKeyDown}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-text-secondary">
         <span aria-live="polite">
-          Card {currentCardIndex + 1} of {cards.length}
+          {t("flashcard.cardOf", { current: currentCardIndex + 1, total: cards.length })}
         </span>
-        <span>
-          {isCloze
-            ? "Fill in the Blank"
-            : isFlipped
-              ? "Answer"
-              : format === "definition"
-                ? "Definition"
-                : "Question"}
-        </span>
+        <span>{getCardTypeLabel(isCloze, isFlipped, format, t)}</span>
       </div>
 
-      <div
-        ref={stageRef}
-        role={isCloze ? undefined : "button"}
-        tabIndex={isCloze ? -1 : 0}
-        aria-label={`Card ${currentCardIndex + 1}: ${isFlipped ? "Answer" : "Question"}`}
-        onClick={isCloze ? undefined : () => setIsFlipped(!isFlipped)}
-        onKeyDown={isCloze ? undefined : handleFlipKeyDown}
-        className={`flex min-h-64 flex-col justify-center gap-6 rounded-2xl bg-surface-2 p-6 select-none sm:min-h-72 sm:p-8 focus-visible:outline-2 focus-visible:outline-ring ${isCloze ? "" : "cursor-pointer transition-colors duration-200 hover:bg-surface-3 hover:ring-1 hover:ring-foreground/10 hover:shadow-sm"}`}
-      >
-        {isCloze ? (
-          <ClozeInteractive key={visit} front={activeCard.front} back={activeCard.back} />
-        ) : (
-          <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 text-center">
-            <div className="flex min-h-24 w-full items-start justify-center">
-              <p
-                className={
-                  isFlipped
-                    ? "w-full text-sm leading-relaxed text-text-primary whitespace-pre-wrap break-words"
-                    : "w-full text-lg font-semibold leading-relaxed text-text-primary whitespace-pre-wrap break-words sm:text-xl"
-                }
-              >
-                {isFlipped ? activeCard.back : activeCard.front}
-              </p>
-            </div>
-            <p
-              aria-hidden="true"
-              className="flex min-h-4 items-center gap-1.5 text-xs text-muted-foreground"
-            >
-              <RotateCw aria-hidden="true" className="size-3.5" />
-              {isFlipped ? "Click to Flip Back" : "Click to Flip"}
-            </p>
-          </div>
-        )}
-      </div>
+      <FlashcardStage
+        stageRef={stageRef}
+        isCloze={isCloze}
+        isFlipped={isFlipped}
+        currentCardIndex={currentCardIndex}
+        visit={visit}
+        activeCard={activeCard}
+        onFlip={() => setIsFlipped(!isFlipped)}
+        onFlipKeyDown={handleFlipKeyDown}
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleExplainInChat}
-            className="h-10 whitespace-nowrap rounded-xl"
-          >
-            Explain
-          </Button>
-        </div>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label="Previous Card"
-            disabled={cards.length <= 1}
-            onClick={() => navigate(handlePrev)}
-            className="h-10 min-w-0 whitespace-nowrap rounded-xl"
-          >
-            <ChevronLeft aria-hidden="true" /> Previous
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label="Next Card"
-            disabled={cards.length <= 1}
-            onClick={() => navigate(handleNext)}
-            className="h-10 min-w-0 whitespace-nowrap rounded-xl"
-          >
-            Next <ChevronRight aria-hidden="true" />
-          </Button>
-        </div>
-      </div>
+      <FlashcardControls
+        onExplain={handleExplainInChat}
+        onPrev={() => navigate(handlePrev)}
+        onNext={() => navigate(handleNext)}
+        disabled={cards.length <= 1}
+      />
     </div>
   );
 }

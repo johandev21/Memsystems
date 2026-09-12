@@ -134,6 +134,10 @@ export class SourceExtractionService {
 
     throw new BadRequestError(
       `Unsupported file type: ${contentType || 'unknown'}`,
+      {
+        messageKey: 'errors.sources.extract.unsupportedFileType',
+        params: { contentType: contentType || 'unknown' },
+      },
     );
   }
 

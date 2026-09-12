@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/ui/markdown";
-import { type Source } from "@/features/sources";
+import { type Source } from "@/features/sources/api/sources";
+import { useTranslation } from "react-i18next";
 import { StudyGuideContent, type StudyGuideContentType } from "../shapes/study-guide";
 
-import { useStudyGuideReader } from "./use-study-guide-reader";
+import { useStudyGuideReader } from "../hooks/use-study-guide-reader";
 
 interface StudyGuideViewProps {
   content: unknown;
@@ -12,11 +13,12 @@ interface StudyGuideViewProps {
 }
 
 export function StudyGuideView({ content, notebookId, onOpenSource }: StudyGuideViewProps) {
+  const { t } = useTranslation("viewer");
   const parsed = StudyGuideContent.safeParse(content);
   if (!parsed.success) {
     return (
       <p role="alert" className="p-6 text-text-secondary">
-        This study guide could not be read. Try reopening it or generating a new guide.
+        {t("studyGuide.parseError")}
       </p>
     );
   }
@@ -30,6 +32,7 @@ function StudyGuideReader({
   notebookId,
   onOpenSource,
 }: Omit<StudyGuideViewProps, "content"> & { guide: StudyGuideContentType }) {
+  const { t } = useTranslation("viewer");
   const { hasReferences, sources, sectionId, openSource, navigateToSection } = useStudyGuideReader(
     guide,
     notebookId,
@@ -40,19 +43,23 @@ function StudyGuideReader({
     <article className="mx-auto w-full max-w-3xl space-y-8 py-3 text-text-primary sm:space-y-10 sm:py-6">
       <header className="space-y-4">
         <p className="text-xs font-medium text-text-tertiary">
-          {guide.format === "revision" ? "Revision Sheet" : "Detailed Guide"}
+          {guide.format === "revision" ? t("studyGuide.revision") : t("studyGuide.detailed")}
         </p>
         <h1 className="text-[1.75rem] leading-tight font-semibold break-words sm:text-3xl">
           {guide.title.replace(/-study-guide$/, "").replaceAll("-", " ")}
         </h1>
         {guide.sourceIds.length === 0 && !hasReferences && (
-          <p className="text-sm text-text-tertiary">Generated without notebook sources.</p>
+          <p className="text-sm text-text-tertiary">{t("common.generatedWithoutSources")}</p>
         )}
         <GuideMarkdown text={guide.overview} headingLevel={2} />
       </header>
-      <GuideList title="Learning Objectives" items={guide.learningObjectives} headingLevel={2} />
-      <nav aria-label="Study guide contents" className="space-y-3">
-        <h2 className="text-xl font-semibold">Contents</h2>
+      <GuideList
+        title={t("common.learningObjectives")}
+        items={guide.learningObjectives}
+        headingLevel={2}
+      />
+      <nav aria-label={t("studyGuide.contentsAria")} className="space-y-3">
+        <h2 className="text-xl font-semibold">{t("studyGuide.contents")}</h2>
         <ol className="list-decimal space-y-2 pl-5 marker:text-text-secondary">
           {guide.sections.map((section) => (
             <li key={section.id}>
@@ -67,12 +74,12 @@ function StudyGuideReader({
           ))}
         </ol>
       </nav>
-      {hasReferences && sources.isPending && <p role="status">Loading source references…</p>}
+      {hasReferences && sources.isPending && <p role="status">{t("common.loadingReferences")}</p>}
       {hasReferences && sources.isError && (
         <div role="alert" className="text-sm text-text-secondary">
-          Source references could not be loaded.{" "}
+          {t("common.referencesError")}{" "}
           <Button variant="outline" size="sm" onClick={() => void sources.refetch()}>
-            Retry References
+            {t("common.retryReferences")}
           </Button>
         </div>
       )}
@@ -103,6 +110,8 @@ function GuideSection({
   sourcesLoaded: boolean;
   openSource: (id: string) => void;
 }) {
+  const { t } = useTranslation("viewer");
+
   return (
     <section
       id={anchorId}
@@ -114,13 +123,13 @@ function GuideSection({
         {section.title}
       </h2>
       <GuideMarkdown text={section.explanation} headingLevel={3} />
-      <GuideList title="Key Concepts" items={section.keyConcepts} />
-      <GuideList title="Generated Examples" items={section.examples} />
-      <GuideList title="Common Misconceptions" items={section.misconceptions} />
-      <GuideList title="Takeaways" items={section.takeaways} />
+      <GuideList title={t("studyGuide.keyConcepts")} items={section.keyConcepts} />
+      <GuideList title={t("studyGuide.generatedExamples")} items={section.examples} />
+      <GuideList title={t("studyGuide.commonMisconceptions")} items={section.misconceptions} />
+      <GuideList title={t("studyGuide.takeaways")} items={section.takeaways} />
       {section.sourceIds.length > 0 && (
         <div className="space-y-2 text-sm text-text-secondary">
-          <h3 className="font-semibold">Supporting Sources</h3>
+          <h3 className="font-semibold">{t("common.supportingSources")}</h3>
           <ul className="space-y-2">
             {section.sourceIds.map((id) => {
               const source = sources.find((candidate) => candidate.id === id);
@@ -137,8 +146,8 @@ function GuideSection({
                   ) : (
                     <span className="text-sm text-text-tertiary">
                       {sourcesLoaded
-                        ? "Source unavailable"
-                        : "Source reference unavailable until loaded"}
+                        ? t("common.sourceUnavailable")
+                        : t("common.sourceReferenceUnavailable")}
                     </span>
                   )}
                 </li>
@@ -168,8 +177,8 @@ function GuideList({
         {title}
       </Heading>
       <ul className="list-disc space-y-2 pl-5">
-        {items.map((item, index) => (
-          <li key={index}>
+        {items.map((item) => (
+          <li key={item}>
             <GuideMarkdown text={item} />
           </li>
         ))}

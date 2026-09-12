@@ -1,4 +1,5 @@
 import { type ReactNode, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
@@ -29,9 +30,10 @@ export function ArticleDocumentViewer({ content, scrollElement }: ArticleDocumen
 }
 
 function EmptyArticleState() {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div className="py-12 text-center text-xs text-muted-foreground">
-      No article content available.
+      {t("articleViewer.noContent")}
     </div>
   );
 }
@@ -50,7 +52,7 @@ function VirtualizedArticleDocument({
         scrollElement={scrollElement}
         estimateSize={() => 60}
         overscan={5}
-        getItemKey={(block, index) => block.id || `block-${index}`}
+        getItemKey={(block) => block.id || `paragraph-${block.text}`}
         renderItem={(block) => <ArticleBlockView block={block} />}
       />
     </ArticleDocumentShell>
@@ -60,8 +62,8 @@ function VirtualizedArticleDocument({
 function StaticArticleDocument({ blocks }: { blocks: ArticleBlock[] }) {
   return (
     <ArticleDocumentShell>
-      {blocks.map((block, index) => (
-        <ArticleBlockView key={block.id || index} block={block} />
+      {blocks.map((block) => (
+        <ArticleBlockView key={block.id || `paragraph-${block.text}`} block={block} />
       ))}
     </ArticleDocumentShell>
   );

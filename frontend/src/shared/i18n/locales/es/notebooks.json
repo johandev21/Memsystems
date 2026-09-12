@@ -1,0 +1,136 @@
+{
+  "banner": {
+    "add": "Añadir portada",
+    "cancelEdits": "Cancelar cambios",
+    "canvas": "Portada del cuaderno",
+    "change": "Cambiar",
+    "dragToReposition": "Arrastra para reposicionar",
+    "editNotebook": "Editar cuaderno",
+    "noImage": "No hay imagen de portada",
+    "previewAlt": "Vista previa de la portada del cuaderno",
+    "previewRegion": "Vista previa de la portada del cuaderno",
+    "remove": "Eliminar portada",
+    "removeBanner": "Eliminar portada",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "titleAria": "Título del cuaderno",
+    "titlePlaceholder": "Título del cuaderno",
+    "titleRequired": "El título es obligatorio",
+    "untitledNotebook": "Cuaderno sin título",
+    "updated": "Cuaderno actualizado",
+    "updateFailed": "No se pudo actualizar el cuaderno",
+    "upload": "Subir",
+    "uploadHint": "Sube una imagen para personalizar tu cuaderno",
+    "uploadImage": "Subir imagen de portada"
+  },
+  "description": {
+    "addDetailed": "Añade una descripción detallada para tu cuaderno...",
+    "ariaLabel": "Descripción del cuaderno",
+    "label": "Descripción",
+    "less": "Menos",
+    "more": "Más",
+    "placeholder": "Describe para qué sirve este cuaderno…"
+  },
+  "folders": {
+    "create": "Crear",
+    "created": "Carpeta \"{{name}}\" creada",
+    "createFailed": "No se pudo crear la carpeta",
+    "newFolderPlaceholder": "Nombre de la nueva carpeta...",
+    "notebookRoot": "Raíz del cuaderno"
+  },
+  "notebook": {
+    "editTitle": "Editar el título del cuaderno",
+    "renamed": "Cuaderno renombrado",
+    "renameFailed": "No se pudo cambiar el nombre del cuaderno"
+  },
+  "panels": {
+    "addSource": "Añadir fuente",
+    "backToMaterial": "Volver al material",
+    "chat": "Chat",
+    "collapseSources": "Contraer fuentes",
+    "collapseStudio": "Contraer estudio",
+    "expandSources": "Expandir fuentes",
+    "expandStudio": "Expandir estudio",
+    "sections": "Secciones del cuaderno",
+    "sources": "Fuentes",
+    "studio": "Estudio"
+  },
+  "recent": {
+    "allSeen_one": "Has visto {{count}} cuaderno",
+    "allSeen_many": "Has visto los {{count}} cuadernos",
+    "allSeen_other": "Has visto los {{count}} cuadernos",
+    "createFailed": "No se pudo crear el cuaderno",
+    "emptyDescription": "Tus cuadernos aparecerán aquí. Crea uno para empezar a aprender.",
+    "emptyTitle": "Aún no hay cuadernos",
+    "heroSubtitle": "Retoma donde lo dejaste o empieza algo nuevo.",
+    "heroTitle": "Avanza en lo que importa.",
+    "loadFailedDescription": "Algo salió mal al cargar tus cuadernos. Comprueba tu conexión e inténtalo de nuevo.",
+    "loadFailedTitle": "No se pudieron cargar los cuadernos",
+    "loadingMore": "Cargando más…",
+    "loadMoreFailed": "No se pudieron cargar más cuadernos.",
+    "newNotebook": "Nuevo cuaderno",
+    "retry": "Reintentar",
+    "title": "Cuadernos recientes",
+    "updated": "Actualizado {{time}}",
+    "updatedJustNow": "Actualizado hace un momento",
+    "viewAll": "Ver todos"
+  },
+  "resources": {
+    "basedOnBrief": "basado en el resumen",
+    "basedOnSources_one": "basado en {{count}} fuente",
+    "basedOnSources_many": "basado en {{count}} fuentes",
+    "basedOnSources_other": "basado en {{count}} fuentes",
+    "processingSources": "procesando fuentes"
+  },
+  "settings": {
+    "ariaLabel": "Ajustes del cuaderno",
+    "cancel": "Cancelar",
+    "clearChat": "Borrar chat",
+    "delete": "Eliminar cuaderno",
+    "deleteConfirm": "¿Eliminar permanentemente “{{title}}” y todas las fuentes y notas asociadas?",
+    "deleted": "Cuaderno eliminado",
+    "deleteFailed": "No se pudo eliminar el cuaderno",
+    "deleting": "Eliminando…",
+    "description": "Edita o gestiona este cuaderno.",
+    "edit": "Editar cuaderno",
+    "thisNotebook": "este cuaderno",
+    "title": "Cuaderno"
+  },
+  "sources": {
+    "noSources": "Aún no hay fuentes. Añade una fuente primero para generar un material de estudio."
+  },
+  "studio": {
+    "cancelGeneration": "Cancelar generación",
+    "dismiss": "Descartar",
+    "dismissError": "Descartar error",
+    "failedToGenerate": "No se pudo generar {{kind}}",
+    "generating": "Generando {{kind}}...",
+    "generationFailed": "La generación falló",
+    "resources": {
+      "caseStudy": "Caso práctico",
+      "flashcards": "Tarjetas",
+      "mindMap": "Mapa mental",
+      "practiceProblems": "Problemas de práctica",
+      "quiz": "Cuestionario",
+      "roadmap": "Ruta de aprendizaje",
+      "slides": "Diapositivas",
+      "studyGuide": "Guía de estudio"
+    },
+    "tooltipGenerating": "{{label}} (Generando...)"
+  },
+  "upload": {
+    "browse": "Examinar archivos",
+    "browseOrDrop": "Haz clic para examinar o arrastra y suelta una imagen",
+    "description": "Selecciona un archivo de imagen de tu equipo. Después puedes arrastrarlo y ampliarlo directamente en el lienzo de la portada.",
+    "formats": "JPG, PNG, WebP hasta 2MB",
+    "inputAria": "Subir imagen de portada del cuaderno",
+    "title": "Subir imagen de portada",
+    "tooLarge": "La imagen es demasiado grande ({{size}}MB). Máx. 2MB.",
+    "unsupportedFormat": "Formato de imagen no compatible ({{type}}). Usa JPG, PNG o WebP."
+  },
+  "viewer": {
+    "goBack": "Volver",
+    "loadFailed": "No se pudo cargar el material de estudio",
+    "select": "Selecciona un material de estudio para ver su contenido"
+  }
+}

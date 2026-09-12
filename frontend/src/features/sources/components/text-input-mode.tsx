@@ -1,4 +1,5 @@
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ export function TextInputMode({
   isPending,
   busy,
 }: TextInputModeProps) {
+  const { t } = useTranslation("sources");
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (textTitle.trim() && textBody.trim()) onSubmit();
@@ -39,13 +41,13 @@ export function TextInputMode({
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back
+        {t("textMode.back")}
       </button>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="source-text-title">Title</Label>
+        <Label htmlFor="source-text-title">{t("textMode.title")}</Label>
         <Input
           id="source-text-title"
-          placeholder="My Study Notes"
+          placeholder={t("textMode.titlePlaceholder")}
           value={textTitle}
           onChange={(e) => onTextTitleChange(e.target.value)}
           autoFocus
@@ -55,13 +57,14 @@ export function TextInputMode({
       </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="source-text-body">Content</Label>
+          <Label htmlFor="source-text-body">{t("textMode.content")}</Label>
           {textBody.length > 0 && (
             <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
               <span>
-                {textBody.split("\n").length.toLocaleString()}{" "}
-                {textBody.split("\n").length === 1 ? "line" : "lines"} ·{" "}
-                {textBody.length.toLocaleString()} chars
+                {t("stats.linesAndChars", {
+                  count: textBody.split("\n").length,
+                  chars: textBody.length,
+                })}
               </span>
               <button
                 type="button"
@@ -69,14 +72,14 @@ export function TextInputMode({
                 disabled={busy}
                 className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
               >
-                Clear
+                {t("textMode.clear")}
               </button>
             </div>
           )}
         </div>
         <Textarea
           id="source-text-body"
-          placeholder="Paste your copied text here..."
+          placeholder={t("textMode.contentPlaceholder")}
           value={textBody}
           onChange={(e) => onTextBodyChange(e.target.value)}
           rows={5}
@@ -93,10 +96,10 @@ export function TextInputMode({
         {isPending ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Adding text...
+            {t("textMode.adding")}
           </>
         ) : (
-          "Add Text Source"
+          t("textMode.add")
         )}
       </Button>
     </form>

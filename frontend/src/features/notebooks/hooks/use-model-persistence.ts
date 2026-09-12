@@ -3,7 +3,7 @@ import {
   NotebookModelContext,
   getPersistedModel,
   setPersistedModel,
-} from "../context/notebook-model-context";
+} from "../context/notebook-model-state";
 
 export function useModelPersistence(notebookId: string) {
   const context = useContext(NotebookModelContext);

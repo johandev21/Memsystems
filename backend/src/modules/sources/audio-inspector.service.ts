@@ -98,12 +98,18 @@ export class AudioInspectorService {
     filenameOrKey?: string | null,
   ): InspectedAudio {
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('Audio buffer is empty.');
+      throw new BadRequestError('Audio buffer is empty.', {
+        messageKey: 'errors.sources.inspect.audioEmpty',
+      });
     }
 
     if (buffer.length > MAX_AUDIO_BYTES) {
       throw new BadRequestError(
         `Audio file size (${(buffer.length / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size of 500 MB.`,
+        {
+          messageKey: 'errors.sources.inspect.audioTooLarge',
+          params: { sizeMb: (buffer.length / (1024 * 1024)).toFixed(2) },
+        },
       );
     }
 
@@ -112,6 +118,10 @@ export class AudioInspectorService {
       const hint = declaredContentType || filenameOrKey || 'unknown';
       throw new BadRequestError(
         `Unsupported audio format (${hint}). Supported formats are MP3, WAV, M4A, AAC, WebM, and OGG.`,
+        {
+          messageKey: 'errors.sources.inspect.audioUnsupported',
+          params: { hint },
+        },
       );
     }
 
@@ -123,6 +133,10 @@ export class AudioInspectorService {
     ) {
       throw new BadRequestError(
         `Audio duration (${(metadata.durationMs / 1000).toFixed(1)}s) exceeds maximum allowed duration of 4 hours.`,
+        {
+          messageKey: 'errors.sources.inspect.audioTooLong',
+          params: { durationS: (metadata.durationMs / 1000).toFixed(1) },
+        },
       );
     }
 
@@ -222,10 +236,13 @@ export class AudioInspectorService {
       }
     } catch (err) {
       if (err instanceof BadRequestError) {
-        throw err;
+        throw new BadRequestError(err.message, {
+          messageKey: 'errors.sources.inspect.audioCorrupted',
+        });
       }
       throw new BadRequestError(
         `Corrupted or invalid ${mimeType} audio header: ${err instanceof Error ? err.message : String(err)}`,
+        { messageKey: 'errors.sources.inspect.audioCorrupted' },
       );
     }
   }

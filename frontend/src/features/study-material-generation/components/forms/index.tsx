@@ -1,40 +1,14 @@
-import type React from "react";
-import type { StudyMaterialKind } from "@/features/study-material-viewer";
-import type { BaseMaterialFormProps } from "./types";
-import { QuizBriefForm } from "./QuizBriefForm";
-import { FlashcardBriefForm } from "./FlashcardBriefForm";
-import { RoadmapBriefForm } from "./RoadmapBriefForm";
-import { MindMapBriefForm } from "./MindMapBriefForm";
-import { SlidesBriefForm } from "./SlidesBriefForm";
+import { MATERIAL_FORM_MAP } from "./material-form-map";
 import { StandardBriefForm } from "./StandardBriefForm";
-import { StudyGuideBriefForm } from "./StudyGuideBriefForm";
-import { PracticeProblemsBriefForm } from "./PracticeProblemsBriefForm";
-import { CaseStudyBriefForm } from "./CaseStudyBriefForm";
+import type { BaseMaterialFormProps } from "./types";
 
-export type { BaseMaterialFormProps, BriefFormData } from "./types";
-export { QuizBriefForm } from "./QuizBriefForm";
 export { FlashcardBriefForm } from "./FlashcardBriefForm";
-export { RoadmapBriefForm } from "./RoadmapBriefForm";
 export { MindMapBriefForm } from "./MindMapBriefForm";
+export { QuizBriefForm } from "./QuizBriefForm";
+export { RoadmapBriefForm } from "./RoadmapBriefForm";
 export { SlidesBriefForm } from "./SlidesBriefForm";
 export { StandardBriefForm } from "./StandardBriefForm";
-
-/**
- * Declarative Form Registry Map (FSD v2.1 Compliant)
- * Maps study material kinds to their dedicated form components.
- */
-export const MATERIAL_FORM_MAP: Partial<
-  Record<StudyMaterialKind, React.ComponentType<BaseMaterialFormProps>>
-> = {
-  quiz: QuizBriefForm,
-  simple_flashcard: FlashcardBriefForm,
-  roadmap: RoadmapBriefForm,
-  mind_map: MindMapBriefForm,
-  slides: SlidesBriefForm,
-  study_guide: StudyGuideBriefForm,
-  practice_problems: PracticeProblemsBriefForm,
-  case_study: CaseStudyBriefForm,
-};
+export type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 /**
  * BriefForm dispatcher component.

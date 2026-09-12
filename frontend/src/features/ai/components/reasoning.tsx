@@ -1,31 +1,16 @@
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MarkdownRenderer } from "@/components/ui/markdown";
+import { cn } from "@/shared/utils/cn";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { createContext, memo, useCallback, useContext, useMemo } from "react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/shared/utils/cn";
-import { MarkdownRenderer } from "@/components/ui/markdown";
+import { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { ReasoningContext, useReasoning } from "./reasoning-context";
 
+import { useReasoningLifecycle } from "../hooks/use-reasoning-lifecycle";
 import { MarkdownCodeBlock } from "./markdown-code-block";
 import { MarkdownTable } from "./markdown-table";
 import { Shimmer } from "./shimmer";
-import { useReasoningLifecycle } from "../hooks/use-reasoning-lifecycle";
-
-interface ReasoningContextValue {
-  isStreaming: boolean;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  duration: number | undefined;
-}
-
-const ReasoningContext = createContext<ReasoningContextValue | null>(null);
-
-export const useReasoning = () => {
-  const context = useContext(ReasoningContext);
-  if (!context) {
-    throw new Error("Reasoning components must be used within Reasoning");
-  }
-  return context;
-};
 
 export type ReasoningProps = ComponentProps<typeof Collapsible> & {
   isStreaming?: boolean;
@@ -85,24 +70,22 @@ export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger> & 
   getThinkingMessage?: (isStreaming: boolean, duration?: number) => ReactNode;
 };
 
-const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
-  if (isStreaming || duration === 0) {
-    return <Shimmer duration={1}>Thinking...</Shimmer>;
-  }
-  if (duration === undefined) {
-    return <p>Thought for a few seconds</p>;
-  }
-  return <p>Thought for {duration} seconds</p>;
-};
-
 export const ReasoningTrigger = memo(
-  ({
-    className,
-    children,
-    getThinkingMessage = defaultGetThinkingMessage,
-    ...props
-  }: ReasoningTriggerProps) => {
+  ({ className, children, getThinkingMessage, ...props }: ReasoningTriggerProps) => {
+    const { t } = useTranslation("ai");
     const { isStreaming, isOpen, duration } = useReasoning();
+
+    const resolveThinkingMessage =
+      getThinkingMessage ??
+      ((streaming: boolean, thinkingDuration?: number): ReactNode => {
+        if (streaming || thinkingDuration === 0) {
+          return <Shimmer duration={1}>{t("reasoning.thinking")}</Shimmer>;
+        }
+        if (thinkingDuration === undefined) {
+          return <p>{t("reasoning.thoughtBrief")}</p>;
+        }
+        return <p>{t("reasoning.thoughtFor", { count: thinkingDuration })}</p>;
+      });
 
     return (
       <CollapsibleTrigger
@@ -115,7 +98,7 @@ export const ReasoningTrigger = memo(
         {children ?? (
           <>
             <BrainIcon className="size-4" />
-            {getThinkingMessage(isStreaming, duration)}
+            {resolveThinkingMessage(isStreaming, duration)}
             <ChevronDownIcon
               className={cn("size-4 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
             />

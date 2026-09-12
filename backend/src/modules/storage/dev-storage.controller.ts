@@ -27,9 +27,13 @@ export class DevStorageController {
 
     if (!verification.ok) {
       if (verification.reason === 'expired') {
-        throw new ForbiddenError('Link expired');
+        throw new ForbiddenError('Link expired', {
+          messageKey: 'errors.storage.dev.linkExpired',
+        });
       }
-      throw new ForbiddenError('Invalid signature');
+      throw new ForbiddenError('Invalid signature', {
+        messageKey: 'errors.storage.dev.invalidSignature',
+      });
     }
 
     try {
@@ -48,7 +52,9 @@ export class DevStorageController {
 
       res.send(buffer);
     } catch {
-      throw new NotFoundError('File not found');
+      throw new NotFoundError('File not found', {
+        messageKey: 'errors.storage.dev.fileNotFound',
+      });
     }
   }
 }

@@ -1,10 +1,16 @@
+export type DomainErrorParams = Record<string, string | number>;
+
 export type DomainErrorOptions = {
   cause?: Error;
   internalMessage?: string;
+  params?: DomainErrorParams;
+  messageKey?: string;
 };
 
 export class DomainError extends Error {
   public readonly internalMessage?: string;
+  public readonly params: DomainErrorParams;
+  public readonly messageKey?: string;
 
   constructor(
     message: string,
@@ -15,6 +21,8 @@ export class DomainError extends Error {
     super(message, { cause: options?.cause });
     this.name = 'DomainError';
     this.internalMessage = options?.internalMessage;
+    this.params = options?.params ?? {};
+    this.messageKey = options?.messageKey;
   }
 }
 
@@ -26,29 +34,29 @@ export class InternalError extends DomainError {
 }
 
 export class NotFoundError extends DomainError {
-  constructor(resource = 'Resource') {
-    super(`${resource} not found`, 404, 'not_found');
+  constructor(resource = 'Resource', options?: DomainErrorOptions) {
+    super(`${resource} not found`, 404, 'not_found', options);
     this.name = 'NotFoundError';
   }
 }
 
 export class UnauthorizedError extends DomainError {
-  constructor(message = 'Unauthorized') {
-    super(message, 401, 'unauthorized');
+  constructor(message = 'Unauthorized', options?: DomainErrorOptions) {
+    super(message, 401, 'unauthorized', options);
     this.name = 'UnauthorizedError';
   }
 }
 
 export class ForbiddenError extends DomainError {
-  constructor(message = 'Forbidden') {
-    super(message, 403, 'forbidden');
+  constructor(message = 'Forbidden', options?: DomainErrorOptions) {
+    super(message, 403, 'forbidden', options);
     this.name = 'ForbiddenError';
   }
 }
 
 export class BadRequestError extends DomainError {
-  constructor(message = 'Bad request') {
-    super(message, 400, 'bad_request');
+  constructor(message = 'Bad request', options?: DomainErrorOptions) {
+    super(message, 400, 'bad_request', options);
     this.name = 'BadRequestError';
   }
 }

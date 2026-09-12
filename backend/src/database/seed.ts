@@ -25,6 +25,11 @@ const BANNER_CONTENT_TYPES: Record<string, string> = {
   '.webp': 'image/webp',
 };
 
+// Responsive WebP variants generated from the seed JPGs with the same
+// contract as client uploads: banners/<sha>-<width>w.webp, so the frontend
+// srcset serves right-sized files instead of the full-size original.
+const BANNER_VARIANT_WIDTHS = [480, 960, 1920] as const;
+
 function resolveSeedDir(): string {
   const candidates = [
     path.resolve(process.cwd(), 'seed'),
@@ -68,7 +73,11 @@ async function main() {
 
     // Idempotency: a notebook with the same title is never inserted twice.
     const [existing] = await db
-      .select({ id: notebooks.id, banner: notebooks.banner })
+      .select({
+        id: notebooks.id,
+        banner: notebooks.banner,
+        bannerVariants: notebooks.bannerVariants,
+      })
       .from(notebooks)
       .where(eq(notebooks.title, title))
       .limit(1);
@@ -76,6 +85,8 @@ async function main() {
     // Store the banner bytes. Same bytes always produce the same storage
     // key, so re-running the seed safely overwrites identical content.
     let bannerKey: string | null = null;
+    let variantKeys: { w480: string; w960: string; w1920: string } | null =
+      null;
     if (entry.banner) {
       const bannerPath = path.join(seedDir, 'banners', entry.banner);
       if (!fs.existsSync(bannerPath)) {
@@ -92,6 +103,27 @@ async function main() {
           body: bytes,
           contentType: BANNER_CONTENT_TYPES[ext] ?? 'application/octet-stream',
         });
+
+        const baseName = entry.banner.replace(/\.[^.]+$/, '');
+        const stored: Record<string, string> = {};
+        for (const width of BANNER_VARIANT_WIDTHS) {
+          const variantPath = path.join(
+            seedDir,
+            'banners',
+            `${baseName}-${width}w.webp`,
+          );
+          if (!fs.existsSync(variantPath)) continue;
+          const variantKey = `banners/${sha256}-${width}w.webp`;
+          await storage.putObject({
+            key: variantKey,
+            body: fs.readFileSync(variantPath),
+            contentType: 'image/webp',
+          });
+          stored[`w${width}`] = variantKey;
+        }
+        if (Object.keys(stored).length > 0) {
+          variantKeys = stored as { w480: string; w960: string; w1920: string };
+        }
       }
     }
 
@@ -101,14 +133,15 @@ async function main() {
         description: entry.description.trim().slice(0, 500),
         icon: entry.icon.trim().slice(0, 50) || 'notebook',
         banner: bannerKey,
+        bannerVariants: variantKeys,
       });
       created++;
       console.log(`Seeded notebook "${title}"`);
     } else {
-      if (bannerKey && !existing.banner) {
+      if (bannerKey && (!existing.banner || !existing.bannerVariants)) {
         await db
           .update(notebooks)
-          .set({ banner: bannerKey })
+          .set({ banner: bannerKey, bannerVariants: variantKeys })
           .where(eq(notebooks.id, existing.id));
         bannersBackfilled++;
       }

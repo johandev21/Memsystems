@@ -1,9 +1,11 @@
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderPicker, SourceMultiSelect } from "@/features/notebooks";
-import { KIND_LABELS } from "@/features/study-material-viewer";
+import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
+import { SourceMultiSelect } from "@/features/notebooks/components/studio/source-multi-select";
+import { kindLabelKey } from "../../kind-label";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 export function StandardBriefForm({
@@ -12,37 +14,40 @@ export function StandardBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const update = (patch: Partial<BriefFormData>) => {
     onChange(patch);
   };
 
-  const label = KIND_LABELS[kind] || kind;
+  const label = t(kindLabelKey(kind));
   const canSubmit = !disabled && (value.sourceIds.length > 0 || value.brief.trim().length > 0);
 
   return (
     <div className="min-w-0 space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="brief" className="text-sm font-medium">
-          Brief instructions for {label} (optional)
+          {t("standard.briefLabel", { kind: label })}
         </Label>
         <Textarea
           id="brief"
           ref={textareaRef}
           value={value.brief}
           onChange={(e) => update({ brief: e.target.value })}
-          placeholder={`Describe what topics or focus areas to include in this ${label}...`}
+          placeholder={t("standard.briefPlaceholder", { kind: label })}
           className="min-h-[90px] max-h-[200px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
           disabled={disabled}
         />
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-text-tertiary">Knowledge Sources</Label>
+        <Label className="text-xs font-medium text-text-tertiary">
+          {t("fields.knowledgeSources")}
+        </Label>
         <SourceMultiSelect
           notebookId={notebookId}
           value={value.sourceIds}
@@ -52,7 +57,9 @@ export function StandardBriefForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+        <Label className="text-xs font-medium text-text-tertiary">
+          {t("fields.destinationFolder")}
+        </Label>
         <FolderPicker
           notebookId={notebookId}
           value={value.folderId}
@@ -67,7 +74,7 @@ export function StandardBriefForm({
         disabled={!canSubmit}
         onClick={onSubmit}
       >
-        {submitLabel}
+        {submitLabel ?? t("actions.generate")}
       </Button>
     </div>
   );

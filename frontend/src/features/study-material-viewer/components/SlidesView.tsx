@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
-import { formatDisplayTitle } from "@/shared/utils/format-title";
+import { formatDisplayTitle } from "../utils/format-title";
 import { downloadSlidesPptx } from "../api/study-materials";
 import type { SlideElementType, SlidesContentType, SlidesSlideType } from "../shapes/slides";
 
@@ -79,6 +80,7 @@ function slideBodyLines(slide: SlidesSlideType): string[] {
 }
 
 export function SlidesView({ materialId, materialTitle, content }: SlidesViewProps) {
+  const { t } = useTranslation("viewer");
   const slides = useMemo(() => content.slides ?? [], [content.slides]);
   const previewById = useMemo(() => {
     const map = new Map<string, string>();
@@ -109,20 +111,24 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") goTo(clampedIndex + 1);
-      if (event.key === "ArrowLeft") goTo(clampedIndex - 1);
+      if (slides.length === 0) return;
+      if (event.key === "ArrowRight") {
+        setActiveIndex((prev) => (prev + 1) % slides.length);
+      } else if (event.key === "ArrowLeft") {
+        setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [clampedIndex, goTo]);
+  }, [slides.length]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
       await downloadSlidesPptx(materialId, materialTitle || "slides");
-      toast.success("PowerPoint exported");
+      toast.success(t("slides.exportedToast"));
     } catch {
-      toast.error("Export failed");
+      toast.error(t("slides.exportFailedToast"));
     } finally {
       setIsDownloading(false);
     }
@@ -133,13 +139,28 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
     const role = designRole(activeSlide);
     const lines = slideBodyLines(activeSlide);
     const bullets = (activeSlide.bullets ?? []).map((b, i) => `${i + 1}. ${b}`).join("\n");
+    const keyPoints = bullets ? `${t("slides.prompt.keyPoints", { points: bullets })}\n` : "";
+    const body = activeSlide.body ? `${t("slides.prompt.body", { body: activeSlide.body })}\n` : "";
+    const contentBlock =
+      lines.length > 0
+        ? `${t("slides.prompt.content", { lines: lines.slice(0, 12).join("\n") })}\n`
+        : "";
     dispatchChatPrompt(
-      `I'm studying slide ${clampedIndex + 1} ("${activeSlide.title}", role: ${role}) from my deck "${formatDisplayTitle(materialTitle)}".\n\nSubtitle: ${activeSlide.subtitle || "N/A"}\n${bullets ? `Key points:\n${bullets}\n` : ""}${activeSlide.body ? `Body: ${activeSlide.body}\n` : ""}${lines.length > 0 ? `Content:\n${lines.slice(0, 12).join("\n")}\n` : ""}\nPlease act as my tutor for this slide: summarize it clearly, then ask me one check-in question.`,
+      t("slides.prompt.study", {
+        number: clampedIndex + 1,
+        title: activeSlide.title,
+        role,
+        deck: formatDisplayTitle(materialTitle),
+        subtitle: activeSlide.subtitle || t("slides.prompt.notAvailable"),
+        keyPoints,
+        body,
+        content: contentBlock,
+      }),
     );
   };
 
   if (slides.length === 0) {
-    return <div className="p-8 text-center text-text-tertiary">No slides in this deck yet.</div>;
+    return <div className="p-8 text-center text-text-tertiary">{t("slides.empty")}</div>;
   }
 
   const activePreview = activeSlide ? previewById.get(activeSlide.id) : undefined;
@@ -148,10 +169,10 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
     <div className="flex w-full max-w-4xl mx-auto flex-col gap-4 animate-in fade-in duration-300 pb-20 select-none px-3 sm:px-4">
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-medium text-text-tertiary">
-          Slide {clampedIndex + 1} / {slides.length}
+          {t("slides.position", { current: clampedIndex + 1, total: slides.length })}
           {designPreset && (
             <span
-              aria-label={`Deck design: ${designPreset}`}
+              aria-label={t("slides.deckDesign", { preset: designPreset })}
               className="rounded-full border border-surface-border-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary"
             >
               {designPreset}
@@ -176,23 +197,25 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
           ) : (
             <Download className="size-3.5" />
           )}
-          Export .pptx
+          {t("slides.exportPptx")}
         </Button>
       </div>
-
       <div className="relative overflow-hidden rounded-2xl border border-surface-border-subtle bg-black">
         {activePreview ? (
           <img
             key={activeSlide.id}
             src={svgToDataUrl(activePreview)}
-            alt={`Preview of slide ${clampedIndex + 1}: ${activeSlide.title}`}
+            alt={t("slides.previewAlt", { number: clampedIndex + 1, title: activeSlide.title })}
             className="block h-auto w-full aspect-video object-contain bg-black"
             draggable={false}
           />
         ) : (
           <div
             role="img"
-            aria-label={`Slide ${clampedIndex + 1} unavailable: ${activeSlide.title}`}
+            aria-label={t("slides.unavailableAlt", {
+              number: clampedIndex + 1,
+              title: activeSlide.title,
+            })}
             className="flex aspect-video w-full flex-col justify-center gap-2 p-8"
           >
             <p className="text-lg font-bold text-text-primary">
@@ -208,7 +231,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
                   {line}
                 </p>
               ))}
-            <p className="text-xs text-text-faint">Preview unavailable for this slide.</p>
+            <p className="text-xs text-text-faint">{t("slides.previewUnavailable")}</p>
           </div>
         )}
         <div className="absolute inset-y-0 left-0 flex items-center pl-2">
@@ -217,7 +240,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
             variant="ghost"
             size="icon"
             onClick={() => goTo(clampedIndex - 1)}
-            aria-label="Previous slide"
+            aria-label={t("slides.previous")}
             className="h-9 w-9 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer"
           >
             <ChevronLeft className="size-5" />
@@ -229,7 +252,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
             variant="ghost"
             size="icon"
             onClick={() => goTo(clampedIndex + 1)}
-            aria-label="Next slide"
+            aria-label={t("slides.next")}
             className="h-9 w-9 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer"
           >
             <ChevronRight className="size-5" />
@@ -246,7 +269,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
               key={slide.id}
               type="button"
               onClick={() => goTo(index)}
-              aria-label={`Go to slide ${index + 1}`}
+              aria-label={t("slides.goToSlide", { number: index + 1 })}
               aria-current={selected}
               className={cn(
                 "shrink-0 w-28 overflow-hidden rounded-xl border transition-all cursor-pointer",
@@ -277,7 +300,9 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
 
       {(activeSlide?.notes || activeSlide?.speakerNotes) && (
         <p className="text-xs leading-relaxed text-text-faint">
-          Speaker notes: {activeSlide.speakerNotes ?? activeSlide.notes}
+          {t("slides.speakerNotes", {
+            notes: activeSlide.speakerNotes ?? activeSlide.notes ?? "",
+          })}
         </p>
       )}
 
@@ -289,7 +314,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
           onClick={handleStudyInChat}
           className="h-8 rounded-xl text-xs font-medium cursor-pointer"
         >
-          Study this slide in chat
+          {t("slides.studyInChat")}
         </Button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+export * from "./components/palette-context";
 export * from "./components/palette-provider";
 export * from "./components/scheme-selector";
 export * from "./components/theme-grid";

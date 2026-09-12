@@ -29,7 +29,7 @@ function messageOf(error: unknown): string {
 }
 
 function envelope(error: string, code: string, model: string): string {
-  return JSON.stringify({ error, code, model });
+  return JSON.stringify({ error, code, model, params: { model } });
 }
 
 /**

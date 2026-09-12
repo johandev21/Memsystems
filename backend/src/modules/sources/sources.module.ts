@@ -1,5 +1,6 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { AiModule } from '../ai/ai.module';
+import { CrawlerModule } from '../crawler/crawler.module';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { NotebooksModule } from '../notebooks/notebooks.module';
 import { DocumentNormalizerService } from './document-normalizer.service';
@@ -39,7 +40,7 @@ import { WebSearchJobsService } from './web-search-jobs.service';
 import { WebSearchService } from './web-search.service';
 
 @Module({
-  imports: [NotebooksModule, AiModule],
+  imports: [NotebooksModule, AiModule, CrawlerModule],
   controllers: [SourcesController, SourceUploadsController],
   providers: [
     {

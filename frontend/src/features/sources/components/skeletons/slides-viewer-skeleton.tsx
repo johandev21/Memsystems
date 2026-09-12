@@ -1,7 +1,9 @@
 import { Presentation } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function SlidesViewerSkeleton() {
+  const { t } = useTranslation("sources");
   return (
     <div
       data-testid="slides-viewer-skeleton"
@@ -14,14 +16,14 @@ export function SlidesViewerSkeleton() {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
               <Presentation className="size-3" />
-              <span>Slide 1</span>
+              <span>{t("skeletons.slideLabel", { number: 1 })}</span>
             </div>
             {[2, 3, 4].map((num) => (
               <div
                 key={num}
                 className="h-7 px-2.5 rounded-md border border-border/60 bg-card text-xs flex items-center text-muted-foreground/60"
               >
-                Slide {num}
+                {t("skeletons.slideLabel", { number: num })}
               </div>
             ))}
           </div>

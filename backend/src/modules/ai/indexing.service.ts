@@ -108,11 +108,15 @@ export class IndexingService {
     }
 
     const contents = chunks.map((c) => c.content);
-    const embeddings = await this.embeddingService.generateEmbeddings(contents);
+    const embeddings = await this.embeddingService.embedDocuments(contents);
 
     if (embeddings.length !== chunks.length) {
       throw new InternalError(
         `Embedding count mismatch: expected ${chunks.length}, received ${embeddings.length}`,
+        {
+          messageKey: 'errors.ai.indexing.embeddingCountMismatch',
+          params: { expected: chunks.length, received: embeddings.length },
+        },
       );
     }
 

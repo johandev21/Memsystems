@@ -1,4 +1,5 @@
-﻿import type { StudyMaterialKind } from "../types";
+﻿import i18n from "@/shared/i18n";
+import type { StudyMaterialKind } from "../types";
 
 export const KIND_LABELS: Record<StudyMaterialKind, string> = {
   quiz: "Quiz",
@@ -23,9 +24,47 @@ export const KIND_PLURAL_LABELS: Record<StudyMaterialKind, string> = {
 };
 
 export function getKindLabel(kind: StudyMaterialKind): string {
-  return KIND_LABELS[kind] ?? kind;
+  switch (kind) {
+    case "quiz":
+      return i18n.t("kinds.quiz", { ns: "viewer" });
+    case "simple_flashcard":
+      return i18n.t("kinds.simple_flashcard", { ns: "viewer" });
+    case "roadmap":
+      return i18n.t("kinds.roadmap", { ns: "viewer" });
+    case "mind_map":
+      return i18n.t("kinds.mind_map", { ns: "viewer" });
+    case "slides":
+      return i18n.t("kinds.slides", { ns: "viewer" });
+    case "study_guide":
+      return i18n.t("kinds.study_guide", { ns: "viewer" });
+    case "practice_problems":
+      return i18n.t("kinds.practice_problems", { ns: "viewer" });
+    case "case_study":
+      return i18n.t("kinds.case_study", { ns: "viewer" });
+    default:
+      return KIND_LABELS[kind] ?? kind;
+  }
 }
 
 export function getKindPluralLabel(kind: StudyMaterialKind): string {
-  return KIND_PLURAL_LABELS[kind] ?? kind;
+  switch (kind) {
+    case "quiz":
+      return i18n.t("kindsPlural.quiz", { ns: "viewer" });
+    case "simple_flashcard":
+      return i18n.t("kindsPlural.simple_flashcard", { ns: "viewer" });
+    case "roadmap":
+      return i18n.t("kindsPlural.roadmap", { ns: "viewer" });
+    case "mind_map":
+      return i18n.t("kindsPlural.mind_map", { ns: "viewer" });
+    case "slides":
+      return i18n.t("kindsPlural.slides", { ns: "viewer" });
+    case "study_guide":
+      return i18n.t("kindsPlural.study_guide", { ns: "viewer" });
+    case "practice_problems":
+      return i18n.t("kindsPlural.practice_problems", { ns: "viewer" });
+    case "case_study":
+      return i18n.t("kindsPlural.case_study", { ns: "viewer" });
+    default:
+      return KIND_PLURAL_LABELS[kind] ?? kind;
+  }
 }

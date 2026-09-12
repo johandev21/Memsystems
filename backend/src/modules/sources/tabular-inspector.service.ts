@@ -64,13 +64,19 @@ export class TabularInspectorService {
     contentType?: string,
   ): InspectedTabularFile {
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('Tabular dataset file is empty.');
+      throw new BadRequestError('Tabular dataset file is empty.', {
+        messageKey: 'errors.sources.inspect.tabularEmpty',
+      });
     }
 
     if (buffer.length > MAX_TABULAR_BYTES) {
       const sizeMb = (buffer.length / (1024 * 1024)).toFixed(1);
       throw new BadRequestError(
         `Tabular file exceeds maximum limit of 100 MB (received ${sizeMb} MB).`,
+        {
+          messageKey: 'errors.sources.inspect.tabularTooLarge',
+          params: { sizeMb },
+        },
       );
     }
 
@@ -91,6 +97,7 @@ export class TabularInspectorService {
       ) {
         throw new BadRequestError(
           'Corrupt XLSX file: missing valid OpenXML ZIP header signature.',
+          { messageKey: 'errors.sources.inspect.tabularCorrupted' },
         );
       }
     } else if (ext === 'xls' || ext === 'ods') {

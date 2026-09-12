@@ -1,6 +1,10 @@
-import { NotebookHeader, NotebookWorkspaceContainer } from "@/features/notebooks";
+import { useParams } from "@tanstack/react-router";
+import { NotebookHeader } from "@/features/notebooks/components/notebook-header";
+import { NotebookWorkspaceContainer } from "@/features/notebooks/components/notebook-workspace/notebook-workspace-container";
 
-export function NotebookPage({ notebookId }: { notebookId: string }) {
+export function NotebookPage({ notebookId: propNotebookId }: { notebookId?: string } = {}) {
+  const params = useParams({ strict: false });
+  const notebookId = propNotebookId ?? params.notebookId ?? "";
   return (
     <div className="flex h-[100dvh] flex-col">
       <NotebookHeader id={notebookId} />

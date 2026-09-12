@@ -6,15 +6,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/features/ai";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useModelPersistence } from "@/features/notebooks";
+import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import { useGenerationStore } from "../hooks/use-generation-store";
-import { KIND_LABELS, type StudyMaterialKind } from "@/features/study-material-viewer";
+import type { StudyMaterialKind } from "@/features/study-material-viewer/types";
+import { useTranslation } from "react-i18next";
+import { kindLabelKey } from "../kind-label";
 import type {
   RoadmapOptions,
   MindMapOptions,
   SlidesOptions,
   PracticeProblemsOptions,
 } from "./forms/types";
+import { DEFAULT_ROADMAP_OPTIONS } from "./forms/roadmap-options";
+import { DEFAULT_SLIDES_OPTIONS } from "./forms/slides-theme-options";
 import { BriefForm } from "./BriefForm";
 import { cn } from "@/shared/utils/cn";
 
@@ -34,11 +38,12 @@ export function GenerateBriefDialog({
   onComplete,
 }: GenerateBriefDialogProps) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation("generation");
   const startBackgroundGeneration = useGenerationStore((s) => s.startBackgroundGeneration);
   const setCollapsed = useGenerationStore((s) => s.setCollapsed);
   const { data: connection } = useConnectionStatus();
 
-  const { value, updateBriefForm, resetAfterSubmit } = useGenerationBriefState();
+  const { value, updateBriefForm, resetAfterSubmit } = useGenerationBriefState(kind);
   const {
     brief,
     sourceIds,
@@ -73,9 +78,11 @@ export function GenerateBriefDialog({
         questionCount,
         difficulty,
         cardStyle,
-        roadmapOptions,
+        roadmapOptions:
+          kind === "roadmap" ? (roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS) : roadmapOptions,
         mindMapOptions,
-        slidesOptions,
+        slidesOptions:
+          kind === "slides" ? (slidesOptions ?? DEFAULT_SLIDES_OPTIONS) : slidesOptions,
         studyGuideOptions,
         practiceProblemsOptions,
         caseStudyOptions,
@@ -91,7 +98,7 @@ export function GenerateBriefDialog({
 
   if (kind === null) return null;
 
-  const label = KIND_LABELS[kind] || kind;
+  const label = t(kindLabelKey(kind));
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -114,7 +121,7 @@ export function GenerateBriefDialog({
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-text-primary">
-            Generate {label}
+            {t("dialog.title", { kind: label })}
           </DialogTitle>
         </DialogHeader>
         {isConnectionUsable(connection) ? (
@@ -124,18 +131,31 @@ export function GenerateBriefDialog({
             value={value}
             onChange={updateBriefForm}
             onSubmit={handleSubmit}
-            submitLabel="Generate"
+            submitLabel={t("actions.generate")}
             disabled={false}
           />
         ) : (
-          <GatewayKeyPrompt description="An AI Gateway key is required to generate study materials." />
+          <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function useGenerationBriefState() {
+function getInitialBriefState(kind?: StudyMaterialKind | null) {
+  return {
+    brief: "",
+    sourceIds: [] as string[],
+    folderId: null as string | null,
+    questionCount: 10,
+    difficulty: "medium" as const,
+    roadmapOptions: kind === "roadmap" ? { ...DEFAULT_ROADMAP_OPTIONS } : undefined,
+    slidesOptions: kind === "slides" ? { ...DEFAULT_SLIDES_OPTIONS } : undefined,
+  };
+}
+
+function useGenerationBriefState(kind?: StudyMaterialKind | null) {
+  const [prevKind, setPrevKind] = useState(kind);
   const [value, setValue] = useState<{
     brief: string;
     sourceIds: string[];
@@ -149,27 +169,17 @@ function useGenerationBriefState() {
     studyGuideOptions?: StudyGuideGenerationOptions;
     practiceProblemsOptions?: PracticeProblemsOptions;
     caseStudyOptions?: CaseStudyGenerationOptions;
-  }>({
-    brief: "",
-    sourceIds: [],
-    folderId: null,
-    questionCount: 10,
-    difficulty: "medium",
-  });
+  }>(() => getInitialBriefState(kind));
+
+  if (prevKind !== kind) {
+    setPrevKind(kind);
+    setValue(getInitialBriefState(kind));
+  }
 
   const updateBriefForm = (next: Partial<typeof value>) =>
     setValue((current) => ({ ...current, ...next }));
-  const resetAfterSubmit = () =>
-    setValue((current) => ({
-      ...current,
-      brief: "",
-      roadmapOptions: undefined,
-      mindMapOptions: undefined,
-      slidesOptions: undefined,
-      studyGuideOptions: undefined,
-      practiceProblemsOptions: undefined,
-      caseStudyOptions: undefined,
-    }));
+  const resetAfterSubmit = () => setValue(getInitialBriefState(kind));
 
   return { value, updateBriefForm, resetAfterSubmit };
 }
+

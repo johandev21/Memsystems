@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { type Source, sourcesQueryOptions } from "@/features/sources";
+import { type Source, sourcesQueryOptions } from "@/features/sources/api/sources";
 import { cn } from "@/shared/utils/cn";
 
 export interface SourceMultiSelectProps {
@@ -18,6 +19,7 @@ export function SourceMultiSelect({
   onChange,
   className,
 }: SourceMultiSelectProps) {
+  const { t } = useTranslation("notebooks");
   const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
   const valueSet = useMemo(() => new Set(value), [value]);
 
@@ -38,7 +40,7 @@ export function SourceMultiSelect({
           className,
         )}
       >
-        No sources yet. Add a source first to generate a study material.
+        {t("sources.noSources")}
       </div>
     );
   }

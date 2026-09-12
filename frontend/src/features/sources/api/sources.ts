@@ -1,4 +1,5 @@
 import { fetchApi, apiDelete, createQueryOptions } from "@/shared/api";
+import i18n from "@/shared/i18n";
 import type { SourceKind, Source, SourceWithContent } from "../types";
 
 export type { SourceKind, Source, SourceWithContent };
@@ -42,7 +43,10 @@ async function postSource<TInput>(
     signal,
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error ?? `Failed to add source (${response.status})`);
+  if (!response.ok)
+    throw new Error(
+      data.error ?? i18n.t("api.addSourceFailed", { ns: "sources", status: response.status }),
+    );
   return data as Source;
 }
 
@@ -71,7 +75,10 @@ export async function createFileSource(
     error?: string;
   };
   if (!targetResponse.ok || !targetData.uploadId || !targetData.uploadUrl) {
-    throw new Error(targetData.error ?? `Failed to prepare upload (${targetResponse.status})`);
+    throw new Error(
+      targetData.error ??
+        i18n.t("api.prepareUploadFailed", { ns: "sources", status: targetResponse.status }),
+    );
   }
 
   const uploadResponse = await fetchApi(targetData.uploadUrl, {
@@ -85,7 +92,10 @@ export async function createFileSource(
   });
   if (!uploadResponse.ok) {
     const data = await uploadResponse.json().catch(() => ({}));
-    throw new Error(data.error ?? `Failed to upload file (${uploadResponse.status})`);
+    throw new Error(
+      data.error ??
+        i18n.t("api.uploadFileFailed", { ns: "sources", status: uploadResponse.status }),
+    );
   }
 
   const finalizeResponse = await fetchApi(
@@ -99,7 +109,10 @@ export async function createFileSource(
   );
   const data = await finalizeResponse.json().catch(() => ({}));
   if (!finalizeResponse.ok) {
-    throw new Error(data.error ?? `Failed to finalize upload (${finalizeResponse.status})`);
+    throw new Error(
+      data.error ??
+        i18n.t("api.finalizeUploadFailed", { ns: "sources", status: finalizeResponse.status }),
+    );
   }
   return data as Source;
 }
@@ -117,13 +130,18 @@ export async function retrySource(sourceId: string): Promise<unknown> {
     const legacyResponse = await fetchApi(`/api/sources/${sourceId}/reindex`, { method: "POST" });
     const legacyData = await legacyResponse.json().catch(() => ({}));
     if (!legacyResponse.ok) {
-      throw new Error(legacyData.error ?? `Failed to retry source (${legacyResponse.status})`);
+      throw new Error(
+        legacyData.error ??
+          i18n.t("api.retrySourceFailed", { ns: "sources", status: legacyResponse.status }),
+      );
     }
     return legacyData;
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error ?? `Failed to retry source (${response.status})`);
+    throw new Error(
+      data.error ?? i18n.t("api.retrySourceFailed", { ns: "sources", status: response.status }),
+    );
   }
   return data;
 }
@@ -133,7 +151,9 @@ export async function cancelSource(sourceId: string): Promise<void> {
   const response = await fetchApi(`/api/sources/${sourceId}/cancel`, { method: "POST" });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.error ?? `Failed to cancel source (${response.status})`);
+    throw new Error(
+      data.error ?? i18n.t("api.cancelSourceFailed", { ns: "sources", status: response.status }),
+    );
   }
 }
 

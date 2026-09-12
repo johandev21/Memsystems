@@ -57,7 +57,9 @@ export class EpubInspectorService {
     }
 
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('EPUB buffer is empty.');
+      throw new BadRequestError('EPUB buffer is empty.', {
+        messageKey: 'errors.sources.inspect.epubEmpty',
+      });
     }
 
     const effectiveSize = sizeBytes ?? buffer.length;
@@ -65,6 +67,10 @@ export class EpubInspectorService {
       const displaySize = Math.max(effectiveSize, buffer.length);
       throw new BadRequestError(
         `EPUB file size (${(displaySize / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size of 200 MB.`,
+        {
+          messageKey: 'errors.sources.inspect.epubTooLarge',
+          params: { sizeMb: (displaySize / (1024 * 1024)).toFixed(2) },
+        },
       );
     }
 
@@ -78,6 +84,10 @@ export class EpubInspectorService {
       const hint = effectiveFilename || declaredContentType || 'unknown';
       throw new BadRequestError(
         `Unsupported EPUB format (${hint}). Expected EPUB ZIP container with PK\\x03\\x04 header.`,
+        {
+          messageKey: 'errors.sources.inspect.epubUnsupported',
+          params: { hint },
+        },
       );
     }
 
@@ -184,12 +194,22 @@ export class EpubInspectorService {
       if (chapterCount !== undefined && chapterCount > MAX_EPUB_CHAPTERS) {
         throw new BadRequestError(
           `EPUB chapter count (${chapterCount}) exceeds maximum allowed limit of ${MAX_EPUB_CHAPTERS}.`,
+          {
+            messageKey: 'errors.sources.inspect.epubTooManyChapters',
+            params: { count: chapterCount, max: MAX_EPUB_CHAPTERS },
+          },
         );
       }
     } catch (err) {
-      if (err instanceof BadRequestError) throw err;
+      if (err instanceof BadRequestError) {
+        if (err.messageKey) throw err;
+        throw new BadRequestError(err.message, {
+          messageKey: 'errors.sources.inspect.epubInvalid',
+        });
+      }
       throw new BadRequestError(
         `Corrupted or invalid EPUB file: ${err instanceof Error ? err.message : String(err)}`,
+        { messageKey: 'errors.sources.inspect.epubInvalid' },
       );
     }
 

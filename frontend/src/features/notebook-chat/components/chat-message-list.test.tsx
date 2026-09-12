@@ -1,13 +1,21 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import i18n from "@/shared/i18n/i18n";
 import {
   MessageScroller,
   MessageScrollerContent,
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { ChatMessageList } from "./chat-message-list";
+import { ChatMessageList, type ChatMessageListProps } from "./chat-message-list";
+
+// The list suspends on `useTranslation("chat")` until that namespace is
+// loaded, and error copy is read from the `ai` namespace; preloading keeps
+// the first render from suspending and the classifier copy resolvable.
+beforeAll(async () => {
+  await i18n.loadNamespaces(["chat", "ai"]);
+});
 
 function userMessage(id: string, text: string): UIMessage {
   return {
@@ -25,58 +33,49 @@ function assistantMessage(id: string, text: string): UIMessage {
   };
 }
 
-function renderChatMessageList(
-  messages: UIMessage[],
-  showPendingIndicator = false,
-  pendingLabel?: string,
-) {
-  return render(
-    <MessageScrollerProvider defaultScrollPosition="last-anchor">
+type RenderOptions = Partial<
+  Pick<ChatMessageListProps, "showPendingIndicator" | "pendingLabel" | "anchorMessageId" | "error">
+>;
+
+function buildChatTree(messages: UIMessage[], options: RenderOptions = {}) {
+  return (
+    <MessageScrollerProvider defaultScrollPosition="start">
       <MessageScroller>
         <MessageScrollerViewport>
           <MessageScrollerContent>
             <ChatMessageList
               messages={messages}
               citedSourcesMap={new Map()}
-              showPendingIndicator={showPendingIndicator}
-              pendingLabel={pendingLabel}
+              showPendingIndicator={options.showPendingIndicator ?? false}
+              pendingLabel={options.pendingLabel}
+              anchorMessageId={options.anchorMessageId}
+              error={options.error}
               onCopy={vi.fn()}
               onRegenerate={vi.fn()}
             />
           </MessageScrollerContent>
         </MessageScrollerViewport>
       </MessageScroller>
-    </MessageScrollerProvider>,
+    </MessageScrollerProvider>
   );
 }
 
-describe("ChatMessageList scroll anchoring", () => {
-  it("offers general recovery guidance for capability errors", () => {
-    render(
-      <MessageScrollerProvider defaultScrollPosition="last-anchor">
-        <MessageScroller>
-          <MessageScrollerViewport>
-            <MessageScrollerContent>
-              <ChatMessageList
-                messages={[userMessage("msg-user-1", "Search this")]}
-                citedSourcesMap={new Map()}
-                showPendingIndicator={false}
-                error={new Error("tool_choice did not match any supported type")}
-                onCopy={vi.fn()}
-                onRegenerate={vi.fn()}
-              />
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-        </MessageScroller>
-      </MessageScrollerProvider>,
-    );
+function renderChatMessageList(messages: UIMessage[], options: RenderOptions = {}) {
+  return render(buildChatTree(messages, options));
+}
 
-    expect(screen.getByText("Web search isn't supported")).toBeTruthy();
+describe("ChatMessageList scroll anchoring", () => {
+  it("offers general recovery guidance for capability errors", async () => {
+    renderChatMessageList([userMessage("msg-user-1", "Search this")], {
+      error: new Error("tool_choice did not match any supported type"),
+    });
+
+    expect(await screen.findByText("Web search isn't supported")).toBeTruthy();
     expect(screen.getByText(/a model that supports web search/)).toBeTruthy();
     expect(screen.queryByText(/GPT-4o Mini/)).toBeNull();
   });
 
-  it("anchors only the latest user message in a 4-turn conversation, ensuring earlier turns are not anchors", () => {
+  it("anchors the identified session message and not earlier turns", () => {
     const messages: UIMessage[] = [
       userMessage("msg-user-1", "Turn 1 question"),
       assistantMessage("msg-asst-1", "Turn 1 answer"),
@@ -88,43 +87,52 @@ describe("ChatMessageList scroll anchoring", () => {
       assistantMessage("msg-asst-4", "Turn 4 answer"),
     ];
 
-    const { container } = renderChatMessageList(messages);
+    const { container } = renderChatMessageList(messages, { anchorMessageId: "msg-user-4" });
 
-    const user1 = container.querySelector('[data-message-id="msg-user-1"]');
-    const asst1 = container.querySelector('[data-message-id="msg-asst-1"]');
-    const user2 = container.querySelector('[data-message-id="msg-user-2"]');
-    const asst2 = container.querySelector('[data-message-id="msg-asst-2"]');
-    const user3 = container.querySelector('[data-message-id="msg-user-3"]');
-    const asst3 = container.querySelector('[data-message-id="msg-asst-3"]');
-    const user4 = container.querySelector('[data-message-id="msg-user-4"]');
-    const asst4 = container.querySelector('[data-message-id="msg-asst-4"]');
+    for (const id of ["msg-user-1", "msg-asst-1", "msg-user-2", "msg-asst-2", "msg-user-3", "msg-asst-3"]) {
+      expect(container.querySelector(`[data-message-id="${id}"]`)?.getAttribute("data-scroll-anchor")).toBe("false");
+    }
 
-    // All previous turns must NOT be anchors so the scroller does NOT scroll to them
-    expect(user1?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(asst1?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(user2?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(asst2?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(user3?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(asst3?.getAttribute("data-scroll-anchor")).toBe("false");
-
-    // Only the true latest user anchor (Turn 4) must be an anchor
-    expect(user4?.getAttribute("data-scroll-anchor")).toBe("true");
-    expect(asst4?.getAttribute("data-scroll-anchor")).toBe("false");
+    expect(
+      container.querySelector('[data-message-id="msg-user-4"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("true");
+    expect(
+      container.querySelector('[data-message-id="msg-asst-4"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("false");
   });
 
-  it("anchors the sole user message in a single-turn conversation", () => {
+  it("does not anchor hydrated history when no session message exists", () => {
+    const history: UIMessage[] = [
+      userMessage("msg-user-1", "Old question 1"),
+      assistantMessage("msg-asst-1", "Old answer 1"),
+      userMessage("msg-user-2", "Latest old question"),
+      assistantMessage("msg-asst-2", "Latest old answer"),
+    ];
+
+    const { container } = renderChatMessageList(history, { anchorMessageId: null });
+
+    for (const id of ["msg-user-1", "msg-user-2", "msg-asst-2"]) {
+      expect(container.querySelector(`[data-message-id="${id}"]`)?.getAttribute("data-scroll-anchor")).toBe("false");
+    }
+  });
+
+  it("anchors the sole session user message", () => {
     const messages: UIMessage[] = [userMessage("msg-user-1", "Hello")];
 
-    const { container } = renderChatMessageList(messages, true);
+    const { container } = renderChatMessageList(messages, {
+      showPendingIndicator: true,
+      anchorMessageId: "msg-user-1",
+    });
 
-    const user1Item = container.querySelector('[data-message-id="msg-user-1"]');
-    const thinkingItem = container.querySelector('[data-message-id="thinking-indicator"]');
-
-    expect(user1Item?.getAttribute("data-scroll-anchor")).toBe("true");
-    expect(thinkingItem?.getAttribute("data-scroll-anchor")).toBe("false");
+    expect(
+      container.querySelector('[data-message-id="msg-user-1"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("true");
+    expect(
+      container.querySelector('[data-message-id="thinking-indicator"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("false");
   });
 
-  it("handles async history loading: transitions from empty to multi-turn and marks only the final user turn as anchor", () => {
+  it("does not anchor hydrated history that loads asynchronously", () => {
     const { container, rerender } = renderChatMessageList([]);
 
     const loadedHistory: UIMessage[] = [
@@ -136,43 +144,26 @@ describe("ChatMessageList scroll anchoring", () => {
       assistantMessage("msg-asst-3", "Latest answer 3"),
     ];
 
-    rerender(
-      <MessageScrollerProvider defaultScrollPosition="last-anchor">
-        <MessageScroller>
-          <MessageScrollerViewport>
-            <MessageScrollerContent>
-              <ChatMessageList
-                messages={loadedHistory}
-                citedSourcesMap={new Map()}
-                showPendingIndicator={false}
-                onCopy={vi.fn()}
-                onRegenerate={vi.fn()}
-              />
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-        </MessageScroller>
-      </MessageScrollerProvider>,
-    );
+    rerender(buildChatTree(loadedHistory, { anchorMessageId: null }));
 
-    const user1 = container.querySelector('[data-message-id="msg-user-1"]');
-    const user2 = container.querySelector('[data-message-id="msg-user-2"]');
-    const user3 = container.querySelector('[data-message-id="msg-user-3"]');
-
-    expect(user1?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(user2?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(user3?.getAttribute("data-scroll-anchor")).toBe("true");
+    for (const id of ["msg-user-1", "msg-user-2", "msg-user-3"]) {
+      expect(container.querySelector(`[data-message-id="${id}"]`)?.getAttribute("data-scroll-anchor")).toBe("false");
+    }
   });
 
-  it("updates anchor to the newly added user message when messages update", () => {
+  it("moves the anchor to a message sent this session", () => {
     const initialMessages: UIMessage[] = [
       userMessage("msg-user-1", "First question"),
       assistantMessage("msg-asst-1", "First answer"),
     ];
 
-    const { container, rerender } = renderChatMessageList(initialMessages);
+    const { container, rerender } = renderChatMessageList(initialMessages, {
+      anchorMessageId: null,
+    });
 
-    let user1Item = container.querySelector('[data-message-id="msg-user-1"]');
-    expect(user1Item?.getAttribute("data-scroll-anchor")).toBe("true");
+    expect(
+      container.querySelector('[data-message-id="msg-user-1"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("false");
 
     const updatedMessages: UIMessage[] = [
       ...initialMessages,
@@ -180,31 +171,21 @@ describe("ChatMessageList scroll anchoring", () => {
     ];
 
     rerender(
-      <MessageScrollerProvider defaultScrollPosition="last-anchor">
-        <MessageScroller>
-          <MessageScrollerViewport>
-            <MessageScrollerContent>
-              <ChatMessageList
-                messages={updatedMessages}
-                citedSourcesMap={new Map()}
-                showPendingIndicator={true}
-                onCopy={vi.fn()}
-                onRegenerate={vi.fn()}
-              />
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-        </MessageScroller>
-      </MessageScrollerProvider>,
+      buildChatTree(updatedMessages, {
+        showPendingIndicator: true,
+        anchorMessageId: "msg-user-2",
+      }),
     );
 
-    user1Item = container.querySelector('[data-message-id="msg-user-1"]');
-    const user2Item = container.querySelector('[data-message-id="msg-user-2"]');
-    const thinkingItem = container.querySelector('[data-message-id="thinking-indicator"]');
-
-    // After adding turn 2, turn 1 must no longer anchor, and turn 2 must anchor
-    expect(user1Item?.getAttribute("data-scroll-anchor")).toBe("false");
-    expect(user2Item?.getAttribute("data-scroll-anchor")).toBe("true");
-    expect(thinkingItem?.getAttribute("data-scroll-anchor")).toBe("false");
+    expect(
+      container.querySelector('[data-message-id="msg-user-1"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("false");
+    expect(
+      container.querySelector('[data-message-id="msg-user-2"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("true");
+    expect(
+      container.querySelector('[data-message-id="thinking-indicator"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("false");
   });
 
   it("groups multiple consecutive assistant responses into a single versioned turn", () => {
@@ -216,14 +197,12 @@ describe("ChatMessageList scroll anchoring", () => {
 
     const { container } = renderChatMessageList(messages);
 
-    // There should only be 1 user item and 1 assistant item in the DOM
     const userItems = container.querySelectorAll('[data-message-id="msg-user-1"]');
     const asstItems = container.querySelectorAll('[data-message-id="msg-asst-1"]');
 
     expect(userItems.length).toBe(1);
     expect(asstItems.length).toBe(1);
 
-    // The version counter "2 of 2" should be present
     expect(container.textContent).toContain("2 of 2");
     expect(container.textContent).toContain("Regenerated response");
   });
@@ -231,11 +210,10 @@ describe("ChatMessageList scroll anchoring", () => {
 
 describe("ChatMessageList pending indicator", () => {
   it("renders the provided pending label with status semantics", () => {
-    const { container } = renderChatMessageList(
-      [userMessage("msg-user-1", "Hello")],
-      true,
-      "Thinking…",
-    );
+    const { container } = renderChatMessageList([userMessage("msg-user-1", "Hello")], {
+      showPendingIndicator: true,
+      pendingLabel: "Thinking…",
+    });
 
     const thinkingItem = container.querySelector('[data-message-id="thinking-indicator"]');
     expect(thinkingItem?.textContent).toContain("Thinking…");
@@ -243,11 +221,10 @@ describe("ChatMessageList pending indicator", () => {
   });
 
   it("renders the non-reasoning waiting copy instead of fake thinking", () => {
-    const { container } = renderChatMessageList(
-      [userMessage("msg-user-1", "Hello")],
-      true,
-      "Waiting for response…",
-    );
+    const { container } = renderChatMessageList([userMessage("msg-user-1", "Hello")], {
+      showPendingIndicator: true,
+      pendingLabel: "Waiting for response…",
+    });
 
     expect(container.textContent).toContain("Waiting for response…");
     expect(container.textContent).not.toContain("Thinking…");
@@ -256,7 +233,7 @@ describe("ChatMessageList pending indicator", () => {
   it("hides the pending indicator once assistant content arrives", () => {
     const { container } = renderChatMessageList(
       [userMessage("msg-user-1", "Hello"), assistantMessage("msg-asst-1", "Hi")],
-      false,
+      { showPendingIndicator: false },
     );
 
     expect(container.querySelector('[data-message-id="thinking-indicator"]')).toBeNull();

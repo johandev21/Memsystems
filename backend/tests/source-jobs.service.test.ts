@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createDatabaseConnection } from '../src/database/connection';
 import { jobs, sourceChunks, sources } from '../src/database/schema';
 import { ChunkingService } from '../src/modules/ai/chunking.service';
+import { EMBEDDING_DIMENSIONS } from '../src/modules/ai/embedding.service';
 import { IndexingService } from '../src/modules/ai/indexing.service';
 import {
   JobQueueConfig,
@@ -28,10 +29,10 @@ function makeVector(dimensions: number): number[] {
 
 function fakeEmbeddingService() {
   return {
-    generateEmbeddings: vi
+    embedDocuments: vi
       .fn()
       .mockImplementation(async (texts: string[]) =>
-        texts.map(() => makeVector(1536)),
+        texts.map(() => makeVector(EMBEDDING_DIMENSIONS)),
       ),
   } as any;
 }
@@ -120,7 +121,7 @@ describe('SourceJobsService', () => {
 
   it('retries with backoff and fails after the attempt limit', async () => {
     const embedding = {
-      generateEmbeddings: vi.fn().mockRejectedValue(new Error('provider down')),
+      embedDocuments: vi.fn().mockRejectedValue(new Error('provider down')),
     } as any;
     const { jobs: service, queue } = makeJobsService(embedding, {
       defaultBackoffBaseMs: 50,
@@ -174,14 +175,14 @@ describe('SourceJobsService', () => {
     await service.enqueue(source.id);
     await queue.drain();
 
-    const firstRunCalls = embedding.generateEmbeddings.mock.calls.length;
+    const firstRunCalls = embedding.embedDocuments.mock.calls.length;
     expect(firstRunCalls).toBeGreaterThan(0);
 
     // Run 2: reindex same content -> skips re-embedding
     await service.enqueue(source.id);
     await queue.drain();
 
-    expect(embedding.generateEmbeddings.mock.calls.length).toBe(firstRunCalls);
+    expect(embedding.embedDocuments.mock.calls.length).toBe(firstRunCalls);
     const latest = await service.latestForSource(source.id);
     expect(latest?.status).toBe('ready');
   });
@@ -200,7 +201,7 @@ describe('SourceJobsService', () => {
 
     await service.enqueue(source.id);
     await queue.drain();
-    const callsAfterV1 = embedding.generateEmbeddings.mock.calls.length;
+    const callsAfterV1 = embedding.embedDocuments.mock.calls.length;
 
     // Mutate the source content hash in the db
     await db
@@ -211,7 +212,7 @@ describe('SourceJobsService', () => {
     await service.enqueue(source.id);
     await queue.drain();
 
-    expect(embedding.generateEmbeddings.mock.calls.length).toBeGreaterThan(
+    expect(embedding.embedDocuments.mock.calls.length).toBeGreaterThan(
       callsAfterV1,
     );
   });
@@ -253,10 +254,10 @@ describe('SourceJobsService', () => {
       embeddingsStarted = resolve;
     });
     const embedding = {
-      generateEmbeddings: vi.fn(async (texts: string[]) => {
+      embedDocuments: vi.fn(async (texts: string[]) => {
         embeddingsStarted();
         await embeddingsReleased;
-        return texts.map(() => makeVector(1536));
+        return texts.map(() => makeVector(EMBEDDING_DIMENSIONS));
       }),
     } as any;
 

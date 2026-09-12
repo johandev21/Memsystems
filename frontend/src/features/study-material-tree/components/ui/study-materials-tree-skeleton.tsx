@@ -1,12 +1,14 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/shared/utils/cn";
+import { useTranslation } from "react-i18next";
 
 export function StudyMaterialsTreeSkeleton({ className }: { className?: string }) {
+  const { t } = useTranslation("tree");
   return (
     <div
       data-slot="study-materials-tree-skeleton"
       className={cn("flex flex-col gap-2 p-2", className)}
-      aria-label="Loading study materials"
+      aria-label={t("tree.loading")}
       aria-busy="true"
     >
       {/* Header skeleton */}

@@ -236,7 +236,9 @@ export class TabularParserService {
 
     const allRows = parseDelimitedText(rawText, delimiter);
     if (allRows.length === 0) {
-      throw new BadRequestError('Tabular file contains no rows.');
+      throw new BadRequestError('Tabular file contains no rows.', {
+        messageKey: 'errors.sources.inspect.tabularEmpty',
+      });
     }
 
     const headers = allRows[0];
@@ -294,6 +296,7 @@ export class TabularParserService {
     } catch (err: any) {
       throw new BadRequestError(
         `Failed to parse XLSX archive: ${err.message || 'corrupt zip'}`,
+        { messageKey: 'errors.sources.parse.tabularCorrupted' },
       );
     }
 
@@ -434,7 +437,9 @@ export class TabularParserService {
     }
 
     if (sheets.length === 0) {
-      throw new BadRequestError('XLSX workbook contains no readable sheets.');
+      throw new BadRequestError('XLSX workbook contains no readable sheets.', {
+        messageKey: 'errors.sources.parse.tabularCorrupted',
+      });
     }
 
     const compositeRawText = [

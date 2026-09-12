@@ -1,5 +1,10 @@
+import { useCallback, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/shared/utils/cn";
+import { chatMessagesQueryOptions } from "@/features/notebook-chat/api/chat";
+import { notebookQueryOptions } from "../api";
+import { buildBannerSrcSet } from "../utils/banner-variants";
 
 interface NotebookCardProps {
   id: string;
@@ -7,9 +12,11 @@ interface NotebookCardProps {
   description: string;
   updatedAt: string;
   imageUrl?: string;
+  bannerVariants?: { w480: string | null; w960: string | null; w1920: string | null } | null;
   bannerFocalPoint?: { x: number; y: number } | null;
   icon: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function NotebookCard({
@@ -18,28 +25,55 @@ export function NotebookCard({
   description,
   updatedAt,
   imageUrl,
+  bannerVariants,
   bannerFocalPoint,
   icon,
   className,
+  style,
 }: NotebookCardProps) {
+  const [isBannerLoaded, setIsBannerLoaded] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Warm the notebook + chat history caches on intent so opening a notebook
+  // renders its banner and messages immediately instead of waiting on a
+  // request waterfall.
+  const prefetch = useCallback(() => {
+    void queryClient.prefetchQuery(notebookQueryOptions(id));
+    void queryClient.prefetchQuery(chatMessagesQueryOptions(id));
+  }, [id, queryClient]);
+
   return (
     <Link
       to="/notebooks/$notebookId"
       params={{ notebookId: id }}
+      onMouseEnter={prefetch}
+      onFocus={prefetch}
       className={cn(
         "group relative flex flex-col overflow-hidden bg-card ring-1 ring-foreground/10 hover:ring-primary/35 hover:shadow-md transition-all duration-200 cursor-pointer block rounded-[min(var(--radius-4xl),24px)]",
         className,
       )}
+      style={style}
     >
       <div className="relative h-36 overflow-hidden">
         {imageUrl ? (
           <img
             src={imageUrl}
+            srcSet={buildBannerSrcSet(bannerVariants)}
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             alt={title}
-            className="h-full w-full object-cover opacity-60 transition-opacity duration-300 group-hover:opacity-100"
+            className={cn(
+              "h-full w-full bg-muted object-cover transition-opacity duration-300 group-hover:opacity-100",
+              isBannerLoaded ? "opacity-60" : "opacity-0",
+            )}
             style={{
               objectPosition: `${Math.round((bannerFocalPoint?.x ?? 0.5) * 100)}% ${Math.round((bannerFocalPoint?.y ?? 0.5) * 100)}%`,
             }}
+            ref={(el) => {
+              if (el?.complete && el.naturalWidth > 0) setIsBannerLoaded(true);
+            }}
+            onLoad={() => setIsBannerLoaded(true)}
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted" />

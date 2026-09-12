@@ -1,7 +1,9 @@
 import { Columns2, Eye, FileText, ImageIcon, ZoomIn, ZoomOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function ImageViewerSkeleton() {
+  const { t } = useTranslation("sources");
   return (
     <div
       data-testid="image-viewer-skeleton"
@@ -13,15 +15,15 @@ export function ImageViewerSkeleton() {
         <div className="flex items-center rounded-lg border border-border/70 p-0.5 bg-muted/40">
           <div className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-background shadow-xs text-foreground font-medium">
             <Columns2 className="size-3.5" />
-            <span>Split</span>
+            <span>{t("skeletons.split")}</span>
           </div>
           <div className="flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground/60">
             <Eye className="size-3.5" />
-            <span>Image</span>
+            <span>{t("skeletons.image")}</span>
           </div>
           <div className="flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground/60">
             <FileText className="size-3.5" />
-            <span>Notes</span>
+            <span>{t("skeletons.notes")}</span>
           </div>
         </div>
 

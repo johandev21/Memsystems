@@ -61,13 +61,17 @@ function mockFetchFor({
     if (delay) await new Promise((r) => setTimeout(r, delay));
     if (url.includes(`/api/notebooks/${notebookId}/folders`)) {
       if (folderError) {
-        return new Response(JSON.stringify({ error: "folder error" }), { status: folderError });
+        return new Response(JSON.stringify({ error: "Failed to load folders" }), {
+          status: folderError,
+        });
       }
       return new Response(JSON.stringify(folders ?? []), { status: 200 });
     }
     if (url.includes(`/api/notebooks/${notebookId}/study-materials`)) {
       if (materialError) {
-        return new Response(JSON.stringify({ error: "material error" }), { status: materialError });
+        return new Response(JSON.stringify({ error: "Failed to load materials" }), {
+          status: materialError,
+        });
       }
       return new Response(JSON.stringify(materials ?? []), { status: 200 });
     }

@@ -52,6 +52,20 @@ export interface CitedSourceEntry {
   quote: string | null;
 }
 
+export interface ChatRequestMessage {
+  id?: string;
+  role: "user" | "assistant" | "system";
+  parts: unknown;
+  metadata?: unknown;
+}
+
+export interface ChatRequest {
+  model: string;
+  message: ChatRequestMessage | null;
+  messages: ChatRequestMessage[];
+  language?: string;
+}
+
 export interface ChatMessageDTO {
   id: string;
   role: "user" | "assistant";

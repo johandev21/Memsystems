@@ -1,13 +1,9 @@
+import { MessageScroller as MessageScrollerPrimitive } from "@shadcn/react/message-scroller";
 import * as React from "react";
-import {
-  MessageScroller as MessageScrollerPrimitive,
-  useMessageScroller,
-  useMessageScrollerScrollable,
-  useMessageScrollerVisibility,
-} from "@shadcn/react/message-scroller";
+import { useTranslation } from "react-i18next";
 
-import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/utils/cn";
 import { ArrowDownIcon } from "lucide-react";
 
 function MessageScrollerProvider(
@@ -89,6 +85,8 @@ function MessageScrollerButton({
   ...props
 }: React.ComponentProps<typeof MessageScrollerPrimitive.Button> &
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  const { t } = useTranslation();
+
   return (
     <MessageScrollerPrimitive.Button
       data-slot="message-scroller-button"
@@ -107,7 +105,7 @@ function MessageScrollerButton({
         <>
           <ArrowDownIcon />
           <span className="sr-only">
-            {direction === "end" ? "Scroll to end" : "Scroll to start"}
+            {direction === "end" ? t("messageScroller.toEnd") : t("messageScroller.toStart")}
           </span>
         </>
       )}
@@ -116,13 +114,10 @@ function MessageScrollerButton({
 }
 
 export {
-  MessageScrollerProvider,
   MessageScroller,
-  MessageScrollerViewport,
+  MessageScrollerButton,
   MessageScrollerContent,
   MessageScrollerItem,
-  MessageScrollerButton,
-  useMessageScroller,
-  useMessageScrollerScrollable,
-  useMessageScrollerVisibility,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
 };

@@ -12,6 +12,7 @@ import {
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/shared/utils/cn";
 import type { ComponentProps, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;
 
@@ -30,23 +31,27 @@ export type ModelSelectorContentProps = ComponentProps<typeof DialogContent> & {
 export const ModelSelectorContent = ({
   className,
   children,
-  title = "Model Selector",
+  title,
   ...props
-}: ModelSelectorContentProps) => (
-  <DialogContent
-    aria-describedby={undefined}
-    className={cn(
-      "outline! border border-border! p-0 outline-border! outline-solid! overflow-hidden rounded-2xl bg-popover shadow-2xl [&>button]:top-2",
-      className,
-    )}
-    {...props}
-  >
-    <DialogTitle className="sr-only">{title}</DialogTitle>
-    <Command className="**:data-[slot=command-input-wrapper]:h-auto [&_[cmdk-input-wrapper]]:border-0">
-      {children}
-    </Command>
-  </DialogContent>
-);
+}: ModelSelectorContentProps) => {
+  const { t } = useTranslation("ai");
+
+  return (
+    <DialogContent
+      aria-describedby={undefined}
+      className={cn(
+        "outline! border border-border! p-0 outline-border! outline-solid! overflow-hidden rounded-2xl bg-popover shadow-2xl [&>button]:top-2",
+        className,
+      )}
+      {...props}
+    >
+      <DialogTitle className="sr-only">{title ?? t("modelSelector.title")}</DialogTitle>
+      <Command className="**:data-[slot=command-input-wrapper]:h-auto [&_[cmdk-input-wrapper]]:border-0">
+        {children}
+      </Command>
+    </DialogContent>
+  );
+};
 
 export type ModelSelectorDialogProps = ComponentProps<typeof CommandDialog>;
 
@@ -92,22 +97,26 @@ export type ModelSelectorLogoProps = Omit<ComponentProps<"span">, "aria-label"> 
   provider: string;
 };
 
-export const ModelSelectorLogo = ({ provider, className, ...props }: ModelSelectorLogoProps) => (
-  <span
-    {...props}
-    aria-label={`${provider} logo`}
-    className={cn(
-      "size-4.5 shrink-0 bg-[var(--model-icon-color)] text-[var(--model-icon-color)]",
-      "[mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]",
-      "[-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]",
-      className,
-    )}
-    style={{
-      WebkitMaskImage: `url(https://models.dev/logos/${provider}.svg)`,
-      maskImage: `url(https://models.dev/logos/${provider}.svg)`,
-    }}
-  />
-);
+export const ModelSelectorLogo = ({ provider, className, ...props }: ModelSelectorLogoProps) => {
+  const { t } = useTranslation("ai");
+
+  return (
+    <span
+      {...props}
+      aria-label={t("modelSelector.providerLogo", { provider })}
+      className={cn(
+        "size-4.5 shrink-0 bg-[var(--model-icon-color)] text-[var(--model-icon-color)]",
+        "[mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]",
+        "[-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]",
+        className,
+      )}
+      style={{
+        WebkitMaskImage: `url(https://models.dev/logos/${provider}.svg)`,
+        maskImage: `url(https://models.dev/logos/${provider}.svg)`,
+      }}
+    />
+  );
+};
 
 export type ModelSelectorLogoGroupProps = ComponentProps<"div">;
 

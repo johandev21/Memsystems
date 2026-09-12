@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
   DocumentNormalizerService,
   NormalizedDocument,
@@ -15,15 +15,16 @@ import {
   YouTubeAcquisitionOptions,
   YouTubeAcquisitionService,
 } from './youtube-acquisition.service';
+import { CRAWLER_SERVICE, type CrawlerService } from '../crawler/crawler.types';
 
 /** A normalized URL document plus the fetch provenance used for persistence. */
 export interface AcquiredUrlDocument extends NormalizedDocument {
-  status: number;
-  httpContentType: string;
+  status?: number;
+  httpContentType?: string;
   etag?: string;
   lastModified?: string;
-  robotsDecision: string;
-  redirects: string[];
+  robotsDecision?: string;
+  redirects?: string[];
 }
 
 export type AcquireUrlOptions = YouTubeAcquisitionOptions;
@@ -39,6 +40,9 @@ export class SourceAcquisitionService {
     private readonly imageInspector: ImageInspectorService,
     private readonly visionExtraction: VisionExtractionService,
     @Optional() private readonly youtubeAcquisition?: YouTubeAcquisitionService,
+    @Optional()
+    @Inject(CRAWLER_SERVICE)
+    private readonly crawler?: CrawlerService,
   ) {}
 
   /**
@@ -71,6 +75,36 @@ export class SourceAcquisitionService {
     }
 
     // Default web fetch & scrape pipeline
+    const validated = await this.policyService.validateUrl(input);
+
+    if (this.crawler) {
+      const crawled = await this.crawler.scrape(validated.url.toString());
+      const canonical = this.policyService.normalizeUrl(
+        crawled.canonicalUrl || crawled.url,
+      );
+      const document = this.normalizer.fromFirecrawlResult(
+        {
+          title: crawled.title,
+          markdown: crawled.markdown,
+          metadata: crawled.metadata,
+          html: crawled.html,
+        },
+        {
+          sourceUrl: input,
+          canonicalUrl: canonical,
+          fetchedUrl: crawled.url,
+          contentType: 'text/markdown',
+        },
+      );
+      return {
+        ...document,
+        status: 200,
+        httpContentType: 'text/markdown',
+        robotsDecision: 'skipped',
+        redirects: [],
+      };
+    }
+
     const fetched = await this.httpFetcher.fetchHtml(input);
     const page = this.webScraper.extractHtml(fetched.body, fetched.url);
     const document = this.normalizer.fromHtml(page, {

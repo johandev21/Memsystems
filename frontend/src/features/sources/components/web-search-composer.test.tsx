@@ -3,30 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NotebookModelProvider } from "@/features/notebooks";
 import { WebSearchComposer } from "./web-search-composer";
 
-const { sampleModels, mockStartWebSearchJob, mockDismissWebSearchJob } = vi.hoisted(() => {
-  const models = [
-    {
-      id: "openai/gpt-4o-mini",
-      displayName: "GPT-4o Mini",
-      supportsWebSearch: true,
-    },
-    {
-      id: "openai/gpt-5.6-sol",
-      displayName: "GPT-5.6 Sol",
-      supportsWebSearch: true,
-    },
-    {
-      id: "anthropic/claude-3-7-sonnet",
-      displayName: "Claude 3.7 Sonnet",
-      supportsWebSearch: false,
-    },
-  ];
-
+const { mockStartWebSearchJob, mockDismissWebSearchJob } = vi.hoisted(() => {
   return {
-    sampleModels: models,
     mockStartWebSearchJob: vi.fn().mockResolvedValue({ id: "job-1", status: "pending" }),
     mockDismissWebSearchJob: vi.fn().mockResolvedValue(undefined),
   };
@@ -62,22 +42,8 @@ vi.mock("../api/web-search", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/ai", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/ai")>();
-  return {
-    ...actual,
-    modelsQueryOptions: {
-      queryKey: ["models"],
-      queryFn: () => sampleModels,
-      initialData: sampleModels,
-      staleTime: Infinity,
-    },
-  };
-});
-
 function createWrapper(
   notebookId = "nb-1",
-  initialModel = "openai/gpt-5.6-sol",
   initialJob: Record<string, unknown> | null = null,
 ) {
   const queryClient = new QueryClient({
@@ -89,17 +55,10 @@ function createWrapper(
     },
   });
 
-  queryClient.setQueryData(["models"], sampleModels);
   queryClient.setQueryData(["web-search-job", notebookId], initialJob);
 
   return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <NotebookModelProvider notebookId={notebookId} initialModel={initialModel}>
-          {children}
-        </NotebookModelProvider>
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -111,21 +70,21 @@ describe("WebSearchComposer", () => {
     mockDismissWebSearchJob.mockResolvedValue(undefined);
   });
 
-  it("renders without any model selector dropdown", () => {
-    const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol");
+  it("renders no model notice and no model selector", () => {
+    const Wrapper = createWrapper("nb-1");
     render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
       wrapper: Wrapper,
     });
 
     expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByText("Choose a model that can search the web")).toBeNull();
     expect(screen.queryByText("Select model")).toBeNull();
     expect(screen.queryByText("No compatible model")).toBeNull();
-    expect(screen.queryByText(/Web · GPT-5.6 Sol/)).toBeNull();
   });
 
-  it("enables search input and runs search with global model when model supports web search", async () => {
+  it("enables search input and runs search without any model", async () => {
     const user = userEvent.setup();
-    const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol");
+    const Wrapper = createWrapper("nb-1");
     render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
       wrapper: Wrapper,
     });
@@ -147,45 +106,20 @@ describe("WebSearchComposer", () => {
     await waitFor(() => {
       expect(mockStartWebSearchJob).toHaveBeenCalledWith("nb-1", {
         query: "Machine learning architectures",
-        modelId: "openai/gpt-5.6-sol",
       });
     });
   });
 
-  it("blocks search and offers compatible models when the selected model is unsupported", async () => {
+  it("shows a persisted failed-job error as-is and dismisses it", async () => {
     const user = userEvent.setup();
-    const Wrapper = createWrapper("nb-1", "anthropic/claude-3-7-sonnet");
-    render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
-      wrapper: Wrapper,
-    });
-
-    expect(screen.getByText("Choose a model that can search the web")).toBeTruthy();
-
-    const textarea = screen.getByPlaceholderText(
-      "What would you like to research?",
-    ) as HTMLTextAreaElement;
-    expect(textarea.disabled).toBe(false);
-
-    await user.type(textarea, "Existentialism");
-
-    const sendButton = screen.getByRole("button", { name: "Search" }) as HTMLButtonElement;
-    expect(sendButton.disabled).toBe(true);
-    await user.click(sendButton);
-
-    expect(mockStartWebSearchJob).not.toHaveBeenCalled();
-  });
-
-  it("sanitizes and dismisses a persisted failed-job error", async () => {
-    const user = userEvent.setup();
-    const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol", {
+    const Wrapper = createWrapper("nb-1", {
       id: "job-failed",
       notebookId: "nb-1",
       query: "Nietzsche",
-      modelId: "openai/gpt-5.6-sol",
       status: "failed",
       summary: null,
       candidates: [],
-      lastError: "Tool choice `web_search_preview` not found in `tools` parameter.",
+      lastError: "Firecrawl rate limit hit: slow down and retry later.",
       createdAt: "2026-09-03T12:00:00.000Z",
       completedAt: "2026-09-03T12:00:01.000Z",
     });
@@ -193,12 +127,11 @@ describe("WebSearchComposer", () => {
       wrapper: Wrapper,
     });
 
-    expect(await screen.findByText(/doesn't support web search/i)).toBeTruthy();
-    expect(screen.queryByText(/web_search_preview/)).toBeNull();
+    expect(await screen.findByText(/slow down and retry later/i)).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Clear results" }));
     await waitFor(() => {
-      expect(screen.queryByText(/doesn't support web search/i)).toBeNull();
+      expect(screen.queryByText(/slow down and retry later/i)).toBeNull();
     });
     expect(mockDismissWebSearchJob).toHaveBeenCalledWith("nb-1");
   });
@@ -209,7 +142,6 @@ describe("WebSearchComposer", () => {
       id: "job-ready",
       notebookId: "nb-1",
       query: "Plato",
-      modelId: "openai/gpt-5.6-sol",
       status: "ready",
       summary: "A concise overview of Plato.",
       candidates: [
@@ -223,7 +155,7 @@ describe("WebSearchComposer", () => {
       createdAt: "2026-09-03T12:00:00.000Z",
       completedAt: "2026-09-03T12:00:01.000Z",
     });
-    const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol");
+    const Wrapper = createWrapper("nb-1");
     render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
       wrapper: Wrapper,
     });
@@ -247,11 +179,10 @@ describe("WebSearchComposer", () => {
   it("keeps results visible and offers retry when clearing fails", async () => {
     const user = userEvent.setup();
     mockDismissWebSearchJob.mockRejectedValueOnce(new Error("Network unavailable"));
-    const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol", {
+    const Wrapper = createWrapper("nb-1", {
       id: "job-ready",
       notebookId: "nb-1",
       query: "Plato",
-      modelId: "openai/gpt-5.6-sol",
       status: "ready",
       summary: null,
       candidates: [
@@ -286,11 +217,10 @@ describe("WebSearchComposer", () => {
         resolveDismissal = resolve;
       }),
     );
-    const Wrapper = createWrapper("nb-1", "openai/gpt-5.6-sol", {
+    const Wrapper = createWrapper("nb-1", {
       id: "job-ready",
       notebookId: "nb-1",
       query: "Plato",
-      modelId: "openai/gpt-5.6-sol",
       status: "ready",
       summary: null,
       candidates: [

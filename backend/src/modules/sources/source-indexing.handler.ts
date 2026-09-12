@@ -9,6 +9,7 @@ import {
   IndexingService,
   IndexResult,
 } from '../ai/indexing.service';
+import { DomainError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { Job, JobHandler } from '../jobs/job-handler.interface';
 import { SourceVersionService } from './source-version.service';
@@ -116,6 +117,10 @@ export class SourceIndexingHandler implements JobHandler<
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const messageKey =
+        error instanceof DomainError && error.messageKey
+          ? error.messageKey
+          : undefined;
       if (
         this.versions &&
         job.attemptCount >= job.maxAttempts &&
@@ -123,8 +128,8 @@ export class SourceIndexingHandler implements JobHandler<
       ) {
         await this.versions.markFailed(
           job.payload.sourceId,
-          'indexing_failed',
-          message,
+          messageKey ?? 'indexing_failed',
+          messageKey ?? message,
         );
       }
       throw error;

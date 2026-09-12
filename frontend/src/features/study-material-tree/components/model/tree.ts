@@ -1,5 +1,6 @@
-import type { FolderDTO } from "@/features/study-material-tree";
+import type { FolderDTO } from "../../types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
+import i18n from "@/shared/i18n";
 
 export type StudyMaterialTreeFolder = FolderDTO;
 export type StudyMaterialTreeMaterial = StudyMaterialDTO;
@@ -39,8 +40,8 @@ export function buildStudyMaterialTree(state: TreeState): TreeNode[] {
   }
 
   const visit = (parentId: string | null): TreeNode[] => {
-    const foldersForParent = [...(foldersByParent.get(parentId) ?? [])].sort(byCreatedAtThenId);
-    const materialsForParent = [...(materialsByParent.get(parentId) ?? [])].sort(byCreatedAtThenId);
+    const foldersForParent = (foldersByParent.get(parentId) ?? []).toSorted(byCreatedAtThenId);
+    const materialsForParent = (materialsByParent.get(parentId) ?? []).toSorted(byCreatedAtThenId);
 
     return [
       ...foldersForParent.map((folder) => ({
@@ -188,7 +189,7 @@ export function createFolder(
     id,
     notebookId: "notebook-placeholder",
     parentId,
-    name: "Untitled folder",
+    name: i18n.t("defaults.untitledFolder", { ns: "tree" }),
     deletedAt: null,
     createdAt: now,
     updatedAt: now,

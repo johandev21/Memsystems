@@ -1,0 +1,106 @@
+{
+  "appearance": {
+    "description": "Elige el aspecto de Memsystems. El tema define la paleta y el esquema de color define el modo claro u oscuro.",
+    "title": "Apariencia"
+  },
+  "embeddings": {
+    "apiKey": {
+      "confirmRemove": "Confirmar eliminación",
+      "hide": "Ocultar clave de Voyage",
+      "label": "Clave de API de Voyage",
+      "placeholder": "Pega tu clave de Voyage AI…",
+      "remove": "Eliminar",
+      "removeConfirm": "Eliminar tu clave impide buscar en tus fuentes. Haz clic de nuevo para confirmar.",
+      "removing": "Eliminando…",
+      "replace": "Reemplazar",
+      "save": "Guardar clave",
+      "saved": "Guardada",
+      "saving": "Guardando…",
+      "show": "Mostrar clave de Voyage"
+    },
+    "description": {
+      "checking": "Comprobando el estado del proveedor de embeddings…",
+      "connected": "Tu clave de Voyage AI alimenta la búsqueda en todos los cuadernos.",
+      "missing": "Añade tu clave de Voyage AI abajo para habilitar la búsqueda en tus fuentes."
+    },
+    "modelInfo": "Modelo: {{model}} · {{dimensions}} dimensiones",
+    "reembed": {
+      "action": "Regenerar embeddings de todas las fuentes",
+      "actionRunning": "Poniendo en cola…",
+      "hint": "Pone en cola el reindexado en segundo plano de todas las fuentes.",
+      "title": "Regeneración de embeddings"
+    },
+    "status": {
+      "checking": "Comprobando",
+      "connected": "Conectado",
+      "notConnected": "Sin conexión"
+    },
+    "title": "Embeddings",
+    "toast": {
+      "removed": "Clave de Voyage eliminada",
+      "removeFailed": "No se pudo eliminar esta clave",
+      "requestFailed": "La petición falló",
+      "reembedFailed": "No se pudo poner en cola la regeneración",
+      "reembedQueued": "Reindexado en cola para {{count}} fuentes",
+      "saved": "Clave de Voyage guardada",
+      "saveFailed": "No se pudo guardar esta clave"
+    },
+    "whatIsIt": "¿Qué es Voyage AI?"
+  },
+  "gateway": {
+    "apiKey": {
+      "confirmRemove": "Confirmar eliminación",
+      "hide": "Ocultar clave del gateway",
+      "label": "Clave de API del Gateway",
+      "placeholder": "Pega tu clave del Gateway de IA de Vercel…",
+      "remove": "Eliminar",
+      "removeConfirm": "Eliminar tu clave desconecta todos los modelos. Haz clic de nuevo para confirmar.",
+      "removing": "Eliminando…",
+      "replace": "Reemplazar",
+      "save": "Guardar clave",
+      "saved": "Guardada",
+      "saving": "Guardando…",
+      "show": "Mostrar clave del gateway"
+    },
+    "description": {
+      "checkFailed": "No se pudo comprobar la conexión",
+      "checking": "Comprobando el estado del gateway…",
+      "connected": "Tu clave del Gateway de IA de Vercel conecta los modelos en todos los cuadernos.",
+      "missing": "Añade tu clave del Gateway de IA abajo para conectar todos los modelos."
+    },
+    "lastChecked": "Última comprobación: {{date}}",
+    "refresh": {
+      "action": "Actualizar modelos",
+      "refreshing": "Actualizando modelos…"
+    },
+    "refreshHint": "Se actualiza automáticamente cada 6 horas.",
+    "stats": {
+      "balance": "Saldo (créditos)",
+      "models": "Modelos",
+      "used": "Créditos usados"
+    },
+    "status": {
+      "checking": "Comprobando",
+      "connected": "Conectado",
+      "degraded": "Degradado",
+      "notConnected": "Sin conexión"
+    },
+    "title": "Gateway de IA",
+    "toast": {
+      "modelsRefreshed": "Lista de modelos actualizada",
+      "refreshFailed": "No se pudo actualizar la lista de modelos",
+      "removed": "Clave del gateway eliminada",
+      "removeFailed": "No se pudo eliminar esta clave",
+      "saved": "Clave del gateway guardada",
+      "saveFailed": "No se pudo guardar esta clave"
+    },
+    "whatIsIt": "¿Qué es el gateway?"
+  },
+  "language": {
+    "description": "Elige el idioma que se usa en toda la aplicación.",
+    "title": "Idioma"
+  },
+  "page": {
+    "title": "Ajustes"
+  }
+}

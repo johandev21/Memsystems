@@ -1,9 +1,10 @@
 import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import { MarkdownRenderer } from "@/components/ui/markdown";
 import { MarkdownCodeBlock } from "@/features/ai";
 import type { SourceSegmentLocator } from "../../types";
-import { splitTextIntoChunks } from "./document-type-detector";
+import { splitTextIntoChunks } from "../../utils/detect-document-type";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
 export interface MarkdownDocumentViewerProps {
@@ -82,7 +83,7 @@ const markdownComponents = {
     <HeadingWithId level={6}>{children}</HeadingWithId>
   ),
   p: ({ children }: { children?: ReactNode }) => (
-    <p className="text-foreground/90 leading-relaxed font-sans my-3 wrap-break-words text-sm sm:text-base select-text">
+    <p className="my-3 wrap-break-words select-text">
       {children}
     </p>
   ),
@@ -98,7 +99,7 @@ const markdownComponents = {
     <ol className="list-decimal pl-6 my-3 space-y-1.5 text-foreground/90">{children}</ol>
   ),
   li: ({ children }: { children?: ReactNode }) => (
-    <li className="leading-relaxed font-sans pl-1">{children}</li>
+    <li className="pl-1">{children}</li>
   ),
   hr: () => <hr className="my-6 border-t border-border/40" />,
   table: ({ children }: { children?: ReactNode }) => (
@@ -242,9 +243,10 @@ export function MarkdownDocumentViewer({
 }
 
 function EmptyMarkdownState() {
+  const { t } = useTranslation("sourceRenderers");
   return (
     <div className="py-12 text-center text-xs text-muted-foreground">
-      No text content available.
+      {t("markdownViewer.noContent")}
     </div>
   );
 }
@@ -269,11 +271,9 @@ function VirtualizedMarkdownDocument({
         overscan={5}
         targetIndex={targetIndex}
         highlightedIndex={highlightedIndex}
-        getItemKey={(chunk, index) =>
-          `md-chunk-${index}-${chunk.slice(0, 20).replace(/[^a-z0-9]/gi, "_")}`
-        }
-        renderItem={(chunk, index, isHighlighted) => (
-          <MarkdownChunk key={index} chunk={chunk} isHighlighted={isHighlighted} />
+        getItemKey={(chunk) => `md-chunk-${chunk}`}
+        renderItem={(chunk, _index, isHighlighted) => (
+          <MarkdownChunk key={`md-chunk-${chunk}`} chunk={chunk} isHighlighted={isHighlighted} />
         )}
       />
     </MarkdownDocumentShell>
@@ -309,7 +309,7 @@ const MarkdownChunk = memo(function MarkdownChunk({
 
 function MarkdownDocumentShell({ children }: { children: ReactNode }) {
   return (
-    <div className="prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed font-sans text-foreground">
+    <div className="typeset typeset-chat max-w-none">
       {children}
     </div>
   );

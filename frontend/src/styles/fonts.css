@@ -1,0 +1,30 @@
+/*
+ * Poppins is self-hosted with font-display: optional. Combined with the
+ * <link rel="preload"> hints in index.html, the font usually wins the race
+ * against first paint; when it doesn't (very slow connections), the page
+ * renders with the fallback for that pageview instead of swapping fonts
+ * mid-load, which avoids layout shift (CLS).
+ */
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-display: optional;
+  font-weight: 400;
+  src: url("/fonts/poppins-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-display: optional;
+  font-weight: 500;
+  src: url("/fonts/poppins-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-display: optional;
+  font-weight: 600;
+  src: url("/fonts/poppins-latin-600-normal.woff2") format("woff2");
+}

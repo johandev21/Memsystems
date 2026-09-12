@@ -59,30 +59,22 @@ function createWebSearchService(
   sourcesService: SourcesService,
   notebooksService: NotebooksService,
 ) {
-  const aiService = {
-    searchWeb: vi.fn().mockResolvedValue({
-      query: 'philosophy',
-      summary: 'A summary of philosophy sources.',
-      sources: [
-        {
-          title: 'Philosophy Basics',
-          url: 'https://philosophybasics.com',
-          description: 'Intro',
-        },
-        {
-          title: 'Stanford Encyclopedia',
-          url: 'https://plato.stanford.edu',
-          description: 'Deep dive',
-        },
-      ],
-    }),
+  const crawler = {
+    search: vi.fn().mockResolvedValue([
+      {
+        title: 'Philosophy Basics',
+        url: 'https://philosophybasics.com',
+        description: 'Intro',
+      },
+      {
+        title: 'Stanford Encyclopedia',
+        url: 'https://plato.stanford.edu',
+        description: 'Deep dive',
+      },
+    ]),
   } as any;
-  const service = new WebSearchService(
-    notebooksService,
-    sourcesService,
-    aiService,
-  );
-  return { service, aiService };
+  const service = new WebSearchService(notebooksService, sourcesService, crawler);
+  return { service, crawler };
 }
 
 describe('WebSearchService', () => {
@@ -96,20 +88,16 @@ describe('WebSearchService', () => {
       url: 'https://philosophybasics.com',
     });
 
-    const { service, aiService } = createWebSearchService(
+    const { service, crawler } = createWebSearchService(
       sourcesService,
       notebooksService,
     );
     const result = await service.search(notebook.id, {
       query: 'philosophy',
-      modelId: 'openai/gpt-5.6-sol',
     });
 
-    expect(aiService.searchWeb).toHaveBeenCalledWith(
-      'philosophy',
-      'openai/gpt-5.6-sol',
-    );
-    expect(result.summary).toBe('A summary of philosophy sources.');
+    expect(crawler.search).toHaveBeenCalledWith('philosophy', 10);
+    expect(result.summary).toBeNull();
     expect(result.sources).toHaveLength(1);
     expect(result.sources[0].url).toBe('https://plato.stanford.edu');
   });
@@ -128,7 +116,6 @@ describe('WebSearchService', () => {
         { url: 'https://example.com/one', title: 'One', description: 'First' },
         { url: 'https://example.com/two', description: 'Second' },
       ],
-      modelId: 'openai/gpt-5.6-sol',
       query: 'philosophy',
     });
 
@@ -167,7 +154,6 @@ describe('WebSearchService', () => {
         { url: 'https://example.com/one', title: 'One' },
         { url: 'https://example.com/two' },
       ],
-      modelId: 'openai/gpt-5.6-sol',
       query: 'philosophy',
     });
 
@@ -203,7 +189,6 @@ describe('WebSearchService', () => {
         { url: 'https://example.com/good' },
         { url: 'https://example.com/bad' },
       ],
-      modelId: 'openai/gpt-5.6-sol',
       query: 'philosophy',
     });
 
@@ -222,7 +207,6 @@ describe('WebSearchService', () => {
     );
     await service.import(notebook.id, {
       candidates: [{ url: 'https://example.com/provenance' }],
-      modelId: 'openai/gpt-5.6-sol',
       query: 'philosophy',
     });
 
@@ -232,7 +216,8 @@ describe('WebSearchService', () => {
       .where(eq(sources.url, 'https://example.com/provenance'));
     expect(row.addedVia).toBe('ai_search');
     expect(row.metadata?.searchQuery).toBe('philosophy');
-    expect(row.metadata?.modelId).toBe('openai/gpt-5.6-sol');
+    expect(row.metadata?.provider).toBe('firecrawl');
+    expect(row.metadata?.modelId).toBeUndefined();
     expect(row.metadata?.searchedAt).toBeDefined();
   });
 });

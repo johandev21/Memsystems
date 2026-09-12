@@ -1,16 +1,17 @@
-import { useRef, useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { FolderPicker } from "@/features/notebooks";
-import { sourcesQueryOptions } from "@/features/sources";
+import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
+import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import { cn } from "@/shared/utils/cn";
-import type { BaseMaterialFormProps, BriefFormData } from "./types";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
+import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 // ============================================================================
 // Module Constants
@@ -19,9 +20,13 @@ import { GenerationSourcePopover } from "./generation-source-popover";
 const QUESTION_PRESETS = [5, 10, 15, 20] as const;
 
 const DIFFICULTIES = [
-  { id: "easy", title: "Warmup", description: "Basic recall & definitions" },
-  { id: "medium", title: "Standard", description: "Balanced application" },
-  { id: "hard", title: "Challenge", description: "Deep reasoning & edge cases" },
+  { id: "easy", titleKey: "quiz.difficulty.easy.title", descKey: "quiz.difficulty.easy.desc" },
+  {
+    id: "medium",
+    titleKey: "quiz.difficulty.medium.title",
+    descKey: "quiz.difficulty.medium.desc",
+  },
+  { id: "hard", titleKey: "quiz.difficulty.hard.title", descKey: "quiz.difficulty.hard.desc" },
 ] as const;
 
 type DifficultyId = (typeof DIFFICULTIES)[number]["id"];
@@ -35,9 +40,10 @@ export function QuizBriefForm({
   value,
   onChange,
   onSubmit,
-  submitLabel = "Generate Quiz Now",
+  submitLabel,
   disabled = false,
 }: BaseMaterialFormProps) {
+  const { t } = useTranslation("generation");
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -56,19 +62,15 @@ export function QuizBriefForm({
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = !disabled && (hasSources || hasInstructions);
 
-  const questionLabel = `${questionCount} ${
-    questionCount === 1 ? "Question" : "Questions"
-  }${questionCount >= 50 ? " (Max 50)" : ""}`;
+  const questionLabel =
+    questionCount >= 50
+      ? t("quiz.questionCountMax", { count: questionCount, max: 50 })
+      : t("quiz.questionCount", { count: questionCount });
 
   // Handlers
   const update = (patch: Partial<BriefFormData>) => {
     onChange(patch);
   };
-
-  // Sync internal state to parent brief form values
-  useEffect(() => {
-    update({ questionCount, difficulty });
-  }, [questionCount, difficulty]);
 
   const handleCustomChange = (raw: string) => {
     setCustomVal(raw);
@@ -76,6 +78,7 @@ export function QuizBriefForm({
     if (!isNaN(parsed) && parsed > 0) {
       const clamped = Math.min(50, Math.max(1, parsed));
       setQuestionCount(clamped);
+      update({ questionCount: clamped });
     }
   };
 
@@ -85,6 +88,7 @@ export function QuizBriefForm({
     if (parsed > 50) parsed = 50;
     setCustomVal(String(parsed));
     setQuestionCount(parsed);
+    update({ questionCount: parsed });
   };
 
   // Section Render Helpers
@@ -92,7 +96,13 @@ export function QuizBriefForm({
     return (
       <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
         <div className="flex flex-col gap-5">
-          <DifficultySelector value={difficulty} onChange={setDifficulty} />
+          <DifficultySelector
+            value={difficulty}
+            onChange={(val) => {
+              setDifficulty(val);
+              update({ difficulty: val });
+            }}
+          />
 
           <QuestionSelector
             questionLabel={questionLabel}
@@ -102,11 +112,14 @@ export function QuizBriefForm({
             onSelectPreset={(cnt) => {
               setIsCustomMode(false);
               setQuestionCount(cnt);
+              update({ questionCount: cnt });
             }}
             onEnableCustom={() => {
               setIsCustomMode(true);
               const parsed = parseInt(customVal, 10) || 25;
-              setQuestionCount(Math.min(50, Math.max(1, parsed)));
+              const clamped = Math.min(50, Math.max(1, parsed));
+              setQuestionCount(clamped);
+              update({ questionCount: clamped });
             }}
             onCustomChange={handleCustomChange}
             onCustomBlur={handleCustomBlur}
@@ -114,20 +127,20 @@ export function QuizBriefForm({
 
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium text-text-primary">
-              3. Knowledge Sources
+              {t("fields.knowledgeSourcesStep3")}
               {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
             </Label>
             <GenerationSourcePopover
               sources={sources}
               selectedIds={value.sourceIds}
               onChange={(sourceIds) => update({ sourceIds })}
-              emptyMessage="No sources in notebook. Quiz will generate using general knowledge."
+              emptyMessage={t("knowledge.emptySources", { kind: t("kinds.quiz") })}
             />
           </div>
         </div>
 
         <div className="flex justify-between items-center pt-2 border-t border-transparent">
-          <span className="text-xs text-text-faint">Configure custom instructions next</span>
+          <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
           <Button
             type="button"
             onClick={() => setStep(2)}
@@ -136,7 +149,7 @@ export function QuizBriefForm({
               CTA_BUTTON_CLASS,
             )}
           >
-            Next Step
+            {t("actions.nextStep")}
             <ArrowRight className="size-4" />
           </Button>
         </div>
@@ -150,21 +163,24 @@ export function QuizBriefForm({
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <Label htmlFor="brief-quiz" className="text-sm font-medium text-text-primary">
-              Custom Instructions{!hasSources && <span className="text-destructive ml-0.5">*</span>}
+              {t("fields.customInstructions")}
+              {!hasSources && <span className="text-destructive ml-0.5">*</span>}
             </Label>
             <Textarea
               id="brief-quiz"
               ref={textareaRef}
               value={value.brief}
               onChange={(e) => update({ brief: e.target.value })}
-              placeholder="Provide specific focus areas, topics, or instructions for this quiz..."
+              placeholder={t("quiz.instructionsPlaceholder")}
               className="min-h-[120px] max-h-[200px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
               disabled={disabled}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-text-tertiary">Destination Folder</Label>
+            <Label className="text-xs font-medium text-text-tertiary">
+              {t("fields.destinationFolder")}
+            </Label>
             <FolderPicker
               notebookId={notebookId}
               value={value.folderId}
@@ -182,7 +198,7 @@ export function QuizBriefForm({
             className="h-9 px-4 text-sm text-text-faint hover:text-text-secondary gap-1.5 cursor-pointer"
           >
             <ArrowLeft className="size-4" />
-            Back
+            {t("actions.back")}
           </Button>
 
           <Button
@@ -194,7 +210,7 @@ export function QuizBriefForm({
             disabled={!canSubmit}
             onClick={onSubmit}
           >
-            {submitLabel}
+            {submitLabel ?? t("actions.generateNow", { kind: t("kinds.quiz") })}
           </Button>
         </div>
       </div>
@@ -203,49 +219,12 @@ export function QuizBriefForm({
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
-      <WizardHeader step={step} onStepChange={setStep} />
+      <BriefWizardHeader
+        title={t("wizard.title", { kind: t("kinds.quiz") })}
+        step={step}
+        onStepChange={setStep}
+      />
       {step === 1 ? renderStepOne() : renderStepTwo()}
-    </div>
-  );
-}
-
-// ============================================================================
-// Small Local Helper Components
-// ============================================================================
-
-function WizardHeader({
-  step,
-  onStepChange,
-}: {
-  step: 1 | 2;
-  onStepChange: (step: 1 | 2) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 font-medium text-text-primary">
-          <span className="text-sm font-semibold">Quiz Setup</span>
-        </div>
-        <Badge variant="outline" className="text-xs font-normal">
-          Step {step} of 2
-        </Badge>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div
-          onClick={() => onStepChange(1)}
-          className={cn(
-            "h-1.5 rounded-full transition-all cursor-pointer",
-            step >= 1 ? "bg-primary" : "bg-surface-4",
-          )}
-        />
-        <div
-          onClick={() => onStepChange(2)}
-          className={cn(
-            "h-1.5 rounded-full transition-all cursor-pointer",
-            step === 2 ? "bg-primary" : "bg-surface-4",
-          )}
-        />
-      </div>
     </div>
   );
 }
@@ -257,17 +236,21 @@ function DifficultySelector({
   value: DifficultyId;
   onChange: (val: DifficultyId) => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-sm font-medium text-text-primary">1. Target Difficulty</Label>
+      <Label className="text-sm font-medium text-text-primary">{t("fields.targetDifficulty")}</Label>
       <div className="grid grid-cols-3 gap-3">
         {DIFFICULTIES.map((d) => (
-          <div
+          <button
             key={d.id}
+            type="button"
+            aria-pressed={value === d.id}
             onClick={() => onChange(d.id)}
             className={cn(
               optionRowClass(value === d.id),
-              "p-3 flex flex-col justify-between gap-1.5",
+              "p-3 flex flex-col justify-between gap-1.5 text-left cursor-pointer",
             )}
           >
             <div className="flex items-center justify-between">
@@ -277,7 +260,7 @@ function DifficultySelector({
                   value === d.id ? "text-primary-foreground" : "text-text-tertiary",
                 )}
               >
-                {d.title}
+                {t(d.titleKey)}
               </span>
             </div>
             <span
@@ -286,9 +269,9 @@ function DifficultySelector({
                 value === d.id ? "text-primary-foreground/80" : "text-text-faint",
               )}
             >
-              {d.description}
+              {t(d.descKey)}
             </span>
-          </div>
+          </button>
         ))}
       </div>
     </div>
@@ -314,10 +297,12 @@ function QuestionSelector({
   onCustomChange: (raw: string) => void;
   onCustomBlur: () => void;
 }) {
+  const { t } = useTranslation("generation");
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <Label className="text-sm font-medium text-text-primary">2. Number of Questions</Label>
+        <Label className="text-sm font-medium text-text-primary">{t("quiz.questionsLabel")}</Label>
         <span className="text-xs font-medium text-primary">{questionLabel}</span>
       </div>
 
@@ -328,6 +313,7 @@ function QuestionSelector({
             <button
               key={cnt}
               type="button"
+              aria-pressed={selected}
               onClick={() => onSelectPreset(cnt)}
               className={cn(
                 optionRowClass(selected),
@@ -335,7 +321,7 @@ function QuestionSelector({
                 selected ? "font-semibold" : "font-medium",
               )}
             >
-              {cnt} Qs
+              {t("quiz.questionPreset", { count: cnt })}
             </button>
           );
         })}
@@ -350,6 +336,7 @@ function QuestionSelector({
               onChange={(e) => onCustomChange(e.target.value)}
               onBlur={onCustomBlur}
               placeholder="1-50"
+              aria-label="1-50"
               className="w-full h-9 px-2 text-center text-sm font-semibold bg-surface-2 border border-primary text-text-primary rounded-2xl outline-none focus:ring-1 focus:ring-surface-border-strong shadow-2xs"
               autoFocus
             />
@@ -363,7 +350,7 @@ function QuestionSelector({
               "h-9 text-sm font-medium text-center flex items-center justify-center gap-1.5",
             )}
           >
-            Custom
+            {t("actions.custom")}
           </button>
         )}
       </div>

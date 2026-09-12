@@ -1,4 +1,4 @@
-﻿export * from "./components/MaterialViewer";
+export * from "./components/MaterialViewer";
 export * from "./components/skeletons";
 export * from "./components/FlashcardView";
 export * from "./components/QuizView";
@@ -16,3 +16,5 @@ export * from "./shapes/study-guide";
 export * from "./shapes/case-study";
 export * from "./types";
 export * from "./api";
+export * from "./hooks";
+export * from "./utils";

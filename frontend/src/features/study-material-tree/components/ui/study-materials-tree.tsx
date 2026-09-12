@@ -1,3 +1,20 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import type { FolderDTO } from "../../types";
+import type { StudyMaterialDTO } from "@/features/study-material-viewer";
+import { cn } from "@/shared/utils/cn";
 import {
   DndContext,
   DragOverlay,
@@ -11,33 +28,17 @@ import {
 } from "@dnd-kit/core";
 import { ChevronsUpDown, Command, Folder, FolderOpen, FolderPlus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuShortcut,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { cn } from "@/shared/utils/cn";
-import type { FolderDTO } from "@/features/study-material-tree";
-import type { StudyMaterialDTO } from "@/features/study-material-viewer";
+import { useTranslation } from "react-i18next";
 import type { TreeCommandExecutor } from "../model/commands";
 import { getItemName, type TreeState } from "../model/tree";
+import { TreeControllerProvider } from "./controller";
 import {
   findTreeNode,
   getTreeDragData,
   getTreeDropData,
-  TreeControllerProvider,
-  useTreeControllerContext,
   useStudyMaterialsTreeController,
-} from "./controller";
+  useTreeControllerContext,
+} from "./controller-state";
 import { Branch } from "./tree/branch";
 import { DragPreview } from "./tree/drag-preview";
 import { TreeHeader } from "./tree/header";
@@ -217,12 +218,13 @@ function TreeContent({ isPrototype }: { isPrototype: boolean }) {
 }
 
 function TreeRootMenu() {
+  const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
   return (
     <ContextMenuContent className="min-w-56">
       <ContextMenuGroup>
         <ContextMenuItem onClick={() => controller.createFolder(null)}>
-          <FolderPlus /> New folder
+          <FolderPlus /> {t("actions.newFolder")}
           <ContextMenuShortcut className="flex items-center gap-1 tracking-normal font-sans text-xs text-muted-foreground group-focus/context-menu-item:text-accent-foreground">
             <Command className="size-4 shrink-0" aria-hidden="true" />
             <span className="font-sans font-medium">N</span>
@@ -233,10 +235,10 @@ function TreeRootMenu() {
       <ContextMenuSeparator />
       <ContextMenuGroup>
         <ContextMenuItem onClick={controller.expandAll}>
-          <FolderOpen /> Expand all
+          <FolderOpen /> {t("actions.expandAll")}
         </ContextMenuItem>
         <ContextMenuItem onClick={controller.collapseAll}>
-          <ChevronsUpDown /> Collapse all
+          <ChevronsUpDown /> {t("actions.collapseAll")}
         </ContextMenuItem>
       </ContextMenuGroup>
     </ContextMenuContent>
@@ -244,12 +246,13 @@ function TreeRootMenu() {
 }
 
 function TreeBranchList() {
+  const { t } = useTranslation("tree");
   const { tree } = useTreeControllerContext();
   return (
     <div
       data-slot="study-materials-tree-content"
       role="tree"
-      aria-label="Study materials"
+      aria-label={t("tree.ariaLabel")}
       className="min-h-full min-w-0 py-1"
     >
       {tree.map((node) => (
@@ -260,16 +263,15 @@ function TreeBranchList() {
 }
 
 function TreeEmptyState({ isPrototype }: { isPrototype: boolean }) {
+  const { t } = useTranslation("tree");
   return (
     <EmptyState
       data-slot="study-materials-tree-empty-state"
       className="h-full py-6"
       icon={<Folder className="size-5 text-muted-foreground" />}
-      title="No study materials"
+      title={t("tree.emptyTitle")}
       description={
-        isPrototype
-          ? "Create a folder to begin the in-memory prototype."
-          : "Create a folder to begin."
+        isPrototype ? t("tree.emptyDescriptionPrototype") : t("tree.emptyDescription")
       }
     />
   );
@@ -283,6 +285,7 @@ function DeleteTreeItemDialog({
   isPrototype: boolean;
 }) {
   const pending = controller.pendingDelete;
+  const { t } = useTranslation("tree");
   const handleOpenChange = (open: boolean) => {
     if (!open) controller.cancelDelete();
   };
@@ -290,11 +293,15 @@ function DeleteTreeItemDialog({
     <ConfirmDeleteDialog
       open={pending !== null}
       onOpenChange={handleOpenChange}
-      title={`Delete ${pending?.type === "folder" ? "folder" : "study material"}`}
+      title={
+        pending?.type === "folder"
+          ? t("deleteDialog.folderTitle")
+          : t("deleteDialog.materialTitle")
+      }
       description={
         isPrototype
-          ? `Delete "${pending?.name ?? ""}" from this in-memory prototype?`
-          : `Delete "${pending?.name ?? ""}"?`
+          ? t("deleteDialog.prototypeDescription", { name: pending?.name ?? "" })
+          : t("deleteDialog.description", { name: pending?.name ?? "" })
       }
       onConfirm={controller.confirmDelete}
     />
@@ -302,5 +309,5 @@ function DeleteTreeItemDialog({
 }
 
 // Re-export for convenience
+export type { CommandResult, TreeCommand, TreeCommandExecutor } from "../model/commands";
 export type { TreeNode, TreeState } from "../model/tree";
-export type { TreeCommand, TreeCommandExecutor, CommandResult } from "../model/commands";

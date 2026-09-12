@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotebookModelProvider } from "@/features/notebooks";
+import i18n from "@/shared/i18n/i18n";
 import { GenerateBriefDialog } from "./GenerateBriefDialog";
 import { useGenerationStore } from "../hooks/use-generation-store";
 
@@ -46,7 +47,11 @@ function createWrapper(notebookId = "nb-1", initialModel = "openai/gpt-5.6-sol")
 describe("GenerateBriefDialog", () => {
   let mockStartBackgroundGeneration: ReturnType<typeof vi.fn>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Namespaces load lazily; without the app-level Suspense boundary the first
+    // render would suspend on a cold worker.
+    await i18n.loadNamespaces(["generation", "notebooks"]);
+    await i18n.changeLanguage("en");
     vi.clearAllMocks();
     mockStartBackgroundGeneration = vi.fn().mockResolvedValue(undefined);
     useGenerationStore.setState({
@@ -110,6 +115,8 @@ describe("GenerateBriefDialog", () => {
     expect(screen.getByText("Generate Flashcards")).toBeTruthy();
     expect(screen.queryByText("Select Model")).toBeNull();
     expect(screen.queryByText("AI Intelligence Model")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
 
     const instructions = screen.getByPlaceholderText("What topics should these flashcards cover?");
     await user.type(instructions, "Key definitions in biology");

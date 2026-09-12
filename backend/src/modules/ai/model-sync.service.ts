@@ -7,6 +7,7 @@ import {
   SEED_GATEWAY_MODELS,
 } from './providers/model-catalog';
 import type { ProviderModel } from './providers/provider';
+import { UserSettingsService } from './user-settings.service';
 
 /** Refresh the gateway model catalog every 6 hours. */
 const MODEL_SYNC_CRON = '0 */6 * * *';
@@ -17,6 +18,8 @@ export class ModelSyncService implements OnModuleInit {
   private models: ProviderModel[] = [...SEED_GATEWAY_MODELS];
   private source: 'gateway' | 'seed' = 'seed';
   private lastSyncAt: string | null = null;
+
+  constructor(private readonly userSettingsService: UserSettingsService) {}
 
   onModuleInit() {
     // Fire-and-forget: the seed catalog serves requests until the first
@@ -42,9 +45,11 @@ export class ModelSyncService implements OnModuleInit {
   }
 
   /**
-   * Refresh the catalog. Uses the optional server key for background syncs
-   * (startup/cron); callers may pass a user's gateway key instead (e.g. the
-   * manual refresh button) so the catalog stays fresh without any server key.
+   * Refresh the catalog. Key resolution order: an explicitly passed user key
+   * (e.g. the manual refresh button), then the optional server key
+   * (AI_GATEWAY_API_KEY), then the app-wide key stored in Settings. The stored
+   * fallback lets startup/cron syncs reach the gateway without a server key.
+   * Falls back to the seed catalog only when no key exists anywhere.
    *
    * This intentionally does not probe model capabilities with inference.
    * Tool-call probes spend user quota, add one request per model every six
@@ -63,7 +68,10 @@ export class ModelSyncService implements OnModuleInit {
     reason = 'manual',
     apiKey?: string | null,
   ): Promise<ProviderModel[]> {
-    const key = apiKey ?? gatewayServerKey();
+    const key =
+      apiKey ??
+      gatewayServerKey() ??
+      (await this.userSettingsService.getGatewayApiKey());
     if (!key) {
       if (this.source !== 'seed' || this.models.length === 0) {
         this.models = [...SEED_GATEWAY_MODELS];

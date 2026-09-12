@@ -1,6 +1,7 @@
+import { cn } from "@/shared/utils/cn";
 import {
-  Brain,
   BookOpen,
+  Brain,
   Briefcase,
   FileQuestion,
   Folder,
@@ -11,9 +12,8 @@ import {
   Presentation,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@/shared/utils/cn";
 import type { TreeNode } from "../../model/tree";
-import { useTreeControllerContext } from "../controller";
+import { useTreeControllerContext } from "../controller-state";
 import { studyMaterialsTreeVariants } from "./variants";
 
 type DragPreviewProps = {

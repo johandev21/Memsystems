@@ -20,7 +20,8 @@ const TABLES = [
   'study_material_folders',
   'sources',
   'notebooks',
-  'user_settings',
+  // Renamed to app_settings by migration 0007 (user_settings was dropped).
+  'app_settings',
 ];
 
 export async function resetDatabase(): Promise<void> {
@@ -75,19 +76,19 @@ export async function ensureTestDatabase(): Promise<void> {
     await pgClient.query('DROP TABLE IF EXISTS "session" CASCADE');
     await pgClient.query('DROP TABLE IF EXISTS "user" CASCADE');
     await pgClient.query(
-      'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "gateway_api_key" text',
+      'ALTER TABLE "app_settings" ADD COLUMN IF NOT EXISTS "gateway_api_key" text',
     );
     await pgClient.query(
-      'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "deepseek_api_key" text',
+      'ALTER TABLE "app_settings" ADD COLUMN IF NOT EXISTS "deepseek_api_key" text',
     );
     await pgClient.query(
-      'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "anthropic_api_key" text',
+      'ALTER TABLE "app_settings" ADD COLUMN IF NOT EXISTS "anthropic_api_key" text',
     );
     await pgClient.query(
-      'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "gemini_api_key" text',
+      'ALTER TABLE "app_settings" ADD COLUMN IF NOT EXISTS "gemini_api_key" text',
     );
     await pgClient.query(
-      'ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "kimi_api_key" text',
+      'ALTER TABLE "app_settings" ADD COLUMN IF NOT EXISTS "kimi_api_key" text',
     );
     await pgClient.query(`DO $$ BEGIN
       CREATE TYPE "web_search_job_status" AS ENUM('pending', 'processing', 'ready', 'failed');

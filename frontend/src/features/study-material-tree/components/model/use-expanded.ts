@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { FolderDTO } from "@/features/study-material-tree";
+import { useCallback, useEffect, useState } from "react";
+import type { FolderDTO } from "../../types";
 
 const STORAGE_PREFIX = "study-materials-tree:expanded:";
 
@@ -31,7 +31,11 @@ function persist(notebookId: string, ids: Set<string>) {
 }
 
 export function getActiveFolderIds(folders: readonly FolderDTO[]): Set<string> {
-  return new Set(folders.filter((folder) => !folder.deletedAt).map((folder) => folder.id));
+  const result = new Set<string>();
+  for (const folder of folders) {
+    if (!folder.deletedAt) result.add(folder.id);
+  }
+  return result;
 }
 
 export function getInitialExpandedIds(
@@ -40,11 +44,13 @@ export function getInitialExpandedIds(
 ): Set<string> {
   const activeIds = getActiveFolderIds(folders);
   if (persisted) return new Set([...persisted].filter((id) => activeIds.has(id)));
-  return new Set(
-    folders
-      .filter((folder) => folder.parentId === null && !folder.deletedAt)
-      .map((folder) => folder.id),
-  );
+  const initial = new Set<string>();
+  for (const folder of folders) {
+    if (folder.parentId === null && !folder.deletedAt) {
+      initial.add(folder.id);
+    }
+  }
+  return initial;
 }
 
 export function reconcileExpandedIds(
@@ -52,12 +58,44 @@ export function reconcileExpandedIds(
   expandedIds: Set<string>,
   previousFolderIds: Set<string>,
 ): Set<string> {
-  const next = new Set([...expandedIds].filter((id) => getActiveFolderIds(folders).has(id)));
+  const activeIds = getActiveFolderIds(folders);
+  const next = new Set<string>();
+  for (const id of expandedIds) {
+    if (activeIds.has(id)) next.add(id);
+  }
   for (const folder of folders) {
     if (folder.parentId === null && !folder.deletedAt && !previousFolderIds.has(folder.id))
       next.add(folder.id);
   }
   return next;
+}
+
+export function computeExpandedForNotebook(
+  notebookId: string,
+  folders: readonly FolderDTO[],
+): Set<string> {
+  return getInitialExpandedIds(folders, loadPersisted(notebookId));
+}
+
+function areSetsEqual(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
+}
+
+function syncExpandedOnFoldersChange(
+  folders: readonly FolderDTO[],
+  openIds: Set<string>,
+  prevFolderIds: Set<string>,
+): { nextFolderIds: Set<string>; nextOpenIds: Set<string> } | null {
+  const currentFolderIds = getActiveFolderIds(folders);
+  if (areSetsEqual(currentFolderIds, prevFolderIds)) return null;
+
+  const reconciled = reconcileExpandedIds(folders, openIds, prevFolderIds);
+  const nextOpenIds = areSetsEqual(reconciled, openIds) ? openIds : reconciled;
+  return { nextFolderIds: currentFolderIds, nextOpenIds };
 }
 
 /**
@@ -68,84 +106,30 @@ export function usePersistentExpandedFolders(
   notebookId: string,
   folders: readonly FolderDTO[],
 ): [Set<string>, (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void] {
-  const storageKey = getStorageKey(notebookId);
+  const [openIds, setOpenIds] = useState<Set<string>>(() =>
+    computeExpandedForNotebook(notebookId, folders),
+  );
 
-  const [openIds, setOpenIds] = useState<Set<string>>(() => {
-    const persisted = loadPersisted(notebookId);
-    if (persisted) {
-      // Prune stale on init
-      const existing = new Set(folders.filter((f) => !f.deletedAt).map((f) => f.id));
-      const pruned = new Set([...persisted].filter((id) => existing.has(id)));
-      // If persisted was non-empty but pruned became empty due to stale, keep pruned (user had no valid expansion)
-      // Also expand new top-level if no persisted? Actually if persisted existed, we should not auto-expand new top-level yet — that will be handled in effect.
-      return pruned;
-    }
-    // No persisted: expand top-level folders by default
-    return new Set(folders.filter((f) => f.parentId === null && !f.deletedAt).map((f) => f.id));
-  });
+  const [prevNotebookId, setPrevNotebookId] = useState(notebookId);
+  const [prevFolderIds, setPrevFolderIds] = useState<Set<string>>(() =>
+    getActiveFolderIds(folders),
+  );
 
-  const prevFolderIdsRef = useRef<Set<string>>(getActiveFolderIds(folders));
-  const prevNotebookIdRef = useRef<string>(notebookId);
-
-  // When notebookId changes, load persisted for new notebook
-  useEffect(() => {
-    if (prevNotebookIdRef.current !== notebookId) {
-      prevNotebookIdRef.current = notebookId;
-      const persisted = loadPersisted(notebookId);
-      if (persisted) {
-        const existing = new Set(folders.filter((f) => !f.deletedAt).map((f) => f.id));
-        const pruned = new Set([...persisted].filter((id) => existing.has(id)));
-        // Expand newly encountered top-level for new notebook if persisted empty? Actually if persisted null, expand top-level.
-        if (pruned.size === 0 && !persisted.size) {
-          // no persisted, expand top-level
-          const topLevel = folders
-            .filter((f) => f.parentId === null && !f.deletedAt)
-            .map((f) => f.id);
-          setOpenIds(new Set(topLevel));
-        } else {
-          setOpenIds(pruned);
-        }
-      } else {
-        const topLevel = folders
-          .filter((f) => f.parentId === null && !f.deletedAt)
-          .map((f) => f.id);
-        setOpenIds(new Set(topLevel));
+  // Adjust persisted expansion when the notebook changes (render-phase
+  // adjustment, no effect). localStorage read here mirrors the initializer.
+  if (prevNotebookId !== notebookId) {
+    setPrevNotebookId(notebookId);
+    setPrevFolderIds(getActiveFolderIds(folders));
+    setOpenIds(computeExpandedForNotebook(notebookId, folders));
+  } else {
+    const update = syncExpandedOnFoldersChange(folders, openIds, prevFolderIds);
+    if (update) {
+      setPrevFolderIds(update.nextFolderIds);
+      if (update.nextOpenIds !== openIds) {
+        setOpenIds(update.nextOpenIds);
       }
-      prevFolderIdsRef.current = getActiveFolderIds(folders);
-      return;
     }
-  }, [notebookId, folders, storageKey]);
-
-  // Handle folder list changes: prune stale and expand newly encountered top-level
-  useEffect(() => {
-    const currentIds = getActiveFolderIds(folders);
-    const prevIds = prevFolderIdsRef.current;
-
-    // Detect newly encountered top-level folders (IDs that weren't in prev set)
-    const newTopLevelIds = folders
-      .filter((f) => f.parentId === null && !f.deletedAt && !prevIds.has(f.id))
-      .map((f) => f.id);
-
-    // Prune stale
-    const pruned = new Set([...openIds].filter((id) => currentIds.has(id)));
-
-    // Expand newly encountered top-level
-    for (const id of newTopLevelIds) pruned.add(id);
-
-    // Only update if changed
-    const changed =
-      pruned.size !== openIds.size ||
-      newTopLevelIds.length > 0 ||
-      [...openIds].some((id) => !currentIds.has(id));
-
-    if (changed) {
-      setOpenIds(pruned);
-    }
-
-    prevFolderIdsRef.current = currentIds;
-    // We intentionally do not include openIds in deps to avoid loop; we manage via state update
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folders]);
+  }
 
   // Persist whenever openIds changes
   useEffect(() => {

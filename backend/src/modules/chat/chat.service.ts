@@ -13,6 +13,7 @@ import { AiService } from '../ai/ai.service';
 import { ConnectionService } from '../ai/connection.service';
 import { toClientStreamError } from '../ai/stream-error';
 import { resolveModelId } from '../ai/providers/model-catalog';
+import { languageDirective } from '../../common/i18n/language';
 import { RetrievalService } from '../ai/retrieval.service';
 import type { CitationLocator } from '../ai/retrieval.service';
 import { DRIZZLE } from '../database/database.module';
@@ -84,6 +85,7 @@ export interface SendInput {
   regenerateMessageId?: string;
   model: string;
   abortSignal?: AbortSignal;
+  language?: string;
 }
 
 @Injectable()
@@ -369,9 +371,9 @@ export class ChatService {
     const requestOptions = this.aiService.getGatewayRequestOptions();
 
     const systemMessage =
-      retrievedChunks.length > 0
+      (retrievedChunks.length > 0
         ? `${SYSTEM_PROMPT}\n\n---\n\nRELEVANT SOURCE PASSAGES:\n\n${sourceContext}`
-        : SYSTEM_PROMPT;
+        : SYSTEM_PROMPT) + languageDirective(input.language);
 
     const messagesForLlm = history.map((m) => {
       const parts =

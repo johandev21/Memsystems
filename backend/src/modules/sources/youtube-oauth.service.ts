@@ -50,6 +50,7 @@ export class YouTubeOAuthService {
     if (!accessToken) {
       throw new BadRequestError(
         'OAuth access token is required to list YouTube captions',
+        { messageKey: 'errors.sources.youtube.oauthListTokenRequired' },
       );
     }
 
@@ -65,6 +66,13 @@ export class YouTubeOAuthService {
       const errorBody = await response.text().catch(() => '');
       throw new BadRequestError(
         `Failed to list YouTube captions (HTTP ${response.status}): ${errorBody || response.statusText}`,
+        {
+          messageKey: 'errors.sources.youtube.oauthListFailed',
+          params: {
+            status: response.status,
+            reason: errorBody || response.statusText,
+          },
+        },
       );
     }
 
@@ -93,6 +101,7 @@ export class YouTubeOAuthService {
     if (!accessToken) {
       throw new BadRequestError(
         'OAuth access token is required to download YouTube caption',
+        { messageKey: 'errors.sources.youtube.oauthDownloadTokenRequired' },
       );
     }
 
@@ -107,6 +116,14 @@ export class YouTubeOAuthService {
       const errorBody = await response.text().catch(() => '');
       throw new BadRequestError(
         `Failed to download YouTube caption track ${captionId} (HTTP ${response.status}): ${errorBody || response.statusText}`,
+        {
+          messageKey: 'errors.sources.youtube.oauthDownloadFailed',
+          params: {
+            captionId,
+            status: response.status,
+            reason: errorBody || response.statusText,
+          },
+        },
       );
     }
 

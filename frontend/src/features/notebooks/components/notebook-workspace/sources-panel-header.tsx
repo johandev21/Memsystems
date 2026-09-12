@@ -1,7 +1,8 @@
 import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { AddSourceDialog } from "@/features/sources";
+import { AddSourceDialog } from "@/features/sources/components/add-source-dialog";
 import { cn } from "@/shared/utils/cn";
 
 export interface SourcesPanelHeaderProps {
@@ -15,9 +16,13 @@ export function SourcesPanelHeader({
   notebookId,
   onToggleCollapse,
 }: SourcesPanelHeaderProps) {
+  const { t } = useTranslation("notebooks");
+
   return (
     <header className="flex items-center justify-between p-1.5 bg-panel-header-bg min-h-[44px]">
-      <h2 className={`text-sm font-semibold pl-1.5 ${collapsed ? "hidden" : ""}`}>Sources</h2>
+      <h2 className={`text-sm font-semibold pl-1.5 ${collapsed ? "hidden" : ""}`}>
+        {t("panels.sources")}
+      </h2>
       <div className="flex items-center gap-0.5">
         {!collapsed && (
           <AddSourceDialog notebookId={notebookId}>
@@ -27,7 +32,7 @@ export function SourcesPanelHeader({
                 buttonVariants({ variant: "ghost", size: "icon" }),
                 "h-7 w-7 cursor-pointer",
               )}
-              aria-label="Add source"
+              aria-label={t("panels.addSource")}
             >
               <Plus className="size-4" />
             </button>
@@ -37,7 +42,7 @@ export function SourcesPanelHeader({
           variant="ghost"
           size="icon"
           className={collapsed ? "mx-auto cursor-pointer" : "h-7 w-7 cursor-pointer"}
-          aria-label={collapsed ? "Expand sources" : "Collapse sources"}
+          aria-label={collapsed ? t("panels.expandSources") : t("panels.collapseSources")}
           onClick={onToggleCollapse}
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}

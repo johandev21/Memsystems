@@ -47,7 +47,9 @@ export class StudyMaterialFolderService {
     await this.notebooksService.assertNotebookOwner(notebookId);
     const name = input.name.trim();
     if (name.length === 0) {
-      throw new BadRequestError('Folder name cannot be empty');
+      throw new BadRequestError('Folder name cannot be empty', {
+        messageKey: 'errors.studyMaterials.folderNameEmpty',
+      });
     }
     if (input.parentId) {
       await this.assertFolderOwned(notebookId, input.parentId);
@@ -69,13 +71,17 @@ export class StudyMaterialFolderService {
     if (input.name !== undefined) {
       const name = input.name.trim();
       if (name.length === 0) {
-        throw new BadRequestError('Folder name cannot be empty');
+        throw new BadRequestError('Folder name cannot be empty', {
+          messageKey: 'errors.studyMaterials.folderNameEmpty',
+        });
       }
       updates.name = name;
     }
     if (input.parentId !== undefined) {
       if (input.parentId === folderId) {
-        throw new BadRequestError('Folder cannot be its own parent');
+        throw new BadRequestError('Folder cannot be its own parent', {
+          messageKey: 'errors.studyMaterials.folderOwnParent',
+        });
       }
       if (input.parentId) {
         await this.assertFolderOwned(folder.notebookId, input.parentId);
@@ -86,6 +92,7 @@ export class StudyMaterialFolderService {
         if (wouldCycle) {
           throw new BadRequestError(
             'Cannot reparent folder under one of its descendants',
+            { messageKey: 'errors.studyMaterials.folderReparentCycle' },
           );
         }
       }
@@ -105,7 +112,9 @@ export class StudyMaterialFolderService {
   async delete(folderId: string) {
     const folder = await this.fetchOwned(folderId);
     if (folder.deletedAt) {
-      throw new BadRequestError('Folder already deleted');
+      throw new BadRequestError('Folder already deleted', {
+        messageKey: 'errors.studyMaterials.folderAlreadyDeleted',
+      });
     }
     const descendantFolderIds = await this.getDescendantFolderIds(folder);
 
@@ -122,6 +131,7 @@ export class StudyMaterialFolderService {
     if (activeMaterials.length > 0) {
       throw new BadRequestError(
         'Cannot delete folder: please delete all study materials inside first',
+        { messageKey: 'errors.studyMaterials.folderDeleteHasMaterials' },
       );
     }
 
@@ -275,13 +285,19 @@ export class StudyMaterialFolderService {
       .from(studyMaterialFolders)
       .where(eq(studyMaterialFolders.id, folderId));
     if (!folder) {
-      throw new NotFoundError('Folder');
+      throw new NotFoundError('Folder', {
+        messageKey: 'errors.studyMaterials.folderNotFound',
+      });
     }
     if (folder.notebookId !== notebookId) {
-      throw new ForbiddenError('Folder does not belong to this notebook');
+      throw new ForbiddenError('Folder does not belong to this notebook', {
+        messageKey: 'errors.studyMaterials.folderNotInNotebook',
+      });
     }
     if (folder.deletedAt) {
-      throw new BadRequestError('Cannot move to a folder in Trash');
+      throw new BadRequestError('Cannot move to a folder in Trash', {
+        messageKey: 'errors.studyMaterials.folderInTrash',
+      });
     }
   }
 
@@ -291,7 +307,9 @@ export class StudyMaterialFolderService {
       .from(studyMaterialFolders)
       .where(eq(studyMaterialFolders.id, folderId));
     if (!folder) {
-      throw new NotFoundError('Folder');
+      throw new NotFoundError('Folder', {
+        messageKey: 'errors.studyMaterials.folderNotFound',
+      });
     }
     await this.notebooksService.assertNotebookOwner(folder.notebookId);
     return folder;

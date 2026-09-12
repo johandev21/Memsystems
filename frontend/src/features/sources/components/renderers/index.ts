@@ -1,31 +1,26 @@
-export * from "./document-type-detector";
-export * from "./markdown-document-viewer";
-export * from "./article-document-viewer";
-export * from "./plain-text-document-viewer";
-export * from "./virtualized-document-container";
-export * from "./image-document-viewer";
-export * from "./tabular-document-viewer";
 export {
-  AudioDocumentViewer,
+  formatTime as formatVideoTime,
+  parseRawTextToVideoSegments,
+  parseTimestampToMs as parseVideoTimestampToMs,
+} from "../../utils/video-transcript-parser";
+export * from "./article-document-viewer";
+export { AudioDocumentViewer, type AudioDocumentViewerProps } from "./audio-document-viewer";
+export {
   formatTime,
   parseRawTextToAudioSegments,
   parseTimestampToMs,
-  type AudioDocumentViewerProps,
   type ParsedAudioSegment,
-} from "./audio-document-viewer";
+} from "../../utils/audio-transcript-parser";
+export * from "../../utils/detect-document-type";
+export * from "./image-document-viewer";
+export * from "./markdown-document-viewer";
+export * from "./plain-text-document-viewer";
+export { PptxDocumentViewer, type PptxDocumentViewerProps } from "./pptx-document-viewer";
+export { parseRawTextToSlideSegments, type ParsedSlideSegment } from "../../utils/slide-segment-parser";
+export * from "./tabular-document-viewer";
 export {
   VideoDocumentViewer,
-  parseRawTextToVideoSegments,
   type ParsedVideoSegment,
   type VideoDocumentViewerProps,
 } from "./video-document-viewer";
-export {
-  formatTime as formatVideoTime,
-  parseTimestampToMs as parseVideoTimestampToMs,
-} from "./video-document-viewer";
-export {
-  PptxDocumentViewer,
-  parseRawTextToSlideSegments,
-  type PptxDocumentViewerProps,
-  type ParsedSlideSegment,
-} from "./pptx-document-viewer";
+export * from "./virtualized-document-container";

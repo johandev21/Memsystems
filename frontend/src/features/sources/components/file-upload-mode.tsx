@@ -1,5 +1,6 @@
 import { Link as LinkIcon, Loader2, Type, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -7,7 +8,7 @@ import {
   ACCEPTED_SOURCE_EXTENSIONS,
   ACCEPTED_SOURCE_MIME_TYPES,
   isClientSupportedSourceFile,
-} from "../utils";
+} from "../utils/source-upload-actions";
 
 interface FileUploadModeProps {
   onSelectUrlMode: () => void;
@@ -24,6 +25,7 @@ export function FileUploadMode({
   isUploading,
   busy,
 }: FileUploadModeProps) {
+  const { t } = useTranslation("sources");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -34,9 +36,7 @@ export function FileUploadMode({
     const file = e.dataTransfer.files?.[0];
     if (file) {
       if (!isClientSupportedSourceFile(file)) {
-        toast.error(
-          "Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.",
-        );
+        toast.error(t("fileUploadMode.unsupportedFileType"));
         return;
       }
       onUploadFile(file);
@@ -64,9 +64,7 @@ export function FileUploadMode({
     const file = e.target.files?.[0];
     if (file) {
       if (!isClientSupportedSourceFile(file)) {
-        toast.error(
-          "Unsupported file type. Use PDF, DOCX, TXT, Markdown, Images, Audio, Video, PPTX, EPUB, TeX, or BibTeX files.",
-        );
+        toast.error(t("fileUploadMode.unsupportedFileType"));
         e.target.value = "";
         return;
       }
@@ -97,11 +95,10 @@ export function FileUploadMode({
 
       <h3 className="mb-1.5 flex items-center gap-2 text-lg font-medium text-foreground">
         {isUploading && <Loader2 className="size-4 animate-spin text-primary" />}
-        {isUploading ? "Uploading file..." : "Drop your files here"}
+        {isUploading ? t("fileUploadMode.uploading") : t("fileUploadMode.dropFiles")}
       </h3>
       <p className="text-xs text-muted-foreground mb-4 text-center max-w-[340px]">
-        Supports PDF, DOCX, TXT, Markdown, Images, Audio, Video, Presentations, eBooks, LaTeX, and
-        BibTeX.
+        {t("fileUploadMode.supportedFormats")}
       </p>
 
       <div className="flex flex-wrap justify-center gap-2.5 w-full relative z-10">
@@ -113,7 +110,7 @@ export function FileUploadMode({
           disabled={busy}
         >
           <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
-          Upload Files
+          {t("fileUploadMode.uploadFiles")}
         </Button>
         <Button
           type="button"
@@ -123,7 +120,7 @@ export function FileUploadMode({
           disabled={busy}
         >
           <LinkIcon className="h-4 w-4 mr-2 text-info" />
-          Websites
+          {t("fileUploadMode.websites")}
         </Button>
         <Button
           type="button"
@@ -133,13 +130,13 @@ export function FileUploadMode({
           disabled={busy}
         >
           <Type className="h-4 w-4 mr-2 text-warning" />
-          Copied Text
+          {t("fileUploadMode.copiedText")}
         </Button>
       </div>
 
       <button
         type="button"
-        aria-label="Upload a file"
+        aria-label={t("fileUploadMode.uploadFile")}
         onClick={openFileDialog}
         disabled={busy}
         className="absolute inset-0 z-0 cursor-pointer disabled:cursor-progress"

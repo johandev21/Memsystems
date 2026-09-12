@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
-import { formatDisplayTitle } from "@/shared/utils/format-title";
-import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "./useRoadmapProgress";
+import i18n from "@/shared/i18n";
+import { formatDisplayTitle } from "../utils/format-title";
+import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "../hooks/use-roadmap-progress";
 import "./roadmap-theme.css";
 
 // =============================================================================
@@ -62,7 +64,7 @@ const SEND_CHAT_PROMPT_EVENT = "send-chat-prompt";
  * Formats a phase index label (e.g. "Phase 1").
  */
 function formatMilestoneLabel(phaseIndex: number): string {
-  return `Phase ${phaseIndex + 1}`;
+  return i18n.t("roadmap.phase", { ns: "viewer", number: phaseIndex + 1 });
 }
 
 /**
@@ -87,9 +89,18 @@ function buildPhaseStudyPrompt(
 ): string {
   const formattedPhaseTitle = formatDisplayTitle(phase.title);
   const topicSummary = formatTopicSummary(phase.topics);
-  const roadmapContext = roadmapTitle ? ` ("${formatDisplayTitle(roadmapTitle)}")` : "";
+  const roadmapContext = roadmapTitle
+    ? i18n.t("roadmap.prompt.context", { ns: "viewer", title: formatDisplayTitle(roadmapTitle) })
+    : "";
 
-  return `I'm studying Phase ${phaseIndex + 1}: "${formattedPhaseTitle}" from my learning roadmap${roadmapContext}.\n\nPhase Description: ${phase.description || "N/A"}\n\nTopics covered in this phase:\n${topicSummary}\n\nPlease act as my interactive AI tutor for this phase. Start by giving me a clear, high-level summary of what I'll master in this phase, and then ask me an initial concept question to check my understanding and kick off our study session!`;
+  return i18n.t("roadmap.prompt.study", {
+    ns: "viewer",
+    number: phaseIndex + 1,
+    title: formattedPhaseTitle,
+    roadmapContext,
+    description: phase.description || i18n.t("roadmap.prompt.notAvailable", { ns: "viewer" }),
+    topics: topicSummary,
+  });
 }
 
 /**
@@ -101,7 +112,7 @@ function buildTopicCopyText(topic: RoadmapTopic): string {
     lines.push("", topic.description);
   }
   if (topic.keyTakeaways?.length) {
-    lines.push("", "Key Objectives:");
+    lines.push("", i18n.t("roadmap.keyObjectives", { ns: "viewer" }));
     topic.keyTakeaways.forEach((keyPoint) => lines.push(`- ${keyPoint}`));
   }
   return lines.join("\n");
@@ -164,6 +175,8 @@ function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
 }
 
 function PhaseMilestoneCard({ phase, phaseIndex, onStudyPhase }: PhaseMilestoneCardProps) {
+  const { t } = useTranslation("viewer");
+
   return (
     <div className="rounded-2xl border bg-surface-2 border-surface-border-subtle p-4 @sm:p-5 @3xl:p-6 max-w-full sm:max-w-lg w-full text-center flex flex-col items-center gap-2.5">
       <Badge
@@ -190,13 +203,14 @@ function PhaseMilestoneCard({ phase, phaseIndex, onStudyPhase }: PhaseMilestoneC
         onClick={() => onStudyPhase(phase, phaseIndex)}
         className="mt-1 h-8 @sm:h-9 px-3 @sm:px-4 rounded-xl border border-surface-border-subtle bg-surface-2 text-text-secondary hover:bg-surface-3 text-xs @sm:text-sm font-medium cursor-pointer transition-colors"
       >
-        Study in chat
+        {t("roadmap.studyInChat")}
       </Button>
     </div>
   );
 }
 
 function TopicCard({ topic, isLeft }: TopicCardProps) {
+  const { t } = useTranslation("viewer");
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<number>(0);
 
@@ -214,10 +228,10 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
     try {
       await navigator.clipboard.writeText(text);
       setIsCopied(true);
-      toast.success("Copied");
+      toast.success(t("roadmap.copied"));
       timeoutRef.current = window.setTimeout(() => setIsCopied(false), 1500);
     } catch {
-      toast.error("Copy failed");
+      toast.error(t("roadmap.copyFailed"));
     }
   };
 
@@ -253,7 +267,7 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
           variant="ghost"
           size="icon-sm"
           onClick={handleCopy}
-          aria-label={`Copy ${formatDisplayTitle(topic.title)}`}
+          aria-label={t("roadmap.copyTopic", { title: formatDisplayTitle(topic.title) })}
           className="absolute top-2 right-2 text-text-faint hover:text-text-secondary opacity-0 transition-opacity duration-200 focus-visible:opacity-100 group-hover:opacity-100"
         >
           {isCopied ? <Check className="size-4" /> : <Copy className="size-4" />}

@@ -52,6 +52,7 @@ export interface StartGenerationInput {
   practiceProblemsOptions?: PracticeProblemsGenerationOptions;
   caseStudyOptions?: CaseStudyGenerationOptions | CaseStudyGenerationOptionsInput;
   slidesOptions?: SlidesGenerationOptions;
+  language?: string;
 }
 
 export type GenerationEvent =

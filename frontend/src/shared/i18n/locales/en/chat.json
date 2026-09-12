@@ -1,0 +1,81 @@
+{
+  "announcement": {
+    "openingChat": "Opening chat.",
+    "openingChatFor": "Opening chat for {{concept}}."
+  },
+  "assistant": {
+    "branchPage": "{{current}} of {{total}}",
+    "copied": "Copied!",
+    "copyMessage": "Copy message",
+    "nextVersion": "Next version",
+    "previousVersion": "Previous version",
+    "regenerateResponse": "Regenerate response"
+  },
+  "clearHistory": {
+    "cancel": "Cancel",
+    "cleared": "Chat history cleared",
+    "clearFailed": "Couldn't clear chat history",
+    "clearing": "Clearing...",
+    "confirm": "Clear History",
+    "description": "Are you sure you want to clear all chat messages in this notebook?",
+    "title": "Clear Chat History"
+  },
+  "composer": {
+    "attachmentAlt": "Attachment",
+    "attachPhoto": "Attach photo",
+    "imageAlt": "Image",
+    "noModelsFound": "No models found",
+    "placeholder": "Type a message...",
+    "removeAttachment": "Remove attachment",
+    "searchPlaceholder": "Search models...",
+    "selectModelTitle": "Select Model",
+    "sendMessage": "Send message",
+    "stopResponse": "Stop response"
+  },
+  "empty": {
+    "blankCanvas": "Start with a blank canvas",
+    "welcomeDescription": "Ask questions or generate study materials based on your added sources.\n\nUse the chat composer below to get started.",
+    "welcomeTitle": "Welcome to your notebook: \"{{title}}\""
+  },
+  "errorCard": {
+    "addCredits": "Add credits",
+    "openSettings": "Open settings",
+    "retry": "Retry",
+    "tip": "Tip: cheaper models are throttled less often."
+  },
+  "header": {
+    "title": "Chat"
+  },
+  "locator": {
+    "lines": "Lines {{value}}",
+    "linesRange": "Lines {{start}}–{{end}}",
+    "page": "Page {{number}}",
+    "sheet": "Sheet \"{{name}}\"",
+    "slide": "Slide {{number}}",
+    "timestamp": "Timestamp",
+    "visualRegion": "Visual region"
+  },
+  "message": {
+    "copiedToClipboard": "Copied to clipboard"
+  },
+  "panel": {
+    "gatewayBusy": "AI Gateway is busy — responses may fail. Waiting a bit and retrying usually works.",
+    "gatewayKeyDescription": "An AI Gateway key is required to chat with your study assistant.",
+    "notebookFallback": "Notebook"
+  },
+  "pending": {
+    "thinking": "Thinking…",
+    "waiting": "Waiting for response…"
+  },
+  "referencePopover": {
+    "noExcerpt": "No excerpt is available for this reference.",
+    "openSource": "Open source",
+    "referencesAria": "References",
+    "sourceUnavailable": "Source unavailable",
+    "triggerAria": "Reference {{number}}: {{title}}",
+    "unknownKind": "Source"
+  },
+  "userMessage": {
+    "attachedImageAlt": "Attached image"
+  }
+}

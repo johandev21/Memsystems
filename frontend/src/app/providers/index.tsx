@@ -14,6 +14,5 @@ export function AppProviders({ children }: { children: ReactNode }) {
   );
 }
 
-export * from "./query-provider";
-export * from "./theme-provider";
-export * from "./use-theme-keyboard-shortcut";
+export { QueryProvider } from "./query-provider";
+export { AppThemeProvider } from "./theme-provider";

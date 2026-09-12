@@ -36,8 +36,7 @@ function createJobsService(searchImpl: () => Promise<unknown>) {
 
 const SEARCH_RESULT = {
   query: 'philosophy',
-  modelId: 'openai/gpt-5.6-sol',
-  summary: 'A summary of philosophy sources.',
+  summary: null,
   sources: [
     {
       title: 'Stanford Encyclopedia',
@@ -54,7 +53,6 @@ describe('WebSearchJobsService', () => {
 
     const job = await service.enqueue(notebook.id, {
       query: 'philosophy',
-      modelId: 'openai/gpt-5.6-sol',
     });
     expect(job.status).toBe('pending');
 
@@ -62,7 +60,7 @@ describe('WebSearchJobsService', () => {
 
     const latest = await service.latest(notebook.id);
     expect(latest?.status).toBe('ready');
-    expect(latest?.summary).toBe('A summary of philosophy sources.');
+    expect(latest?.summary).toBeNull();
     expect(latest?.candidates).toEqual([
       {
         title: 'Stanford Encyclopedia',
@@ -79,12 +77,10 @@ describe('WebSearchJobsService', () => {
 
     const job1 = await service.enqueue(notebook.id, {
       query: 'first query',
-      modelId: 'openai/gpt-5.6-sol',
     });
 
     const job2 = await service.enqueue(notebook.id, {
       query: 'second query',
-      modelId: 'openai/gpt-5.6-sol',
     });
 
     expect(job1.id).not.toBe(job2.id);
@@ -101,7 +97,6 @@ describe('WebSearchJobsService', () => {
 
     await service.enqueue(notebook.id, {
       query: 'failing query',
-      modelId: 'openai/gpt-5.6-sol',
     });
 
     await queue.drain();
@@ -117,7 +112,6 @@ describe('WebSearchJobsService', () => {
 
     await service.enqueue(notebook.id, {
       query: 'dismiss query',
-      modelId: 'openai/gpt-5.6-sol',
     });
 
     await service.dismiss(notebook.id);

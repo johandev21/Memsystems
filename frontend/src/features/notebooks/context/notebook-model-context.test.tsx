@@ -1,13 +1,9 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  DEFAULT_MODEL_ID,
-  NotebookModelProvider,
-  resolveModelId,
-  useNotebookModel,
-} from "./notebook-model-context";
 import { useModelPersistence } from "../hooks/use-model-persistence";
+import { NotebookModelProvider } from "./notebook-model-context";
+import { DEFAULT_MODEL_ID, resolveModelId, useNotebookModel } from "./notebook-model-state";
 
 describe("NotebookModelContext & useNotebookModel", () => {
   beforeEach(() => {

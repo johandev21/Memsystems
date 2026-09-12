@@ -1,0 +1,74 @@
+{
+  "actions": {
+    "collapseAll": "Contraer todo",
+    "delete": "Eliminar",
+    "duplicate": "Duplicar",
+    "expandAll": "Expandir todo",
+    "moveToRoot": "Mover a Materiales de estudio",
+    "newFolder": "Nueva carpeta",
+    "rename": "Cambiar nombre"
+  },
+  "defaults": {
+    "folder": "carpeta",
+    "item": "Elemento",
+    "studyMaterial": "Material de estudio",
+    "untitledFolder": "Carpeta sin título"
+  },
+  "deleteDialog": {
+    "description": "¿Eliminar “{{name}}”?",
+    "folderTitle": "Eliminar carpeta",
+    "materialTitle": "Eliminar material de estudio",
+    "prototypeDescription": "¿Eliminar “{{name}}” de este prototipo en memoria?"
+  },
+  "errors": {
+    "commandFailed": "No se pudo completar el comando",
+    "connection": "Comprueba tu conexión e inténtalo de nuevo.",
+    "deleteFailed": "No se pudo eliminar",
+    "deleteFolderFailed": "No se pudo eliminar la carpeta",
+    "deleteMaterialFailed": "No se pudo eliminar el material",
+    "duplicateFailed": "No se pudo duplicar el material",
+    "invalidMove": "Movimiento no válido",
+    "loadFailed": "No se pudieron cargar los materiales de estudio",
+    "materialNotFound": "No se encontró el material",
+    "moveFailed": "No se pudo mover el elemento",
+    "nameEmpty": "El nombre no puede estar vacío",
+    "refreshFailed": "No se pudo actualizar.",
+    "renameFailed": "No se pudo cambiar el nombre",
+    "renameFolderFailed": "No se pudo cambiar el nombre de la carpeta",
+    "renameMaterialFailed": "No se pudo cambiar el nombre del material",
+    "retry": "Reintentar",
+    "retrying": "Reintentando…",
+    "unknownCommand": "Comando desconocido"
+  },
+  "header": {
+    "collapseAllFolders": "Contraer todas las carpetas",
+    "collapsePanel": "Contraer materiales de estudio",
+    "dragToFolder": "Arrastra a una carpeta",
+    "dropToRoot": "Suelta para mover a la raíz",
+    "expandAllFolders": "Expandir todas las carpetas",
+    "expandPanel": "Expandir materiales de estudio",
+    "newFolder": "Nueva carpeta",
+    "title": "Materiales de estudio"
+  },
+  "lastAction": {
+    "created": "Se creó {{name}}.",
+    "deleted": "Se eliminó {{name}} del prototipo local.",
+    "duplicated": "Se duplicó {{name}}.",
+    "moved": "Se movió {{name}} a {{targetName}}.",
+    "ready": "Listo para mover materiales de estudio en memoria.",
+    "renamed": "Se cambió el nombre de {{previousName}} a {{nextName}}."
+  },
+  "row": {
+    "actionsFor": "Acciones para {{name}}",
+    "dragHandle": "Arrastra para mover",
+    "itemName": "Nombre del elemento"
+  },
+  "tree": {
+    "ariaLabel": "Materiales de estudio",
+    "emptyDescription": "Crea una carpeta para empezar.",
+    "emptyDescriptionPrototype": "Crea una carpeta para empezar el prototipo en memoria.",
+    "emptyTitle": "No hay materiales de estudio",
+    "loading": "Cargando materiales de estudio",
+    "updating": "Actualizando materiales de estudio"
+  }
+}

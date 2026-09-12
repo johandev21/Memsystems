@@ -97,6 +97,7 @@ export const generateRequestSchema = z.object({
   studyGuideOptions: StudyGuideOptions.optional(),
   practiceProblemsOptions: PracticeProblemsOptions.optional(),
   caseStudyOptions: CaseStudyOptions.optional(),
+  language: z.string().min(1).max(35).optional(),
   slidesOptions: z
     .object({
       slideCount: z.number().min(0).max(20),

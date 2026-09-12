@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { notebookQueryOptions } from "../api/notebooks";
-import { fetchApi } from "@/shared/api";
+import { notebookQueryOptions, updateNotebook } from "../api/notebooks";
 
 export function EditableNotebookTitle({ id }: { id: string }) {
+  const { t } = useTranslation("notebooks");
   const queryClient = useQueryClient();
   const { data: notebook } = useQuery(notebookQueryOptions(id));
   const [isEditing, setIsEditing] = useState(false);
@@ -26,23 +27,15 @@ export function EditableNotebookTitle({ id }: { id: string }) {
   }, [isEditing]);
 
   const mutation = useMutation({
-    mutationFn: async (newTitle: string) => {
-      const res = await fetchApi(`/api/notebooks/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
-      });
-      if (!res.ok) throw new Error(`Failed to update notebook (${res.status})`);
-      return res.json();
-    },
+    mutationFn: (newTitle: string) => updateNotebook(id, { title: newTitle }),
     onSuccess: (updated) => {
       queryClient.setQueryData(["notebooks", id], updated);
       queryClient.invalidateQueries({ queryKey: ["notebooks"] });
-      toast.success("Notebook renamed");
+      toast.success(t("notebook.renamed"));
       setIsEditing(false);
     },
     onError: () => {
-      toast.error("Failed to rename notebook");
+      toast.error(t("notebook.renameFailed"));
       setTitle(currentTitle);
       setIsEditing(false);
     },
@@ -67,7 +60,7 @@ export function EditableNotebookTitle({ id }: { id: string }) {
       <input
         ref={inputRef}
         type="text"
-        aria-label="Edit notebook title"
+        aria-label={t("notebook.editTitle")}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onBlur={handleSave}
@@ -89,7 +82,7 @@ export function EditableNotebookTitle({ id }: { id: string }) {
     <button
       type="button"
       onClick={() => setIsEditing(true)}
-      className="text-sm font-semibold px-2 py-0.5 border border-transparent hover:border-foreground/20 cursor-text select-none text-foreground transition-all duration-150 rounded-xl min-w-0 max-w-full truncate block text-left"
+      className="text-sm font-semibold px-2 py-0.5 border border-transparent hover:border-foreground/20 cursor-text select-none text-foreground transition-colors duration-150 rounded-xl min-w-0 max-w-full truncate block text-left"
     >
       <span className="block truncate max-w-[55vw] sm:max-w-[60vw] lg:max-w-none">
         {currentTitle}

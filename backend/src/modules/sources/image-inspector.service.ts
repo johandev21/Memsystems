@@ -53,12 +53,18 @@ export class ImageInspectorService {
     filenameOrKey?: string | null,
   ): InspectedImage {
     if (!buffer || buffer.length === 0) {
-      throw new BadRequestError('Image buffer is empty.');
+      throw new BadRequestError('Image buffer is empty.', {
+        messageKey: 'errors.sources.inspect.imageEmpty',
+      });
     }
 
     if (buffer.length > MAX_IMAGE_BYTES) {
       throw new BadRequestError(
         `Image size (${(buffer.length / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size of 20 MB.`,
+        {
+          messageKey: 'errors.sources.inspect.imageTooLarge',
+          params: { sizeMb: (buffer.length / (1024 * 1024)).toFixed(2) },
+        },
       );
     }
 
@@ -67,15 +73,34 @@ export class ImageInspectorService {
       const hint = declaredContentType || filenameOrKey || 'unknown';
       throw new BadRequestError(
         `Unsupported image format (${hint}). Supported formats are PNG, JPEG, and WebP.`,
+        {
+          messageKey: 'errors.sources.inspect.imageUnsupported',
+          params: { hint },
+        },
       );
     }
 
-    const { width, height } = this.extractDimensions(buffer, mimeType);
+    let dimensions: { width: number; height: number };
+    try {
+      dimensions = this.extractDimensions(buffer, mimeType);
+    } catch (error) {
+      if (error instanceof BadRequestError) {
+        throw new BadRequestError(error.message, {
+          messageKey: 'errors.sources.inspect.imageCorrupted',
+        });
+      }
+      throw error;
+    }
+    const { width, height } = dimensions;
     const totalPixels = width * height;
 
     if (totalPixels > MAX_IMAGE_PIXELS) {
       throw new BadRequestError(
         `Image dimensions (${width}x${height} = ${totalPixels.toLocaleString()} pixels) exceed maximum allowed limit of ${MAX_IMAGE_PIXELS.toLocaleString()} pixels (40 MP).`,
+        {
+          messageKey: 'errors.sources.inspect.imageTooManyPixels',
+          params: { width, height },
+        },
       );
     }
 
