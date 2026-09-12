@@ -1,5 +1,36 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+const { providerProps } = vi.hoisted(() => ({ providerProps: vi.fn() }));
+
+vi.mock("@/components/ui/message-scroller", async () => {
+  const React = await import("react");
+
+  type DivProps = Record<string, unknown>;
+
+  return {
+    MessageScrollerProvider: (props: { children?: ReactNode }) => {
+      providerProps(props);
+      return React.createElement(React.Fragment, null, props.children);
+    },
+    MessageScroller: (props: DivProps) =>
+      React.createElement("div", { ...props, "data-slot": "message-scroller" }),
+    MessageScrollerViewport: (props: DivProps) =>
+      React.createElement("div", { ...props, "data-slot": "message-scroller-viewport" }),
+    MessageScrollerContent: (props: DivProps) =>
+      React.createElement("div", { ...props, "data-slot": "message-scroller-content" }),
+    MessageScrollerItem: (props: DivProps) =>
+      React.createElement("div", {
+        ...props,
+        "data-slot": "message-scroller-item",
+        "data-message-id": props.messageId as string | undefined,
+        "data-scroll-anchor": String((props.scrollAnchor as boolean | undefined) ?? false),
+      }),
+    MessageScrollerButton: () => null,
+  };
+});
+
 import {
   Conversation,
   ConversationContent,
@@ -8,7 +39,7 @@ import {
 } from "./conversation";
 
 describe("Conversation Component", () => {
-  it("renders with default last-anchor scroll position and container classes", () => {
+  it("defaults to last-anchor scroll position and forwards container classes", () => {
     const { container } = render(
       <Conversation className="custom-conversation">
         <ConversationContent className="custom-content">
@@ -18,6 +49,14 @@ describe("Conversation Component", () => {
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>,
+    );
+
+    expect(providerProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        autoScroll: false,
+        defaultScrollPosition: "last-anchor",
+        scrollPreviousItemPeek: 64,
+      }),
     );
 
     const scrollerRoot = container.querySelector('[data-slot="message-scroller"]');
@@ -31,7 +70,20 @@ describe("Conversation Component", () => {
     expect(item).not.toBeNull();
 
     expect(scrollerRoot?.classList.contains("custom-conversation")).toBe(true);
+    expect(content?.classList.contains("custom-content")).toBe(true);
     expect(item?.getAttribute("data-scroll-anchor")).toBe("true");
     expect(item?.getAttribute("data-message-id")).toBe("item-1");
+  });
+
+  it("honors an explicit defaultScrollPosition override", () => {
+    render(
+      <Conversation defaultScrollPosition="start">
+        <ConversationContent>content</ConversationContent>
+      </Conversation>,
+    );
+
+    expect(providerProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ defaultScrollPosition: "start" }),
+    );
   });
 });
