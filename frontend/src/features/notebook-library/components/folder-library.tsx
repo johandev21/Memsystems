@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { ArrowUpDown, ChevronRight, NotebookText } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -234,6 +234,37 @@ function LibraryGrid({
     id: `library:${destinationFolderId ?? "root"}`,
     data: { folderId: destinationFolderId },
   });
+  const [gridElement, setGridElement] = useState<HTMLElement | null>(null);
+
+  const handleGridRef = useCallback(
+    (node: HTMLElement | null) => {
+      setNodeRef(node);
+      setGridElement(node);
+    },
+    [setNodeRef],
+  );
+
+  const onDeselect = useEffectEvent(() => {
+    onSelectItem(null);
+  });
+
+  useEffect(() => {
+    if (!gridElement) return;
+
+    const handleClick = (event: MouseEvent) => {
+      if (event.target === event.currentTarget) onDeselect();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onDeselect();
+    };
+
+    gridElement.addEventListener("click", handleClick);
+    gridElement.addEventListener("keydown", handleKeyDown);
+    return () => {
+      gridElement.removeEventListener("click", handleClick);
+      gridElement.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [gridElement]);
 
   if (!items.length) {
     return (
@@ -244,16 +275,7 @@ function LibraryGrid({
   }
 
   return (
-    <section
-      ref={setNodeRef}
-      className="library-grid"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onSelectItem(null);
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onSelectItem(null);
-      }}
-    >
+    <section ref={handleGridRef} className="library-grid">
       {items.map((item) =>
         item.kind === "folder" ? (
           <FolderCard

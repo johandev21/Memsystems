@@ -1,67 +1,116 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export function InlineEditableText({
-  value,
-  onSave,
-  onCancel,
-  onDismiss,
-  onEditingChange,
-  ariaLabel,
-  className,
-  inputClassName,
-  multiline = false,
-  autoSize = false,
-  maxLength,
-  tooltip,
-  editRequest = 0,
-  children,
-}: {
+interface InlineEditableInputProps {
   value: string;
-  onSave: (value: string) => void;
-  onCancel?: () => void;
-  onDismiss?: (value: string) => void;
-  onEditingChange?: (editing: boolean) => void;
-  ariaLabel: string;
-  className?: string;
-  inputClassName?: string;
   multiline?: boolean;
   autoSize?: boolean;
   maxLength?: number;
-  tooltip?: string;
-  editRequest?: number;
-  children?: ReactNode;
-}) {
-  const { t } = useTranslation("notebooks");
-  const [editing, setEditing] = useState(false);
+  className?: string;
+  ariaLabel: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}
+
+function InlineEditableInput({
+  value,
+  multiline = false,
+  autoSize = false,
+  maxLength,
+  className,
+  ariaLabel,
+  onCommit,
+  onCancel,
+}: InlineEditableInputProps) {
   const [draft, setDraft] = useState(value);
-  const [truncated, setTruncated] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onCancel();
+      return;
+    }
+    if (event.key === "Enter" && (!multiline || event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      event.stopPropagation();
+      onCommit(draft.trim());
+    }
+  };
+
+  const assignRef = (node: HTMLInputElement | HTMLTextAreaElement | null) => {
+    inputRef.current = node;
+  };
+
+  const shared = {
+    value: draft,
+    onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(event.target.value),
+    onBlur: () => onCommit(draft.trim()),
+    onKeyDown: handleKeyDown,
+    onPointerDown: (event: PointerEvent<HTMLInputElement | HTMLTextAreaElement>) => event.stopPropagation(),
+    onDoubleClick: (event: MouseEvent<HTMLInputElement | HTMLTextAreaElement>) => event.stopPropagation(),
+    maxLength,
+    className: cn("library-inline-editable__input", className),
+    "aria-label": ariaLabel,
+  };
+
+  if (multiline) {
+    return <textarea {...shared} ref={assignRef} rows={3} />;
+  }
+
+  if (autoSize) {
+    return (
+      <span className="library-inline-editable__sizer">
+        <span aria-hidden="true">{draft || "\u00a0"}</span>
+        <input {...shared} ref={assignRef} size={1} />
+      </span>
+    );
+  }
+
+  return <input {...shared} ref={assignRef} />;
+}
+
+interface InlineEditableDisplayProps {
+  value: string;
+  className?: string;
+  ariaLabel: string;
+  tooltip?: string;
+  onStartEditing: () => void;
+  children?: ReactNode;
+}
+
+function InlineEditableDisplay({
+  value,
+  className,
+  ariaLabel,
+  tooltip,
+  onStartEditing,
+  children,
+}: InlineEditableDisplayProps) {
+  const { t } = useTranslation("notebooks");
+  const [truncated, setTruncated] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    onEditingChange?.(editing);
-  }, [editing, onEditingChange]);
-
-  useEffect(() => {
-    if (!editing) setDraft(value);
-  }, [editing, value]);
-
-  useEffect(() => {
-    if (editRequest > 0) setEditing(true);
-  }, [editRequest]);
-
-  useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }
-  }, [editing]);
-
   useLayoutEffect(() => {
-    if (editing || !tooltip) {
+    if (!tooltip) {
       setTruncated(false);
       return;
     }
@@ -72,57 +121,7 @@ export function InlineEditableText({
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [editing, tooltip, value]);
-
-  function finish() {
-    const next = draft.trim();
-    setEditing(false);
-    if (next && next !== value) onSave(next);
-    else {
-      setDraft(value);
-      onDismiss?.(next);
-    }
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      setDraft(value);
-      setEditing(false);
-      onCancel?.();
-    }
-    if (event.key === "Enter" && (!multiline || event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      event.stopPropagation();
-      finish();
-    }
-  }
-
-  if (editing) {
-    const assignRef = (node: HTMLInputElement | HTMLTextAreaElement | null) => {
-      inputRef.current = node;
-    };
-    const shared = {
-      value: draft,
-      onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(event.target.value),
-      onBlur: finish,
-      onKeyDown: handleKeyDown,
-      onPointerDown: (event: PointerEvent<HTMLInputElement | HTMLTextAreaElement>) => event.stopPropagation(),
-      onDoubleClick: (event: MouseEvent<HTMLInputElement | HTMLTextAreaElement>) => event.stopPropagation(),
-      maxLength,
-      className: cn("library-inline-editable__input", inputClassName),
-      "aria-label": ariaLabel,
-    };
-    return multiline ? <textarea {...shared} ref={assignRef} rows={3} /> : autoSize ? (
-      <span className="library-inline-editable__sizer">
-        <span aria-hidden="true">{draft || "\u00a0"}</span>
-        <input {...shared} ref={assignRef} size={1} />
-      </span>
-    ) : (
-      <input {...shared} ref={assignRef} />
-    );
-  }
+  }, [tooltip, value]);
 
   const button = (
     <button
@@ -131,7 +130,7 @@ export function InlineEditableText({
       className={cn("library-inline-editable", className)}
       onClick={(event) => {
         event.stopPropagation();
-        setEditing(true);
+        onStartEditing();
       }}
       onDoubleClick={(event) => event.stopPropagation()}
       aria-label={t("library.editAria", { label: ariaLabel })}
@@ -149,3 +148,96 @@ export function InlineEditableText({
     </Tooltip>
   );
 }
+
+export interface InlineEditableTextProps {
+  value: string;
+  onSave: (value: string) => void;
+  onCancel?: () => void;
+  onDismiss?: (value: string) => void;
+  onEditingChange?: (editing: boolean) => void;
+  ariaLabel: string;
+  className?: string;
+  inputClassName?: string;
+  multiline?: boolean;
+  autoSize?: boolean;
+  maxLength?: number;
+  tooltip?: string;
+  editRequest?: number;
+  children?: ReactNode;
+}
+
+export function InlineEditableText({
+  value,
+  onSave,
+  onCancel,
+  onDismiss,
+  onEditingChange,
+  ariaLabel,
+  className,
+  inputClassName,
+  multiline = false,
+  autoSize = false,
+  maxLength,
+  tooltip,
+  editRequest = 0,
+  children,
+}: InlineEditableTextProps) {
+  const [editing, setEditing] = useState(editRequest > 0);
+  const [prevEditRequest, setPrevEditRequest] = useState(editRequest);
+
+  if (editRequest !== prevEditRequest) {
+    setPrevEditRequest(editRequest);
+    if (editRequest > 0 && !editing) {
+      setEditing(true);
+    }
+  }
+
+  const handleStartEditing = () => {
+    setEditing(true);
+    onEditingChange?.(true);
+  };
+
+  const handleCommit = (next: string) => {
+    setEditing(false);
+    onEditingChange?.(false);
+    if (next && next !== value) {
+      onSave(next);
+    } else {
+      onDismiss?.(next);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditing(false);
+    onEditingChange?.(false);
+    onCancel?.();
+  };
+
+  if (editing) {
+    return (
+      <InlineEditableInput
+        value={value}
+        multiline={multiline}
+        autoSize={autoSize}
+        maxLength={maxLength}
+        className={inputClassName}
+        ariaLabel={ariaLabel}
+        onCommit={handleCommit}
+        onCancel={handleCancel}
+      />
+    );
+  }
+
+  return (
+    <InlineEditableDisplay
+      value={value}
+      className={className}
+      ariaLabel={ariaLabel}
+      tooltip={tooltip}
+      onStartEditing={handleStartEditing}
+    >
+      {children}
+    </InlineEditableDisplay>
+  );
+}
+

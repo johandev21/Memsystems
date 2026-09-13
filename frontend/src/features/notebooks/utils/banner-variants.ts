@@ -52,13 +52,15 @@ export async function createBannerVariants(file: File): Promise<BannerUploadPayl
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     try {
-      for (const width of BANNER_VARIANT_WIDTHS) {
-        const blob = await canvasToWebpBlob(drawAtWidth(bitmap, width));
-        if (blob) {
-          const variantFile = toWebpFile(blob, file.name, width);
-          if (variantFile) variants[width] = variantFile;
-        }
-      }
+      await Promise.all(
+        BANNER_VARIANT_WIDTHS.map(async (width) => {
+          const blob = await canvasToWebpBlob(drawAtWidth(bitmap, width));
+          if (blob) {
+            const variantFile = toWebpFile(blob, file.name, width);
+            if (variantFile) variants[width] = variantFile;
+          }
+        }),
+      );
     } finally {
       bitmap.close();
     }

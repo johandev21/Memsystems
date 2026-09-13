@@ -88,7 +88,7 @@ describe("InlineEditableText callbacks", () => {
   it("reports editing state changes", () => {
     const onEditingChange = vi.fn();
     render(<InlineEditableText value="Old" onSave={() => {}} ariaLabel="title" onEditingChange={onEditingChange} />);
-    expect(onEditingChange).toHaveBeenLastCalledWith(false);
+    expect(onEditingChange).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Edit title" }));
     expect(onEditingChange).toHaveBeenLastCalledWith(true);
     fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });

@@ -100,18 +100,16 @@ export function FolderCard({
     isDragging,
   } = useDraggable({ id: `folder:${folder.id}`, data: { kind: "folder", folderId: folder.id } });
   const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const wasEditingRef = useRef(false);
+  const editingTitleRef = useRef(Boolean(autoEdit));
   const openSuppressedUntilRef = useRef(0);
 
   const handleTitleEditingChange = useCallback((editing: boolean) => {
-    if (wasEditingRef.current && !editing) openSuppressedUntilRef.current = Date.now() + 500;
-    wasEditingRef.current = editing;
-    setEditingTitle(editing);
+    if (editingTitleRef.current && !editing) openSuppressedUntilRef.current = Date.now() + 500;
+    editingTitleRef.current = editing;
   }, []);
 
   const handleOpen = () => {
-    if (editingTitle || Date.now() < openSuppressedUntilRef.current) return;
+    if (editingTitleRef.current || Date.now() < openSuppressedUntilRef.current) return;
     onOpen();
   };
 
@@ -125,6 +123,7 @@ export function FolderCard({
               setDragRef(node);
             }}
             {...attributes}
+            role={attributes.role}
             {...listeners}
             className={cn(
               "library-folder-card",
@@ -132,7 +131,7 @@ export function FolderCard({
             )}
             data-selected={selected ? "true" : undefined}
             onClick={() => {
-              if (!editingTitle) onSelect?.();
+              if (!editingTitleRef.current) onSelect?.();
             }}
             onContextMenu={() => onSelect?.()}
             onDoubleClick={handleOpen}
@@ -142,8 +141,11 @@ export function FolderCard({
               count: notebooks.length,
             })}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !editingTitle) onOpen();
-              if (event.key === "F2") requestEdit((value) => value + 1);
+              if (event.key === "Enter" && !editingTitleRef.current) onOpen();
+              if (event.key === "F2") {
+                editingTitleRef.current = true;
+                requestEdit((value) => value + 1);
+              }
             }}
           />
         }
@@ -159,7 +161,12 @@ export function FolderCard({
         />
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onClick={() => requestEdit((value) => value + 1)}>
+        <ContextMenuItem
+          onClick={() => {
+            editingTitleRef.current = true;
+            requestEdit((value) => value + 1);
+          }}
+        >
           {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
         </ContextMenuItem>
         {onMove &&
@@ -283,18 +290,16 @@ export function NotebookCard({
     void queryClient.prefetchQuery(chatMessagesQueryOptions(notebook.id));
   }, [notebook.id, queryClient]);
   const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const wasEditingRef = useRef(false);
+  const editingTitleRef = useRef(Boolean(autoEdit));
   const openSuppressedUntilRef = useRef(0);
 
   const handleTitleEditingChange = useCallback((editing: boolean) => {
-    if (wasEditingRef.current && !editing) openSuppressedUntilRef.current = Date.now() + 500;
-    wasEditingRef.current = editing;
-    setEditingTitle(editing);
+    if (editingTitleRef.current && !editing) openSuppressedUntilRef.current = Date.now() + 500;
+    editingTitleRef.current = editing;
   }, []);
 
   const handleOpen = () => {
-    if (editingTitle || Date.now() < openSuppressedUntilRef.current) return;
+    if (editingTitleRef.current || Date.now() < openSuppressedUntilRef.current) return;
     onOpen();
   };
 
@@ -325,6 +330,7 @@ export function NotebookCard({
           <div
             ref={setNodeRef}
             {...attributes}
+            role={attributes.role}
             {...listeners}
             className={cn(
               "library-notebook-card",
@@ -334,15 +340,18 @@ export function NotebookCard({
             onMouseEnter={prefetch}
             onFocus={prefetch}
             onClick={() => {
-              if (!editingTitle) onSelect?.();
+              if (!editingTitleRef.current) onSelect?.();
             }}
             onContextMenu={() => onSelect?.()}
             onDoubleClick={handleOpen}
             tabIndex={0}
             aria-label={notebook.title}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !editingTitle) onOpen();
-              if (event.key === "F2") requestEdit((value) => value + 1);
+              if (event.key === "Enter" && !editingTitleRef.current) onOpen();
+              if (event.key === "F2") {
+                editingTitleRef.current = true;
+                requestEdit((value) => value + 1);
+              }
             }}
           />
         }
@@ -350,7 +359,12 @@ export function NotebookCard({
         <NotebookArtwork notebook={notebook} titleSlot={titleSlot} />
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onClick={() => requestEdit((value) => value + 1)}>
+        <ContextMenuItem
+          onClick={() => {
+            editingTitleRef.current = true;
+            requestEdit((value) => value + 1);
+          }}
+        >
           {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
         </ContextMenuItem>
         <ContextMenuItem disabled={notebook.folderId === null} onClick={() => onMove(null)}>

@@ -7,11 +7,12 @@ export function childFolders(folders: LibraryFolder[], parentId: string | null) 
 export function folderAncestors(folders: LibraryFolder[], folderId: string | null) {
   const result: LibraryFolder[] = [];
   const seen = new Set<string>();
-  let current = folders.find((folder) => folder.id === folderId);
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  let current = folderId ? byId.get(folderId) : undefined;
   while (current && !seen.has(current.id)) {
     result.unshift(current);
     seen.add(current.id);
-    current = folders.find((folder) => folder.id === current?.parentId);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
   }
   return result;
 }
