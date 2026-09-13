@@ -38,6 +38,55 @@
     "newFolderPlaceholder": "Nombre de la nueva carpeta...",
     "notebookRoot": "Raíz del cuaderno"
   },
+  "library": {
+    "breadcrumbAria": "Ruta de navegación",
+    "create": {
+      "aria": "Crear",
+      "folder": "Carpeta",
+      "folderDescription": "Agrupa cuadernos",
+      "label": "Crear nuevo",
+      "notebook": "Cuaderno",
+      "notebookDescription": "Empezar un cuaderno en blanco"
+    },
+    "dropToMove": "Suelta aquí para mover a {{target}}",
+    "editAria": "Editar {{label}}",
+    "emptyFolderDescription": "Arrastra cuadernos aquí o usa el botón + para crear uno.",
+    "emptyFolderTitle": "Esta carpeta está vacía",
+    "emptyLibraryDescription": "Usa el botón + para crear tu primer cuaderno o carpeta.",
+    "emptyLibraryTitle": "Aún no hay cuadernos",
+    "folderCardAria_one": "{{name}}, {{count}} cuaderno",
+    "folderCardAria_many": "{{name}}, {{count}} cuadernos",
+    "folderCardAria_other": "{{name}}, {{count}} cuadernos",
+    "heroSubtitle": "Retoma donde lo dejaste o empieza algo nuevo.",
+    "heroTitle": "Avanza en lo que importa.",
+    "library": "Biblioteca",
+    "loadFailedDescription": "Algo salió mal al cargar tus cuadernos. Comprueba tu conexión e inténtalo de nuevo.",
+    "loadFailedTitle": "No se pudo cargar tu biblioteca",
+    "moveTo": "Mover a {{target}}",
+    "moving": "Moviendo {{name}}",
+    "removeFolder": "Eliminar carpeta",
+    "rename": "Renombrar",
+    "retry": "Reintentar",
+    "sort": {
+      "aria": "Ordenar biblioteca",
+      "createdAt": "Fecha de creación",
+      "createdAtDescription": "Creados primero",
+      "name": "Nombre",
+      "nameDescription": "Orden alfabético",
+      "updatedAt": "Última modificación",
+      "updatedAtDescription": "Modificados primero"
+    },
+    "toasts": {
+      "folderCreateFailed": "No se pudo crear la carpeta",
+      "folderRemoveFailed": "No se pudo eliminar la carpeta",
+      "folderUpdateFailed": "No se pudo actualizar la carpeta",
+      "notebookCreateFailed": "No se pudo crear el cuaderno",
+      "notebookRemoveFailed": "No se pudo eliminar el cuaderno",
+      "notebookUpdateFailed": "No se pudo actualizar el cuaderno"
+    },
+    "untitledFolder": "Carpeta sin título",
+    "untitledNotebook": "Cuaderno sin título"
+  },
   "notebook": {
     "editTitle": "Editar el título del cuaderno",
     "renamed": "Cuaderno renombrado",
@@ -54,26 +103,6 @@
     "sections": "Secciones del cuaderno",
     "sources": "Fuentes",
     "studio": "Estudio"
-  },
-  "recent": {
-    "allSeen_one": "Has visto {{count}} cuaderno",
-    "allSeen_many": "Has visto los {{count}} cuadernos",
-    "allSeen_other": "Has visto los {{count}} cuadernos",
-    "createFailed": "No se pudo crear el cuaderno",
-    "emptyDescription": "Tus cuadernos aparecerán aquí. Crea uno para empezar a aprender.",
-    "emptyTitle": "Aún no hay cuadernos",
-    "heroSubtitle": "Retoma donde lo dejaste o empieza algo nuevo.",
-    "heroTitle": "Avanza en lo que importa.",
-    "loadFailedDescription": "Algo salió mal al cargar tus cuadernos. Comprueba tu conexión e inténtalo de nuevo.",
-    "loadFailedTitle": "No se pudieron cargar los cuadernos",
-    "loadingMore": "Cargando más…",
-    "loadMoreFailed": "No se pudieron cargar más cuadernos.",
-    "newNotebook": "Nuevo cuaderno",
-    "retry": "Reintentar",
-    "title": "Cuadernos recientes",
-    "updated": "Actualizado {{time}}",
-    "updatedJustNow": "Actualizado hace un momento",
-    "viewAll": "Ver todos"
   },
   "resources": {
     "basedOnBrief": "basado en el resumen",

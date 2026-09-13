@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { notebooks } from '../../database/schema';
+import { notebookFolders, notebooks } from '../../database/schema';
 import {
   BadRequestError,
   NotFoundError,
@@ -15,10 +15,11 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_BANNER_BYTES = 2 * 1024 * 1024;
 const BANNER_PRESIGN_TTL = 86400;
 
-const BANNER_VARIANT_WIDTHS = [480, 960, 1920] as const;
+const BANNER_VARIANT_WIDTHS = [240, 480, 960, 1920] as const;
 type BannerVariantWidth = (typeof BANNER_VARIANT_WIDTHS)[number];
 
 export interface BannerVariantKeys {
+  w240?: string;
   w480?: string;
   w960?: string;
   w1920?: string;
@@ -31,6 +32,7 @@ export interface BannerVariantUpload {
 }
 
 export interface BannerVariantUrls {
+  w240: string | null;
   w480: string | null;
   w960: string | null;
   w1920: string | null;
@@ -40,12 +42,14 @@ export interface CreateNotebookInput {
   title: string;
   description?: string;
   icon?: string;
+  folderId?: string | null;
 }
 
 export interface UpdateNotebookInput {
   title?: string;
   description?: string | null;
   icon?: string | null;
+  folderId?: string | null;
   bannerFocalPoint?: { x: number; y: number } | null;
 }
 
@@ -54,6 +58,7 @@ export interface NotebookResponse {
   title: string;
   description: string;
   icon: string;
+  folderId: string | null;
   banner: string | null;
   bannerUrl: string | null;
   bannerVariants: BannerVariantUrls | null;
@@ -74,6 +79,7 @@ function toResponse(nb: typeof notebooks.$inferSelect): NotebookResponse {
     title: nb.title,
     description: nb.description ?? '',
     icon: nb.icon ?? 'notebook',
+    folderId: nb.folderId ?? null,
     banner: nb.banner,
     bannerUrl: null,
     bannerVariants: null,
@@ -90,13 +96,14 @@ async function presignBannerVariants(
   if (!keys) return null;
   const presign = (key?: string) =>
     key ? storageService.presignDownload(key, BANNER_PRESIGN_TTL) : null;
-  const [w480, w960, w1920] = await Promise.all([
+  const [w240, w480, w960, w1920] = await Promise.all([
+    presign(keys.w240),
     presign(keys.w480),
     presign(keys.w960),
     presign(keys.w1920),
   ]);
-  if (!w480 && !w960 && !w1920) return null;
-  return { w480, w960, w1920 };
+  if (!w240 && !w480 && !w960 && !w1920) return null;
+  return { w240, w480, w960, w1920 };
 }
 
 function pickExtension(originalName: string): string {
@@ -198,12 +205,17 @@ export class NotebooksService {
   }
 
   async create(input: CreateNotebookInput) {
+    const folderId = input.folderId ?? null;
+    if (folderId) {
+      await this.assertFolderExists(folderId);
+    }
     const [row] = await this.db
       .insert(notebooks)
       .values({
         title: input.title,
         description: input.description?.trim().slice(0, 500) ?? '',
         icon: input.icon?.trim().slice(0, 50) ?? 'notebook',
+        folderId,
       })
       .returning();
     return toResponse(row);
@@ -221,6 +233,12 @@ export class NotebooksService {
     }
     if (input.icon !== undefined) {
       updates.icon = input.icon ? input.icon.trim().slice(0, 50) : 'notebook';
+    }
+    if (input.folderId !== undefined) {
+      if (input.folderId) {
+        await this.assertFolderExists(input.folderId);
+      }
+      updates.folderId = input.folderId;
     }
     if (input.bannerFocalPoint !== undefined) {
       updates.bannerFocalPoint = input.bannerFocalPoint;
@@ -407,6 +425,19 @@ export class NotebooksService {
     return res;
   }
 
+  private async assertFolderExists(folderId: string): Promise<void> {
+    const [folder] = await this.db
+      .select({ id: notebookFolders.id })
+      .from(notebookFolders)
+      .where(eq(notebookFolders.id, folderId))
+      .limit(1);
+    if (!folder) {
+      throw new NotFoundError('Folder', {
+        messageKey: 'errors.library.folderNotFound',
+      });
+    }
+  }
+
   private staleVariantKeys(
     previous: BannerVariantKeys | null | undefined,
     next: BannerVariantKeys | null,
@@ -414,6 +445,8 @@ export class NotebooksService {
     if (!previous) return null;
     const nextValues = new Set(next ? Object.values(next) : []);
     const stale: BannerVariantKeys = {};
+    if (previous.w240 && !nextValues.has(previous.w240))
+      stale.w240 = previous.w240;
     if (previous.w480 && !nextValues.has(previous.w480))
       stale.w480 = previous.w480;
     if (previous.w960 && !nextValues.has(previous.w960))
@@ -428,7 +461,7 @@ export class NotebooksService {
     keys: BannerVariantKeys | null | undefined,
   ): Promise<void> {
     if (!keys) return;
-    const allKeys = [keys.w480, keys.w960, keys.w1920].filter(
+    const allKeys = [keys.w240, keys.w480, keys.w960, keys.w1920].filter(
       (key): key is string => Boolean(key),
     );
     await Promise.all(

@@ -140,29 +140,60 @@ export const generationStatusEnum = pgEnum('generation_status', [
 
 export const chatRoleEnum = pgEnum('chat_role', ['user', 'assistant']);
 
-export const notebooks = pgTable('notebooks', {
-  id: varchar('id')
-    .$defaultFn(() => createId())
-    .primaryKey(),
-  title: varchar('title', { length: 200 }).notNull(),
-  description: varchar('description', { length: 500 }).default('').notNull(),
-  icon: varchar('icon', { length: 50 }).default('notebook').notNull(),
-  banner: varchar('banner', { length: 2000 }),
-  bannerVariants: jsonb('banner_variants').$type<{
-    w480?: string;
-    w960?: string;
-    w1920?: string;
-  } | null>(),
-  bannerFocalPoint: jsonb('banner_focal_point').$type<{
-    x: number;
-    y: number;
-  } | null>(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+export const notebookFolders = pgTable(
+  'notebook_folders',
+  {
+    id: varchar('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    name: varchar('name', { length: 200 }).notNull(),
+    parentId: varchar('parent_id').references(
+      (): AnyPgColumn => notebookFolders.id,
+      { onDelete: 'cascade' },
+    ),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('notebook_folders_parent_id_idx').on(table.parentId),
+    index('notebook_folders_name_idx').on(table.name),
+  ],
+);
+
+export const notebooks = pgTable(
+  'notebooks',
+  {
+    id: varchar('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    title: varchar('title', { length: 200 }).notNull(),
+    description: varchar('description', { length: 500 }).default('').notNull(),
+    icon: varchar('icon', { length: 50 }).default('notebook').notNull(),
+    folderId: varchar('folder_id').references(() => notebookFolders.id, {
+      onDelete: 'set null',
+    }),
+    banner: varchar('banner', { length: 2000 }),
+    bannerVariants: jsonb('banner_variants').$type<{
+      w240?: string;
+      w480?: string;
+      w960?: string;
+      w1920?: string;
+    } | null>(),
+    bannerFocalPoint: jsonb('banner_focal_point').$type<{
+      x: number;
+      y: number;
+    } | null>(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index('notebooks_folder_id_idx').on(table.folderId)],
+);
 
 export const sources = pgTable(
   'sources',
@@ -541,7 +572,26 @@ export const sourceChunks = pgTable(
   ],
 );
 
-export const notebooksRelations = relations(notebooks, ({ many }) => ({
+export const notebookFoldersRelations = relations(
+  notebookFolders,
+  ({ one, many }) => ({
+    parent: one(notebookFolders, {
+      fields: [notebookFolders.parentId],
+      references: [notebookFolders.id],
+      relationName: 'notebookFolderHierarchy',
+    }),
+    children: many(notebookFolders, {
+      relationName: 'notebookFolderHierarchy',
+    }),
+    notebooks: many(notebooks),
+  }),
+);
+
+export const notebooksRelations = relations(notebooks, ({ one, many }) => ({
+  folder: one(notebookFolders, {
+    fields: [notebooks.folderId],
+    references: [notebookFolders.id],
+  }),
   sources: many(sources),
   sourceChunks: many(sourceChunks),
   sourceIndexJobs: many(sourceIndexJobs),
@@ -726,6 +776,7 @@ export const sourceUploadIntentsRelations = relations(
 
 export const table = {
   notebooks,
+  notebookFolders,
   sources,
   sourceVersions,
   sourceSegments,

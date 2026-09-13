@@ -20,6 +20,7 @@ const TABLES = [
   'study_material_folders',
   'sources',
   'notebooks',
+  'notebook_folders',
   // Renamed to app_settings by migration 0007 (user_settings was dropped).
   'app_settings',
 ];

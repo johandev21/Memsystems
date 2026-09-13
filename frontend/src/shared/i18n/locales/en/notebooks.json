@@ -38,6 +38,54 @@
     "newFolderPlaceholder": "New folder name...",
     "notebookRoot": "Notebook Root"
   },
+  "library": {
+    "breadcrumbAria": "Breadcrumb",
+    "create": {
+      "aria": "Create",
+      "folder": "Folder",
+      "folderDescription": "Group notebooks together",
+      "label": "Create new",
+      "notebook": "Notebook",
+      "notebookDescription": "Start a blank notebook"
+    },
+    "dropToMove": "Drop here to move to {{target}}",
+    "editAria": "Edit {{label}}",
+    "emptyFolderDescription": "Drag notebooks here or use the + button to create one.",
+    "emptyFolderTitle": "This folder is empty",
+    "emptyLibraryDescription": "Use the + button to create your first notebook or folder.",
+    "emptyLibraryTitle": "No notebooks yet",
+    "folderCardAria_one": "{{name}}, {{count}} notebook",
+    "folderCardAria_other": "{{name}}, {{count}} notebooks",
+    "heroSubtitle": "Pick up where you left off, or start something fresh.",
+    "heroTitle": "Make progress on what matters.",
+    "library": "Library",
+    "loadFailedDescription": "Something went wrong while loading your notebooks. Check your connection and try again.",
+    "loadFailedTitle": "Couldn't load your library",
+    "moveTo": "Move To {{target}}",
+    "moving": "Moving {{name}}",
+    "removeFolder": "Remove Folder",
+    "rename": "Rename",
+    "retry": "Retry",
+    "sort": {
+      "aria": "Sort library",
+      "createdAt": "Date created",
+      "createdAtDescription": "Recently created first",
+      "name": "Name",
+      "nameDescription": "Alphabetical order",
+      "updatedAt": "Last modified",
+      "updatedAtDescription": "Recently changed first"
+    },
+    "toasts": {
+      "folderCreateFailed": "Failed to create folder",
+      "folderRemoveFailed": "Failed to remove folder",
+      "folderUpdateFailed": "Failed to update folder",
+      "notebookCreateFailed": "Failed to create notebook",
+      "notebookRemoveFailed": "Failed to delete notebook",
+      "notebookUpdateFailed": "Failed to update notebook"
+    },
+    "untitledFolder": "Untitled folder",
+    "untitledNotebook": "Untitled notebook"
+  },
   "notebook": {
     "editTitle": "Edit notebook title",
     "renamed": "Notebook renamed",
@@ -54,25 +102,6 @@
     "sections": "Notebook sections",
     "sources": "Sources",
     "studio": "Studio"
-  },
-  "recent": {
-    "allSeen_one": "You've seen all {{count}} notebook",
-    "allSeen_other": "You've seen all {{count}} notebooks",
-    "createFailed": "Failed to create notebook",
-    "emptyDescription": "Your notebooks will live here. Create one to start learning.",
-    "emptyTitle": "No notebooks yet",
-    "heroSubtitle": "Pick up where you left off, or start something fresh.",
-    "heroTitle": "Make progress on what matters.",
-    "loadFailedDescription": "Something went wrong while loading your notebooks. Check your connection and try again.",
-    "loadFailedTitle": "Couldn't load notebooks",
-    "loadingMore": "Loading more…",
-    "loadMoreFailed": "Couldn't load more notebooks.",
-    "newNotebook": "New notebook",
-    "retry": "Retry",
-    "title": "Recent Notebooks",
-    "updated": "Updated {{time}}",
-    "updatedJustNow": "Updated just now",
-    "viewAll": "View all"
   },
   "resources": {
     "basedOnBrief": "based on brief",

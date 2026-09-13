@@ -27,12 +27,14 @@ const createNotebookSchema = z.object({
     .max(500, 'Description must be at most 500 characters')
     .optional(),
   icon: z.string().max(50, 'Icon must be at most 50 characters').optional(),
+  folderId: z.string().nullable().optional(),
 });
 
 const updateNotebookSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200).optional(),
   description: z.string().max(500).nullable().optional(),
   icon: z.string().max(50).nullable().optional(),
+  folderId: z.string().nullable().optional(),
   bannerFocalPoint: z
     .object({
       x: z.number().min(0).max(1),
@@ -90,6 +92,7 @@ export class NotebooksController {
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'file', maxCount: 1 },
+      { name: 'variant240', maxCount: 1 },
       { name: 'variant480', maxCount: 1 },
       { name: 'variant960', maxCount: 1 },
       { name: 'variant1920', maxCount: 1 },
@@ -100,6 +103,7 @@ export class NotebooksController {
     @UploadedFiles()
     files?: {
       file?: Express.Multer.File[];
+      variant240?: Express.Multer.File[];
       variant480?: Express.Multer.File[];
       variant960?: Express.Multer.File[];
       variant1920?: Express.Multer.File[];
@@ -123,6 +127,7 @@ export class NotebooksController {
     }
 
     const variants = [
+      { width: 240 as const, file: files?.variant240?.[0] },
       { width: 480 as const, file: files?.variant480?.[0] },
       { width: 960 as const, file: files?.variant960?.[0] },
       { width: 1920 as const, file: files?.variant1920?.[0] },

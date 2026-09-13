@@ -9,6 +9,7 @@
     "test",
     "tests",
     "dist",
+    "scripts",
     "**/*spec.ts",
     "drizzle.config.ts",
     "vitest.config.ts"

@@ -22,7 +22,6 @@ export default defineConfig({
   lint: {
     checkInterpolationParams: true,
     checkConcatenation: "warn",
-    ignore: ["src/features/notebook-folders-prototype/**"],
   },
   plugins: [
     {

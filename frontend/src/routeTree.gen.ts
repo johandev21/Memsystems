@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as NotebooksNotebookIdRouteImport } from './routes/notebooks.$notebookId'
-import { Route as PrototypeNotebookFoldersRouteImport } from './routes/prototype.notebook-folders'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -30,12 +29,6 @@ const NotebooksNotebookIdRoute = NotebooksNotebookIdRouteImport.update({
   path: '/notebooks/$notebookId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PrototypeNotebookFoldersRoute =
-  PrototypeNotebookFoldersRouteImport.update({
-    id: '/prototype/notebook-folders',
-    path: '/prototype/notebook-folders',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -46,13 +39,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/notebooks/$notebookId': typeof NotebooksNotebookIdRoute
-  '/prototype/notebook-folders': typeof PrototypeNotebookFoldersRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/notebooks/$notebookId': typeof NotebooksNotebookIdRoute
-  '/prototype/notebook-folders': typeof PrototypeNotebookFoldersRoute
   '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -60,34 +51,20 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/notebooks/$notebookId': typeof NotebooksNotebookIdRoute
-  '/prototype/notebook-folders': typeof PrototypeNotebookFoldersRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/settings'
-    | '/notebooks/$notebookId'
-    | '/prototype/notebook-folders'
-    | '/settings/'
+  fullPaths: '/' | '/settings' | '/notebooks/$notebookId' | '/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    '/' | '/notebooks/$notebookId' | '/prototype/notebook-folders' | '/settings'
-  id:
-    | '__root__'
-    | '/'
-    | '/settings'
-    | '/notebooks/$notebookId'
-    | '/prototype/notebook-folders'
-    | '/settings/'
+  to: '/' | '/notebooks/$notebookId' | '/settings'
+  id: '__root__' | '/' | '/settings' | '/notebooks/$notebookId' | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   NotebooksNotebookIdRoute: typeof NotebooksNotebookIdRoute
-  PrototypeNotebookFoldersRoute: typeof PrototypeNotebookFoldersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -111,13 +88,6 @@ declare module '@tanstack/react-router' {
       path: '/notebooks/$notebookId'
       fullPath: '/notebooks/$notebookId'
       preLoaderRoute: typeof NotebooksNotebookIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/prototype/notebook-folders': {
-      id: '/prototype/notebook-folders'
-      path: '/prototype/notebook-folders'
-      fullPath: '/prototype/notebook-folders'
-      preLoaderRoute: typeof PrototypeNotebookFoldersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -146,7 +116,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRouteWithChildren,
   NotebooksNotebookIdRoute: NotebooksNotebookIdRoute,
-  PrototypeNotebookFoldersRoute: PrototypeNotebookFoldersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,4 +1,4 @@
-const BANNER_VARIANT_WIDTHS = [480, 960, 1920] as const;
+const BANNER_VARIANT_WIDTHS = [240, 480, 960, 1920] as const;
 const MAX_BANNER_VARIANT_HEIGHT = 1080;
 const WEBP_QUALITY = 0.8;
 
@@ -69,10 +69,19 @@ export async function createBannerVariants(file: File): Promise<BannerUploadPayl
 }
 
 export function buildBannerSrcSet(
-  variants: { w480: string | null; w960: string | null; w1920: string | null } | null | undefined,
+  variants:
+    | {
+        w240?: string | null;
+        w480: string | null;
+        w960: string | null;
+        w1920: string | null;
+      }
+    | null
+    | undefined,
 ): string | undefined {
   if (!variants) return undefined;
   const entries: string[] = [];
+  if (variants.w240) entries.push(`${variants.w240} 240w`);
   if (variants.w480) entries.push(`${variants.w480} 480w`);
   if (variants.w960) entries.push(`${variants.w960} 960w`);
   if (variants.w1920) entries.push(`${variants.w1920} 1920w`);
