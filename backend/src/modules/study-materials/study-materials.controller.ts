@@ -281,9 +281,18 @@ export class StudyMaterialsController {
     @Body() body: z.infer<typeof generateRequestSchema>,
     @Res() res: Response,
   ) {
+    const generationController = new AbortController();
+    const abortOnDisconnect = () => {
+      if (!res.writableEnded && !generationController.signal.aborted) {
+        generationController.abort();
+      }
+    };
+    res.once('close', abortOnDisconnect);
+
     const { stream, requestId } = await this.generationService.generate(
       notebookId,
       body,
+      generationController.signal,
     );
 
     res.setHeader('Content-Type', 'application/x-ndjson');
@@ -347,6 +356,7 @@ export class StudyMaterialsController {
         writeTerminalError('Generation stream ended without a terminal frame.');
       }
     } finally {
+      res.off('close', abortOnDisconnect);
       try {
         reader.releaseLock();
       } catch {

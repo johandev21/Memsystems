@@ -63,16 +63,19 @@ export type GenerationEvent =
 export interface StartGenerationResult {
   stream: AsyncIterable<GenerationEvent>;
   requestIdPromise: Promise<string>;
+  abort: () => void;
 }
 
 export function startGeneration(
   notebookId: string,
   input: StartGenerationInput,
 ): StartGenerationResult {
+  const controller = new AbortController();
   const promise = fetch(getApiUrl(`/api/notebooks/${notebookId}/generate`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+    signal: controller.signal,
   }).then(async (response) => {
     if (!response.ok) {
       let message = `Generation failed (${response.status})`;
@@ -99,7 +102,7 @@ export function startGeneration(
     },
   };
 
-  return { stream, requestIdPromise };
+  return { stream, requestIdPromise, abort: () => controller.abort() };
 }
 
 async function* iteratorFrom(
@@ -154,6 +157,7 @@ async function* iteratorFrom(
     };
   } finally {
     try {
+      await reader.cancel().catch(() => {});
       reader.releaseLock();
     } catch {
       /* ignore */

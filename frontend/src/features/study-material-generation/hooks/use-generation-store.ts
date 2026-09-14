@@ -90,6 +90,7 @@ function updateGenerationError(
 export const useGenerationStore = create<GenerationState>((set, get) => {
   const stallTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const errorDismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const activeAborts = new Map<string, () => void>();
 
   function clearStallTimer(id: string) {
     const timer = stallTimers.get(id);
@@ -204,10 +205,11 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
       }));
       scheduleStallCheck(tempId, input.kind);
 
-      const { stream, requestIdPromise } = startGeneration(notebookId, {
+      const { stream, requestIdPromise, abort } = startGeneration(notebookId, {
         ...input,
         language: activeBaseLanguage(),
       });
+      activeAborts.set(tempId, abort);
 
       let requestId: string;
       try {
@@ -217,6 +219,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        activeAborts.delete(tempId);
         clearStallTimer(tempId);
         set((state) => {
           return { generations: updateGenerationError(state.generations, tempId, msg) };
@@ -227,6 +230,8 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
       }
 
       if (!get().generations[tempId]) {
+        activeAborts.get(tempId)?.();
+        activeAborts.delete(tempId);
         clearStallTimer(tempId);
         try {
           await cancelGeneration(notebookId, requestId);
@@ -239,6 +244,8 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
       const startedAt = get().generations[tempId]?.startedAt ?? Date.now();
       const swappedAt = Date.now();
       clearStallTimer(tempId);
+      activeAborts.delete(tempId);
+      activeAborts.set(requestId, abort);
       set((state) => {
         const next = removeGeneration(state.generations, tempId);
         next[requestId] = {
@@ -288,6 +295,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
               scheduleStallCheck(requestId, input.kind);
             } else if (event.type === "done") {
               settled = true;
+              activeAborts.delete(requestId);
               clearStallTimer(requestId);
               clearErrorDismissTimer(requestId);
               await queryClient.invalidateQueries({
@@ -331,9 +339,11 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
             }
           }
           if (!settled && get().generations[requestId]) {
+            activeAborts.delete(requestId);
             failGeneration(requestId, input.kind, i18n.t("errors.connectionClosed", { ns: "generation" }));
           }
         } catch (err) {
+          activeAborts.delete(requestId);
           const rawMessage = err instanceof Error ? err.message : String(err);
           // Generation failures arrive as `{error, code[, model]}` envelopes
           // (or raw provider text) — classify to friendly copy so toasts never
@@ -346,6 +356,8 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
 
     cancelBackgroundGeneration: async (notebookId, id) => {
       const isTemp = id.startsWith("temp-");
+      activeAborts.get(id)?.();
+      activeAborts.delete(id);
       removeAndClear(id);
 
       if (!isTemp) {

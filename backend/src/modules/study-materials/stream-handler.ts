@@ -102,6 +102,7 @@ export class StreamHandler {
     requestId: string,
     onDone: (result: StreamResult) => void,
     onError: (error: string) => void,
+    abortSignal?: AbortSignal,
   ) {
     const promptTemplate = getPromptTemplate(input.kind);
     const systemPrompt =
@@ -132,6 +133,10 @@ export class StreamHandler {
 
     const stream = new ReadableStream<Uint8Array>({
       start: async (controller) => {
+        if (abortSignal?.aborted) {
+          controller.close();
+          return;
+        }
         let model!: LanguageModel;
         let requestOptions: GatewayRequestOptions = {
           providerOptions: { gateway: {} },
@@ -164,6 +169,7 @@ export class StreamHandler {
             instructions: systemPrompt,
             prompt: userPrompt,
             ...requestOptions,
+            abortSignal,
           });
 
           for await (const partial of result.partialOutputStream) {
@@ -204,6 +210,11 @@ export class StreamHandler {
                     ? withSlidePreviews(validated as Record<string, unknown>)
                     : validated;
 
+          if (abortSignal?.aborted) {
+            controller.close();
+            return;
+          }
+
           const [inserted] = await this.db
             .insert(studyMaterials)
             .values({
@@ -228,6 +239,10 @@ export class StreamHandler {
           controller.close();
           onDone({ materialId: inserted.id });
         } catch (nativeError) {
+          if (abortSignal?.aborted || isAbortError(nativeError)) {
+            controller.close();
+            return;
+          }
           this.logger.warn(
             `Native structured output failed, falling back to strict JSON prompting for ${requestId}`,
             nativeError,
@@ -246,6 +261,7 @@ export class StreamHandler {
               ...requestOptions,
               temperature: 0,
               maxOutputTokens: 16000,
+              abortSignal,
             });
 
             let accumulatedText = '';
@@ -352,6 +368,11 @@ export class StreamHandler {
                       ? withSlidePreviews(validated as Record<string, unknown>)
                       : validated;
 
+            if (abortSignal?.aborted) {
+              controller.close();
+              return;
+            }
+
             const [inserted] = await this.db
               .insert(studyMaterials)
               .values({
@@ -376,6 +397,10 @@ export class StreamHandler {
             controller.close();
             onDone({ materialId: inserted.id });
           } catch (fallbackError) {
+            if (abortSignal?.aborted || isAbortError(fallbackError)) {
+              controller.close();
+              return;
+            }
             this.logger.error(
               'Generation stream failed on fallback',
               fallbackError,
@@ -409,6 +434,17 @@ export class StreamHandler {
     };
     return schemas[kind];
   }
+}
+
+/**
+ * Detect an abort/response-aborted error so it is not surfaced to the client
+ * as a generation failure.
+ */
+function isAbortError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'AbortError' || error.name === 'ResponseAborted')
+  );
 }
 
 /**

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { generationRequests } from '../../database/schema';
@@ -68,14 +68,24 @@ export class GenerationRequestManager {
         status: 'completed',
         completedAt: new Date(),
       })
-      .where(eq(generationRequests.id, requestId));
+      .where(
+        and(
+          eq(generationRequests.id, requestId),
+          eq(generationRequests.status, 'streaming'),
+        ),
+      );
   }
 
   async markFailed(requestId: string): Promise<void> {
     await this.db
       .update(generationRequests)
       .set({ status: 'failed' })
-      .where(eq(generationRequests.id, requestId));
+      .where(
+        and(
+          eq(generationRequests.id, requestId),
+          eq(generationRequests.status, 'streaming'),
+        ),
+      );
   }
 
   async cancel(requestId: string): Promise<void> {

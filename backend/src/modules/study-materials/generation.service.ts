@@ -28,6 +28,8 @@ const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
 
 @Injectable()
 export class GenerationService {
+  private readonly activeRequests = new Map<string, AbortController>();
+
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
@@ -37,7 +39,11 @@ export class GenerationService {
     private readonly streamHandler: StreamHandler,
   ) {}
 
-  async generate(notebookId: string, input: StartGenerationInput) {
+  async generate(
+    notebookId: string,
+    input: StartGenerationInput,
+    externalSignal?: AbortSignal,
+  ) {
     await this.notebooksService.assertNotebookOwner(notebookId);
 
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
@@ -111,6 +117,16 @@ export class GenerationService {
       model: modelId,
     });
 
+    const controller = new AbortController();
+    if (externalSignal) {
+      if (externalSignal.aborted) controller.abort();
+      else
+        externalSignal.addEventListener('abort', () => controller.abort(), {
+          once: true,
+        });
+    }
+    this.activeRequests.set(requestId, controller);
+
     const { stream } = this.streamHandler.createStream(
       notebookId,
       {
@@ -120,11 +136,14 @@ export class GenerationService {
       sourceTexts,
       requestId,
       () => {
+        this.activeRequests.delete(requestId);
         void this.requestManager.markCompleted(requestId);
       },
       () => {
+        this.activeRequests.delete(requestId);
         void this.requestManager.markFailed(requestId);
       },
+      controller.signal,
     );
 
     return { stream, requestId };
@@ -139,6 +158,7 @@ export class GenerationService {
     }
     await this.notebooksService.assertNotebookOwner(request.notebookId);
     await this.requestManager.cancel(requestId);
+    this.activeRequests.get(requestId)?.abort();
     return request;
   }
 
