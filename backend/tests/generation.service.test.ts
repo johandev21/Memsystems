@@ -22,7 +22,9 @@ function setup() {
     cancel: vi.fn(async () => undefined),
   };
   const streamHandler = {
-    createStream: vi.fn(() => ({ stream: new ReadableStream() })),
+    createStream: vi.fn((..._args: unknown[]) => ({
+      stream: new ReadableStream(),
+    })),
   };
   const service = new GenerationService(
     db as never,
@@ -31,7 +33,7 @@ function setup() {
     requestManager as never,
     streamHandler as never,
   );
-  return { service };
+  return { service, requestManager, streamHandler };
 }
 
 const baseInput: StartGenerationInput = {
@@ -118,5 +120,26 @@ describe('GenerationService message keys', () => {
       messageKey: 'errors.generation.requestNotFound',
       code: 'not_found',
     });
+  });
+
+  it('aborts the in-flight stream controller when cancelled', async () => {
+    const { service, requestManager, streamHandler } = setup();
+    requestManager.get.mockResolvedValue({
+      id: 'request-1',
+      notebookId: 'notebook-1',
+    } as never);
+
+    await service.generate('notebook-1', {
+      ...baseInput,
+      brief: 'Cell biology',
+    });
+
+    const signal = streamHandler.createStream.mock.calls[0][6] as AbortSignal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal.aborted).toBe(false);
+
+    await service.cancel('request-1');
+
+    expect(signal.aborted).toBe(true);
   });
 });
