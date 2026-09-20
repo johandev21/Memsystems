@@ -173,13 +173,13 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
           {designPreset && (
             <span
               aria-label={t("slides.deckDesign", { preset: designPreset })}
-              className="rounded-full border border-surface-border-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary"
+              className="rounded-full border border-surface-border-subtle px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-text-secondary"
             >
               {designPreset}
             </span>
           )}
           {activeSlide && (
-            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-text-tertiary">
+            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-text-tertiary">
               {designRole(activeSlide)}
             </span>
           )}
@@ -286,11 +286,11 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
                   draggable={false}
                 />
               ) : (
-                <span className="flex aspect-video w-full items-center justify-center p-1 text-[10px] text-text-tertiary">
+                <span className="flex aspect-video w-full items-center justify-center p-1 text-xs text-text-tertiary">
                   {formatDisplayTitle(slide.title)}
                 </span>
               )}
-              <span className="block truncate px-1.5 py-1 text-[10px] font-medium text-text-secondary">
+              <span className="block truncate px-1.5 py-1 text-xs font-medium text-text-secondary">
                 {index + 1}. {formatDisplayTitle(slide.title)}
               </span>
             </button>

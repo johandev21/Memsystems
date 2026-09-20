@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
-import { CTA_BUTTON_CLASS } from "./option-row";
 import {
   RoadmapDetailLevelSection,
   RoadmapPhasesSection,
@@ -86,7 +85,7 @@ export function RoadmapBriefForm({
         onStepChange={setStep}
       />
       {step === 1 ? (
-        <div className="flex min-h-[380px] flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
+        <div className="flex min-h-95 flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
             <RoadmapPhasesSection
               phaseLabel={phaseLabel}
@@ -136,6 +135,7 @@ export function RoadmapBriefForm({
           <div className="flex items-center justify-between border-t border-transparent pt-2">
             <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
             <Button
+              variant="surface"
               type="button"
               onClick={() => {
                 if (!value.roadmapOptions) {
@@ -145,7 +145,6 @@ export function RoadmapBriefForm({
               }}
               className={cn(
                 "h-9 cursor-pointer gap-1.5 rounded-full px-5 text-sm font-medium transition-colors",
-                CTA_BUTTON_CLASS,
               )}
             >
               {t("actions.nextStep")}

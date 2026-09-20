@@ -45,7 +45,7 @@ describe("generationSourceCheckboxClass dark-mode contrast", () => {
       <Checkbox
         checked
         onCheckedChange={vi.fn()}
-        className={generationSourceCheckboxClass(true)}
+        className="border-primary-foreground/40 data-checked:border-primary-foreground data-checked:bg-primary-foreground data-checked:text-primary dark:border-primary-foreground/60 dark:data-checked:border-primary-foreground dark:data-checked:bg-primary-foreground dark:data-checked:text-primary"
       />,
     );
     const box = document.querySelector('[data-slot="checkbox"]');

@@ -170,7 +170,7 @@ function ComposerAttachmentList() {
           ) : (
             <ImageIcon className="size-4 text-muted-foreground" />
           )}
-          <span className="max-w-[120px] truncate text-xs">
+          <span className="max-w-30 truncate text-xs">
             {file.filename || t("composer.imageAlt")}
           </span>
           <button

@@ -201,7 +201,7 @@ export function Row({ node, depth }: RowProps) {
       aria-busy={pending.isPending ? true : undefined}
       role="treeitem"
       tabIndex={isFocused ? 0 : -1}
-      style={{ paddingLeft: `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` }}
+      style={{ "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` } as React.CSSProperties}
       className={getRowClassName({
         isSelected,
         treeHasFocus: controller.treeHasFocus,

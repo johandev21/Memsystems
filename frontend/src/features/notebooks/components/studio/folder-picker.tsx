@@ -89,8 +89,8 @@ export function FolderPicker({
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start">
-        <div className="max-h-[260px] overflow-y-auto p-1">
+      <PopoverContent className="w-70 p-0" align="start">
+        <div className="max-h-65 overflow-y-auto p-1">
           <FolderRow
             label={t("folders.notebookRoot")}
             depth={0}
@@ -216,9 +216,9 @@ function FolderRow({
     <button
       type="button"
       onClick={onClick}
-      style={{ paddingLeft: 8 + depth * 16 }}
+      style={{ "--picker-indent": `${8 + depth * 16}px` } as React.CSSProperties}
       className={cn(
-        "group flex w-full items-center gap-2 rounded-xl py-1.5 pr-2 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
+        "group flex w-full items-center gap-2 rounded-xl py-1.5 pr-2 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer pl-(--picker-indent)",
         selected ? "bg-muted" : "hover:bg-muted/60",
       )}
     >

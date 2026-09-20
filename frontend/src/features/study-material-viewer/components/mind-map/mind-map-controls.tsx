@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 export function EmptyMindMap() {
   const { t } = useTranslation("viewer");
   return (
-    <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-surface-border-subtle bg-surface-2 text-sm text-text-tertiary">
+    <div className="flex min-h-105 items-center justify-center rounded-xl border border-surface-border-subtle bg-surface-2 text-sm text-text-tertiary">
       {t("mindMap.empty")}
     </div>
   );

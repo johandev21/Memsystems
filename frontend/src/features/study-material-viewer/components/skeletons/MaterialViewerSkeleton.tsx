@@ -17,7 +17,7 @@ function ViewerHeaderSkeleton() {
   return (
     <div
       data-slot="material-viewer-header-skeleton"
-      className="flex min-h-[44px] shrink-0 items-center justify-between gap-2 bg-panel-header-bg p-1.5 select-none"
+      className="flex min-h-11 shrink-0 items-center justify-between gap-2 bg-panel-header-bg p-1.5 select-none"
       aria-hidden="true"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">

@@ -17,7 +17,7 @@ export function SlideNavigator({
   const { t } = useTranslation("sourceRenderers");
   return (
     <div className="hidden sm:flex w-20 shrink-0 flex-col border-r border-border/40 bg-muted/20 overflow-y-auto p-2 gap-1.5">
-      <span className="text-[10px] font-semibold text-muted-foreground px-1 py-1">
+      <span className="text-xs font-semibold text-muted-foreground px-1 py-1">
         {t("pptxSlideNavigator.slides")}
       </span>
       {slideNumbers.map((num) => {

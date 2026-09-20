@@ -171,7 +171,7 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
                 type="button"
                 data-testid="add-transcripts-button"
                 onClick={() => setIsAddTranscriptOpen(true)}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-text-faint hover:text-text-primary transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-text-faint hover:text-text-primary transition-colors cursor-pointer"
                 title={t("videoTranscript.addOrReplaceTitle")}
               >
                 <FileText className="size-3 text-primary" />

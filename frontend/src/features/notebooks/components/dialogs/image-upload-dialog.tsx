@@ -65,7 +65,7 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] p-6 gap-5 rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl">
+      <DialogContent className="sm:max-w-120 p-6 gap-5 rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">
             {t("upload.title")}

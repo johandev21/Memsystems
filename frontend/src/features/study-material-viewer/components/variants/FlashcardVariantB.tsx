@@ -81,7 +81,7 @@ export function FlashcardVariantB({
   };
 
   return (
-    <div className="flex flex-col w-full min-h-[500px] bg-surface-1 border border-surface-border rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200">
+    <div className="flex flex-col w-full min-h-125 bg-surface-1 border border-surface-border rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200">
       <FlashcardDeckHeader
         deckTitle={resolvedDeckTitle}
         sourceCount={sourceCount}

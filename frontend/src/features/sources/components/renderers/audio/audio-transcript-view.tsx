@@ -35,8 +35,8 @@ export function AudioTranscriptView({
         </div>
       ) : isVirtualized ? (
         <div
-          className="max-w-4xl mx-auto relative w-full"
-          style={{ height: `${virtualizer.getTotalSize()}px` }}
+          className="max-w-4xl mx-auto relative w-full h-(--virtual-total)"
+          style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const segment = filteredSegments[virtualRow.index];
@@ -46,14 +46,8 @@ export function AudioTranscriptView({
                 key={segment.id}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-                className="py-1.5"
+                className="absolute top-0 left-0 w-full translate-y-(--virtual-start) py-1.5"
+                style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
               >
                 {renderTranscriptCard(segment)}
               </div>

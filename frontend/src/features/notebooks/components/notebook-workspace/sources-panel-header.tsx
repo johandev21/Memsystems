@@ -19,7 +19,7 @@ export function SourcesPanelHeader({
   const { t } = useTranslation("notebooks");
 
   return (
-    <header className="flex items-center justify-between p-1.5 bg-panel-header-bg min-h-[44px]">
+    <header className="flex items-center justify-between p-1.5 bg-panel-header-bg min-h-11">
       <h2 className={`text-sm font-semibold pl-1.5 ${collapsed ? "hidden" : ""}`}>
         {t("panels.sources")}
       </h2>

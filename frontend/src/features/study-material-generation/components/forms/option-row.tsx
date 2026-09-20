@@ -5,10 +5,6 @@ import { cn } from "@/shared/utils/cn";
  * See docs/design/study-materials-ladder-spec.md §2.
  */
 
-/** Primary CTA button (submit / next-step) resting on the dialog surface. */
-export const CTA_BUTTON_CLASS =
-  "border border-surface-border-subtle bg-surface-2 text-text-primary hover:bg-surface-3 hover:text-text-secondary disabled:bg-surface-2 disabled:text-text-faint";
-
 /**
  * Option row / preset chip tones (difficulty pickers, count presets,
  * card-style radios, detail cards).

@@ -66,8 +66,8 @@ export interface ProductionStudyMaterialsTreeProps {
   /** Panel chrome: when provided, header shows collapse toggle and content is conditionally hidden */
   isPanelExpanded?: boolean;
   onPanelToggle?: () => void;
-  /** Override for CardContent height, e.g. "h-[250px]" */
-  contentClassName?: string;
+  /** CardContent height variant */
+  contentHeight?: "desktop" | "mobile" | "standalone";
 }
 
 export function StudyMaterialsTree({
@@ -85,7 +85,7 @@ export function StudyMaterialsTree({
   isPrototype = false,
   isPanelExpanded,
   onPanelToggle,
-  contentClassName,
+  contentHeight = "standalone",
 }: ProductionStudyMaterialsTreeProps) {
   const [internalSelected, setInternalSelected] = useState<string | null>(
     defaultSelectedId !== undefined ? defaultSelectedId : null,
@@ -181,7 +181,11 @@ export function StudyMaterialsTree({
                 <CardContent
                   className={cn(
                     "min-h-0 p-0 !rounded-b-2xl overflow-hidden",
-                    contentClassName ?? "h-[400px]",
+                    contentHeight === "desktop"
+                      ? "h-62.5"
+                      : contentHeight === "mobile"
+                        ? "max-h-[38dvh] min-h-60 h-auto overflow-y-auto overscroll-contain"
+                        : "h-100",
                   )}
                 >
                   <TreeContent isPrototype={isPrototype} />

@@ -5,10 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  generationSourceCheckboxClass,
   generationSourceIconClass,
   generationSourceOptionClass,
 } from "./option-row";
+
+/**
+ * The box is inverted (primary-foreground on a primary row) so it stays
+ * visible on the solid selected background. The `dark:` counterparts are
+ * required: the base Checkbox ships `dark:data-checked:bg-primary`, which
+ * has higher specificity than a bare `data-checked:` rule and would
+ * otherwise repaint the box with the row color in dark mode (invisible
+ * checkbox + invisible check). Matching the variant stack lets tailwind-merge
+ * drop the base dark rule instead of fighting it in the cascade.
+ */
+const CHECKED_SOURCE_CHECKBOX_CLASS =
+  "border-primary-foreground/40 data-checked:border-primary-foreground data-checked:bg-primary-foreground data-checked:text-primary dark:border-primary-foreground/60 dark:data-checked:border-primary-foreground dark:data-checked:bg-primary-foreground dark:data-checked:text-primary";
 
 export type GenerationSource = { id: string; title: string; kind: string };
 
@@ -74,7 +85,7 @@ export function GenerationSourcePopover({
       />
       <PopoverContent
         align="start"
-        className="w-[320px] overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl"
+        className="w-80 overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl"
       >
         <div className="flex items-center justify-between bg-surface-2 px-3.5 py-2.5">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -100,7 +111,7 @@ export function GenerationSourcePopover({
         {sources.length === 0 ? (
           <div className="p-4 text-center text-xs text-text-faint">{emptyMessage}</div>
         ) : (
-          <div className="max-h-[220px] space-y-1 overflow-y-auto p-2">
+          <div className="max-h-55 space-y-1 overflow-y-auto p-2">
             {filteredSources.map((source) => {
               const checked = selectedIdSet.has(source.id);
               return (
@@ -123,7 +134,7 @@ export function GenerationSourcePopover({
                   <Checkbox
                     checked={checked}
                     onCheckedChange={() => toggleSource(source.id)}
-                    className={generationSourceCheckboxClass(checked)}
+                    className={checked ? CHECKED_SOURCE_CHECKBOX_CLASS : undefined}
                   />
                 </button>
               );

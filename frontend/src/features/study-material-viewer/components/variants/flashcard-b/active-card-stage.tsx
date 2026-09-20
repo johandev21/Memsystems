@@ -38,7 +38,7 @@ export function ActiveCardStage({
       >
         {showSideBySide ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-surface-border-subtle bg-surface-2 p-5 flex flex-col justify-center min-h-[160px]">
+            <div className="rounded-2xl border border-surface-border-subtle bg-surface-2 p-5 flex flex-col justify-center min-h-40">
               {activeCard.format === "cloze" ? (
                 <ClozeInteractive
                   front={activeCard.front}
@@ -52,7 +52,7 @@ export function ActiveCardStage({
               )}
             </div>
 
-            <div className="rounded-2xl border border-surface-border-subtle bg-surface-3 p-5 flex flex-col justify-between min-h-[160px]">
+            <div className="rounded-2xl border border-surface-border-subtle bg-surface-3 p-5 flex flex-col justify-between min-h-40">
               <p className="text-base font-medium text-text-primary leading-relaxed text-center my-auto">
                 {activeCard.back}
               </p>

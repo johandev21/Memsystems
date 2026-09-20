@@ -71,7 +71,7 @@ export function AddSourceDialog({
       <DialogTrigger render={children} nativeButton={isNativeButton} />
       <DialogContent
         motion={false}
-        className="flex max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-[min(var(--radius-4xl),24px)] border-border/60 bg-card p-0 shadow-2xl sm:max-h-[90vh] sm:max-w-[680px]"
+        className="flex max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-[min(var(--radius-4xl),24px)] border-border/60 bg-card p-0 shadow-2xl sm:max-h-[90vh] sm:max-w-170"
       >
         <DialogHeader className="shrink-0 px-5 pb-2 pt-6 sm:px-6">
           <DialogTitle className="text-center text-xl font-semibold text-foreground">

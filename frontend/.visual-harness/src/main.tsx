@@ -40,9 +40,9 @@ function App() {
       <button className="rounded-lg border border-border px-3 py-1.5" onClick={() => window.dispatchEvent(new CustomEvent("restore-study-material"))}>Return Fullscreen</button>
       <span className="text-text-secondary">Chat draft: {draft ? "set (autoSend false)" : "empty"}</span>
     </div>
-    <div className="mx-auto grid min-h-[720px] max-w-6xl grid-cols-[1fr_320px] gap-3 max-lg:block">
+    <div className="mx-auto grid min-h-180 max-w-6xl grid-cols-[1fr_320px] gap-3 max-lg:block">
       <div className="rounded-2xl border border-border bg-panel-bg p-4"><p className="mb-4 text-xs text-text-secondary">Existing resizable workspace / fake chat</p><textarea aria-label="Chat draft" value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-32 w-full rounded-xl border border-border bg-surface-1 p-3" /></div>
-      <div className="min-h-[560px] rounded-2xl border border-border bg-panel-bg p-2">
+      <div className="min-h-140 rounded-2xl border border-border bg-panel-bg p-2">
         {selectedId && <MaterialViewer material={material} onClose={() => setSelectedId(null)} defaultFullscreen forceFullscreen />}
       </div>
     </div>

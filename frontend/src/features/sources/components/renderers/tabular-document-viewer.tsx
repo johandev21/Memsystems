@@ -217,7 +217,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
               <span>{sheet.name}</span>
               <Badge
                 variant={activeSheetIndex === index ? "secondary" : "outline"}
-                className="text-[10px] px-1 py-0 h-4"
+                className="text-xs px-1 py-0 h-4"
               >
                 {sheet.rows.length}
               </Badge>
@@ -228,7 +228,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
 
       {/* Interactive Table Container */}
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
-        <div className="overflow-x-auto max-h-[600px] overscroll-contain">
+        <div className="overflow-x-auto max-h-150 overscroll-contain">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="sticky top-0 bg-muted/80 backdrop-blur z-10 border-b border-border/60">
               <tr>
@@ -243,15 +243,15 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
                       className="px-3 py-2.5 font-semibold text-foreground border-r border-border/30 last:border-r-0 whitespace-nowrap"
                     >
                       <div className="flex items-center gap-1.5">
-                        {colType === "number" && <Hash className="size-3 text-blue-500 shrink-0" />}
+                        {colType === "number" && <Hash className="size-3 text-info shrink-0" />}
                         {colType === "string" && (
                           <Type className="size-3 text-muted-foreground shrink-0" />
                         )}
                         {colType === "date" && (
-                          <Calendar className="size-3 text-amber-500 shrink-0" />
+                          <Calendar className="size-3 text-warning shrink-0" />
                         )}
                         {colType === "boolean" && (
-                          <ToggleLeft className="size-3 text-emerald-500 shrink-0" />
+                          <ToggleLeft className="size-3 text-success shrink-0" />
                         )}
                         <span>{header}</span>
                       </div>
@@ -260,7 +260,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40 font-mono text-[11px]">
+            <tbody className="divide-y divide-border/40 font-mono text-xs">
               {pageRows.length === 0 ? (
                 <tr>
                   <td

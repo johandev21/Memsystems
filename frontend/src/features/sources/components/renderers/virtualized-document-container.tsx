@@ -1,5 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { type ReactNode, useEffect } from "react";
+import { cn } from "@/shared/utils/cn";
 
 interface VirtualizedDocumentContainerProps<T> {
   items: T[];
@@ -44,11 +45,8 @@ export function VirtualizedDocumentContainer<T>({
 
   return (
     <div
-      className={className || "w-full relative"}
-      style={{
-        height: `${virtualizer.getTotalSize()}px`,
-        position: "relative",
-      }}
+      className={cn("relative", className || "w-full", "h-(--virtual-total)")}
+      style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
     >
       {virtualItems.map((virtualRow) => {
         const index = virtualRow.index;
@@ -61,13 +59,8 @@ export function VirtualizedDocumentContainer<T>({
             key={key}
             data-index={index}
             ref={virtualizer.measureElement}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              transform: `translateY(${virtualRow.start}px)`,
-            }}
+            className="absolute top-0 left-0 w-full translate-y-(--virtual-start)"
+            style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
           >
             {renderItem(item, index, isHighlighted)}
           </div>

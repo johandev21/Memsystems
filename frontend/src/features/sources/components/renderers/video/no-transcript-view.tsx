@@ -24,7 +24,7 @@ export function NoTranscriptView({
           {player}
         </div>
 
-        <div className="hidden @min-[720px]:flex items-center justify-between w-full px-2 py-3 text-text-muted">
+        <div className="hidden @min-[720px]:flex items-center justify-between w-full px-2 py-3 text-text-tertiary">
           <div className="flex items-center gap-2">
             <FileText className="size-4 text-text-secondary" />
             <span className="text-xs">{t("videoTranscript.noTranscriptAttached")}</span>
@@ -42,13 +42,13 @@ export function NoTranscriptView({
       </div>
 
       <div className="flex @min-[720px]:hidden flex-1 min-h-0 flex-col items-center justify-center p-6 text-center bg-surface-0">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-surface-2 text-text-muted mb-3">
+        <div className="flex size-12 items-center justify-center rounded-xl bg-surface-2 text-text-tertiary mb-3">
           <FileText className="size-6 text-text-secondary" />
         </div>
         <h4 className="text-sm font-semibold text-text-primary mb-1">
           {t("videoTranscript.noTranscripts")}
         </h4>
-        <p className="text-xs text-text-muted max-w-[260px] leading-relaxed mb-4">
+        <p className="text-xs text-text-tertiary max-w-65 leading-relaxed mb-4">
           {t("videoTranscript.noTranscriptsDescription")}
         </p>
         <button

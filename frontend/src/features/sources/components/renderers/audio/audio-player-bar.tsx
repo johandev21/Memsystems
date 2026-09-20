@@ -45,7 +45,7 @@ export function AudioPlayerBar({
               {t("audioPlayer.audioRecording")}
             </Badge>
             {segmentsCount > 0 && (
-              <Badge variant="secondary" className="font-normal text-[11px]">
+              <Badge variant="secondary" className="font-normal text-xs">
                 {t("audioPlayer.summary", { count: segmentsCount, words: totalWords })}
               </Badge>
             )}
@@ -83,7 +83,7 @@ export function AudioPlayerBar({
               className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
             />
           </div>
-          <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+          <div className="flex justify-between text-xs font-mono text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>

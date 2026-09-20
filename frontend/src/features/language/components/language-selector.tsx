@@ -31,7 +31,7 @@ export function LanguageSelector() {
               className="flex h-20 w-full items-center justify-center overflow-hidden rounded-xl bg-muted/20 px-3"
               aria-hidden="true"
             >
-              <span className="truncate text-lg font-medium tracking-[-0.01em] text-foreground">
+              <span className="truncate text-lg font-medium tracking-tight text-foreground">
                 {option.sample}
               </span>
             </span>

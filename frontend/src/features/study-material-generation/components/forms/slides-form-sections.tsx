@@ -126,7 +126,7 @@ export function SlideThemeSection({
         <Label className="text-sm font-medium text-text-primary">
           {t("slides.visualThemeLabel")}
         </Label>
-        <span className="text-xs font-medium text-text-muted">
+        <span className="text-xs font-medium text-text-tertiary">
           {themeDesc ? t(themeDesc) : null}
         </span>
       </div>
@@ -141,42 +141,34 @@ export function SlideThemeSection({
                   aria-pressed={selected}
                   onClick={() => onThemeChange(opt.id)}
                   className={cn(
-                    optionRowClass(selected),
+                    "cursor-pointer rounded-2xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3",
                     "flex flex-col items-center gap-1.5 p-2 transition-all",
                     selected ? "font-semibold" : "font-medium",
                   )}
                 >
                   <span
-                    className="relative block h-7 w-full overflow-hidden rounded-md border"
-                    style={{
-                      backgroundColor: opt.swatch.bg,
-                      borderColor: selected ? opt.swatch.accent : "transparent",
-                    }}
+                    className={cn(
+                      "relative block h-7 w-full overflow-hidden rounded-md border bg-(--swatch-bg)",
+                      selected ? "border-(--swatch-accent)" : "border-transparent",
+                    )}
+                    style={
+                      {
+                        "--swatch-bg": opt.swatch.bg,
+                        "--swatch-accent": opt.swatch.accent,
+                        "--swatch-text": opt.swatch.text,
+                        "--swatch-surface": opt.swatch.surface,
+                      } as React.CSSProperties
+                    }
                   >
-                    <span
-                      className="absolute inset-x-0 top-0 block h-[3px]"
-                      style={{ backgroundColor: opt.swatch.accent }}
-                    />
-                    <span
-                      className="absolute left-[4px] top-[6px] block h-[3px] w-3/5 rounded-full"
-                      style={{ backgroundColor: opt.swatch.text }}
-                    />
-                    <span
-                      className="absolute left-[4px] top-[11px] block h-[2px] w-2/5 rounded-full opacity-70"
-                      style={{ backgroundColor: opt.swatch.text }}
-                    />
-                    <span className="absolute bottom-[3px] left-[4px] flex gap-[2px]">
-                      <span
-                        className="block size-[6px] rounded-[2px]"
-                        style={{
-                          backgroundColor: opt.swatch.surface,
-                          border: `1px solid ${opt.swatch.accent}`,
-                        }}
-                      />
-                      <span
-                        className="block size-[6px] rounded-full"
-                        style={{ backgroundColor: opt.swatch.accent }}
-                      />
+                    <span className="absolute inset-x-0 top-0 block h-0.75 bg-(--swatch-accent)" />
+                    <span className="absolute left-1 top-1.5 block h-0.75 w-3/5 rounded-full bg-(--swatch-text)" />
+                    <span className="absolute left-1 top-2.75 block h-0.5 w-2/5 rounded-full opacity-70 bg-(--swatch-text)" />
+                    <span className="absolute bottom-0.75 left-1 flex gap-0.5">
+                      <span className="block size-1.5 rounded-xs border border-(--swatch-accent) bg-(--swatch-surface)" />
+                      <span className="block size-1.5 rounded-full bg-(--swatch-accent)" />
                     </span>
                   </span>
                   <span className="min-w-0">

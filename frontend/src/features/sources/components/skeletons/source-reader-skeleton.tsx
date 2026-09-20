@@ -30,7 +30,7 @@ function SkeletonHeader({
 }) {
   const { t } = useTranslation("sources");
   return (
-    <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none border-b border-border/40">
+    <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-11 shrink-0 select-none border-b border-border/40">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Button
           type="button"
@@ -49,7 +49,7 @@ function SkeletonHeader({
             {title}
           </h3>
         ) : (
-          <Skeleton className="h-4 w-40 max-w-[220px] rounded-md" />
+          <Skeleton className="h-4 w-40 max-w-55 rounded-md" />
         )}
       </div>
 

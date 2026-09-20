@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { GenerationSourcePopover } from "./generation-source-popover";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { optionRowClass } from "./option-row";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 type StudyGuideFormat = "detailed" | "revision";
@@ -107,7 +107,7 @@ export function StudyGuideBriefForm({
       />
 
       {step === 1 ? (
-        <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
+        <div className="flex flex-col gap-5 min-h-95 justify-between animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
             <BriefChoiceField
               label={t("studyGuide.formatLabel")}
@@ -204,11 +204,11 @@ export function StudyGuideBriefForm({
           <div className="flex justify-between items-center pt-2 border-t border-transparent">
             <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
             <Button
+              variant="surface"
               type="button"
               onClick={() => setStep(2)}
               className={cn(
                 "h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors",
-                CTA_BUTTON_CLASS,
               )}
             >
               {t("actions.nextStep")}
@@ -217,7 +217,7 @@ export function StudyGuideBriefForm({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
+        <div className="flex flex-col gap-5 min-h-95 justify-between animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="brief-study-guide" className="text-sm font-medium text-text-primary">
@@ -229,7 +229,7 @@ export function StudyGuideBriefForm({
                 value={value.brief}
                 onChange={(e) => update({ brief: e.target.value })}
                 placeholder={t("studyGuide.instructionsPlaceholder")}
-                className="min-h-[120px] max-h-[200px] text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
+                className="min-h-30 max-h-50 text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>
@@ -258,10 +258,10 @@ export function StudyGuideBriefForm({
               {t("actions.back")}
             </Button>
             <Button
+              variant="surface"
               type="button"
               className={cn(
                 "h-10 px-6 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors",
-                CTA_BUTTON_CLASS,
               )}
               disabled={!canSubmit}
               onClick={onSubmit}

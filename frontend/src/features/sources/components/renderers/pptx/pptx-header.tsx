@@ -19,7 +19,7 @@ export function PptxViewerHeader({ title, totalSlides }: PptxViewerHeaderProps) 
           </Badge>
           <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
         </div>
-        <Badge variant="secondary" className="font-normal text-[11px] shrink-0">
+        <Badge variant="secondary" className="font-normal text-xs shrink-0">
           {t("pptxHeader.slideCount", { count: totalSlides })}
         </Badge>
       </div>

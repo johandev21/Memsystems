@@ -13,7 +13,7 @@ export function CaseStudyScenario({ study }: CaseStudyScenarioProps) {
     <>
       <header className="space-y-4">
         <p className="text-xs font-medium text-text-tertiary">{t("caseStudy.label")}</p>
-        <h1 className="text-[1.75rem] leading-tight font-semibold break-words sm:text-3xl">
+        <h1 className="text-3xl leading-tight font-semibold break-words sm:text-3xl">
           {study.title.replace(/-case-study$/, "").replaceAll("-", " ")}
         </h1>
         {study.sourceIds.length === 0 ? (

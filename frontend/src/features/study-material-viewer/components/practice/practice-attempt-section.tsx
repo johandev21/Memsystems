@@ -44,7 +44,7 @@ export function AttemptSection({
         value={studentAnswer}
         onChange={(e) => onAnswerChange(e.target.value)}
         placeholder={t("practice.attemptPlaceholder")}
-        className="min-h-[140px] text-base leading-relaxed resize-y border-surface-border bg-surface-2 focus-visible:border-surface-border-strong"
+        className="min-h-35 text-base leading-relaxed resize-y border-surface-border bg-surface-2 focus-visible:border-surface-border-strong"
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">

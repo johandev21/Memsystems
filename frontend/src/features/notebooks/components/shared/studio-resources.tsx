@@ -266,7 +266,7 @@ function ActiveGenerationCard({
                 kind: t(KIND_LABEL_KEYS[generation.kind]),
               })}
             </span>
-            <span className="text-xs text-muted-foreground truncate wrap-break-words">
+            <span className="text-xs text-muted-foreground truncate wrap-break-word">
               {generation.error || t("studio.generationFailed")}
             </span>
             <button
@@ -303,7 +303,7 @@ function ActiveGenerationCard({
               kind: t(KIND_LABEL_KEYS[generation.kind]),
             })}
           </span>
-          <span className="text-xs text-muted-foreground truncate wrap-break-words">
+          <span className="text-xs text-muted-foreground truncate wrap-break-word">
             {getGenerationSubtitle(generation, totalSourceCount, t)}
           </span>
         </div>

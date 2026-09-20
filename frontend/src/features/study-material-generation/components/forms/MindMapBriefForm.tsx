@@ -7,7 +7,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { BriefKnowledgeStep } from "./brief-knowledge-step";
 import { BriefWizardHeader } from "./brief-wizard-header";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { optionRowClass } from "./option-row";
 import type { BaseMaterialFormProps, MindMapOptions } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
@@ -159,7 +159,7 @@ function OptionCards<T extends string | boolean>({
               onClick={() => onSelect(option.id)}
               className={cn(
                 optionRowClass(selected),
-                "flex min-h-[62px] items-start p-3 text-left",
+                "flex min-h-15.5 items-start p-3 text-left",
               )}
             >
               <span className="min-w-0">
@@ -257,7 +257,7 @@ export function MindMapBriefForm({
         onStepChange={setStep}
       />
       {step === 1 ? (
-        <div className="flex min-h-[380px] flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
+        <div className="flex min-h-95 flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
             <NodeCountSelector
               nodeCount={nodeCount}
@@ -315,6 +315,7 @@ export function MindMapBriefForm({
           <div className="flex items-center justify-between border-t border-transparent pt-2">
             <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
             <Button
+              variant="surface"
               type="button"
               onClick={() => {
                 updateMindMapOptions({});
@@ -322,7 +323,6 @@ export function MindMapBriefForm({
               }}
               className={cn(
                 "h-9 gap-1.5 rounded-full px-5 text-sm font-medium transition-colors cursor-pointer",
-                CTA_BUTTON_CLASS,
               )}
             >
               {t("actions.nextStep")}

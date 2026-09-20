@@ -6,7 +6,7 @@ import { cn } from "@/shared/utils/cn";
 
 
 export function PracticeStepperHeader({
-  difficultyClassName,
+  difficulty,
   difficultyLabel,
   activeIdx,
   totalProblems,
@@ -15,7 +15,7 @@ export function PracticeStepperHeader({
   onPrev,
   onNext,
 }: {
-  difficultyClassName: string;
+  difficulty: "easy" | "medium" | "hard";
   difficultyLabel: string;
   activeIdx: number;
   totalProblems: number;
@@ -30,7 +30,17 @@ export function PracticeStepperHeader({
     <div className="sticky top-0 z-10 bg-surface-1/95 backdrop-blur-sm px-4 py-3 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
-          <Badge variant="outline" className={cn("text-xs font-medium", difficultyClassName)}>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-xs font-medium",
+              difficulty === "easy"
+                ? "bg-success/15 text-success border-success/30"
+                : difficulty === "medium"
+                  ? "bg-primary/15 text-primary border-primary/30"
+                  : "bg-warning/15 text-warning border-warning/30",
+            )}
+          >
             {difficultyLabel}
           </Badge>
           <span className="text-sm font-medium text-text-secondary">

@@ -62,12 +62,14 @@ export function NotebookCard({
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             alt={title}
             className={cn(
-              "h-full w-full bg-muted object-cover transition-opacity duration-300 group-hover:opacity-100",
+              "h-full w-full bg-muted object-cover object-(--banner-pos) transition-opacity duration-300 group-hover:opacity-100",
               isBannerLoaded ? "opacity-60" : "opacity-0",
             )}
-            style={{
-              objectPosition: `${Math.round((bannerFocalPoint?.x ?? 0.5) * 100)}% ${Math.round((bannerFocalPoint?.y ?? 0.5) * 100)}%`,
-            }}
+            style={
+              {
+                "--banner-pos": `${Math.round((bannerFocalPoint?.x ?? 0.5) * 100)}% ${Math.round((bannerFocalPoint?.y ?? 0.5) * 100)}%`,
+              } as React.CSSProperties
+            }
             ref={(el) => {
               if (el?.complete && el.naturalWidth > 0) setIsBannerLoaded(true);
             }}
@@ -79,7 +81,7 @@ export function NotebookCard({
           <div className="flex h-full w-full items-center justify-center bg-muted" />
         )}
       </div>
-      <div className="absolute left-4 top-36 flex size-14 -translate-y-1/2 items-center justify-center text-notebook-icon z-10 drop-shadow-sm [&_svg]:size-full">
+      <div className="absolute left-4 top-36 flex size-14 -translate-y-1/2 items-center justify-center z-10 drop-shadow-sm [&_svg]:size-full">
         {icon}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-4 pt-8">

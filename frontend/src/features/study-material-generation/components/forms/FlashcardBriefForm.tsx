@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefKnowledgeStep } from "./brief-knowledge-step";
 import { BriefWizardHeader } from "./brief-wizard-header";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { optionRowClass } from "./option-row";
 import type { BaseMaterialFormProps } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
@@ -116,7 +116,7 @@ export function FlashcardBriefForm({
   // Section Render Helpers
   function renderStepOne() {
     return (
-      <div className="flex flex-col gap-5 min-h-[380px] justify-between animate-in fade-in slide-in-from-right-2 duration-150">
+      <div className="flex flex-col gap-5 min-h-95 justify-between animate-in fade-in slide-in-from-right-2 duration-150">
         <div className="flex flex-col gap-5">
           <BriefChoiceField
             label={t("flashcards.cardFormatLabel")}
@@ -161,11 +161,11 @@ export function FlashcardBriefForm({
         <div className="flex justify-between items-center pt-2 border-t border-transparent">
           <span className="text-xs text-text-faint">{t("wizard.nextHintKnowledge")}</span>
           <Button
+            variant="surface"
             type="button"
             onClick={() => setStep(2)}
             className={cn(
               "h-9 px-5 rounded-full text-sm font-medium gap-1.5 cursor-pointer transition-colors",
-              CTA_BUTTON_CLASS,
             )}
           >
             {t("actions.nextStep")}

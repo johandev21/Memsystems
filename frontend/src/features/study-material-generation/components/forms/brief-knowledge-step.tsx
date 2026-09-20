@@ -5,7 +5,6 @@ import { FolderPicker } from "@/features/notebooks/components/studio/folder-pick
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { GenerationSourcePopover, type GenerationSource } from "./generation-source-popover";
-import { CTA_BUTTON_CLASS } from "./option-row";
 import { cn } from "@/shared/utils/cn";
 import type { BriefFormData } from "./types";
 
@@ -73,7 +72,7 @@ export function BriefKnowledgeStep({
             value={value.brief}
             onChange={(e) => onPatch({ brief: e.target.value })}
             placeholder={resolvedPlaceholder}
-            className="min-h-[120px] max-h-[200px] text-xs resize-none w-full"
+            className="min-h-30 max-h-50 text-xs resize-none w-full"
             disabled={disabled}
           />
         </div>
@@ -103,10 +102,10 @@ export function BriefKnowledgeStep({
         </Button>
 
         <Button
+          variant="surface"
           type="button"
           className={cn(
             "h-10 px-6 rounded-full font-medium text-sm gap-2 cursor-pointer transition-colors",
-            CTA_BUTTON_CLASS,
           )}
           disabled={!canSubmit}
           onClick={onSubmit}

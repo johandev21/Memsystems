@@ -32,33 +32,33 @@ export function AttemptFeedbackCard({
       className={cn(
         "mt-4 rounded-xl border p-5 space-y-4 transition-all",
         evaluation.status === "correct"
-          ? "bg-emerald-500/10 border-emerald-500/30"
+          ? "bg-success/10 border-success/30"
           : evaluation.status === "partially_correct"
-            ? "bg-amber-500/10 border-amber-500/30"
-            : "bg-rose-500/10 border-rose-500/30",
+            ? "bg-warning/10 border-warning/30"
+            : "bg-destructive/10 border-destructive/30",
       )}
     >
       <div className="flex items-center gap-2">
         {evaluation.status === "correct" && (
           <>
-            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-xs font-semibold">
+            <CheckCircle2 className="h-5 w-5 text-success" />
+            <Badge className="bg-success/20 text-success border-success/40 text-xs font-semibold">
               {t("practice.evaluation.correct")}
             </Badge>
           </>
         )}
         {evaluation.status === "partially_correct" && (
           <>
-            <AlertCircle className="h-5 w-5 text-amber-400" />
-            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-xs font-semibold">
+            <AlertCircle className="h-5 w-5 text-warning" />
+            <Badge className="bg-warning/20 text-warning border-warning/40 text-xs font-semibold">
               {t("practice.evaluation.partiallyCorrect")}
             </Badge>
           </>
         )}
         {evaluation.status === "needs_improvement" && (
           <>
-            <XCircle className="h-5 w-5 text-rose-400" />
-            <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/40 text-xs font-semibold">
+            <XCircle className="h-5 w-5 text-destructive" />
+            <Badge className="bg-destructive/20 text-destructive border-destructive/40 text-xs font-semibold">
               {t("practice.evaluation.needsRevision")}
             </Badge>
           </>
@@ -224,8 +224,8 @@ export function SolutionSection({
       </div>
 
       {difficulty === "hard" && !isRevealed ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 space-y-3">
-          <div className="flex items-center gap-2 text-amber-400 font-medium text-sm">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-5 space-y-3">
+          <div className="flex items-center gap-2 text-warning font-medium text-sm">
             <Lock className="h-4 w-4" />
             {t("practice.challengeLocked")}
           </div>

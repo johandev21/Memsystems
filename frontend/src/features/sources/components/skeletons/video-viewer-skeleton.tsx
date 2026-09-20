@@ -33,7 +33,7 @@ export function VideoViewerSkeleton() {
                 <Skeleton className="h-4 w-20 rounded-full" />
               </div>
               <Skeleton className="h-3.5 w-full rounded" />
-              <Skeleton className="h-3.5 rounded" style={{ width: `${80 - index * 10}%` }} />
+              <Skeleton className="h-3.5 rounded w-(--skeleton-width)" style={{ "--skeleton-width": `${80 - index * 10}%` } as React.CSSProperties} />
             </div>
           ))}
         </div>

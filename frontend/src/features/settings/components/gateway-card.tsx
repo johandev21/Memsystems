@@ -42,7 +42,7 @@ function GatewayStatusBadge({
     );
   if (degraded)
     return (
-      <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-sm font-semibold text-amber-700 dark:text-amber-300">
+      <span className="inline-flex items-center rounded-full bg-warning/10 px-2.5 py-1 text-sm font-semibold text-warning dark:text-warning">
         {t("gateway.status.degraded")}
       </span>
     );
@@ -167,7 +167,7 @@ function GatewayDegradedAlert({ detail }: { detail: string }) {
   return (
     <div
       role="status"
-      className="rounded-lg bg-amber-500/10 px-4 py-3 text-sm leading-5 text-amber-700 dark:text-amber-300"
+      className="rounded-lg bg-warning/10 px-4 py-3 text-sm leading-5 text-warning dark:text-warning"
     >
       {detail}
     </div>

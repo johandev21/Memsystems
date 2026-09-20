@@ -129,7 +129,7 @@ export function FlashcardVariantC({
         >
           {!isFlipped ? (
             <div className="space-y-6">
-              <div className="py-2 flex flex-col justify-center min-h-[140px]">
+              <div className="py-2 flex flex-col justify-center min-h-35">
                 {cardFormat === "cloze" ? (
                   <div onClick={(e) => e.stopPropagation()}>
                     <ClozeInteractive
@@ -165,7 +165,7 @@ export function FlashcardVariantC({
             </div>
           ) : (
             <div className="space-y-6 animate-in fade-in duration-150">
-              <div className="py-2 flex flex-col justify-center min-h-[140px] max-w-lg mx-auto text-center">
+              <div className="py-2 flex flex-col justify-center min-h-35 max-w-lg mx-auto text-center">
                 <p className="text-lg md:text-xl font-medium leading-relaxed tracking-tight text-text-primary">
                   {currentCard.back}
                 </p>

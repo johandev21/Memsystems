@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { cn } from "@/shared/utils/cn";
 import type { LucideProps } from "lucide-react";
 import type { IconName } from "lucide-react/dynamic";
 import type { BookOpen } from "lucide-react";
@@ -20,12 +21,10 @@ function IconPlaceholder({ className, size }: DynamicIconProps) {
   return (
     <span
       aria-hidden="true"
-      className={className}
+      className={cn("inline-block w-(--icon-size) h-(--icon-size)", className)}
       style={{
-        display: "inline-block",
-        width: px ?? size ?? "1em",
-        height: px ?? size ?? "1em",
-      }}
+        "--icon-size": px !== undefined ? `${px}px` : (size ?? "1em"),
+      } as React.CSSProperties}
     />
   );
 }

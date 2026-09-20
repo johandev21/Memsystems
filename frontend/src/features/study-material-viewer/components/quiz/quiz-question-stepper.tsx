@@ -70,7 +70,7 @@ function OptionFeedback({
   explanation?: string;
 }) {
   return (
-    <div id={id} className="space-y-1 pb-4 pl-[3.25rem] pr-4 text-sm leading-relaxed break-words">
+    <div id={id} className="space-y-1 pb-4 pl-13 pr-4 text-sm leading-relaxed break-words">
       {status && (
         <p className={cn("font-semibold", correct ? "text-success" : "text-destructive")}>
           {status}
@@ -203,8 +203,8 @@ export function QuizQuestionStepper({
           className="h-1.5 overflow-hidden rounded-full bg-surface-4"
         >
           <div
-            className="h-full rounded-full bg-text-secondary transition-[width] motion-reduce:transition-none"
-            style={{ width: (answeredCount / questions.length) * 100 + "%" }}
+            className="h-full rounded-full bg-text-secondary transition-[width] motion-reduce:transition-none w-(--quiz-progress)"
+            style={{ "--quiz-progress": (answeredCount / questions.length) * 100 + "%" } as React.CSSProperties}
           />
         </div>
       </div>

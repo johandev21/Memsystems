@@ -80,7 +80,7 @@ export function AudioSegmentCard({
               e.stopPropagation();
               onTimestampClick(segment);
             }}
-            className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
             title={t("audioSegment.seekAudioTitle")}
           >
             [{formatTime(segment.startOffsetMs / 1000)}]
@@ -123,7 +123,7 @@ export function AudioSegmentCard({
                   data-testid="speaker-badge"
                   onClick={(e) => onStartRename(segment.speaker!, e)}
                   className={cn(
-                    "group/speaker inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer",
+                    "group/speaker inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold transition-all cursor-pointer",
                     speakerColor,
                   )}
                   title={t("audioSegment.renameSpeakerTitle")}
@@ -136,7 +136,7 @@ export function AudioSegmentCard({
             </>
           )}
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground">#{segment.ordinal}</span>
+        <span className="text-xs font-mono text-muted-foreground">#{segment.ordinal}</span>
       </div>
       <button
         type="button"

@@ -175,7 +175,7 @@ function LibraryHero({
   return (
     <section className="flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-2">
-        <h1 className="max-w-md font-heading text-2xl leading-snug font-semibold tracking-[-0.03em] text-foreground">
+        <h1 className="max-w-md font-heading text-2xl leading-snug font-semibold tracking-tight text-foreground">
           {t("library.heroTitle")}
         </h1>
         <p className="text-sm text-muted-foreground">{t("library.heroSubtitle")}</p>
@@ -203,7 +203,7 @@ function LibraryContent({
     return (
       <div className="library-grid py-2" aria-hidden="true">
         {Array.from({ length: 8 }).map((_, index) => (
-          <Skeleton key={index} className="h-[168px] w-[239px] rounded-[16px]" />
+          <Skeleton key={index} className="h-42 w-59.75 rounded-[16px]" />
         ))}
       </div>
     );

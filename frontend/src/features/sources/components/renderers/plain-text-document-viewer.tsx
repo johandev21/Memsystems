@@ -116,8 +116,8 @@ export function PlainTextDocumentViewer({
       return (
         <div
           ref={containerRef}
-          className="w-full relative font-mono text-xs sm:text-sm"
-          style={{ height: `${virtualizer.getTotalSize()}px` }}
+          className="w-full relative font-mono text-xs sm:text-sm h-(--virtual-total)"
+          style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
         >
           {virtualItems.map((virtualRow) => {
             const block = blocks[virtualRow.index];
@@ -130,14 +130,8 @@ export function PlainTextDocumentViewer({
                 data-index={virtualRow.index}
                 data-text-block-index={block.index}
                 ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-                className="py-1.5"
+                className="absolute top-0 left-0 w-full translate-y-(--virtual-start) py-1.5"
+                style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
               >
                 <div
                   className={cn(

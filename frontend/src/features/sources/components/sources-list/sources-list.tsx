@@ -3,6 +3,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
 import { SourceRow } from "./source-row";
+import { cn } from "@/shared/utils/cn";
 
 export interface SourcesListProps {
   sources?: Source[];
@@ -75,8 +76,8 @@ export function SourcesList({
   if (isVirtualized && sources) {
     return (
       <div
-        className="w-full relative min-w-full"
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
+        className={cn("w-full relative min-w-full", "h-(--virtual-total)")}
+        style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const source = sources[virtualRow.index];
@@ -87,13 +88,8 @@ export function SourcesList({
               key={source.id}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
+              className="absolute top-0 left-0 w-full translate-y-(--virtual-start)"
+              style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
             >
               <SourceRow
                 source={source}

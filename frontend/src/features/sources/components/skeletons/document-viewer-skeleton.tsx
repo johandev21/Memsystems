@@ -55,7 +55,7 @@ export function DocumentViewerSkeleton({ variant = "document" }: DocumentViewerS
             <Skeleton className="h-4 w-full rounded" />
             <Skeleton className="h-4 w-[94%] rounded" />
             <Skeleton className="h-4 w-[90%] rounded" />
-            <Skeleton className="h-4 w-[45%] rounded" />
+            <Skeleton className="h-4 w-9/20 rounded" />
           </div>
         </div>
 
@@ -64,7 +64,7 @@ export function DocumentViewerSkeleton({ variant = "document" }: DocumentViewerS
           {[1, 2, 3].map((item, index) => (
             <div key={item} className="flex items-center gap-2.5">
               <div className="size-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
-              <Skeleton className="h-4 rounded" style={{ width: `${75 - index * 12}%` }} />
+              <Skeleton className="h-4 rounded w-(--skeleton-width)" style={{ "--skeleton-width": `${75 - index * 12}%` } as React.CSSProperties} />
             </div>
           ))}
         </div>

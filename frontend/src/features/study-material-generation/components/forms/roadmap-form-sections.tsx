@@ -5,7 +5,7 @@ import { FolderPicker } from "@/features/notebooks/components/studio/folder-pick
 import { cn } from "@/shared/utils/cn";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CTA_BUTTON_CLASS, optionRowClass } from "./option-row";
+import { optionRowClass } from "./option-row";
 import { DETAIL_OPTIONS, PHASE_PRESETS, type DetailLevel } from "./roadmap-options";
 
 export interface RoadmapPhasesSectionProps {
@@ -202,7 +202,7 @@ export function RoadmapStepTwo({
             value={brief}
             onChange={(e) => onBriefChange(e.target.value)}
             placeholder={t("roadmap.instructionsPlaceholder")}
-            className="max-h-[200px] min-h-[120px] w-full resize-none text-xs"
+            className="max-h-50 min-h-30 w-full resize-none text-xs"
             disabled={disabled}
           />
         </div>
@@ -232,10 +232,10 @@ export function RoadmapStepTwo({
         </Button>
 
         <Button
+          variant="surface"
           type="button"
           className={cn(
             "h-10 cursor-pointer gap-2 rounded-full px-6 text-sm font-medium transition-colors",
-            CTA_BUTTON_CLASS,
           )}
           disabled={!canSubmit}
           onClick={onSubmit}

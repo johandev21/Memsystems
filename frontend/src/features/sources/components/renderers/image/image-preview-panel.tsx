@@ -84,8 +84,8 @@ export function ImagePreviewPanel({
           </div>
         ) : (
           <div
-            className="relative inline-block transition-transform duration-100 ease-out max-w-full"
-            style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
+            className="relative inline-block transition-transform duration-100 ease-out max-w-full origin-center scale-(--image-zoom)"
+            style={{ "--image-zoom": zoom } as React.CSSProperties}
           >
             <img
               src={imageUrl}

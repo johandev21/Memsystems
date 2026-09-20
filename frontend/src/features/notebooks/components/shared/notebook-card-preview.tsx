@@ -104,10 +104,12 @@ export function NotebookCardPreview({
             <img
               src={bannerPreviewUrl}
               alt={t("banner.previewAlt")}
-              className="h-full w-full object-cover pointer-events-none transition-[object-position] duration-75"
-              style={{
-                objectPosition: `${Math.round(focalPoint.x * 100)}% ${Math.round(focalPoint.y * 100)}%`,
-              }}
+              className="h-full w-full object-cover object-(--banner-pos) pointer-events-none transition-[object-position] duration-75"
+              style={
+                {
+                  "--banner-pos": `${Math.round(focalPoint.x * 100)}% ${Math.round(focalPoint.y * 100)}%`,
+                } as React.CSSProperties
+              }
               decoding="async"
             />
 

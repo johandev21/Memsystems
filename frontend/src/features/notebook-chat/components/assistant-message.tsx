@@ -246,7 +246,7 @@ function useAssistantMessageContent(
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-muted-foreground underline decoration-1 underline-offset-[3px] transition-colors hover:text-foreground focus-visible:text-foreground"
+            className="font-medium text-muted-foreground underline decoration-1 underline-offset-2 transition-colors hover:text-foreground focus-visible:text-foreground"
           >
             {children}
           </a>

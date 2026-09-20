@@ -24,7 +24,7 @@ export function MaterialViewerHeader({
   const { t } = useTranslation("viewer");
 
   return (
-    <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-[44px] shrink-0 select-none">
+    <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-11 shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {!isEffectivelyFullscreen && !hasChatHandoff && (
           <Button

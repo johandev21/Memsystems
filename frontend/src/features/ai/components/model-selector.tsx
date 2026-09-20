@@ -105,15 +105,12 @@ export const ModelSelectorLogo = ({ provider, className, ...props }: ModelSelect
       {...props}
       aria-label={t("modelSelector.providerLogo", { provider })}
       className={cn(
-        "size-4.5 shrink-0 bg-[var(--model-icon-color)] text-[var(--model-icon-color)]",
-        "[mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]",
-        "[-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]",
+        "size-4.5 shrink-0 bg-(--model-icon-color) text-(--model-icon-color)",
+        "[mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [mask-image:var(--model-mask)]",
+        "[-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain] [-webkit-mask-image:var(--model-mask)]",
         className,
       )}
-      style={{
-        WebkitMaskImage: `url(https://models.dev/logos/${provider}.svg)`,
-        maskImage: `url(https://models.dev/logos/${provider}.svg)`,
-      }}
+      style={{ "--model-mask": `url(https://models.dev/logos/${provider}.svg)` } as React.CSSProperties}
     />
   );
 };

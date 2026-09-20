@@ -84,8 +84,6 @@ function TreeLoadedContent({
   onPanelToggle,
   variant,
 }: TreeLoadedContentProps) {
-  const contentHeight = getTreeContentHeight(variant);
-
   return (
     <div data-slot="study-materials-tree-container" className={className}>
       {data.isFetching && data.hasData && <TreeUpdatingIndicator />}
@@ -99,7 +97,7 @@ function TreeLoadedContent({
         onExpandedChange={setExpandedIds}
         isPanelExpanded={isPanelExpanded}
         onPanelToggle={onPanelToggle}
-        contentClassName={contentHeight}
+        contentHeight={variant ?? "standalone"}
       />
       {data.isError && data.hasData && <TreeRefreshError onRetry={data.handleRetry} />}
     </div>
@@ -148,15 +146,6 @@ export function StudyMaterialsTreeContainer({
       variant={variant}
     />
   );
-}
-
-function getTreeContentHeight(variant: StudyMaterialsTreeContainerProps["variant"]): string {
-  const heights = {
-    desktop: "h-[250px]",
-    mobile: "max-h-[38dvh] min-h-[240px] h-auto overflow-y-auto overscroll-contain",
-    standalone: "h-[400px]",
-  } as const;
-  return heights[variant ?? "standalone"];
 }
 
 function TreeUpdatingIndicator() {

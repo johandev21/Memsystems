@@ -47,9 +47,9 @@ function UrlTypeBadge({
       <Badge
         variant="outline"
         data-testid="youtube-badge"
-        className="gap-1 border-red-500/30 bg-red-500/10 text-xs font-normal text-red-600 dark:text-red-400"
+        className="gap-1 border-destructive/30 bg-destructive/10 text-xs font-normal text-destructive dark:text-destructive"
       >
-        <Video className="size-3 text-red-600 dark:text-red-400" />
+        <Video className="size-3 text-destructive dark:text-destructive" />
         {t("urlMode.youtubeBadge")}
       </Badge>
     );
@@ -59,9 +59,9 @@ function UrlTypeBadge({
       <Badge
         variant="outline"
         data-testid="arxiv-badge"
-        className="gap-1 border-indigo-500/30 bg-indigo-500/10 text-xs font-normal text-indigo-600 dark:text-indigo-400"
+        className="gap-1 border-info/30 bg-info/10 text-xs font-normal text-info dark:text-info"
       >
-        <BookOpen className="size-3 text-indigo-600 dark:text-indigo-400" />
+        <BookOpen className="size-3 text-info dark:text-info" />
         {t("urlMode.arxivBadge")}
       </Badge>
     );
@@ -71,9 +71,9 @@ function UrlTypeBadge({
       <Badge
         variant="outline"
         data-testid="doi-badge"
-        className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-xs font-normal text-emerald-600 dark:text-emerald-400"
+        className="gap-1 border-success/30 bg-success/10 text-xs font-normal text-success dark:text-success"
       >
-        <GraduationCap className="size-3 text-emerald-600 dark:text-emerald-400" />
+        <GraduationCap className="size-3 text-success dark:text-success" />
         {t("urlMode.doiBadge")}
       </Badge>
     );

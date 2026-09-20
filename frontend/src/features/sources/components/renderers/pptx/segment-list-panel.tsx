@@ -36,7 +36,7 @@ export function PptxSegmentItem({
       )}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
-        <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0">
+        <Badge variant="secondary" className="text-xs font-mono px-1.5 py-0">
           {t("pptxSegmentList.segmentBadge", {
             number: seg.slideNumber,
             ordinal: seg.ordinal,
@@ -84,7 +84,7 @@ export function SegmentListPanel({
     <div className="hidden lg:flex w-72 shrink-0 flex-col border-l border-border/40 bg-muted/10 overflow-hidden">
       <div className="shrink-0 border-b border-border/40 px-3 py-2">
         <h3 className="text-xs font-semibold text-foreground">{t("pptxSegmentList.title")}</h3>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {t("pptxSegmentList.segmentCount", { count: filteredSegments.length })}
         </p>
       </div>
@@ -94,7 +94,7 @@ export function SegmentListPanel({
             {t("pptxSegmentList.noSegmentsMatch", { query: searchQuery })}
           </p>
         ) : isVirtualized ? (
-          <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+          <div className="relative w-full h-(--virtual-total)" style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const seg = filteredSegments[virtualRow.index];
               if (!seg) return null;
@@ -103,14 +103,8 @@ export function SegmentListPanel({
                   key={seg.id}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  className="py-1"
+                  className="absolute top-0 left-0 w-full translate-y-(--virtual-start) py-1"
+                  style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
                 >
                   <PptxSegmentItem
                     seg={seg}

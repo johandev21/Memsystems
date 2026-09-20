@@ -36,7 +36,7 @@ export function TranscriptSegmentCard({
             e.stopPropagation();
             onSeek(segment);
           }}
-          className="inline-flex items-center rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] font-medium text-text-muted hover:bg-surface-3 hover:text-text-primary transition-colors cursor-pointer"
+          className="inline-flex items-center rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs font-medium text-text-tertiary hover:bg-surface-3 hover:text-text-primary transition-colors cursor-pointer"
           title={t("videoTranscript.seekVideoTitle")}
         >
           [{formatTime(segment.startOffsetMs / 1000)}]
@@ -45,7 +45,7 @@ export function TranscriptSegmentCard({
         {(segment.locator?.imageRegion || segment.kind === "visual_description") && (
           <span
             data-testid="visual-note-badge"
-            className="inline-flex items-center gap-1 rounded-full border border-surface-border bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-text-secondary"
+            className="inline-flex items-center gap-1 rounded-full border border-surface-border bg-surface-2 px-2 py-0.5 text-xs font-medium text-text-secondary"
           >
             <ImageIcon className="size-2.5 text-text-faint" />
             {t("videoTranscript.visualNote")}

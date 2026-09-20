@@ -41,7 +41,7 @@ function MindMapFlow(props: MindMapViewProps) {
   }
 
   return (
-    <div className="relative h-[min(520px,calc(100dvh-160px))] sm:h-[min(680px,calc(100dvh-180px))] min-h-[420px] w-full overflow-hidden rounded-xl border border-surface-border bg-surface-1">
+    <div className="relative h-[min(520px,calc(100dvh-160px))] sm:h-[min(680px,calc(100dvh-180px))] min-h-105 w-full overflow-hidden rounded-xl border border-surface-border bg-surface-1">
       <ReactFlow<MindMapFlowNode, Edge>
         nodes={nodes}
         edges={edges}

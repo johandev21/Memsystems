@@ -39,13 +39,13 @@ const FOLDER_COVER_SRCSET = (variants: CoverVariants | null) =>
 
 export function EmptyFolderArtwork({ title, titleFontSize, titleSlot }: { title: string; titleFontSize: number; titleSlot?: ReactNode }) {
   return (
-    <span className="box-border w-[239px] h-[168.5px] relative block shrink-0 [z-index:5]">
-      <span className="box-border w-[239px] h-[168.5px] absolute left-0 top-0 [z-index:0]">
+    <span className="box-border w-59.75 h-[168.5px] relative block shrink-0 z-5">
+      <span className="box-border w-59.75 h-[168.5px] absolute left-0 top-0 z-0">
         <svg
           viewBox="0 5.5 238 159.5"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[159.5px] absolute left-0 top-0 overflow-visible [z-index:0]"
+          className="box-border w-59.75 h-[159.5px] absolute left-0 top-0 overflow-visible z-0"
         >
           <path
             d={FOLDER_BACK_PATH}
@@ -56,7 +56,7 @@ export function EmptyFolderArtwork({ title, titleFontSize, titleSlot }: { title:
           viewBox="0 0 239 125"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[125px] absolute left-0 top-[43.5px] overflow-visible [z-index:1]"
+          className="box-border w-59.75 h-31.25 absolute left-0 top-[43.5px] overflow-visible z-1"
         >
           <path
             d={FOLDER_FRONT_PATH_EMPTY}
@@ -64,7 +64,7 @@ export function EmptyFolderArtwork({ title, titleFontSize, titleSlot }: { title:
           ></path>
         </svg>
       </span>
-      <span className="library-artwork__folder-title text-[29.4px]/[42px] box-border absolute left-[61px] top-[107px] text-[color:var(--notebook-folder-title)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap] [z-index:1]" style={{ fontSize: titleFontSize }}>
+      <span className="library-artwork__folder-title text-(length:--artwork-title-size)/[42px] box-border absolute left-15.25 top-26.75 text-(--notebook-folder-title) font-sans font-medium text-left whitespace-nowrap z-1" style={{ "--artwork-title-size": `${titleFontSize}px` } as React.CSSProperties}>
         {titleSlot ?? title}
       </span>
     </span>
@@ -84,27 +84,27 @@ export function SingleFolderArtwork({
 }) {
   const cover = primaryCoverUrl(covers[0]);
   return (
-    <span className="box-border w-[239px] h-[168.5px] relative block shrink-0 [z-index:4]">
-      <span className="box-border w-[239px] h-[168.5px] absolute left-0 top-0 [z-index:0]">
+    <span className="box-border w-59.75 h-[168.5px] relative block shrink-0 z-4">
+      <span className="box-border w-59.75 h-[168.5px] absolute left-0 top-0 z-0">
         <svg
           viewBox="0 5.5 238 159.5"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[159.5px] absolute left-0 top-0 overflow-visible [z-index:0]"
+          className="box-border w-59.75 h-[159.5px] absolute left-0 top-0 overflow-visible z-0"
         >
           <path
             d={FOLDER_BACK_PATH}
             fill="var(--notebook-folder-back)"
           ></path>
         </svg>
-        <span className="box-border w-[183px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2] bg-[var(--notebook-empty-cover)]">
+        <span className="box-border w-45.75 h-26.75 absolute left-7 top-12.5 rounded-md overflow-hidden z-2 bg-(--notebook-empty-cover)">
           {cover ? <CoverFill url={cover} sizes="183px" srcSet={FOLDER_COVER_SRCSET(covers[0])} /> : null}
         </span>
         <svg
           viewBox="0 -44.5 237.5 76"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[76px] absolute left-0 top-[92.5px] overflow-visible [z-index:3]"
+          className="box-border w-59.75 h-19 absolute left-0 top-[92.5px] overflow-visible z-3"
         >
           <path
             d={FOLDER_FRONT_PATH}
@@ -112,7 +112,7 @@ export function SingleFolderArtwork({
           ></path>
         </svg>
       </span>
-      <span className="library-artwork__folder-title text-[29.4px]/[42px] box-border absolute left-[61px] top-[107px] text-[color:var(--notebook-folder-title)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap] [z-index:1]" style={{ fontSize: titleFontSize }}>
+      <span className="library-artwork__folder-title text-(length:--artwork-title-size)/[42px] box-border absolute left-15.25 top-26.75 text-(--notebook-folder-title) font-sans font-medium text-left whitespace-nowrap z-1" style={{ "--artwork-title-size": `${titleFontSize}px` } as React.CSSProperties}>
         {titleSlot ?? title}
       </span>
     </span>
@@ -133,30 +133,30 @@ export function DoubleFolderArtwork({
   const firstCover = primaryCoverUrl(covers[0]);
   const secondCover = primaryCoverUrl(covers[1]);
   return (
-    <span className="box-border w-[239px] h-[168.5px] relative block shrink-0 [z-index:6]">
-      <span className="box-border w-[239px] h-[168.5px] absolute left-0 top-0 [z-index:0]">
+    <span className="box-border w-59.75 h-[168.5px] relative block shrink-0 z-6">
+      <span className="box-border w-59.75 h-[168.5px] absolute left-0 top-0 z-0">
         <svg
           viewBox="0 5.5 238 159.5"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[159.5px] absolute left-0 top-0 overflow-visible [z-index:0]"
+          className="box-border w-59.75 h-[159.5px] absolute left-0 top-0 overflow-visible z-0"
         >
           <path
             d={FOLDER_BACK_PATH}
             fill="var(--notebook-folder-back)"
           ></path>
         </svg>
-        <span className="box-border w-[90px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2] bg-[var(--notebook-empty-cover)]">
+        <span className="box-border w-22.5 h-26.75 absolute left-7 top-12.5 rounded-md overflow-hidden z-2 bg-(--notebook-empty-cover)">
           {firstCover ? <CoverFill url={firstCover} sizes="90px" srcSet={FOLDER_COVER_SRCSET(covers[0])} /> : null}
         </span>
-        <span className="box-border w-[90px] h-[107px] absolute left-[121px] top-[50px] rounded-[8px] overflow-hidden [z-index:3] bg-[var(--notebook-empty-cover)]">
+        <span className="box-border w-22.5 h-26.75 absolute left-30.25 top-12.5 rounded-md overflow-hidden z-3 bg-(--notebook-empty-cover)">
           {secondCover ? <CoverFill url={secondCover} sizes="90px" srcSet={FOLDER_COVER_SRCSET(covers[1])} /> : null}
         </span>
         <svg
           viewBox="0 -44.5 237.5 76"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[76px] absolute left-0 top-[92.5px] overflow-visible [z-index:4]"
+          className="box-border w-59.75 h-19 absolute left-0 top-[92.5px] overflow-visible z-4"
         >
           <path
             d={FOLDER_FRONT_PATH}
@@ -164,7 +164,7 @@ export function DoubleFolderArtwork({
           ></path>
         </svg>
       </span>
-      <span className="library-artwork__folder-title text-[29.4px]/[42px] box-border absolute left-[61px] top-[107px] text-[color:var(--notebook-folder-title)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap] [z-index:1]" style={{ fontSize: titleFontSize }}>
+      <span className="library-artwork__folder-title text-(length:--artwork-title-size)/[42px] box-border absolute left-15.25 top-26.75 text-(--notebook-folder-title) font-sans font-medium text-left whitespace-nowrap z-1" style={{ "--artwork-title-size": `${titleFontSize}px` } as React.CSSProperties}>
         {titleSlot ?? title}
       </span>
     </span>
@@ -187,30 +187,30 @@ export function ManyFolderArtwork({
   const firstCover = primaryCoverUrl(covers[0]);
   const secondCover = primaryCoverUrl(covers[1]);
   return (
-    <span className="box-border w-[239px] h-[168.5px] relative block shrink-0 [z-index:3]">
-      <span className="box-border w-[239px] h-[168.5px] absolute left-0 top-0 [z-index:0]">
+    <span className="box-border w-59.75 h-[168.5px] relative block shrink-0 z-3">
+      <span className="box-border w-59.75 h-[168.5px] absolute left-0 top-0 z-0">
         <svg
           viewBox="0 5.5 238 159.5"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[159.5px] absolute left-0 top-0 overflow-visible [z-index:0]"
+          className="box-border w-59.75 h-[159.5px] absolute left-0 top-0 overflow-visible z-0"
         >
           <path
             d={FOLDER_BACK_PATH}
             fill="var(--notebook-folder-back)"
           ></path>
         </svg>
-        <span className="box-border w-[67px] h-[107px] absolute left-[28px] top-[50px] rounded-[8px] overflow-hidden [z-index:2] bg-[var(--notebook-empty-cover)]">
+        <span className="box-border w-16.75 h-26.75 absolute left-7 top-12.5 rounded-md overflow-hidden z-2 bg-(--notebook-empty-cover)">
           {firstCover ? <CoverFill url={firstCover} sizes="67px" srcSet={FOLDER_COVER_SRCSET(covers[0])} /> : null}
         </span>
-        <span className="box-border w-[67px] h-[107px] absolute left-[99px] top-[50px] rounded-[8px] overflow-hidden [z-index:3] bg-[var(--notebook-empty-cover)]">
+        <span className="box-border w-16.75 h-26.75 absolute left-24.75 top-12.5 rounded-md overflow-hidden z-3 bg-(--notebook-empty-cover)">
           {secondCover ? <CoverFill url={secondCover} sizes="67px" srcSet={FOLDER_COVER_SRCSET(covers[1])} /> : null}
         </span>
-        <span className="box-border w-[41px] h-[82px] absolute left-[170px] top-[50px] bg-[var(--notebook-overflow-surface)] rounded-[8px] overflow-hidden [z-index:4]">
-          <span className="text-[16.8px]/[24px] box-border absolute left-[19.5px] top-[12px] text-[color:var(--notebook-overflow-foreground)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap] [z-index:0]">
+        <span className="box-border w-10.25 h-20.5 absolute left-42.5 top-12.5 bg-(--notebook-overflow-surface) rounded-md overflow-hidden z-4">
+          <span className="text-base/[24px] box-border absolute left-[19.5px] top-3 text-(--notebook-overflow-foreground) font-sans font-medium text-left whitespace-nowrap z-0">
             {extraCount}
           </span>
-          <span className="text-[11.2px]/[16px] box-border absolute left-[11.5px] top-[16px] text-[color:var(--notebook-overflow-foreground)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap] [z-index:1]">
+          <span className="text-xs/[16px] box-border absolute left-[11.5px] top-4 text-(--notebook-overflow-foreground) font-sans font-medium text-left whitespace-nowrap z-1">
             +
           </span>
         </span>
@@ -218,7 +218,7 @@ export function ManyFolderArtwork({
           viewBox="0 -44.5 237.5 76"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[239px] h-[76px] absolute left-0 top-[92.5px] overflow-visible [z-index:5]"
+          className="box-border w-59.75 h-19 absolute left-0 top-[92.5px] overflow-visible z-5"
         >
           <path
             d={FOLDER_FRONT_PATH}
@@ -226,7 +226,7 @@ export function ManyFolderArtwork({
           ></path>
         </svg>
       </span>
-      <span className="library-artwork__folder-title text-[29.4px]/[42px] box-border absolute left-[61px] top-[107px] text-[color:var(--notebook-folder-title)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap] [z-index:1]" style={{ fontSize: titleFontSize }}>
+      <span className="library-artwork__folder-title text-(length:--artwork-title-size)/[42px] box-border absolute left-15.25 top-26.75 text-(--notebook-folder-title) font-sans font-medium text-left whitespace-nowrap z-1" style={{ "--artwork-title-size": `${titleFontSize}px` } as React.CSSProperties}>
         {titleSlot ?? title}
       </span>
     </span>
@@ -241,13 +241,13 @@ function NotebookCoverLabel({
   titleSlot?: ReactNode;
 }) {
   return (
-    <span className="box-border w-fit max-w-[calc(100%_-_12px)] h-fit absolute left-[6px] top-[88px] flex flex-row gap-[6px] p-[0px_8px] justify-start items-center bg-[var(--notebook-label-surface)] rounded-[8px] [z-index:0]">
-      <span className="box-border w-[24px] shrink-0 h-[24px] overflow-hidden relative">
+    <span className="box-border w-fit max-w-[calc(100%_-_12px)] h-fit absolute left-1.5 top-22 flex flex-row gap-1.5 px-2 py-0 justify-start items-center bg-(--notebook-label-surface) rounded-md z-0">
+      <span className="box-border w-6 shrink-0 h-6 overflow-hidden relative">
         <svg
           viewBox="0 0 4 1"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[4px] h-[2px] absolute left-[2px] top-[6px] overflow-visible [z-index:0]"
+          className="box-border w-1 h-0.5 absolute left-0.5 top-1.5 overflow-visible z-0"
         >
           <path
             d="M0 0l4 0"
@@ -263,7 +263,7 @@ function NotebookCoverLabel({
           viewBox="0 0 4 1"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[4px] h-[2px] absolute left-[2px] top-[10px] overflow-visible [z-index:1]"
+          className="box-border w-1 h-0.5 absolute left-0.5 top-2.5 overflow-visible z-1"
         >
           <path
             d="M0 0l4 0"
@@ -279,7 +279,7 @@ function NotebookCoverLabel({
           viewBox="0 0 4 1"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[4px] h-[2px] absolute left-[2px] top-[14px] overflow-visible [z-index:2]"
+          className="box-border w-1 h-0.5 absolute left-0.5 top-3.5 overflow-visible z-2"
         >
           <path
             d="M0 0l4 0"
@@ -295,7 +295,7 @@ function NotebookCoverLabel({
           viewBox="0 0 4 1"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[4px] h-[2px] absolute left-[2px] top-[18px] overflow-visible [z-index:3]"
+          className="box-border w-1 h-0.5 absolute left-0.5 top-4.5 overflow-visible z-3"
         >
           <path
             d="M0 0l4 0"
@@ -311,7 +311,7 @@ function NotebookCoverLabel({
           viewBox="0 0 16 20"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[16px] h-[20px] absolute left-[4px] top-[2px] overflow-visible [z-index:4]"
+          className="box-border w-4 h-5 absolute left-1 top-0.5 overflow-visible z-4"
         >
           <path
             d="M2 0l12 0c1.10457 0 2 0.89543 2 2l0 16c0 1.10457-0.89543 2-2 2l-12 0c-1.10457 0-2-0.89543-2-2l0-16c0-1.10457 0.89543-2 2-2z"
@@ -327,7 +327,7 @@ function NotebookCoverLabel({
           viewBox="0 0 1 20"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-[2px] h-[20px] absolute left-[16px] top-[2px] overflow-visible [z-index:5]"
+          className="box-border w-0.5 h-5 absolute left-4 top-0.5 overflow-visible z-5"
         >
           <path
             d="M0 0l0 20"
@@ -340,7 +340,7 @@ function NotebookCoverLabel({
           ></path>
         </svg>
       </span>
-      <span className="min-w-0 text-[16px]/[42px] box-border text-[color:var(--notebook-label-foreground)] font-[Poppins,system-ui,sans-serif] font-medium text-left [white-space:nowrap]">
+      <span className="min-w-0 text-base/[42px] box-border text-(--notebook-label-foreground) font-sans font-medium text-left whitespace-nowrap">
         {titleSlot ?? title}
       </span>
     </span>
@@ -360,7 +360,7 @@ export function CoveredNotebookArtwork({
 }) {
   return (
     <span
-      className="box-border w-[239px] h-[137px] relative block shrink-0 library-notebook-surface rounded-[14px] overflow-hidden [z-index:0]"
+      className="box-border w-59.75 h-34.25 relative block shrink-0 library-notebook-surface rounded-xl overflow-hidden z-0"
     >
       <CoverFill url={coverUrl} sizes="239px" srcSet={NotebookCoverSrcSet({ coverVariants })} />
       <NotebookCoverLabel title={title} titleSlot={titleSlot} />
@@ -370,7 +370,7 @@ export function CoveredNotebookArtwork({
 
 export function EmptyNotebookArtwork({ title, titleSlot }: { title: string; titleSlot?: ReactNode }) {
   return (
-    <span className="box-border w-[239px] h-[137px] relative block shrink-0 bg-[var(--notebook-empty-cover)] library-notebook-surface rounded-[14px] overflow-hidden [z-index:1]">
+    <span className="box-border w-59.75 h-34.25 relative block shrink-0 bg-(--notebook-empty-cover) library-notebook-surface rounded-xl overflow-hidden z-1">
       <NotebookCoverLabel title={title} titleSlot={titleSlot} />
     </span>
   );

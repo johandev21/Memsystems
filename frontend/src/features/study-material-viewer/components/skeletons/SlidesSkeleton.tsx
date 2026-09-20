@@ -16,11 +16,11 @@ export function SlidesSkeleton() {
       <Skeleton className="aspect-video w-full rounded-2xl" />
       {/* Thumbnails */}
       <div className="flex gap-2 overflow-hidden pb-1">
-        <Skeleton className="h-[72px] w-28 shrink-0 rounded-xl" />
-        <Skeleton className="h-[72px] w-28 shrink-0 rounded-xl" />
-        <Skeleton className="h-[72px] w-28 shrink-0 rounded-xl" />
-        <Skeleton className="hidden h-[72px] w-28 shrink-0 rounded-xl sm:block" />
-        <Skeleton className="hidden h-[72px] w-28 shrink-0 rounded-xl md:block" />
+        <Skeleton className="h-18 w-28 shrink-0 rounded-xl" />
+        <Skeleton className="h-18 w-28 shrink-0 rounded-xl" />
+        <Skeleton className="h-18 w-28 shrink-0 rounded-xl" />
+        <Skeleton className="hidden h-18 w-28 shrink-0 rounded-xl sm:block" />
+        <Skeleton className="hidden h-18 w-28 shrink-0 rounded-xl md:block" />
       </div>
       {/* CTA */}
       <div className="flex justify-center">

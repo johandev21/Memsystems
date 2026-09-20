@@ -71,7 +71,7 @@ function StaticArticleDocument({ blocks }: { blocks: ArticleBlock[] }) {
 
 function ArticleDocumentShell({ children }: { children: ReactNode }) {
   return (
-    <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed font-sans">
+    <div className="max-w-none text-sm leading-relaxed font-sans">
       {children}
     </div>
   );

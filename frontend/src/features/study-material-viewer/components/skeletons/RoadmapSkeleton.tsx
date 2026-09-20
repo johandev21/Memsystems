@@ -17,7 +17,7 @@ export function RoadmapSkeleton() {
         <div className="absolute top-0 bottom-0 left-1/2 w-1 -translate-x-1/2 rounded-full bg-muted" />
         {[0, 1, 2].map((i) => (
           <div key={i} className={`relative flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
-            <Skeleton className="h-32 w-[45%] rounded-2xl" />
+            <Skeleton className="h-32 w-9/20 rounded-2xl" />
           </div>
         ))}
       </div>

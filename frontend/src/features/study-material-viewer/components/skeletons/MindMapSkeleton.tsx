@@ -4,7 +4,7 @@ export function MindMapSkeleton() {
   return (
     <div
       data-slot="mind-map-skeleton"
-      className="relative mx-auto h-[400px] w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border-subtle bg-card/50"
+      className="relative mx-auto h-100 w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border-subtle bg-card/50"
       aria-hidden="true"
     >
       {/* Central node */}

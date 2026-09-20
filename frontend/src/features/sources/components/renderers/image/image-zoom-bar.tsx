@@ -35,7 +35,7 @@ export function ImageZoomBar({
       >
         <ZoomOut className="size-3.5" />
       </Button>
-      <span className="min-w-[36px] text-center text-[11px] font-medium text-muted-foreground">
+      <span className="min-w-9 text-center text-xs font-medium text-muted-foreground">
         {Math.round(zoom * 100)}%
       </span>
       <Button

@@ -30,7 +30,7 @@ export function TranscriptListView({
   return (
     <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 @min-[720px]:p-4">
       {isVirtualized ? (
-        <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        <div className="relative w-full h-(--virtual-total)" style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}>
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const segment = segments[virtualRow.index];
             if (!segment) return null;
@@ -39,14 +39,8 @@ export function TranscriptListView({
                 key={segment.id}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-                className="py-1"
+                className="absolute top-0 left-0 w-full translate-y-(--virtual-start) py-1"
+                style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
               >
                 <TranscriptSegmentCard
                   segment={segment}

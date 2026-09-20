@@ -62,12 +62,14 @@ export function BannerImage({
         sizes="(min-width: 928px) 896px, 100vw"
         alt=""
         className={cn(
-          "pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-200 motion-reduce:transition-none",
+          "pointer-events-none absolute inset-0 size-full object-cover object-(--banner-pos) transition-opacity duration-200 motion-reduce:transition-none",
           isLoaded ? "opacity-100" : "opacity-0",
         )}
-        style={{
-          objectPosition: `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
-        }}
+        style={
+          {
+            "--banner-pos": `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
+          } as React.CSSProperties
+        }
         draggable={false}
         fetchPriority="high"
         decoding="async"

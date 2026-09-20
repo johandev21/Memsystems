@@ -50,7 +50,7 @@ const HeadingWithId = ({
       id={id}
       data-heading-level={level}
       className={cn(
-        "font-bold text-foreground tracking-tight scroll-mt-6 wrap-break-words",
+        "font-bold text-foreground tracking-tight scroll-mt-6 wrap-break-word",
         level === 1 && "text-xl sm:text-2xl pt-6 pb-2 my-3 border-b border-border/30",
         level === 2 && "text-lg sm:text-xl pt-5 pb-1.5 my-3 border-b border-border/20",
         level === 3 && "text-base sm:text-lg pt-4 my-2.5",
@@ -83,7 +83,7 @@ const markdownComponents = {
     <HeadingWithId level={6}>{children}</HeadingWithId>
   ),
   p: ({ children }: { children?: ReactNode }) => (
-    <p className="my-3 wrap-break-words select-text">
+    <p className="my-3 wrap-break-word select-text">
       {children}
     </p>
   ),
@@ -104,7 +104,7 @@ const markdownComponents = {
   hr: () => <hr className="my-6 border-t border-border/40" />,
   table: ({ children }: { children?: ReactNode }) => (
     <div className="my-4 overflow-x-auto overscroll-x-contain rounded-lg border border-border/40 shadow-xs">
-      <table className="w-full text-left text-sm border-collapse min-w-[500px]">{children}</table>
+      <table className="w-full text-left text-sm border-collapse min-w-125">{children}</table>
     </div>
   ),
   thead: ({ children }: { children?: ReactNode }) => (

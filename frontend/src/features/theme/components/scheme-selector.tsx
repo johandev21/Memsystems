@@ -18,7 +18,7 @@ export function SchemeSelector() {
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-base font-semibold tracking-[-0.01em]">{t("scheme.title")}</h3>
+        <h3 className="text-base font-semibold tracking-tight">{t("scheme.title")}</h3>
         <span className="text-xs text-muted-foreground">{t("scheme.summary")}</span>
       </div>
       <div
@@ -136,66 +136,70 @@ function SingleSchemePreview({
 }) {
   return (
     <div
-      className="relative h-20 w-full overflow-hidden rounded-xl border border-border/80 p-2 shadow-xs"
+      className="relative h-20 w-full overflow-hidden rounded-xl border border-border/80 p-2 shadow-xs bg-(--scheme-bg)"
       data-scheme-preview={scheme}
-      style={{ backgroundColor: bg }}
+      style={{ "--scheme-bg": bg } as React.CSSProperties}
     >
       <div className="mb-1.5 flex gap-1">
         <div
-          className="h-1.5 w-8 rounded-full"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${accent} ${isDark ? "35%" : "25%"})`,
-          }}
+          className="h-1.5 w-8 rounded-full bg-(--scheme-accent)"
+          style={
+            { "--scheme-accent": `color-mix(in oklch, ${bg}, ${accent} ${isDark ? "35%" : "25%"})` } as React.CSSProperties
+          }
         />
         <div
-          className="h-1.5 flex-1 rounded-full"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "10%" : "6%"})`,
-          }}
+          className="h-1.5 flex-1 rounded-full bg-(--scheme-mix)"
+          style={
+            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "10%" : "6%"})` } as React.CSSProperties
+          }
         />
       </div>
-      <div className="flex flex-1 gap-1.5" style={{ height: "48px" }}>
+      <div className="flex flex-1 gap-1.5 h-12">
         <div
-          className="w-7 rounded-md border"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "6%" : "4%"})`,
-            borderColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "10%"})`,
-          }}
+          className="w-7 rounded-md border bg-(--scheme-bg) border-(--scheme-border)"
+          style={
+            {
+              "--scheme-bg": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "6%" : "4%"})`,
+              "--scheme-border": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "10%"})`,
+            } as React.CSSProperties
+          }
         />
         <div className="flex flex-1 flex-col gap-1">
           <div
-            className="h-2 rounded"
-            style={{
-              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
-            }}
+            className="h-2 rounded bg-(--scheme-mix)"
+            style={
+              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` } as React.CSSProperties
+            }
           />
           <div
-            className="h-2 w-3/4 rounded"
-            style={{
-              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
-            }}
+            className="h-2 w-3/4 rounded bg-(--scheme-mix)"
+            style={
+              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` } as React.CSSProperties
+            }
           />
           <div
-            className="mt-1 h-2 w-5/6 rounded"
-            style={{
-              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "8%" : "5%"})`,
-            }}
+            className="mt-1 h-2 w-5/6 rounded bg-(--scheme-soft)"
+            style={
+              { "--scheme-soft": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "8%" : "5%"})` } as React.CSSProperties
+            }
           />
         </div>
         <div
-          className="hidden w-10 rounded-md border sm:block"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "6%" : "4%"})`,
-            borderColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "10%"})`,
-          }}
+          className="hidden w-10 rounded-md border sm:block bg-(--scheme-bg) border-(--scheme-border)"
+          style={
+            {
+              "--scheme-bg": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "6%" : "4%"})`,
+              "--scheme-border": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "10%"})`,
+            } as React.CSSProperties
+          }
         />
       </div>
       <div className="mt-1.5 flex justify-center">
         <div
-          className="h-2 w-16 rounded-full"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
-          }}
+          className="h-2 w-16 rounded-full bg-(--scheme-mix)"
+          style={
+            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` } as React.CSSProperties
+          }
         />
       </div>
     </div>
@@ -212,48 +216,50 @@ interface SchemeHalfPaneProps {
 function SchemeHalfPane({ bg, accent, mixTarget, accentPercent }: SchemeHalfPaneProps) {
   const isWhite = mixTarget === "white";
   return (
-    <div className="flex flex-1 flex-col p-2" style={{ backgroundColor: bg }}>
+    <div className="flex flex-1 flex-col p-2 bg-(--scheme-bg)" style={{ "--scheme-bg": bg } as React.CSSProperties}>
       <div className="mb-1.5 flex gap-1">
         <div
-          className="h-1.5 w-8 rounded-full"
-          style={{ backgroundColor: `color-mix(in oklch, ${bg}, ${accent} ${accentPercent})` }}
+          className="h-1.5 w-8 rounded-full bg-(--scheme-accent)"
+          style={{ "--scheme-accent": `color-mix(in oklch, ${bg}, ${accent} ${accentPercent})` } as React.CSSProperties}
         />
         <div
-          className="h-1.5 flex-1 rounded-full"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "10%" : "6%"})`,
-          }}
+          className="h-1.5 flex-1 rounded-full bg-(--scheme-mix)"
+          style={
+            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "10%" : "6%"})` } as React.CSSProperties
+          }
         />
       </div>
-      <div className="flex flex-1 gap-1.5" style={{ height: "48px" }}>
+      <div className="flex flex-1 gap-1.5 h-12">
         <div
-          className="w-6 rounded-md border"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "6%" : "4%"})`,
-            borderColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "10%"})`,
-          }}
+          className="w-6 rounded-md border bg-(--scheme-bg) border-(--scheme-border)"
+          style={
+            {
+              "--scheme-bg": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "6%" : "4%"})`,
+              "--scheme-border": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "10%"})`,
+            } as React.CSSProperties
+          }
         />
         <div className="flex flex-1 flex-col gap-1">
           <div
-            className="h-2 rounded"
-            style={{
-              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
-            }}
+            className="h-2 rounded bg-(--scheme-mix)"
+            style={
+              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})` } as React.CSSProperties
+            }
           />
           <div
-            className="h-2 w-3/4 rounded"
-            style={{
-              backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
-            }}
+            className="h-2 w-3/4 rounded bg-(--scheme-mix)"
+            style={
+              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})` } as React.CSSProperties
+            }
           />
         </div>
       </div>
       <div className="mt-1.5 flex justify-center">
         <div
-          className="h-1.5 w-16 rounded-full"
-          style={{
-            backgroundColor: `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
-          }}
+          className="h-1.5 w-16 rounded-full bg-(--scheme-mix)"
+          style={
+            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})` } as React.CSSProperties
+          }
         />
       </div>
     </div>

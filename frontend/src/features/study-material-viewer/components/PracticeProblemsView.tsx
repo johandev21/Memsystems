@@ -58,19 +58,16 @@ export function PracticeProblemsView({
 
 const DIFFICULTY_CONFIG: Record<
   PracticeProblemsDifficulty,
-  { labelKey: ParseKeys<"viewer">; className: string }
+  { labelKey: ParseKeys<"viewer"> }
 > = {
   easy: {
     labelKey: "practice.difficulty.easy",
-    className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   },
   medium: {
     labelKey: "practice.difficulty.medium",
-    className: "bg-primary/15 text-primary border-primary/30",
   },
   hard: {
     labelKey: "practice.difficulty.hard",
-    className: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   },
 };
 
@@ -157,7 +154,7 @@ function PracticeProblemsReader({
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-surface-1 text-text-primary">
       <PracticeStepperHeader
-        difficultyClassName={difficultyConfig.className}
+        difficulty={difficulty}
         difficultyLabel={t(difficultyConfig.labelKey)}
         activeIdx={activeIdx}
         totalProblems={totalProblems}

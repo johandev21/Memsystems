@@ -97,7 +97,7 @@ export function FileUploadMode({
         {isUploading && <Loader2 className="size-4 animate-spin text-primary" />}
         {isUploading ? t("fileUploadMode.uploading") : t("fileUploadMode.dropFiles")}
       </h3>
-      <p className="text-xs text-muted-foreground mb-4 text-center max-w-[340px]">
+      <p className="text-xs text-muted-foreground mb-4 text-center max-w-85">
         {t("fileUploadMode.supportedFormats")}
       </p>
 

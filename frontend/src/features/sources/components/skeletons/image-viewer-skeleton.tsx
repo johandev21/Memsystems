@@ -62,7 +62,7 @@ export function ImageViewerSkeleton() {
             <div key={item} className="rounded-lg border border-border/40 bg-card/40 p-3 space-y-2">
               <Skeleton className="h-4 w-20 rounded" />
               <Skeleton className="h-3.5 w-full rounded" />
-              <Skeleton className="h-3.5 rounded" style={{ width: `${80 - index * 15}%` }} />
+              <Skeleton className="h-3.5 rounded w-(--skeleton-width)" style={{ "--skeleton-width": `${80 - index * 15}%` } as React.CSSProperties} />
             </div>
           ))}
         </div>

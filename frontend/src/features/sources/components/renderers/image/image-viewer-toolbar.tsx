@@ -24,7 +24,7 @@ export function ImageViewerToolbar({
           {t("imageToolbar.imageDocument")}
         </Badge>
         {segmentsWithRegionsCount > 0 && (
-          <Badge variant="secondary" className="font-normal text-[11px]">
+          <Badge variant="secondary" className="font-normal text-xs">
             {t("imageToolbar.visualRegions", { count: segmentsWithRegionsCount })}
           </Badge>
         )}

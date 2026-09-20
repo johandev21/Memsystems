@@ -44,7 +44,7 @@ const ShimmerComponent = ({
       <MotionComponent
         animate={{ backgroundPosition: "0% center" }}
         className={cn(
-          "relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent",
+          "relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent bg-(image:--shimmer-image)",
           "[--bg:linear-gradient(90deg,var(--transparent)_calc(50%-var(--spread)),var(--color-background),var(--transparent)_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]",
           className,
         )}
@@ -52,7 +52,7 @@ const ShimmerComponent = ({
         style={
           {
             "--spread": `${dynamicSpread}px`,
-            backgroundImage:
+            "--shimmer-image":
               "var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))",
           } as CSSProperties
         }

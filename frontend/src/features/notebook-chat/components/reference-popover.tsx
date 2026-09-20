@@ -42,7 +42,7 @@ export function ReferencePopover({ reference, children }: ReferencePopoverProps)
               number: reference.number,
               title: reference.title,
             })}
-            className="relative -top-px mx-0.5 inline-flex h-5 w-auto min-w-5 rounded-full px-1 align-baseline text-[0.6875rem] leading-none text-muted-foreground hover:text-foreground"
+            className="relative -top-px mx-0.5 inline-flex h-5 w-auto min-w-5 rounded-full px-1 align-baseline text-xs leading-none text-muted-foreground hover:text-foreground"
           />
         }
       >

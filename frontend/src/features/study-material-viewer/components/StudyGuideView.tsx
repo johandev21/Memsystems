@@ -45,7 +45,7 @@ function StudyGuideReader({
         <p className="text-xs font-medium text-text-tertiary">
           {guide.format === "revision" ? t("studyGuide.revision") : t("studyGuide.detailed")}
         </p>
-        <h1 className="text-[1.75rem] leading-tight font-semibold break-words sm:text-3xl">
+        <h1 className="text-3xl leading-tight font-semibold break-words sm:text-3xl">
           {guide.title.replace(/-study-guide$/, "").replaceAll("-", " ")}
         </h1>
         {guide.sourceIds.length === 0 && !hasReferences && (

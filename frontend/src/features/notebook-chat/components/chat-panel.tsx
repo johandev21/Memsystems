@@ -100,7 +100,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
       <div
         ref={conversationWrapperRef}
         className="relative flex w-full min-h-0 flex-1 flex-col"
-        style={{ ["--composer-height" as string]: "96px" } as React.CSSProperties}
+        style={{ "--composer-height": "96px" } as React.CSSProperties}
       >
         <Conversation key={notebookId} className="flex-1 min-h-0" defaultScrollPosition="start">
           <ChatContent
@@ -123,9 +123,10 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
             onRegenerate={handleRegenerate}
           />
           <ConversationScrollButton
+            className="bottom-(--composer-offset)"
             style={
               {
-                bottom: "calc(var(--composer-height, 96px) + 0.75rem)",
+                "--composer-offset": "calc(var(--composer-height, 96px) + 0.75rem)",
               } as React.CSSProperties
             }
           />
@@ -200,10 +201,10 @@ function ChatContent({
   const showHistorySkeleton = isHistoryPending && !hasMessages;
   return (
     <ConversationContent
-      className="mx-auto w-full max-w-4xl pb-32"
+      className="mx-auto w-full max-w-4xl pb-32 pb-(--composer-pad)"
       aria-busy={isLoading}
       style={
-        { paddingBottom: "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties
+        { "--composer-pad": "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties
       }
     >
       {notebook && (
@@ -313,7 +314,7 @@ function ChatComposerArea({
         {connection && !connection.ok && connection.degraded && (
           <div
             role="status"
-            className="mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
+            className="mb-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning dark:text-warning"
           >
             {t("panel.gatewayBusy")}
           </div>

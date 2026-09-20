@@ -15,7 +15,7 @@ export function AudioViewerSkeleton() {
           {/* Top Row: Title badge & statistics placeholders */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-border/60 text-[11px] text-muted-foreground">
+              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-border/60 text-xs text-muted-foreground">
                 <Headphones className="size-3 text-muted-foreground/60" />
                 <Skeleton className="h-3 w-20 rounded" />
               </div>
@@ -27,7 +27,7 @@ export function AudioViewerSkeleton() {
           {/* Middle Row: Scrubber Timeline */}
           <div className="flex flex-col gap-1.5">
             <Skeleton className="w-full h-1.5 rounded-lg" />
-            <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+            <div className="flex justify-between text-xs font-mono text-muted-foreground">
               <span>{t("skeletons.audioStartTime")}</span>
               <Skeleton className="h-3 w-8 rounded" />
             </div>
@@ -70,11 +70,11 @@ export function AudioViewerSkeleton() {
               </div>
               <div className="space-y-2">
                 <Skeleton className="h-4 w-full rounded" />
-                <Skeleton className="h-4 rounded" style={{ width: `${85 - (index % 3) * 12}%` }} />
+                <Skeleton className="h-4 rounded w-(--skeleton-width)" style={{ "--skeleton-width": `${85 - (index % 3) * 12}%` } as React.CSSProperties} />
                 {index % 2 === 0 && (
                   <Skeleton
-                    className="h-4 rounded"
-                    style={{ width: `${65 + (index % 2) * 15}%` }}
+                    className="h-4 rounded w-(--skeleton-width)"
+                    style={{ "--skeleton-width": `${65 + (index % 2) * 15}%` } as React.CSSProperties}
                   />
                 )}
               </div>

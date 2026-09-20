@@ -14,7 +14,7 @@ export function ThemeGrid() {
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-base font-semibold tracking-[-0.01em]">{t("grid.title")}</h3>
+        <h3 className="text-base font-semibold tracking-tight">{t("grid.title")}</h3>
         <span className="text-xs text-muted-foreground">
           {t("grid.hint", { count: THEMES.length })}
         </span>
@@ -112,30 +112,36 @@ function ThemePreviewIcon({
     <div className="relative flex h-20 w-full items-center justify-center overflow-hidden rounded-xl bg-muted/20 p-2">
       {/* ambient glow */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-75"
-        style={{
-          background: `radial-gradient(circle at 50% 50%, color-mix(in oklch, ${accentLight} 25%, transparent) 0%, transparent 70%)`,
-        }}
+        className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-75 [background:var(--tg-bg)]"
+        style={
+          {
+            "--tg-bg": `radial-gradient(circle at 50% 50%, color-mix(in oklch, ${accentLight} 25%, transparent) 0%, transparent 70%)`,
+          } as React.CSSProperties
+        }
         aria-hidden="true"
       />
       {/* canvas */}
       <div className="relative h-11 w-20">
         {/* dark icon — back */}
         <Logo
-          className="absolute right-0 top-1/2 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105"
-          style={{
-            background: `linear-gradient(135deg, ${accentDark} 0%, color-mix(in oklch, ${accentDark} 40%, ${dark}) 50%, ${dark} 100%)`,
-            filter: "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4))",
-          }}
+          className="absolute right-0 top-1/2 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105 [background:var(--tg-bg)] filter-(--tg-filter)"
+          style={
+            {
+              "--tg-bg": `linear-gradient(135deg, ${accentDark} 0%, color-mix(in oklch, ${accentDark} 40%, ${dark}) 50%, ${dark} 100%)`,
+              "--tg-filter": "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4))",
+            } as React.CSSProperties
+          }
           aria-hidden="true"
         />
         {/* light icon — front overlapping */}
         <Logo
-          className="absolute left-0 top-1/2 z-10 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105"
-          style={{
-            background: `linear-gradient(135deg, ${light} 0%, ${accentLight} 55%, color-mix(in oklch, ${accentLight} 70%, black) 100%)`,
-            filter: "drop-shadow(0 3px 8px rgba(0, 0, 0, 0.22))",
-          }}
+          className="absolute left-0 top-1/2 z-10 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105 [background:var(--tg-bg)] filter-(--tg-filter)"
+          style={
+            {
+              "--tg-bg": `linear-gradient(135deg, ${light} 0%, ${accentLight} 55%, color-mix(in oklch, ${accentLight} 70%, black) 100%)`,
+              "--tg-filter": "drop-shadow(0 3px 8px rgba(0, 0, 0, 0.22))",
+            } as React.CSSProperties
+          }
           aria-hidden="true"
         />
       </div>

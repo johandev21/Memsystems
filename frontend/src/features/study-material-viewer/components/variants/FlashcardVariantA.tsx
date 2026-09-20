@@ -114,7 +114,7 @@ export function FlashcardVariantA({
       <div className="relative w-full">
         <div
           className={cn(
-            "relative w-full rounded-[28px] border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-[300px] transition-all duration-300 ease-out select-none",
+            "relative w-full rounded-[28px] border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-75 transition-all duration-300 ease-out select-none",
             !isFlipped
               ? "bg-surface-2 border-surface-border"
               : "bg-surface-3 border-surface-border",
@@ -124,7 +124,7 @@ export function FlashcardVariantA({
         >
           {!isFlipped ? (
             /* FRONT SIDE */
-            <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
+            <div className="flex flex-col justify-between gap-8 min-h-55 animate-in fade-in duration-150">
               <div className="flex items-center justify-between text-xs text-text-faint">
                 <span className="font-semibold text-text-faint">
                   {t("flashcard.position", { current: currentIndex + 1, total: cards.length })}
@@ -162,7 +162,7 @@ export function FlashcardVariantA({
             </div>
           ) : (
             /* BACK SIDE */
-            <div className="flex flex-col justify-between gap-8 min-h-[220px] animate-in fade-in duration-150">
+            <div className="flex flex-col justify-between gap-8 min-h-55 animate-in fade-in duration-150">
               <div className="flex items-center justify-between text-xs text-text-faint">
                 <span className="font-semibold text-text-faint">
                   {t("flashcard.position", { current: currentIndex + 1, total: cards.length })}

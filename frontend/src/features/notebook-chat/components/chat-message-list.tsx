@@ -32,11 +32,6 @@ export interface ChatMessageListProps {
   onRegenerate: () => void;
 }
 
-function entranceStyle(index: number): CSSProperties | undefined {
-  const delay = chatEntranceDelay(index);
-  return delay > 0 ? { animationDelay: `${delay}ms` } : undefined;
-}
-
 export function ChatMessageList({
   messages,
   citedSourcesMap,
@@ -55,7 +50,9 @@ export function ChatMessageList({
     <>
       {turns.map((turn, index) => {
         const isLast = index === turns.length - 1;
-        const animateStyle = entranceStyle(index);
+        const delay = chatEntranceDelay(index);
+        const animateStyle =
+          delay > 0 ? ({ "--chat-delay": `${delay}ms` } as CSSProperties) : undefined;
         if (turn.type === "user") {
           return (
             <MessageScrollerItem

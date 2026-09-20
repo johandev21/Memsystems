@@ -35,15 +35,18 @@ interface KeyedLine {
 
 const TokenSpan = ({ token }: { token: ThemedToken }) => (
   <span
-    className="dark:!bg-[var(--shiki-dark-bg)] dark:!text-[var(--shiki-dark)]"
+    className={cn(
+      "bg-(--token-bg) text-(--token-fg) dark:!bg-(--shiki-dark-bg) dark:!text-(--shiki-dark)",
+      isItalic(token.fontStyle) && "italic",
+      isBold(token.fontStyle) && "font-bold",
+      isUnderline(token.fontStyle) && "underline",
+    )}
     style={
       {
-        backgroundColor: token.bgColor,
-        color: token.color,
-        fontStyle: isItalic(token.fontStyle) ? "italic" : undefined,
-        fontWeight: isBold(token.fontStyle) ? "bold" : undefined,
-        textDecoration: isUnderline(token.fontStyle) ? "underline" : undefined,
-        ...token.htmlStyle,
+        "--token-bg": token.bgColor,
+        "--token-fg": token.color,
+        "--shiki-dark-bg": token.htmlStyle?.["--shiki-dark-bg"],
+        "--shiki-dark": token.htmlStyle?.["--shiki-dark"],
       } as CSSProperties
     }
   >
@@ -102,23 +105,15 @@ const CodeBlockBody = memo(
     showLineNumbers: boolean;
     className?: string;
   }) => {
-    const preStyle = useMemo(
-      () => ({
-        backgroundColor: tokenized.bg,
-        color: tokenized.fg,
-      }),
-      [tokenized.bg, tokenized.fg],
-    );
-
     const keyedLines = useMemo(() => addKeysToTokens(tokenized.tokens), [tokenized.tokens]);
 
     return (
       <pre
         className={cn(
-          "dark:!bg-[var(--shiki-dark-bg)] dark:!text-[var(--shiki-dark)] m-0 p-4 text-sm",
+          "bg-(--code-bg) text-(--code-fg) dark:!bg-(--shiki-dark-bg) dark:!text-(--shiki-dark) m-0 p-4 text-sm",
           className,
         )}
-        style={preStyle}
+        style={{ "--code-bg": tokenized.bg, "--code-fg": tokenized.fg } as CSSProperties}
       >
         <code
           className={cn(
@@ -150,14 +145,11 @@ export const CodeBlockContainer = ({
   <div
     className={cn(
       "group relative w-full overflow-hidden rounded-md border bg-background text-foreground",
+      "[contain-intrinsic-size:auto_200px] [content-visibility:auto]",
       className,
     )}
     data-language={language}
-    style={{
-      containIntrinsicSize: "auto 200px",
-      contentVisibility: "auto",
-      ...style,
-    }}
+    style={style}
     {...props}
   />
 );

@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefKnowledgeStep } from "./brief-knowledge-step";
 import { BriefWizardHeader } from "./brief-wizard-header";
-import { CTA_BUTTON_CLASS } from "./option-row";
 import { SlideCountSection, SlideThemeSection } from "./slides-form-sections";
 import {
   DEFAULT_SLIDES_OPTIONS,
@@ -90,7 +89,7 @@ export function SlidesBriefForm({
       />
 
       {step === 1 ? (
-        <div className="flex min-h-[380px] flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
+        <div className="flex min-h-95 flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
           <div className="flex flex-col gap-5">
             <SlideCountSection
               isAutoMode={isAutoMode}
@@ -136,6 +135,7 @@ export function SlidesBriefForm({
           <div className="flex items-center justify-between border-t border-transparent pt-2">
             <span className="text-xs text-text-faint">{t("wizard.nextHintKnowledge")}</span>
             <Button
+              variant="surface"
               type="button"
               onClick={() => {
                 if (!value.slidesOptions) {
@@ -145,7 +145,6 @@ export function SlidesBriefForm({
               }}
               className={cn(
                 "h-9 cursor-pointer gap-1.5 rounded-full px-5 text-sm font-medium transition-colors",
-                CTA_BUTTON_CLASS,
               )}
             >
               {t("actions.nextStep")}

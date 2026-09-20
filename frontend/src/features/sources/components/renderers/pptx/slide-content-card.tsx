@@ -56,10 +56,10 @@ export function SlideContentCard({
       className="rounded-xl border border-border/60 bg-card/40 p-4 sm:p-5 shadow-xs"
     >
       <div className="mb-3 flex items-center justify-between">
-        <Badge variant="outline" className="font-mono text-[11px]">
+        <Badge variant="outline" className="font-mono text-xs">
           {t("pptxSlideContent.slideLabel", { number: activeSlideNumber })}
         </Badge>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {t("pptxSlideContent.blockCount", { count: currentSlideSegments.length })}
         </span>
       </div>
@@ -100,7 +100,7 @@ export function SlideContentCard({
                     )}
                   </p>
                 )}
-                <span className="mt-2 inline-flex text-[10px] font-mono text-muted-foreground">
+                <span className="mt-2 inline-flex text-xs font-mono text-muted-foreground">
                   {t("pptxSlideContent.slideRef", { number: seg.slideNumber })}
                 </span>
               </div>

@@ -48,7 +48,7 @@ export function SourceMultiSelect({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-card max-h-[200px] overflow-y-auto overflow-x-hidden p-1",
+        "rounded-2xl border border-border/60 bg-card max-h-50 overflow-y-auto overflow-x-hidden p-1",
         className,
       )}
     >

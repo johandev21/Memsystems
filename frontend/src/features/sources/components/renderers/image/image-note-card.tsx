@@ -53,12 +53,12 @@ export function ImageNoteCard({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-bold text-muted-foreground">#{section.ordinal}</span>
+          <span className="text-xs font-bold text-muted-foreground">#{section.ordinal}</span>
 
           {section.kind === "visual_description" && (
             <Badge
               variant="secondary"
-              className="gap-1 bg-primary/10 text-primary border-primary/20 text-[11px]"
+              className="gap-1 bg-primary/10 text-primary border-primary/20 text-xs"
             >
               <Eye className="size-3" />
               {t("imageNote.visualDescription")}
@@ -66,27 +66,27 @@ export function ImageNoteCard({
           )}
 
           {section.kind === "formula" && (
-            <Badge variant="outline" className="text-[11px] text-muted-foreground">
+            <Badge variant="outline" className="text-xs text-muted-foreground">
               {t("imageNote.formula")}
             </Badge>
           )}
 
           {section.kind === "heading" && (
-            <Badge variant="outline" className="text-[11px] text-muted-foreground">
+            <Badge variant="outline" className="text-xs text-muted-foreground">
               {t("imageNote.heading")}
             </Badge>
           )}
         </div>
 
         {hasRegion && (
-          <span className="text-[10px] text-muted-foreground group-hover:text-primary flex items-center gap-0.5 transition-colors">
+          <span className="text-xs text-muted-foreground group-hover:text-primary flex items-center gap-0.5 transition-colors">
             <Layers className="size-3" />
             {t("imageNote.regionLabel", { ordinal: section.ordinal })}
           </span>
         )}
       </div>
 
-      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed">
+      <div className="max-w-none text-sm leading-relaxed">
         {section.kind === "heading" ? (
           <h3 className="font-bold text-foreground text-base tracking-tight my-1">
             {section.content.replace(/^#{1,6}\s+/, "")}
@@ -97,7 +97,7 @@ export function ImageNoteCard({
       </div>
 
       {section.warning && (
-        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-warning">
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-warning">
           <AlertTriangle className="size-3" />
           <span>{section.warning}</span>
         </div>

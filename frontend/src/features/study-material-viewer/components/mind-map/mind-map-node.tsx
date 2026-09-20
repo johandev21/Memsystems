@@ -18,13 +18,14 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
 
   return (
     <div
-      style={data.item.color ? { borderLeftColor: data.item.color, borderLeftWidth: 4 } : undefined}
+      style={data.item.color ? ({ "--node-color": data.item.color } as React.CSSProperties) : undefined}
       className={cn(
-        "group relative min-w-[150px] max-w-[190px] sm:min-w-[190px] sm:max-w-[230px] rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200",
+        "group relative min-w-37.5 max-w-47.5 sm:min-w-47.5 sm:max-w-57.5 rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200",
         isRoot &&
-          "min-w-[170px] sm:min-w-[210px] rounded-full border-surface-border bg-surface-3 text-text-primary",
+          "min-w-42.5 sm:min-w-52.5 rounded-full border-surface-border bg-surface-3 text-text-primary",
         data.selected && !isRoot && "bg-surface-3 border-surface-border",
         !data.selected && !isRoot && "hover:bg-surface-3 hover:border-surface-border",
+        data.item.color && "border-l-4 border-l-(--node-color)",
       )}
     >
       <Handle
@@ -33,7 +34,7 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
         className="!h-1 !w-1 !border-0 !bg-transparent"
       />
       <div className="flex items-center gap-2">
-        <span className="text-sm sm:text-sm font-semibold leading-tight wrap-break-words">
+        <span className="text-sm sm:text-sm font-semibold leading-tight wrap-break-word">
           {data.item.label}
         </span>
       </div>

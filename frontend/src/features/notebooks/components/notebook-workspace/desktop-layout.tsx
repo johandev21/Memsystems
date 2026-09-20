@@ -259,7 +259,7 @@ function WorkspaceResizeHandle({ disabled }: { disabled: boolean }) {
     <ResizableHandle
       disabled={disabled}
       withHandle
-      className="w-2.5 bg-transparent hover:bg-border/20 active:bg-border/40 transition-colors my-[48px] rounded-xl"
+      className="w-2.5 bg-transparent hover:bg-border/20 active:bg-border/40 transition-colors my-12 rounded-xl"
     />
   );
 }

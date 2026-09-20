@@ -161,7 +161,7 @@ function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
 
   return (
     <div className="flex flex-col items-center gap-2.5 text-center max-w-2xl px-2">
-      <h1 className="text-lg @sm:text-2xl @3xl:text-3xl font-extrabold tracking-tight text-text-primary wrap-break-words leading-tight">
+      <h1 className="text-lg @sm:text-2xl @3xl:text-3xl font-extrabold tracking-tight text-text-primary wrap-break-word leading-tight">
         {formatDisplayTitle(title)}
       </h1>
 
@@ -186,12 +186,12 @@ function PhaseMilestoneCard({ phase, phaseIndex, onStudyPhase }: PhaseMilestoneC
         {formatMilestoneLabel(phaseIndex)}
       </Badge>
 
-      <h3 className="text-base @sm:text-lg @3xl:text-xl font-extrabold text-text-primary tracking-tight leading-snug wrap-break-words">
+      <h3 className="text-base @sm:text-lg @3xl:text-xl font-extrabold text-text-primary tracking-tight leading-snug wrap-break-word">
         {formatDisplayTitle(phase.title)}
       </h3>
 
       {phase.description && (
-        <p className="roadmap-description text-xs @sm:text-sm leading-relaxed wrap-break-words">
+        <p className="roadmap-description text-xs @sm:text-sm leading-relaxed wrap-break-word">
           {phase.description}
         </p>
       )}
@@ -252,12 +252,12 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
 
       {/* Topic Box Card */}
       <div className="group relative rounded-xl border border-surface-border-subtle bg-surface-2 p-3.5 @sm:p-4 @3xl:p-5 flex flex-col gap-1.5 @sm:gap-2 w-full max-w-full @3xl:max-w-sm z-10">
-        <h4 className="text-sm @sm:text-base font-bold text-text-tertiary leading-snug wrap-break-words">
+        <h4 className="text-sm @sm:text-base font-bold text-text-tertiary leading-snug wrap-break-word">
           {formatDisplayTitle(topic.title)}
         </h4>
 
         {topic.description && (
-          <p className="roadmap-description text-xs @sm:text-sm line-clamp-3 leading-relaxed wrap-break-words">
+          <p className="roadmap-description text-xs @sm:text-sm line-clamp-3 leading-relaxed wrap-break-word">
             {topic.description}
           </p>
         )}

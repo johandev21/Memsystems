@@ -125,10 +125,10 @@ export function useSpeakerRename(
     if (!speaker) return "bg-muted text-muted-foreground border-border";
     const colors = [
       "bg-primary/10 text-primary border-primary/20",
-      "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-      "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      "bg-warning/10 text-amber-600 dark:text-warning border-warning/20",
+      "bg-success/10 text-success dark:text-success border-success/20",
       "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-      "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+      "bg-destructive/10 text-rose-600 dark:text-destructive border-destructive/20",
       "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
     ];
     let hash = 0;

@@ -54,7 +54,7 @@ export const Reasoning = memo(
     return (
       <ReasoningContext.Provider value={contextValue}>
         <Collapsible
-          className={cn("not-prose mb-4", className)}
+          className={cn("mb-4", className)}
           onOpenChange={handleOpenChange}
           open={isOpen}
           {...props}

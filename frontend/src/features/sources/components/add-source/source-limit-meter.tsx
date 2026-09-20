@@ -17,7 +17,10 @@ export function SourceLimitMeter({ count, usedPercent }: SourceLimitMeterProps) 
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${usedPercent}%` }} />
+        <div
+          className="h-full rounded-full bg-primary w-(--meter-width)"
+          style={{ "--meter-width": `${usedPercent}%` } as React.CSSProperties}
+        />
       </div>
     </div>
   );
