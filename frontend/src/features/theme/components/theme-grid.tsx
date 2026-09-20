@@ -62,7 +62,7 @@ function ThemeCard({ label, ariaLabel, description, preview, selected, onSelect 
       aria-checked={selected}
       aria-label={ariaLabel}
       onClick={onSelect}
-      className={`group relative flex flex-col gap-2.5 rounded-[20px] border p-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+      className={`group relative flex flex-col gap-2.5 rounded-selector border p-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
         selected
           ? "border-primary bg-card shadow-sm ring-1 ring-primary/20"
           : "border-border bg-card hover:border-border/80 hover:bg-muted/10"
@@ -112,7 +112,7 @@ function ThemePreviewIcon({
     <div className="relative flex h-20 w-full items-center justify-center overflow-hidden rounded-xl bg-muted/20 p-2">
       {/* ambient glow */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-75 [background:var(--tg-bg)]"
+        className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-75 bg-theme-preview"
         style={
           {
             "--tg-bg": `radial-gradient(circle at 50% 50%, color-mix(in oklch, ${accentLight} 25%, transparent) 0%, transparent 70%)`,
@@ -124,7 +124,7 @@ function ThemePreviewIcon({
       <div className="relative h-11 w-20">
         {/* dark icon — back */}
         <Logo
-          className="absolute right-0 top-1/2 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105 [background:var(--tg-bg)] filter-(--tg-filter)"
+          className="absolute right-0 top-1/2 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105 bg-theme-preview filter-(--tg-filter)"
           style={
             {
               "--tg-bg": `linear-gradient(135deg, ${accentDark} 0%, color-mix(in oklch, ${accentDark} 40%, ${dark}) 50%, ${dark} 100%)`,
@@ -135,7 +135,7 @@ function ThemePreviewIcon({
         />
         {/* light icon — front overlapping */}
         <Logo
-          className="absolute left-0 top-1/2 z-10 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105 [background:var(--tg-bg)] filter-(--tg-filter)"
+          className="absolute left-0 top-1/2 z-10 size-11 -translate-y-1/2 transition-transform duration-300 group-hover:scale-105 bg-theme-preview filter-(--tg-filter)"
           style={
             {
               "--tg-bg": `linear-gradient(135deg, ${light} 0%, ${accentLight} 55%, color-mix(in oklch, ${accentLight} 70%, black) 100%)`,

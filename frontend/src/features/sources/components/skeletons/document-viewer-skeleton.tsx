@@ -33,17 +33,17 @@ export function DocumentViewerSkeleton({ variant = "document" }: DocumentViewerS
           {/* First Paragraph */}
           <div className="space-y-2.5">
             <Skeleton className="h-4 w-full rounded" />
-            <Skeleton className="h-4 w-[96%] rounded" />
-            <Skeleton className="h-4 w-[92%] rounded" />
-            <Skeleton className="h-4 w-[60%] rounded" />
+            <Skeleton className="h-4 w-24/25 rounded" />
+            <Skeleton className="h-4 w-23/25 rounded" />
+            <Skeleton className="h-4 w-3/5 rounded" />
           </div>
         </div>
 
         {/* Callout / Blockquote card simulation */}
         <div className="border-l-2 border-primary/30 pl-4 py-3 space-y-2 bg-muted/20 rounded-r-lg">
-          <Skeleton className="h-4 w-[95%] rounded" />
-          <Skeleton className="h-4 w-[85%] rounded" />
-          <Skeleton className="h-4 w-[65%] rounded" />
+          <Skeleton className="h-4 w-19/20 rounded" />
+          <Skeleton className="h-4 w-17/20 rounded" />
+          <Skeleton className="h-4 w-13/20 rounded" />
         </div>
 
         {/* Second Section Heading (H2) */}
@@ -53,8 +53,8 @@ export function DocumentViewerSkeleton({ variant = "document" }: DocumentViewerS
           {/* Second Paragraph */}
           <div className="space-y-2.5">
             <Skeleton className="h-4 w-full rounded" />
-            <Skeleton className="h-4 w-[94%] rounded" />
-            <Skeleton className="h-4 w-[90%] rounded" />
+            <Skeleton className="h-4 w-47/50 rounded" />
+            <Skeleton className="h-4 w-9/10 rounded" />
             <Skeleton className="h-4 w-9/20 rounded" />
           </div>
         </div>

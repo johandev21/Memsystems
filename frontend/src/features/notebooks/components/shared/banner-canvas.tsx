@@ -272,7 +272,7 @@ export function BannerCanvas({
           onClick={onBeginEditing}
           aria-label={t("banner.editNotebook")}
           title={t("banner.editNotebook")}
-          className="absolute right-3 top-3 bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-[opacity,background-color] hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100"
+          className="absolute right-3 top-3 bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-fade hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100"
         >
           <Pencil />
         </Button>

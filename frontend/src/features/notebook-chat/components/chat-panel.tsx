@@ -123,7 +123,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
             onRegenerate={handleRegenerate}
           />
           <ConversationScrollButton
-            className="bottom-(--composer-offset)"
+            className="data-[direction=end]:bottom-(--composer-offset)"
             style={
               {
                 "--composer-offset": "calc(var(--composer-height, 96px) + 0.75rem)",
@@ -308,7 +308,7 @@ function ChatComposerArea({
   return (
     <div
       ref={composerWrapperRef}
-      className="absolute inset-x-0 bottom-0 z-composer p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] select-none"
+      className="absolute inset-x-0 bottom-0 z-composer p-2 pb-safe select-none"
     >
       <div className="mx-auto w-full max-w-4xl">
         {connection && !connection.ok && connection.degraded && (

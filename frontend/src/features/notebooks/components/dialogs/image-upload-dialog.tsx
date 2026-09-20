@@ -98,7 +98,7 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
           className={cn(
             "relative flex h-48 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed transition-all bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring",
             isDragging
-              ? "border-primary bg-primary/5 scale-[0.99]"
+              ? "border-primary bg-primary/5 scale-99"
               : "border-border hover:border-primary/50 hover:bg-muted/50",
           )}
         >

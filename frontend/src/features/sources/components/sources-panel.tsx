@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
@@ -25,7 +25,7 @@ export function SourcesPanel({
   collapsed?: boolean;
   onSelectSource: (id: string) => void;
 }) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const { t } = useTranslation("sources");
   const {
     data: sources,
@@ -63,7 +63,7 @@ export function SourcesPanel({
   return (
     <div className="flex h-full min-w-0 flex-col">
       <div
-        ref={scrollContainerRef}
+        ref={setScrollElement}
         className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
       >
         {pendingUploads.map((upload) => (
@@ -75,7 +75,7 @@ export function SourcesPanel({
           isPending={isPending}
           isError={isError}
           hasNoSources={hasNoSources}
-          scrollElement={scrollContainerRef.current}
+          scrollElement={scrollElement}
           onSelectSource={onSelectSource}
           onDelete={(source) => setSourceToDelete({ id: source.id, title: source.title })}
           onRetry={(source) => retryMutation.mutate(source.id)}

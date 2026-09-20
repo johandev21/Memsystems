@@ -22,10 +22,12 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
 
-  useEffect(() => {
+  const [prevContent, setPrevContent] = useState(content);
+  if (prevContent !== content) {
+    setPrevContent(content);
     setExpandedIds(new Set(rootId ? [rootId] : []));
     setSelectedId(rootId);
-  }, [content, rootId]);
+  }
 
   const toggleNode = useCallback(
     (id: string) => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   getPersistedModel,
   NotebookModelContext,
@@ -22,9 +22,12 @@ export function NotebookModelProvider({
     return resolveModelId(initialModel ?? getPersistedModel(notebookId));
   });
 
-  useEffect(() => {
+  const modelSource = `${notebookId}\u0000${initialModel ?? ""}`;
+  const [prevModelSource, setPrevModelSource] = useState(modelSource);
+  if (prevModelSource !== modelSource) {
+    setPrevModelSource(modelSource);
     setSelectedModelState(resolveModelId(initialModel ?? getPersistedModel(notebookId)));
-  }, [notebookId, initialModel]);
+  }
 
   const setSelectedModel = useCallback(
     (id: string) => {

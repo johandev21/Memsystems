@@ -37,6 +37,9 @@ export function SourcesList({
   const { t } = useTranslation("sources");
   const isVirtualized = (sources?.length ?? 0) > 25 && scrollElement !== undefined;
 
+  // TanStack Virtual returns functions that React Compiler cannot memoize; the
+  // compiler already skips this component, which is the intended behavior.
+  // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: sources?.length ?? 0,
     getScrollElement: () => scrollElement ?? null,

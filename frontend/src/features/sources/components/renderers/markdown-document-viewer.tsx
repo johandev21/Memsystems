@@ -166,10 +166,16 @@ export function MarkdownDocumentViewer({
   const isVirtualized = chunks.length > 25 && scrollElement !== undefined;
 
   // Handle citation scrolling and highlighting
+  const [prevTargetChunkIndex, setPrevTargetChunkIndex] = useState<
+    typeof targetChunkIndex | undefined
+  >(undefined);
+  if (prevTargetChunkIndex !== targetChunkIndex) {
+    setPrevTargetChunkIndex(targetChunkIndex);
+    if (targetChunkIndex !== null) setHighlightedIndex(targetChunkIndex);
+  }
+
   useEffect(() => {
     if (targetChunkIndex === null) return;
-
-    setHighlightedIndex(targetChunkIndex);
 
     if (!isVirtualized) {
       const root = scrollElement || containerRef.current;

@@ -34,7 +34,7 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
         data-size={controller.size}
         data-valid-drop-target={isOver && isValidRootTarget ? "true" : undefined}
         className={cn(
-          "flex min-h-[var(--tree-header-min-height)] items-center justify-between gap-2 bg-panel-header-bg px-2.5 !rounded-t-2xl",
+          "flex min-h-(--tree-header-min-height) items-center justify-between gap-2 bg-panel-header-bg px-2.5 !rounded-t-2xl",
           isOver && isValidRootTarget && "bg-accent",
         )}
       >

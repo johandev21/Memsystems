@@ -137,7 +137,7 @@ export function PracticeProblemsBriefForm({
                     </span>
                     <span
                       className={cn(
-                        "text-xs leading-tight",
+                        "text-sm leading-tight",
                         difficulty === d.id ? "text-primary-foreground/80" : "text-text-faint",
                       )}
                     >
@@ -153,7 +153,7 @@ export function PracticeProblemsBriefForm({
                 <Label className="text-sm font-medium text-text-primary">
                   {t("practice.problemsLabel")}
                 </Label>
-                <span className="text-xs font-medium text-primary">{problemLabel}</span>
+                <span className="text-sm font-medium text-primary">{problemLabel}</span>
               </div>
               <div className="grid grid-cols-5 gap-2">
                 {PROBLEM_PRESETS.map((cnt) => {
@@ -261,12 +261,12 @@ export function PracticeProblemsBriefForm({
                 value={value.brief}
                 onChange={(e) => update({ brief: e.target.value })}
                 placeholder={t("practice.instructionsPlaceholder")}
-                className="min-h-30 max-h-50 text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
+                className="min-h-30 max-h-50 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-text-tertiary">
+              <Label className="text-sm font-medium text-text-tertiary">
                 {t("fields.destinationFolder")}
               </Label>
               <FolderPicker

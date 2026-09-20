@@ -130,7 +130,7 @@ export function DesktopLayout({
           groupResizeBehavior="preserve-relative-size"
           panelRef={sourcesRef}
           onResize={handleSyncSources}
-          className="overflow-hidden shadow-sm dark:shadow-none rounded-[min(var(--radius-4xl),24px)] border border-border/80 bg-card"
+          className="overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card"
         >
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             {selectedSourceId ? (
@@ -167,7 +167,7 @@ export function DesktopLayout({
           minSize={isReviewingStudyMaterial ? `${CHAT_PANEL_MIN_SIZE}px` : responsiveChatMinSize}
           groupResizeBehavior="preserve-relative-size"
           panelRef={chatRef}
-          className="overflow-hidden shadow-sm dark:shadow-none rounded-[min(var(--radius-4xl),24px)] border border-border/80 bg-card"
+          className="overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card"
         >
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             <ChatPanelHeader notebookId={notebookId} />
@@ -189,7 +189,7 @@ export function DesktopLayout({
           disabled={isReviewingStudyMaterial}
           panelRef={studioRef}
           onResize={handleSyncStudio}
-          className="overflow-hidden shadow-sm dark:shadow-none rounded-[min(var(--radius-4xl),24px)] border border-border/80 bg-card"
+          className="overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card"
         >
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             {dialogs.selectedStudyMaterialId ? (

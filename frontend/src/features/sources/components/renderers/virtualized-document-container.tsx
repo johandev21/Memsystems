@@ -25,6 +25,9 @@ export function VirtualizedDocumentContainer<T>({
   targetIndex,
   highlightedIndex,
 }: VirtualizedDocumentContainerProps<T>) {
+  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
+  // this component is the intended behavior.
+  // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollElement,

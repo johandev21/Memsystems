@@ -89,7 +89,7 @@ export function isYouTubeUrl(url?: string | null): boolean {
 export function extractYouTubeId(url?: string | null): string | null {
   if (!url) return null;
   const match = url.match(
-    /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i,
+    /(?:youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i,
   );
   return match ? match[1] : null;
 }
@@ -98,8 +98,8 @@ export function isArXivUrl(urlOrId?: string | null): boolean {
   if (!urlOrId) return false;
   const trimmed = urlOrId.trim();
   if (/^\d{4}\.\d{4,5}(?:v\d+)?$/i.test(trimmed)) return true;
-  if (/^[a-zA-Z\-]+(?:\.[A-Za-z]{2})?\/\d{7}(?:v\d+)?$/i.test(trimmed)) return true;
-  if (/^arxiv:\s*[a-zA-Z0-9.\-\/]+$/i.test(trimmed)) return true;
+  if (/^[a-zA-Z-]+(?:\.[A-Za-z]{2})?\/\d{7}(?:v\d+)?$/i.test(trimmed)) return true;
+  if (/^arxiv:\s*[a-zA-Z0-9.\-/]+$/i.test(trimmed)) return true;
   return /(?:arxiv\.org\/(?:abs|pdf|html)\/|arxiv:\s*)/i.test(trimmed);
 }
 
@@ -108,10 +108,10 @@ export function extractArXivId(urlOrId?: string | null): string | null {
   const trimmed = urlOrId.trim();
   const match =
     trimmed.match(/^\d{4}\.\d{4,5}(?:v\d+)?$/i) ||
-    trimmed.match(/^[a-zA-Z\-]+(?:\.[A-Za-z]{2})?\/\d{7}(?:v\d+)?$/i) ||
-    trimmed.match(/^arxiv:\s*([a-zA-Z0-9.\-\/]+)$/i) ||
+    trimmed.match(/^[a-zA-Z-]+(?:\.[A-Za-z]{2})?\/\d{7}(?:v\d+)?$/i) ||
+    trimmed.match(/^arxiv:\s*([a-zA-Z0-9.\-/]+)$/i) ||
     trimmed.match(
-      /(?:arxiv\.org\/(?:abs|pdf|html)\/|arxiv:\s*)([a-zA-Z0-9.\-\/]+?)(?:\.pdf|\/|$|\s|\?)/i,
+      /(?:arxiv\.org\/(?:abs|pdf|html)\/|arxiv:\s*)([a-zA-Z0-9.\-/]+?)(?:\.pdf|\/|$|\s|\?)/i,
     );
   return match ? match[1] || match[0] : null;
 }

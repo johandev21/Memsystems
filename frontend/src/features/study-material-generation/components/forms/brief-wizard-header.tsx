@@ -15,11 +15,11 @@ export function BriefWizardHeader({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 font-medium text-text-primary">
           <span className="text-sm font-semibold">{title}</span>
         </div>
-        <Badge variant="outline" className="text-xs font-normal">
+        <Badge variant="outline" className="text-sm font-normal">
           {t("wizard.stepOfTwo", { step })}
         </Badge>
       </div>

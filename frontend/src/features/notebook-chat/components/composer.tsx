@@ -73,7 +73,7 @@ export function Composer({
       accept="image/jpeg,image/png,image/webp,image/gif"
       maxFileSize={10 * 1024 * 1024}
       onSubmit={handleSubmit}
-      className="w-full [&_[data-slot=input-group]]:flex-col [&_[data-slot=input-group]]:items-stretch [&_[data-slot=input-group]]:border-composer-border [&_[data-slot=input-group]]:bg-composer-bg [&_[data-slot=input-group]]:p-2 [&_[data-slot=input-group]]:pb-1.5 [&_[data-slot=input-group]]:shadow-[var(--composer-glow),inset_0_1px_0_var(--composer-highlight),0_16px_44px_-28px_var(--composer-shadow)] [&_[data-slot=input-group]]:transition-[background-color,border-color,box-shadow] [&_[data-slot=input-group]]:duration-200 [&_[data-slot=input-group]]:focus-within:border-ring/60 [&_[data-slot=input-group]]:focus-within:shadow-[var(--composer-glow),inset_0_1px_0_var(--composer-highlight),0_18px_48px_-26px_var(--composer-shadow)] [&_[data-slot=input-group]]:focus-within:ring-2 [&_[data-slot=input-group]]:focus-within:ring-ring/15"
+      className="w-full [&_[data-slot=input-group]]:flex-col [&_[data-slot=input-group]]:items-stretch [&_[data-slot=input-group]]:border-composer-border [&_[data-slot=input-group]]:bg-composer-bg [&_[data-slot=input-group]]:p-2 [&_[data-slot=input-group]]:pb-1.5 [&_[data-slot=input-group]]:transition-chrome [&_[data-slot=input-group]]:duration-200 [&_[data-slot=input-group]]:focus-within:border-ring/60 [&_[data-slot=input-group]]:focus-within:ring-2 [&_[data-slot=input-group]]:focus-within:ring-ring/15"
     >
       <ComposerAttachmentList />
       <PromptInputBody>
@@ -90,7 +90,7 @@ export function Composer({
           <ModelSelector open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
             <ModelSelectorTrigger
               render={
-                <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-7rem))] cursor-pointer items-center gap-1.5 rounded-xl px-2 text-xs font-medium text-muted-foreground transition-[background-color,color] duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground [@media(pointer:coarse)]:h-9">
+                <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-7rem))] cursor-pointer items-center gap-1.5 rounded-xl px-2 text-xs font-medium text-muted-foreground transition-tint duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground [@media(pointer:coarse)]:h-9">
                   <ModelSelectorLogo
                     provider={modelState.activeProvider}
                     className="size-4 opacity-80"
@@ -142,7 +142,7 @@ export function Composer({
             content: isLoading ? t("composer.stopResponse") : t("composer.sendMessage"),
             shortcut: isLoading ? undefined : "Enter",
           }}
-          className="size-8 rounded-xl shadow-none transition-[background-color,color,box-shadow] duration-150 enabled:shadow-sm [@media(pointer:coarse)]:size-9"
+          className="size-8 rounded-xl shadow-none transition-interactive duration-150 enabled:shadow-sm [@media(pointer:coarse)]:size-9"
         />
       </PromptInputFooter>
     </PromptInput>

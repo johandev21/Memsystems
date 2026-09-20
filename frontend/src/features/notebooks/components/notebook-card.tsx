@@ -49,7 +49,7 @@ export function NotebookCard({
       onMouseEnter={prefetch}
       onFocus={prefetch}
       className={cn(
-        "group relative flex flex-col overflow-hidden bg-card ring-1 ring-foreground/10 hover:ring-primary/35 hover:shadow-md transition-all duration-200 cursor-pointer block rounded-[min(var(--radius-4xl),24px)]",
+        "group relative flex flex-col overflow-hidden bg-card ring-1 ring-foreground/10 hover:ring-primary/35 hover:shadow-md transition-all duration-200 cursor-pointer block rounded-panel",
         className,
       )}
       style={style}

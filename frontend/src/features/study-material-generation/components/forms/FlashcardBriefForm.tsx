@@ -243,7 +243,7 @@ function DifficultySelector({
             </span>
             <span
               className={cn(
-                "text-xs leading-tight",
+                "text-sm leading-tight",
                 value === d.id ? "text-primary-foreground/80" : "text-text-faint",
               )}
             >
@@ -283,7 +283,7 @@ function CardCountSelector({
         <Label className="text-sm font-medium text-text-primary">
           {t("flashcards.cardsLabel")}
         </Label>
-        <span className="text-xs font-medium text-primary">{cardLabel}</span>
+        <span className="text-sm font-medium text-primary">{cardLabel}</span>
       </div>
 
       <div className="grid grid-cols-4 gap-2">

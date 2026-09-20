@@ -39,13 +39,13 @@ export function StandardBriefForm({
           value={value.brief}
           onChange={(e) => update({ brief: e.target.value })}
           placeholder={t("standard.briefPlaceholder", { kind: label })}
-          className="min-h-22.5 max-h-50 text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
+          className="min-h-22.5 max-h-50 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
           disabled={disabled}
         />
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-text-tertiary">
+        <Label className="text-sm font-medium text-text-tertiary">
           {t("fields.knowledgeSources")}
         </Label>
         <SourceMultiSelect
@@ -57,7 +57,7 @@ export function StandardBriefForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-text-tertiary">
+        <Label className="text-sm font-medium text-text-tertiary">
           {t("fields.destinationFolder")}
         </Label>
         <FolderPicker

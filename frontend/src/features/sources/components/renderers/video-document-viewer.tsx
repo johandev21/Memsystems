@@ -56,6 +56,9 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
 
   const isVirtualized = segments.length > 30;
 
+  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
+  // this component is the intended behavior.
+  // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: segments.length,
     getScrollElement: () => transcriptContainerRef.current,

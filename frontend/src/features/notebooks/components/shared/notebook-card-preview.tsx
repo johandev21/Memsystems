@@ -50,11 +50,12 @@ export function NotebookCardPreview({
     });
   }, [createdAt, i18n.resolvedLanguage]);
 
-  const focalPointDrag = useBannerFocalPointDrag({
-    enabled: !!bannerPreviewUrl,
-    focalPoint,
-    onChange: setFocalPoint,
-  });
+  const { containerRef, isDragging, handleMouseDown, handleMouseMove, stopDragging } =
+    useBannerFocalPointDrag({
+      enabled: !!bannerPreviewUrl,
+      focalPoint,
+      onChange: setFocalPoint,
+    });
   const handleBannerKeyDown = (e: React.KeyboardEvent) => {
     if (!bannerPreviewUrl) return;
     const STEP = 0.05;
@@ -81,19 +82,19 @@ export function NotebookCardPreview({
       )}
     >
       <div
-        ref={focalPointDrag.containerRef}
+        ref={containerRef}
         role="region"
         aria-label={t("banner.previewRegion")}
         tabIndex={0}
         onKeyDown={handleBannerKeyDown}
-        onMouseDown={focalPointDrag.handleMouseDown}
-        onMouseMove={focalPointDrag.handleMouseMove}
-        onMouseUp={focalPointDrag.stopDragging}
-        onMouseLeave={focalPointDrag.stopDragging}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={stopDragging}
+        onMouseLeave={stopDragging}
         className={cn(
           "group relative h-52 sm:h-60 w-full overflow-hidden rounded-2xl border border-border bg-muted/60 select-none outline-none focus-visible:ring-2 focus-visible:ring-ring",
           bannerPreviewUrl
-            ? focalPointDrag.isDragging
+            ? isDragging
               ? "cursor-grabbing"
               : "cursor-grab"
             : "cursor-default",
@@ -104,7 +105,7 @@ export function NotebookCardPreview({
             <img
               src={bannerPreviewUrl}
               alt={t("banner.previewAlt")}
-              className="h-full w-full object-cover object-(--banner-pos) pointer-events-none transition-[object-position] duration-75"
+              className="h-full w-full object-cover object-(--banner-pos) pointer-events-none transition-object-position duration-75"
               style={
                 {
                   "--banner-pos": `${Math.round(focalPoint.x * 100)}% ${Math.round(focalPoint.y * 100)}%`,

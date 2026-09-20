@@ -59,15 +59,20 @@ export function IconPicker({
   }, [searchQuery]);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) {
       setSearchQuery("");
       setDebouncedQuery("");
       setVisibleCount(BATCH_SIZE);
       setFocusedIndex(-1);
-      const timer = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
     }
-  }, [open]);
+  };
 
   const matchingIcons = useMemo(() => {
     const query = debouncedQuery.trim().toLowerCase();
@@ -158,7 +163,7 @@ export function IconPicker({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         disabled={disabled}
         aria-label={value ? t("iconPicker.selectedIcon", { name: value }) : t("iconPicker.selectIcon")}

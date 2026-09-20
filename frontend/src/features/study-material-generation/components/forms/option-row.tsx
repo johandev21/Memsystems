@@ -25,7 +25,7 @@ export function optionRowClass(selected: boolean, className?: string) {
  */
 export function generationSourceOptionClass(selected: boolean, className?: string) {
   return cn(
-    "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition-colors",
+    "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors",
     selected
       ? "bg-primary font-medium text-primary-foreground"
       : "text-text-tertiary hover:bg-surface-2",

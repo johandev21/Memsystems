@@ -132,7 +132,7 @@ function CollapsedResourceList({
 }) {
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-3 py-2 px-0 items-center w-full">
+      <div className="flex flex-col gap-0 py-2 px-0 items-center w-full">
         {RESOURCES.map((resource) => (
           <ResourceButton
             key={resource.key}
@@ -180,7 +180,7 @@ function ResourceButton({
               type="button"
               disabled={disabled}
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center relative cursor-pointer",
+                "flex h-9 w-9 shrink-0 items-center justify-center relative cursor-pointer",
                 "text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground",
                 disabled && "opacity-50 cursor-not-allowed",
               )}

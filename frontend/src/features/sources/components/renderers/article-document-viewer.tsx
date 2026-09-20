@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from "react";
+import { createElement, type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
@@ -83,18 +83,18 @@ function ArticleBlockView({ block }: { block: ArticleBlock }) {
   }
 
   const HeadingTag = getHeadingTag(block.level);
-  return (
-    <HeadingTag
-      id={block.id}
-      className={cn(
+  return createElement(
+    HeadingTag,
+    {
+      id: block.id,
+      className: cn(
         "font-bold text-foreground tracking-tight scroll-mt-6 pt-4 my-3",
         block.level === 1 && "text-xl",
         block.level === 2 && "text-lg",
         block.level === 3 && "text-base",
-      )}
-    >
-      {block.text}
-    </HeadingTag>
+      ),
+    },
+    block.text,
   );
 }
 

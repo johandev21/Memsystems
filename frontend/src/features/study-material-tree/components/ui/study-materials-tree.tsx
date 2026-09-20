@@ -126,9 +126,11 @@ export function StudyMaterialsTree({
     useSensor(KeyboardSensor),
   );
 
+  const { tree, activeDragItemId, registerTreeSurface } = controller;
+
   const activeDragNode = useMemo(
-    () => findTreeNode(controller.tree, controller.activeDragItemId),
-    [controller.activeDragItemId, controller.tree],
+    () => findTreeNode(tree, activeDragItemId),
+    [activeDragItemId, tree],
   );
 
   const handleDragStart = useCallback(
@@ -167,7 +169,7 @@ export function StudyMaterialsTree({
       >
         <TreeControllerProvider controller={controller}>
           <div
-            ref={controller.registerTreeSurface}
+            ref={registerTreeSurface}
             data-slot="study-materials-tree"
             data-size={size}
             className={cn(studyMaterialsTreeVariants({ size }), className)}

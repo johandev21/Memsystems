@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { AlertCircle, Loader2, RotateCcw, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
@@ -32,7 +33,6 @@ export function SourceRow({
   cancelling,
 }: SourceRowProps) {
   const { t } = useTranslation("sources");
-  const Icon = getSourceIcon(source);
   const status = sourceProcessingStatus(source);
   const active = isSourceProcessing(source);
   const failed = status === "failed";
@@ -60,7 +60,7 @@ export function SourceRow({
         ) : failed ? (
           <AlertCircle className="size-4 shrink-0" />
         ) : (
-          <Icon className="size-4 shrink-0" />
+          createElement(getSourceIcon(source), { className: "size-4 shrink-0" })
         )}
         <span className="truncate">{source.title}</span>
         {status !== "ready" && (

@@ -43,7 +43,7 @@ export function SlideCountSection({
         <Label className="text-sm font-medium text-text-primary">
           {t("slides.numberOfSlidesLabel")}
         </Label>
-        <span className="text-xs font-medium text-primary">{countLabel}</span>
+        <span className="text-sm font-medium text-primary">{countLabel}</span>
       </div>
       <div className="grid grid-cols-6 gap-2">
         <button
@@ -52,7 +52,7 @@ export function SlideCountSection({
           onClick={onAuto}
           className={cn(
             optionRowClass(isAutoMode),
-            "flex h-9 items-center justify-center text-xs",
+            "flex h-9 items-center justify-center text-sm",
             isAutoMode ? "font-semibold" : "font-medium",
           )}
         >
@@ -68,7 +68,7 @@ export function SlideCountSection({
               onClick={() => onPreset(preset)}
               className={cn(
                 optionRowClass(selected),
-                "flex h-9 items-center justify-center text-xs",
+                "flex h-9 items-center justify-center text-sm",
                 selected ? "font-semibold" : "font-medium",
               )}
             >
@@ -86,7 +86,7 @@ export function SlideCountSection({
               onChange={(e) => onCustomChange(e.target.value)}
               onBlur={onCustomBlur}
               aria-label={t("slides.customCountAria")}
-              className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-1 text-center text-xs font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong"
+              className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-1 text-center text-sm font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong"
               autoFocus
             />
           </div>
@@ -97,7 +97,7 @@ export function SlideCountSection({
             onClick={onCustomMode}
             className={cn(
               optionRowClass(false),
-              "flex h-9 items-center justify-center text-xs font-medium",
+              "flex h-9 items-center justify-center text-sm font-medium",
             )}
           >
             {t("actions.custom")}
@@ -126,7 +126,7 @@ export function SlideThemeSection({
         <Label className="text-sm font-medium text-text-primary">
           {t("slides.visualThemeLabel")}
         </Label>
-        <span className="text-xs font-medium text-text-tertiary">
+        <span className="text-sm font-medium text-text-tertiary">
           {themeDesc ? t(themeDesc) : null}
         </span>
       </div>
@@ -172,7 +172,7 @@ export function SlideThemeSection({
                     </span>
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-center text-xs font-semibold">
+                    <span className="block truncate text-center text-sm font-semibold">
                       {t(opt.titleKey)}
                     </span>
                   </span>

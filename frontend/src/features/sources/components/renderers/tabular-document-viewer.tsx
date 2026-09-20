@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Search,
@@ -121,7 +121,9 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
   const pageSize = 30;
 
   // React to locator selection
-  useEffect(() => {
+  const [prevLocator, setPrevLocator] = useState<typeof selectedLocator>(undefined);
+  if (prevLocator !== selectedLocator) {
+    setPrevLocator(selectedLocator);
     if (selectedLocator?.sheetName) {
       const idx = sheets.findIndex(
         (s) => s.name.toLowerCase() === selectedLocator.sheetName?.toLowerCase(),
@@ -130,7 +132,7 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
         setActiveSheetIndex(idx);
       }
     }
-  }, [selectedLocator, sheets]);
+  }
 
   const activeSheet = sheets[activeSheetIndex] || sheets[0];
 

@@ -3,8 +3,16 @@
 import { beforeEach } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 
+// Components use react-i18next's default suspense while a namespace chunk
+// loads. Preloading every namespace before each test keeps renders synchronous
+// so queries like getByText() see the translated DOM on the first pass.
+const localeNamespaces = Object.keys(
+  import.meta.glob("../shared/i18n/locales/en/*.json"),
+).map((filePath) => filePath.split("/").pop()!.replace(/\.json$/, ""));
+
 beforeEach(async () => {
   await i18n.changeLanguage("en");
+  await i18n.loadNamespaces(localeNamespaces);
 });
 
 if (typeof window !== "undefined") {

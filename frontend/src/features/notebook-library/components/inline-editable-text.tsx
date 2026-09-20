@@ -110,10 +110,7 @@ function InlineEditableDisplay({
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useLayoutEffect(() => {
-    if (!tooltip) {
-      setTruncated(false);
-      return;
-    }
+    if (!tooltip) return;
     const element = buttonRef.current;
     if (!element) return;
     const measure = () => setTruncated(element.scrollWidth > element.clientWidth + 1);

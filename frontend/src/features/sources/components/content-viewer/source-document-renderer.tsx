@@ -20,15 +20,16 @@ function ScrollableDocumentContainer({
   maxWidth?: string;
   children: React.ReactNode;
 }) {
+  const { setScrollElement, isEffectivelyFullscreen } = controls;
   return (
     <div
-      ref={controls.setScrollElement}
+      ref={setScrollElement}
       className="h-full w-full overflow-y-auto overscroll-contain"
     >
       <div
         className={cn(
           "w-full flex flex-col",
-          controls.isEffectivelyFullscreen
+          isEffectivelyFullscreen
             ? `px-4 sm:px-8 py-4 sm:py-6 ${maxWidth} mx-auto gap-4`
             : "p-3 sm:p-4",
         )}

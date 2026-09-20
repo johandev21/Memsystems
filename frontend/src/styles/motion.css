@@ -1,4 +1,4 @@
-/* motion.css — reduced-motion and reduced-transparency preferences */
+/* motion.css — reduced-motion preferences */
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -6,13 +6,5 @@
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  [data-slot="notebook-chat-composer"] [data-slot="input-group"] {
-    background-color: var(--composer-bg-solid);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 }

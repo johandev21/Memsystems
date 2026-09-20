@@ -2,7 +2,7 @@ import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { cn } from "@/shared/utils/cn";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { GripVertical } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { createElement, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getCommandPendingKey } from "../../model/commands";
 import type { TreeNode } from "../../model/tree";
@@ -150,7 +150,7 @@ function getRowClassName({
 }): string {
   const isDragActive = isDragging || isActiveItem;
   return cn(
-    "group/tree-row relative flex h-[var(--tree-row-height)] w-full min-w-0 items-center gap-1.5 pr-1 text-left font-sans text-sm outline-none select-none",
+    "group/tree-row relative flex h-(--tree-row-height) w-full min-w-0 items-center gap-1.5 pr-1 text-left font-sans text-sm outline-none select-none",
     "text-muted-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring",
     "hover:bg-muted/70 hover:text-foreground",
     isSelected && treeHasFocus && "bg-accent/35 text-foreground ring-1 ring-inset ring-ring",
@@ -171,7 +171,16 @@ export function Row({ node, depth }: RowProps) {
   const isFocused = controller.isFocused(node.id);
   const isCoarse = useIsCoarsePointer();
 
-  const dnd = useTreeRowDragDrop({
+  const {
+    isDragging,
+    isOver,
+    canAcceptDrop,
+    pendingMoveForDrag,
+    setNodeRefs,
+    rowDragProps,
+    handleDragProps,
+    listeners,
+  } = useTreeRowDragDrop({
     node,
     controller,
     isFolder,
@@ -181,19 +190,18 @@ export function Row({ node, depth }: RowProps) {
   });
 
   const pending = useTreeRowPendingCommands(node.id, controller.pendingKeys);
-  const Icon = getTreeIcon(node, isOpen);
 
   const row = (
     <div
-      ref={dnd.setNodeRefs}
-      {...dnd.rowDragProps}
+      ref={setNodeRefs}
+      {...rowDragProps}
       data-slot="study-materials-tree-row"
       data-size={controller.size}
       data-selected={isSelected ? "true" : undefined}
       data-focused={isFocused ? "true" : undefined}
       data-renaming={isRenaming ? "true" : undefined}
-      data-dragging={dnd.isDragging || isActiveItem ? "true" : undefined}
-      data-drop-target={dnd.isOver && dnd.canAcceptDrop ? "valid" : undefined}
+      data-dragging={isDragging || isActiveItem ? "true" : undefined}
+      data-drop-target={isOver && canAcceptDrop ? "valid" : undefined}
       data-pending={pending.isPending ? "true" : undefined}
       aria-expanded={isFolder ? isOpen : undefined}
       aria-level={depth + 1}
@@ -205,9 +213,9 @@ export function Row({ node, depth }: RowProps) {
       className={getRowClassName({
         isSelected,
         treeHasFocus: controller.treeHasFocus,
-        isOver: dnd.isOver,
-        canAcceptDrop: dnd.canAcceptDrop,
-        isDragging: dnd.isDragging,
+        isOver,
+        canAcceptDrop,
+        isDragging,
         isActiveItem,
         isRenaming,
         isCoarse,
@@ -215,7 +223,7 @@ export function Row({ node, depth }: RowProps) {
       onPointerDown={(event) => {
         if (!isCoarse) {
           (
-            dnd.listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void }
+            listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void }
           )?.onPointerDown?.(event as unknown as React.PointerEvent);
         }
         if (event.button !== 0 || isRenaming) return;
@@ -240,13 +248,16 @@ export function Row({ node, depth }: RowProps) {
     >
       <TreeRowDragHandle
         visible={!isRenaming}
-        disabled={dnd.pendingMoveForDrag}
-        isDragging={dnd.isDragging}
+        disabled={pendingMoveForDrag}
+        isDragging={isDragging}
         isCoarse={isCoarse}
-        dragProps={dnd.handleDragProps}
+        dragProps={handleDragProps}
         onSelect={() => controller.select(node)}
       />
-      <Icon className="size-[var(--tree-icon-size)] shrink-0" strokeWidth={1.7} />
+      {createElement(getTreeIcon(node, isOpen), {
+        className: "size-(--tree-icon-size) shrink-0",
+        strokeWidth: 1.7,
+      })}
       <TreeRowLabel node={node} isRenaming={isRenaming} />
       <MobileTreeRowActions
         node={node}

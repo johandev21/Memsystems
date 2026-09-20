@@ -86,6 +86,9 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
   const filteredSegments = useFilteredAudioSegments(segments, searchQuery);
   const isVirtualized = filteredSegments.length > 30;
 
+  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
+  // this component is the intended behavior.
+  // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: filteredSegments.length,
     getScrollElement: () => transcriptContainerRef.current,

@@ -55,7 +55,7 @@ export function MaterialViewer({
         isChatSuspended ? "hidden" : ""
       } ${
         isEffectivelyFullscreen || isExitingFullscreen
-          ? "fixed inset-0 z-viewer h-[100dvh] w-screen motion-reduce:animate-none"
+          ? "fixed inset-0 z-viewer h-dvh w-screen motion-reduce:animate-none"
           : ""
       } ${isExitingFullscreen ? "animate-out fade-out duration-150" : ""}`}
     >

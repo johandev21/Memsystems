@@ -134,8 +134,6 @@ Memsystems utiliza PostgreSQL con Drizzle ORM. Después de configurar `DATABASE_
 pnpm exec drizzle-kit push
 ```
 
-Consulta [docs/database.md](docs/database.md) para conocer el esquema y la configuración de la conexión.
-
 ## Docker
 
 Docker ofrece dos flujos aislados. Cada uno tiene sus propios contenedores, base de datos y archivos subidos.
@@ -213,17 +211,18 @@ Ejecuta estos comandos desde la raíz:
 pnpm run build       # compilar frontend y backend
 pnpm run lint        # revisar el código
 pnpm run typecheck   # comprobar los tipos de TypeScript
-pnpm run test        # ejecutar las pruebas del backend
+pnpm run test        # ejecutar las pruebas del frontend y del backend
 pnpm run format      # formatear el código configurado
 ```
 
-El backend también permite ejecutar las pruebas en modo observación:
+Cada paquete también permite ejecutar sus pruebas en modo observación:
 
 ```bash
+pnpm --filter frontend run test:watch
 pnpm --filter backend run test:watch
 ```
 
-Las pruebas utilizan una base de datos PostgreSQL independiente: copia `backend/.env.test.example` a `backend/.env.test` y revisa [docs/testing.md](docs/testing.md) antes de ejecutarlas.
+Las pruebas del backend utilizan una base de datos PostgreSQL independiente con `pgvector`. Copia `backend/.env.test.example` a `backend/.env.test` y sigue [docs/testing.md](docs/testing.md), que explica el orden de preparación (levantar la base, migrar y recién después ejecutar las pruebas) y los errores comunes.
 
 ## Estructura del proyecto
 
@@ -233,14 +232,9 @@ backend/    API, autenticación, fuentes, IA y persistencia
 docs/       Documentación técnica del proyecto
 ```
 
-La arquitectura detallada está disponible en [docs/architecture.md](docs/architecture.md).
-
 ## Documentación
 
-- [Arquitectura](docs/architecture.md)
-- [Base de datos](docs/database.md)
 - [Pruebas](docs/testing.md)
-- [Arquitectura Frontend](docs/frontend-architecture.md)
 
 ## Estado del proyecto
 

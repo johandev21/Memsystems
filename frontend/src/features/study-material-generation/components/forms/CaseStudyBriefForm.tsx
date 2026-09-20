@@ -117,7 +117,7 @@ export function CaseStudyBriefForm({
                 <Label className="text-sm font-medium text-text-primary">
                   {t("caseStudy.discussionQuestionsLabel")}
                 </Label>
-                <span className="text-xs font-medium text-primary">{questionLabel}</span>
+                <span className="text-sm font-medium text-primary">{questionLabel}</span>
               </div>
               <div className="grid grid-cols-5 gap-2">
                 {QUESTION_PRESETS.map((cnt) => {
@@ -200,8 +200,8 @@ export function CaseStudyBriefForm({
                       )}
                     >
                       <span className="flex-1 min-w-0">
-                        <span className="block text-xs font-semibold">{t(opt.titleKey)}</span>
-                        <span className="block text-xs leading-tight opacity-80">
+                        <span className="block text-sm font-semibold">{t(opt.titleKey)}</span>
+                        <span className="block text-sm leading-tight opacity-80">
                           {t(opt.descKey)}
                         </span>
                       </span>
@@ -258,7 +258,7 @@ export function CaseStudyBriefForm({
                   updateCaseStudyOptions({ focus: e.target.value });
                 }}
                 placeholder={t("caseStudy.conceptsPlaceholder")}
-                className="min-h-20 max-h-40 text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
+                className="min-h-20 max-h-40 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>
@@ -273,13 +273,13 @@ export function CaseStudyBriefForm({
                 value={value.brief}
                 onChange={(e) => update({ brief: e.target.value })}
                 placeholder={t("caseStudy.instructionsPlaceholder")}
-                className="min-h-20 max-h-40 text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
+                className="min-h-20 max-h-40 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-text-tertiary">
+              <Label className="text-sm font-medium text-text-tertiary">
                 {t("fields.destinationFolder")}
               </Label>
               <FolderPicker

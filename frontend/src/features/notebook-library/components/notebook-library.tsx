@@ -203,7 +203,7 @@ function LibraryContent({
     return (
       <div className="library-grid py-2" aria-hidden="true">
         {Array.from({ length: 8 }).map((_, index) => (
-          <Skeleton key={index} className="h-42 w-59.75 rounded-[16px]" />
+          <Skeleton key={index} className="h-42 w-59.75 rounded-artwork" />
         ))}
       </div>
     );

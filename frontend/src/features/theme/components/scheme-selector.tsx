@@ -36,7 +36,7 @@ export function SchemeSelector() {
               role="radio"
               aria-checked={selected}
               onClick={() => setTheme(opt.value)}
-              className={`group flex flex-col gap-2.5 rounded-[20px] border p-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+              className={`group flex flex-col gap-2.5 rounded-selector border p-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                 selected
                   ? "border-primary bg-card shadow-sm ring-1 ring-primary/20"
                   : "border-border bg-card hover:border-border/80 hover:bg-muted/20"

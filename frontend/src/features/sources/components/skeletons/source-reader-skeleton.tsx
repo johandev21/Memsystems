@@ -112,7 +112,7 @@ export function SourceReaderSkeleton({
       data-testid="source-reader-skeleton"
       className={
         isEffectivelyFullscreen
-          ? "fixed inset-0 z-viewer flex h-[100dvh] w-screen flex-col bg-panel-bg text-foreground overflow-hidden"
+          ? "fixed inset-0 z-viewer flex h-dvh w-screen flex-col bg-panel-bg text-foreground overflow-hidden"
           : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden"
       }
     >

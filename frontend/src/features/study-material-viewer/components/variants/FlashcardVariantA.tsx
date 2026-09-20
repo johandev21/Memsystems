@@ -114,7 +114,7 @@ export function FlashcardVariantA({
       <div className="relative w-full">
         <div
           className={cn(
-            "relative w-full rounded-[28px] border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-75 transition-all duration-300 ease-out select-none",
+            "relative w-full rounded-flashcard border p-8 md:p-10 flex flex-col justify-between gap-8 shadow-sm min-h-75 transition-all duration-300 ease-out select-none",
             !isFlipped
               ? "bg-surface-2 border-surface-border"
               : "bg-surface-3 border-surface-border",

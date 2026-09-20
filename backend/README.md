@@ -44,17 +44,19 @@ $ pnpm run start:dev
 $ pnpm run start:prod
 ```
 
-## Run tests
+## Ejecutar pruebas
+
+Las pruebas usan Vitest y necesitan una base PostgreSQL de prueba con `pgvector` (por defecto en `localhost:5499`). La guía completa, incluida la preparación inicial, está en [docs/testing.md](../docs/testing.md).
 
 ```bash
-# unit tests
+# ejecutar las pruebas una vez
 $ pnpm run test
 
-# e2e tests
-$ pnpm run test:e2e
+# modo observación
+$ pnpm run test:watch
 
-# test coverage
-$ pnpm run test:cov
+# crear la base de prueba y ajustar el esquema
+$ pnpm run test:db:setup
 ```
 
 ## Deployment

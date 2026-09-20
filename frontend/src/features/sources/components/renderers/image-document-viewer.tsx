@@ -68,15 +68,24 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
   }, [source.segments, source.rawText]);
 
   // Handle selected locator from citations
+  const [prevLocator, setPrevLocator] = useState<typeof selectedLocator>(undefined);
+  if (prevLocator !== selectedLocator) {
+    setPrevLocator(selectedLocator);
+    if (selectedLocator?.imageRegion) {
+      const matched = sections.find((sec) =>
+        isMatchingRegion(sec.locator?.imageRegion, selectedLocator.imageRegion),
+      );
+      if (matched) setActiveSegmentId(matched.id);
+    }
+  }
+
   useEffect(() => {
     if (!selectedLocator?.imageRegion) return;
 
     const matched = sections.find((sec) =>
       isMatchingRegion(sec.locator?.imageRegion, selectedLocator.imageRegion),
     );
-
     if (matched) {
-      setActiveSegmentId(matched.id);
       const noteEl = noteElementsRef.current.get(matched.id);
       noteEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }

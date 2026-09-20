@@ -46,6 +46,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
 
   // A new job invalidates previous review-session state.
   const jobId = job?.id ?? null;
+  const jobQueryText = job?.query ?? "";
   const [prevJobId, setPrevJobId] = useState<string | null>(jobId);
   if (jobId !== prevJobId) {
     setPrevJobId(jobId);
@@ -123,7 +124,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
           title: c.title,
           description: c.description,
         })),
-        query: job?.query ?? "",
+        query: jobQueryText,
       });
       const nextResults = new Map<string, WebSearchImportResultItem>();
       for (const r of result.results) {
@@ -143,7 +144,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
     } finally {
       setImporting(false);
     }
-  }, [candidates, importing, job?.query, notebookId, queryClient, selectedUrls, t]);
+  }, [candidates, importing, jobQueryText, notebookId, queryClient, selectedUrls, t]);
 
   const retryFailed = useCallback(async () => {
     const failed = candidates.filter((c) => {
@@ -160,7 +161,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
           title: c.title,
           description: c.description,
         })),
-        query: job?.query ?? "",
+        query: jobQueryText,
       });
       setImportResults((prev) => {
         const next = new Map(prev);
@@ -177,7 +178,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
     } finally {
       setImporting(false);
     }
-  }, [candidates, importResults, importing, job?.query, notebookId, queryClient, t]);
+  }, [candidates, importResults, importing, jobQueryText, notebookId, queryClient, t]);
 
   const clearResults = useCallback(async (): Promise<boolean> => {
     if (clearInFlight.current) return false;

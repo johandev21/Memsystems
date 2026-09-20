@@ -56,7 +56,7 @@ function OptionButton({
       onClick={onClick}
       className={cn(
         optionRowClass(selected),
-        "flex h-9 items-center justify-center text-xs",
+        "flex h-9 items-center justify-center text-sm",
         selected ? "font-semibold" : "font-medium",
       )}
     >
@@ -94,7 +94,7 @@ function NodeCountSelector({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium text-text-primary">{t("mindMap.mapSizeLabel")}</Label>
-        <span className="text-xs font-medium text-primary">{label}</span>
+        <span className="text-sm font-medium text-primary">{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <OptionButton selected={isAutoMode} onClick={onAuto}>
@@ -119,7 +119,7 @@ function NodeCountSelector({
             onBlur={onCustomBlur}
             placeholder="1-100"
             aria-label={t("mindMap.customCountAria")}
-            className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-xs font-semibold text-text-primary outline-none focus:ring-1 focus:ring-surface-border-strong"
+            className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-sm font-semibold text-text-primary outline-none focus:ring-1 focus:ring-surface-border-strong"
             autoFocus
           />
         ) : (
@@ -163,10 +163,10 @@ function OptionCards<T extends string | boolean>({
               )}
             >
               <span className="min-w-0">
-                <span className="block text-xs font-semibold">{t(option.titleKey)}</span>
+                <span className="block text-sm font-semibold">{t(option.titleKey)}</span>
                 <span
                   className={cn(
-                    "mt-0.5 block text-xs leading-tight",
+                    "mt-0.5 block text-sm leading-tight",
                     selected ? "opacity-80" : "text-text-faint",
                   )}
                 >

@@ -62,6 +62,9 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
 
   const isSegmentsVirtualized = filteredSegments.length > 25;
 
+  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
+  // this component is the intended behavior.
+  // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const segmentVirtualizer = useVirtualizer({
     count: filteredSegments.length,
     getScrollElement: () => segmentContainerRef.current,

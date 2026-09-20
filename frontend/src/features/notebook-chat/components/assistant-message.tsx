@@ -135,7 +135,7 @@ export function AssistantMessage({
               >
                 <ChevronLeftIcon className="size-3.5" />
               </button>
-              <span className="min-w-[3.25rem] text-center text-xs font-medium">
+              <span className="min-w-13 text-center text-xs font-medium">
                 {t("assistant.branchPage", {
                   current: activeIndex + 1,
                   total: versionList.length,

@@ -203,7 +203,7 @@ export function QuizQuestionStepper({
           className="h-1.5 overflow-hidden rounded-full bg-surface-4"
         >
           <div
-            className="h-full rounded-full bg-text-secondary transition-[width] motion-reduce:transition-none w-(--quiz-progress)"
+            className="h-full rounded-full bg-text-secondary transition-width motion-reduce:transition-none w-(--quiz-progress)"
             style={{ "--quiz-progress": (answeredCount / questions.length) * 100 + "%" } as React.CSSProperties}
           />
         </div>

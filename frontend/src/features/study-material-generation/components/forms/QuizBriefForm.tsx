@@ -172,13 +172,13 @@ export function QuizBriefForm({
               value={value.brief}
               onChange={(e) => update({ brief: e.target.value })}
               placeholder={t("quiz.instructionsPlaceholder")}
-              className="min-h-30 max-h-50 text-xs resize-none break-all max-w-full overflow-x-hidden w-full"
+              className="min-h-30 max-h-50 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
               disabled={disabled}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-text-tertiary">
+            <Label className="text-sm font-medium text-text-tertiary">
               {t("fields.destinationFolder")}
             </Label>
             <FolderPicker
@@ -265,7 +265,7 @@ function DifficultySelector({
             </div>
             <span
               className={cn(
-                "text-xs leading-tight",
+                "text-sm leading-tight",
                 value === d.id ? "text-primary-foreground/80" : "text-text-faint",
               )}
             >
@@ -303,7 +303,7 @@ function QuestionSelector({
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
         <Label className="text-sm font-medium text-text-primary">{t("quiz.questionsLabel")}</Label>
-        <span className="text-xs font-medium text-primary">{questionLabel}</span>
+        <span className="text-sm font-medium text-primary">{questionLabel}</span>
       </div>
 
       <div className="grid grid-cols-5 gap-2">

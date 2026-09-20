@@ -25,12 +25,11 @@ function applyThemeAttribute(theme: ThemeName) {
 
 export function PaletteProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeName>(() => getInitialTheme());
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [isHydrated] = useState(() => typeof window !== "undefined");
 
   // Sync attribute on mount + theme change
   useEffect(() => {
     applyThemeAttribute(theme);
-    setIsHydrated(true);
   }, [theme]);
 
   // Listen for cross-tab changes

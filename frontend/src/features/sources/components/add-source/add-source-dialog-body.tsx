@@ -55,7 +55,7 @@ export function AddSourceDialogBody({
   usedPercent,
 }: AddSourceDialogBodyProps) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-safe-lg pt-2 sm:px-6 sm:pb-6">
       {mode === "menu" && (
         <AddSourceMenuBlock
           notebookId={notebookId}

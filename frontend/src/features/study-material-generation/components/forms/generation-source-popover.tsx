@@ -69,7 +69,7 @@ export function GenerationSourcePopover({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 px-3.5 text-xs font-medium text-text-tertiary hover:bg-surface-3 hover:text-text-secondary"
+            className="h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 px-3.5 text-sm font-medium text-text-tertiary hover:bg-surface-3 hover:text-text-secondary"
           >
             <span className="flex min-w-0 items-center gap-2 truncate">
               <BookOpen className="size-4 shrink-0 text-primary" />
@@ -102,14 +102,14 @@ export function GenerationSourcePopover({
           <button
             type="button"
             onClick={toggleAllSources}
-            className="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-xs text-text-tertiary"
+            className="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-sm text-text-tertiary"
           >
             {t("knowledge.selectAll")}{" "}
             <Checkbox checked={allFilteredSourcesSelected} onCheckedChange={toggleAllSources} />
           </button>
         </div>
         {sources.length === 0 ? (
-          <div className="p-4 text-center text-xs text-text-faint">{emptyMessage}</div>
+          <div className="p-4 text-center text-sm text-text-faint">{emptyMessage}</div>
         ) : (
           <div className="max-h-55 space-y-1 overflow-y-auto p-2">
             {filteredSources.map((source) => {

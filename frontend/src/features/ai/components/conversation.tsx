@@ -106,7 +106,7 @@ export const ConversationScrollButton = ({
   return (
     <MessageScrollerButton
       className={cn(
-        "liquid-glass absolute bottom-4 left-1/2 z-floating-control -translate-x-1/2 cursor-pointer rounded-full border-white/35 bg-background/85 shadow-[var(--composer-glow),0_4px_16px_rgb(0_0_0/0.12)] transition-[background-color,box-shadow,transform] hover:bg-background/95 hover:shadow-[var(--composer-glow),0_6px_20px_rgb(0_0_0/0.14)] dark:!border-white/10 dark:!bg-background/85 dark:hover:!bg-background/95",
+        "absolute bottom-4 left-1/2 z-floating-control -translate-x-1/2 cursor-pointer rounded-full border-white/35 bg-background/85 shadow-sm transition-elevation hover:bg-background/95 hover:shadow-md dark:!border-white/10 dark:!bg-background/85 dark:hover:!bg-background/95",
         className,
       )}
       size={size}

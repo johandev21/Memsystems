@@ -72,13 +72,13 @@ export function BriefKnowledgeStep({
             value={value.brief}
             onChange={(e) => onPatch({ brief: e.target.value })}
             placeholder={resolvedPlaceholder}
-            className="min-h-30 max-h-50 text-xs resize-none w-full"
+            className="min-h-30 max-h-50 text-sm resize-none w-full"
             disabled={disabled}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-text-tertiary">
+          <Label className="text-sm font-medium text-text-tertiary">
             {t("fields.destinationFolder")}
           </Label>
           <FolderPicker

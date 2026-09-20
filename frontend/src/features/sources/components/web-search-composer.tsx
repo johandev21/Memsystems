@@ -70,7 +70,7 @@ export function WebSearchComposer({
         </p>
       </div>
 
-      <div className="rounded-2xl border border-composer-border bg-composer-bg p-2 shadow-[var(--composer-glow),inset_0_1px_0_var(--composer-highlight)] transition-[border-color,box-shadow] focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15">
+      <div className="rounded-2xl border border-composer-border bg-composer-bg p-2 shadow-sm transition-frame focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15">
         <textarea
           ref={searchInputRef}
           aria-label={t("webSearch.inputLabel")}

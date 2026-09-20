@@ -27,12 +27,17 @@ export function NotebookWorkspaceContainer({ notebookId }: NotebookWorkspaceCont
 }
 
 function NotebookWorkspaceInner({ notebookId }: { notebookId: string }) {
-  const panels = useNotebookPanels();
+  const {
+    sourcesRef,
+    chatRef,
+    studioRef,
+    sourcesCollapsed,
+    studioCollapsed,
+    syncSources,
+    syncStudio,
+  } = useNotebookPanels();
   const dialogs = useStudioDialogs();
   const sources = useSourcesPanel();
-  const sourcesRef = panels.sourcesRef;
-  const chatRef = panels.chatRef;
-  const studioRef = panels.studioRef;
 
   useEffect(() => {
     if (!dialogs.selectedStudyMaterialId) return;
@@ -43,19 +48,19 @@ function NotebookWorkspaceInner({ notebookId }: { notebookId: string }) {
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [dialogs.selectedStudyMaterialId, sourcesRef, chatRef, studioRef]);
+  }, [dialogs.selectedStudyMaterialId, sourcesRef, studioRef]);
 
   return (
     <>
       <DesktopLayout
         notebookId={notebookId}
-        sourcesRef={panels.sourcesRef}
-        chatRef={panels.chatRef}
-        studioRef={panels.studioRef}
-        sourcesCollapsed={panels.sourcesCollapsed}
-        studioCollapsed={panels.studioCollapsed}
-        onSyncSources={panels.syncSources}
-        onSyncStudio={panels.syncStudio}
+        sourcesRef={sourcesRef}
+        chatRef={chatRef}
+        studioRef={studioRef}
+        sourcesCollapsed={sourcesCollapsed}
+        studioCollapsed={studioCollapsed}
+        onSyncSources={syncSources}
+        onSyncStudio={syncStudio}
         dialogs={dialogs}
         selectedSourceId={sources.selectedSourceId}
         selectedLocator={sources.selectedLocator}

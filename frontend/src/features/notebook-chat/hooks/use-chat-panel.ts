@@ -90,11 +90,6 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     [setPersistedModel],
   );
 
-  const selectedModelRef = useRef(selectedModel);
-  useEffect(() => {
-    selectedModelRef.current = selectedModel;
-  }, [selectedModel]);
-
   const transport = useMemo(() => {
     return new DefaultChatTransport({
       api: `/api/notebooks/${notebookId}/chat`,
@@ -104,7 +99,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
         const language = (i18n.resolvedLanguage ?? i18n.language ?? "en").split("-")[0];
         return {
           body: {
-            model: selectedModelRef.current,
+            model: selectedModel,
             message: lastUserMessage ?? null,
             messages: messages.map((m) => ({
               id: m.id,
@@ -117,7 +112,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
         };
       },
     });
-  }, [notebookId]);
+  }, [notebookId, selectedModel]);
 
   const initialMessages = useMemo(() => formatChatMessages(chatHistory), [chatHistory]);
 

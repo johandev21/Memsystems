@@ -182,6 +182,9 @@ export function useAudioSegmentSync({
       }
     }
     if (found && found.id !== activeSegmentId) {
+      // The active segment mirrors <audio> playback time (an external system)
+      // and also drives transcript scrolling; it cannot be derived during render.
+      // eslint-disable-next-line react/set-state-in-effect -- media time sync
       setActiveSegmentId(found.id);
       if (isVirtualized) {
         const idx = filteredSegments.findIndex((s) => s.id === found.id);

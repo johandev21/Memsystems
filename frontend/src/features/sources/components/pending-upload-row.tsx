@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import {
   AlertCircle,
   BookOpen,
@@ -97,7 +98,8 @@ function UploadHeader({
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <UploadStatusIcon isError={isError} isTerminal={isTerminal} Icon={Icon} />
-        {!isTerminal && <Icon className="size-3.5 shrink-0 text-muted-foreground" />}
+        {!isTerminal &&
+          createElement(Icon, { className: "size-3.5 shrink-0 text-muted-foreground" })}
         <span className="truncate text-xs font-medium text-foreground">{upload.title}</span>
       </div>
       <button
@@ -118,7 +120,7 @@ function UploadHeader({
 function UploadProgressBar() {
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15" aria-hidden="true">
-      <div className="h-full w-1/3 animate-[source-progress_1.5s_ease-in-out_infinite] rounded-full bg-primary" />
+      <div className="h-full w-1/3 rounded-full bg-primary" />
     </div>
   );
 }

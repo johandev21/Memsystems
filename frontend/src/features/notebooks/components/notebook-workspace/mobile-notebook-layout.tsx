@@ -162,6 +162,9 @@ function useMobileChatNavigation() {
   useEffect(() => {
     if (activeTab !== "chat" || !pendingChatPrompt) return;
     const detail = pendingChatPrompt;
+    // Bridges a window event into tab navigation: the prompt is re-dispatched
+    // only after the chat panel has mounted, then the pending slot is cleared.
+    // eslint-disable-next-line react/set-state-in-effect -- event bridge after mount
     setPendingChatPrompt(null);
     window.dispatchEvent(
       new CustomEvent("send-chat-prompt", { detail: { ...detail, chatNavigationRetry: true } }),

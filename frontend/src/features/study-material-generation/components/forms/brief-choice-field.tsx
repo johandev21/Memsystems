@@ -31,8 +31,8 @@ export function BriefChoiceField<T extends string>({
               )}
             >
               <span className="flex-1 min-w-0">
-                <span className="block text-xs font-semibold">{opt.title}</span>
-                <span className="block text-xs leading-tight opacity-80">{opt.desc}</span>
+                <span className="block text-sm font-semibold">{opt.title}</span>
+                <span className="block text-sm leading-tight opacity-80">{opt.desc}</span>
               </span>
             </button>
           );

@@ -39,7 +39,7 @@ export function RoadmapPhasesSection({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium text-text-primary">{t("roadmap.phasesLabel")}</Label>
-        <span className="text-xs font-medium text-primary">{phaseLabel}</span>
+        <span className="text-sm font-medium text-primary">{phaseLabel}</span>
       </div>
 
       <div className="grid grid-cols-6 gap-2">
@@ -48,7 +48,7 @@ export function RoadmapPhasesSection({
           onClick={onSelectAuto}
           className={cn(
             optionRowClass(isAutoMode),
-            "flex h-9 items-center justify-center gap-1 text-center text-xs",
+            "flex h-9 items-center justify-center gap-1 text-center text-sm",
             isAutoMode ? "font-semibold" : "font-medium",
           )}
         >
@@ -65,7 +65,7 @@ export function RoadmapPhasesSection({
               onClick={() => onSelectPreset(cnt)}
               className={cn(
                 optionRowClass(selected),
-                "flex h-9 items-center justify-center gap-1 text-center text-xs",
+                "flex h-9 items-center justify-center gap-1 text-center text-sm",
                 selected ? "font-semibold" : "font-medium",
               )}
             >
@@ -85,7 +85,7 @@ export function RoadmapPhasesSection({
               onBlur={onCustomBlur}
               placeholder="1-50"
               aria-label="1-50"
-              className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-1 text-center text-xs font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong"
+              className="h-9 w-full rounded-2xl border border-primary bg-surface-2 px-1 text-center text-sm font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong"
               autoFocus
             />
           </div>
@@ -95,7 +95,7 @@ export function RoadmapPhasesSection({
             onClick={onEnableCustom}
             className={cn(
               optionRowClass(false),
-              "flex h-9 items-center justify-center gap-1 text-center text-xs font-medium",
+              "flex h-9 items-center justify-center gap-1 text-center text-sm font-medium",
             )}
           >
             {t("actions.custom")}
@@ -136,7 +136,7 @@ export function RoadmapDetailLevelSection({
                 <div className="flex items-center justify-between gap-2">
                   <span
                     className={cn(
-                      "text-xs font-semibold",
+                      "text-sm font-semibold",
                       selected ? "text-primary-foreground" : "text-text-tertiary",
                     )}
                   >
@@ -145,7 +145,7 @@ export function RoadmapDetailLevelSection({
                 </div>
                 <span
                   className={cn(
-                    "text-xs leading-tight",
+                    "text-sm leading-tight",
                     selected ? "text-primary-foreground/80" : "text-text-faint",
                   )}
                 >
@@ -202,13 +202,13 @@ export function RoadmapStepTwo({
             value={brief}
             onChange={(e) => onBriefChange(e.target.value)}
             placeholder={t("roadmap.instructionsPlaceholder")}
-            className="max-h-50 min-h-30 w-full resize-none text-xs"
+            className="max-h-50 min-h-30 w-full resize-none text-sm"
             disabled={disabled}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium text-text-tertiary">
+          <Label className="text-sm font-medium text-text-tertiary">
             {t("fields.destinationFolder")}
           </Label>
           <FolderPicker

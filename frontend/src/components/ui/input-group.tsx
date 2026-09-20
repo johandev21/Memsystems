@@ -6,7 +6,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="input-group"
       className={cn(
-        "liquid-glass relative flex w-full items-center rounded-2xl border border-border bg-composer-bg shadow-sm transition-[box-shadow,border-color] focus-within:border-ring focus-within:shadow-md focus-within:ring-2 focus-within:ring-ring/20",
+        "relative flex w-full items-center rounded-2xl border border-border bg-composer-bg shadow-sm transition-[box-shadow,border-color] focus-within:border-ring focus-within:shadow-md focus-within:ring-2 focus-within:ring-ring/20",
         className,
       )}
       {...props}
@@ -16,7 +16,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 
 function InputGroupAddon({
   className,
-  align,
+  align: _align,
   ...props
 }: React.ComponentProps<"div"> & {
   align?: "start" | "end" | "block-start" | "block-end";

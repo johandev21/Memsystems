@@ -68,6 +68,9 @@ export function PlainTextDocumentViewer({
 
   const isVirtualized = blocks.length > 25 && scrollElement !== undefined && scrollElement !== null;
 
+  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
+  // this component is the intended behavior.
+  // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: blocks.length,
     getScrollElement: () => scrollElement ?? null,

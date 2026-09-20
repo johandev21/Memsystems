@@ -16,7 +16,7 @@ const material = {
   },
 };
 
-function App() {
+export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(material.id);
   const [draft, setDraft] = useState("");
   const [handoff, setHandoff] = useState("idle");
