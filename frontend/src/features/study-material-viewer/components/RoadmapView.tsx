@@ -8,7 +8,6 @@ import { cn } from "@/shared/utils/cn";
 import i18n from "@/shared/i18n";
 import { formatDisplayTitle } from "../utils/format-title";
 import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "../hooks/use-roadmap-progress";
-import "./roadmap-theme.css";
 
 // =============================================================================
 // Types & Interfaces
@@ -166,7 +165,7 @@ function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
       </h1>
 
       {description && (
-        <p className="roadmap-description text-xs @sm:text-sm @3xl:text-base leading-relaxed">
+        <p className="text-text-secondary text-xs @sm:text-sm @3xl:text-base leading-relaxed">
           {description}
         </p>
       )}
@@ -191,7 +190,7 @@ function PhaseMilestoneCard({ phase, phaseIndex, onStudyPhase }: PhaseMilestoneC
       </h3>
 
       {phase.description && (
-        <p className="roadmap-description text-xs @sm:text-sm leading-relaxed wrap-break-word">
+        <p className="text-text-secondary text-xs @sm:text-sm leading-relaxed wrap-break-word">
           {phase.description}
         </p>
       )}
@@ -257,7 +256,7 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
         </h4>
 
         {topic.description && (
-          <p className="roadmap-description text-xs @sm:text-sm line-clamp-3 leading-relaxed wrap-break-word">
+          <p className="text-text-secondary text-xs @sm:text-sm line-clamp-3 leading-relaxed wrap-break-word">
             {topic.description}
           </p>
         )}
@@ -330,7 +329,7 @@ export function RoadmapView({ materialId, content }: RoadmapViewProps) {
 
   // 6. Render
   return (
-    <div className="roadmap-view @container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-20 select-none px-3 @sm:px-4">
+    <div className="@container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-20 select-none px-3 @sm:px-4">
       <RoadmapHeader title={content.title} description={content.description} />
 
       <RoadmapSpine phases={content.phases} onStudyPhase={handleStudyPhaseInChat} />

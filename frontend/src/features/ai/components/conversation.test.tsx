@@ -41,8 +41,8 @@ import {
 describe("Conversation Component", () => {
   it("defaults to last-anchor scroll position and forwards container classes", () => {
     const { container } = render(
-      <Conversation className="custom-conversation">
-        <ConversationContent className="custom-content">
+      <Conversation className="bg-primary">
+        <ConversationContent className="text-center">
           <ConversationItem messageId="item-1" scrollAnchor>
             <div>Message 1</div>
           </ConversationItem>
@@ -69,8 +69,8 @@ describe("Conversation Component", () => {
     expect(content).not.toBeNull();
     expect(item).not.toBeNull();
 
-    expect(scrollerRoot?.classList.contains("custom-conversation")).toBe(true);
-    expect(content?.classList.contains("custom-content")).toBe(true);
+    expect(scrollerRoot?.classList.contains("bg-primary")).toBe(true);
+    expect(content?.classList.contains("text-center")).toBe(true);
     expect(item?.getAttribute("data-scroll-anchor")).toBe("true");
     expect(item?.getAttribute("data-message-id")).toBe("item-1");
   });

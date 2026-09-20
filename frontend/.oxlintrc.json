@@ -34,34 +34,7 @@
         ]
       }
     ],
-    "shadcn/no-unknown-classes": [
-      "error",
-      {
-        "allow": [
-          "library-artwork",
-          "library-artwork__folder-title",
-          "library-artwork__title-editor",
-          "library-artwork__title-input",
-          "library-folder-card",
-          "library-grid",
-          "library-inline-editable",
-          "library-inline-editable__input",
-          "library-inline-editable__sizer",
-          "library-notebook-card",
-          "library-notebook-card--dragging",
-          "library-notebook-preview",
-          "library-notebook-surface",
-          "library-notebook-title-input",
-          "notebook-library",
-          "roadmap-description",
-          "roadmap-view",
-          "is-user",
-          "is-assistant",
-          "custom-conversation",
-          "custom-content"
-        ]
-      }
-    ],
+    "shadcn/no-unknown-classes": "error",
     "shadcn/require-static-classes": "error"
   },
   "overrides": [

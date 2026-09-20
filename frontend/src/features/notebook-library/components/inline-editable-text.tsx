@@ -68,7 +68,7 @@ function InlineEditableInput({
     onPointerDown: (event: PointerEvent<HTMLInputElement | HTMLTextAreaElement>) => event.stopPropagation(),
     onDoubleClick: (event: MouseEvent<HTMLInputElement | HTMLTextAreaElement>) => event.stopPropagation(),
     maxLength,
-    className: cn("library-inline-editable__input", className),
+    className: cn(className || "library-inline-editable__input"),
     "aria-label": ariaLabel,
   };
 

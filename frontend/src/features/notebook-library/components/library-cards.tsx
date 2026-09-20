@@ -26,7 +26,6 @@ import {
   EmptyNotebookArtwork,
 } from "./exported-artwork";
 import { InlineEditableText } from "./inline-editable-text";
-import "./library-cards.css";
 
 type FolderRef = { id: string; name: string };
 type NotebookCover = {

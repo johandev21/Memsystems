@@ -20,9 +20,10 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
   <div
     className={cn(
       "group flex w-full max-w-19/20 flex-col gap-2",
-      from === "user" ? "is-user ml-auto justify-end" : "is-assistant",
+      from === "user" && "ml-auto justify-end",
       className,
     )}
+    data-role={from}
     {...props}
   />
 );
@@ -32,9 +33,9 @@ export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
 export const MessageContent = ({ children, className, ...props }: MessageContentProps) => (
   <div
     className={cn(
-      "is-user:dark flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-sm",
-      "group-[.is-user]:ml-auto group-[.is-user]:rounded-2xl group-[.is-user]:bg-primary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-primary-foreground group-[.is-user]:[--selection-background:var(--primary-foreground)] group-[.is-user]:[--selection-foreground:var(--primary)] group-[.is-user]:[--color-foreground:var(--primary-foreground)] group-[.is-user]:[--color-muted-foreground:color-mix(in_oklab,var(--primary-foreground)_60%,transparent)] group-[.is-user]:[--color-border:color-mix(in_oklab,var(--primary-foreground)_20%,transparent)] group-[.is-user]:[--color-muted:color-mix(in_oklab,var(--primary-foreground)_8%,transparent)] group-[.is-user]:[--color-ring:var(--primary-foreground)] group-[.is-user]:[&_.typeset]:text-primary-foreground",
-      "group-[.is-assistant]:text-foreground",
+      "flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-sm",
+      "group-data-[role=user]:ml-auto group-data-[role=user]:rounded-2xl group-data-[role=user]:bg-primary group-data-[role=user]:px-4 group-data-[role=user]:py-3 group-data-[role=user]:text-primary-foreground group-data-[role=user]:[--selection-background:var(--primary-foreground)] group-data-[role=user]:[--selection-foreground:var(--primary)] group-data-[role=user]:[--color-foreground:var(--primary-foreground)] group-data-[role=user]:[--color-muted-foreground:color-mix(in_oklab,var(--primary-foreground)_60%,transparent)] group-data-[role=user]:[--color-border:color-mix(in_oklab,var(--primary-foreground)_20%,transparent)] group-data-[role=user]:[--color-muted:color-mix(in_oklab,var(--primary-foreground)_8%,transparent)] group-data-[role=user]:[--color-ring:var(--primary-foreground)] group-data-[role=user]:[&_.typeset]:text-primary-foreground",
+      "group-data-[role=assistant]:text-foreground",
       className,
     )}
     {...props}
