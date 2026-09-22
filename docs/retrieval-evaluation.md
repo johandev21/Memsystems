@@ -8,9 +8,9 @@ fails `pnpm run test`.
 The gate covers the retrieval pipeline (query understanding, query embedding,
 dense and lexical search legs, reciprocal rank fusion, dedupe, reranking,
 relevance thresholds, Evidence selection) and the contextual chunk
-representation the pipeline retrieves over. The remaining retrieval tickets —
-Generation grounding — are expected to move these metrics and to update the
-baseline with evidence.
+representation the pipeline retrieves over. A second gate covers Generation
+grounding over the same corpus (see [Generation grounding](#generation-grounding));
+both share `baseline.json`.
 
 ## Pieces
 
@@ -23,6 +23,8 @@ baseline with evidence.
 | `backend/tests/eval/deterministic-rewriter.ts` | A deterministic rewrite model over the golden corpus, so the gate exercises query understanding keylessly. |
 | `backend/tests/eval/baseline.json` | The checked-in baseline metrics and the documented tolerance. |
 | `backend/tests/retrieval-eval.test.ts` | The Vitest gate, plus the tests that prove a deliberate regression, a disabled reranker, a disabled lexical leg, and disabled query understanding are caught. |
+| `backend/tests/eval/generation-eval.ts` | Seeds the same corpus plus the long `mushroom-guide` source, runs the real Generation grounding, and computes the Generation metrics. |
+| `backend/tests/generation-eval.test.ts` | The Generation gate, plus the test that proves a bypassed retrieval fails it. |
 
 The runner calls the real retrieval pipeline against the disposable test
 database (see [testing.md](testing.md)). It does not call Voyage: the
@@ -134,6 +136,33 @@ already reads as a search query never pays for it. The harness's
 alongside the query embedding and rerank tokens, so enabling rewriting shows
 up in the cost metric rather than hiding behind it.
 
+## Generation grounding
+
+`backend/tests/eval/generation-eval.ts` covers the other consumer of the
+pipeline: Study Material Generation. It seeds the same corpus plus a long,
+sectioned source (`mushroom-guide`, eight sections of three chunks) and runs
+the real `GenerationGroundingService` over labeled Generation requests. Each
+request names the brief, the selected sources in order, and the sections the
+material must be able to draw on and cite. The tail sections sit past the
+sixteenth chunk, so a grounding that returns one bounded set per source
+cannot reach them.
+
+| Metric | Meaning | Direction |
+| --- | --- | --- |
+| `sourceCoverage` | Share of selected sources that contributed evidence. | higher is better |
+| `sectionCoverage` | Share of the labeled sections represented in the evidence. | higher is better |
+| `citationAccuracy` | Share of the labeled sections the material carries a citation for. The harness plays an ideal grounded answer that cites the first retrieved chunk of each labeled section, and runs the real citation extractor and attachment; a section with no evidence never gets a citation. | higher is better |
+| `citationAttachment` | Share of requests whose material carries at least one citation. | higher is better |
+
+The gate runs one deliberate regression: `grounding: 'raw-slice'` bypasses the
+retrieval pipeline and keeps only the first bounded set of chunks per source
+in index order, which loses the tail sections, so `sectionCoverage` and
+`citationAccuracy` fall below the baseline and the gate fails. The harness
+also reports `grounding: 'single-pass'` — the pre-ticket query plan, one brief
+query per source with no section passes — for comparison. On a corpus this
+small a single bounded set still spreads across the sections, which is why
+the gated regression is the raw slice rather than the single pass.
+
 ## Metrics
 
 | Metric | Meaning | Direction |
@@ -167,14 +196,16 @@ metric still protects its job: with the reranker disabled, `contextPrecision`
 drops well below the new baseline and the gate fails.
 
 Refresh the baseline only after an intentional retrieval change and after
-confirming the new metrics are the ones you want:
+confirming the new metrics are the ones you want. The Chat and Generation
+gates share `baseline.json`, so refresh both files together:
 
 ```bash
-RETRIEVAL_EVAL_UPDATE=1 pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts
+RETRIEVAL_EVAL_UPDATE=1 pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts tests/generation-eval.test.ts
 ```
 
 Review the `baseline.json` diff before committing. A metric that moved the
-wrong way is a regression, not a new baseline.
+wrong way is a regression, not a new baseline. Each update path preserves the
+other gate's section.
 
 ## Adding a labeled query
 
@@ -205,8 +236,9 @@ Prerequisites are the same as any backend test: a disposable pgvector
 database (see [testing.md](testing.md)). Then:
 
 ```bash
-pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts   # the gate
-pnpm run test                                                        # the whole suite, gate included
+pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts   # the Chat gate
+pnpm --filter backend exec vitest run tests/generation-eval.test.ts  # the Generation gate
+pnpm run test                                                        # the whole suite, gates included
 ```
 
 ## Continuous integration

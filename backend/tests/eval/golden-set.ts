@@ -394,3 +394,204 @@ export const GOLDEN_QUERIES: GoldenQuery[] = [
     understanding: 'ambiguous',
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Generation grounding
+// ---------------------------------------------------------------------------
+
+/**
+ * The labeled Generation requests the grounding evaluation runs. Each one
+ * names the sections of the selected sources the material must be able to
+ * draw on and cite: a long source's whole range, and the tail section of the
+ * last-selected source. A grounding that returns one bounded set per source
+ * loses the tail.
+ */
+export interface GoldenGeneration {
+  id: string;
+  kind:
+    | 'quiz'
+    | 'simple_flashcard'
+    | 'roadmap'
+    | 'mind_map'
+    | 'slides'
+    | 'study_guide'
+    | 'practice_problems'
+    | 'case_study';
+  brief: string;
+  /** Golden source ids, in selection order. */
+  sourceIds: string[];
+  /** Heading paths (joined with ' > ') the grounding must represent. */
+  expectedSections: string[];
+}
+
+/**
+ * A long, sectioned source used only by the Generation grounding evaluation.
+ * It is deliberately kept out of `GOLDEN_SOURCES` so adding it does not move
+ * the Chat retrieval metrics: the grounding eval seeds both lists itself.
+ *
+ * Every section carries three chunks; the expected chunk (the first of each
+ * section) repeats the section heading's distinctive words in its body, so
+ * both retrieval legs can separate it from its neighbours deterministically.
+ * The tail sections sit past the sixteenth chunk, so a raw slice that ignores
+ * retrieval cannot reach them.
+ */
+export const GOLDEN_GENERATION_SOURCES: GoldenSource[] = [
+  {
+    id: 'mushroom-guide',
+    title: 'Mushroom Field Guide',
+    kind: 'file',
+    processingStatus: 'ready',
+    chunks: [
+      {
+        id: 'mush-cap-shape',
+        headingPath: ['Part 1', 'Cap Identification'],
+        text: 'Cap identification begins with the silhouette. Convex caps curve outward like a dome, campanulate caps hang like a bell, and flat caps spread wide at maturity. Record whether the margin is striate, incurved, or ragged before touching the specimen.',
+      },
+      {
+        id: 'mush-cap-surface',
+        headingPath: ['Part 1', 'Cap Identification'],
+        text: 'Note the surface texture and moisture. A glutinous shape feels tacky and shines under the lamp, while a tomentose one carries a dense mat of fine hairs. Hygrophanous surfaces fade in concentric zones as they dry, leaving a watermark.',
+      },
+      {
+        id: 'mush-cap-colour',
+        headingPath: ['Part 1', 'Cap Identification'],
+        text: 'Describe colour under neutral light and again after scratching the surface. Many russulas bruise from crimson to chalky white within minutes, and some boletes stain blue where the flesh is exposed. Photograph the bruise pattern before it oxidises.',
+      },
+      {
+        id: 'mush-gill-attach',
+        headingPath: ['Part 1', 'Gill Structure'],
+        text: 'Gill structure decides how each gill meets the stem. Adnate gills join the stem along their full depth, free gills stop short and leave a collar, and decurrent gills run down the stem like folds. The attachment separates whole genera.',
+      },
+      {
+        id: 'mush-gill-spacing',
+        headingPath: ['Part 1', 'Gill Structure'],
+        text: 'Compare spacing and thickness along the margin. Crowded neighbours touch, distant ones leave visible gaps, and interleaved short ridges fill the spaces between long ones. Note whether the edges are fringed, serrate, or smooth.',
+      },
+      {
+        id: 'mush-gill-colour',
+        headingPath: ['Part 1', 'Gill Structure'],
+        text: 'Colour shifts with maturity and must be read on a fresh specimen. Pink plates on an agaricus darken to chocolate brown as spores ripen, while white plates on an amanita stay pale. Record the shade beside the spore print.',
+      },
+      {
+        id: 'mush-spore-colour',
+        headingPath: ['Part 2', 'Spore Prints'],
+        text: 'Spore prints preserve the colour of the powder. Rest the cap on half white and half dark paper overnight; the deposit survives in the herbarium as white, cream, ochre, rusty brown, purple brown, or black. The print separates species that look identical in the field.',
+      },
+      {
+        id: 'mush-spore-shape',
+        headingPath: ['Part 2', 'Spore Prints'],
+        text: 'Mount a little powder in water and inspect the shape under the microscope. Elliptical grains with a smooth wall differ from angular grains with a germ pore, and ornamented grains carry ridges or warts. Measure at least twenty of them.',
+      },
+      {
+        id: 'mush-spore-reaction',
+        headingPath: ['Part 2', 'Spore Prints'],
+        text: 'Test colour reactions with iodine and potassium hydroxide. A blue-black amyloid reaction confirms some genera, while a yellow or red chemical colour points elsewhere. Always run the same reagent on a known specimen beside the unknown.',
+      },
+      {
+        id: 'mush-habitat-woodland',
+        headingPath: ['Part 2', 'Habitat and Season'],
+        text: 'Habitat and season notes come before picking: broadleaf woodland, conifer plantation, grassland, or heath. Mycorrhizal species grow only beside their partner trees, so an oak stand and a birch stand host different communities. Note the nearest tree species.',
+      },
+      {
+        id: 'mush-habitat-substrate',
+        headingPath: ['Part 2', 'Habitat and Season'],
+        text: 'State the substrate precisely. Saprobes fruit on fallen logs, buried roots, dung, or leaf litter, and the decay stage matters: a fresh log hosts a different succession from a crumbling stump. Photograph the find in place with the substrate visible.',
+      },
+      {
+        id: 'mush-habitat-weather',
+        headingPath: ['Part 2', 'Habitat and Season'],
+        text: 'Log the date and the weather that preceded the find. Most fruiting bodies appear after sustained rain in late summer and autumn, and a hard frost ends the flush. A warm spell in spring brings morels and a few early agarics.',
+      },
+      {
+        id: 'mush-edible-chantarelle',
+        headingPath: ['Part 3', 'Edible Species'],
+        text: 'Edible species must be separated by every feature, never by one. The chanterelle has a golden funnel-shaped cap with wavy margins and blunt ridges that run down the stem instead of true gills. It grows in mossy broadleaf woodland and smells faintly of apricot.',
+      },
+      {
+        id: 'mush-edible-boletus',
+        headingPath: ['Part 3', 'Edible Species'],
+        text: 'Boletes carry a spongy pore layer instead of plates under the cap. The cep has a brown top, a pale network on the stem, and pores that stay white then yellow. Slice the stem to check that the flesh does not stain blue too strongly.',
+      },
+      {
+        id: 'mush-edible-field',
+        headingPath: ['Part 3', 'Edible Species'],
+        text: 'The field agaric has a white top that stains brown where bruised and plates that ripen from pink to dark brown. It fruits in rings on grazed grassland. Never pick a white gilled woodland specimen for the table, because deadly kinds share the outline.',
+      },
+      {
+        id: 'mush-toxic-deathcap',
+        headingPath: ['Part 3', 'Toxic Lookalikes'],
+        text: 'Toxic lookalikes demand the whole specimen. The death cap is a woodland amanita with a greenish cap, white gills, a ring on the stem, and a bulbous volva at the base. Its amatoxins survive cooking and cause liver failure days after the meal.',
+      },
+      {
+        id: 'mush-toxic-false-morel',
+        headingPath: ['Part 3', 'Toxic Lookalikes'],
+        text: 'The false morel has a wrinkled, brain-like head rather than a honeycombed one, and the head joins the stem along its full length. It contains gyromitrin, which is volatile and poisonous even when dried. Treat every wrinkled spring fungus as suspect.',
+      },
+      {
+        id: 'mush-toxic-rule',
+        headingPath: ['Part 3', 'Toxic Lookalikes'],
+        text: 'Separate the safe from the dangerous by checking every feature. A ring, a volva, rusty powder, or a bruise that darkens all demand caution. If the specimen does not match the guide in every detail, leave it in the ground.',
+      },
+      {
+        id: 'mush-preserve-drying',
+        headingPath: ['Part 4', 'Preservation'],
+        text: 'Preservation starts with drying. Dry firm specimens on a rack in moving air until they are crisp and snap when bent. Slice thick stems lengthwise so the interior dries at the same rate as the top, then store the pieces in an airtight jar away from light.',
+      },
+      {
+        id: 'mush-preserve-freezing',
+        headingPath: ['Part 4', 'Preservation'],
+        text: 'Blanch clean pieces in boiling water, cool them quickly, and freeze them in small portions. Freezing raw turns the texture spongy because the cell walls rupture. Label each portion with the species and the date.',
+      },
+      {
+        id: 'mush-preserve-records',
+        headingPath: ['Part 4', 'Preservation'],
+        text: 'Keep a drying record for every batch: the species, the habitat, the date, and the drying time. A dried specimen is evidence, so store a small sample with its spore print. Discard any batch that smells sour or shows mould.',
+      },
+      {
+        id: 'mush-cultivate-substrate',
+        headingPath: ['Part 4', 'Cultivation Basics'],
+        text: 'Cultivation basics begin with the substrate. Prepare hardwood sawdust, straw, or coffee grounds and sterilise the block in a pressure cooker. Oyster and shiitake mycelium colonise it in a dark, warm room before it fruits. Keep the block sealed until the surface turns white.',
+      },
+      {
+        id: 'mush-cultivate-fruiting',
+        headingPath: ['Part 4', 'Cultivation Basics'],
+        text: 'Trigger fruiting with fresh air, high humidity, and a drop in temperature. Mist the block, fan it several times a day, and provide indirect light. Harvest the cluster while the margins are still curled under.',
+      },
+      {
+        id: 'mush-cultivate-contamination',
+        headingPath: ['Part 4', 'Cultivation Basics'],
+        text: 'Inspect every block for contamination before it fruits. Green trichoderma mould, sour bacterial patches, and black pin moulds mean the block must be discarded and the room cleaned. Healthy mycelium smells of mushrooms and stays white.',
+      },
+    ],
+  },
+];
+
+export const GOLDEN_GENERATIONS: GoldenGeneration[] = [
+  {
+    id: 'g-long-source-guide',
+    kind: 'study_guide',
+    brief: 'Create a study guide covering the mushroom field guide',
+    sourceIds: ['mushroom-guide'],
+    // Every section of the long source, including the two tail sections that
+    // sit past the sixteenth chunk.
+    expectedSections: [
+      'Part 1 > Cap Identification',
+      'Part 1 > Gill Structure',
+      'Part 2 > Spore Prints',
+      'Part 2 > Habitat and Season',
+      'Part 3 > Edible Species',
+      'Part 3 > Toxic Lookalikes',
+      'Part 4 > Preservation',
+      'Part 4 > Cultivation Basics',
+    ],
+  },
+  {
+    id: 'g-multi-source-tail',
+    kind: 'simple_flashcard',
+    brief: 'Review the mushroom field guide and the laboratory manual',
+    sourceIds: ['mushroom-guide', 'lab-manual'],
+    // The tail section of the long source and the only section of the
+    // last-selected source.
+    expectedSections: ['Part 4 > Cultivation Basics', 'Notebook'],
+  },
+];

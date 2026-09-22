@@ -16,5 +16,11 @@
     "latencyMsP50": 2,
     "latencyMsP95": 16,
     "costTokensPerQuery": 860.1111111111111
+  },
+  "generation": {
+    "sourceCoverage": 1,
+    "sectionCoverage": 1,
+    "citationAccuracy": 1,
+    "citationAttachment": 1
   }
 }

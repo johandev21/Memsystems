@@ -1,25 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { NotFoundError } from '../../common/errors/domain-error';
-import { BadRequestError } from '../../common/errors/domain-error';
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestError,
+  NotFoundError,
+} from '../../common/errors/domain-error';
 import { ConnectionService } from '../ai/connection.service';
-import { stripChunkContentHeader } from '../ai/chunking.service';
-import { RetrievalService, type RetrievedChunk } from '../ai/retrieval.service';
 import { RetrievalTraceService } from '../ai/retrieval-trace.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {
   GenerationRequestManager,
   StartGenerationInput,
 } from './generation-request-manager';
+import { GenerationGroundingService } from './generation-grounding';
 import { StudyMaterialKind } from './shapes';
 import { StreamHandler } from './stream-handler';
-
-/**
- * Chunks retrieved per selected source for a Generation. A Generation is
- * grounded on every selected source, so the pipeline bounds each source
- * independently; this keeps the prompt within budget until the
- * retrieval-grounded generation ticket reworks coverage.
- */
-export const GENERATION_EVIDENCE_CHUNKS_PER_SOURCE = 16;
 
 const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
   quiz: 'openai/gpt-5.6-sol',
@@ -34,6 +27,7 @@ const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
 
 @Injectable()
 export class GenerationService {
+  private readonly logger = new Logger(GenerationService.name);
   private readonly activeRequests = new Map<string, AbortController>();
 
   constructor(
@@ -41,7 +35,7 @@ export class GenerationService {
     private readonly connectionService: ConnectionService,
     private readonly requestManager: GenerationRequestManager,
     private readonly streamHandler: StreamHandler,
-    private readonly retrievalService: RetrievalService,
+    private readonly groundingService: GenerationGroundingService,
     private readonly retrievalTraceService: RetrievalTraceService,
   ) {}
 
@@ -55,36 +49,43 @@ export class GenerationService {
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
     await this.connectionService.requireConnected(modelId);
 
-    const retrievalOutcome =
-      input.sourceIds.length > 0
-        ? await this.retrievalService.retrieve({
-            notebookId,
-            query: generationRetrievalQuery(input),
-            sourceIds: input.sourceIds,
-            topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
-            // Selected sources are in scope by definition; the relevance
-            // floor and rerank threshold only gate Notebook-wide Evidence
-            // for Chat.
-            relevanceFloor: 0,
-            rerankThreshold: 0,
-          })
-        : null;
+    // Grounding retrieves the material per section of every selected source,
+    // so a long source is represented beyond a single bounded set and a
+    // multi-source Generation keeps its selection order.
+    const grounding = await this.groundingService.ground({
+      notebookId,
+      kind: input.kind,
+      brief: input.brief,
+      sourceIds: input.sourceIds,
+    });
 
-    const sourceTexts = retrievalOutcome
-      ? groupChunksBySource(retrievalOutcome.chunks, input.sourceIds)
-      : [];
+    // A selected source with no Evidence is unavailable, whatever the reason
+    // (deleted, failed, degraded, or not indexed yet). Every kind reports it
+    // with the same error the study guide flow has always used, instead of
+    // silently generating from a smaller selection.
+    if (grounding.unavailableSources.length > 0) {
+      const degraded = new Set(
+        grounding.degradedSources.map((source) => source.id),
+      );
+      const unavailable = grounding.unavailableSources
+        .map(
+          (source) =>
+            `${source.title}${degraded.has(source.id) ? ' (degraded)' : ''}`,
+        )
+        .join(', ');
+      this.logger.warn(
+        `Generation for notebook ${notebookId} rejected: selected sources unavailable (${unavailable})`,
+      );
+      throw new BadRequestError(
+        'Selected sources are unavailable or have no readable content. Update your selection and retry.',
+        { messageKey: 'errors.generation.sourcesUnavailable' },
+      );
+    }
+
+    const sourceCount = grounding.sources.length;
 
     if (input.kind === 'study_guide') {
-      if (
-        sourceTexts.length !== new Set(input.sourceIds).size ||
-        sourceTexts.some((source) => !source.rawText.trim())
-      ) {
-        throw new BadRequestError(
-          'Selected sources are unavailable or have no readable content. Update your selection and retry.',
-          { messageKey: 'errors.generation.sourcesUnavailable' },
-        );
-      }
-      if (!sourceTexts.length && !input.brief.trim()) {
+      if (sourceCount === 0 && !input.brief.trim()) {
         throw new BadRequestError(
           'Select a source or enter a brief for your study guide.',
           { messageKey: 'errors.generation.sourceOrBrief.studyGuide' },
@@ -104,7 +105,7 @@ export class GenerationService {
           },
         );
       }
-      if (!sourceTexts.length && !input.brief.trim()) {
+      if (sourceCount === 0 && !input.brief.trim()) {
         throw new BadRequestError(
           'Select a source or enter a brief for your practice problems.',
           { messageKey: 'errors.generation.sourceOrBrief.practiceProblems' },
@@ -124,7 +125,7 @@ export class GenerationService {
           },
         );
       }
-      if (!sourceTexts.length && !input.brief.trim()) {
+      if (sourceCount === 0 && !input.brief.trim()) {
         throw new BadRequestError(
           'Select a source or enter a brief for your case study.',
           { messageKey: 'errors.generation.sourceOrBrief.caseStudy' },
@@ -137,12 +138,15 @@ export class GenerationService {
       model: modelId,
     });
 
-    if (retrievalOutcome) {
+    // Every retrieval pass the Generation ran persists its own trace, all
+    // correlated by the generation request, so a section that contributed
+    // nothing can be diagnosed.
+    for (const trace of grounding.traces) {
       await this.retrievalTraceService.record({
         notebookId,
         kind: 'generation',
         generationRequestId: requestId,
-        trace: retrievalOutcome.trace,
+        trace,
       });
     }
 
@@ -162,7 +166,7 @@ export class GenerationService {
         ...input,
         model: modelId,
       },
-      sourceTexts,
+      { sources: grounding.sources, evidence: grounding.evidence },
       requestId,
       () => {
         this.activeRequests.delete(requestId);
@@ -190,48 +194,4 @@ export class GenerationService {
     this.activeRequests.get(requestId)?.abort();
     return request;
   }
-}
-
-/**
- * A Generation without a brief still needs a retrieval query; the material
- * kind is the only topical signal available.
- */
-function generationRetrievalQuery(input: StartGenerationInput): string {
-  const brief = input.brief.trim();
-  return brief || input.kind.replaceAll('_', ' ');
-}
-
-/**
- * Builds the source texts for the prompt from the retrieved chunks, in the
- * caller's selection order so multi-source Generations keep every source.
- */
-function groupChunksBySource(
-  chunks: RetrievedChunk[],
-  sourceIds: string[],
-): { id: string; title: string; rawText: string }[] {
-  const bySource = new Map<string, RetrievedChunk[]>();
-  for (const chunk of chunks) {
-    const list = bySource.get(chunk.sourceId) ?? [];
-    list.push(chunk);
-    bySource.set(chunk.sourceId, list);
-  }
-
-  return sourceIds.flatMap((sourceId) => {
-    const list = bySource.get(sourceId);
-    // A selected source without indexed chunks contributes nothing, matching
-    // the previous behavior for unknown ids. Reporting unavailable or
-    // degraded selected sources consistently is the retrieval-grounded
-    // generation ticket's job.
-    if (!list || list.length === 0) return [];
-    const ordered = [...list].sort((a, b) => a.chunkIndex - b.chunkIndex);
-    return [
-      {
-        id: sourceId,
-        title: ordered[0].title,
-        rawText: ordered
-          .map((chunk) => stripChunkContentHeader(chunk.content))
-          .join('\n\n'),
-      },
-    ];
-  });
 }

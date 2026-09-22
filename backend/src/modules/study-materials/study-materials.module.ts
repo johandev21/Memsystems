@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotebooksModule } from '../notebooks/notebooks.module';
+import { GenerationGroundingService } from './generation-grounding';
 import { GenerationRequestManager } from './generation-request-manager';
 import { GenerationService } from './generation.service';
 import { SlidesBuilderService } from './slides-builder.service';
@@ -18,6 +19,7 @@ import { TrashService } from './trash.service';
     StudyMaterialFolderService,
     TrashService,
     GenerationRequestManager,
+    GenerationGroundingService,
     StreamHandler,
     GenerationService,
     SlidesBuilderService,

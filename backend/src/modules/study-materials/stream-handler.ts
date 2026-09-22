@@ -9,6 +9,14 @@ import type { GatewayRequestOptions } from '../ai/providers/gateway.provider';
 import { toClientStreamError } from '../ai/stream-error';
 import { languageDirective } from '../../common/i18n/language';
 import { DRIZZLE } from '../database/database.module';
+import {
+  attachGenerationCitations,
+  extractGenerationCitations,
+} from './generation-citations';
+import {
+  formatGroundedSourceText,
+  type GenerationGrounding,
+} from './generation-grounding';
 import { getPromptTemplate } from './prompts';
 import type {
   QuizGenerationOptions,
@@ -50,6 +58,44 @@ export interface StreamResult {
   materialId: string;
 }
 
+/** The Generation request fields the stream handler needs. */
+export interface StreamInput {
+  kind: StudyMaterialKind;
+  studyGuideOptions?: StudyGuideGenerationOptions;
+  practiceProblemsOptions?: PracticeProblemsGenerationOptions;
+  caseStudyOptions?: CaseStudyGenerationOptions;
+  brief: string;
+  folderId?: string | null;
+  model?: string;
+  language?: string;
+  questionCount?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
+  roadmapOptions?: {
+    phaseCount: number;
+    detailLevel: 'basic' | 'detailed';
+  };
+  mindMapOptions?: {
+    nodeCount: number;
+    structure: 'radial' | 'hierarchical' | 'organic';
+    colorGroups: boolean;
+    crossLinks: boolean;
+    detailLevel: 'basic' | 'detailed';
+  };
+  slidesOptions?: {
+    slideCount: number;
+    theme:
+      | 'dark'
+      | 'light'
+      | 'accent'
+      | 'editorial'
+      | 'academic'
+      | 'technical'
+      | 'warm';
+    detailLevel: 'basic' | 'detailed';
+  };
+}
+
 @Injectable()
 export class StreamHandler {
   private readonly logger = new Logger(StreamHandler.name);
@@ -62,72 +108,31 @@ export class StreamHandler {
 
   createStream(
     notebookId: string,
-    input: {
-      kind: StudyMaterialKind;
-      studyGuideOptions?: StudyGuideGenerationOptions;
-      practiceProblemsOptions?: PracticeProblemsGenerationOptions;
-      caseStudyOptions?: CaseStudyGenerationOptions;
-      brief: string;
-      folderId?: string | null;
-      model?: string;
-      language?: string;
-      questionCount?: number;
-      difficulty?: 'easy' | 'medium' | 'hard';
-      cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
-      roadmapOptions?: {
-        phaseCount: number;
-        detailLevel: 'basic' | 'detailed';
-      };
-      mindMapOptions?: {
-        nodeCount: number;
-        structure: 'radial' | 'hierarchical' | 'organic';
-        colorGroups: boolean;
-        crossLinks: boolean;
-        detailLevel: 'basic' | 'detailed';
-      };
-      slidesOptions?: {
-        slideCount: number;
-        theme:
-          | 'dark'
-          | 'light'
-          | 'accent'
-          | 'editorial'
-          | 'academic'
-          | 'technical'
-          | 'warm';
-        detailLevel: 'basic' | 'detailed';
-      };
-    },
-    sourceTexts: { id?: string; title: string; rawText: string }[],
+    input: StreamInput,
+    grounding: Pick<GenerationGrounding, 'sources' | 'evidence'>,
     requestId: string,
     onDone: (result: StreamResult) => void,
     onError: (error: string) => void,
     abortSignal?: AbortSignal,
   ) {
     const promptTemplate = getPromptTemplate(input.kind);
+    const hasEvidence = grounding.evidence.length > 0;
     const systemPrompt =
-      promptTemplate.instructions + languageDirective(input.language);
-    const concatenatedSources = sourceTexts
-      .map(
-        (s) =>
-          `[${s.title}]${input.kind === 'study_guide' || input.kind === 'practice_problems' || input.kind === 'case_study' ? ` Source ID: ${s.id ?? ''}` : ''}\n${s.rawText}`,
-      )
-      .join('\n\n---\n\n');
-    const userPrompt = promptTemplate.user(
-      input.brief,
-      concatenatedSources.slice(0, 100000),
-      {
-        questionCount: input.questionCount,
-        difficulty: input.difficulty,
-        cardStyle: input.cardStyle,
-        roadmapOptions: input.roadmapOptions,
-        mindMapOptions: input.mindMapOptions,
-        slidesOptions: input.slidesOptions,
-        studyGuideOptions: input.studyGuideOptions,
-        practiceProblemsOptions: input.practiceProblemsOptions,
-        caseStudyOptions: input.caseStudyOptions,
-      },
-    );
+      promptTemplate.instructions +
+      languageDirective(input.language) +
+      citationDirective(hasEvidence);
+    const sourceText = formatGroundedSourceText(grounding);
+    const userPrompt = promptTemplate.user(input.brief, sourceText, {
+      questionCount: input.questionCount,
+      difficulty: input.difficulty,
+      cardStyle: input.cardStyle,
+      roadmapOptions: input.roadmapOptions,
+      mindMapOptions: input.mindMapOptions,
+      slidesOptions: input.slidesOptions,
+      studyGuideOptions: input.studyGuideOptions,
+      practiceProblemsOptions: input.practiceProblemsOptions,
+      caseStudyOptions: input.caseStudyOptions,
+    });
     const schema = this.getContentSchema(input.kind);
     const options = buildOptions(input);
 
@@ -181,34 +186,7 @@ export class StreamHandler {
           const finalContent: unknown = await result.output;
           const normalized = normalizeContent(input.kind, finalContent);
           const validated = validateContent(input.kind, normalized);
-          const allowedIds = sourceTexts.flatMap((source) =>
-            source.id ? [source.id] : [],
-          );
-          const storable =
-            input.kind === 'study_guide'
-              ? prepareGeneratedStudyGuide(
-                  validated,
-                  allowedIds,
-                  input.studyGuideOptions,
-                )
-              : input.kind === 'practice_problems'
-                ? prepareGeneratedPracticeProblems(validated, allowedIds, {
-                    ...input.practiceProblemsOptions,
-                    questionCount: input.questionCount,
-                    difficulty:
-                      input.difficulty ??
-                      input.practiceProblemsOptions?.difficulty,
-                  })
-                : input.kind === 'case_study'
-                  ? prepareGeneratedCaseStudy(validated, allowedIds, {
-                      ...input.caseStudyOptions,
-                      questionCount:
-                        input.caseStudyOptions?.questionCount ??
-                        input.questionCount,
-                    })
-                  : input.kind === 'slides'
-                    ? withSlidePreviews(validated as Record<string, unknown>)
-                    : validated;
+          const storable = this.prepareStorable(input, validated, grounding);
 
           if (abortSignal?.aborted) {
             controller.close();
@@ -339,34 +317,7 @@ export class StreamHandler {
             );
 
             const validated = validateContent(input.kind, normalizedContent);
-            const allowedIds = sourceTexts.flatMap((source) =>
-              source.id ? [source.id] : [],
-            );
-            const storable =
-              input.kind === 'study_guide'
-                ? prepareGeneratedStudyGuide(
-                    validated,
-                    allowedIds,
-                    input.studyGuideOptions,
-                  )
-                : input.kind === 'practice_problems'
-                  ? prepareGeneratedPracticeProblems(validated, allowedIds, {
-                      ...input.practiceProblemsOptions,
-                      questionCount: input.questionCount,
-                      difficulty:
-                        input.difficulty ??
-                        input.practiceProblemsOptions?.difficulty,
-                    })
-                  : input.kind === 'case_study'
-                    ? prepareGeneratedCaseStudy(validated, allowedIds, {
-                        ...input.caseStudyOptions,
-                        questionCount:
-                          input.caseStudyOptions?.questionCount ??
-                          input.questionCount,
-                      })
-                    : input.kind === 'slides'
-                      ? withSlidePreviews(validated as Record<string, unknown>)
-                      : validated;
+            const storable = this.prepareStorable(input, validated, grounding);
 
             if (abortSignal?.aborted) {
               controller.close();
@@ -421,6 +372,47 @@ export class StreamHandler {
     return { stream };
   }
 
+  /**
+   * Validates and shapes the model output for storage, then attaches the
+   * citations the model actually emitted. Extraction runs against the final
+   * content and only accepts evidence keys retrieved for this Generation, so
+   * an invented or stale key is dropped rather than stored.
+   */
+  private prepareStorable(
+    input: StreamInput,
+    validated: unknown,
+    grounding: Pick<GenerationGrounding, 'sources' | 'evidence'>,
+  ): Record<string, unknown> {
+    const allowedIds = grounding.sources.map((source) => source.id);
+    const storable: Record<string, unknown> =
+      input.kind === 'study_guide'
+        ? prepareGeneratedStudyGuide(
+            validated,
+            allowedIds,
+            input.studyGuideOptions,
+          )
+        : input.kind === 'practice_problems'
+          ? prepareGeneratedPracticeProblems(validated, allowedIds, {
+              ...input.practiceProblemsOptions,
+              questionCount: input.questionCount,
+              difficulty:
+                input.difficulty ?? input.practiceProblemsOptions?.difficulty,
+            })
+          : input.kind === 'case_study'
+            ? prepareGeneratedCaseStudy(validated, allowedIds, {
+                ...input.caseStudyOptions,
+                questionCount:
+                  input.caseStudyOptions?.questionCount ?? input.questionCount,
+              })
+            : input.kind === 'slides'
+              ? withSlidePreviews(validated as Record<string, unknown>)
+              : (validated as Record<string, unknown>);
+    return attachGenerationCitations(
+      storable,
+      extractGenerationCitations(storable, grounding.evidence),
+    );
+  }
+
   private getContentSchema(kind: StudyMaterialKind): z.ZodTypeAny {
     const schemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
       quiz: QuizContent,
@@ -445,6 +437,23 @@ function isAbortError(error: unknown): boolean {
     error instanceof Error &&
     (error.name === 'AbortError' || error.name === 'ResponseAborted')
   );
+}
+
+/**
+ * The citation contract for every kind. Evidence keys are printed in the
+ * source block; the model echoes them in the text it generates and the stream
+ * handler turns them into stored citations. Only added when the Generation is
+ * actually grounded, so an ungrounded material is never asked to cite.
+ */
+function citationDirective(hasEvidence: boolean): string {
+  if (!hasEvidence) return '';
+  return `
+
+CITATIONS:
+- The source material labels each passage with an evidence key such as [Evidence R1].
+- End every sentence that states something taken from the source material with that key in square brackets, exactly like [ref:R1].
+- Use only keys that appear in the source material. Never invent a key, a display number, or a source, and never cite a passage you were not given.
+- Questions, examples, and explanations you create are your own work; cite only the passages that support the facts they rest on.`;
 }
 
 /**
@@ -475,38 +484,7 @@ function fallbackSchemaHint(kind: StudyMaterialKind): string {
   }
 }
 
-function buildOptions(input: {
-  kind: StudyMaterialKind;
-  studyGuideOptions?: StudyGuideGenerationOptions;
-  practiceProblemsOptions?: PracticeProblemsGenerationOptions;
-  caseStudyOptions?: CaseStudyGenerationOptions;
-  questionCount?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
-  roadmapOptions?: {
-    phaseCount: number;
-    detailLevel: 'basic' | 'detailed';
-  };
-  mindMapOptions?: {
-    nodeCount: number;
-    structure: 'radial' | 'hierarchical' | 'organic';
-    colorGroups: boolean;
-    crossLinks: boolean;
-    detailLevel: 'basic' | 'detailed';
-  };
-  slidesOptions?: {
-    slideCount: number;
-    theme:
-      | 'dark'
-      | 'light'
-      | 'accent'
-      | 'editorial'
-      | 'academic'
-      | 'technical'
-      | 'warm';
-    detailLevel: 'basic' | 'detailed';
-  };
-}): Record<string, unknown> | null {
+function buildOptions(input: StreamInput): Record<string, unknown> | null {
   switch (input.kind) {
     case 'quiz': {
       if (input.questionCount == null && input.difficulty == null) return null;

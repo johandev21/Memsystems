@@ -837,7 +837,11 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
     return { ...scene, id };
   });
 
-  return { schemaVersion: 2, title, design, slides: scenes };
+  const citations = Array.isArray(record.citations)
+    ? (record.citations as SlideDeck['citations'])
+    : undefined;
+
+  return { schemaVersion: 2, title, design, slides: scenes, citations };
 }
 
 export function resolveSlideDeckPreservingPreviews(input: unknown): SlideDeck {
