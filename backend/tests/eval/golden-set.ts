@@ -13,6 +13,11 @@
 export interface GoldenChunk {
   id: string;
   text: string;
+  /**
+   * The heading path of the section the chunk came from. It becomes the
+   * section half of the contextual header the searchable text carries.
+   */
+  headingPath?: string[];
 }
 
 export interface GoldenSource {
@@ -185,6 +190,55 @@ export const GOLDEN_SOURCES: GoldenSource[] = [
       },
     ],
   },
+  {
+    id: 'lab-manual',
+    title: 'Organic Chemistry Laboratory Manual',
+    kind: 'file',
+    processingStatus: 'ready',
+    // A long, section-dependent source. The bodies share generic laboratory
+    // vocabulary, so the dense and lexical legs cannot separate the right
+    // passage from its neighbours without the section heading. The labeled
+    // queries name the section, and the contextual header is what makes the
+    // passage retrievable; with contextualization disabled, the section
+    // tokens vanish from the chunk representation and the query abstains.
+    chunks: [
+      {
+        id: 'lab-distillation-fraction',
+        headingPath: ['Experiment 3', 'Fractional Distillation'],
+        text: 'Heat the round-bottom flask slowly and collect the fraction that boils between 78 and 82 degrees in a clean receiving flask. Record the volume of the distillate and cap the flask immediately.',
+      },
+      {
+        id: 'lab-distillation-solvent',
+        headingPath: ['Experiment 3', 'Solvent Recovery'],
+        text: 'After the fraction has been collected, raise the temperature and recover the remaining solvent. Record the volume, label the receiving flask, and store it before the solution cools.',
+      },
+      {
+        id: 'lab-crystallization-seeding',
+        headingPath: ['Experiment 7', 'Recrystallization'],
+        text: 'Dissolve the crude solid in the minimum volume of hot solvent, then let the solution cool slowly to room temperature. Scratch the glass to seed crystal formation and collect the product by vacuum filtration.',
+      },
+      {
+        id: 'lab-crystallization-wash',
+        headingPath: ['Experiment 7', 'Washing the Product'],
+        text: 'Wash the collected crystals with a small portion of cold solvent and dry them on the filter. Record the mass and the melting point before storing the sample.',
+      },
+      {
+        id: 'lab-titration-endpoint',
+        headingPath: ['Experiment 9', 'Acid-Base Titration'],
+        text: 'Add the indicator and titrate until the colour changes and persists for thirty seconds. Record the volume delivered and repeat the measurement until three values agree.',
+      },
+      {
+        id: 'lab-safety-general',
+        headingPath: ['Safety'],
+        text: 'Wear goggles and a lab coat at all times. Record every spill, label every container, and collect waste in the designated bins before leaving the bench.',
+      },
+      {
+        id: 'lab-notebook-rules',
+        headingPath: ['Notebook'],
+        text: 'Write each entry in ink and record the date and the experiment number. Never remove a page; strike through errors so the original value stays readable.',
+      },
+    ],
+  },
 ];
 
 export const GOLDEN_QUERIES: GoldenQuery[] = [
@@ -247,6 +301,18 @@ export const GOLDEN_QUERIES: GoldenQuery[] = [
     text: 'What is the grading policy for CS-3300?',
     answerable: true,
     relevantChunkIds: ['catalog-cs3300'],
+  },
+  {
+    id: 'q-lab-distillation',
+    text: 'What temperature range does the fractional distillation section use?',
+    answerable: true,
+    relevantChunkIds: ['lab-distillation-fraction'],
+  },
+  {
+    id: 'q-lab-crystal-growth',
+    text: 'What does the recrystallization section recommend for crystal growth?',
+    answerable: true,
+    relevantChunkIds: ['lab-crystallization-seeding'],
   },
   {
     id: 'q-degraded-source',

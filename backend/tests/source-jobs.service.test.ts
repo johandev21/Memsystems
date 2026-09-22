@@ -2,14 +2,21 @@ import { and, desc, eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { createDatabaseConnection } from '../src/database/connection';
 import {
+  appSettings,
   jobs,
   sourceChunks,
   sources,
   sourceVersions,
 } from '../src/database/schema';
 import { ChunkingService } from '../src/modules/ai/chunking.service';
-import { EMBEDDING_DIMENSIONS } from '../src/modules/ai/embedding.service';
-import { IndexingService } from '../src/modules/ai/indexing.service';
+import {
+  CONTEXTUAL_EMBEDDING_MODEL,
+  EMBEDDING_DIMENSIONS,
+} from '../src/modules/ai/embedding.service';
+import {
+  INDEX_PROCESSING_VERSION,
+  IndexingService,
+} from '../src/modules/ai/indexing.service';
 import {
   JobQueueConfig,
   JobQueueService,
@@ -20,6 +27,11 @@ import {
 } from '../src/modules/sources/document-normalizer.service';
 import { SourceIndexingHandler } from '../src/modules/sources/source-indexing.handler';
 import { SourceJobsService } from '../src/modules/sources/source-jobs.service';
+import {
+  SourceReindexAllHandler,
+  type SourceReindexAllJobPayload,
+  type SourceReindexAllResult,
+} from '../src/modules/sources/source-reindex-all.handler';
 import { SourceVersionService } from '../src/modules/sources/source-version.service';
 import { seedNotebook, seedSource } from './fixtures';
 
@@ -38,11 +50,13 @@ function makeVector(dimensions: number): number[] {
 
 function fakeEmbeddingService() {
   return {
-    embedDocuments: vi
+    embedDocumentGroups: vi
       .fn()
-      .mockImplementation(async (texts: string[]) =>
-        texts.map(() => makeVector(EMBEDDING_DIMENSIONS)),
-      ),
+      .mockImplementation(async (groups: string[][]) => ({
+        model: CONTEXTUAL_EMBEDDING_MODEL,
+        embeddings: groups.flat().map(() => makeVector(EMBEDDING_DIMENSIONS)),
+      })),
+    documentEmbeddingModel: () => CONTEXTUAL_EMBEDDING_MODEL,
   } as any;
 }
 
@@ -65,7 +79,7 @@ function makeJobsService(
     autoStart: false,
     ...overrides,
   });
-  const handler = new SourceIndexingHandler(db as any, indexing);
+  const handler = new SourceIndexingHandler(db as any, indexing, embedding);
   queue.registerHandler(handler);
   const jobsService = new SourceJobsService(db as any, queue);
   return { jobs: jobsService, indexing, queue, handler };
@@ -130,7 +144,9 @@ describe('SourceJobsService', () => {
 
   it('retries with backoff and fails after the attempt limit', async () => {
     const embedding = {
-      embedDocuments: vi.fn().mockRejectedValue(new Error('provider down')),
+      embedDocumentGroups: vi
+        .fn()
+        .mockRejectedValue(new Error('provider down')),
     } as any;
     const { jobs: service, queue } = makeJobsService(embedding, {
       defaultBackoffBaseMs: 50,
@@ -184,14 +200,14 @@ describe('SourceJobsService', () => {
     await service.enqueue(source.id);
     await queue.drain();
 
-    const firstRunCalls = embedding.embedDocuments.mock.calls.length;
+    const firstRunCalls = embedding.embedDocumentGroups.mock.calls.length;
     expect(firstRunCalls).toBeGreaterThan(0);
 
     // Run 2: reindex same content -> skips re-embedding
     await service.enqueue(source.id);
     await queue.drain();
 
-    expect(embedding.embedDocuments.mock.calls.length).toBe(firstRunCalls);
+    expect(embedding.embedDocumentGroups.mock.calls.length).toBe(firstRunCalls);
     const latest = await service.latestForSource(source.id);
     expect(latest?.status).toBe('ready');
   });
@@ -214,6 +230,7 @@ describe('SourceJobsService', () => {
       new SourceIndexingHandler(
         db as any,
         indexing,
+        embedding,
         new SourceVersionService(db as any),
       ),
     );
@@ -296,7 +313,7 @@ describe('SourceJobsService', () => {
 
     await service.enqueue(source.id);
     await queue.drain();
-    const callsAfterV1 = embedding.embedDocuments.mock.calls.length;
+    const callsAfterV1 = embedding.embedDocumentGroups.mock.calls.length;
 
     // Mutate the source content hash in the db
     await db
@@ -307,7 +324,7 @@ describe('SourceJobsService', () => {
     await service.enqueue(source.id);
     await queue.drain();
 
-    expect(embedding.embedDocuments.mock.calls.length).toBeGreaterThan(
+    expect(embedding.embedDocumentGroups.mock.calls.length).toBeGreaterThan(
       callsAfterV1,
     );
   });
@@ -349,11 +366,15 @@ describe('SourceJobsService', () => {
       embeddingsStarted = resolve;
     });
     const embedding = {
-      embedDocuments: vi.fn(async (texts: string[]) => {
+      embedDocumentGroups: vi.fn(async (groups: string[][]) => {
         embeddingsStarted();
         await embeddingsReleased;
-        return texts.map(() => makeVector(EMBEDDING_DIMENSIONS));
+        return {
+          model: CONTEXTUAL_EMBEDDING_MODEL,
+          embeddings: groups.flat().map(() => makeVector(EMBEDDING_DIMENSIONS)),
+        };
       }),
+      documentEmbeddingModel: () => CONTEXTUAL_EMBEDDING_MODEL,
     } as any;
 
     const notebook = await seedNotebook();
@@ -386,6 +407,7 @@ describe('SourceJobsService', () => {
     const handler = new SourceIndexingHandler(
       db as any,
       indexing,
+      embedding,
       new SourceVersionService(db as any),
     );
     const pending = await queue.enqueue<
@@ -544,5 +566,152 @@ describe('SourceJobsService', () => {
 
     const count = await service.reindexNotebook(notebook.id);
     expect(count).toBe(1);
+  });
+
+  it('re-embeds unchanged content when the processing version is stale', async () => {
+    const embedding = fakeEmbeddingService();
+    const { jobs: service, queue } = makeJobsService(embedding);
+
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      title: 'Stale representation',
+      rawText: LONG_TEXT,
+      kind: 'text',
+      contentHash: 'stale-hash-1',
+    });
+
+    await service.enqueue(source.id);
+    await queue.drain();
+    const callsAfterFirstRun = embedding.embedDocumentGroups.mock.calls.length;
+
+    // Same representation: the prior job result satisfies shouldSkip.
+    await service.enqueue(source.id);
+    await queue.drain();
+    expect(embedding.embedDocumentGroups.mock.calls.length).toBe(
+      callsAfterFirstRun,
+    );
+
+    // A version bump invalidates the stored representation even though the
+    // content hash is unchanged.
+    await db
+      .update(jobs)
+      .set({
+        result: {
+          chunksCount: 1,
+          skipped: false,
+          cancelled: false,
+          contentHash: 'stale-hash-1',
+          processingVersion: INDEX_PROCESSING_VERSION - 1,
+          embeddingModel: CONTEXTUAL_EMBEDDING_MODEL,
+          embeddingDimensions: EMBEDDING_DIMENSIONS,
+          sourceVersionId: null,
+        },
+      })
+      .where(
+        and(
+          eq(jobs.type, 'source_indexing'),
+          eq(jobs.groupKey, `source:${source.id}`),
+        ),
+      );
+
+    await service.enqueue(source.id);
+    await queue.drain();
+    expect(embedding.embedDocumentGroups.mock.calls.length).toBeGreaterThan(
+      callsAfterFirstRun,
+    );
+  });
+
+  it('fans out a reindex-all job into one indexing job per eligible source', async () => {
+    const embedding = fakeEmbeddingService();
+    const { jobs: service, queue } = makeJobsService(embedding);
+
+    const notebook = await seedNotebook();
+    await seedSource(notebook.id, {
+      title: 'First',
+      rawText: LONG_TEXT,
+      kind: 'text',
+      contentHash: 'reindex-hash-1',
+    });
+    await seedSource(notebook.id, {
+      title: 'Second',
+      rawText: LONG_TEXT,
+      kind: 'text',
+      contentHash: 'reindex-hash-2',
+    });
+    await seedSource(notebook.id, {
+      title: 'Degraded',
+      rawText: 'Chapter 1 Chapter 2',
+      kind: 'text',
+      processingStatus: 'degraded',
+    });
+
+    const started = await service.reembedAll();
+    expect(started.sourcesQueued).toBe(2);
+
+    const fanOut = new SourceReindexAllHandler(service);
+    const job = await queue.getJob<
+      SourceReindexAllJobPayload,
+      SourceReindexAllResult
+    >(started.jobId);
+    const result = await fanOut.process({
+      ...job!,
+      payload: { notebookId: null },
+    });
+    expect(result).toEqual({ sourcesQueued: 2, skipped: 0 });
+
+    await queue.drain();
+    const indexingJobs = await db
+      .select({ status: jobs.status })
+      .from(jobs)
+      .where(eq(jobs.type, 'source_indexing'));
+    expect(indexingJobs).toHaveLength(2);
+    expect(indexingJobs.every((row) => row.status === 'ready')).toBe(true);
+    // The fan-out itself never embeds: each Source keeps its own job.
+    expect(embedding.embedDocumentGroups).toHaveBeenCalledTimes(2);
+  });
+
+  it('enqueues the representation fan-out once per representation key', async () => {
+    const embedding = fakeEmbeddingService();
+    const { jobs: service, queue } = makeJobsService(embedding);
+
+    const notebook = await seedNotebook();
+    await seedSource(notebook.id, {
+      title: 'Existing',
+      rawText: LONG_TEXT,
+      kind: 'text',
+    });
+
+    const representation =
+      'chunking=2;indexing=2;model=voyage-context-4;dims=1024';
+    const first = await service.ensureRepresentationCurrent(representation);
+    expect(first.fanOutQueued).toBe(true);
+
+    const jobsAfterFirst = await db
+      .select({ id: jobs.id, type: jobs.type })
+      .from(jobs)
+      .where(eq(jobs.type, 'source_reindex_all'));
+    expect(jobsAfterFirst).toHaveLength(1);
+
+    // The bookmark is only written once the fan-out succeeds, so a failed
+    // run is retried rather than forgotten.
+    const fanOut = new SourceReindexAllHandler(service);
+    const job = await queue.getJob<
+      SourceReindexAllJobPayload,
+      SourceReindexAllResult
+    >(jobsAfterFirst[0].id);
+    await fanOut.process(job!);
+
+    const [bookmark] = await db
+      .select({ applied: appSettings.indexingRepresentation })
+      .from(appSettings);
+    expect(bookmark.applied).toBe(representation);
+
+    const second = await service.ensureRepresentationCurrent(representation);
+    expect(second.fanOutQueued).toBe(false);
+    const jobsAfterSecond = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(eq(jobs.type, 'source_reindex_all'));
+    expect(jobsAfterSecond).toHaveLength(1);
   });
 });

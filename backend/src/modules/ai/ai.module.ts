@@ -2,9 +2,17 @@ import { Global, Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
-import { ChunkingService } from './chunking.service';
+import {
+  CHUNKING_CONFIG,
+  ChunkingService,
+  loadChunkingConfig,
+} from './chunking.service';
 import { ConnectionService } from './connection.service';
-import { EmbeddingService } from './embedding.service';
+import {
+  EMBEDDING_CONFIG,
+  EmbeddingService,
+  loadEmbeddingConfig,
+} from './embedding.service';
 import { IndexingService } from './indexing.service';
 import { ModelSyncService } from './model-sync.service';
 import { RerankerService } from './reranker.service';
@@ -33,6 +41,14 @@ import { UserSettingsService } from './user-settings.service';
     ChunkingService,
     IndexingService,
     {
+      provide: CHUNKING_CONFIG,
+      useFactory: loadChunkingConfig,
+    },
+    {
+      provide: EMBEDDING_CONFIG,
+      useFactory: loadEmbeddingConfig,
+    },
+    {
       provide: RETRIEVAL_RELEVANCE_CONFIG,
       useFactory: loadRetrievalRelevanceConfig,
     },
@@ -56,6 +72,7 @@ import { UserSettingsService } from './user-settings.service';
     EmbeddingService,
     ChunkingService,
     IndexingService,
+    EMBEDDING_CONFIG,
     RerankerService,
     RetrievalService,
     RetrievalTraceService,

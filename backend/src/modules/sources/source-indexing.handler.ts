@@ -3,7 +3,11 @@ import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { jobs, sourceVersions, sources } from '../../database/schema';
-import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL } from '../ai/embedding.service';
+import { CHUNKING_VERSION } from '../ai/chunking.service';
+import {
+  EMBEDDING_DIMENSIONS,
+  EmbeddingService,
+} from '../ai/embedding.service';
 import {
   INDEX_PROCESSING_VERSION,
   IndexingService,
@@ -40,6 +44,7 @@ export class SourceIndexingHandler implements JobHandler<
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly indexingService: IndexingService,
+    private readonly embeddingService: EmbeddingService,
     @Optional() private readonly versions?: SourceVersionService,
   ) {}
 
@@ -72,13 +77,17 @@ export class SourceIndexingHandler implements JobHandler<
 
     if (!priorJob || !priorJob.result) return null;
 
+    // An older result that predates a version field fails these comparisons
+    // (undefined !== current), so it is reindexed rather than skipped.
     const priorResult = priorJob.result as IndexResult;
     if (
       priorResult.contentHash === job.payload.contentHash &&
       (!job.payload.sourceVersionId ||
         priorResult.sourceVersionId === job.payload.sourceVersionId) &&
       priorResult.processingVersion === INDEX_PROCESSING_VERSION &&
-      priorResult.embeddingModel === EMBEDDING_MODEL &&
+      priorResult.chunkingVersion === CHUNKING_VERSION &&
+      priorResult.embeddingModel ===
+        this.embeddingService.documentEmbeddingModel() &&
       priorResult.embeddingDimensions === EMBEDDING_DIMENSIONS
     ) {
       if (this.versions) {

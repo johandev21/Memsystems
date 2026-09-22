@@ -7,9 +7,10 @@ fails `pnpm run test`.
 
 The gate covers the retrieval pipeline (query embedding, dense and lexical
 search legs, reciprocal rank fusion, dedupe, reranking, relevance thresholds,
-Evidence selection). The later retrieval tickets — chunking, query
-understanding, Generation grounding — are expected to move these metrics and
-to update the baseline with evidence.
+Evidence selection) and the contextual chunk representation the pipeline
+retrieves over. The remaining retrieval tickets — query understanding and
+Generation grounding — are expected to move these metrics and to update the
+baseline with evidence.
 
 ## Pieces
 
@@ -33,13 +34,16 @@ relative regressions; they are not a statement about production relevance.
 
 The deterministic reranker scores each query-document pair by the share of the
 query's IDF mass the document contains, reduced for fragments too short to
-carry an answer. It is deliberately different from the dense leg, whose cosine
-normalization lets a short glossary stub outrank a longer passage that answers
-the query. The golden corpus contains such stubs, so the gate can tell reranked
-from unreranked retrieval: with reranking disabled, `mrr`, `nDCG`, and
-`contextPrecision` all fall below the baseline and the gate fails. The harness
-over-fetches fewer candidates than production (`EVAL_CANDIDATE_DEPTH`) so a
-broken dense leg still shows up in recall even while reranking is on.
+carry an answer. It scores the chunk's contextual searchable text, the same
+text the retrieval legs index, so a passage that only makes sense inside its
+section is judged with that section in view. It is deliberately different from
+the dense leg, whose cosine normalization lets a short glossary stub outrank a
+longer passage that answers the query. The golden corpus contains such stubs,
+so the gate can tell reranked from unreranked retrieval: with reranking
+disabled, `mrr`, `nDCG`, and `contextPrecision` all fall below the baseline and
+the gate fails. The harness over-fetches fewer candidates than production
+(`EVAL_CANDIDATE_DEPTH`) so a broken dense leg still shows up in recall even
+while reranking is on.
 
 Hybrid retrieval runs the dense leg and a lexical full-text leg as separate
 candidate lists and fuses them with Reciprocal Rank Fusion, so the harness also
@@ -48,11 +52,41 @@ it: a long catalog entry shares several query terms but dilutes its dense
 cosine, while eight short prerequisite lines mention the same course code and
 fill the dense candidate depth. The lexical leg ranks the long entry first and
 fusion carries it into the reranked set; with the lexical leg disabled, the
-entry never becomes a candidate, recall and citation accuracy fall, and the
-answerable query abstains. The harness runs each leg at the same over-fetch
-depth (`EVAL_LEXICAL_CANDIDATE_DEPTH`), so neither leg masks the other. Fusion
-is a rank-based stage, so its ordering is covered directly by
-`backend/tests/rank-fusion.test.ts` and end to end through the pipeline.
+entry never becomes a candidate and recall and citation accuracy fall. Dense
+only retrieval may still return a prerequisite stub, so the gate does not
+assert refusal accuracy for that configuration. The harness runs each leg at
+the same over-fetch depth (`EVAL_LEXICAL_CANDIDATE_DEPTH`), so neither leg
+masks the other. Fusion is a rank-based stage, so its ordering is covered
+directly by `backend/tests/rank-fusion.test.ts` and end to end through the
+pipeline.
+
+## Contextual representation
+
+Chunks carry a document and section context header in their searchable text:
+the source title, the source kind, and the segment heading path. The lexical
+leg indexes it, the dense leg embeds it (in production through Voyage's
+contextualized chunk embeddings), and the reranker scores it. The gate proves
+the header is load-bearing with the `lab-manual` source: a long, section
+dependent corpus whose bodies share generic laboratory vocabulary, with
+labeled queries that name the section rather than the body wording. With the
+header the passages are retrieved; with `evaluateRetrieval({ contextualize:
+false })` the header is absent from the searchable text and the embedding, the
+section tokens disappear from the chunk representation, both queries abstain,
+and `recallAtK` and `refusalAccuracy` drop far below the baseline.
+
+The deterministic embedder cannot simulate the model's learned document
+context, so `contextualize` proxies contextualization with the header it can
+represent. The IDF vocabulary is always built from the contextual text, even
+when a run disables the header, so a chunk that loses its section tokens
+genuinely loses ranking signal instead of the tokens being ignored as unknown.
+
+The gate seeds its chunks directly, so the `contextualize` toggle isolates the
+representation from the chunker. `backend/tests/chunking.service.test.ts`
+covers the real `ChunkingService` over this same corpus: it asserts that each
+section keeps its heading path and body, that a long document is split into
+chunks that respect the minimum and target, and that the split loses no text.
+Sections shorter than the minimum stay their own chunk (a citation keeps its
+locator); only fragments within a section merge.
 
 ## Metrics
 
@@ -77,6 +111,14 @@ is a rank-based stage, so its ordering is covered directly by
   baseline.
 - `latencyMsP95` fails above the absolute 2000 ms ceiling, chosen to avoid
   flaking on shared CI runners while still catching pathological regressions.
+
+One baseline move is expected from the contextual representation: when chunks
+began carrying the header, `contextPrecision` went from 1.0 to about 0.9167.
+The glossary stub for Operation Barbarossa gained header tokens, which count
+toward the deterministic reranker's substantive-token floor, so it now clears
+the rerank threshold for `q-barbarossa` alongside the relevant passage. The
+metric still protects its job: with the reranker disabled, `contextPrecision`
+drops well below the new baseline and the gate fails.
 
 Refresh the baseline only after an intentional retrieval change and after
 confirming the new metrics are the ones you want:
@@ -124,8 +166,10 @@ applies migrations to the test database, and runs `lint`, `typecheck`, and
 the workflow.
 
 The gate test also runs deliberately broken configurations — a constant
-embedder, a disabled floor, a disabled reranker, and a disabled lexical leg —
-and asserts that the gate reports failures, so the gate itself is tested rather
-than assumed. Disabling the lexical leg is expected to fail `recallAtK`,
-`citationAccuracy`, and `refusalAccuracy`: the catalog answer is only reachable
-through fusion.
+embedder, a disabled floor, a disabled reranker, a disabled lexical leg, and a
+disabled contextual header — and asserts that the gate reports failures, so
+the gate itself is tested rather than assumed. Disabling the lexical leg is
+expected to fail `recallAtK` and `citationAccuracy`: the catalog answer is only
+reachable through fusion. Disabling the contextual header is expected to fail
+`recallAtK` and `refusalAccuracy`: the section-dependent lab-manual queries lose
+the tokens that make them retrievable and abstain.

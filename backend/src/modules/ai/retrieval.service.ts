@@ -3,11 +3,7 @@ import { sql, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
-import {
-  EMBEDDING_DIMENSIONS,
-  EMBEDDING_MODEL,
-  EmbeddingService,
-} from './embedding.service';
+import { EMBEDDING_DIMENSIONS, EmbeddingService } from './embedding.service';
 import {
   MAX_RERANK_DOCUMENTS,
   estimateVoyageTokens,
@@ -329,6 +325,8 @@ interface RetrievalChunkRow {
   source_version_id: string | null;
   locator: CitationLocator | null;
   content: string;
+  /** Contextual searchable text; what the reranker scores. */
+  searchable_text: string;
   /** The leg's own score: cosine similarity or `ts_rank_cd`. */
   score: number;
   /**
@@ -410,6 +408,11 @@ export class RetrievalService {
       relevanceConfig?.relevanceFloor ?? DEFAULT_RELEVANCE_FLOOR;
     this.rerankConfig = rerankConfig ?? DEFAULT_RERANK_CONFIG;
     this.hybridConfig = hybridConfig ?? DEFAULT_HYBRID_CONFIG;
+  }
+
+  /** The model the query embedding used, for the retrieval trace. */
+  private embeddingModelName(): string {
+    return this.embeddingService.queryEmbeddingModel();
   }
 
   async retrieve(request: RetrievalRequest): Promise<RetrievalOutcome> {
@@ -567,6 +570,7 @@ export class RetrievalService {
         topK: policy.topK,
         sourceIds: policy.sourceIds,
         relevanceFloor: policy.relevanceFloor,
+        embeddingModel: this.embeddingModelName(),
         legs: traceLegs,
         fusion,
         fusedOrder,
@@ -610,6 +614,7 @@ export class RetrievalService {
         topK: policy.topK,
         sourceIds: policy.sourceIds,
         relevanceFloor: policy.relevanceFloor,
+        embeddingModel: this.embeddingModelName(),
         legs: input.legs ?? [],
         fusion: input.fusion,
         fusedOrder: [],
@@ -666,7 +671,11 @@ export class RetrievalService {
     try {
       response = await this.reranker.rerank({
         query,
-        documents: fused.map(({ candidate }) => candidate.content),
+        // Score the contextual searchable text, not just the body: a chunk
+        // that refers to "the second argument" is only judgeable with its
+        // section and document context in view. The stored body still stays
+        // the text shown to the model and used for citations.
+        documents: fused.map(({ candidate }) => candidate.searchable_text),
         model: this.rerankConfig.model,
       });
     } catch (error) {
@@ -858,7 +867,8 @@ function chunkColumns(): SQL {
     s.kind,
     sc.source_version_id,
     sc.locator,
-    sc.content
+    sc.content,
+    sc.searchable_text
   `;
 }
 
@@ -867,6 +877,7 @@ function buildTrace(input: {
   topK: number;
   sourceIds: string[] | null;
   relevanceFloor: number;
+  embeddingModel: string;
   legs: RetrievalTraceLeg[];
   fusion: RetrievalTraceFusion;
   fusedOrder: RetrievalTraceCandidate[];
@@ -887,7 +898,7 @@ function buildTrace(input: {
     },
     relevanceFloor: input.relevanceFloor,
     embedding: {
-      model: EMBEDDING_MODEL,
+      model: input.embeddingModel,
       dimensions: EMBEDDING_DIMENSIONS,
     },
     legs: input.legs,

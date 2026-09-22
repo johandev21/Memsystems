@@ -15,6 +15,7 @@
 
 import { createId } from '@paralleldrive/cuid2';
 import { sourceChunks } from '../../src/database/schema';
+import { chunkContextHeader } from '../../src/modules/ai/chunking.service';
 import {
   DEFAULT_FUSION_K,
   RetrievalService,
@@ -31,7 +32,13 @@ import {
   type EvalEmbedder,
 } from './deterministic-embedder';
 import { DeterministicReranker } from './deterministic-reranker';
-import { GOLDEN_QUERIES, GOLDEN_SOURCES, type GoldenQuery } from './golden-set';
+import {
+  GOLDEN_QUERIES,
+  GOLDEN_SOURCES,
+  type GoldenChunk,
+  type GoldenQuery,
+  type GoldenSource,
+} from './golden-set';
 
 /**
  * Evidence depth and relevance floor used by the harness. The floor is
@@ -54,6 +61,12 @@ export const EVAL_RERANK_MODEL = 'eval-coverage-reranker';
 export const EVAL_RERANK_THRESHOLD = 0.5;
 
 /**
+ * The model name recorded in the retrieval trace for the deterministic
+ * embedder. The harness never calls Voyage; the name says so.
+ */
+export const EVAL_EMBEDDING_MODEL = 'eval-deterministic-embedder';
+
+/**
  * The hybrid leg's over-fetch depth. It matches the dense depth so neither
  * leg can mask the other: disabling the lexical leg must show up in recall
  * even while reranking is on.
@@ -71,6 +84,13 @@ export interface RetrievalEvalOptions {
   reranker?: Reranker;
   /** Set false to measure the pipeline with the lexical leg disabled. */
   hybrid?: boolean;
+  /**
+   * Set false to seed the corpus without the document and section context
+   * header (the pre-contextual representation). The gate uses it to prove
+   * the contextual representation is what makes section-dependent passages
+   * retrievable.
+   */
+  contextualize?: boolean;
 }
 
 export interface RetrievalEvalQueryResult {
@@ -108,6 +128,7 @@ export interface RetrievalEvalMetrics {
 export interface RetrievalEvalReport {
   topK: number;
   relevanceFloor: number;
+  contextualize: boolean;
   rerank: {
     enabled: boolean;
     model: string;
@@ -163,19 +184,28 @@ export async function evaluateRetrieval(
   const relevanceFloor = options.relevanceFloor ?? EVAL_RELEVANCE_FLOOR;
   const rerankEnabled = options.rerank ?? true;
   const hybridEnabled = options.hybrid ?? true;
+  const contextualize = options.contextualize ?? true;
+  // The IDF vocabulary is built from the contextual representation even when
+  // the run disables it: the section tokens exist in the corpus, the chunk
+  // representation just does not carry them. That is what makes the gate
+  // catch a run that loses the context.
   const corpus = GOLDEN_SOURCES.flatMap((source) =>
-    source.chunks.map((chunk) => chunk.text),
+    source.chunks.map((chunk) => contextualText(source, chunk)),
   );
   const embedder = options.embedder ?? new DeterministicEmbedder(corpus);
   const reranker =
     options.reranker ??
     (rerankEnabled ? new DeterministicReranker(corpus) : null);
 
-  const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(embedder);
+  const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(
+    embedder,
+    contextualize,
+  );
   const service = new RetrievalService(
     db as never,
     {
       embedQuery: async (text: string) => embedder.embed(text),
+      queryEmbeddingModel: () => EVAL_EMBEDDING_MODEL,
     } as never,
     { relevanceFloor },
     {
@@ -210,6 +240,7 @@ export async function evaluateRetrieval(
   return {
     topK,
     relevanceFloor,
+    contextualize,
     rerank: {
       enabled: rerankEnabled,
       model: EVAL_RERANK_MODEL,
@@ -229,8 +260,25 @@ export async function evaluateRetrieval(
   };
 }
 
-/** Persists the golden corpus and returns the golden-id to chunk-id map. */
-async function seedGoldenCorpus(embedder: EvalEmbedder): Promise<{
+/** The document plus section context a golden chunk is represented with. */
+function contextualText(source: GoldenSource, chunk: GoldenChunk): string {
+  return `${chunkContextHeader({
+    title: source.title,
+    kind: source.kind,
+    headingPath: chunk.headingPath ?? [],
+  })}${chunk.text}`;
+}
+
+/**
+ * Persists the golden corpus and returns the golden-id to chunk-id map. With
+ * `contextualize` false the chunks are seeded with the pre-contextual
+ * representation: the searchable text and the embedding are the bare body,
+ * with no document or section header.
+ */
+async function seedGoldenCorpus(
+  embedder: EvalEmbedder,
+  contextualize: boolean,
+): Promise<{
   notebookId: string;
   chunkIdByGoldenId: Map<string, string>;
 }> {
@@ -255,14 +303,25 @@ async function seedGoldenCorpus(embedder: EvalEmbedder): Promise<{
       source.chunks.map((chunk, index) => {
         const id = `eval-${runId}-chunk-${chunk.id}`;
         chunkIdByGoldenId.set(chunk.id, id);
+        const contextHeader = contextualize
+          ? chunkContextHeader({
+              title: source.title,
+              kind: source.kind,
+              headingPath: chunk.headingPath ?? [],
+            })
+          : '';
+        const searchableText = `${contextHeader}${chunk.text}`;
         return {
           id,
           sourceId: seeded.id,
           notebookId: notebook.id,
           chunkIndex: index,
           content: chunk.text,
-          searchableText: chunk.text,
-          embedding: embedder.embed(chunk.text),
+          searchableText,
+          contextHeader,
+          headingPath: chunk.headingPath ?? [],
+          sourceKind: source.kind,
+          embedding: embedder.embed(searchableText),
         };
       }),
     );
@@ -377,7 +436,9 @@ function computeMetrics(
     latencyMsP50: percentile(latencies, 50),
     latencyMsP95: percentile(latencies, 95),
     costTokensPerQuery: mean(
-      queries.map((query) => query.embeddingInputTokens + query.rerankInputTokens),
+      queries.map(
+        (query) => query.embeddingInputTokens + query.rerankInputTokens,
+      ),
     ),
   };
 }

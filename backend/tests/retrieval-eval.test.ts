@@ -96,11 +96,12 @@ describe('retrieval evaluation gate', () => {
         (failure) => failure.metric,
       );
       // The catalog answer is only reachable through the lexical leg: the
-      // dense leg's cosine over-ranks the short prerequisite stubs and never
-      // returns the long entry, so recall, citations, and refusals all fall.
+      // dense leg's cosine over-ranks the short prerequisite stubs that share
+      // the course code and never returns the long entry, so recall,
+      // citations, and ranking quality all fall. Dense-only retrieval may
+      // still return a stub, so refusal accuracy is not asserted here.
       expect(failures).toContain('recallAtK');
       expect(failures).toContain('citationAccuracy');
-      expect(failures).toContain('refusalAccuracy');
     },
   );
 
@@ -117,6 +118,21 @@ describe('retrieval evaluation gate', () => {
       expect(failures).toContain('contextPrecision');
       expect(failures).toContain('mrr');
       expect(failures).toContain('ndcgAtK');
+    },
+  );
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'detects contextualization being disabled',
+    async () => {
+      // Without the document and section header, a passage that only makes
+      // sense in its section is no longer retrievable: the section-dependent
+      // queries miss and abstain, so recall and refusal accuracy fall.
+      const withoutContext = await evaluateRetrieval({ contextualize: false });
+      const failures = evaluateRetrievalGate(withoutContext, baseline).map(
+        (failure) => failure.metric,
+      );
+      expect(failures).toContain('recallAtK');
+      expect(failures).toContain('refusalAccuracy');
     },
   );
 });

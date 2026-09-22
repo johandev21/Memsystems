@@ -53,7 +53,7 @@ function serviceWithRows(
     .mockResolvedValueOnce({ rows: hybrid?.lexicalRows ?? rows });
   const service = new RetrievalService(
     { execute } as never,
-    { embedQuery: vi.fn().mockResolvedValue([0.1, 0.2]) } as never,
+    fakeEmbeddingService(vi.fn().mockResolvedValue([0.1, 0.2])),
     config,
     rerank?.config ? { ...DEFAULT_RERANK_CONFIG, ...rerank.config } : undefined,
     rerank?.reranker as never,
@@ -84,7 +84,7 @@ function scriptedReranker(
 }
 
 function chunkRow(overrides: Record<string, unknown>): Record<string, unknown> {
-  return {
+  const row: Record<string, unknown> = {
     chunk_id: 'chunk-1',
     chunk_index: 0,
     source_id: 'source-1',
@@ -97,6 +97,14 @@ function chunkRow(overrides: Record<string, unknown>): Record<string, unknown> {
     score: 0.9,
     ...overrides,
   };
+  // The reranker scores the contextual searchable text; the mock rows use
+  // the body unless a test overrides the searchable text explicitly.
+  return { ...row, searchable_text: overrides.searchable_text ?? row.content };
+}
+
+/** The embedding seam retrieval uses: query embedding plus its model name. */
+function fakeEmbeddingService(embedQuery: (text: string) => Promise<number[]>) {
+  return { embedQuery, queryEmbeddingModel: () => EMBEDDING_MODEL } as never;
 }
 
 describe('RetrievalService citation locations', () => {
@@ -175,6 +183,7 @@ describe('RetrievalService citation locations', () => {
         id: 'chunk-ready-1',
         sourceId: ready.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'Substantive ready content',
         searchableText: 'Substantive ready content',
@@ -184,6 +193,7 @@ describe('RetrievalService citation locations', () => {
         id: 'chunk-degraded-1',
         sourceId: degraded.id,
         notebookId: notebook.id,
+        sourceKind: 'url',
         chunkIndex: 0,
         content: 'Chapter 1 Chapter 2 Chapter 3',
         searchableText: 'Chapter 1 Chapter 2 Chapter 3',
@@ -191,9 +201,10 @@ describe('RetrievalService citation locations', () => {
       },
     ]);
 
-    const service = new RetrievalService(db, {
-      embedQuery: vi.fn().mockResolvedValue(embedding),
-    } as never);
+    const service = new RetrievalService(
+      db,
+      fakeEmbeddingService(vi.fn().mockResolvedValue(embedding)),
+    );
 
     const result = await service.retrieve({
       notebookId: notebook.id,
@@ -725,13 +736,15 @@ describe('RetrievalService reranking', () => {
   });
 
   it('skips reranking when the candidate set exceeds the provider document limit', async () => {
-    const rows = Array.from({ length: MAX_RERANK_DOCUMENTS + 1 }, (_value, index) =>
-      chunkRow({
-        chunk_id: `chunk-${index}`,
-        content: `Passage ${index}`,
-        score: 0.9 - index * 0.001,
-        source_id: `source-${index}`,
-      }),
+    const rows = Array.from(
+      { length: MAX_RERANK_DOCUMENTS + 1 },
+      (_value, index) =>
+        chunkRow({
+          chunk_id: `chunk-${index}`,
+          content: `Passage ${index}`,
+          score: 0.9 - index * 0.001,
+          source_id: `source-${index}`,
+        }),
     );
     const reranker = scriptedReranker({});
     const { service } = serviceWithRows(rows, undefined, {
@@ -808,6 +821,7 @@ describe('RetrievalService selected sources scope', () => {
         id: 'a-chunk-1',
         sourceId: sourceA.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'A strong match',
         searchableText: 'A strong match',
@@ -817,6 +831,7 @@ describe('RetrievalService selected sources scope', () => {
         id: 'a-chunk-2',
         sourceId: sourceA.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 1,
         content: 'A medium match',
         searchableText: 'A medium match',
@@ -826,6 +841,7 @@ describe('RetrievalService selected sources scope', () => {
         id: 'b-chunk-1',
         sourceId: sourceB.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'B only match',
         searchableText: 'B only match',
@@ -835,6 +851,7 @@ describe('RetrievalService selected sources scope', () => {
         id: 'c-chunk-1',
         sourceId: sourceC.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'C strong match',
         searchableText: 'C strong match',
@@ -844,7 +861,7 @@ describe('RetrievalService selected sources scope', () => {
 
     const service = new RetrievalService(
       db as never,
-      { embedQuery: vi.fn().mockResolvedValue(strong) } as never,
+      fakeEmbeddingService(vi.fn().mockResolvedValue(strong)),
       { relevanceFloor: 0 },
     );
 
@@ -869,7 +886,7 @@ describe('RetrievalService selected sources scope', () => {
     const embedQuery = vi.fn();
     const service = new RetrievalService(
       { execute: vi.fn() } as never,
-      { embedQuery } as never,
+      fakeEmbeddingService(embedQuery),
     );
 
     const outcome = await service.retrieve({
@@ -1140,6 +1157,7 @@ describe('AiModule relevance floor wiring', () => {
         id: 'chunk-strong',
         sourceId: source.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'Strong match',
         searchableText: 'Strong match',
@@ -1149,6 +1167,7 @@ describe('AiModule relevance floor wiring', () => {
         id: 'chunk-borderline',
         sourceId: source.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 1,
         content: 'Borderline match',
         searchableText: 'Borderline match',
@@ -1168,6 +1187,7 @@ describe('AiModule relevance floor wiring', () => {
         .overrideProvider(EmbeddingService)
         .useValue({
           embedQuery: vi.fn().mockResolvedValue(strong),
+          queryEmbeddingModel: () => EMBEDDING_MODEL,
           getVoyageApiKey: vi.fn().mockResolvedValue(null),
         })
         .compile();
@@ -1203,6 +1223,7 @@ describe('AiModule relevance floor wiring', () => {
         id: 'chunk-one',
         sourceId: source.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'First match',
         searchableText: 'First match',
@@ -1212,6 +1233,7 @@ describe('AiModule relevance floor wiring', () => {
         id: 'chunk-two',
         sourceId: source.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 1,
         content: 'Second match',
         searchableText: 'Second match',
@@ -1232,6 +1254,7 @@ describe('AiModule relevance floor wiring', () => {
         .overrideProvider(EmbeddingService)
         .useValue({
           embedQuery: vi.fn().mockResolvedValue(embedding),
+          queryEmbeddingModel: () => EMBEDDING_MODEL,
           getVoyageApiKey: vi.fn().mockResolvedValue(null),
         })
         .compile();
@@ -1313,9 +1336,9 @@ describe('RetrievalService hybrid retrieval', () => {
       'dense',
       'lexical',
     ]);
-    expect(outcome.trace.fusedOrder.map((candidate) => candidate.chunkId)).toEqual(
-      ['chunk-c', 'chunk-b', 'chunk-a'],
-    );
+    expect(
+      outcome.trace.fusedOrder.map((candidate) => candidate.chunkId),
+    ).toEqual(['chunk-c', 'chunk-b', 'chunk-a']);
     expect(outcome.trace.fusion).toEqual({
       k: DEFAULT_FUSION_K,
       weights: { dense: 1, lexical: 1 },
@@ -1472,6 +1495,7 @@ describe('RetrievalService hybrid retrieval', () => {
         id: 'hybrid-a',
         sourceId: sourceA.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'Alpha zebra protocol',
         searchableText: 'Alpha zebra protocol',
@@ -1481,6 +1505,7 @@ describe('RetrievalService hybrid retrieval', () => {
         id: 'hybrid-b',
         sourceId: sourceB.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'Beta zebra manual',
         searchableText: 'Beta zebra manual',
@@ -1490,6 +1515,7 @@ describe('RetrievalService hybrid retrieval', () => {
         id: 'hybrid-degraded',
         sourceId: degraded.id,
         notebookId: notebook.id,
+        sourceKind: 'url',
         chunkIndex: 0,
         content: 'Gamma zebra navigation',
         searchableText: 'Gamma zebra navigation',
@@ -1499,6 +1525,7 @@ describe('RetrievalService hybrid retrieval', () => {
         id: 'hybrid-other',
         sourceId: otherSource.id,
         notebookId: otherNotebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'Delta zebra guide',
         searchableText: 'Delta zebra guide',
@@ -1507,7 +1534,7 @@ describe('RetrievalService hybrid retrieval', () => {
     ]);
     const service = new RetrievalService(
       db,
-      { embedQuery: vi.fn().mockResolvedValue(embedding) } as never,
+      fakeEmbeddingService(vi.fn().mockResolvedValue(embedding)),
       { relevanceFloor: 0 },
       { ...DEFAULT_RERANK_CONFIG, enabled: false },
     );
@@ -1520,9 +1547,10 @@ describe('RetrievalService hybrid retrieval', () => {
       leg.candidates.map((candidate) => candidate.chunkId),
     );
     expect(new Set(legChunkIds)).toEqual(new Set(['hybrid-a', 'hybrid-b']));
-    expect(
-      notebookWide.chunks.map((chunk) => chunk.chunkId).sort(),
-    ).toEqual(['hybrid-a', 'hybrid-b']);
+    expect(notebookWide.chunks.map((chunk) => chunk.chunkId).sort()).toEqual([
+      'hybrid-a',
+      'hybrid-b',
+    ]);
 
     const selected = await service.retrieve({
       notebookId: notebook.id,
@@ -1534,14 +1562,16 @@ describe('RetrievalService hybrid retrieval', () => {
         'hybrid-a',
       ]);
     }
-    expect(selected.chunks.map((chunk) => chunk.chunkId)).toEqual([
-      'hybrid-a',
-    ]);
+    expect(selected.chunks.map((chunk) => chunk.chunkId)).toEqual(['hybrid-a']);
   });
 
   it('gates a lexical-only candidate by its dense score when reranking is unavailable', async () => {
     const rows = [
-      chunkRow({ chunk_id: 'chunk-dense', content: 'Dense passage', score: 0.9 }),
+      chunkRow({
+        chunk_id: 'chunk-dense',
+        content: 'Dense passage',
+        score: 0.9,
+      }),
     ];
     const lexicalRows = [
       chunkRow({
@@ -1596,7 +1626,11 @@ describe('RetrievalService hybrid retrieval', () => {
 
   it('traces a zero-weight leg but leaves it out of the fusion', async () => {
     const rows = [
-      chunkRow({ chunk_id: 'chunk-dense', content: 'Dense passage', score: 0.9 }),
+      chunkRow({
+        chunk_id: 'chunk-dense',
+        content: 'Dense passage',
+        score: 0.9,
+      }),
     ];
     const lexicalRows = [
       chunkRow({
@@ -1706,6 +1740,7 @@ describe('AiModule hybrid wiring', () => {
         id: 'chunk-hybrid-off',
         sourceId: source.id,
         notebookId: notebook.id,
+        sourceKind: 'text',
         chunkIndex: 0,
         content: 'Zebra crossing',
         searchableText: 'Zebra crossing',
@@ -1725,6 +1760,7 @@ describe('AiModule hybrid wiring', () => {
         .overrideProvider(EmbeddingService)
         .useValue({
           embedQuery: vi.fn().mockResolvedValue(embedding),
+          queryEmbeddingModel: () => EMBEDDING_MODEL,
           getVoyageApiKey: vi.fn().mockResolvedValue(null),
         })
         .compile();

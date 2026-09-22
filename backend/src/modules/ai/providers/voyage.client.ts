@@ -7,10 +7,24 @@ import {
 } from '../../../common/errors/domain-error';
 
 export const VOYAGE_EMBEDDINGS_URL = 'https://api.voyageai.com/v1/embeddings';
+export const VOYAGE_CONTEXTUAL_EMBEDDINGS_URL =
+  'https://api.voyageai.com/v1/contextualizedembeddings';
 export const VOYAGE_RERANK_URL = 'https://api.voyageai.com/v1/rerank';
 
 /** Voyage accepts at most 1,000 texts per request; stay well under it. */
 const MAX_TEXTS_PER_REQUEST = 256;
+
+/**
+ * Contextualized chunk embeddings: the endpoint embeds each inner list as a
+ * group, so every chunk is encoded in the context of the chunks around it.
+ * One request may carry at most 1,000 input lists, 16,000 chunks, and — for
+ * pre-chunked inputs, the mode this client uses — 32,000 tokens in total.
+ * (The 120,000-token figure applies only with `enable_auto_chunking`, which
+ * the app does not use.) Batches stay under the real limit with margin.
+ */
+const MAX_CONTEXTUAL_INPUTS_PER_REQUEST = 256;
+const MAX_CONTEXTUAL_CHUNKS_PER_REQUEST = 1_024;
+const MAX_CONTEXTUAL_TOKENS_PER_REQUEST = 30_000;
 
 /**
  * Voyage caps rerank requests at 1,000 documents. The retrieval pipeline
@@ -35,7 +49,14 @@ const RERANK_TIMEOUT_MS = 15_000;
  * used to split batches; the API truncates real over-length inputs.
  */
 const MAX_ESTIMATED_TOKENS_PER_REQUEST = 240_000;
-const CHARS_PER_TOKEN = 4;
+
+/**
+ * Voyage token estimation ratio: about four characters per token. Chunking
+ * uses the same ratio to size chunks in tokens, and batch splitting uses it
+ * to stay under the provider's per-request caps.
+ */
+export const VOYAGE_CHARS_PER_TOKEN = 4;
+
 const REQUEST_TIMEOUT_MS = 60_000;
 
 /**
@@ -44,7 +65,7 @@ const REQUEST_TIMEOUT_MS = 60_000;
  * cost without a second provider call.
  */
 export function estimateVoyageTokens(text: string): number {
-  return Math.ceil(text.length / CHARS_PER_TOKEN);
+  return Math.ceil(text.length / VOYAGE_CHARS_PER_TOKEN);
 }
 
 export type VoyageInputType = 'query' | 'document';
@@ -54,6 +75,8 @@ export interface VoyageEmbedOptions {
   model: string;
   input: string[];
   inputType: VoyageInputType;
+  /** Request timeout; capability probes pass a shorter one. */
+  timeoutMs?: number;
   /** Test seam; defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
@@ -78,11 +101,66 @@ export async function voyageEmbed(
         apiKey: options.apiKey,
         model: options.model,
         inputType: options.inputType,
+        timeoutMs: options.timeoutMs,
         batch,
       }),
     );
   }
   return results.flat();
+}
+
+/**
+ * Thin client for Voyage AI's contextualized chunk embeddings endpoint
+ * (voyage-context). Each inner list is embedded as a group, so a chunk's
+ * vector encodes the document context around it. Batches preserve group and
+ * chunk order, and the client maps HTTP failures onto the same localized
+ * domain errors as the plain embeddings endpoint.
+ */
+export interface VoyageContextualEmbedOptions {
+  apiKey: string;
+  model: string;
+  /** One inner list per document; each list is embedded as a group. */
+  groups: string[][];
+  inputType: VoyageInputType;
+  /** Request timeout; capability probes pass a shorter one. */
+  timeoutMs?: number;
+  /** Test seam; defaults to global fetch. */
+  fetchImpl?: typeof fetch;
+}
+
+export interface VoyageContextualEmbedResponse {
+  /** Embeddings in group order, then chunk order within each group. */
+  embeddings: number[][];
+  /** Provider-reported tokens spent embedding. */
+  totalTokens: number;
+}
+
+export async function voyageContextualEmbed(
+  options: VoyageContextualEmbedOptions,
+): Promise<VoyageContextualEmbedResponse> {
+  const totalChunks = options.groups.reduce(
+    (sum, group) => sum + group.length,
+    0,
+  );
+  if (totalChunks === 0) return { embeddings: [], totalTokens: 0 };
+
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const batches = splitIntoGroupBatches(options.groups);
+  const embeddings: number[][] = [];
+  let totalTokens = 0;
+  for (const batch of batches) {
+    const result = await requestContextualBatch({
+      fetchImpl,
+      apiKey: options.apiKey,
+      model: options.model,
+      inputType: options.inputType,
+      timeoutMs: options.timeoutMs,
+      batch,
+    });
+    embeddings.push(...result.embeddings);
+    totalTokens += result.totalTokens;
+  }
+  return { embeddings, totalTokens };
 }
 
 export interface VoyageRerankOptions {
@@ -171,7 +249,7 @@ async function postVoyageJson<T>(options: {
   apiKey: string;
   body: unknown;
   timeoutMs: number;
-  subject: 'embeddings' | 'rerank';
+  subject: 'embeddings' | 'contextual embeddings' | 'rerank';
   fetchImpl: typeof fetch;
 }): Promise<T> {
   let response: Response;
@@ -204,7 +282,9 @@ async function postVoyageJson<T>(options: {
   return payload;
 }
 
-function malformedResponse(subject: 'embeddings' | 'rerank'): DomainError {
+function malformedResponse(
+  subject: 'embeddings' | 'contextual embeddings' | 'rerank',
+): DomainError {
   return new ServiceUnavailableError(
     `Voyage returned a malformed ${subject} response.`,
     { messageKey: 'errors.ai.voyage.invalidResponse' },
@@ -238,6 +318,7 @@ async function requestBatch(deps: {
   apiKey: string;
   model: string;
   inputType: VoyageInputType;
+  timeoutMs?: number;
   batch: string[];
 }): Promise<number[][]> {
   const payload = await postVoyageJson<{
@@ -246,7 +327,7 @@ async function requestBatch(deps: {
     url: VOYAGE_EMBEDDINGS_URL,
     apiKey: deps.apiKey,
     subject: 'embeddings',
-    timeoutMs: REQUEST_TIMEOUT_MS,
+    timeoutMs: deps.timeoutMs ?? REQUEST_TIMEOUT_MS,
     fetchImpl: deps.fetchImpl,
     body: {
       model: deps.model,
@@ -274,10 +355,132 @@ async function requestBatch(deps: {
   });
 }
 
+/**
+ * Splits groups into batches that respect every contextualized-endpoint cap.
+ * A group larger than one request's token budget is first split into
+ * contiguous subgroups, so no request is ever over the limit. A single chunk
+ * larger than the budget cannot be split further and is sent on its own; the
+ * chunker never produces one, so that only guards against corrupt input.
+ */
+function splitIntoGroupBatches(groups: string[][]): string[][][] {
+  const fitted: string[][] = [];
+  for (const group of groups) {
+    if (group.length === 0) continue;
+    let current: string[] = [];
+    let estimatedTokens = 0;
+    for (const text of group) {
+      const textTokens = estimateVoyageTokens(text);
+      if (
+        current.length > 0 &&
+        estimatedTokens + textTokens > MAX_CONTEXTUAL_TOKENS_PER_REQUEST
+      ) {
+        fitted.push(current);
+        current = [];
+        estimatedTokens = 0;
+      }
+      current.push(text);
+      estimatedTokens += textTokens;
+    }
+    if (current.length > 0) fitted.push(current);
+  }
+
+  const batches: string[][][] = [];
+  let current: string[][] = [];
+  let estimatedTokens = 0;
+  let chunks = 0;
+  for (const group of fitted) {
+    const groupTokens = group.reduce(
+      (sum, text) => sum + estimateVoyageTokens(text),
+      0,
+    );
+    if (
+      current.length > 0 &&
+      (current.length >= MAX_CONTEXTUAL_INPUTS_PER_REQUEST ||
+        chunks + group.length > MAX_CONTEXTUAL_CHUNKS_PER_REQUEST ||
+        estimatedTokens + groupTokens > MAX_CONTEXTUAL_TOKENS_PER_REQUEST)
+    ) {
+      batches.push(current);
+      current = [];
+      estimatedTokens = 0;
+      chunks = 0;
+    }
+    current.push(group);
+    estimatedTokens += groupTokens;
+    chunks += group.length;
+  }
+  if (current.length > 0) batches.push(current);
+  return batches;
+}
+
+async function requestContextualBatch(deps: {
+  fetchImpl: typeof fetch;
+  apiKey: string;
+  model: string;
+  inputType: VoyageInputType;
+  timeoutMs?: number;
+  batch: string[][];
+}): Promise<VoyageContextualEmbedResponse> {
+  const payload = await postVoyageJson<{
+    data?: {
+      index?: number;
+      data?: { index?: number; embedding?: unknown }[];
+    }[];
+    usage?: { total_tokens?: unknown };
+  }>({
+    url: VOYAGE_CONTEXTUAL_EMBEDDINGS_URL,
+    apiKey: deps.apiKey,
+    subject: 'contextual embeddings',
+    timeoutMs: deps.timeoutMs ?? REQUEST_TIMEOUT_MS,
+    fetchImpl: deps.fetchImpl,
+    body: {
+      model: deps.model,
+      inputs: deps.batch,
+      input_type: deps.inputType,
+    },
+  });
+  if (!payload.data || !Array.isArray(payload.data)) {
+    throw malformedResponse('contextual embeddings');
+  }
+
+  // Each entry is one group; both the group and its chunks carry an `index`.
+  // Honor them instead of array order so results always line up with inputs.
+  const groups = payload.data.map((entry, position) => ({
+    index: typeof entry.index === 'number' ? entry.index : position,
+    chunks: Array.isArray(entry.data) ? entry.data : [],
+  }));
+  groups.sort((a, b) => a.index - b.index);
+
+  const embeddings: number[][] = [];
+  for (const group of groups) {
+    const chunks = group.chunks.map((entry, position) => ({
+      index: typeof entry.index === 'number' ? entry.index : position,
+      embedding: entry.embedding,
+    }));
+    chunks.sort((a, b) => a.index - b.index);
+    for (const chunk of chunks) {
+      if (!Array.isArray(chunk.embedding)) {
+        throw malformedResponse('contextual embeddings');
+      }
+      embeddings.push(chunk.embedding as number[]);
+    }
+  }
+  if (embeddings.length === 0) {
+    throw malformedResponse('contextual embeddings');
+  }
+
+  return {
+    embeddings,
+    totalTokens:
+      typeof payload.usage?.total_tokens === 'number'
+        ? payload.usage.total_tokens
+        : 0,
+  };
+}
+
 function voyageHttpError(
   status: number,
   detail: string,
-  subject: 'embeddings' | 'rerank',
+  subject: 'embeddings' | 'contextual embeddings' | 'rerank',
 ): DomainError {
   const summary = detail.trim().slice(0, 300);
   if (status === 401 || status === 403) {
