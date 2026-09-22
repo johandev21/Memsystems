@@ -13,8 +13,8 @@
     "citationAccuracy": 1,
     "refusalAccuracy": 1,
     "faithfulness": 1,
-    "latencyMsP50": 5,
-    "latencyMsP95": 32,
-    "costTokensPerQuery": 683.3076923076923
+    "latencyMsP50": 2,
+    "latencyMsP95": 14,
+    "costTokensPerQuery": 652.3125
   }
 }

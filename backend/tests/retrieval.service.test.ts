@@ -32,6 +32,14 @@ import {
   type RetrievalHybridConfig,
   type RetrievalRerankConfig,
 } from '../src/modules/ai/retrieval.service';
+import {
+  DEFAULT_REWRITE_CONFIG,
+  DEFAULT_REWRITE_MODEL,
+  QueryUnderstandingService,
+  loadRetrievalRewriteConfig,
+  type QueryRewriter,
+  type RetrievalRewriteConfig,
+} from '../src/modules/ai/query-understanding';
 import { db } from './db';
 import { seedNotebook, seedSource } from './fixtures';
 
@@ -44,6 +52,7 @@ function serviceWithRows(
     /** Rows the lexical leg returns; defaults to the dense rows. */
     lexicalRows?: Record<string, unknown>[];
   },
+  understanding?: QueryUnderstandingService,
 ) {
   // The first leg searched is always the dense leg, so the scripted rows
   // describe it; the lexical leg returns `lexicalRows` when one is given.
@@ -58,8 +67,27 @@ function serviceWithRows(
     rerank?.config ? { ...DEFAULT_RERANK_CONFIG, ...rerank.config } : undefined,
     rerank?.reranker as never,
     hybrid?.config ? { ...DEFAULT_HYBRID_CONFIG, ...hybrid.config } : undefined,
+    understanding,
   );
   return { service, execute };
+}
+
+/** The real understanding stage over a scripted rewrite model. */
+function understandingWith(
+  result: Awaited<ReturnType<QueryRewriter['rewrite']>> | (() => never),
+  config: Partial<RetrievalRewriteConfig> = {},
+): QueryUnderstandingService & { rewrite: ReturnType<typeof vi.fn> } {
+  const rewrite = vi.fn(
+    async (): Promise<Awaited<ReturnType<QueryRewriter['rewrite']>>> => {
+      if (typeof result === 'function') return result();
+      return result;
+    },
+  );
+  const service = new QueryUnderstandingService(
+    { ...DEFAULT_REWRITE_CONFIG, ...config },
+    { rewrite },
+  );
+  return Object.assign(service, { rewrite });
 }
 
 /** The fused score of a candidate both mocked legs rank at `rank`. */
@@ -227,12 +255,22 @@ describe('RetrievalService retrieval trace', () => {
     });
 
     expect(outcome.trace).toMatchObject({
-      version: 3,
+      version: 4,
       query: 'derivative',
       topK: 5,
       scope: { kind: 'notebook', sourceIds: null },
       relevanceFloor: DEFAULT_RELEVANCE_FLOOR,
       embedding: { model: EMBEDDING_MODEL, dimensions: EMBEDDING_DIMENSIONS },
+      rewrite: {
+        enabled: false,
+        original: 'derivative',
+        query: 'derivative',
+        variants: [],
+        hypotheticalAnswer: false,
+        strategy: null,
+        reason: 'disabled',
+        trigger: null,
+      },
       fusion: {
         k: DEFAULT_FUSION_K,
         weights: { dense: 1, lexical: 1 },
@@ -240,6 +278,7 @@ describe('RetrievalService retrieval trace', () => {
           dense: DEFAULT_CANDIDATE_DEPTH,
           lexical: DEFAULT_CANDIDATE_DEPTH,
         },
+        variants: 1,
       },
       rerank: {
         model: DEFAULT_RERANK_MODEL,
@@ -255,6 +294,7 @@ describe('RetrievalService retrieval trace', () => {
     expect(outcome.trace.legs).toEqual([
       {
         kind: 'dense',
+        variant: 0,
         candidates: [
           {
             chunkId: 'chunk-good',
@@ -274,6 +314,7 @@ describe('RetrievalService retrieval trace', () => {
       },
       {
         kind: 'lexical',
+        variant: 0,
         candidates: [
           {
             chunkId: 'chunk-good',
@@ -316,6 +357,8 @@ describe('RetrievalService retrieval trace', () => {
     expect(outcome.trace.cost).toEqual({
       embeddingInputTokens: Math.ceil('derivative'.length / 4),
       rerankInputTokens: 0,
+      rewriteInputTokens: 0,
+      rewriteOutputTokens: 0,
     });
   });
 
@@ -1323,6 +1366,7 @@ describe('RetrievalService hybrid retrieval', () => {
         dense: DEFAULT_CANDIDATE_DEPTH,
         lexical: DEFAULT_CANDIDATE_DEPTH,
       },
+      variants: 1,
     });
   });
 
@@ -1631,6 +1675,265 @@ describe('RetrievalService hybrid retrieval', () => {
   });
 });
 
+describe('RetrievalService query understanding', () => {
+  const noRerank: Partial<RetrievalRerankConfig> = { enabled: false };
+
+  it('records a skipped rewrite in the trace and searches the message unchanged', async () => {
+    const understanding = understandingWith(null);
+    const { service } = serviceWithRows(
+      [chunkRow({ chunk_id: 'chunk-atp', score: 0.9 })],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      {},
+      understanding,
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'How do mitochondria generate ATP in a cell?',
+    });
+
+    expect(understanding.rewrite).not.toHaveBeenCalled();
+    expect(outcome.trace.rewrite).toEqual({
+      enabled: true,
+      original: 'How do mitochondria generate ATP in a cell?',
+      query: 'How do mitochondria generate ATP in a cell?',
+      variants: [],
+      hypotheticalAnswer: false,
+      trigger: null,
+      strategy: null,
+      reason: 'search_ready',
+      model: DEFAULT_REWRITE_MODEL,
+    });
+    expect(outcome.trace.fusion.variants).toBe(1);
+  });
+
+  it('searches the rewritten query and records the model decision and cost', async () => {
+    const understanding = understandingWith({
+      query: 'osmosis selectively permeable membrane water',
+      variants: [],
+      hypotheticalAnswer: null,
+      inputTokens: 180,
+      outputTokens: 14,
+    });
+    const embedQuery = vi.fn().mockResolvedValue([0.1, 0.2]);
+    const execute = vi
+      .fn()
+      .mockResolvedValue({ rows: [chunkRow({ chunk_id: 'chunk-osmosis' })] });
+    const reranker = scriptedReranker({ 0: 0.9 });
+    const service = new RetrievalService(
+      { execute } as never,
+      { embedQuery } as never,
+      { relevanceFloor: 0 },
+      { ...DEFAULT_RERANK_CONFIG, threshold: 0.5 },
+      reranker as never,
+      { ...DEFAULT_HYBRID_CONFIG, enabled: false },
+      understanding,
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query:
+        'Give me a short chapter summary explaining osmosis across a selectively permeable membrane.',
+    });
+
+    expect(understanding.rewrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Give me a short chapter summary explaining osmosis across a selectively permeable membrane.',
+        // Paraphrases are only requested for short or ambiguous messages.
+        variants: 0,
+      }),
+    );
+    expect(embedQuery).toHaveBeenCalledWith(
+      'osmosis selectively permeable membrane water',
+    );
+    expect(reranker.rerank).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: 'osmosis selectively permeable membrane water',
+      }),
+    );
+    expect(outcome.trace.rewrite).toMatchObject({
+      trigger: 'meta_instructions',
+      strategy: 'model',
+      reason: null,
+      query: 'osmosis selectively permeable membrane water',
+      variants: [],
+    });
+    expect(outcome.trace.cost.rewriteInputTokens).toBe(180);
+    expect(outcome.trace.cost.rewriteOutputTokens).toBe(14);
+  });
+
+  it('fuses the paraphrases as extra candidate lists', async () => {
+    const understanding = understandingWith({
+      query: 'primary query',
+      variants: ['paraphrase query'],
+      hypotheticalAnswer: null,
+      inputTokens: 0,
+      outputTokens: 0,
+    });
+    // The paraphrase's legs are the only route to chunk-paraphrase.
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          chunkRow({ chunk_id: 'chunk-primary', content: 'Primary passage' }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          chunkRow({
+            chunk_id: 'chunk-paraphrase',
+            content: 'Paraphrase passage',
+            source_id: 'source-2',
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+    const service = new RetrievalService(
+      { execute } as never,
+      { embedQuery: vi.fn().mockResolvedValue([0.1, 0.2]) } as never,
+      { relevanceFloor: 0 },
+      { ...DEFAULT_RERANK_CONFIG, enabled: false },
+      undefined,
+      undefined,
+      understanding,
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'osmosis?',
+    });
+
+    expect(outcome.trace.legs.map((leg) => [leg.kind, leg.variant])).toEqual([
+      ['dense', 0],
+      ['lexical', 0],
+      ['dense', 1],
+      ['lexical', 1],
+    ]);
+    expect(outcome.trace.fusion.variants).toBe(2);
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'chunk-primary',
+      'chunk-paraphrase',
+    ]);
+    expect(outcome.trace.rewrite).toMatchObject({
+      query: 'primary query',
+      variants: ['paraphrase query'],
+      trigger: 'ambiguous',
+      strategy: 'model',
+    });
+  });
+
+  it('embeds the hypothetical answer for a short query when enabled', async () => {
+    const hypothetical =
+      'Mitochondria produce adenosine triphosphate through oxidative phosphorylation.';
+    const understanding = understandingWith(
+      {
+        query: 'mitochondria atp',
+        variants: [],
+        hypotheticalAnswer: hypothetical,
+        inputTokens: 90,
+        outputTokens: 30,
+      },
+      { hypotheticalAnswer: true },
+    );
+    const embedQuery = vi.fn().mockResolvedValue([0.1, 0.2]);
+    const execute = vi
+      .fn()
+      .mockResolvedValue({ rows: [chunkRow({ chunk_id: 'chunk-atp' })] });
+    const service = new RetrievalService(
+      { execute } as never,
+      { embedQuery } as never,
+      { relevanceFloor: 0 },
+      { ...DEFAULT_RERANK_CONFIG, enabled: false },
+      undefined,
+      { ...DEFAULT_HYBRID_CONFIG, enabled: false },
+      understanding,
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'the powerhouse?',
+    });
+
+    expect(embedQuery).toHaveBeenCalledWith(hypothetical);
+    expect(outcome.trace.rewrite).toMatchObject({
+      query: 'mitochondria atp',
+      hypotheticalAnswer: true,
+      strategy: 'model',
+    });
+    expect(outcome.trace.cost.embeddingInputTokens).toBe(
+      Math.ceil(hypothetical.length / 4),
+    );
+  });
+
+  it('passes the recent turns through to the rewrite model', async () => {
+    const understanding = understandingWith({
+      query: 'osmosis permeable membrane',
+      variants: [],
+      hypotheticalAnswer: null,
+      inputTokens: 0,
+      outputTokens: 0,
+    });
+    const { service } = serviceWithRows(
+      [chunkRow({ chunk_id: 'chunk-osmosis', score: 0.9 })],
+      { relevanceFloor: 0 },
+      { config: { enabled: false } },
+      {},
+      understanding,
+    );
+
+    await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'Can you expand on that in more detail?',
+      history: [
+        {
+          role: 'user',
+          content: 'What is osmosis across a selectively permeable membrane?',
+        },
+      ],
+    });
+
+    expect(understanding.rewrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        history: [
+          {
+            role: 'user',
+            content: 'What is osmosis across a selectively permeable membrane?',
+          },
+        ],
+      }),
+    );
+  });
+});
+
+describe('loadRetrievalRewriteConfig', () => {
+  it('falls back to the documented defaults', () => {
+    expect(loadRetrievalRewriteConfig({})).toEqual(DEFAULT_REWRITE_CONFIG);
+  });
+
+  it('reads the rewrite configuration from the environment', () => {
+    expect(
+      loadRetrievalRewriteConfig({
+        RETRIEVAL_REWRITE_ENABLED: 'false',
+        RETRIEVAL_REWRITE_MODEL: 'openai/gpt-5.6-luna',
+        RETRIEVAL_REWRITE_TIMEOUT_MS: '900',
+        RETRIEVAL_REWRITE_MULTI_QUERY: 'false',
+        RETRIEVAL_REWRITE_VARIANT_COUNT: '3',
+        RETRIEVAL_REWRITE_HYPOTHETICAL_ANSWER: 'true',
+      }),
+    ).toEqual({
+      enabled: false,
+      model: 'openai/gpt-5.6-luna',
+      timeoutMs: 900,
+      multiQuery: false,
+      variantCount: 3,
+      hypotheticalAnswer: true,
+    });
+  });
+});
+
 describe('loadRetrievalHybridConfig', () => {
   it('falls back to the documented defaults', () => {
     expect(loadRetrievalHybridConfig({})).toEqual(DEFAULT_HYBRID_CONFIG);
@@ -1740,5 +2043,90 @@ describe('AiModule hybrid wiring', () => {
     } finally {
       delete process.env.RETRIEVAL_HYBRID_ENABLED;
     }
+  });
+});
+
+describe('AiModule query understanding wiring', () => {
+  async function moduleService() {
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'text',
+      title: 'Ready source',
+      rawText: 'Mitochondria generate ATP',
+      processingStatus: 'ready',
+    });
+    const embedding = [1, ...Array.from({ length: 1023 }, () => 0)];
+    await db.insert(sourceChunks).values([
+      {
+        id: 'chunk-rewrite',
+        sourceId: source.id,
+        notebookId: notebook.id,
+        chunkIndex: 0,
+        content: 'Mitochondria generate ATP',
+        searchableText: 'Mitochondria generate ATP',
+        embedding,
+      },
+    ]);
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [DatabaseModule, AiModule],
+    })
+      .overrideProvider(DRIZZLE)
+      .useValue(db)
+      .overrideProvider(PG_POOL)
+      .useValue({})
+      .overrideProvider(EmbeddingService)
+      .useValue({
+        embedQuery: vi.fn().mockResolvedValue(embedding),
+        getVoyageApiKey: vi.fn().mockResolvedValue(null),
+      })
+      .compile();
+
+    return {
+      notebookId: notebook.id,
+      service: moduleRef.get(RetrievalService),
+    };
+  }
+
+  it('disables query understanding through the config provider', async () => {
+    process.env.RETRIEVAL_REWRITE_ENABLED = 'false';
+    try {
+      const { notebookId, service } = await moduleService();
+
+      const result = await service.retrieve({
+        notebookId,
+        query: 'Give me a short chapter summary of osmosis.',
+      });
+
+      expect(result.trace.rewrite).toMatchObject({
+        enabled: false,
+        original: 'Give me a short chapter summary of osmosis.',
+        query: 'Give me a short chapter summary of osmosis.',
+        strategy: null,
+        reason: 'disabled',
+        trigger: null,
+      });
+    } finally {
+      delete process.env.RETRIEVAL_REWRITE_ENABLED;
+    }
+  });
+
+  it('degrades to the heuristic when the gateway is not connected', async () => {
+    const { notebookId, service } = await moduleService();
+
+    const result = await service.retrieve({
+      notebookId,
+      query: 'Give me a detailed chapter summary of osmosis.',
+    });
+
+    // No gateway key is configured in the test database, so the rewrite
+    // model reports itself unavailable and the deterministic heuristic runs.
+    expect(result.trace.rewrite).toMatchObject({
+      enabled: true,
+      trigger: 'meta_instructions',
+      strategy: 'heuristic',
+      reason: 'no_provider',
+      query: 'osmosis',
+    });
   });
 });

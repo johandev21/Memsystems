@@ -120,7 +120,7 @@ El gate de recuperación se ejecuta como una prueba más del backend:
 pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts
 ```
 
-No necesita claves de proveedor: usa un embedder léxico determinista en lugar de Voyage. Siembra el corpus dorado en la base de pruebas, pasa cada consulta etiquetada por el pipeline real y compara recall, ranking, precisión de contexto, citas, rechazos, fidelidad, latencia y costo contra `backend/tests/eval/baseline.json`.
+No necesita claves de proveedor: usa un embedder léxico determinista en lugar de Voyage y un reescritor determinista en lugar del modelo del gateway. Siembra el corpus dorado en la base de pruebas, pasa cada consulta etiquetada por el pipeline real y compara recall, ranking, precisión de contexto, citas, rechazos, fidelidad, latencia y costo contra `backend/tests/eval/baseline.json`.
 
 Tras un cambio intencional en recuperación, actualiza la línea base y revisa el diff antes de confirmarlo:
 

@@ -14,17 +14,19 @@ function retrievalOutcome(
     abstentionReason: 'no_indexed_chunks',
     unhelpfulSources: [],
     trace: {
-      version: 3,
+      version: 4,
       query: 'Cell biology',
       topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
       scope: { kind: 'selected_sources', sourceIds: ['source-1'] },
       relevanceFloor: 0,
       embedding: { model: 'voyage-4', dimensions: 1024 },
-      legs: [{ kind: 'dense', candidates: [] }],
+      rewrite: null,
+      legs: [{ kind: 'dense', variant: 0, candidates: [] }],
       fusion: {
         k: 60,
         weights: { dense: 1, lexical: 1 },
         depths: { dense: 32, lexical: 32 },
+        variants: 1,
       },
       fusedOrder: [],
       rerank: {
@@ -39,7 +41,12 @@ function retrievalOutcome(
       abstained: true,
       abstentionReason: 'no_indexed_chunks',
       latencyMs: 4,
-      cost: { embeddingInputTokens: 4, rerankInputTokens: 0 },
+      cost: {
+        embeddingInputTokens: 4,
+        rerankInputTokens: 0,
+        rewriteInputTokens: 0,
+        rewriteOutputTokens: 0,
+      },
     },
     ...overrides,
   };

@@ -7,15 +7,27 @@ import { seedNotebook } from './fixtures';
 
 function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
   return {
-    version: 3,
+    version: 4,
     query: 'Explain osmosis',
     topK: 8,
     scope: { kind: 'notebook', sourceIds: null },
     relevanceFloor: 0.3,
     embedding: { model: 'voyage-4', dimensions: 1024 },
+    rewrite: {
+      enabled: true,
+      original: 'Explain osmosis',
+      query: 'Explain osmosis',
+      variants: [],
+      hypotheticalAnswer: false,
+      trigger: null,
+      strategy: null,
+      reason: 'search_ready',
+      model: 'openai/gpt-4o-mini',
+    },
     legs: [
       {
         kind: 'dense',
+        variant: 0,
         candidates: [
           {
             chunkId: 'chunk-1',
@@ -28,6 +40,7 @@ function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
       },
       {
         kind: 'lexical',
+        variant: 0,
         candidates: [
           {
             chunkId: 'chunk-1',
@@ -43,6 +56,7 @@ function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
       k: 60,
       weights: { dense: 1, lexical: 1 },
       depths: { dense: 32, lexical: 32 },
+      variants: 1,
     },
     fusedOrder: [
       {
@@ -82,7 +96,12 @@ function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
     abstained: false,
     abstentionReason: null,
     latencyMs: 42,
-    cost: { embeddingInputTokens: 5, rerankInputTokens: 64 },
+    cost: {
+      embeddingInputTokens: 5,
+      rerankInputTokens: 64,
+      rewriteInputTokens: 0,
+      rewriteOutputTokens: 0,
+    },
     ...overrides,
   };
 }

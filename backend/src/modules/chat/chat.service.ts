@@ -247,33 +247,6 @@ export class ChatService {
     // assistant row is persisted.
     const assistantMessageId = createId();
 
-    // An image/file-only message has no text to embed. Retrieval is optional
-    // for multimodal turns, so let the model inspect the supplied parts
-    // directly instead of passing an empty query to the embedding provider.
-    const retrievalOutcome: RetrievalOutcome | null = input.content.trim()
-      ? await this.retrievalService.retrieve({
-          notebookId,
-          query: input.content,
-        })
-      : null;
-    if (retrievalOutcome) {
-      await this.retrievalTraceService.record({
-        notebookId,
-        kind: 'chat',
-        chatMessageId: assistantMessageId,
-        trace: retrievalOutcome.trace,
-      });
-    }
-    const retrievedChunks = retrievalOutcome?.chunks ?? [];
-    const citationEvidence = createCitationEvidence(retrievedChunks);
-
-    const sourceContext = formatCitationContext(citationEvidence).slice(
-      0,
-      MAX_SOURCE_TEXT,
-    );
-
-    // When regenerating, previous assistant versions are preserved in history as separate versions
-
     let userMessage: {
       id: string;
       role: 'user';
@@ -338,6 +311,38 @@ export class ChatService {
       notebookId,
       MAX_HISTORY_MESSAGES,
       userMessage.id,
+    );
+
+    // Retrieval runs after the user message is persisted, so the rewrite can
+    // resolve follow-up references ("expand on the second chapter") from the
+    // recent turns. An image/file-only message has no text to embed:
+    // retrieval is optional for multimodal turns, so let the model inspect
+    // the supplied parts directly instead of passing an empty query to the
+    // embedding provider.
+    const retrievalOutcome: RetrievalOutcome | null = input.content.trim()
+      ? await this.retrievalService.retrieve({
+          notebookId,
+          query: input.content,
+          history: priorHistory.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+        })
+      : null;
+    if (retrievalOutcome) {
+      await this.retrievalTraceService.record({
+        notebookId,
+        kind: 'chat',
+        chatMessageId: assistantMessageId,
+        trace: retrievalOutcome.trace,
+      });
+    }
+    const retrievedChunks = retrievalOutcome?.chunks ?? [];
+    const citationEvidence = createCitationEvidence(retrievedChunks);
+
+    const sourceContext = formatCitationContext(citationEvidence).slice(
+      0,
+      MAX_SOURCE_TEXT,
     );
 
     const history = [
