@@ -1,53 +1,85 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
-  GenerationService,
-} from '../src/modules/study-materials/generation.service';
+import { GenerationService } from '../src/modules/study-materials/generation.service';
 import type { StartGenerationInput } from '../src/modules/study-materials/generation-request-manager';
+import type { GenerationGrounding } from '../src/modules/study-materials/generation-grounding';
+import type { RetrievedChunk } from '../src/modules/ai/retrieval.service';
 
-function retrievalOutcome(
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
+function chunk(overrides: Partial<RetrievedChunk> = {}): RetrievedChunk {
   return {
-    chunks: [],
-    abstained: true,
-    abstentionReason: 'no_indexed_chunks',
-    unhelpfulSources: [],
-    trace: {
-      version: 4,
-      query: 'Cell biology',
-      topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
-      scope: { kind: 'selected_sources', sourceIds: ['source-1'] },
-      relevanceFloor: 0,
-      embedding: { model: 'voyage-4', dimensions: 1024 },
-      rewrite: null,
-      legs: [{ kind: 'dense', variant: 0, candidates: [] }],
-      fusion: {
-        k: 60,
-        weights: { dense: 1, lexical: 1 },
-        depths: { dense: 32, lexical: 32 },
-        variants: 1,
-      },
-      fusedOrder: [],
-      rerank: {
-        model: 'rerank-2.5',
-        applied: false,
-        skippedReason: 'unavailable',
-        threshold: 0,
-        candidates: [],
-        inputTokens: 0,
-      },
-      chosen: [],
-      abstained: true,
-      abstentionReason: 'no_indexed_chunks',
-      latencyMs: 4,
-      cost: {
-        embeddingInputTokens: 4,
-        rerankInputTokens: 0,
-        rewriteInputTokens: 0,
-        rewriteOutputTokens: 0,
-      },
+    chunkId: 'chunk-1',
+    chunkIndex: 0,
+    sourceId: 'source-1',
+    title: 'First source',
+    content: 'Source: "First source"\nFirst source body',
+    score: 0.6,
+    url: null,
+    kind: 'text',
+    sourceVersionId: null,
+    locator: null,
+    sectionPath: [],
+    ...overrides,
+  };
+}
+
+function trace(query: string) {
+  return {
+    version: 5 as const,
+    query,
+    topK: 16,
+    scope: { kind: 'selected_sources' as const, sourceIds: ['source-1'] },
+    relevanceFloor: 0,
+    embedding: { model: 'voyage-4', dimensions: 1024 },
+    rewrite: null,
+    legs: [{ kind: 'dense' as const, variant: 0, candidates: [] }],
+    fusion: {
+      k: 60,
+      weights: { dense: 1, lexical: 1 },
+      depths: { dense: 32, lexical: 32 },
+      variants: 1,
     },
+    fusedOrder: [],
+    rerank: {
+      model: 'rerank-2.5',
+      applied: false,
+      skippedReason: 'unavailable' as const,
+      threshold: 0,
+      candidates: [],
+      inputTokens: 0,
+    },
+    evidence: {
+      overlapThreshold: 0.8,
+      maxPerSource: 4,
+      tokenBudget: 20_000,
+      sectionExpansion: true,
+      tokens: 0,
+      budgetExhausted: false,
+      items: [],
+      droppedOverlap: [],
+      droppedDiversity: [],
+      droppedBudget: [],
+    },
+    chosen: [],
+    abstained: false,
+    abstentionReason: null,
+    latencyMs: 4,
+    cost: {
+      embeddingInputTokens: 4,
+      rerankInputTokens: 0,
+      rewriteInputTokens: 0,
+      rewriteOutputTokens: 0,
+    },
+  };
+}
+
+function grounding(
+  overrides: Partial<GenerationGrounding> = {},
+): GenerationGrounding {
+  return {
+    sources: [],
+    evidence: [],
+    unavailableSources: [],
+    degradedSources: [],
+    traces: [],
     ...overrides,
   };
 }
@@ -69,8 +101,8 @@ function setup() {
       stream: new ReadableStream(),
     })),
   };
-  const retrieve = vi.fn(async () => retrievalOutcome());
-  const retrievalService = { retrieve };
+  const ground = vi.fn(async () => grounding());
+  const groundingService = { ground };
   const recordTrace = vi.fn(async () => undefined);
   const retrievalTraceService = { record: recordTrace };
   const service = new GenerationService(
@@ -78,14 +110,14 @@ function setup() {
     connectionService as never,
     requestManager as never,
     streamHandler as never,
-    retrievalService as never,
+    groundingService as never,
     retrievalTraceService as never,
   );
   return {
     service,
     requestManager,
     streamHandler,
-    retrieve,
+    ground,
     recordTrace,
   };
 }
@@ -98,13 +130,74 @@ const baseInput: StartGenerationInput = {
 
 describe('GenerationService message keys', () => {
   it('keys unavailable study guide sources', async () => {
-    const { service } = setup();
+    const { service, ground } = setup();
+    ground.mockResolvedValue(
+      grounding({
+        unavailableSources: [
+          { id: 'source-1', title: 'First source', kind: 'text' },
+        ],
+      }),
+    );
 
     await expect(
       service.generate('notebook-1', { ...baseInput, sourceIds: ['source-1'] }),
     ).rejects.toMatchObject({
       messageKey: 'errors.generation.sourcesUnavailable',
       code: 'bad_request',
+    });
+  });
+
+  it('reports unavailable selected sources for every kind, not only study guides', async () => {
+    const { service, ground } = setup();
+    ground.mockResolvedValue(
+      grounding({
+        unavailableSources: [
+          { id: 'source-1', title: 'First source', kind: 'text' },
+        ],
+      }),
+    );
+
+    await expect(
+      service.generate('notebook-1', {
+        kind: 'quiz',
+        brief: 'Cell biology',
+        sourceIds: ['source-1'],
+      }),
+    ).rejects.toMatchObject({
+      messageKey: 'errors.generation.sourcesUnavailable',
+      code: 'bad_request',
+    });
+  });
+
+  it('persists the traces of the passes it ran before rejecting unavailable sources', async () => {
+    const { service, ground, recordTrace } = setup();
+    ground.mockResolvedValue(
+      grounding({
+        traces: [trace('Cell biology Part 1'), trace('Cell biology Part 2')],
+        unavailableSources: [
+          { id: 'source-2', title: 'Second source', kind: 'text' },
+        ],
+      }),
+    );
+
+    await expect(
+      service.generate('notebook-1', {
+        kind: 'quiz',
+        brief: 'Cell biology',
+        sourceIds: ['source-1', 'source-2'],
+      }),
+    ).rejects.toMatchObject({
+      messageKey: 'errors.generation.sourcesUnavailable',
+    });
+
+    // The Generation never streamed, so there is no request id to correlate
+    // with, but the retrieval work is still diagnosable.
+    expect(recordTrace).toHaveBeenCalledTimes(2);
+    expect(recordTrace).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
+      kind: 'generation',
+      generationRequestId: undefined,
+      trace: expect.objectContaining({ query: 'Cell biology Part 1' }),
     });
   });
 
@@ -199,50 +292,42 @@ describe('GenerationService message keys', () => {
 });
 
 describe('GenerationService retrieval grounding', () => {
-  it('grounds a Generation on retrieved chunks from every selected source and records a trace', async () => {
-    const { service, retrieve, streamHandler, recordTrace } = setup();
-    retrieve.mockResolvedValue(
-      retrievalOutcome({
-        chunks: [
+  it('grounds on the retrieved sections of every selected source and records one trace per pass', async () => {
+    const { service, ground, streamHandler, recordTrace } = setup();
+    const first = chunk();
+    const second = chunk({
+      chunkId: 'chunk-2',
+      chunkIndex: 2,
+      sourceId: 'source-2',
+      title: 'Second source',
+      content: 'Source: "Second source"\nSecond source body',
+    });
+    const evidence = [
+      { ...first, citationKey: 'R1', rank: 1 },
+      { ...second, citationKey: 'R2', rank: 2 },
+    ];
+    ground.mockResolvedValue(
+      grounding({
+        sources: [
           {
-            chunkId: 'chunk-b-2',
-            chunkIndex: 2,
-            sourceId: 'source-2',
-            title: 'Second source',
-            content: 'Source: "Second source"\nSecond source body',
-            score: 0.6,
-            url: null,
-            kind: 'text',
-            sourceVersionId: null,
-            locator: null,
-          },
-          {
-            chunkId: 'chunk-b-1',
-            chunkIndex: 1,
-            sourceId: 'source-2',
-            title: 'Second source',
-            content: 'Source: "Second source"\nSecond source intro',
-            score: 0.5,
-            url: null,
-            kind: 'text',
-            sourceVersionId: null,
-            locator: null,
-          },
-          {
-            chunkId: 'chunk-a-1',
-            chunkIndex: 0,
-            sourceId: 'source-1',
+            id: 'source-1',
             title: 'First source',
-            content: 'Source: "First source"\nFirst source body',
-            score: 0.4,
-            url: null,
             kind: 'text',
-            sourceVersionId: null,
-            locator: null,
+            url: null,
+            chunks: [first],
+            promptChunks: [first],
+          },
+          {
+            id: 'source-2',
+            title: 'Second source',
+            kind: 'text',
+            url: null,
+            chunks: [second],
+            promptChunks: [second],
           },
         ],
-        abstained: false,
-        abstentionReason: null,
+        evidence,
+        traces: [trace('Cell biology Part 1'), trace('Cell biology Part 2')],
       }),
     );
 
@@ -252,74 +337,32 @@ describe('GenerationService retrieval grounding', () => {
       sourceIds: ['source-1', 'source-2'],
     });
 
-    expect(retrieve).toHaveBeenCalledWith({
+    expect(ground).toHaveBeenCalledWith({
       notebookId: 'notebook-1',
-      query: 'Cell biology',
+      kind: 'quiz',
+      brief: 'Cell biology',
       sourceIds: ['source-1', 'source-2'],
-      topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
-      relevanceFloor: 0,
-      rerankThreshold: 0,
     });
 
-    expect(streamHandler.createStream.mock.calls[0][2]).toEqual([
-      {
-        id: 'source-1',
-        title: 'First source',
-        rawText: 'First source body',
-      },
-      {
-        id: 'source-2',
-        title: 'Second source',
-        rawText: 'Second source intro\n\nSecond source body',
-      },
-    ]);
-
-    expect(recordTrace).toHaveBeenCalledWith(
-      expect.objectContaining({
-        notebookId: 'notebook-1',
-        kind: 'generation',
-        generationRequestId: 'request-1',
-        trace: expect.objectContaining({ query: 'Cell biology' }),
-      }),
-    );
-  });
-
-  it('retrieves with the material kind when the brief is empty', async () => {
-    const { service, retrieve } = setup();
-    retrieve.mockResolvedValue(
-      retrievalOutcome({
-        chunks: [
-          {
-            chunkId: 'chunk-a-1',
-            chunkIndex: 0,
-            sourceId: 'source-1',
-            title: 'First source',
-            content: 'Source: "First source"\nBody',
-            score: 0.4,
-            url: null,
-            kind: 'text',
-            sourceVersionId: null,
-            locator: null,
-          },
-        ],
-        abstained: false,
-        abstentionReason: null,
-      }),
-    );
-
-    await service.generate('notebook-1', {
-      kind: 'simple_flashcard',
-      brief: '   ',
-      sourceIds: ['source-1'],
+    expect(streamHandler.createStream.mock.calls[0][2]).toEqual({
+      sources: [
+        expect.objectContaining({ id: 'source-1' }),
+        expect.objectContaining({ id: 'source-2' }),
+      ],
+      evidence,
     });
 
-    expect(retrieve).toHaveBeenCalledWith(
-      expect.objectContaining({ query: 'simple flashcard' }),
-    );
+    expect(recordTrace).toHaveBeenCalledTimes(2);
+    expect(recordTrace).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
+      kind: 'generation',
+      generationRequestId: 'request-1',
+      trace: expect.objectContaining({ query: 'Cell biology Part 1' }),
+    });
   });
 
-  it('does not retrieve when no sources are selected', async () => {
-    const { service, retrieve, recordTrace } = setup();
+  it('does not retrieve or record a trace when no sources are selected', async () => {
+    const { service, ground, recordTrace, streamHandler } = setup();
 
     await service.generate('notebook-1', {
       kind: 'study_guide',
@@ -327,7 +370,13 @@ describe('GenerationService retrieval grounding', () => {
       sourceIds: [],
     });
 
-    expect(retrieve).not.toHaveBeenCalled();
+    expect(ground).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceIds: [] }),
+    );
     expect(recordTrace).not.toHaveBeenCalled();
+    expect(streamHandler.createStream.mock.calls[0][2]).toEqual({
+      sources: [],
+      evidence: [],
+    });
   });
 });

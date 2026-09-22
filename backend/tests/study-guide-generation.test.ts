@@ -2,12 +2,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { streamText } from 'ai';
 import { StreamHandler } from '../src/modules/study-materials/stream-handler';
 import { StudyMaterialService } from '../src/modules/study-materials/study-material.service';
+import type { RetrievedChunk } from '../src/modules/ai/retrieval.service';
 
 vi.mock('ai', () => ({
   streamText: vi.fn(),
   Output: { object: vi.fn() },
   parsePartialJson: vi.fn(),
 }));
+
+const sourceChunk: RetrievedChunk = {
+  chunkId: 'chunk-1',
+  chunkIndex: 0,
+  sourceId: 'source-1',
+  title: 'Ethics',
+  content: 'Source: "Ethics"\nPractice develops habits.',
+  score: 0.6,
+  url: null,
+  kind: 'text',
+  sourceVersionId: null,
+  locator: null,
+  sectionPath: [],
+};
 
 const content = {
   title: 'virtue-study-guide',
@@ -17,7 +32,7 @@ const content = {
     {
       id: 'virtue',
       title: 'Virtue',
-      explanation: 'Practice develops habits.',
+      explanation: 'Practice develops habits [ref:R1].',
       keyConcepts: ['Habit'],
       examples: [],
       sourceIds: ['source-1'],
@@ -102,13 +117,19 @@ describe('study guide generation boundary', () => {
           model: 'test-model',
           studyGuideOptions: { format: 'revision', sectionCount: 1 },
         },
-        [
-          {
-            id: 'source-1',
-            title: 'Ethics',
-            rawText: 'Practice develops habits.',
-          },
-        ],
+        {
+          sources: [
+            {
+              id: 'source-1',
+              title: 'Ethics',
+              kind: 'text',
+              url: null,
+              chunks: [sourceChunk],
+              promptChunks: [sourceChunk],
+            },
+          ],
+          evidence: [{ ...sourceChunk, citationKey: 'R1', rank: 1 }],
+        },
         'request-1',
         onDone,
         onError,
@@ -121,16 +142,177 @@ describe('study guide generation boundary', () => {
           format: 'revision',
           sourceIds: ['source-1'],
           sections: [{ sourceIds: ['source-1'] }],
+          citations: [
+            expect.objectContaining({
+              citationKey: 'R1',
+              sourceId: 'source-1',
+              chunkId: 'chunk-1',
+              chunkIndex: 0,
+            }),
+          ],
         },
         options: { format: 'revision', sectionCount: 1 },
       });
-      expect(vi.mocked(streamText).mock.calls[0][0].prompt).toContain(
-        'Source ID: source-1',
-      );
+      const prompt = vi.mocked(streamText).mock.calls[0][0].prompt as string;
+      expect(prompt).toContain('Source ID: source-1');
+      expect(prompt).toContain('[Evidence R1]');
+      expect(prompt).toContain('Practice develops habits.');
+      const instructions = vi.mocked(streamText).mock.calls[0][0]
+        .instructions as string;
+      expect(instructions).toContain('[ref:R1]');
       expect(onDone).toHaveBeenCalledWith({ materialId: 'material-1' });
       expect(onError).not.toHaveBeenCalled();
     },
   );
+
+  it('drops citation markers that do not resolve to retrieved evidence', async () => {
+    const { handler, materials } = setup();
+    const invented = {
+      ...content,
+      sections: [
+        {
+          ...content.sections[0],
+          explanation: 'Practice develops habits [ref:R9].',
+        },
+      ],
+    };
+    vi.mocked(streamText).mockReturnValue({
+      partialOutputStream: (async function* () {
+        yield invented;
+      })(),
+      output: Promise.resolve(invented),
+    } as never);
+
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'study_guide',
+        brief: 'Virtue',
+        model: 'test-model',
+        studyGuideOptions: { format: 'revision', sectionCount: 1 },
+      },
+      {
+        sources: [
+          {
+            id: 'source-1',
+            title: 'Ethics',
+            kind: 'text',
+            url: null,
+            chunks: [sourceChunk],
+            promptChunks: [sourceChunk],
+          },
+        ],
+        evidence: [{ ...sourceChunk, citationKey: 'R1', rank: 1 }],
+      },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    await drain(stream);
+
+    const reopened = await materials.get('material-1');
+    expect(reopened.content).toMatchObject({ citations: [] });
+  });
+
+  it('keeps the tail sections of a source when the prompt budget cuts it', async () => {
+    const { handler } = setup();
+    vi.mocked(streamText).mockReturnValue({
+      partialOutputStream: (async function* () {
+        yield content;
+      })(),
+      output: Promise.resolve(content),
+    } as never);
+
+    // Eight sections of two chunks each. The evidence is presented round robin
+    // across sections, so the budget cut costs every section a little instead
+    // of lopping off the tail; head to tail it would drop section 7 entirely.
+    const chunks = Array.from({ length: 8 }, (_, section) =>
+      Array.from({ length: 2 }, (_, part) => ({
+        ...sourceChunk,
+        chunkId: `chunk-${section}-${part}`,
+        chunkIndex: section * 2 + part,
+        content: `Source: "Ethics"\nSection ${section} marker ${'x'.repeat(8_000)}`,
+      })),
+    ).flat();
+    const promptChunks = [
+      ...chunks.filter((chunk) => chunk.chunkIndex % 2 === 0),
+      ...chunks.filter((chunk) => chunk.chunkIndex % 2 === 1),
+    ];
+    const evidence = promptChunks.map((chunk, index) => ({
+      ...chunk,
+      citationKey: `R${index + 1}`,
+      rank: index + 1,
+    }));
+
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'study_guide',
+        brief: 'Ethics',
+        model: 'test-model',
+        studyGuideOptions: { format: 'revision', sectionCount: 1 },
+      },
+      {
+        sources: [
+          {
+            id: 'source-1',
+            title: 'Ethics',
+            kind: 'text',
+            url: null,
+            chunks,
+            promptChunks,
+          },
+        ],
+        evidence,
+      },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    const frames = await drain(stream);
+
+    const prompt = vi.mocked(streamText).mock.calls[0][0].prompt as string;
+    expect(prompt.length).toBeLessThanOrEqual(100_000);
+    expect(prompt).toContain('Section 7 marker');
+    // What the budget dropped is reported in the terminal frame, not silent.
+    expect(frames).toContain('"droppedBlocks"');
+    expect(frames).toContain('"truncatedSourceIds"');
+  });
+
+  it('does not ask for citations when the generation is ungrounded', async () => {
+    const { handler } = setup();
+    vi.mocked(streamText).mockReturnValue({
+      partialOutputStream: (async function* () {
+        yield {
+          ...content,
+          sections: [{ ...content.sections[0], sourceIds: [] }],
+        };
+      })(),
+      output: Promise.resolve({
+        ...content,
+        sections: [{ ...content.sections[0], sourceIds: [] }],
+      }),
+    } as never);
+
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'study_guide',
+        brief: 'Virtue',
+        model: 'test-model',
+        studyGuideOptions: { format: 'revision', sectionCount: 1 },
+      },
+      { sources: [], evidence: [] },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    await drain(stream);
+
+    const instructions = vi.mocked(streamText).mock.calls[0][0]
+      .instructions as string;
+    expect(instructions).not.toContain('[ref:R1]');
+  });
 
   it('fails recoverably without saving invalid native or fallback output', async () => {
     const { handler, database } = setup();
@@ -150,7 +332,7 @@ describe('study guide generation boundary', () => {
     const { stream } = handler.createStream(
       'notebook',
       { kind: 'study_guide', brief: 'Virtue', model: 'test-model' },
-      [],
+      { sources: [], evidence: [] },
       'request',
       vi.fn(),
       onError,

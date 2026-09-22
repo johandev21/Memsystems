@@ -5,6 +5,7 @@ import {
   validatePracticeProblems,
 } from './practice-problems-content';
 import { CaseStudyContent, validateCaseStudy } from './case-study-content';
+import { GenerationCitationsSchema } from './generation-citations';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export type StudyMaterialKind =
@@ -35,6 +36,7 @@ export const QuizQuestion = z.object({
 export const QuizContent = z.object({
   title: z.string().max(200),
   questions: z.array(QuizQuestion).min(1).max(50),
+  citations: GenerationCitationsSchema,
 });
 
 export const SimpleFlashcardContent = z.preprocess(
@@ -57,6 +59,7 @@ export const SimpleFlashcardContent = z.preprocess(
       )
       .min(1)
       .max(100),
+    citations: GenerationCitationsSchema,
   }),
 );
 
@@ -84,6 +87,7 @@ export const RoadmapContent = z.object({
   title: z.string().max(200),
   description: z.string().max(5000).default(''),
   phases: z.array(RoadmapPhase).min(1).max(20),
+  citations: GenerationCitationsSchema,
 });
 
 export const MindMapNode = z.object({
@@ -109,6 +113,7 @@ export const MindMapContent = z.object({
   rootId: z.string(),
   nodes: z.array(MindMapNode).min(1).max(500),
   edges: z.array(MindMapEdge).max(2000),
+  citations: GenerationCitationsSchema,
 });
 
 export const SlidesTheme = z.object({

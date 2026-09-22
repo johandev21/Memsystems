@@ -5,6 +5,7 @@ import {
   SLIDE_ROLES,
   SUPPORTED_FONTS,
 } from './slides-design.types';
+import { GenerationCitationsSchema } from './generation-citations';
 
 const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
@@ -177,6 +178,7 @@ export const SlideDeckSchema = z.object({
     )
     .max(20)
     .optional(),
+  citations: GenerationCitationsSchema,
 });
 
 export type SlideDeckInput = z.input<typeof SlideDeckSchema>;

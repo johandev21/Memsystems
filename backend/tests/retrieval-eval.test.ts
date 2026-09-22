@@ -34,6 +34,9 @@ describe('retrieval evaluation gate', () => {
         baselinePath,
         `${JSON.stringify(
           {
+            // Preserve other evaluation sections (Generation grounding) that
+            // share this baseline file.
+            ...baseline,
             version: 1,
             tolerance: baseline.tolerance,
             metrics: report.metrics,

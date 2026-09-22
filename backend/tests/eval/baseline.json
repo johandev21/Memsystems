@@ -13,8 +13,14 @@
     "citationAccuracy": 1,
     "refusalAccuracy": 1,
     "faithfulness": 1,
-    "latencyMsP50": 3,
-    "latencyMsP95": 19,
+    "latencyMsP50": 7,
+    "latencyMsP95": 54,
     "costTokensPerQuery": 860.1111111111111
+  },
+  "generation": {
+    "sourceCoverage": 1,
+    "sectionCoverage": 1,
+    "citationAccuracy": 1,
+    "citationAttachment": 1
   }
 }

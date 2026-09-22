@@ -22,7 +22,7 @@ import { cn } from "@/shared/utils/cn";
 import type { CitedSourceDTO } from "../api/chat";
 import { noEvidenceMetadataOf } from "../types/no-evidence.types";
 import { getReferenceKeyFromHref, prepareReferenceMessage } from "../types/message-reference.types";
-import { MessageReferences, ReferencePopover } from "./reference-popover";
+import { CitationChipRow, CitationPopover } from "@/shared/citations/citation-popover";
 import { NoEvidencePanel } from "./no-evidence-message";
 
 export interface AssistantMessageProps {
@@ -125,9 +125,7 @@ export function AssistantMessage({
           <>
             <AssistantReasoning content={content} />
             <AssistantResponses messageId={activeMessage.id} content={content} />
-            {!content.isStreaming && (
-              <MessageReferences references={content.remainingReferences} />
-            )}
+            {!content.isStreaming && <CitationChipRow references={content.remainingReferences} />}
           </>
         )}
       </MessageContent>
@@ -243,8 +241,7 @@ function useAssistantMessageContent(
         const referenceKey = getReferenceKeyFromHref(href);
         if (referenceKey) {
           const reference = referencesByKey.get(referenceKey.toUpperCase());
-          if (reference)
-            return <ReferencePopover reference={reference}>{children}</ReferencePopover>;
+          if (reference) return <CitationPopover reference={reference}>{children}</CitationPopover>;
           // Unknown citation key (e.g. model hallucinated R9 or live message
           // before history refetch): render plain number text instead of a
           // dead `#reference-*` fragment link or raw markdown.

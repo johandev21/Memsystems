@@ -1,23 +1,7 @@
 import { apiDelete, createQueryOptions } from "@/shared/api";
 
-export interface CitationLocator {
-  pageNumber?: number;
-  slideNumber?: number;
-  startOffsetMs?: number;
-  endOffsetMs?: number;
-  speaker?: string;
-  sheetName?: string;
-  cellRange?: string;
-  symbol?: string;
-  lineStart?: number;
-  lineEnd?: number;
-  imageRegion?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-}
+export type { CitationLocator } from "@/shared/citations/citation";
+import type { CitationLocator } from "@/shared/citations/citation";
 
 export interface CitedSourceDTO {
   id: string;

@@ -1,7 +1,12 @@
 import { ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { CitedSourceDTO } from "../api/chat";
+import {
+  getCitationExcerpt,
+  getCitationLocatorLabel,
+  getSafeCitationUrl,
+  type CitationReference,
+} from "@/shared/citations/citation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,23 +17,27 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  getReferenceExcerpt,
-  getReferenceLocatorLabel,
-  getSafeReferenceUrl,
-} from "../types/message-reference.types";
 
-interface ReferencePopoverProps {
-  reference: CitedSourceDTO;
+/**
+ * The shared citation surface: a numbered pill that opens a popover with the
+ * source kind, title, locator, and supporting excerpt, plus an action to open
+ * the source. Chat replies and generated Study Materials both use it.
+ *
+ * The popover labels live in the `chat` namespace, where the citation copy was
+ * first written; keeping them there avoids duplicating the locator strings.
+ */
+
+interface CitationPopoverProps {
+  reference: CitationReference;
   children?: ReactNode;
 }
 
-export function ReferencePopover({ reference, children }: ReferencePopoverProps) {
+export function CitationPopover({ reference, children }: CitationPopoverProps) {
   const { t } = useTranslation("chat");
-  const safeUrl = getSafeReferenceUrl(reference.url);
+  const safeUrl = getSafeCitationUrl(reference.url);
   const kindLabel =
     reference.kind === "unknown" ? t("referencePopover.unknownKind") : capitalize(reference.kind);
-  const locatorLabel = getReferenceLocatorLabel(reference);
+  const locatorLabel = getCitationLocatorLabel(reference);
 
   return (
     <Popover>
@@ -55,28 +64,26 @@ export function ReferencePopover({ reference, children }: ReferencePopoverProps)
         sideOffset={8}
         className="w-[min(22rem,calc(100vw-2rem))]"
       >
-        <ReferencePopoverHeader
+        <CitationPopoverHeader
           reference={reference}
           kindLabel={kindLabel}
           locatorLabel={locatorLabel}
         />
-        <ReferenceOpenSourceButton reference={reference} safeUrl={safeUrl} />
+        <CitationOpenSourceButton reference={reference} safeUrl={safeUrl} />
       </PopoverContent>
     </Popover>
   );
 }
 
-interface ReferencePopoverHeaderProps {
-  reference: CitedSourceDTO;
-  kindLabel: string;
-  locatorLabel: string | null;
-}
-
-function ReferencePopoverHeader({
+function CitationPopoverHeader({
   reference,
   kindLabel,
   locatorLabel,
-}: ReferencePopoverHeaderProps) {
+}: {
+  reference: CitationReference;
+  kindLabel: string;
+  locatorLabel: string | null;
+}) {
   const { t } = useTranslation("chat");
 
   return (
@@ -92,33 +99,31 @@ function ReferencePopoverHeader({
         <div className="text-xs font-medium text-muted-foreground">{locatorLabel}</div>
       )}
       <PopoverDescription className="max-h-48 overflow-y-auto leading-relaxed">
-        {getReferenceExcerpt(reference)}
+        {getCitationExcerpt(reference)}
       </PopoverDescription>
     </PopoverHeader>
   );
 }
 
-interface ReferenceOpenSourceButtonProps {
-  reference: CitedSourceDTO;
-  safeUrl: string | null;
-}
-
-function ReferenceOpenSourceButton({
+function CitationOpenSourceButton({
   reference,
   safeUrl,
-}: ReferenceOpenSourceButtonProps) {
+}: {
+  reference: CitationReference;
+  safeUrl: string | null;
+}) {
   const { t } = useTranslation("chat");
 
   if (!reference.isAvailable) return null;
 
   const hasCustomLocator = Boolean(
     reference.locator?.imageRegion ||
-      typeof reference.locator?.startOffsetMs === "number" ||
-      typeof reference.locator?.slideNumber === "number" ||
-      reference.locator?.symbol ||
-      reference.locator?.cellRange ||
-      reference.locator?.sheetName ||
-      !safeUrl,
+    typeof reference.locator?.startOffsetMs === "number" ||
+    typeof reference.locator?.slideNumber === "number" ||
+    reference.locator?.symbol ||
+    reference.locator?.cellRange ||
+    reference.locator?.sheetName ||
+    !safeUrl,
   );
 
   const handleOpenSourceViewer = () => {
@@ -188,26 +193,25 @@ function ReferenceOpenSourceButton({
   return null;
 }
 
-interface MessageReferencesProps {
-  references: CitedSourceDTO[];
+interface CitationChipRowProps {
+  references: CitationReference[];
+  /** Accessible label for the row; defaults to the Chat copy. */
+  ariaLabel?: string;
 }
 
-export function MessageReferences({ references }: MessageReferencesProps) {
+export function CitationChipRow({ references, ariaLabel }: CitationChipRowProps) {
   const { t } = useTranslation("chat");
 
   if (references.length === 0) return null;
 
   return (
     <div
-      aria-label={t("referencePopover.referencesAria")}
+      aria-label={ariaLabel ?? t("referencePopover.referencesAria")}
       className="not-typeset mt-2 flex flex-wrap items-center gap-1"
       data-not-typeset
     >
       {references.map((reference) => (
-        <ReferencePopover
-          key={`${reference.citationKey}-${reference.id}-${reference.chunkId ?? "source"}`}
-          reference={reference}
-        />
+        <CitationPopover key={`${reference.citationKey}-${reference.id}`} reference={reference} />
       ))}
     </div>
   );

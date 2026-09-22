@@ -7,6 +7,8 @@
  * (`slides-builder.service.ts`) renderers consume only resolved decks.
  */
 
+import type { GenerationCitation } from './generation-citations';
+
 export const SLIDES_SCHEMA_VERSION = 2 as const;
 
 export type SlideDesignPreset =
@@ -159,6 +161,8 @@ export type SlideDeck = {
   design: SlideDesign;
   slides: SlideScene[];
   previews?: { slideId: string; svg: string }[];
+  /** Evidence citations attached after generation; never model-authored. */
+  citations?: GenerationCitation[];
 };
 
 /** Legacy prose slide (pre-IR renderer). Convertible via the resolver. */

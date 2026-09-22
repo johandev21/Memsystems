@@ -1,5 +1,10 @@
-import i18n from "@/shared/i18n";
 import type { CitedSourceDTO } from "../api/chat";
+
+export {
+  getCitationExcerpt as getReferenceExcerpt,
+  getCitationLocatorLabel as getReferenceLocatorLabel,
+  getSafeCitationUrl as getSafeReferenceUrl,
+} from "@/shared/citations/citation";
 
 const REFERENCE_HREF_PREFIX = "#reference-";
 const REF_MARKER_PATTERN = /`?\[ref:([a-zA-Z0-9_-]+)\]`?/gi;
@@ -136,108 +141,6 @@ export function getReferenceKeyFromHref(href?: string): string | null {
   }
 }
 
-export function getReferenceExcerpt(reference: CitedSourceDTO): string {
-  return (
-    reference.quote?.trim() ||
-    reference.description?.trim() ||
-    i18n.t("referencePopover.noExcerpt", { ns: "chat" })
-  );
-}
-
-/** Returns a human-readable location without changing the source URL action. */
-export function getReferenceLocatorLabel(reference: CitedSourceDTO): string | null {
-  const locator = reference.locator;
-  if (!locator) return null;
-
-  const labels: string[] = [];
-  if (isPositiveNumber(locator.pageNumber)) {
-    labels.push(i18n.t("locator.page", { ns: "chat", number: locator.pageNumber }));
-  }
-  if (isPositiveNumber(locator.slideNumber)) {
-    labels.push(i18n.t("locator.slide", { ns: "chat", number: locator.slideNumber }));
-  }
-
-  if (isNonNegativeNumber(locator.startOffsetMs) || isNonNegativeNumber(locator.endOffsetMs)) {
-    const start = isNonNegativeNumber(locator.startOffsetMs)
-      ? formatTimestamp(locator.startOffsetMs)
-      : null;
-    const end = isNonNegativeNumber(locator.endOffsetMs)
-      ? formatTimestamp(locator.endOffsetMs)
-      : null;
-    labels.push(
-      start && end
-        ? `${start}–${end}`
-        : (start ?? end ?? i18n.t("locator.timestamp", { ns: "chat" })),
-    );
-  }
-
-  if (locator.sheetName || locator.cellRange) {
-    labels.push(
-      [
-        locator.sheetName
-          ? i18n.t("locator.sheet", { ns: "chat", name: locator.sheetName })
-          : null,
-        locator.cellRange,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    );
-  }
-
-  if (locator.symbol || isPositiveNumber(locator.lineStart) || isPositiveNumber(locator.lineEnd)) {
-    const lines =
-      isPositiveNumber(locator.lineStart) || isPositiveNumber(locator.lineEnd)
-        ? locator.lineStart != null && locator.lineEnd != null
-          ? i18n.t("locator.linesRange", {
-              ns: "chat",
-              start: locator.lineStart,
-              end: locator.lineEnd,
-            })
-          : i18n.t("locator.lines", {
-              ns: "chat",
-              value: locator.lineStart ?? locator.lineEnd ?? 0,
-            })
-        : null;
-    labels.push([locator.symbol, lines].filter(Boolean).join(" · "));
-  }
-
-  if (locator.imageRegion) {
-    labels.push(i18n.t("locator.visualRegion", { ns: "chat" }));
-  }
-
-  return labels.length > 0 ? labels.join(" · ") : null;
-}
-
-export function getSafeReferenceUrl(url: string | null): string | null {
-  if (!url) return null;
-
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : null;
-  } catch {
-    return null;
-  }
-}
-
 function createReferenceMarkdownLink(reference: CitedSourceDTO): string {
   return `[${reference.number}](${createReferenceHref(reference.citationKey)})`;
-}
-
-function isPositiveNumber(value: number | undefined): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
-
-function isNonNegativeNumber(value: number | undefined): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
-}
-
-function formatTimestamp(offsetMs: number): string {
-  const totalSeconds = Math.floor(offsetMs / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }

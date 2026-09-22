@@ -13,9 +13,6 @@
  *   RETRIEVAL_EVAL_UPDATE=1 pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts
  */
 
-import { createId } from '@paralleldrive/cuid2';
-import { sourceChunks } from '../../src/database/schema';
-import { chunkContextHeader } from '../../src/modules/ai/chunking.service';
 import {
   DEFAULT_FUSION_K,
   RetrievalService,
@@ -35,20 +32,14 @@ import {
 } from '../../src/modules/chat/chat-citations';
 import { chunkBody } from '../../src/modules/ai/evidence-assembly';
 import { db } from '../db';
-import { seedNotebook, seedSource } from '../fixtures';
 import {
   DeterministicEmbedder,
   type EvalEmbedder,
 } from './deterministic-embedder';
 import { DeterministicReranker } from './deterministic-reranker';
 import { DeterministicRewriter } from './deterministic-rewriter';
-import {
-  GOLDEN_QUERIES,
-  GOLDEN_SOURCES,
-  type GoldenChunk,
-  type GoldenQuery,
-  type GoldenSource,
-} from './golden-set';
+import { contextualText, seedGoldenCorpus } from './seed-corpus';
+import { GOLDEN_QUERIES, GOLDEN_SOURCES, type GoldenQuery } from './golden-set';
 
 /**
  * Evidence depth and relevance floor used by the harness. The floor is
@@ -273,10 +264,9 @@ export async function evaluateRetrieval(
   const rewriter = options.rewriter ?? new DeterministicRewriter(corpus);
   const understanding = new QueryUnderstandingService(rewriteConfig, rewriter);
 
-  const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(
-    embedder,
+  const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(embedder, {
     contextualize,
-  );
+  });
   const service = new RetrievalService(
     db as never,
     {
@@ -349,76 +339,6 @@ export async function evaluateRetrieval(
     metrics: computeMetrics(queries),
     queries,
   };
-}
-
-/** The document plus section context a golden chunk is represented with. */
-function contextualText(source: GoldenSource, chunk: GoldenChunk): string {
-  return `${chunkContextHeader({
-    title: source.title,
-    kind: source.kind,
-    headingPath: chunk.headingPath ?? [],
-  })}${chunk.text}`;
-}
-
-/**
- * Persists the golden corpus and returns the golden-id to chunk-id map. With
- * `contextualize` false the chunks are seeded with the pre-contextual
- * representation: the searchable text and the embedding are the bare body,
- * with no document or section header.
- */
-async function seedGoldenCorpus(
-  embedder: EvalEmbedder,
-  contextualize: boolean,
-): Promise<{
-  notebookId: string;
-  chunkIdByGoldenId: Map<string, string>;
-}> {
-  const notebook = await seedNotebook({
-    title: 'Retrieval Evaluation Corpus',
-  });
-  const chunkIdByGoldenId = new Map<string, string>();
-  // Unique per run: the harness may seed the corpus more than once in a test.
-  const runId = createId();
-
-  for (const source of GOLDEN_SOURCES) {
-    const seeded = await seedSource(notebook.id, {
-      id: `eval-${runId}-source-${source.id}`,
-      kind: source.kind,
-      title: source.title,
-      rawText: source.chunks.map((chunk) => chunk.text).join('\n\n'),
-      processingStatus: source.processingStatus,
-      url: source.kind === 'url' ? `https://example.test/${source.id}` : null,
-    });
-
-    await db.insert(sourceChunks).values(
-      source.chunks.map((chunk, index) => {
-        const id = `eval-${runId}-chunk-${chunk.id}`;
-        chunkIdByGoldenId.set(chunk.id, id);
-        const contextHeader = contextualize
-          ? chunkContextHeader({
-              title: source.title,
-              kind: source.kind,
-              headingPath: chunk.headingPath ?? [],
-            })
-          : '';
-        const searchableText = `${contextHeader}${chunk.text}`;
-        return {
-          id,
-          sourceId: seeded.id,
-          notebookId: notebook.id,
-          chunkIndex: index,
-          content: chunk.text,
-          searchableText,
-          contextHeader,
-          headingPath: chunk.headingPath ?? [],
-          sourceKind: source.kind,
-          embedding: embedder.embed(searchableText),
-        };
-      }),
-    );
-  }
-
-  return { notebookId: notebook.id, chunkIdByGoldenId };
 }
 
 function buildQueryResult(

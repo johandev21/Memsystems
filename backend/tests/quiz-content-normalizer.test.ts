@@ -44,6 +44,7 @@ describe('quiz answer identity', () => {
           topic: '',
         },
       ],
+      citations: [],
     };
 
     const shuffled = shuffleQuizOptions(content);

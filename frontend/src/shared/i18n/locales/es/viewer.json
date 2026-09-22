@@ -30,6 +30,10 @@
     "tradeoffs": "Compensaciones",
     "yourResponse": "Tu respuesta"
   },
+  "citations": {
+    "title": "Citas",
+    "aria": "Citas de fuentes"
+  },
   "cloze": {
     "blankAnswer": "Espacio {{number}}:",
     "blankAria": "Respuesta del espacio {{number}}",

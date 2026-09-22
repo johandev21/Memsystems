@@ -6,6 +6,7 @@ type NormalizedFlashcard = { front: string; back: string };
 type NormalizedFlashcardContent = {
   title?: string;
   cards: NormalizedFlashcard[];
+  citations: unknown[];
 };
 
 type NormalizedQuizOption = { id: string; text: string; explanation: string };
@@ -18,6 +19,7 @@ type NormalizedQuizQuestion = {
 type NormalizedQuizContent = {
   title?: string;
   questions: NormalizedQuizQuestion[];
+  citations: unknown[];
 };
 
 type NormalizedRoadmapTopic = {
@@ -39,6 +41,7 @@ type NormalizedRoadmapContent = {
   title?: string;
   description?: string;
   phases: NormalizedRoadmapPhase[];
+  citations: unknown[];
 };
 
 type NormalizedMindMapNode = {
@@ -59,6 +62,7 @@ type NormalizedMindMapContent = {
   rootId: string;
   nodes: NormalizedMindMapNode[];
   edges: NormalizedMindMapEdge[];
+  citations: unknown[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -72,6 +76,16 @@ const arrayLength = (value: unknown): number =>
 
 const stringify = (value: unknown): string =>
   typeof value === 'string' ? value : String(value);
+
+/**
+ * Citations are attached after generation and must survive every read path
+ * that re-normalizes content, so the normalizers carry the field through
+ * untouched (the content schemas validate it).
+ */
+const citationsField = (content: unknown): unknown[] =>
+  isRecord(content) && Array.isArray(content.citations)
+    ? (content.citations as unknown[])
+    : [];
 
 export function normalizeFlashcardContent(
   content: unknown,
@@ -120,6 +134,7 @@ export function normalizeFlashcardContent(
     title:
       isRecord(content) && content.title ? stringify(content.title) : undefined,
     cards: normalizedCards,
+    citations: citationsField(content),
   };
 }
 
@@ -293,6 +308,7 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
     title:
       isRecord(content) && content.title ? stringify(content.title) : undefined,
     questions: normalizedQuestions,
+    citations: citationsField(content),
   };
 }
 
@@ -384,6 +400,7 @@ export function normalizeRoadmapContent(
         ? content.description
         : undefined,
     phases: normalizedPhases,
+    citations: citationsField(content),
   };
 }
 
@@ -451,6 +468,7 @@ export function normalizeMindMapContent(
         : (normalizedNodes[0]?.id ?? ''),
     nodes: normalizedNodes,
     edges: normalizedEdges,
+    citations: citationsField(content),
   };
 }
 
@@ -579,6 +597,7 @@ export function normalizeCaseStudyContent(content: unknown): unknown {
     sourceIds: Array.isArray(content.sourceIds)
       ? (content.sourceIds as unknown[]).map((id) => stringify(id))
       : [],
+    citations: citationsField(content),
   };
 }
 
@@ -649,6 +668,7 @@ export function normalizePracticeProblemsContent(content: unknown): unknown {
     sourceIds: Array.isArray(content.sourceIds)
       ? (content.sourceIds as unknown[]).map((id) => stringify(id))
       : [],
+    citations: citationsField(content),
   };
 }
 
