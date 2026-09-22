@@ -26,6 +26,9 @@ const tsvector = customType<{ data: string; driverData: string }>({
 
 export const sourceKindEnum = pgEnum('source_kind', ['text', 'url', 'file']);
 
+/** The kind of a Source: pasted text, a URL, or an uploaded file. */
+export type SourceKind = (typeof sourceKindEnum.enumValues)[number];
+
 export const sourceModalityEnum = pgEnum('source_modality', [
   'document',
   'image',

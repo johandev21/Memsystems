@@ -52,6 +52,8 @@ export interface IndexResult {
   cancelled: boolean;
   contentHash: string | null;
   processingVersion: number;
+  /** The chunk representation the stored chunks were built with. */
+  chunkingVersion: number;
   embeddingModel: string;
   embeddingDimensions: number;
   sourceVersionId?: string | null;
@@ -239,6 +241,7 @@ export class IndexingService {
       cancelled: false,
       contentHash: source.contentHash ?? null,
       processingVersion: INDEX_PROCESSING_VERSION,
+      chunkingVersion: CHUNKING_VERSION,
       embeddingModel: embedding.model,
       embeddingDimensions: EMBEDDING_DIMENSIONS,
       sourceVersionId,
@@ -262,6 +265,7 @@ export class IndexingService {
       cancelled,
       contentHash,
       processingVersion: INDEX_PROCESSING_VERSION,
+      chunkingVersion: CHUNKING_VERSION,
       embeddingModel: this.embeddingService.documentEmbeddingModel(),
       embeddingDimensions: EMBEDDING_DIMENSIONS,
       sourceVersionId,

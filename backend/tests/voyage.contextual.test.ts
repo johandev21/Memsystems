@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   VOYAGE_CONTEXTUAL_EMBEDDINGS_URL,
+  estimateVoyageTokens,
   voyageContextualEmbed,
 } from '../src/modules/ai/providers/voyage.client';
 
@@ -98,39 +99,58 @@ describe('voyageContextualEmbed', () => {
     expect(result.totalTokens).toBe(7);
   });
 
-  it('splits documents into multiple requests when the token budget would be exceeded', async () => {
-    let requestIndex = 0;
+  it('splits a group whose chunks exceed the token cap into requests that each stay under it', async () => {
+    const requests: string[][][] = [];
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(init?.body as string) as { inputs: string[][] };
-      const index = requestIndex++;
+      requests.push(body.inputs);
+      const requestIndex = requests.length - 1;
       return jsonResponse({
         data: body.inputs.map((group, groupIndex) => ({
           index: groupIndex,
           data: group.map((_, chunkIndex) => ({
             index: chunkIndex,
-            embedding: [index, groupIndex, chunkIndex],
+            embedding: [requestIndex, groupIndex, chunkIndex],
           })),
         })),
         usage: { total_tokens: 4 },
       });
     });
-    // ~100,000 estimated tokens each: one per request.
-    const huge = 'x'.repeat(400_000);
 
+    // Four chunks of ~10,000 estimated tokens each: 40,000 in one group,
+    // above the 30,000-token cap the endpoint enforces for pre-chunked
+    // inputs (auto-chunking is what raises it to 120,000).
+    const chunk = 'x'.repeat(40_000);
     const result = await voyageContextualEmbed({
       apiKey: 'voy_key',
       model: 'voyage-context-4',
-      groups: [[huge], [huge]],
+      groups: [[chunk, chunk, chunk, chunk]],
       inputType: 'document',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    // The group is split into requests that respect the cap, and the batch
+    // packer keeps each request under it too.
+    expect(requests).toHaveLength(2);
+    expect(
+      requests.map((inputs) =>
+        inputs
+          .flat()
+          .reduce((sum, text) => sum + estimateVoyageTokens(text), 0),
+      ),
+    ).toEqual([30_000, 10_000]);
+    for (const inputs of requests) {
+      const tokens = inputs
+        .flat()
+        .reduce((sum, text) => sum + estimateVoyageTokens(text), 0);
+      expect(tokens).toBeLessThanOrEqual(30_000);
+    }
     expect(result.embeddings).toEqual([
       [0, 0, 0],
+      [0, 0, 1],
+      [0, 0, 2],
       [1, 0, 0],
     ]);
-    expect(result.totalTokens).toBe(8);
   });
 
   it('short-circuits empty input and rejects a malformed response', async () => {

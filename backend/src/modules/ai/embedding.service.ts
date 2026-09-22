@@ -1,5 +1,8 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
-import { ServiceUnavailableError } from '../../common/errors/domain-error';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  DomainError,
+  ServiceUnavailableError,
+} from '../../common/errors/domain-error';
 import { voyageContextualEmbed, voyageEmbed } from './providers/voyage.client';
 import { UserSettingsService } from './user-settings.service';
 
@@ -15,12 +18,17 @@ export const CONTEXTUAL_EMBEDDING_MODEL = 'voyage-context-4';
 export const EMBEDDING_DIMENSIONS = 1024;
 
 /**
+ * A capability probe must fail fast: it runs during boot and when a key is
+ * saved, and it never indexes anything.
+ */
+const CAPABILITY_PROBE_TIMEOUT_MS = 15_000;
+
+/**
  * The embedding path. Contextualized chunk embeddings are the primary
  * document path: each Source's ordered chunks are embedded as one group, so
- * every chunk encodes its document context. The pre-contextual model is
- * retained as the documented fallback, selected with
- * `EMBEDDING_CONTEXTUAL_ENABLED=false`; documents and queries always share
- * one embedding space.
+ * every chunk encodes its document context. The pre-contextual model is the
+ * automatic fallback when the key or plan cannot use the contextual model;
+ * documents and queries always share one embedding space.
  */
 export interface EmbeddingConfig {
   contextualEnabled: boolean;
@@ -68,7 +76,15 @@ export function voyageApiKeyFromEnv(): string | null {
 
 @Injectable()
 export class EmbeddingService {
+  private readonly logger = new Logger(EmbeddingService.name);
   private readonly config: EmbeddingConfig;
+  /**
+   * Whether the contextual path is active. It starts from the configured
+   * default and only a capability probe flips it, process-wide — never per
+   * call. Documents and queries must share one embedding model, because
+   * vectors from different models are not comparable.
+   */
+  private contextualActive: boolean;
 
   constructor(
     private readonly userSettingsService: UserSettingsService,
@@ -77,6 +93,7 @@ export class EmbeddingService {
     config?: EmbeddingConfig,
   ) {
     this.config = config ?? loadEmbeddingConfig();
+    this.contextualActive = this.config.contextualEnabled;
   }
 
   /** The effective Voyage key: stored settings key, else env fallback. */
@@ -92,7 +109,7 @@ export class EmbeddingService {
    * because vectors from different models are not comparable.
    */
   documentEmbeddingModel(): string {
-    return this.config.contextualEnabled
+    return this.contextualActive
       ? this.config.contextualModel
       : this.config.fallbackModel;
   }
@@ -103,10 +120,74 @@ export class EmbeddingService {
   }
 
   /**
+   * Probes the contextual endpoint once, at boot and before the reindex-all
+   * representation check. A capability failure — the key or plan cannot use
+   * the model (HTTP 400/403) — flips the whole process to the fallback
+   * model, so documents and queries stay in one space and the changed
+   * representation key makes the reindex-all rebuild the corpus with it.
+   * Transient failures (rate limit, outage, invalid key) keep the configured
+   * path: they are not evidence the model is unavailable, and jobs retry.
+   */
+  async ensureContextualAvailability(apiKey: string): Promise<boolean> {
+    if (!this.config.contextualEnabled) {
+      this.contextualActive = false;
+      return false;
+    }
+
+    try {
+      await this.pingContextual(apiKey);
+      this.contextualActive = true;
+      return true;
+    } catch (error) {
+      if (isCapabilityError(error)) {
+        this.contextualActive = false;
+        this.logger.warn(
+          `Contextual embeddings (${this.config.contextualModel}) are not available for this key; falling back to ${this.config.fallbackModel}. ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        return false;
+      }
+      this.logger.warn(
+        `Could not probe contextual embeddings; keeping ${this.config.contextualModel}. ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      this.contextualActive = true;
+      return true;
+    }
+  }
+
+  /**
+   * Verifies a key for the settings save flow against the path the process
+   * actually uses. A capability failure while the contextual path is active
+   * flips the process to the fallback and verifies that path instead, so a
+   * key without contextual access can still be stored; the boot
+   * representation check reconciles the corpus on the next start.
+   */
+  async verifyApiKey(apiKey: string): Promise<void> {
+    if (!this.contextualActive) {
+      await this.pingStandard(apiKey);
+      return;
+    }
+
+    try {
+      await this.pingContextual(apiKey);
+    } catch (error) {
+      if (!isCapabilityError(error)) throw error;
+      this.contextualActive = false;
+      this.logger.warn(
+        `Contextual embeddings (${this.config.contextualModel}) are not available for this key; falling back to ${this.config.fallbackModel}.`,
+      );
+      await this.pingStandard(apiKey);
+    }
+  }
+
+  /**
    * Embeds one Source's ordered chunks as a group through the contextualized
    * chunk embedding endpoint, so each chunk's vector encodes its document
-   * context. With contextualization disabled, falls back to embedding each
-   * chunk independently with the pre-contextual model.
+   * context. With the contextual path inactive, embeds each chunk
+   * independently with the pre-contextual model.
    */
   async embedDocumentGroups(
     groups: string[][],
@@ -117,7 +198,7 @@ export class EmbeddingService {
     }
 
     const apiKey = await this.requireApiKey();
-    if (!this.config.contextualEnabled) {
+    if (!this.contextualActive) {
       const embeddings = await this.embedDocuments(groups.flat());
       return { model: this.config.fallbackModel, embeddings };
     }
@@ -156,7 +237,7 @@ export class EmbeddingService {
    */
   async embedQuery(text: string): Promise<number[]> {
     const apiKey = await this.requireApiKey();
-    if (!this.config.contextualEnabled) {
+    if (!this.contextualActive) {
       const embeddings = await voyageEmbed({
         apiKey,
         model: this.config.fallbackModel,
@@ -176,6 +257,26 @@ export class EmbeddingService {
     return response.embeddings[0];
   }
 
+  private async pingContextual(apiKey: string): Promise<void> {
+    await voyageContextualEmbed({
+      apiKey,
+      model: this.config.contextualModel,
+      groups: [['ping']],
+      inputType: 'query',
+      timeoutMs: CAPABILITY_PROBE_TIMEOUT_MS,
+    });
+  }
+
+  private async pingStandard(apiKey: string): Promise<void> {
+    await voyageEmbed({
+      apiKey,
+      model: this.config.fallbackModel,
+      input: ['ping'],
+      inputType: 'query',
+      timeoutMs: CAPABILITY_PROBE_TIMEOUT_MS,
+    });
+  }
+
   private async requireApiKey(): Promise<string> {
     const apiKey = await this.getVoyageApiKey();
     if (!apiKey) {
@@ -186,6 +287,18 @@ export class EmbeddingService {
     }
     return apiKey;
   }
+}
+
+/**
+ * A capability error means the model cannot be used with this key or plan
+ * (bad model name, no access), as opposed to a key, rate-limit, or outage
+ * problem that the fallback would not fix either.
+ */
+function isCapabilityError(error: unknown): boolean {
+  return (
+    error instanceof DomainError &&
+    (error.status === 400 || error.status === 403)
+  );
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {

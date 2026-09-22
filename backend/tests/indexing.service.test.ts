@@ -21,7 +21,10 @@ import {
   INDEX_PROCESSING_VERSION,
   IndexingService,
 } from '../src/modules/ai/indexing.service';
-import { EXTRACTOR_VERSION, NORMALIZATION_VERSION } from '../src/modules/sources/document-normalizer.service';
+import {
+  EXTRACTOR_VERSION,
+  NORMALIZATION_VERSION,
+} from '../src/modules/sources/document-normalizer.service';
 import { seedNotebook, seedSource } from './fixtures';
 
 const LONG_TEXT = Array.from(
@@ -39,7 +42,9 @@ function makeVector(dimensions: number): number[] {
 
 function fakeEmbeddingService(
   impl?: Partial<{
-    embedDocumentGroups: (groups: string[][]) => Promise<DocumentEmbeddingResult>;
+    embedDocumentGroups: (
+      groups: string[][],
+    ) => Promise<DocumentEmbeddingResult>;
   }>,
 ) {
   return {
@@ -122,18 +127,22 @@ function makeIndexing(embedding: any) {
 describe('IndexingService', () => {
   it('chunks, embeds and persists a source with heading metadata', async () => {
     const notebook = await seedNotebook();
-    const { source, version } = await seedVersionedSource(notebook.id, 'Long Source', [
-      {
-        headingPath: ['Chapter 1', 'Foundations'],
-        content:
-          'Retrieval quality depends on document structure. Paragraph two repeats enough words to fill several chunks of the configured size.',
-      },
-      {
-        headingPath: ['Chapter 2', 'Context'],
-        content:
-          'Contextual representations carry the section heading. Sentence two closes the thought.',
-      },
-    ]);
+    const { source, version } = await seedVersionedSource(
+      notebook.id,
+      'Long Source',
+      [
+        {
+          headingPath: ['Chapter 1', 'Foundations'],
+          content:
+            'Retrieval quality depends on document structure. Paragraph two repeats enough words to fill several chunks of the configured size.',
+        },
+        {
+          headingPath: ['Chapter 2', 'Context'],
+          content:
+            'Contextual representations carry the section heading. Sentence two closes the thought.',
+        },
+      ],
+    );
     const embedding = fakeEmbeddingService();
     const result = await makeIndexing(embedding).indexSource(source.id);
 
@@ -157,7 +166,9 @@ describe('IndexingService', () => {
     expect(rows[0].chunkingVersion).toBe(CHUNKING_VERSION);
     expect(rows[0].contextHeader).toContain('Source: "Long Source"');
     expect(rows[0].contextHeader).toContain('Kind: text');
-    expect(rows[0].searchableText).toContain('Section: Chapter 1 > Foundations');
+    expect(rows[0].searchableText).toContain(
+      'Section: Chapter 1 > Foundations',
+    );
     expect(rows[0].content).not.toContain('Section:');
     expect(rows.every((row) => row.headingPath.length > 0)).toBe(true);
     // The lexical representation is stored and indexed alongside the body.
@@ -177,10 +188,12 @@ describe('IndexingService', () => {
       contentHash: 'hash-fallback',
     });
     const embedding = fakeEmbeddingService({
-      embedDocumentGroups: vi.fn().mockImplementation(async (groups: string[][]) => ({
-        model: EMBEDDING_MODEL,
-        embeddings: groups.flat().map(() => makeVector(EMBEDDING_DIMENSIONS)),
-      })),
+      embedDocumentGroups: vi
+        .fn()
+        .mockImplementation(async (groups: string[][]) => ({
+          model: EMBEDDING_MODEL,
+          embeddings: groups.flat().map(() => makeVector(EMBEDDING_DIMENSIONS)),
+        })),
     });
 
     const result = await makeIndexing(embedding).indexSource(source.id);
@@ -222,7 +235,9 @@ describe('IndexingService', () => {
     expect(before.length).toBeGreaterThan(0);
 
     const failing = fakeEmbeddingService({
-      embedDocumentGroups: vi.fn().mockRejectedValue(new Error('provider down')),
+      embedDocumentGroups: vi
+        .fn()
+        .mockRejectedValue(new Error('provider down')),
     });
     await expect(makeIndexing(failing).indexSource(source.id)).rejects.toThrow(
       'provider down',

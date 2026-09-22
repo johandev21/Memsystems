@@ -3,11 +3,10 @@ import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { jobs, sourceVersions, sources } from '../../database/schema';
+import { CHUNKING_VERSION } from '../ai/chunking.service';
 import {
-  EMBEDDING_CONFIG,
   EMBEDDING_DIMENSIONS,
-  loadEmbeddingConfig,
-  type EmbeddingConfig,
+  EmbeddingService,
 } from '../ai/embedding.service';
 import {
   INDEX_PROCESSING_VERSION,
@@ -40,26 +39,14 @@ export class SourceIndexingHandler implements JobHandler<
   readonly concurrency = 2;
   readonly maxAttempts = 3;
   readonly backoffBaseMs = 5_000;
-  private readonly embeddingConfig: EmbeddingConfig;
 
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly indexingService: IndexingService,
+    private readonly embeddingService: EmbeddingService,
     @Optional() private readonly versions?: SourceVersionService,
-    @Optional()
-    @Inject(EMBEDDING_CONFIG)
-    embeddingConfig?: EmbeddingConfig,
-  ) {
-    this.embeddingConfig = embeddingConfig ?? loadEmbeddingConfig();
-  }
-
-  /** The model the next indexing run will embed with. */
-  private expectedEmbeddingModel(): string {
-    return this.embeddingConfig.contextualEnabled
-      ? this.embeddingConfig.contextualModel
-      : this.embeddingConfig.fallbackModel;
-  }
+  ) {}
 
   async shouldSkip(
     job: Job<SourceIndexingJobPayload, IndexResult>,
@@ -90,13 +77,17 @@ export class SourceIndexingHandler implements JobHandler<
 
     if (!priorJob || !priorJob.result) return null;
 
+    // An older result that predates a version field fails these comparisons
+    // (undefined !== current), so it is reindexed rather than skipped.
     const priorResult = priorJob.result as IndexResult;
     if (
       priorResult.contentHash === job.payload.contentHash &&
       (!job.payload.sourceVersionId ||
         priorResult.sourceVersionId === job.payload.sourceVersionId) &&
       priorResult.processingVersion === INDEX_PROCESSING_VERSION &&
-      priorResult.embeddingModel === this.expectedEmbeddingModel() &&
+      priorResult.chunkingVersion === CHUNKING_VERSION &&
+      priorResult.embeddingModel ===
+        this.embeddingService.documentEmbeddingModel() &&
       priorResult.embeddingDimensions === EMBEDDING_DIMENSIONS
     ) {
       if (this.versions) {

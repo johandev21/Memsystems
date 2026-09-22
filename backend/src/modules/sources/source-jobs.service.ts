@@ -130,7 +130,7 @@ export class SourceJobsService {
 
   async reindexNotebook(notebookId: string): Promise<number> {
     const result = await this.fanOutReindexes(notebookId);
-    return result.enqueued;
+    return result.sourcesQueued;
   }
 
   /**
@@ -138,12 +138,13 @@ export class SourceJobsService {
    * embedding-model switch or a representation version bump invalidates
    * stored vectors. The work fans out as one indexing job per Source through
    * the queue; the jobs' shouldSkip and atomic-replace checks make repeated
-   * fan-outs idempotent.
+   * fan-outs idempotent. `sourcesQueued` counts the Sources the queued
+   * fan-out will rebuild.
    */
-  async reembedAll(): Promise<{ enqueued: number; jobId: string }> {
+  async reembedAll(): Promise<{ sourcesQueued: number; jobId: string }> {
     const targets = await this.listReindexTargets(null);
     const job = await this.enqueueReindexAll({ notebookId: null });
-    return { enqueued: targets.length, jobId: job.id };
+    return { sourcesQueued: targets.length, jobId: job.id };
   }
 
   /**
@@ -152,25 +153,26 @@ export class SourceJobsService {
    * fan-out applied, so a version bump triggers exactly one fan-out; a
    * restart with the same representation does nothing. The bookmark is
    * written by the fan-out job when it succeeds, so a failed fan-out is
-   * retried on the next startup instead of being forgotten.
+   * retried on the next startup instead of being forgotten. `fanOutQueued`
+   * says whether this call queued the fan-out.
    */
   async ensureRepresentationCurrent(
     representation: string,
-  ): Promise<{ enqueued: boolean }> {
+  ): Promise<{ fanOutQueued: boolean }> {
     const [row] = await this.db
       .select({ applied: appSettings.indexingRepresentation })
       .from(appSettings)
       .where(eq(appSettings.id, APP_SETTINGS_ID));
-    if (row?.applied === representation) return { enqueued: false };
+    if (row?.applied === representation) return { fanOutQueued: false };
 
     const targets = await this.listReindexTargets(null);
-    if (targets.length === 0) return { enqueued: false };
+    if (targets.length === 0) return { fanOutQueued: false };
 
     await this.enqueueReindexAll({
       notebookId: null,
       representation,
     });
-    return { enqueued: true };
+    return { fanOutQueued: true };
   }
 
   /** Records the representation a completed reindex-all applied. */
@@ -189,7 +191,7 @@ export class SourceJobsService {
     notebookId: string | null,
   ): Promise<SourceReindexAllResult> {
     const rows = await this.listReindexTargets(notebookId);
-    let enqueued = 0;
+    let sourcesQueued = 0;
     let skipped = 0;
     for (const row of rows) {
       // Degraded sources have no usable Evidence to re-index; retrying them
@@ -203,9 +205,9 @@ export class SourceJobsService {
         skipped++;
         continue;
       }
-      enqueued++;
+      sourcesQueued++;
     }
-    return { enqueued, skipped };
+    return { sourcesQueued, skipped };
   }
 
   /**

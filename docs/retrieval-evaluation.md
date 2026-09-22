@@ -80,6 +80,14 @@ represent. The IDF vocabulary is always built from the contextual text, even
 when a run disables the header, so a chunk that loses its section tokens
 genuinely loses ranking signal instead of the tokens being ignored as unknown.
 
+The gate seeds its chunks directly, so the `contextualize` toggle isolates the
+representation from the chunker. `backend/tests/chunking.service.test.ts`
+covers the real `ChunkingService` over this same corpus: it asserts that each
+section keeps its heading path and body, that a long document is split into
+chunks that respect the minimum and target, and that the split loses no text.
+Sections shorter than the minimum stay their own chunk (a citation keeps its
+locator); only fragments within a section merge.
+
 ## Metrics
 
 | Metric | Meaning | Direction |
@@ -103,6 +111,14 @@ genuinely loses ranking signal instead of the tokens being ignored as unknown.
   baseline.
 - `latencyMsP95` fails above the absolute 2000 ms ceiling, chosen to avoid
   flaking on shared CI runners while still catching pathological regressions.
+
+One baseline move is expected from the contextual representation: when chunks
+began carrying the header, `contextPrecision` went from 1.0 to about 0.9167.
+The glossary stub for Operation Barbarossa gained header tokens, which count
+toward the deterministic reranker's substantive-token floor, so it now clears
+the rerank threshold for `q-barbarossa` alongside the relevant passage. The
+metric still protects its job: with the reranker disabled, `contextPrecision`
+drops well below the new baseline and the gate fails.
 
 Refresh the baseline only after an intentional retrieval change and after
 confirming the new metrics are the ones you want:

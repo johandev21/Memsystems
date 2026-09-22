@@ -61,6 +61,12 @@ export const EVAL_RERANK_MODEL = 'eval-coverage-reranker';
 export const EVAL_RERANK_THRESHOLD = 0.5;
 
 /**
+ * The model name recorded in the retrieval trace for the deterministic
+ * embedder. The harness never calls Voyage; the name says so.
+ */
+export const EVAL_EMBEDDING_MODEL = 'eval-deterministic-embedder';
+
+/**
  * The hybrid leg's over-fetch depth. It matches the dense depth so neither
  * leg can mask the other: disabling the lexical leg must show up in recall
  * even while reranking is on.
@@ -199,6 +205,7 @@ export async function evaluateRetrieval(
     db as never,
     {
       embedQuery: async (text: string) => embedder.embed(text),
+      queryEmbeddingModel: () => EVAL_EMBEDDING_MODEL,
     } as never,
     { relevanceFloor },
     {
@@ -429,7 +436,9 @@ function computeMetrics(
     latencyMsP50: percentile(latencies, 50),
     latencyMsP95: percentile(latencies, 95),
     costTokensPerQuery: mean(
-      queries.map((query) => query.embeddingInputTokens + query.rerankInputTokens),
+      queries.map(
+        (query) => query.embeddingInputTokens + query.rerankInputTokens,
+      ),
     ),
   };
 }

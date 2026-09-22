@@ -79,7 +79,7 @@ function makeJobsService(
     autoStart: false,
     ...overrides,
   });
-  const handler = new SourceIndexingHandler(db as any, indexing);
+  const handler = new SourceIndexingHandler(db as any, indexing, embedding);
   queue.registerHandler(handler);
   const jobsService = new SourceJobsService(db as any, queue);
   return { jobs: jobsService, indexing, queue, handler };
@@ -230,6 +230,7 @@ describe('SourceJobsService', () => {
       new SourceIndexingHandler(
         db as any,
         indexing,
+        embedding,
         new SourceVersionService(db as any),
       ),
     );
@@ -370,9 +371,7 @@ describe('SourceJobsService', () => {
         await embeddingsReleased;
         return {
           model: CONTEXTUAL_EMBEDDING_MODEL,
-          embeddings: groups
-            .flat()
-            .map(() => makeVector(EMBEDDING_DIMENSIONS)),
+          embeddings: groups.flat().map(() => makeVector(EMBEDDING_DIMENSIONS)),
         };
       }),
       documentEmbeddingModel: () => CONTEXTUAL_EMBEDDING_MODEL,
@@ -408,6 +407,7 @@ describe('SourceJobsService', () => {
     const handler = new SourceIndexingHandler(
       db as any,
       indexing,
+      embedding,
       new SourceVersionService(db as any),
     );
     const pending = await queue.enqueue<
@@ -646,7 +646,7 @@ describe('SourceJobsService', () => {
     });
 
     const started = await service.reembedAll();
-    expect(started.enqueued).toBe(2);
+    expect(started.sourcesQueued).toBe(2);
 
     const fanOut = new SourceReindexAllHandler(service);
     const job = await queue.getJob<
@@ -657,7 +657,7 @@ describe('SourceJobsService', () => {
       ...job!,
       payload: { notebookId: null },
     });
-    expect(result).toEqual({ enqueued: 2, skipped: 0 });
+    expect(result).toEqual({ sourcesQueued: 2, skipped: 0 });
 
     await queue.drain();
     const indexingJobs = await db
@@ -681,9 +681,10 @@ describe('SourceJobsService', () => {
       kind: 'text',
     });
 
-    const representation = 'chunking=2;indexing=2;model=voyage-context-4;dims=1024';
+    const representation =
+      'chunking=2;indexing=2;model=voyage-context-4;dims=1024';
     const first = await service.ensureRepresentationCurrent(representation);
-    expect(first.enqueued).toBe(true);
+    expect(first.fanOutQueued).toBe(true);
 
     const jobsAfterFirst = await db
       .select({ id: jobs.id, type: jobs.type })
@@ -706,7 +707,7 @@ describe('SourceJobsService', () => {
     expect(bookmark.applied).toBe(representation);
 
     const second = await service.ensureRepresentationCurrent(representation);
-    expect(second.enqueued).toBe(false);
+    expect(second.fanOutQueued).toBe(false);
     const jobsAfterSecond = await db
       .select({ id: jobs.id })
       .from(jobs)

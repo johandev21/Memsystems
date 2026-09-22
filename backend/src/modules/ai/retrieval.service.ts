@@ -3,11 +3,7 @@ import { sql, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
-import {
-  EMBEDDING_DIMENSIONS,
-  EMBEDDING_MODEL,
-  EmbeddingService,
-} from './embedding.service';
+import { EMBEDDING_DIMENSIONS, EmbeddingService } from './embedding.service';
 import {
   MAX_RERANK_DOCUMENTS,
   estimateVoyageTokens,
@@ -414,15 +410,9 @@ export class RetrievalService {
     this.hybridConfig = hybridConfig ?? DEFAULT_HYBRID_CONFIG;
   }
 
-  /**
-   * The model the query embedding used. Partial test doubles may not expose
-   * it, in which case the legacy constant is recorded.
-   */
+  /** The model the query embedding used, for the retrieval trace. */
   private embeddingModelName(): string {
-    const service = this.embeddingService as Partial<EmbeddingService>;
-    return typeof service.queryEmbeddingModel === 'function'
-      ? service.queryEmbeddingModel()
-      : EMBEDDING_MODEL;
+    return this.embeddingService.queryEmbeddingModel();
   }
 
   async retrieve(request: RetrievalRequest): Promise<RetrievalOutcome> {

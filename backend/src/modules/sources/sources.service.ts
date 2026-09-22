@@ -42,7 +42,7 @@ import {
 import { WebScrapeError } from './source-errors';
 import { SourceVersionService } from './source-version.service';
 
-export type SourceKind = 'text' | 'url' | 'file';
+export type { SourceKind } from '../../database/schema';
 
 export interface CreateTextSourceInput {
   title: string;
@@ -581,10 +581,12 @@ export class SourcesService {
   /**
    * Re-indexes every source, e.g. after an embedding-model switch or a
    * representation version bump. The work fans out per Source through the
-   * job queue, so the response reports how many Sources will be rebuilt.
+   * job queue. The response keeps the frontend's `enqueued` contract and
+   * reports how many Sources the queued fan-out will rebuild.
    */
   async reembedAll() {
-    return this.sourceJobsService.reembedAll();
+    const { sourcesQueued, jobId } = await this.sourceJobsService.reembedAll();
+    return { enqueued: sourcesQueued, jobId };
   }
 
   async getDownload(id: string, expiresInSeconds = 300): Promise<DownloadInfo> {

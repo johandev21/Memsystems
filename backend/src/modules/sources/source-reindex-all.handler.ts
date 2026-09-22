@@ -14,8 +14,8 @@ export interface SourceReindexAllJobPayload {
 }
 
 export interface SourceReindexAllResult {
-  /** Per-Source indexing jobs the fan-out enqueued or re-queued. */
-  enqueued: number;
+  /** Per-Source indexing (or processing) jobs the fan-out enqueued. */
+  sourcesQueued: number;
   /** Sources skipped because they have no usable representation. */
   skipped: number;
 }

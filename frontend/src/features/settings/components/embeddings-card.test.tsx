@@ -6,7 +6,7 @@ import { EmbeddingsCard } from "./embeddings-card";
 
 const connection = vi.hoisted(() => ({
   hasKey: false,
-  model: "voyage-4",
+  model: "voyage-context-4",
   dimensions: 1024,
 }));
 vi.mock("../api/embeddings", () => ({
@@ -51,7 +51,7 @@ describe("Embeddings card", () => {
     connection.hasKey = true;
     render(<EmbeddingsCard />);
     expect(screen.getByText("Connected")).toBeTruthy();
-    expect(screen.getByText("Model: voyage-4 · 1024 dimensions")).toBeTruthy();
+    expect(screen.getByText("Model: voyage-context-4 · 1024 dimensions")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Re-embed All Sources" })).toBeTruthy();
   });
 });

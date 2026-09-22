@@ -141,9 +141,12 @@ export class SourcesModule implements OnModuleInit {
 
   /**
    * A representation version bump (or a switch of the embedding path)
-   * invalidates every stored chunk. Remember what has been applied and fan
-   * out one reindex-all job exactly once, so no Source is left behind and no
-   * Source has to be reindexed by hand. Without a Voyage key the fan-out is
+   * invalidates every stored chunk. Probe the configured embedding path
+   * first: if the key cannot use the contextual model, the probe flips the
+   * whole process to the fallback, so the representation key below rebuilds
+   * every Source with the model queries will use. Then fan out one
+   * reindex-all job exactly once, so no Source is left behind and no Source
+   * has to be reindexed by hand. Without a Voyage key the fan-out is
    * deferred: indexing jobs would only fail and mark Sources failed, so the
    * check retries on the next startup, after the key is configured.
    */
@@ -152,6 +155,7 @@ export class SourcesModule implements OnModuleInit {
       const apiKey = await this.embeddingService.getVoyageApiKey();
       if (!apiKey) return;
 
+      await this.embeddingService.ensureContextualAvailability(apiKey);
       await this.sourceJobsService.ensureRepresentationCurrent(
         indexingRepresentationKey(
           this.embeddingService.documentEmbeddingModel(),

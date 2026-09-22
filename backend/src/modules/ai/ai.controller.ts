@@ -11,14 +11,9 @@ import {
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AiService } from './ai.service';
 import { ConnectionService } from './connection.service';
-import {
-  EMBEDDING_DIMENSIONS,
-  EMBEDDING_MODEL,
-  EmbeddingService,
-} from './embedding.service';
+import { EMBEDDING_DIMENSIONS, EmbeddingService } from './embedding.service';
 import { ModelSyncService } from './model-sync.service';
 import { classifyGatewayError } from './providers/gateway-errors';
-import { voyageEmbed } from './providers/voyage.client';
 import { UserSettingsService } from './user-settings.service';
 
 const updateSettingsSchema = z.object({
@@ -167,7 +162,9 @@ export class AiController {
     const hasKey = Boolean(await this.embeddingService.getVoyageApiKey());
     return {
       hasKey,
-      model: EMBEDDING_MODEL,
+      // The model indexing and retrieval actually use, which is the fallback
+      // when the contextual path is disabled or the key cannot use it.
+      model: this.embeddingService.documentEmbeddingModel(),
       dimensions: EMBEDDING_DIMENSIONS,
     };
   }
@@ -176,7 +173,8 @@ export class AiController {
   @UsePipes(new ZodValidationPipe(voyageKeySchema))
   async saveEmbeddingConnection(@Body() body: z.infer<typeof voyageKeySchema>) {
     // Verify-then-store: one tiny embeddings request proves the key works
-    // before it is persisted (a few tokens, no catalog call needed).
+    // against the embedding path indexing will use before it is persisted
+    // (a few tokens, no catalog call needed).
     await this.verifyVoyageKey(body.voyageApiKey.trim());
     await this.userSettingsService.setVoyageApiKey(body.voyageApiKey.trim());
     return this.getEmbeddingConnection();
@@ -189,16 +187,14 @@ export class AiController {
   }
 
   /**
-   * Verify-then-store for the Voyage key. The client already maps failures
-   * onto localized domain errors (auth / rate limit / unreachable), so a
-   * rejected key surfaces the same message it will produce at indexing time.
+   * Verify-then-store for the Voyage key. Verification targets the active
+   * embedding path (contextual or fallback) so a key that cannot use the
+   * contextual model fails here instead of on every indexing job. The
+   * client already maps failures onto localized domain errors (auth / rate
+   * limit / unreachable), so a rejected key surfaces the same message it
+   * will produce at indexing time.
    */
   private async verifyVoyageKey(apiKey: string): Promise<void> {
-    await voyageEmbed({
-      apiKey,
-      model: EMBEDDING_MODEL,
-      input: ['ping'],
-      inputType: 'query',
-    });
+    await this.embeddingService.verifyApiKey(apiKey);
   }
 }

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  BadRequestError,
   ServiceUnavailableError,
+  UnauthorizedError,
 } from '../src/common/errors/domain-error';
 import {
   CONTEXTUAL_EMBEDDING_MODEL,
@@ -141,10 +143,7 @@ describe('EmbeddingService', () => {
     expect(voyageContextualEmbedMock).toHaveBeenCalledWith({
       apiKey: 'voy_stored_key',
       model: CONTEXTUAL_EMBEDDING_MODEL,
-      groups: [
-        ['chunk one', 'chunk two'],
-        ['chunk three'],
-      ],
+      groups: [['chunk one', 'chunk two'], ['chunk three']],
       inputType: 'document',
     });
   });
@@ -155,14 +154,11 @@ describe('EmbeddingService', () => {
       contextualModel: CONTEXTUAL_EMBEDDING_MODEL,
       fallbackModel: EMBEDDING_MODEL,
     };
-    voyageEmbedMock.mockResolvedValue([
-      [0.1],
-      [0.2],
-      [0.3],
-    ]);
-    const result = await service('voy_stored_key', fallback).embedDocumentGroups(
-      [['chunk one', 'chunk two'], ['chunk three']],
-    );
+    voyageEmbedMock.mockResolvedValue([[0.1], [0.2], [0.3]]);
+    const result = await service(
+      'voy_stored_key',
+      fallback,
+    ).embedDocumentGroups([['chunk one', 'chunk two'], ['chunk three']]);
 
     expect(result).toEqual({
       model: EMBEDDING_MODEL,
@@ -189,9 +185,7 @@ describe('EmbeddingService', () => {
   });
 
   it('reports the model the vectors were produced with', () => {
-    expect(service().documentEmbeddingModel()).toBe(
-      CONTEXTUAL_EMBEDDING_MODEL,
-    );
+    expect(service().documentEmbeddingModel()).toBe(CONTEXTUAL_EMBEDDING_MODEL);
     expect(service().queryEmbeddingModel()).toBe(CONTEXTUAL_EMBEDDING_MODEL);
     expect(
       service(null, {
@@ -203,9 +197,9 @@ describe('EmbeddingService', () => {
   });
 
   it('short-circuits empty document groups', async () => {
-    await expect(service('voy_stored_key').embedDocumentGroups([])).resolves.toEqual(
-      { model: CONTEXTUAL_EMBEDDING_MODEL, embeddings: [] },
-    );
+    await expect(
+      service('voy_stored_key').embedDocumentGroups([]),
+    ).resolves.toEqual({ model: CONTEXTUAL_EMBEDDING_MODEL, embeddings: [] });
     await expect(
       service('voy_stored_key').embedDocumentGroups([[]]),
     ).resolves.toEqual({ model: CONTEXTUAL_EMBEDDING_MODEL, embeddings: [] });
@@ -213,10 +207,7 @@ describe('EmbeddingService', () => {
   });
 
   it('embeds documents with input_type document and short-circuits empty input', async () => {
-    voyageEmbedMock.mockResolvedValue([
-      [0.1],
-      [0.2],
-    ]);
+    voyageEmbedMock.mockResolvedValue([[0.1], [0.2]]);
     await expect(
       service('voy_stored_key').embedDocuments(['one', 'two']),
     ).resolves.toEqual([[0.1], [0.2]]);
@@ -232,5 +223,114 @@ describe('EmbeddingService', () => {
       [],
     );
     expect(voyageEmbedMock).not.toHaveBeenCalled();
+  });
+
+  it('probes the contextual path at boot and keeps it when the model is available', async () => {
+    voyageContextualEmbedMock.mockResolvedValue({
+      embeddings: [[0.1]],
+      totalTokens: 1,
+    });
+    const instance = service('voy_key');
+
+    await expect(
+      instance.ensureContextualAvailability('voy_key'),
+    ).resolves.toBe(true);
+    expect(voyageContextualEmbedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: 'voy_key',
+        model: CONTEXTUAL_EMBEDDING_MODEL,
+        groups: [['ping']],
+        inputType: 'query',
+      }),
+    );
+    expect(instance.documentEmbeddingModel()).toBe(CONTEXTUAL_EMBEDDING_MODEL);
+  });
+
+  it('flips documents and queries to the fallback when the contextual model is not available', async () => {
+    voyageContextualEmbedMock.mockRejectedValue(
+      new BadRequestError('model not available'),
+    );
+    const instance = service('voy_key');
+
+    await expect(
+      instance.ensureContextualAvailability('voy_key'),
+    ).resolves.toBe(false);
+    expect(instance.documentEmbeddingModel()).toBe(EMBEDDING_MODEL);
+    expect(instance.queryEmbeddingModel()).toBe(EMBEDDING_MODEL);
+
+    voyageEmbedMock.mockResolvedValue([[0.5, 0.6]]);
+    await expect(instance.embedQuery('q')).resolves.toEqual([0.5, 0.6]);
+    expect(voyageEmbedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: EMBEDDING_MODEL,
+        inputType: 'query',
+      }),
+    );
+  });
+
+  it('keeps the contextual path on a transient probe failure', async () => {
+    voyageContextualEmbedMock.mockRejectedValue(
+      new ServiceUnavailableError('provider down'),
+    );
+    const instance = service('voy_key');
+
+    await expect(
+      instance.ensureContextualAvailability('voy_key'),
+    ).resolves.toBe(true);
+    expect(instance.documentEmbeddingModel()).toBe(CONTEXTUAL_EMBEDDING_MODEL);
+  });
+
+  it('keeps the contextual path on an invalid-key probe failure', async () => {
+    voyageContextualEmbedMock.mockRejectedValue(
+      new UnauthorizedError('bad key'),
+    );
+    const instance = service('voy_key');
+
+    await expect(
+      instance.ensureContextualAvailability('voy_key'),
+    ).resolves.toBe(true);
+    expect(instance.documentEmbeddingModel()).toBe(CONTEXTUAL_EMBEDDING_MODEL);
+  });
+
+  it('verifies a saved key against the active path and falls back when the model is unavailable', async () => {
+    voyageContextualEmbedMock.mockRejectedValue(
+      new BadRequestError('model not available'),
+    );
+    voyageEmbedMock.mockResolvedValue([[0.1]]);
+    const instance = service('voy_key');
+
+    await expect(instance.verifyApiKey('voy_new')).resolves.toBeUndefined();
+    expect(instance.documentEmbeddingModel()).toBe(EMBEDDING_MODEL);
+    expect(voyageEmbedMock).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'voy_new', model: EMBEDDING_MODEL }),
+    );
+  });
+
+  it('rethrows a rejected key from verification without falling back', async () => {
+    voyageContextualEmbedMock.mockRejectedValue(
+      new UnauthorizedError('bad key'),
+    );
+    const instance = service('voy_key');
+
+    await expect(instance.verifyApiKey('voy_bad')).rejects.toBeInstanceOf(
+      UnauthorizedError,
+    );
+    expect(instance.documentEmbeddingModel()).toBe(CONTEXTUAL_EMBEDDING_MODEL);
+    expect(voyageEmbedMock).not.toHaveBeenCalled();
+  });
+
+  it('verifies the fallback path when the configured path is pre-contextual', async () => {
+    voyageEmbedMock.mockResolvedValue([[0.1]]);
+    const instance = service('voy_key', {
+      contextualEnabled: false,
+      contextualModel: CONTEXTUAL_EMBEDDING_MODEL,
+      fallbackModel: EMBEDDING_MODEL,
+    });
+
+    await instance.verifyApiKey('voy_new');
+    expect(voyageEmbedMock).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'voy_new', model: EMBEDDING_MODEL }),
+    );
+    expect(voyageContextualEmbedMock).not.toHaveBeenCalled();
   });
 });

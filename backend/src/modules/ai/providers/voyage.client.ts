@@ -17,12 +17,14 @@ const MAX_TEXTS_PER_REQUEST = 256;
 /**
  * Contextualized chunk embeddings: the endpoint embeds each inner list as a
  * group, so every chunk is encoded in the context of the chunks around it.
- * One request may carry at most 1,000 input lists, 16,000 chunks, and
- * 120,000 tokens; batches stay well under every cap.
+ * One request may carry at most 1,000 input lists, 16,000 chunks, and — for
+ * pre-chunked inputs, the mode this client uses — 32,000 tokens in total.
+ * (The 120,000-token figure applies only with `enable_auto_chunking`, which
+ * the app does not use.) Batches stay under the real limit with margin.
  */
 const MAX_CONTEXTUAL_INPUTS_PER_REQUEST = 256;
 const MAX_CONTEXTUAL_CHUNKS_PER_REQUEST = 1_024;
-const MAX_CONTEXTUAL_TOKENS_PER_REQUEST = 100_000;
+const MAX_CONTEXTUAL_TOKENS_PER_REQUEST = 30_000;
 
 /**
  * Voyage caps rerank requests at 1,000 documents. The retrieval pipeline
@@ -73,6 +75,8 @@ export interface VoyageEmbedOptions {
   model: string;
   input: string[];
   inputType: VoyageInputType;
+  /** Request timeout; capability probes pass a shorter one. */
+  timeoutMs?: number;
   /** Test seam; defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
@@ -97,6 +101,7 @@ export async function voyageEmbed(
         apiKey: options.apiKey,
         model: options.model,
         inputType: options.inputType,
+        timeoutMs: options.timeoutMs,
         batch,
       }),
     );
@@ -117,6 +122,8 @@ export interface VoyageContextualEmbedOptions {
   /** One inner list per document; each list is embedded as a group. */
   groups: string[][];
   inputType: VoyageInputType;
+  /** Request timeout; capability probes pass a shorter one. */
+  timeoutMs?: number;
   /** Test seam; defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
@@ -147,6 +154,7 @@ export async function voyageContextualEmbed(
       apiKey: options.apiKey,
       model: options.model,
       inputType: options.inputType,
+      timeoutMs: options.timeoutMs,
       batch,
     });
     embeddings.push(...result.embeddings);
@@ -310,6 +318,7 @@ async function requestBatch(deps: {
   apiKey: string;
   model: string;
   inputType: VoyageInputType;
+  timeoutMs?: number;
   batch: string[];
 }): Promise<number[][]> {
   const payload = await postVoyageJson<{
@@ -318,7 +327,7 @@ async function requestBatch(deps: {
     url: VOYAGE_EMBEDDINGS_URL,
     apiKey: deps.apiKey,
     subject: 'embeddings',
-    timeoutMs: REQUEST_TIMEOUT_MS,
+    timeoutMs: deps.timeoutMs ?? REQUEST_TIMEOUT_MS,
     fetchImpl: deps.fetchImpl,
     body: {
       model: deps.model,
@@ -349,7 +358,9 @@ async function requestBatch(deps: {
 /**
  * Splits groups into batches that respect every contextualized-endpoint cap.
  * A group larger than one request's token budget is first split into
- * contiguous subgroups, so no request is ever over the limit.
+ * contiguous subgroups, so no request is ever over the limit. A single chunk
+ * larger than the budget cannot be split further and is sent on its own; the
+ * chunker never produces one, so that only guards against corrupt input.
  */
 function splitIntoGroupBatches(groups: string[][]): string[][][] {
   const fitted: string[][] = [];
@@ -406,6 +417,7 @@ async function requestContextualBatch(deps: {
   apiKey: string;
   model: string;
   inputType: VoyageInputType;
+  timeoutMs?: number;
   batch: string[][];
 }): Promise<VoyageContextualEmbedResponse> {
   const payload = await postVoyageJson<{
@@ -418,7 +430,7 @@ async function requestContextualBatch(deps: {
     url: VOYAGE_CONTEXTUAL_EMBEDDINGS_URL,
     apiKey: deps.apiKey,
     subject: 'contextual embeddings',
-    timeoutMs: REQUEST_TIMEOUT_MS,
+    timeoutMs: deps.timeoutMs ?? REQUEST_TIMEOUT_MS,
     fetchImpl: deps.fetchImpl,
     body: {
       model: deps.model,

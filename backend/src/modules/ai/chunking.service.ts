@@ -1,12 +1,10 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
+import type { SourceKind } from '../../database/schema';
 import {
   estimateVoyageTokens,
   VOYAGE_CHARS_PER_TOKEN,
 } from './providers/voyage.client';
-
-/** The Source kinds a chunk can belong to. */
-export type SourceKind = 'text' | 'url' | 'file';
 
 /**
  * Token-based chunk sizing. `targetTokens` is the size packing aims for,
@@ -184,20 +182,28 @@ function splitParagraphs(text: string): string[] {
     .filter((paragraph) => paragraph.length > 0);
 }
 
-/** Sentences end at `.`, `!`, or `?` and keep their punctuation. */
+/**
+ * Sentences end at `.`, `!`, or `?` and keep their punctuation. Every
+ * character survives: a paragraph may contain single newlines (hard wraps or
+ * heading lines), text may precede the first terminator, and a run of
+ * terminators (`What?!`) stays with its sentence. The only characters the
+ * splitter drops are the whitespace around the boundaries, which the packer
+ * re-joins.
+ */
 function splitSentences(paragraph: string): string[] {
-  const matches = paragraph.match(/[^.!?\n]+[.!?]+/g);
-  if (!matches) return [paragraph];
-
   const sentences: string[] = [];
-  let cursor = 0;
-  for (const match of matches) {
-    const index = paragraph.indexOf(match, cursor);
-    cursor = index + match.length;
-    const sentence = match.trim();
+  let start = 0;
+  for (let index = 0; index < paragraph.length; index++) {
+    const char = paragraph[index];
+    if (char !== '.' && char !== '!' && char !== '?') continue;
+    let end = index + 1;
+    while (end < paragraph.length && '.!?'.includes(paragraph[end])) end++;
+    const sentence = paragraph.slice(start, end).trim();
     if (sentence) sentences.push(sentence);
+    start = end;
+    index = end - 1;
   }
-  const rest = paragraph.slice(cursor).trim();
+  const rest = paragraph.slice(start).trim();
   if (rest) sentences.push(rest);
   return sentences.length > 0 ? sentences : [paragraph];
 }
@@ -268,6 +274,13 @@ function packBlocks(blocks: string[], targetTokens: number): string[] {
  * Merges fragments below the minimum into a neighbour: short fragments
  * accumulate into the following chunk, and a short tail is appended to the
  * previous one. A document smaller than the minimum stays one chunk.
+ *
+ * Merging happens inside one section: `chunkText` is called per segment, so
+ * a whole sub-minimum section (a slide title, a short transcript line) stays
+ * its own chunk rather than merging with a neighbour. That keeps the
+ * section's heading path and locator attached to the text a citation points
+ * at; the alternative — merging across sections — would make the citation's
+ * location ambiguous.
  */
 function mergeShortFragments(chunks: string[], minTokens: number): string[] {
   if (chunks.length <= 1) return chunks;
