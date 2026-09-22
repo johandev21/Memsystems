@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
@@ -12,12 +12,15 @@ import {
   MAX_RERANK_DOCUMENTS,
   estimateVoyageTokens,
 } from './providers/voyage.client';
+import { reciprocalRankFusion, type FusedCandidate } from './rank-fusion';
 import { RerankerService, type Reranker } from './reranker.service';
 import type {
   RetrievalAbstentionReason,
   RetrievalRerankSkippedReason,
   RetrievalTrace,
   RetrievalTraceCandidate,
+  RetrievalTraceFusion,
+  RetrievalTraceLeg,
   RetrievalTraceRerankedCandidate,
 } from './retrieval-trace';
 
@@ -25,6 +28,14 @@ export type { RetrievalAbstentionReason } from './retrieval-trace';
 
 /** Sources named in a no-evidence reply, capped to keep the reply readable. */
 const MAX_UNHELPFUL_SOURCES = 5;
+
+/**
+ * Cap on the lexemes OR-ed into one lexical query, so a long message cannot
+ * build an unbounded tsquery. Lexemes come from the parser in lexicographic
+ * order, which keeps the selection deterministic; ordinary questions stay
+ * well below the cap.
+ */
+const MAX_LEXICAL_TERMS = 64;
 
 /** Location metadata carried from a source segment into an index chunk. */
 export interface CitationLocator {
@@ -53,9 +64,9 @@ export interface RetrievedChunk {
   title: string;
   content: string;
   /**
-   * The retrieval (fused) score. Reranking reorders chunks but never
-   * overwrites this value, so the score shown in the Evidence block is not
-   * the reranker score.
+   * The dense retrieval score (cosine similarity). Reranking reorders chunks
+   * but never overwrites this value, so the score shown in the Evidence block
+   * is not the reranker score.
    */
   score: number;
   url: string | null;
@@ -125,11 +136,20 @@ export const RETRIEVAL_RELEVANCE_CONFIG = 'RETRIEVAL_RELEVANCE_CONFIG';
 
 /**
  * Documented default for how many candidates each retrieval leg over-fetches
- * before near-duplicates are removed and the survivors are reranked. Four
- * times the default top-k is deep enough for the reranker to promote a
- * passage the dense leg ranked low, without paying for hundreds of documents.
+ * before the legs are fused, near-duplicates are removed, and the survivors
+ * are reranked. Four times the default top-k is deep enough for the reranker
+ * to promote a passage a leg ranked low, without paying for hundreds of
+ * documents.
  */
 export const DEFAULT_CANDIDATE_DEPTH = 32;
+
+/**
+ * Documented default for the Reciprocal Rank Fusion smoothing constant. The
+ * original RRF paper's k = 60 is deliberately high: it flattens the
+ * contribution of the very top ranks so one leg's first place cannot dominate
+ * the fused order.
+ */
+export const DEFAULT_FUSION_K = 60;
 
 /**
  * Documented default reranker. `rerank-2.5` is the provider's recommended
@@ -164,6 +184,38 @@ export const DEFAULT_RERANK_CONFIG: RetrievalRerankConfig = {
   candidateDepth: DEFAULT_CANDIDATE_DEPTH,
   threshold: DEFAULT_RERANK_THRESHOLD,
   topK: DEFAULT_TOP_K,
+};
+
+/**
+ * Hybrid retrieval's knobs: the lexical leg and the Reciprocal Rank Fusion it
+ * feeds. The lexical leg runs over the chunk's generated `search_vector`,
+ * which uses the `simple` configuration — no stemming and no stop words — so
+ * identifiers and mixed-language terms are matched exactly.
+ */
+export interface RetrievalHybridConfig {
+  /** Whether the lexical leg runs and contributes to the fusion. */
+  enabled: boolean;
+  /** RRF smoothing constant; higher values flatten the rank contribution. */
+  fusionK: number;
+  /** The dense leg's fusion weight in [0, 1]. */
+  denseWeight: number;
+  /** The lexical leg's fusion weight in [0, 1]. */
+  lexicalWeight: number;
+  /** Dense-leg over-fetch override; null uses the configured candidate depth. */
+  denseCandidateDepth: number | null;
+  /** Lexical-leg over-fetch override; null uses the configured candidate depth. */
+  lexicalCandidateDepth: number | null;
+}
+
+export const RETRIEVAL_HYBRID_CONFIG = 'RETRIEVAL_HYBRID_CONFIG';
+
+export const DEFAULT_HYBRID_CONFIG: RetrievalHybridConfig = {
+  enabled: true,
+  fusionK: DEFAULT_FUSION_K,
+  denseWeight: 1,
+  lexicalWeight: 1,
+  denseCandidateDepth: null,
+  lexicalCandidateDepth: null,
 };
 
 /** Reads the relevance floor from the environment, falling back to the default. */
@@ -206,6 +258,34 @@ export function loadRetrievalRerankConfig(
   };
 }
 
+/**
+ * Reads the hybrid retrieval configuration from the environment, falling
+ * back to the documented defaults for anything unset or invalid. Weights are
+ * ratios in [0, 1]; a weight of 0 removes that leg from the fusion. A per-leg
+ * depth override is clamped to the provider's document limit; an unset
+ * override keeps the shared candidate depth.
+ */
+export function loadRetrievalHybridConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): RetrievalHybridConfig {
+  return {
+    enabled: parseBoolean(env.RETRIEVAL_HYBRID_ENABLED, true),
+    fusionK: clamp(
+      parsePositiveInt(env.RETRIEVAL_RRF_K, DEFAULT_FUSION_K),
+      1,
+      MAX_RERANK_DOCUMENTS,
+    ),
+    denseWeight: clamp(parseRatio(env.RETRIEVAL_RRF_DENSE_WEIGHT, 1), 0, 1),
+    lexicalWeight: clamp(parseRatio(env.RETRIEVAL_RRF_LEXICAL_WEIGHT, 1), 0, 1),
+    denseCandidateDepth: parseDepthOverride(
+      env.RETRIEVAL_DENSE_CANDIDATE_DEPTH,
+    ),
+    lexicalCandidateDepth: parseDepthOverride(
+      env.RETRIEVAL_LEXICAL_CANDIDATE_DEPTH,
+    ),
+  };
+}
+
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   const normalized = value.trim().toLowerCase();
@@ -228,6 +308,13 @@ function parseRatio(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
+function parseDepthOverride(value: string | undefined): number | null {
+  if (value === undefined) return null;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return null;
+  return clamp(parsed, 1, MAX_RERANK_DOCUMENTS);
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -242,12 +329,20 @@ interface RetrievalChunkRow {
   source_version_id: string | null;
   locator: CitationLocator | null;
   content: string;
+  /** The leg's own score: cosine similarity or `ts_rank_cd`. */
   score: number;
+  /**
+   * Cosine similarity, selected by the lexical leg too so a lexical-only
+   * candidate still has a dense relevance signal for the floor and Evidence.
+   */
+  dense_score?: number | null;
 }
 
-/** One candidate after dedupe, with its cross-encoder score when reranked. */
+/** One candidate after fusion, with its cross-encoder score when reranked. */
 interface RankedCandidate {
   row: RetrievalChunkRow;
+  /** The Reciprocal Rank Fusion score that ordered the candidate. */
+  fusedScore: number;
   rerankScore: number | null;
 }
 
@@ -280,17 +375,19 @@ const NEAR_DUPLICATE_SIMILARITY = 0.9;
 
 /**
  * The single retrieval pipeline entry point. It composes the retrieval
- * stages (query embedding, search legs, fusion, dedupe, reranking, relevance
- * threshold, top-k selection) and returns both the Evidence and the trace
- * that explains how it was chosen. Chat and Study Material Generation both
- * call this; later retrieval tickets change the stages behind it rather than
- * adding call sites.
+ * stages (query embedding, dense and lexical search legs, reciprocal rank
+ * fusion, near-duplicate removal, reranking, relevance threshold, top-k
+ * selection) and returns both the Evidence and the trace that explains how
+ * it was chosen. Chat and Study Material Generation both call this; later
+ * retrieval tickets change the stages behind it rather than adding call
+ * sites.
  */
 @Injectable()
 export class RetrievalService {
   private readonly logger = new Logger(RetrievalService.name);
   private readonly relevanceFloor: number;
   private readonly rerankConfig: RetrievalRerankConfig;
+  private readonly hybridConfig: RetrievalHybridConfig;
 
   constructor(
     @Inject(DRIZZLE)
@@ -305,10 +402,14 @@ export class RetrievalService {
     @Optional()
     @Inject(RerankerService)
     private readonly reranker?: Reranker,
+    @Optional()
+    @Inject(RETRIEVAL_HYBRID_CONFIG)
+    hybridConfig?: RetrievalHybridConfig,
   ) {
     this.relevanceFloor =
       relevanceConfig?.relevanceFloor ?? DEFAULT_RELEVANCE_FLOOR;
     this.rerankConfig = rerankConfig ?? DEFAULT_RERANK_CONFIG;
+    this.hybridConfig = hybridConfig ?? DEFAULT_HYBRID_CONFIG;
   }
 
   async retrieve(request: RetrievalRequest): Promise<RetrievalOutcome> {
@@ -319,16 +420,37 @@ export class RetrievalService {
       rerankThreshold: request.rerankThreshold ?? this.rerankConfig.threshold,
       sourceIds: request.sourceIds ? [...request.sourceIds] : null,
     };
-    // The reranker needs candidates the dense leg ranked below the requested
-    // top-k, so over-fetch at least the configured candidate depth.
+    // The reranker needs candidates the legs ranked below the requested
+    // top-k, so over-fetch at least the configured candidate depth. Each leg
+    // can override that depth independently.
     const candidateDepth = Math.max(
       this.rerankConfig.candidateDepth,
       policy.topK,
     );
+    const denseDepth = Math.max(
+      this.hybridConfig.denseCandidateDepth ?? candidateDepth,
+      policy.topK,
+    );
+    const lexicalDepth = Math.max(
+      this.hybridConfig.lexicalCandidateDepth ?? candidateDepth,
+      policy.topK,
+    );
+    const fusion: RetrievalTraceFusion = {
+      k: this.hybridConfig.fusionK,
+      weights: {
+        dense: this.hybridConfig.denseWeight,
+        lexical: this.hybridConfig.lexicalWeight,
+      },
+      depths: {
+        dense: denseDepth,
+        lexical: this.hybridConfig.enabled ? lexicalDepth : 0,
+      },
+    };
 
     // An explicitly empty selection can never match a chunk.
     if (policy.sourceIds && policy.sourceIds.length === 0) {
       return this.emptyOutcome(request, policy, {
+        fusion,
         abstentionReason: 'no_indexed_chunks',
         skippedReason: 'no_candidates',
         elapsedMs: performance.now() - startedAt,
@@ -338,24 +460,61 @@ export class RetrievalService {
     const queryEmbedding = await this.embeddingService.embedQuery(
       request.query,
     );
-    const rows = await this.search(
-      request.notebookId,
-      queryEmbedding,
-      candidateDepth,
-      policy.sourceIds,
+    // The legs are separate candidate lists over the same scope; run them
+    // together and fuse their ranks rather than their scores.
+    const [denseRows, lexicalRows] = await Promise.all([
+      this.searchDense(
+        request.notebookId,
+        queryEmbedding,
+        denseDepth,
+        policy.sourceIds,
+      ),
+      this.hybridConfig.enabled
+        ? this.searchLexical(
+            request.notebookId,
+            request.query,
+            queryEmbedding,
+            lexicalDepth,
+            policy.sourceIds,
+          )
+        : Promise.resolve<RetrievalChunkRow[]>([]),
+    ]);
+
+    const legs: {
+      kind: RetrievalTraceLeg['kind'];
+      weight: number;
+      candidates: RetrievalChunkRow[];
+    }[] = [
+      {
+        kind: 'dense',
+        weight: this.hybridConfig.denseWeight,
+        candidates: denseRows,
+      },
+    ];
+    if (this.hybridConfig.enabled) {
+      legs.push({
+        kind: 'lexical',
+        weight: this.hybridConfig.lexicalWeight,
+        candidates: lexicalRows,
+      });
+    }
+    const traceLegs: RetrievalTraceLeg[] = legs.map((leg) => ({
+      kind: leg.kind,
+      candidates: leg.candidates.map((row, index) =>
+        traceCandidate(row, index + 1, Number(row.score)),
+      ),
+    }));
+
+    const fused = reciprocalRankFusion(
+      legs,
+      (row) => row.chunk_id,
+      this.hybridConfig.fusionK,
     );
 
-    const legCandidates = rows.map((row, index) =>
-      candidateFromRow(row, index),
-    );
-    const fusedRows = dedupeNearDuplicates(rows);
-    const fusedOrder = fusedRows.map((row, index) =>
-      candidateFromRow(row, index),
-    );
-
-    if (fusedRows.length === 0) {
+    if (fused.length === 0) {
       return this.emptyOutcome(request, policy, {
-        legCandidates,
+        legs: traceLegs,
+        fusion,
         abstentionReason: 'no_indexed_chunks',
         skippedReason: 'no_candidates',
         elapsedMs: performance.now() - startedAt,
@@ -363,7 +522,17 @@ export class RetrievalService {
       });
     }
 
-    const rerank = await this.rerankCandidates(request.query, fusedRows);
+    // The fused order feeds reranking; near-duplicates are removed first so
+    // the reranker never scores the same passage twice.
+    const deduped = dedupeNearDuplicates(fused);
+    const fusedOrder = deduped.map((candidate, index) =>
+      traceCandidate(candidate.candidate, index + 1, candidate.score),
+    );
+
+    const rerank = await this.rerankCandidates(request.query, deduped);
+    // Reranking gates Evidence on the cross-encoder score; without it, the
+    // dense cosine floor is the gate, so a lexical-only candidate that is
+    // semantically distant is dropped rather than padding the answer.
     const threshold = rerank.applied
       ? policy.rerankThreshold
       : policy.relevanceFloor;
@@ -381,7 +550,7 @@ export class RetrievalService {
     );
     const chunks = selected.map((candidate) => chunkFromRow(candidate.row));
     const chosen = selected.map((candidate, index) =>
-      candidateFromRow(candidate.row, index),
+      traceCandidate(candidate.row, index + 1, candidate.fusedScore),
     );
     const abstained = chunks.length === 0;
     const abstentionReason: RetrievalAbstentionReason | null = abstained
@@ -398,7 +567,8 @@ export class RetrievalService {
         topK: policy.topK,
         sourceIds: policy.sourceIds,
         relevanceFloor: policy.relevanceFloor,
-        legs: [{ kind: 'dense', candidates: legCandidates }],
+        legs: traceLegs,
+        fusion,
         fusedOrder,
         rerank: {
           model: this.rerankConfig.model,
@@ -422,7 +592,8 @@ export class RetrievalService {
     request: RetrievalRequest,
     policy: RetrievalPolicy,
     input: {
-      legCandidates?: RetrievalTraceCandidate[];
+      legs?: RetrievalTraceLeg[];
+      fusion: RetrievalTraceFusion;
       abstentionReason: RetrievalAbstentionReason;
       skippedReason: RetrievalRerankSkippedReason;
       elapsedMs: number;
@@ -439,9 +610,8 @@ export class RetrievalService {
         topK: policy.topK,
         sourceIds: policy.sourceIds,
         relevanceFloor: policy.relevanceFloor,
-        legs: input.legCandidates
-          ? [{ kind: 'dense', candidates: input.legCandidates }]
-          : [],
+        legs: input.legs ?? [],
+        fusion: input.fusion,
         fusedOrder: [],
         rerank: {
           model: this.rerankConfig.model,
@@ -467,14 +637,18 @@ export class RetrievalService {
    */
   private async rerankCandidates(
     query: string,
-    rows: RetrievalChunkRow[],
+    fused: FusedCandidate<RetrievalChunkRow>[],
   ): Promise<RerankOutcome> {
     const fallback = (
       skippedReason: RetrievalRerankSkippedReason,
     ): RerankOutcome => ({
       applied: false,
       skippedReason,
-      candidates: rows.map((row) => ({ row, rerankScore: null })),
+      candidates: fused.map(({ candidate, score }) => ({
+        row: candidate,
+        fusedScore: score,
+        rerankScore: null,
+      })),
       traceCandidates: [],
       inputTokens: 0,
     });
@@ -484,7 +658,7 @@ export class RetrievalService {
     // The provider caps a request at 1,000 documents. Selected-source scopes
     // over-fetch per source, so many selected sources can exceed that even
     // with candidate depth clamped; degrade rather than send an invalid call.
-    if (rows.length > MAX_RERANK_DOCUMENTS) {
+    if (fused.length > MAX_RERANK_DOCUMENTS) {
       return fallback('too_many_candidates');
     }
 
@@ -492,7 +666,7 @@ export class RetrievalService {
     try {
       response = await this.reranker.rerank({
         query,
-        documents: rows.map((row) => row.content),
+        documents: fused.map(({ candidate }) => candidate.content),
         model: this.rerankConfig.model,
       });
     } catch (error) {
@@ -505,7 +679,7 @@ export class RetrievalService {
     }
 
     if (!response) return fallback('unavailable');
-    const scores = mapRerankScores(response.candidates, rows.length);
+    const scores = mapRerankScores(response.candidates, fused.length);
     if (!scores) {
       this.logger.warn(
         'Reranker returned an incomplete score set; falling back to fused order.',
@@ -513,63 +687,142 @@ export class RetrievalService {
       return fallback('failed');
     }
 
-    const candidates: RankedCandidate[] = rows
-      .map((row, index) => ({ row, rerankScore: scores[index] }))
+    const candidates: RankedCandidate[] = fused
+      .map(({ candidate, score }, index) => ({
+        row: candidate,
+        fusedScore: score,
+        rerankScore: scores[index],
+      }))
       .sort((a, b) => b.rerankScore - a.rerankScore);
     return {
       applied: true,
       skippedReason: null,
       candidates,
       traceCandidates: candidates.map((candidate, index) => ({
-        ...candidateFromRow(candidate.row, index),
+        ...traceCandidate(candidate.row, index + 1, candidate.fusedScore),
         rerankScore: candidate.rerankScore!,
       })),
       inputTokens: response.inputTokens,
     };
   }
 
-  private async search(
+  /** The dense leg: nearest neighbours by cosine similarity. */
+  private async searchDense(
     notebookId: string,
     embedding: number[],
     depth: number,
     sourceIds: string[] | null,
   ): Promise<RetrievalChunkRow[]> {
     const vectorLiteral = `[${embedding.join(',')}]`;
-    const chunkProjection = sql`
-      sc.id AS chunk_id,
-      sc.chunk_index,
-      sc.source_id,
-      s.title,
-      s.url,
-      s.kind,
-      sc.source_version_id,
-      sc.locator,
-      sc.content,
-      1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score
-    `;
+    return this.runLegSearch(
+      { notebookId, depth, sourceIds },
+      {
+        projection: sql`
+          ${chunkColumns()},
+          1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score
+        `,
+        // Ordering on the distance keeps the HNSW index usable.
+        rank: sql`sc.embedding <=> ${vectorLiteral}::vector`,
+      },
+    );
+  }
 
-    if (sourceIds) {
-      const sourceFilter = sql`AND sc.source_id IN (${sql.join(
-        sourceIds.map((id) => sql`${id}`),
-        sql`, `,
-      )})`;
+  /**
+   * The lexical leg: full-text candidates ranked by `ts_rank_cd`. The tsquery
+   * is built by the database's own parser so a term is lexed exactly as it
+   * was indexed — `RFC-2616` becomes the same lexemes on both sides — and the
+   * terms are OR-ed. `ts_rank_cd` then orders by cover density: how many of
+   * the query's lexemes a chunk contains and how close together they are. The
+   * leg also selects the cosine similarity, so a lexical-only candidate still
+   * carries a dense relevance signal.
+   */
+  private async searchLexical(
+    notebookId: string,
+    query: string,
+    embedding: number[],
+    depth: number,
+    sourceIds: string[] | null,
+  ): Promise<RetrievalChunkRow[]> {
+    const vectorLiteral = `[${embedding.join(',')}]`;
+    return this.runLegSearch(
+      { notebookId, depth, sourceIds },
+      {
+        cte: sql`
+          WITH lexemes AS (
+            SELECT lexeme
+            FROM unnest(
+              tsvector_to_array(to_tsvector('simple', ${query}))
+            ) AS lexeme
+            ORDER BY lexeme
+            LIMIT ${MAX_LEXICAL_TERMS}
+          ), q AS (
+            SELECT to_tsquery(
+              'simple',
+              string_agg(quote_literal(lexeme), ' | ')
+            ) AS query
+            FROM lexemes
+          )
+        `,
+        join: sql`CROSS JOIN q`,
+        predicate: sql`AND sc.search_vector @@ q.query`,
+        projection: sql`
+          ${chunkColumns()},
+          ts_rank_cd(sc.search_vector, q.query) AS score,
+          1 - (sc.embedding <=> ${vectorLiteral}::vector) AS dense_score
+        `,
+        rank: sql`ts_rank_cd(sc.search_vector, q.query) DESC`,
+      },
+    );
+  }
 
+  /**
+   * Runs one leg over the resolved scope. Both legs share the same filters —
+   * notebook, non-degraded sources, and the selected source ids — so a
+   * filter can never apply to one candidate list but not the other. The
+   * per-source scope bounds each selected source independently.
+   */
+  private async runLegSearch(
+    search: { notebookId: string; depth: number; sourceIds: string[] | null },
+    leg: {
+      /** Leading CTE the projection and predicate reference, if any. */
+      cte?: SQL;
+      /** Extra FROM/JOIN fragment the projection depends on. */
+      join?: SQL;
+      /** Extra WHERE predicate, starting with AND, if any. */
+      predicate?: SQL;
+      /** The leg's SELECT columns, including its score columns. */
+      projection: SQL;
+      /** The leg's ordering expression, best first. */
+      rank: SQL;
+    },
+  ): Promise<RetrievalChunkRow[]> {
+    const sourceFilter = search.sourceIds
+      ? sql`AND sc.source_id IN (${sql.join(
+          search.sourceIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`
+      : null;
+
+    if (search.sourceIds) {
       const result = await this.db.execute(
         sql`
+          ${leg.cte ?? sql``}
           SELECT * FROM (
             SELECT
-              ${chunkProjection},
+              ${leg.projection},
               row_number() OVER (
                 PARTITION BY sc.source_id
-                ORDER BY sc.embedding <=> ${vectorLiteral}::vector, sc.id
+                ORDER BY ${leg.rank}, sc.id
               ) AS source_rank
             FROM source_chunks sc
             JOIN sources s ON s.id = sc.source_id
-            WHERE sc.notebook_id = ${notebookId}
+            ${leg.join ?? sql``}
+            WHERE sc.notebook_id = ${search.notebookId}
               AND s.processing_status <> 'degraded'
+              ${leg.predicate ?? sql``}
               ${sourceFilter}
           ) ranked
-          WHERE ranked.source_rank <= ${depth}
+          WHERE ranked.source_rank <= ${search.depth}
           ORDER BY ranked.score DESC, ranked.chunk_id
         `,
       );
@@ -578,17 +831,35 @@ export class RetrievalService {
 
     const result = await this.db.execute(
       sql`
-        SELECT ${chunkProjection}
+        ${leg.cte ?? sql``}
+        SELECT ${leg.projection}
         FROM source_chunks sc
         JOIN sources s ON s.id = sc.source_id
-        WHERE sc.notebook_id = ${notebookId}
+        ${leg.join ?? sql``}
+        WHERE sc.notebook_id = ${search.notebookId}
           AND s.processing_status <> 'degraded'
-        ORDER BY sc.embedding <=> ${vectorLiteral}::vector, sc.id
-        LIMIT ${depth}
+          ${leg.predicate ?? sql``}
+        ORDER BY ${leg.rank}, sc.id
+        LIMIT ${search.depth}
       `,
     );
     return result.rows as unknown as RetrievalChunkRow[];
   }
+}
+
+/** The columns every leg selects; the leg appends its own score columns. */
+function chunkColumns(): SQL {
+  return sql`
+    sc.id AS chunk_id,
+    sc.chunk_index,
+    sc.source_id,
+    s.title,
+    s.url,
+    s.kind,
+    sc.source_version_id,
+    sc.locator,
+    sc.content
+  `;
 }
 
 function buildTrace(input: {
@@ -596,7 +867,8 @@ function buildTrace(input: {
   topK: number;
   sourceIds: string[] | null;
   relevanceFloor: number;
-  legs: RetrievalTrace['legs'];
+  legs: RetrievalTraceLeg[];
+  fusion: RetrievalTraceFusion;
   fusedOrder: RetrievalTraceCandidate[];
   rerank: RetrievalTrace['rerank'];
   chosen: RetrievalTraceCandidate[];
@@ -606,7 +878,7 @@ function buildTrace(input: {
   embeddingInputTokens: number;
 }): RetrievalTrace {
   return {
-    version: 2,
+    version: 3,
     query: input.query,
     topK: input.topK,
     scope: {
@@ -619,6 +891,7 @@ function buildTrace(input: {
       dimensions: EMBEDDING_DIMENSIONS,
     },
     legs: input.legs,
+    fusion: input.fusion,
     fusedOrder: input.fusedOrder,
     rerank: input.rerank,
     chosen: input.chosen,
@@ -632,16 +905,17 @@ function buildTrace(input: {
   };
 }
 
-function candidateFromRow(
+function traceCandidate(
   row: RetrievalChunkRow,
-  index: number,
+  rank: number,
+  score: number,
 ): RetrievalTraceCandidate {
   return {
     chunkId: row.chunk_id,
     sourceId: row.source_id,
     chunkIndex: row.chunk_index,
-    score: Number(row.score),
-    rank: index + 1,
+    score,
+    rank,
   };
 }
 
@@ -656,12 +930,17 @@ function chunkFromRow(row: RetrievalChunkRow): RetrievedChunk {
     sourceVersionId: row.source_version_id ?? null,
     locator: row.locator ?? null,
     content: row.content,
-    score: Number(row.score),
+    score: denseScoreOf(row),
   };
 }
 
+/** The cosine similarity of a row, whether it came from the dense or lexical leg. */
+function denseScoreOf(row: RetrievalChunkRow): number {
+  return Number(row.dense_score ?? row.score);
+}
+
 function candidateScore(candidate: RankedCandidate): number {
-  return candidate.rerankScore ?? Number(candidate.row.score);
+  return candidate.rerankScore ?? denseScoreOf(candidate.row);
 }
 
 /**
@@ -691,20 +970,25 @@ function mapRerankScores(
 }
 
 /**
- * Removes near-duplicate candidates before reranking, keeping the
- * best-ranked representative of each duplicate group.
+ * Removes near-duplicate candidates from the fused order before reranking,
+ * keeping the best-ranked representative of each duplicate group.
  */
-function dedupeNearDuplicates(rows: RetrievalChunkRow[]): RetrievalChunkRow[] {
-  const kept: { row: RetrievalChunkRow; tokens: Set<string> }[] = [];
-  for (const row of rows) {
-    const tokens = tokenizeForSimilarity(row.content);
+function dedupeNearDuplicates(
+  candidates: FusedCandidate<RetrievalChunkRow>[],
+): FusedCandidate<RetrievalChunkRow>[] {
+  const kept: {
+    candidate: FusedCandidate<RetrievalChunkRow>;
+    tokens: Set<string>;
+  }[] = [];
+  for (const candidate of candidates) {
+    const tokens = tokenizeForSimilarity(candidate.candidate.content);
     const duplicate = kept.some(
       (entry) =>
         jaccardSimilarity(entry.tokens, tokens) >= NEAR_DUPLICATE_SIMILARITY,
     );
-    if (!duplicate) kept.push({ row, tokens });
+    if (!duplicate) kept.push({ candidate, tokens });
   }
-  return kept.map((entry) => entry.row);
+  return kept.map((entry) => entry.candidate);
 }
 
 /**

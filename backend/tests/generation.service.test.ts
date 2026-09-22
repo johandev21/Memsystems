@@ -14,13 +14,18 @@ function retrievalOutcome(
     abstentionReason: 'no_indexed_chunks',
     unhelpfulSources: [],
     trace: {
-      version: 2,
+      version: 3,
       query: 'Cell biology',
       topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
       scope: { kind: 'selected_sources', sourceIds: ['source-1'] },
       relevanceFloor: 0,
       embedding: { model: 'voyage-4', dimensions: 1024 },
       legs: [{ kind: 'dense', candidates: [] }],
+      fusion: {
+        k: 60,
+        weights: { dense: 1, lexical: 1 },
+        depths: { dense: 32, lexical: 32 },
+      },
       fusedOrder: [],
       rerank: {
         model: 'rerank-2.5',

@@ -25,6 +25,9 @@ describe('ChunkingService', () => {
       locator: { pageNumber: 4 },
       chunkingVersion: 1,
     });
+    // The lexical representation indexes the contextualized text, which today
+    // is the document header plus the body.
+    expect(chunks[0].searchableText).toBe(chunks[0].content);
     expect(chunks[0].contentHash).toMatch(/^[0-9a-f]{64}$/);
   });
 

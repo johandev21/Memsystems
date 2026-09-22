@@ -136,6 +136,55 @@ export const GOLDEN_SOURCES: GoldenSource[] = [
       },
     ],
   },
+  {
+    id: 'catalog',
+    title: 'Computer Science Course Catalog',
+    kind: 'file',
+    processingStatus: 'ready',
+    // A long catalog entry shares several query terms with a question but
+    // dilutes its dense cosine, while eight short prerequisite lines mention
+    // the same course code and fill the dense candidate depth. Only the
+    // lexical leg ranks the long entry first, so disabling the lexical leg
+    // drops the answer out of the candidate set entirely.
+    chunks: [
+      {
+        id: 'catalog-cs3300',
+        text: 'CS-3300 Operating Systems is a required third-year course that introduces process scheduling, virtual memory, concurrency, file systems, and the design of reliable system software. The course is graded with a cumulative policy: weekly problem sets contribute twenty percent of the final mark, two midterm examinations contribute forty percent, and the final project contributes the remaining forty percent. Problem sets submitted after the due date lose ten percent of their value for each calendar day they are late, and no late work is accepted after the final class meeting. Students must pass the final project to pass the course, regardless of their marks on the problem sets and midterms. The syllabus also describes the laboratory schedule, the academic integrity rules that govern code submissions, the reading list for each week, and the office hours that the teaching assistants hold.',
+      },
+      {
+        id: 'catalog-prereq-2200',
+        text: 'Prerequisite for CS-2200: CS-3300.',
+      },
+      {
+        id: 'catalog-prereq-2400',
+        text: 'CS-2400 requires CS-3300.',
+      },
+      {
+        id: 'catalog-prereq-3100',
+        text: 'Prerequisite for CS-3100: CS-3300.',
+      },
+      {
+        id: 'catalog-prereq-3400',
+        text: 'CS-3400 admits CS-3300 graduates.',
+      },
+      {
+        id: 'catalog-prereq-3500',
+        text: 'Prerequisite for CS-3500: CS-3300.',
+      },
+      {
+        id: 'catalog-prereq-4100',
+        text: 'CS-4100 assumes CS-3300.',
+      },
+      {
+        id: 'catalog-prereq-4200',
+        text: 'Prerequisite for CS-4200: CS-3300.',
+      },
+      {
+        id: 'catalog-prereq-5100',
+        text: 'CS-5100 builds on CS-3300.',
+      },
+    ],
+  },
 ];
 
 export const GOLDEN_QUERIES: GoldenQuery[] = [
@@ -192,6 +241,12 @@ export const GOLDEN_QUERIES: GoldenQuery[] = [
     text: 'Where did the D-Day landings take place?',
     answerable: true,
     relevantChunkIds: ['wwii-dday'],
+  },
+  {
+    id: 'q-course-grading',
+    text: 'What is the grading policy for CS-3300?',
+    answerable: true,
+    relevantChunkIds: ['catalog-cs3300'],
   },
   {
     id: 'q-degraded-source',

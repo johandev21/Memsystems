@@ -15,7 +15,10 @@
 
 import { createId } from '@paralleldrive/cuid2';
 import { sourceChunks } from '../../src/database/schema';
-import { RetrievalService } from '../../src/modules/ai/retrieval.service';
+import {
+  DEFAULT_FUSION_K,
+  RetrievalService,
+} from '../../src/modules/ai/retrieval.service';
 import type { Reranker } from '../../src/modules/ai/reranker.service';
 import {
   createCitationEvidence,
@@ -50,6 +53,13 @@ export const EVAL_CANDIDATE_DEPTH = 8;
 export const EVAL_RERANK_MODEL = 'eval-coverage-reranker';
 export const EVAL_RERANK_THRESHOLD = 0.5;
 
+/**
+ * The hybrid leg's over-fetch depth. It matches the dense depth so neither
+ * leg can mask the other: disabling the lexical leg must show up in recall
+ * even while reranking is on.
+ */
+export const EVAL_LEXICAL_CANDIDATE_DEPTH = 8;
+
 export interface RetrievalEvalOptions {
   topK?: number;
   relevanceFloor?: number;
@@ -59,6 +69,8 @@ export interface RetrievalEvalOptions {
   rerank?: boolean;
   /** Override to inject a deliberately regressed reranker. */
   reranker?: Reranker;
+  /** Set false to measure the pipeline with the lexical leg disabled. */
+  hybrid?: boolean;
 }
 
 export interface RetrievalEvalQueryResult {
@@ -102,6 +114,14 @@ export interface RetrievalEvalReport {
     candidateDepth: number;
     threshold: number;
   };
+  hybrid: {
+    enabled: boolean;
+    fusionK: number;
+    denseWeight: number;
+    lexicalWeight: number;
+    denseCandidateDepth: number;
+    lexicalCandidateDepth: number;
+  };
   metrics: RetrievalEvalMetrics;
   queries: RetrievalEvalQueryResult[];
 }
@@ -142,6 +162,7 @@ export async function evaluateRetrieval(
   const topK = options.topK ?? EVAL_TOP_K;
   const relevanceFloor = options.relevanceFloor ?? EVAL_RELEVANCE_FLOOR;
   const rerankEnabled = options.rerank ?? true;
+  const hybridEnabled = options.hybrid ?? true;
   const corpus = GOLDEN_SOURCES.flatMap((source) =>
     source.chunks.map((chunk) => chunk.text),
   );
@@ -165,6 +186,14 @@ export async function evaluateRetrieval(
       topK,
     },
     reranker as never,
+    {
+      enabled: hybridEnabled,
+      fusionK: DEFAULT_FUSION_K,
+      denseWeight: 1,
+      lexicalWeight: 1,
+      denseCandidateDepth: EVAL_CANDIDATE_DEPTH,
+      lexicalCandidateDepth: EVAL_LEXICAL_CANDIDATE_DEPTH,
+    },
   );
 
   const queries: RetrievalEvalQueryResult[] = [];
@@ -186,6 +215,14 @@ export async function evaluateRetrieval(
       model: EVAL_RERANK_MODEL,
       candidateDepth: EVAL_CANDIDATE_DEPTH,
       threshold: EVAL_RERANK_THRESHOLD,
+    },
+    hybrid: {
+      enabled: hybridEnabled,
+      fusionK: DEFAULT_FUSION_K,
+      denseWeight: 1,
+      lexicalWeight: 1,
+      denseCandidateDepth: EVAL_CANDIDATE_DEPTH,
+      lexicalCandidateDepth: EVAL_LEXICAL_CANDIDATE_DEPTH,
     },
     metrics: computeMetrics(queries),
     queries,
@@ -224,6 +261,7 @@ async function seedGoldenCorpus(embedder: EvalEmbedder): Promise<{
           notebookId: notebook.id,
           chunkIndex: index,
           content: chunk.text,
+          searchableText: chunk.text,
           embedding: embedder.embed(chunk.text),
         };
       }),

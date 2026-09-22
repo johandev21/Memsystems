@@ -27,7 +27,11 @@ export interface RetrievalTraceCandidate {
   chunkId: string;
   sourceId: string;
   chunkIndex: number;
-  /** The retrieval (fused) score, never the reranker score. */
+  /**
+   * The score of the list that contains it: a leg's own score (cosine
+   * similarity or lexical rank) inside `legs`, and the Reciprocal Rank Fusion
+   * score inside `fusedOrder` and `chosen`. Never the reranker score.
+   */
   score: number;
   /** 1-based position within the list that contains it. */
   rank: number;
@@ -60,12 +64,22 @@ export interface RetrievalTraceRerank {
 }
 
 /**
- * The ranked output of one retrieval leg. Today there is a single dense leg;
- * the hybrid ticket adds a lexical leg behind the same pipeline.
+ * The ranked output of one retrieval leg: the dense nearest-neighbor search
+ * and the lexical full-text search.
  */
 export interface RetrievalTraceLeg {
   kind: 'dense' | 'lexical';
   candidates: RetrievalTraceCandidate[];
+}
+
+/** The Reciprocal Rank Fusion stage that merged the legs. */
+export interface RetrievalTraceFusion {
+  /** The RRF smoothing constant applied to the leg ranks. */
+  k: number;
+  /** The weight each leg contributed to the fusion. */
+  weights: { dense: number; lexical: number };
+  /** Candidates each leg over-fetched; the lexical depth is 0 when off. */
+  depths: { dense: number; lexical: number };
 }
 
 /** What the call was allowed to search. */
@@ -77,7 +91,7 @@ export interface RetrievalTraceScope {
 
 export interface RetrievalTrace {
   /** A stable shape version for traces persisted across schema changes. */
-  version: 2;
+  version: 3;
   query: string;
   topK: number;
   scope: RetrievalTraceScope;
@@ -91,6 +105,8 @@ export interface RetrievalTrace {
     dimensions: number;
   };
   legs: RetrievalTraceLeg[];
+  /** The fusion knobs applied to the legs. */
+  fusion: RetrievalTraceFusion;
   /**
    * The deduplicated fusion order that feeds reranking. When reranking is not
    * applied, this order is also the order the threshold selects Evidence from.

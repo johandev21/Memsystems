@@ -15,6 +15,8 @@ import {
 } from '../src/modules/database/database.module';
 import {
   DEFAULT_CANDIDATE_DEPTH,
+  DEFAULT_FUSION_K,
+  DEFAULT_HYBRID_CONFIG,
   DEFAULT_RERANK_CONFIG,
   DEFAULT_RERANK_MODEL,
   DEFAULT_RERANK_THRESHOLD,
@@ -23,9 +25,11 @@ import {
   RetrievalService,
   RETRIEVAL_RERANK_CONFIG,
   RETRIEVAL_RELEVANCE_CONFIG,
+  loadRetrievalHybridConfig,
   loadRetrievalRerankConfig,
   loadRetrievalRelevanceConfig,
   type CitationLocator,
+  type RetrievalHybridConfig,
   type RetrievalRerankConfig,
 } from '../src/modules/ai/retrieval.service';
 import { db } from './db';
@@ -35,16 +39,32 @@ function serviceWithRows(
   rows: Record<string, unknown>[],
   config?: { relevanceFloor: number },
   rerank?: { config?: Partial<RetrievalRerankConfig>; reranker?: unknown },
+  hybrid?: {
+    config?: Partial<RetrievalHybridConfig>;
+    /** Rows the lexical leg returns; defaults to the dense rows. */
+    lexicalRows?: Record<string, unknown>[];
+  },
 ) {
-  const execute = vi.fn().mockResolvedValue({ rows });
+  // The first leg searched is always the dense leg, so the scripted rows
+  // describe it; the lexical leg returns `lexicalRows` when one is given.
+  const execute = vi
+    .fn()
+    .mockResolvedValueOnce({ rows })
+    .mockResolvedValueOnce({ rows: hybrid?.lexicalRows ?? rows });
   const service = new RetrievalService(
     { execute } as never,
     { embedQuery: vi.fn().mockResolvedValue([0.1, 0.2]) } as never,
     config,
     rerank?.config ? { ...DEFAULT_RERANK_CONFIG, ...rerank.config } : undefined,
     rerank?.reranker as never,
+    hybrid?.config ? { ...DEFAULT_HYBRID_CONFIG, ...hybrid.config } : undefined,
   );
   return { service, execute };
+}
+
+/** The fused score of a candidate both mocked legs rank at `rank`. */
+function fusedFromBothLegs(rank: number): number {
+  return 1 / (DEFAULT_FUSION_K + rank) + 1 / (DEFAULT_FUSION_K + rank);
 }
 
 /** A scripted reranker: `scores` are keyed by the document's request index. */
@@ -157,6 +177,7 @@ describe('RetrievalService citation locations', () => {
         notebookId: notebook.id,
         chunkIndex: 0,
         content: 'Substantive ready content',
+        searchableText: 'Substantive ready content',
         embedding,
       },
       {
@@ -165,6 +186,7 @@ describe('RetrievalService citation locations', () => {
         notebookId: notebook.id,
         chunkIndex: 0,
         content: 'Chapter 1 Chapter 2 Chapter 3',
+        searchableText: 'Chapter 1 Chapter 2 Chapter 3',
         embedding,
       },
     ]);
@@ -205,12 +227,20 @@ describe('RetrievalService retrieval trace', () => {
     });
 
     expect(outcome.trace).toMatchObject({
-      version: 2,
+      version: 3,
       query: 'derivative',
       topK: 5,
       scope: { kind: 'notebook', sourceIds: null },
       relevanceFloor: DEFAULT_RELEVANCE_FLOOR,
       embedding: { model: EMBEDDING_MODEL, dimensions: EMBEDDING_DIMENSIONS },
+      fusion: {
+        k: DEFAULT_FUSION_K,
+        weights: { dense: 1, lexical: 1 },
+        depths: {
+          dense: DEFAULT_CANDIDATE_DEPTH,
+          lexical: DEFAULT_CANDIDATE_DEPTH,
+        },
+      },
       rerank: {
         model: DEFAULT_RERANK_MODEL,
         applied: false,
@@ -242,8 +272,43 @@ describe('RetrievalService retrieval trace', () => {
           },
         ],
       },
+      {
+        kind: 'lexical',
+        candidates: [
+          {
+            chunkId: 'chunk-good',
+            sourceId: 'source-1',
+            chunkIndex: 0,
+            score: 0.72,
+            rank: 1,
+          },
+          {
+            chunkId: 'chunk-weak',
+            sourceId: 'source-2',
+            chunkIndex: 0,
+            score: 0.11,
+            rank: 2,
+          },
+        ],
+      },
     ]);
-    expect(outcome.trace.fusedOrder).toEqual(outcome.trace.legs[0].candidates);
+    // Both legs rank the same candidates, so the RRF contributions add up.
+    expect(outcome.trace.fusedOrder).toEqual([
+      {
+        chunkId: 'chunk-good',
+        sourceId: 'source-1',
+        chunkIndex: 0,
+        score: fusedFromBothLegs(1),
+        rank: 1,
+      },
+      {
+        chunkId: 'chunk-weak',
+        sourceId: 'source-2',
+        chunkIndex: 0,
+        score: fusedFromBothLegs(2),
+        rank: 2,
+      },
+    ]);
     expect(outcome.trace.chosen.map((candidate) => candidate.chunkId)).toEqual([
       'chunk-good',
     ]);
@@ -349,7 +414,8 @@ describe('RetrievalService reranking', () => {
       'chunk-a',
       'chunk-b',
     ]);
-    // Evidence keeps the retrieval score; the reranker score is trace-only.
+    // Evidence keeps the dense retrieval score; the reranker score is
+    // trace-only and the fused score orders the reranked trace candidates.
     expect(outcome.chunks.map((chunk) => chunk.score)).toEqual([0.7, 0.9, 0.8]);
     expect(outcome.trace.rerank).toEqual({
       model: 'rerank-2.5',
@@ -361,7 +427,7 @@ describe('RetrievalService reranking', () => {
           chunkId: 'chunk-c',
           sourceId: 'source-3',
           chunkIndex: 0,
-          score: 0.7,
+          score: fusedFromBothLegs(3),
           rank: 1,
           rerankScore: 0.95,
         },
@@ -369,7 +435,7 @@ describe('RetrievalService reranking', () => {
           chunkId: 'chunk-a',
           sourceId: 'source-1',
           chunkIndex: 0,
-          score: 0.9,
+          score: fusedFromBothLegs(1),
           rank: 2,
           rerankScore: 0.8,
         },
@@ -377,7 +443,7 @@ describe('RetrievalService reranking', () => {
           chunkId: 'chunk-b',
           sourceId: 'source-2',
           chunkIndex: 0,
-          score: 0.8,
+          score: fusedFromBothLegs(2),
           rank: 3,
           rerankScore: 0.6,
         },
@@ -744,6 +810,7 @@ describe('RetrievalService selected sources scope', () => {
         notebookId: notebook.id,
         chunkIndex: 0,
         content: 'A strong match',
+        searchableText: 'A strong match',
         embedding: strong,
       },
       {
@@ -752,6 +819,7 @@ describe('RetrievalService selected sources scope', () => {
         notebookId: notebook.id,
         chunkIndex: 1,
         content: 'A medium match',
+        searchableText: 'A medium match',
         embedding: medium,
       },
       {
@@ -760,6 +828,7 @@ describe('RetrievalService selected sources scope', () => {
         notebookId: notebook.id,
         chunkIndex: 0,
         content: 'B only match',
+        searchableText: 'B only match',
         embedding: medium,
       },
       {
@@ -768,6 +837,7 @@ describe('RetrievalService selected sources scope', () => {
         notebookId: notebook.id,
         chunkIndex: 0,
         content: 'C strong match',
+        searchableText: 'C strong match',
         embedding: strong,
       },
     ]);
@@ -1072,6 +1142,7 @@ describe('AiModule relevance floor wiring', () => {
         notebookId: notebook.id,
         chunkIndex: 0,
         content: 'Strong match',
+        searchableText: 'Strong match',
         embedding: strong,
       },
       {
@@ -1080,6 +1151,7 @@ describe('AiModule relevance floor wiring', () => {
         notebookId: notebook.id,
         chunkIndex: 1,
         content: 'Borderline match',
+        searchableText: 'Borderline match',
         embedding: borderline,
       },
     ]);
@@ -1133,6 +1205,7 @@ describe('AiModule relevance floor wiring', () => {
         notebookId: notebook.id,
         chunkIndex: 0,
         content: 'First match',
+        searchableText: 'First match',
         embedding,
       },
       {
@@ -1141,6 +1214,7 @@ describe('AiModule relevance floor wiring', () => {
         notebookId: notebook.id,
         chunkIndex: 1,
         content: 'Second match',
+        searchableText: 'Second match',
         embedding,
       },
     ]);
@@ -1177,6 +1251,494 @@ describe('AiModule relevance floor wiring', () => {
     } finally {
       delete process.env.RETRIEVAL_RERANK_ENABLED;
       delete process.env.RETRIEVAL_TOP_K;
+    }
+  });
+});
+
+describe('RetrievalService hybrid retrieval', () => {
+  const noRerank: Partial<RetrievalRerankConfig> = { enabled: false };
+
+  it('fuses the dense and lexical legs by rank instead of by score', async () => {
+    const rows = [
+      chunkRow({ chunk_id: 'chunk-a', content: 'Alpha passage', score: 0.9 }),
+      chunkRow({
+        chunk_id: 'chunk-b',
+        content: 'Beta passage',
+        score: 0.8,
+        source_id: 'source-2',
+      }),
+      chunkRow({
+        chunk_id: 'chunk-c',
+        content: 'Gamma passage',
+        score: 0.7,
+        source_id: 'source-3',
+      }),
+    ];
+    const lexicalRows = [
+      chunkRow({
+        chunk_id: 'chunk-c',
+        content: 'Gamma passage',
+        score: 0.5,
+        source_id: 'source-3',
+      }),
+      chunkRow({
+        chunk_id: 'chunk-b',
+        content: 'Beta passage',
+        score: 0.4,
+        source_id: 'source-2',
+      }),
+    ];
+    const { service } = serviceWithRows(
+      rows,
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      { lexicalRows },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'passage',
+    });
+
+    // chunk-c is only third by dense score but first lexically, so RRF lifts
+    // it above chunk-a, which only the dense leg ranked.
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'chunk-c',
+      'chunk-b',
+      'chunk-a',
+    ]);
+    // Evidence keeps the dense retrieval score even though fusion ordered it.
+    expect(outcome.chunks.map((chunk) => chunk.score)).toEqual([0.7, 0.8, 0.9]);
+    expect(outcome.trace.legs.map((leg) => leg.kind)).toEqual([
+      'dense',
+      'lexical',
+    ]);
+    expect(outcome.trace.fusedOrder.map((candidate) => candidate.chunkId)).toEqual(
+      ['chunk-c', 'chunk-b', 'chunk-a'],
+    );
+    expect(outcome.trace.fusion).toEqual({
+      k: DEFAULT_FUSION_K,
+      weights: { dense: 1, lexical: 1 },
+      depths: {
+        dense: DEFAULT_CANDIDATE_DEPTH,
+        lexical: DEFAULT_CANDIDATE_DEPTH,
+      },
+    });
+  });
+
+  it('retrieves a chunk from an exact identifier the dense leg misses', async () => {
+    const denseRows = [
+      chunkRow({
+        chunk_id: 'chunk-cooking',
+        content: 'A cooking passage about sourdough starters.',
+        score: 0.9,
+      }),
+    ];
+    const lexicalRows = [
+      chunkRow({
+        chunk_id: 'chunk-rfc',
+        content: 'RFC 2616 defines the Accept header in section 14.1.',
+        score: 0.42,
+        source_id: 'source-2',
+      }),
+    ];
+    const reranker = {
+      rerank: vi.fn(async (request: { documents: string[] }) => ({
+        candidates: request.documents.map((document, index) => ({
+          index,
+          relevanceScore: document.includes('RFC 2616') ? 0.9 : 0.1,
+        })),
+        inputTokens: 20,
+      })),
+    };
+    const { service } = serviceWithRows(
+      denseRows,
+      { relevanceFloor: 0 },
+      {
+        config: {
+          enabled: true,
+          candidateDepth: 1,
+          topK: 1,
+          threshold: 0.5,
+        },
+        reranker,
+      },
+      {
+        config: { denseCandidateDepth: 1, lexicalCandidateDepth: 1 },
+        lexicalRows,
+      },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'What does RFC 2616 say about the Accept header?',
+      topK: 1,
+    });
+
+    // The lexical leg surfaced the chunk the dense leg never returned; the
+    // reranker then promoted it over the dense leg's only candidate.
+    expect(reranker.rerank).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documents: [
+          'A cooking passage about sourdough starters.',
+          'RFC 2616 defines the Accept header in section 14.1.',
+        ],
+      }),
+    );
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual(['chunk-rfc']);
+    expect(outcome.trace.legs[1].candidates.map((c) => c.chunkId)).toEqual([
+      'chunk-rfc',
+    ]);
+    expect(outcome.trace.rerank.candidates.map((c) => c.chunkId)).toEqual([
+      'chunk-rfc',
+      'chunk-cooking',
+    ]);
+  });
+
+  it('abstains when the lexical leg is disabled and the dense leg misses the exact term', async () => {
+    const denseRows = [
+      chunkRow({
+        chunk_id: 'chunk-cooking',
+        content: 'A cooking passage about sourdough starters.',
+        score: 0.9,
+      }),
+    ];
+    const reranker = {
+      rerank: vi.fn(async (request: { documents: string[] }) => ({
+        candidates: request.documents.map((_document, index) => ({
+          index,
+          relevanceScore: 0.1,
+        })),
+        inputTokens: 20,
+      })),
+    };
+    const { service } = serviceWithRows(
+      denseRows,
+      { relevanceFloor: 0 },
+      {
+        config: {
+          enabled: true,
+          candidateDepth: 1,
+          topK: 1,
+          threshold: 0.5,
+        },
+        reranker,
+      },
+      { config: { enabled: false } },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'What does RFC 2616 say about the Accept header?',
+      topK: 1,
+    });
+
+    expect(outcome.abstained).toBe(true);
+    expect(outcome.abstentionReason).toBe('below_threshold');
+    expect(outcome.trace.legs.map((leg) => leg.kind)).toEqual(['dense']);
+    expect(outcome.trace.fusion.depths.lexical).toBe(0);
+  });
+
+  it('applies notebook, selected-source and degraded filters to both legs', async () => {
+    const embedding = Array.from({ length: 1024 }, () => 0.01);
+    const notebook = await seedNotebook();
+    const otherNotebook = await seedNotebook({ title: 'Other notebook' });
+    const sourceA = await seedSource(notebook.id, {
+      kind: 'text',
+      title: 'Source A',
+      rawText: 'alpha zebra protocol',
+      processingStatus: 'ready',
+    });
+    const sourceB = await seedSource(notebook.id, {
+      kind: 'text',
+      title: 'Source B',
+      rawText: 'beta zebra manual',
+      processingStatus: 'ready',
+    });
+    const degraded = await seedSource(notebook.id, {
+      kind: 'url',
+      title: 'Degraded source',
+      rawText: 'gamma zebra navigation',
+      processingStatus: 'degraded',
+    });
+    const otherSource = await seedSource(otherNotebook.id, {
+      kind: 'text',
+      title: 'Other notebook source',
+      rawText: 'delta zebra guide',
+      processingStatus: 'ready',
+    });
+    await db.insert(sourceChunks).values([
+      {
+        id: 'hybrid-a',
+        sourceId: sourceA.id,
+        notebookId: notebook.id,
+        chunkIndex: 0,
+        content: 'Alpha zebra protocol',
+        searchableText: 'Alpha zebra protocol',
+        embedding,
+      },
+      {
+        id: 'hybrid-b',
+        sourceId: sourceB.id,
+        notebookId: notebook.id,
+        chunkIndex: 0,
+        content: 'Beta zebra manual',
+        searchableText: 'Beta zebra manual',
+        embedding,
+      },
+      {
+        id: 'hybrid-degraded',
+        sourceId: degraded.id,
+        notebookId: notebook.id,
+        chunkIndex: 0,
+        content: 'Gamma zebra navigation',
+        searchableText: 'Gamma zebra navigation',
+        embedding,
+      },
+      {
+        id: 'hybrid-other',
+        sourceId: otherSource.id,
+        notebookId: otherNotebook.id,
+        chunkIndex: 0,
+        content: 'Delta zebra guide',
+        searchableText: 'Delta zebra guide',
+        embedding,
+      },
+    ]);
+    const service = new RetrievalService(
+      db,
+      { embedQuery: vi.fn().mockResolvedValue(embedding) } as never,
+      { relevanceFloor: 0 },
+      { ...DEFAULT_RERANK_CONFIG, enabled: false },
+    );
+
+    const notebookWide = await service.retrieve({
+      notebookId: notebook.id,
+      query: 'zebra',
+    });
+    const legChunkIds = notebookWide.trace.legs.flatMap((leg) =>
+      leg.candidates.map((candidate) => candidate.chunkId),
+    );
+    expect(new Set(legChunkIds)).toEqual(new Set(['hybrid-a', 'hybrid-b']));
+    expect(
+      notebookWide.chunks.map((chunk) => chunk.chunkId).sort(),
+    ).toEqual(['hybrid-a', 'hybrid-b']);
+
+    const selected = await service.retrieve({
+      notebookId: notebook.id,
+      query: 'zebra',
+      sourceIds: [sourceA.id],
+    });
+    for (const leg of selected.trace.legs) {
+      expect(leg.candidates.map((candidate) => candidate.chunkId)).toEqual([
+        'hybrid-a',
+      ]);
+    }
+    expect(selected.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'hybrid-a',
+    ]);
+  });
+
+  it('gates a lexical-only candidate by its dense score when reranking is unavailable', async () => {
+    const rows = [
+      chunkRow({ chunk_id: 'chunk-dense', content: 'Dense passage', score: 0.9 }),
+    ];
+    const lexicalRows = [
+      chunkRow({
+        chunk_id: 'chunk-lexical',
+        content: 'RFC 2616 passage',
+        score: 0.42,
+        dense_score: 0.05,
+        source_id: 'source-2',
+        title: 'RFC notes',
+      }),
+    ];
+    const { service } = serviceWithRows(
+      rows,
+      undefined,
+      { config: noRerank },
+      { lexicalRows },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'RFC 2616',
+    });
+
+    // Without the cross-encoder, the dense cosine floor is the gate: a
+    // lexical-only candidate that is semantically distant is dropped rather
+    // than padding the answer.
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'chunk-dense',
+    ]);
+    expect(outcome.unhelpfulSources).toEqual([
+      { id: 'source-2', title: 'RFC notes', kind: 'file', url: null },
+    ]);
+  });
+
+  it('runs only the dense leg when hybrid retrieval is disabled', async () => {
+    const { service, execute } = serviceWithRows(
+      [chunkRow({ chunk_id: 'chunk-a', score: 0.9 })],
+      undefined,
+      { config: noRerank },
+      { config: { enabled: false } },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'derivative',
+    });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(outcome.trace.legs.map((leg) => leg.kind)).toEqual(['dense']);
+    expect(outcome.trace.fusion.depths.lexical).toBe(0);
+  });
+
+  it('traces a zero-weight leg but leaves it out of the fusion', async () => {
+    const rows = [
+      chunkRow({ chunk_id: 'chunk-dense', content: 'Dense passage', score: 0.9 }),
+    ];
+    const lexicalRows = [
+      chunkRow({
+        chunk_id: 'chunk-lexical',
+        content: 'Lexical passage',
+        score: 0.5,
+        source_id: 'source-2',
+      }),
+    ];
+    const { service } = serviceWithRows(
+      rows,
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      { config: { lexicalWeight: 0 }, lexicalRows },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'passage',
+    });
+
+    expect(outcome.trace.legs.map((leg) => leg.kind)).toEqual([
+      'dense',
+      'lexical',
+    ]);
+    expect(outcome.trace.fusedOrder.map((c) => c.chunkId)).toEqual([
+      'chunk-dense',
+    ]);
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'chunk-dense',
+    ]);
+  });
+});
+
+describe('loadRetrievalHybridConfig', () => {
+  it('falls back to the documented defaults', () => {
+    expect(loadRetrievalHybridConfig({})).toEqual(DEFAULT_HYBRID_CONFIG);
+  });
+
+  it('reads the hybrid configuration from the environment', () => {
+    expect(
+      loadRetrievalHybridConfig({
+        RETRIEVAL_HYBRID_ENABLED: 'false',
+        RETRIEVAL_RRF_K: '12',
+        RETRIEVAL_RRF_DENSE_WEIGHT: '0.25',
+        RETRIEVAL_RRF_LEXICAL_WEIGHT: '0.75',
+        RETRIEVAL_DENSE_CANDIDATE_DEPTH: '5',
+        RETRIEVAL_LEXICAL_CANDIDATE_DEPTH: '9',
+      }),
+    ).toEqual({
+      enabled: false,
+      fusionK: 12,
+      denseWeight: 0.25,
+      lexicalWeight: 0.75,
+      denseCandidateDepth: 5,
+      lexicalCandidateDepth: 9,
+    });
+  });
+
+  it('clamps the fusion constant and weights and ignores unusable values', () => {
+    expect(
+      loadRetrievalHybridConfig({
+        RETRIEVAL_RRF_K: '0',
+        RETRIEVAL_RRF_DENSE_WEIGHT: '5',
+        RETRIEVAL_RRF_LEXICAL_WEIGHT: '-1',
+        RETRIEVAL_LEXICAL_CANDIDATE_DEPTH: 'many',
+      }),
+    ).toEqual({
+      ...DEFAULT_HYBRID_CONFIG,
+      denseWeight: 1,
+      lexicalWeight: 0,
+    });
+  });
+
+  it('treats an empty depth override as unset, so it falls back to the shared depth', () => {
+    // Docker Compose forwards the overrides as empty strings when they are
+    // not configured, which must not override the shared candidate depth.
+    expect(
+      loadRetrievalHybridConfig({
+        RETRIEVAL_DENSE_CANDIDATE_DEPTH: '',
+        RETRIEVAL_LEXICAL_CANDIDATE_DEPTH: '',
+      }),
+    ).toEqual(DEFAULT_HYBRID_CONFIG);
+  });
+
+  it('clamps an over-limit depth override', () => {
+    expect(
+      loadRetrievalHybridConfig({
+        RETRIEVAL_LEXICAL_CANDIDATE_DEPTH: '99999',
+      }).lexicalCandidateDepth,
+    ).toBe(MAX_RERANK_DOCUMENTS);
+  });
+});
+
+describe('AiModule hybrid wiring', () => {
+  it('reads the hybrid configuration from the environment through the config provider', async () => {
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'text',
+      title: 'Ready source',
+      rawText: 'Zebra crossing',
+      processingStatus: 'ready',
+    });
+    const embedding = [1, ...Array.from({ length: 1023 }, () => 0)];
+    await db.insert(sourceChunks).values([
+      {
+        id: 'chunk-hybrid-off',
+        sourceId: source.id,
+        notebookId: notebook.id,
+        chunkIndex: 0,
+        content: 'Zebra crossing',
+        searchableText: 'Zebra crossing',
+        embedding,
+      },
+    ]);
+
+    process.env.RETRIEVAL_HYBRID_ENABLED = 'false';
+    try {
+      const moduleRef = await Test.createTestingModule({
+        imports: [DatabaseModule, AiModule],
+      })
+        .overrideProvider(DRIZZLE)
+        .useValue(db)
+        .overrideProvider(PG_POOL)
+        .useValue({})
+        .overrideProvider(EmbeddingService)
+        .useValue({
+          embedQuery: vi.fn().mockResolvedValue(embedding),
+          getVoyageApiKey: vi.fn().mockResolvedValue(null),
+        })
+        .compile();
+
+      const service = moduleRef.get(RetrievalService);
+      const result = await service.retrieve({
+        notebookId: notebook.id,
+        query: 'zebra',
+      });
+
+      expect(result.trace.legs.map((leg) => leg.kind)).toEqual(['dense']);
+      expect(result.trace.fusion.depths.lexical).toBe(0);
+    } finally {
+      delete process.env.RETRIEVAL_HYBRID_ENABLED;
     }
   });
 });

@@ -32,6 +32,13 @@ export interface ChunkOutput {
   notebookId: string;
   chunkIndex: number;
   content: string;
+  /**
+   * The contextualized text the lexical leg indexes. It is the document
+   * context plus section context plus body, while `content` stays the text
+   * shown to the model and referenced by citations. Today the section context
+   * is not carried yet, so this mirrors `content`.
+   */
+  searchableText: string;
   sourceVersionId?: string | null;
   locator: Record<string, unknown>;
   segmentIds: string[];
@@ -162,6 +169,7 @@ export class ChunkingService {
         notebookId: input.notebookId,
         chunkIndex: index,
         content,
+        searchableText: content,
         sourceVersionId: input.sourceVersionId ?? null,
         locator: piece.locator,
         segmentIds: piece.segmentIds,

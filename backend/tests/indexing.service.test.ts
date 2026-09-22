@@ -37,7 +37,11 @@ function fakeEmbeddingService(
 
 async function chunkRows(sourceId: string) {
   const rows = await db
-    .select({ content: sourceChunks.content })
+    .select({
+      content: sourceChunks.content,
+      searchableText: sourceChunks.searchableText,
+      searchVector: sourceChunks.searchVector,
+    })
     .from(sourceChunks)
     .where(eq(sourceChunks.sourceId, sourceId))
     .orderBy(sourceChunks.chunkIndex);
@@ -69,6 +73,9 @@ describe('IndexingService', () => {
     const rows = await chunkRows(source.id);
     expect(rows).toHaveLength(result.chunksCount);
     expect(rows[0].content).toContain('Source: "Long Source"');
+    // The lexical representation is stored and indexed alongside the body.
+    expect(rows[0].searchableText).toBe(rows[0].content);
+    expect(rows[0].searchVector).toContain("'source'");
   });
 
   it('keeps the previous chunk set when embedding fails', async () => {

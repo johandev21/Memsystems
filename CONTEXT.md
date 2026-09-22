@@ -138,6 +138,14 @@ _Avoid_: LLM, engine
 The Voyage AI connection used to embed and retrieve source chunks.
 _Avoid_: vector store, index
 
+**Lexical Leg**:
+The full-text half of hybrid retrieval. It matches the exact terms, names, numbers, and identifiers of a query against a chunk's searchable text.
+_Avoid_: keyword search, BM25
+
+**Reciprocal Rank Fusion**:
+The rank-based merge of the dense and lexical candidate lists. It orders by the ranks each list gave a candidate instead of comparing their scores.
+_Avoid_: score fusion, reranking (reranking is the later cross-encoder stage)
+
 ### Settings and appearance
 
 **Palette**:

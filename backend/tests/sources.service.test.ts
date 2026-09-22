@@ -789,6 +789,7 @@ describe.sequential('SourcesService', () => {
           sourceVersionId: version.id,
           chunkIndex: 0,
           content: 'Hello world',
+          searchableText: 'Hello world',
           locator: {
             startOffsetMs: 0,
             endOffsetMs: 2000,

@@ -7,7 +7,7 @@ import { seedNotebook } from './fixtures';
 
 function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
   return {
-    version: 2,
+    version: 3,
     query: 'Explain osmosis',
     topK: 8,
     scope: { kind: 'notebook', sourceIds: null },
@@ -26,13 +26,30 @@ function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
           },
         ],
       },
+      {
+        kind: 'lexical',
+        candidates: [
+          {
+            chunkId: 'chunk-1',
+            sourceId: 'source-1',
+            chunkIndex: 0,
+            score: 0.31,
+            rank: 1,
+          },
+        ],
+      },
     ],
+    fusion: {
+      k: 60,
+      weights: { dense: 1, lexical: 1 },
+      depths: { dense: 32, lexical: 32 },
+    },
     fusedOrder: [
       {
         chunkId: 'chunk-1',
         sourceId: 'source-1',
         chunkIndex: 0,
-        score: 0.72,
+        score: 0.0325,
         rank: 1,
       },
     ],
@@ -58,7 +75,7 @@ function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
         chunkId: 'chunk-1',
         sourceId: 'source-1',
         chunkIndex: 0,
-        score: 0.72,
+        score: 0.0325,
         rank: 1,
       },
     ],

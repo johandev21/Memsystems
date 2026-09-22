@@ -9,9 +9,11 @@ import { IndexingService } from './indexing.service';
 import { ModelSyncService } from './model-sync.service';
 import { RerankerService } from './reranker.service';
 import {
+  RETRIEVAL_HYBRID_CONFIG,
   RETRIEVAL_RERANK_CONFIG,
   RETRIEVAL_RELEVANCE_CONFIG,
   RetrievalService,
+  loadRetrievalHybridConfig,
   loadRetrievalRerankConfig,
   loadRetrievalRelevanceConfig,
 } from './retrieval.service';
@@ -37,6 +39,10 @@ import { UserSettingsService } from './user-settings.service';
     {
       provide: RETRIEVAL_RERANK_CONFIG,
       useFactory: loadRetrievalRerankConfig,
+    },
+    {
+      provide: RETRIEVAL_HYBRID_CONFIG,
+      useFactory: loadRetrievalHybridConfig,
     },
     RerankerService,
     RetrievalService,

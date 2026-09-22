@@ -174,6 +174,7 @@ export class IndexingService {
             notebookId: chunk.notebookId,
             chunkIndex: chunk.chunkIndex,
             content: chunk.content,
+            searchableText: chunk.searchableText,
             embedding,
             sourceVersionId: chunk.sourceVersionId,
             locator: chunk.locator,

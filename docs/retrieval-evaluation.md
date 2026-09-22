@@ -5,11 +5,11 @@ live with the backend tests, and the runner is a continuous integration gate:
 a retrieval change that regresses a metric beyond the documented tolerance
 fails `pnpm run test`.
 
-The gate covers the retrieval pipeline (query embedding, search legs, fusion,
-dedupe, reranking, relevance thresholds, Evidence selection). The later
-retrieval tickets — hybrid search, chunking, query understanding, Generation
-grounding — are expected to move these metrics and to update the baseline with
-evidence.
+The gate covers the retrieval pipeline (query embedding, dense and lexical
+search legs, reciprocal rank fusion, dedupe, reranking, relevance thresholds,
+Evidence selection). The later retrieval tickets — chunking, query
+understanding, Generation grounding — are expected to move these metrics and
+to update the baseline with evidence.
 
 ## Pieces
 
@@ -41,6 +41,19 @@ from unreranked retrieval: with reranking disabled, `mrr`, `nDCG`, and
 over-fetches fewer candidates than production (`EVAL_CANDIDATE_DEPTH`) so a
 broken dense leg still shows up in recall even while reranking is on.
 
+Hybrid retrieval runs the dense leg and a lexical full-text leg as separate
+candidate lists and fuses them with Reciprocal Rank Fusion, so the harness also
+needs a query the dense leg cannot answer. The course-catalog source provides
+it: a long catalog entry shares several query terms but dilutes its dense
+cosine, while eight short prerequisite lines mention the same course code and
+fill the dense candidate depth. The lexical leg ranks the long entry first and
+fusion carries it into the reranked set; with the lexical leg disabled, the
+entry never becomes a candidate, recall and citation accuracy fall, and the
+answerable query abstains. The harness runs each leg at the same over-fetch
+depth (`EVAL_LEXICAL_CANDIDATE_DEPTH`), so neither leg masks the other. Fusion
+is a rank-based stage, so its ordering is covered directly by
+`backend/tests/rank-fusion.test.ts` and end to end through the pipeline.
+
 ## Metrics
 
 | Metric | Meaning | Direction |
@@ -53,7 +66,7 @@ broken dense leg still shows up in recall even while reranking is on.
 | `refusalAccuracy` | Share of queries whose abstention matched the label: answerable queries must answer, unanswerable ones must abstain. | higher is better |
 | `faithfulness` | Deterministic proxy: share of answered queries whose top-ranked chunk is relevant. A model-judged faithfulness check needs provider calls and is out of scope for the keyless gate. | higher is better |
 | `latencyMsP50`, `latencyMsP95` | Wall-clock retrieval duration per query. | reported; p95 is gated by an absolute ceiling |
-| `costTokensPerQuery` | Estimated query cost: embedding tokens plus reranker tokens (about 4 characters per token), averaged over queries so adding a labeled query does not move the metric by itself. | lower is better |
+| `costTokensPerQuery` | Estimated query cost: embedding tokens plus reranker tokens (about 4 characters per token), averaged over queries so adding a labeled query does not move the metric by itself. Hybrid retrieval reranks the fused candidates from both legs, so it costs more than dense-only retrieval. | lower is better |
 
 ## Tolerance and baseline
 
@@ -111,5 +124,8 @@ applies migrations to the test database, and runs `lint`, `typecheck`, and
 the workflow.
 
 The gate test also runs deliberately broken configurations — a constant
-embedder, a disabled floor, and a disabled reranker — and asserts that the
-gate reports failures, so the gate itself is tested rather than assumed.
+embedder, a disabled floor, a disabled reranker, and a disabled lexical leg —
+and asserts that the gate reports failures, so the gate itself is tested rather
+than assumed. Disabling the lexical leg is expected to fail `recallAtK`,
+`citationAccuracy`, and `refusalAccuracy`: the catalog answer is only reachable
+through fusion.
