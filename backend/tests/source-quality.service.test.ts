@@ -106,6 +106,25 @@ describe('SourceQualityService', () => {
     expect(assessment.signals.linkDensity).toBe(0.95);
     expect(assessment.status).toBe('degraded');
   });
+
+  it('falls back to a generic failure when a degraded assessment has no reason', () => {
+    expect(
+      qualityFailureOf({
+        status: 'degraded',
+        score: 0,
+        reason: null,
+        signals: {
+          wordCount: 0,
+          linkDensity: 0,
+          repetitionRatio: 0,
+          paywallHits: 0,
+        },
+      }),
+    ).toEqual({
+      code: 'content_quality',
+      messageKey: 'errors.sources.quality.unknown',
+    });
+  });
 });
 
 describe('measureHtmlLinkDensity', () => {
@@ -127,9 +146,7 @@ describe('measureHtmlLinkDensity', () => {
 
 describe('loadSourceQualityConfig', () => {
   it('uses documented defaults when the environment is empty', () => {
-    expect(loadSourceQualityConfig({})).toEqual(
-      DEFAULT_SOURCE_QUALITY_CONFIG,
-    );
+    expect(loadSourceQualityConfig({})).toEqual(DEFAULT_SOURCE_QUALITY_CONFIG);
   });
 
   it('reads thresholds from the environment and clamps them', () => {

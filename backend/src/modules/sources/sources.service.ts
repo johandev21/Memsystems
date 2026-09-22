@@ -35,6 +35,7 @@ import { SourceAcquisitionService } from './source-acquisition.service';
 import { SourceExtractionService } from './source-extraction.service';
 import { SourceJobsService } from './source-jobs.service';
 import {
+  qualityFailureLifecycle,
   qualityFailureOf,
   SourceQualityService,
 } from './source-quality.service';
@@ -146,8 +147,12 @@ export class SourcesService {
     private readonly sourceExtractionService: SourceExtractionService,
     @Optional() private readonly sourceVersionService?: SourceVersionService,
     @Optional() private readonly captionParser?: CaptionParserService,
-    @Optional() private readonly sourceQualityService?: SourceQualityService,
-  ) {}
+    @Optional() sourceQualityService?: SourceQualityService,
+  ) {
+    this.sourceQuality = sourceQualityService ?? new SourceQualityService();
+  }
+
+  private readonly sourceQuality: SourceQualityService;
 
   async list(notebookId: string) {
     await this.notebooksService.assertNotebookOwner(notebookId);
@@ -222,12 +227,7 @@ export class SourcesService {
       })
       .returning();
 
-    await this.persistVersion(row.id, document, quality);
-    if (quality.status === 'degraded') {
-      return this.withQualityFailure(row, quality);
-    }
-    await this.sourceJobsService.enqueue(row.id);
-    return row;
+    return this.persistVersionAndIndex(row, document, quality);
   }
 
   async createUrl(notebookId: string, input: CreateUrlSourceInput) {
@@ -283,12 +283,7 @@ export class SourcesService {
       })
       .returning();
 
-    await this.persistVersion(row.id, document, quality);
-    if (quality.status === 'degraded') {
-      return this.withQualityFailure(row, quality);
-    }
-    await this.sourceJobsService.enqueue(row.id);
-    return row;
+    return this.persistVersionAndIndex(row, document, quality);
   }
 
   async countForNotebook(notebookId: string): Promise<number> {
@@ -559,12 +554,6 @@ export class SourcesService {
       })
       .where(eq(sources.id, id));
 
-    // A degraded source needs a fresh extraction so the quality gate can be
-    // re-evaluated; re-indexing the same unusable text cannot repair it.
-    if (source.processingStatus === 'degraded') {
-      return this.sourceJobsService.enqueueProcessing(id);
-    }
-
     if (source.kind === 'file' && source.s3Key) {
       return this.sourceJobsService.enqueueProcessing(id);
     }
@@ -731,8 +720,11 @@ export class SourcesService {
       sections,
     };
 
-    await this.persistVersion(source.id, doc);
-    await this.sourceJobsService.enqueue(source.id);
+    const quality = this.assessDocument(doc);
+    await this.persistVersion(source.id, doc, quality);
+    if (quality.status !== 'degraded') {
+      await this.sourceJobsService.enqueue(source.id);
+    }
 
     return this.get(source.id);
   }
@@ -754,8 +746,24 @@ export class SourcesService {
   private assessDocument(
     document: NormalizedDocument,
   ): SourceQualityAssessment {
-    const quality = this.sourceQualityService ?? new SourceQualityService();
-    return quality.assess(document);
+    return this.sourceQuality.assess(document);
+  }
+
+  /**
+   * Persists the version, marks the source degraded when the assessment says
+   * so, and otherwise schedules indexing.
+   */
+  private async persistVersionAndIndex(
+    row: typeof sources.$inferSelect,
+    document: NormalizedDocument,
+    quality: SourceQualityAssessment,
+  ): Promise<typeof sources.$inferSelect> {
+    await this.persistVersion(row.id, document, quality);
+    if (quality.status === 'degraded') {
+      return this.withQualityFailure(row, quality);
+    }
+    await this.sourceJobsService.enqueue(row.id);
+    return row;
   }
 
   /** Mirrors the persisted degraded lifecycle on the response row. */
@@ -764,12 +772,10 @@ export class SourcesService {
     quality: SourceQualityAssessment,
   ): typeof sources.$inferSelect {
     const failure = qualityFailureOf(quality);
+    if (!failure) return row;
     return {
       ...row,
-      processingStatus: 'degraded',
-      processingStage: null,
-      processingErrorCode: failure?.code ?? 'content_quality',
-      processingErrorMessage: failure?.messageKey ?? null,
+      ...qualityFailureLifecycle(failure),
     };
   }
 
@@ -781,12 +787,7 @@ export class SourcesService {
     // Optional keeps old unit-test adapters and pre-0A deployments usable;
     // the application module always provides this persistence seam.
     if (this.sourceVersionService) {
-      await this.sourceVersionService.persist(
-        sourceId,
-        document,
-        null,
-        quality,
-      );
+      await this.sourceVersionService.persist(sourceId, document, { quality });
     }
   }
 }

@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { isProbablyReaderable, Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
 import { WebScrapeError } from './source-errors';
-import { measureHtmlLinkDensity, wordTokens } from './source-quality.service';
+import {
+  measureElementLinkDensity,
+  measureHtmlLinkDensity,
+} from './source-quality.service';
 
 export interface ScrapedPage {
   title: string;
@@ -87,13 +90,7 @@ function stripLinkDenseBlocks(document: Document): void {
   for (const element of Array.from(document.querySelectorAll('body *'))) {
     const text = element.textContent?.trim() ?? '';
     if (text.length < LINK_BLOCK_MIN_CHARS) continue;
-    const totalWords = wordTokens(text).length;
-    if (totalWords === 0) continue;
-    let linkWords = 0;
-    element.querySelectorAll('a').forEach((anchor) => {
-      linkWords += wordTokens(anchor.textContent ?? '').length;
-    });
-    if (linkWords / totalWords < LINK_BLOCK_DENSITY) continue;
+    if (measureElementLinkDensity(element) < LINK_BLOCK_DENSITY) continue;
     // A container that also holds prose paragraphs is not pure navigation.
     if (element.querySelector('p, h1, h2, h3, h4, h5, h6')) continue;
     element.remove();
@@ -124,9 +121,10 @@ interface ExtractedArticle {
 }
 
 /**
- * Picks the most usable extraction: a candidate that clears both the length
- * floor and the link-density bar wins, preferring the longest; otherwise the
- * least link-dense candidate wins, with the longest text as the tie-breaker.
+ * Picks the most usable extraction: candidates that clear both the length
+ * floor and the link-density bar are preferred, and the longest wins; when
+ * none clears the bar, the least link-dense candidate wins, with the longest
+ * text as the tie-breaker.
  */
 function pickBestExtraction(candidates: ExtractedArticle[]): ExtractedArticle {
   const usable = candidates.filter(
@@ -134,8 +132,12 @@ function pickBestExtraction(candidates: ExtractedArticle[]): ExtractedArticle {
       candidate.linkDensity < RETRY_LINK_DENSITY_THRESHOLD &&
       candidate.text.length >= RETRY_MIN_TEXT_LENGTH,
   );
-  const pool = usable.length > 0 ? usable : candidates;
-  return pool.reduce((best, candidate) => {
+  if (usable.length > 0) {
+    return usable.reduce((best, candidate) =>
+      candidate.text.length > best.text.length ? candidate : best,
+    );
+  }
+  return candidates.reduce((best, candidate) => {
     if (candidate.linkDensity < best.linkDensity) return candidate;
     if (
       candidate.linkDensity === best.linkDensity &&

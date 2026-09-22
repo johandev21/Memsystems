@@ -3,6 +3,7 @@ import { Firecrawl } from 'firecrawl';
 import { WebScrapeError } from '../sources/source-errors';
 import type {
   CrawledDocument,
+  CrawlerScrapeOptions,
   CrawlerService,
   SearchResultItem,
 } from './crawler.types';
@@ -115,12 +116,16 @@ export class FirecrawlCrawlerService implements CrawlerService {
     });
   }
 
-  async scrape(url: string): Promise<CrawledDocument> {
+  async scrape(
+    url: string,
+    options: CrawlerScrapeOptions = {},
+  ): Promise<CrawledDocument> {
     const startedAt = Date.now();
+    const onlyMainContent = options.onlyMainContent ?? true;
     try {
       const document = await this.client.scrape(url, {
         formats: ['markdown', 'html', 'links'],
-        onlyMainContent: true,
+        onlyMainContent,
         timeout: this.timeoutMs,
       });
       const durationMs = Date.now() - startedAt;

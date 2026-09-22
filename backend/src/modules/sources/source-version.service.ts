@@ -16,7 +16,10 @@ import {
   EXTRACTOR_VERSION,
   NORMALIZATION_VERSION,
 } from './document-normalizer.service';
-import { qualityFailureOf } from './source-quality.service';
+import {
+  qualityFailureOf,
+  qualityLifecycleValues,
+} from './source-quality.service';
 
 /** The small persistence seam shared by synchronous and queued ingestion. */
 export interface PersistedSourceVersion {
@@ -25,6 +28,11 @@ export interface PersistedSourceVersion {
   contentHash: string;
   segmentCount: number;
   quality: SourceQualityAssessment | null;
+}
+
+export interface PersistSourceVersionOptions {
+  artifactKey?: string | null;
+  quality?: SourceQualityAssessment | null;
 }
 
 export class SourceVersionCancelledError extends Error {
@@ -54,9 +62,10 @@ export class SourceVersionService {
   async persist(
     sourceId: string,
     document: NormalizedDocument,
-    artifactKey: string | null = null,
-    quality: SourceQualityAssessment | null = null,
+    options: PersistSourceVersionOptions = {},
   ): Promise<PersistedSourceVersion> {
+    const artifactKey = options.artifactKey ?? null;
+    const quality = options.quality ?? null;
     const versionId = createId();
     const sections = toSegments(document);
     let persistedId = versionId;
@@ -66,19 +75,7 @@ export class SourceVersionService {
     const degraded = failure !== null;
     // A degraded version keeps its extraction for inspection, but the source
     // must not look ready and no Evidence may be indexed from it.
-    const lifecycle = failure
-      ? {
-          processingStatus: 'degraded' as const,
-          processingStage: null,
-          processingErrorCode: failure.code,
-          processingErrorMessage: failure.messageKey,
-        }
-      : {
-          processingStatus: 'processing' as const,
-          processingStage: 'indexing' as const,
-          processingErrorCode: null,
-          processingErrorMessage: null,
-        };
+    const lifecycle = qualityLifecycleValues(failure);
 
     await this.db.transaction(async (tx) => {
       const [source] = await tx

@@ -506,4 +506,43 @@ describe('SourceJobsService', () => {
     expect(job.type).toBe('source_processing');
     expect(job.status).toBe('pending');
   });
+
+  it('routes a degraded source to processing instead of indexing it', async () => {
+    const embedding = fakeEmbeddingService();
+    const { jobs: service } = makeJobsService(embedding);
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      title: 'Degraded source',
+      rawText: 'Chapter 1 Chapter 2 Chapter 3',
+      kind: 'text',
+      processingStatus: 'degraded',
+    });
+
+    const job = await service.enqueue(source.id);
+
+    const [stored] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+    expect(stored.type).toBe('source_processing');
+    expect(stored.groupKey).toBe(`source:${source.id}:processing`);
+  });
+
+  it('skips degraded sources during notebook reindex', async () => {
+    const embedding = fakeEmbeddingService();
+    const { jobs: service } = makeJobsService(embedding);
+    const notebook = await seedNotebook();
+    await seedSource(notebook.id, {
+      title: 'Ready source',
+      rawText: LONG_TEXT,
+      kind: 'text',
+      processingStatus: 'ready',
+    });
+    await seedSource(notebook.id, {
+      title: 'Degraded source',
+      rawText: 'Chapter 1 Chapter 2',
+      kind: 'text',
+      processingStatus: 'degraded',
+    });
+
+    const count = await service.reindexNotebook(notebook.id);
+    expect(count).toBe(1);
+  });
 });

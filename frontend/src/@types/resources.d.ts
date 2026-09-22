@@ -301,7 +301,8 @@ export default interface Resources {
         "quality": {
           "boilerplate": "Most of this source repeats boilerplate text, so it cannot be used as evidence.",
           "navigation": "Most of this source is links or navigation, so it cannot be used as evidence.",
-          "paywall": "This source is mostly a paywall or sign-in message, so it cannot be used as evidence."
+          "paywall": "This source is mostly a paywall or sign-in message, so it cannot be used as evidence.",
+          "unknown": "This source did not yield usable reading material, so it cannot be used as evidence."
         },
         "source": {
           "notFound": "Source not found"

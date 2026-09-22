@@ -83,8 +83,16 @@ export function SourceRow({
         ) : (
           createElement(getSourceIcon(source), { className: "size-4 shrink-0" })
         )}
-        <span className="truncate">{source.title}</span>
-        {status !== "ready" && (
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate">{source.title}</span>
+          {degraded && (
+            <span className="max-w-80 truncate text-xs text-warning">
+              {sourceQualityReasonLabel(source) ?? statusLabel} ·{" "}
+              {sourceQualityCorrectiveAction(source)}
+            </span>
+          )}
+        </span>
+        {status !== "ready" && !degraded && (
           <span className="max-w-36 truncate text-xs opacity-75">{statusLabel}</span>
         )}
       </button>

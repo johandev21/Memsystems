@@ -381,7 +381,7 @@ export class DocumentNormalizerService {
       contentType: meta.contentType,
       contentHash: contentHashOf(text),
       sections,
-      linkDensity: measureHtmlLinkDensity(page.html),
+      linkDensity: page.linkDensity ?? measureHtmlLinkDensity(page.html),
     };
   }
 

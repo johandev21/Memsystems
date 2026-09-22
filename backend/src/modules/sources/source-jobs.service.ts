@@ -66,6 +66,12 @@ export class SourceJobsService {
         messageKey: 'errors.sources.source.notFound',
       });
 
+    if (source.processingStatus === 'degraded') {
+      // Degraded content is never indexed as Evidence. Re-run extraction so
+      // the quality gate can re-evaluate it instead.
+      return this.enqueueProcessing(sourceId);
+    }
+
     if (this.needsProcessing(source)) {
       return this.enqueueProcessing(sourceId);
     }
@@ -125,6 +131,7 @@ export class SourceJobsService {
         s3Key: sources.s3Key,
         rawText: sources.rawText,
         currentVersionId: sources.currentVersionId,
+        processingStatus: sources.processingStatus,
       })
       .from(sources)
       .where(eq(sources.notebookId, notebookId));
@@ -144,6 +151,7 @@ export class SourceJobsService {
         s3Key: sources.s3Key,
         rawText: sources.rawText,
         currentVersionId: sources.currentVersionId,
+        processingStatus: sources.processingStatus,
       })
       .from(sources);
     return this.enqueueReindexes(rows);
@@ -156,10 +164,14 @@ export class SourceJobsService {
       s3Key: string | null;
       rawText: string;
       currentVersionId: string | null;
+      processingStatus: string;
     }[],
   ): Promise<number> {
     let enqueued = 0;
     for (const row of rows) {
+      // Degraded sources have no usable Evidence to re-index; retrying them
+      // individually re-runs extraction instead.
+      if (row.processingStatus === 'degraded') continue;
       if (row.kind === 'file' && row.s3Key && !row.currentVersionId) {
         await this.enqueueProcessing(row.id);
       } else if (row.currentVersionId || row.rawText.trim().length > 0) {

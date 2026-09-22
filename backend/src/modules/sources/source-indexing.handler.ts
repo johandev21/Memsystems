@@ -12,7 +12,11 @@ import {
 import { DomainError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { Job, JobHandler } from '../jobs/job-handler.interface';
-import { qualityFailureOf } from './source-quality.service';
+import {
+  qualityFailureLifecycle,
+  qualityFailureOf,
+  UNKNOWN_QUALITY_FAILURE,
+} from './source-quality.service';
 import { SourceVersionService } from './source-version.service';
 
 export interface SourceIndexingJobPayload {
@@ -206,19 +210,15 @@ export class SourceIndexingHandler implements JobHandler<
         : [];
       const failure = version?.quality
         ? qualityFailureOf(version.quality)
-        : null;
-      const degraded = version?.status === 'degraded' || failure !== null;
+        : version?.status === 'degraded'
+          ? UNKNOWN_QUALITY_FAILURE
+          : null;
 
       await tx
         .update(sources)
         .set(
-          degraded
-            ? {
-                processingStatus: 'degraded',
-                processingStage: null,
-                processingErrorCode: failure?.code ?? 'content_quality',
-                processingErrorMessage: failure?.messageKey ?? null,
-              }
+          failure
+            ? qualityFailureLifecycle(failure)
             : {
                 processingStatus: 'ready',
                 processingStage: null,

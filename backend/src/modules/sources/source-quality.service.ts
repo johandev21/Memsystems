@@ -95,6 +95,12 @@ export interface SourceQualityFailure {
   messageKey: string;
 }
 
+/** Fallback failure for degraded versions whose reason is unavailable. */
+export const UNKNOWN_QUALITY_FAILURE: SourceQualityFailure = {
+  code: 'content_quality',
+  messageKey: 'errors.sources.quality.unknown',
+};
+
 const PAYWALL_PATTERNS: RegExp[] = [
   /subscribe\s+(?:to|for)\s+(?:continue|keep)\s+reading/i,
   /subscribe\s+to\s+(?:read|continue|unlock)/i,
@@ -132,7 +138,7 @@ function wordsIn(text: string): number {
  * Link density of text that may carry Markdown links or bare URLs. The
  * denominator is the visible text (link targets are not visible words).
  */
-function linkDensityOfText(text: string): number {
+export function measureTextLinkDensity(text: string): number {
   let linkWords = 0;
   const withoutTargets = text.replace(
     MARKDOWN_LINK_RE,
@@ -176,32 +182,73 @@ function countPaywallHits(text: string): number {
 }
 
 /**
- * Word-based link density of rendered HTML: anchor words over total words.
+ * Word-based link density of one element: anchor words over total words.
  * Used by web extraction to decide whether the main-content heuristic picked
  * navigation instead of the article.
  */
+export function measureElementLinkDensity(element: Element): number {
+  const total = wordsIn(element.textContent ?? '');
+  if (total === 0) return 0;
+  let linkWords = 0;
+  element.querySelectorAll('a').forEach((anchor) => {
+    linkWords += wordsIn(anchor.textContent ?? '');
+  });
+  return round(clamp01(linkWords / total));
+}
+
+/** Word-based link density of rendered HTML. */
 export function measureHtmlLinkDensity(html: string): number {
   if (!html || !html.trim()) return 0;
   const dom = new JSDOM(html);
   const body = dom.window.document.body;
   if (!body) return 0;
-  const total = wordsIn(body.textContent ?? '');
-  if (total === 0) return 0;
-  let linkWords = 0;
-  body.querySelectorAll('a').forEach((anchor) => {
-    linkWords += wordsIn(anchor.textContent ?? '');
-  });
-  return round(clamp01(linkWords / total));
+  return measureElementLinkDensity(body);
 }
 
 export function qualityFailureOf(
   assessment: SourceQualityAssessment,
 ): SourceQualityFailure | null {
   if (assessment.status !== 'degraded') return null;
-  const reason: SourceQualityReason = assessment.reason ?? 'navigation';
+  const reason = assessment.reason;
+  if (!reason) return UNKNOWN_QUALITY_FAILURE;
   return {
     code: `quality_${reason}`,
     messageKey: `errors.sources.quality.${reason}`,
+  };
+}
+
+/** The source fields applied when a version is judged degraded. */
+export function qualityFailureLifecycle(failure: SourceQualityFailure): {
+  processingStatus: 'degraded';
+  processingStage: null;
+  processingErrorCode: string;
+  processingErrorMessage: string;
+} {
+  return {
+    processingStatus: 'degraded',
+    processingStage: null,
+    processingErrorCode: failure.code,
+    processingErrorMessage: failure.messageKey,
+  };
+}
+
+/**
+ * The source lifecycle applied when a version is persisted. A degraded
+ * assessment parks the source in the degraded state; otherwise the source
+ * moves on to indexing.
+ */
+export function qualityLifecycleValues(failure: SourceQualityFailure | null): {
+  processingStatus: 'degraded' | 'processing';
+  processingStage: 'indexing' | null;
+  processingErrorCode: string | null;
+  processingErrorMessage: string | null;
+} {
+  if (failure) return qualityFailureLifecycle(failure);
+  return {
+    processingStatus: 'processing',
+    processingStage: 'indexing',
+    processingErrorCode: null,
+    processingErrorMessage: null,
   };
 }
 
@@ -235,7 +282,7 @@ export class SourceQualityService {
     const measuredLinkDensity = document.linkDensity !== undefined;
     const linkDensity = measuredLinkDensity
       ? document.linkDensity!
-      : linkDensityOfText(text);
+      : measureTextLinkDensity(text);
 
     const signals: SourceQualitySignals = {
       wordCount,
@@ -267,13 +314,14 @@ export class SourceQualityService {
     let reason: SourceQualityReason | null = null;
     if (status === 'degraded') {
       if (
+        paywallPenalty > 0 &&
         paywallPenalty >= linkPenalty &&
         paywallPenalty >= repetitionPenalty
       ) {
         reason = 'paywall';
-      } else if (linkPenalty >= repetitionPenalty) {
+      } else if (linkPenalty > 0 && linkPenalty >= repetitionPenalty) {
         reason = 'navigation';
-      } else {
+      } else if (repetitionPenalty > 0) {
         reason = 'boilerplate';
       }
     }

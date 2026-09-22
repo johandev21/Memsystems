@@ -306,12 +306,10 @@ export class SourceProcessingHandler implements JobHandler<
       const quality = qualityGateApplies
         ? this.sourceQuality.assess(document)
         : null;
-      const version = await this.versions.persist(
-        sourceId,
-        document,
-        source.s3Key ?? null,
+      const version = await this.versions.persist(sourceId, document, {
+        artifactKey: source.s3Key ?? null,
         quality,
-      );
+      });
       if (quality?.status === 'degraded') {
         // Unusable extraction: keep the version and segments for inspection,
         // but never index them as Evidence.

@@ -9,7 +9,7 @@ import {
   sourceProcessingError,
   sourceProcessingStatus,
   sourceQualityCorrectiveAction,
-  sourceQualityReason,
+  sourceQualityReasonLabel,
 } from "../../utils/source-processing";
 
 export function SourceProcessingState({
@@ -25,7 +25,6 @@ export function SourceProcessingState({
   const error = sourceProcessingError(source);
 
   if (isSourceDegraded(source)) {
-    const reason = sourceQualityReason(source);
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
         <div className="flex size-12 items-center justify-center rounded-full bg-warning/10 text-warning">
@@ -33,7 +32,7 @@ export function SourceProcessingState({
         </div>
         <h2 className="text-lg font-bold">{t("quality.degradedTitle")}</h2>
         <p className="max-w-sm text-xs text-muted-foreground">
-          {reason ? t(`quality.reason.${reason}`) : t("quality.reason.unknown")}
+          {sourceQualityReasonLabel(source) ?? t("quality.reason.unknown")}
         </p>
         <p className="max-w-sm text-xs font-medium text-foreground">
           {sourceQualityCorrectiveAction(source) ?? t("quality.action.default")}

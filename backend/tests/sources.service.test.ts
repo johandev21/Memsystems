@@ -299,38 +299,6 @@ describe.sequential('SourcesService', () => {
     await expect(service.reindex('non-existent-source-id')).rejects.toThrow();
   });
 
-  it('retry re-runs extraction for a degraded source instead of re-indexing it', async () => {
-    const jobs = {
-      enqueue: vi.fn().mockResolvedValue({ id: 'job-1' }),
-      enqueueProcessing: vi
-        .fn()
-        .mockResolvedValue({ id: 'processing-job-1' }),
-      cancelForSource: vi.fn(),
-      latestForSource: vi.fn(),
-      reindexNotebook: vi.fn(),
-    } as any;
-    const { service, db } = createSourcesService({ jobs });
-    const notebook = await seedNotebook();
-    const source = await seedSource(notebook.id, {
-      kind: 'url',
-      title: 'Degraded',
-      rawText: 'Chapter 1 Chapter 2',
-      url: 'https://example.com/nav',
-      processingStatus: 'degraded',
-    });
-
-    await service.retry(source.id);
-
-    expect(jobs.enqueueProcessing).toHaveBeenCalledWith(source.id);
-    expect(jobs.enqueue).not.toHaveBeenCalled();
-
-    const [updated] = await db
-      .select()
-      .from(sources)
-      .where(eq(sources.id, source.id));
-    expect(updated.processingStatus).toBe('pending');
-  });
-
   it('get includes the latest indexing job status', async () => {
     const jobs = {
       latestForSource: vi.fn().mockResolvedValue({

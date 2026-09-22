@@ -15,7 +15,16 @@ import {
   YouTubeAcquisitionOptions,
   YouTubeAcquisitionService,
 } from './youtube-acquisition.service';
-import { CRAWLER_SERVICE, type CrawlerService } from '../crawler/crawler.types';
+import {
+  RETRY_LINK_DENSITY_THRESHOLD,
+  RETRY_MIN_TEXT_LENGTH,
+} from './web-scraper.service';
+import { measureTextLinkDensity } from './source-quality.service';
+import {
+  CRAWLER_SERVICE,
+  type CrawledDocument,
+  type CrawlerService,
+} from '../crawler/crawler.types';
 
 /** A normalized URL document plus the fetch provenance used for persistence. */
 export interface AcquiredUrlDocument extends NormalizedDocument {
@@ -78,31 +87,26 @@ export class SourceAcquisitionService {
     const validated = await this.policyService.validateUrl(input);
 
     if (this.crawler) {
-      const crawled = await this.crawler.scrape(validated.url.toString());
-      const canonical = this.policyService.normalizeUrl(
-        crawled.canonicalUrl || crawled.url,
+      const requestedUrl = validated.url.toString();
+      let document = this.fromCrawledDocument(
+        await this.crawler.scrape(requestedUrl),
+        input,
       );
-      const document = this.normalizer.fromFirecrawlResult(
-        {
-          title: crawled.title,
-          markdown: crawled.markdown,
-          metadata: crawled.metadata,
-          html: crawled.html,
-        },
-        {
-          sourceUrl: input,
-          canonicalUrl: canonical,
-          fetchedUrl: crawled.url,
-          contentType: 'text/markdown',
-        },
-      );
-      return {
-        ...document,
-        status: 200,
-        httpContentType: 'text/markdown',
-        robotsDecision: 'skipped',
-        redirects: [],
-      };
+      // A link-dense or very short main-content extraction is retried with
+      // the heuristic loosened, so pages whose article was misclassified
+      // still have a chance of being captured.
+      if (this.needsLooserExtraction(document)) {
+        const relaxed = await this.crawler
+          .scrape(requestedUrl, { onlyMainContent: false })
+          .catch(() => null);
+        if (relaxed) {
+          const relaxedDocument = this.fromCrawledDocument(relaxed, input);
+          if (this.isBetterExtraction(relaxedDocument, document)) {
+            document = relaxedDocument;
+          }
+        }
+      }
+      return document;
     }
 
     const fetched = await this.httpFetcher.fetchHtml(input);
@@ -162,5 +166,58 @@ export class SourceAcquisitionService {
   /** Pasted text pipeline: direct normalization. */
   fromText(rawText: string, title: string): NormalizedDocument {
     return this.normalizer.fromText(rawText, title);
+  }
+
+  private fromCrawledDocument(
+    crawled: CrawledDocument,
+    input: string,
+  ): AcquiredUrlDocument {
+    const canonical = this.policyService.normalizeUrl(
+      crawled.canonicalUrl || crawled.url,
+    );
+    const document = this.normalizer.fromFirecrawlResult(
+      {
+        title: crawled.title,
+        markdown: crawled.markdown,
+        metadata: crawled.metadata,
+        html: crawled.html,
+      },
+      {
+        sourceUrl: input,
+        canonicalUrl: canonical,
+        fetchedUrl: crawled.url,
+        contentType: 'text/markdown',
+      },
+    );
+    return {
+      ...document,
+      status: 200,
+      httpContentType: 'text/markdown',
+      robotsDecision: 'skipped',
+      redirects: [],
+    };
+  }
+
+  private needsLooserExtraction(document: NormalizedDocument): boolean {
+    return (
+      this.webLinkDensity(document) >= RETRY_LINK_DENSITY_THRESHOLD ||
+      document.text.length < RETRY_MIN_TEXT_LENGTH
+    );
+  }
+
+  private isBetterExtraction(
+    candidate: NormalizedDocument,
+    current: NormalizedDocument,
+  ): boolean {
+    const candidateDensity = this.webLinkDensity(candidate);
+    const currentDensity = this.webLinkDensity(current);
+    if (candidateDensity !== currentDensity) {
+      return candidateDensity < currentDensity;
+    }
+    return candidate.text.length > current.text.length;
+  }
+
+  private webLinkDensity(document: NormalizedDocument): number {
+    return measureTextLinkDensity(document.markdown?.trim() || document.text);
   }
 }
