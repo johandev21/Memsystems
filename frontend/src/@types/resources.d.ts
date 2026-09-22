@@ -1576,6 +1576,10 @@ export default interface Resources {
       "tradeoffs": "Tradeoffs",
       "yourResponse": "Your Response"
     },
+    "citations": {
+      "aria": "Source citations",
+      "title": "Citations"
+    },
     "cloze": {
       "blankAnswer": "Blank {{number}}:",
       "blankAria": "Answer for blank {{number}}",

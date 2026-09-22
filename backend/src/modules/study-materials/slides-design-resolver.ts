@@ -837,11 +837,14 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
     return { ...scene, id };
   });
 
-  const citations = Array.isArray(record.citations)
-    ? (record.citations as SlideDeck['citations'])
-    : undefined;
+  const citations = asCitations(record.citations);
 
   return { schemaVersion: 2, title, design, slides: scenes, citations };
+}
+
+/** Normalizes an optional citations array the way the other deck fields are. */
+function asCitations(value: unknown): SlideDeck['citations'] {
+  return Array.isArray(value) ? (value as SlideDeck['citations']) : undefined;
 }
 
 export function resolveSlideDeckPreservingPreviews(input: unknown): SlideDeck {

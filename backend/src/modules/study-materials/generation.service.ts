@@ -59,6 +59,21 @@ export class GenerationService {
       sourceIds: input.sourceIds,
     });
 
+    // Every retrieval pass the Generation ran persists its own trace, all
+    // correlated by the generation request when one exists. Traces are
+    // recorded before any rejection, so the passes that ran are diagnosable
+    // even when the Generation never starts streaming.
+    const recordTraces = async (generationRequestId?: string) => {
+      for (const trace of grounding.traces) {
+        await this.retrievalTraceService.record({
+          notebookId,
+          kind: 'generation',
+          generationRequestId,
+          trace,
+        });
+      }
+    };
+
     // A selected source with no Evidence is unavailable, whatever the reason
     // (deleted, failed, degraded, or not indexed yet). Every kind reports it
     // with the same error the study guide flow has always used, instead of
@@ -76,6 +91,7 @@ export class GenerationService {
       this.logger.warn(
         `Generation for notebook ${notebookId} rejected: selected sources unavailable (${unavailable})`,
       );
+      await recordTraces();
       throw new BadRequestError(
         'Selected sources are unavailable or have no readable content. Update your selection and retry.',
         { messageKey: 'errors.generation.sourcesUnavailable' },
@@ -138,17 +154,7 @@ export class GenerationService {
       model: modelId,
     });
 
-    // Every retrieval pass the Generation ran persists its own trace, all
-    // correlated by the generation request, so a section that contributed
-    // nothing can be diagnosed.
-    for (const trace of grounding.traces) {
-      await this.retrievalTraceService.record({
-        notebookId,
-        kind: 'generation',
-        generationRequestId: requestId,
-        trace,
-      });
-    }
+    await recordTraces(requestId);
 
     const controller = new AbortController();
     if (externalSignal) {

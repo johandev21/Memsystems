@@ -38,7 +38,12 @@ export const GenerationCitationLocatorSchema = z.object({
     .optional(),
 });
 
-export const GenerationCitationSchema = z.object({
+/**
+ * The stored citation shape. Annotated with the Chat contract's
+ * `CitedSourceEntry` so the two surfaces cannot drift: if the Chat citation
+ * gains or changes a field, this schema stops type-checking until it follows.
+ */
+export const GenerationCitationSchema: z.ZodType<CitedSourceEntry> = z.object({
   schemaVersion: z
     .number()
     .int()

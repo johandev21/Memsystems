@@ -1,97 +1,74 @@
 import { describe, expect, it } from 'vitest';
-import { sourceChunks } from '../src/database/schema';
-import { chunkContextHeader } from '../src/modules/ai/chunking.service';
 import {
   DEFAULT_FUSION_K,
   RetrievalService,
 } from '../src/modules/ai/retrieval.service';
+import type { RetrievedChunk } from '../src/modules/ai/retrieval.service';
 import {
   GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
+  GENERATION_MAX_PROMPT_SOURCE_CHARS,
   GENERATION_MAX_RETRIEVAL_PASSES,
   GENERATION_MAX_SECTION_PASSES_PER_SOURCE,
   GenerationGroundingService,
   formatGroundedSourceText,
+  type GenerationGrounding,
   type GroundedSource,
 } from '../src/modules/study-materials/generation-grounding';
 import { DeterministicEmbedder } from './eval/deterministic-embedder';
 import { DeterministicReranker } from './eval/deterministic-reranker';
+import { contextualText, seedGoldenCorpus } from './eval/seed-corpus';
 import { db } from './db';
-import { seedNotebook, seedSource } from './fixtures';
-
-interface SeedChunk {
-  id: string;
-  headingPath: string[];
-  text: string;
-}
-
-interface SeedSource {
-  id: string;
-  title: string;
-  kind: 'text' | 'file' | 'url';
-  processingStatus?: 'ready' | 'degraded';
-  chunks: SeedChunk[];
-}
-
-function contextualText(source: SeedSource, chunk: SeedChunk): string {
-  return `${chunkContextHeader({
-    title: source.title,
-    kind: source.kind,
-    headingPath: chunk.headingPath,
-  })}${chunk.text}`;
-}
+import type { GoldenChunk, GoldenSource } from './eval/golden-set';
 
 /**
- * Seeds sources and chunks the way the indexing pipeline would, with the
- * contextual representation the retrieval legs index. Returns the ids the
- * grounding request uses.
+ * Eight sections of three chunks each, ordered by chunk position. The first
+ * chunk of each section repeats the section's distinctive word, so its own
+ * section pass ranks it first; the other chunks are generic filler.
  */
-async function seedCorpus(sources: SeedSource[]) {
-  const notebook = await seedNotebook({ title: 'Grounding test' });
-  const sourceIdByGoldenId = new Map<string, string>();
-  const embedder = new DeterministicEmbedder(
-    sources.flatMap((source) =>
-      source.chunks.map((chunk) => contextualText(source, chunk)),
+const LONG_SECTION_WORDS = [
+  'lamella',
+  'spore',
+  'mycelium',
+  'habitat',
+  'edibility',
+  'toxin',
+  'drying',
+  'substrate',
+];
+
+function longSource(id: string, title: string, words: string[]): GoldenSource {
+  return {
+    id,
+    title,
+    kind: 'file',
+    processingStatus: 'ready',
+    chunks: words.flatMap((word, section) =>
+      Array.from({ length: 3 }, (_, part) => ({
+        id: `${id}-s${section}-${part}`,
+        headingPath: [`Part ${section + 1}`, `${word} notes`],
+        text:
+          part === 0
+            ? `${word} notes for part ${section + 1}: this ${word} passage carries the ${word} vocabulary of the section and repeats ${word} so the section's own retrieval pass ranks it first. Detail ${section}${part}. The remainder of this note records observations, measurements, and procedures in enough detail to make the passage a realistic chunk rather than a stub.`
+            : `Supplementary note ${section}${part} for the same part of the guide, with filler words about procedures, measurements, and observations that never name the section's subject directly. The remainder of this note records observations, measurements, and procedures in enough detail to make the passage a realistic chunk rather than a stub.`,
+      })),
     ),
-  );
-
-  for (const source of sources) {
-    const seeded = await seedSource(notebook.id, {
-      id: `seeded-${source.id}`,
-      kind: source.kind,
-      title: source.title,
-      rawText: source.chunks.map((chunk) => chunk.text).join('\n\n'),
-      processingStatus: source.processingStatus ?? 'ready',
-    });
-    sourceIdByGoldenId.set(source.id, seeded.id);
-
-    await db.insert(sourceChunks).values(
-      source.chunks.map((chunk, index) => {
-        const contextHeader = chunkContextHeader({
-          title: source.title,
-          kind: source.kind,
-          headingPath: chunk.headingPath,
-        });
-        const searchableText = `${contextHeader}${chunk.text}`;
-        return {
-          id: `chunk-${source.id}-${chunk.id}`,
-          sourceId: seeded.id,
-          notebookId: notebook.id,
-          chunkIndex: index,
-          content: chunk.text,
-          searchableText,
-          contextHeader,
-          headingPath: chunk.headingPath,
-          sourceKind: source.kind,
-          embedding: embedder.embed(searchableText),
-        };
-      }),
-    );
-  }
-
-  return { notebookId: notebook.id, sourceIdByGoldenId };
+  };
 }
 
-function buildGroundingService(sources: SeedSource[]) {
+const LONG_SOURCE = longSource(
+  'long',
+  'Mushroom Field Guide',
+  LONG_SECTION_WORDS,
+);
+const SECOND_SOURCE = longSource('second', 'Laboratory Manual', [
+  'glassware',
+  'reagent',
+  'titration',
+  'filtration',
+  'notebook',
+]);
+
+function buildGroundingService(sources: GoldenSource[]) {
   const corpus = sources.flatMap((source) =>
     source.chunks.map((chunk) => contextualText(source, chunk)),
   );
@@ -123,65 +100,22 @@ function buildGroundingService(sources: SeedSource[]) {
   return new GenerationGroundingService(db as never, retrieval);
 }
 
-/**
- * Eight sections of three chunks each, ordered by chunk position. The first
- * chunk of each section repeats the section's distinctive word, so its own
- * section pass ranks it first; the other chunks are generic filler.
- */
-const LONG_SECTION_WORDS = [
-  'lamella',
-  'spore',
-  'mycelium',
-  'habitat',
-  'edibility',
-  'toxin',
-  'drying',
-  'substrate',
-];
+async function seed(sources: GoldenSource[]) {
+  const corpus = sources.flatMap((source) =>
+    source.chunks.map((chunk) => contextualText(source, chunk)),
+  );
+  return seedGoldenCorpus(new DeterministicEmbedder(corpus), { sources });
+}
 
-const LONG_SOURCE: SeedSource = {
-  id: 'long',
-  title: 'Mushroom Field Guide',
-  kind: 'file',
-  chunks: LONG_SECTION_WORDS.flatMap((word, section) =>
-    Array.from({ length: 3 }, (_, part) => ({
-      id: `long-s${section}-${part}`,
-      headingPath: [`Part ${section + 1}`, `${word} notes`],
-      text:
-        part === 0
-          ? `${word} notes for part ${section + 1}: this ${word} passage carries the ${word} vocabulary of the section and repeats ${word} so the section's own retrieval pass ranks it first. Detail ${section}${part}.`
-          : `Supplementary note ${section}${part} for the same part of the guide, with filler words about procedures, measurements, and observations that never name the section's subject directly.`,
-    })),
-  ).flat(),
-};
-
-const SECOND_SECTION_WORDS = [
-  'glassware',
-  'reagent',
-  'titration',
-  'filtration',
-  'notebook',
-];
-
-const SECOND_SOURCE: SeedSource = {
-  id: 'second',
-  title: 'Laboratory Manual',
-  kind: 'file',
-  chunks: SECOND_SECTION_WORDS.flatMap((word, section) =>
-    Array.from({ length: 3 }, (_, part) => ({
-      id: `second-s${section}-${part}`,
-      headingPath: [`Experiment ${section + 1}`, `${word} procedure`],
-      text:
-        part === 0
-          ? `${word} procedure for experiment ${section + 1}: this ${word} passage carries the ${word} vocabulary of the section and repeats ${word} so the section's own retrieval pass ranks it first. Detail ${section}${part}.`
-          : `Supplementary note ${section}${part} for the same experiment, with filler words about bench work, timings, and observations that never name the section's subject directly.`,
-    })),
-  ).flat(),
-};
+function sectionsOf(chunks: { chunkId: string }[]): Set<string | undefined> {
+  return new Set(
+    chunks.map((chunk) => chunk.chunkId.match(/-s(\d+)-\d+$/)?.[1]),
+  );
+}
 
 describe('GenerationGroundingService long-source coverage', () => {
   it('represents every section of a long source instead of one bounded set', async () => {
-    const seeded = await seedCorpus([LONG_SOURCE]);
+    const seeded = await seed([LONG_SOURCE]);
     const service = buildGroundingService([LONG_SOURCE]);
 
     const grounding = await service.ground({
@@ -194,15 +128,12 @@ describe('GenerationGroundingService long-source coverage', () => {
     });
 
     expect(grounding.sources).toHaveLength(1);
-    const chunks = grounding.sources[0].chunks;
-    expect(chunks.length).toBeLessThanOrEqual(
+    const source = grounding.sources[0];
+    expect(source.chunks.length).toBeLessThanOrEqual(
       GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
     );
     // Every one of the eight sections contributes evidence.
-    const sections = new Set(
-      chunks.map((chunk) => chunk.chunkId.match(/-s(\d+)-\d+$/)?.[1]),
-    );
-    expect([...sections].sort()).toEqual([
+    expect([...sectionsOf(source.chunks)].sort()).toEqual([
       '0',
       '1',
       '2',
@@ -212,16 +143,29 @@ describe('GenerationGroundingService long-source coverage', () => {
       '6',
       '7',
     ]);
-    // Chunks are ordered by position for the prompt.
-    expect(chunks.map((chunk) => chunk.chunkIndex)).toEqual(
-      [...chunks.map((chunk) => chunk.chunkIndex)].sort((a, b) => a - b),
+    // Evidence is reported in chunk order...
+    expect(source.chunks.map((chunk) => chunk.chunkIndex)).toEqual(
+      [...source.chunks.map((chunk) => chunk.chunkIndex)].sort((a, b) => a - b),
     );
+    // ...while the prompt order is round robin across passes, so the first
+    // blocks already span every section.
+    expect([...sectionsOf(source.promptChunks)].sort()).toEqual([
+      '0',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+    ]);
+    expect(sectionsOf(source.promptChunks.slice(0, 8)).size).toBe(8);
     // One trace per retrieval pass, capped per source.
     expect(grounding.traces.length).toBe(
       Math.min(8, GENERATION_MAX_SECTION_PASSES_PER_SOURCE),
     );
     expect(grounding.evidence.map((item) => item.chunkId)).toEqual(
-      chunks.map((chunk) => chunk.chunkId),
+      source.chunks.map((chunk) => chunk.chunkId),
     );
     expect(
       new Set(grounding.evidence.map((item) => item.citationKey)).size,
@@ -231,7 +175,7 @@ describe('GenerationGroundingService long-source coverage', () => {
 
 describe('GenerationGroundingService multi-source coverage', () => {
   it('keeps every selected source, including the tail of the selection order', async () => {
-    const seeded = await seedCorpus([LONG_SOURCE, SECOND_SOURCE]);
+    const seeded = await seed([LONG_SOURCE, SECOND_SOURCE]);
     const service = buildGroundingService([LONG_SOURCE, SECOND_SOURCE]);
 
     const grounding = await service.ground({
@@ -255,30 +199,50 @@ describe('GenerationGroundingService multi-source coverage', () => {
       true,
     );
 
-    const longChunks = grounding.sources[1].chunks;
-    const longSections = new Set(
-      longChunks.map((chunk) => chunk.chunkId.match(/-s(\d+)-\d+$/)?.[1]),
-    );
+    const longSections = sectionsOf(grounding.sources[1].chunks);
     expect(longSections.has('7')).toBe(true);
-    const secondChunks = grounding.sources[0].chunks;
-    const secondSections = new Set(
-      secondChunks.map((chunk) => chunk.chunkId.match(/-s(\d+)-\d+$/)?.[1]),
-    );
+    const secondSections = sectionsOf(grounding.sources[0].chunks);
     expect(secondSections.has('4')).toBe(true);
     // The shared pass budget is split across the selected sources.
     expect(grounding.traces.length).toBeLessThanOrEqual(
       GENERATION_MAX_RETRIEVAL_PASSES,
     );
   });
+
+  it('keeps the soft pass cap above sixteen sources without dropping any', async () => {
+    const sources = Array.from({ length: 20 }, (_, index) =>
+      longSource(`soft-${index}`, `Source ${index}`, [`topic${index}`]),
+    );
+    const seeded = await seed(sources);
+    const service = buildGroundingService(sources);
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: 'Review everything',
+      sourceIds: sources.map((source) =>
+        seeded.sourceIdByGoldenId.get(source.id)!,
+      ),
+    });
+
+    // The cap is soft: every selected source keeps one pass, so the total
+    // exceeds it rather than dropping a source.
+    expect(grounding.traces.length).toBe(20);
+    expect(grounding.traces.length).toBeGreaterThan(
+      GENERATION_MAX_RETRIEVAL_PASSES,
+    );
+    expect(grounding.sources).toHaveLength(20);
+    expect(grounding.unavailableSources).toEqual([]);
+  });
 });
 
 describe('GenerationGroundingService reporting', () => {
   it('reports a degraded selected source as unavailable', async () => {
-    const degraded: SeedSource = {
+    const degraded: GoldenSource = {
       ...SECOND_SOURCE,
       processingStatus: 'degraded',
     };
-    const seeded = await seedCorpus([LONG_SOURCE, degraded]);
+    const seeded = await seed([LONG_SOURCE, degraded]);
     const service = buildGroundingService([LONG_SOURCE, degraded]);
 
     const grounding = await service.ground({
@@ -303,7 +267,7 @@ describe('GenerationGroundingService reporting', () => {
   });
 
   it('reports a selected id that has no indexed chunks as unavailable', async () => {
-    const seeded = await seedCorpus([LONG_SOURCE]);
+    const seeded = await seed([LONG_SOURCE]);
     const service = buildGroundingService([LONG_SOURCE]);
 
     const grounding = await service.ground({
@@ -320,7 +284,7 @@ describe('GenerationGroundingService reporting', () => {
   });
 
   it('does not retrieve when no sources are selected', async () => {
-    const seeded = await seedCorpus([LONG_SOURCE]);
+    const seeded = await seed([LONG_SOURCE]);
     const service = buildGroundingService([]);
 
     const grounding = await service.ground({
@@ -341,66 +305,115 @@ describe('GenerationGroundingService reporting', () => {
 });
 
 describe('formatGroundedSourceText', () => {
-  function groundedSource(
+  function chunkOf(id: string, body: string, chunkIndex = 0): RetrievedChunk {
+    return {
+      chunkId: id,
+      chunkIndex,
+      sourceId: 'source-1',
+      title: 'Lecture Notes',
+      content: body,
+      score: 1,
+      url: null,
+      kind: 'text',
+      sourceVersionId: null,
+      locator: null,
+    };
+  }
+
+  function sourceOf(
     id: string,
     title: string,
-    bodies: string[],
+    chunks: RetrievedChunk[],
   ): GroundedSource {
     return {
       id,
       title,
       kind: 'text',
       url: null,
-      chunks: bodies.map((body, index) => ({
-        chunkId: `${id}-chunk-${index}`,
-        chunkIndex: index,
-        sourceId: id,
-        title,
-        content: body,
-        score: 1,
-        url: null,
-        kind: 'text',
-        sourceVersionId: null,
-        locator: null,
-      })),
+      chunks,
+      promptChunks: chunks,
     };
   }
 
-  it('labels every passage with its evidence key and source id', () => {
-    const source = groundedSource('source-1', 'Lecture Notes', ['First body']);
-    const evidence = [
-      {
-        ...source.chunks[0],
-        citationKey: 'R1',
-        rank: 1,
-      },
-    ];
+  function groundingOf(sources: GroundedSource[]): GenerationGrounding {
+    return {
+      sources,
+      evidence: sources.flatMap((source, sourceIndex) =>
+        source.chunks.map((chunk, index) => ({
+          ...chunk,
+          citationKey: `R${sourceIndex * 10 + index + 1}`,
+          rank: sourceIndex * 10 + index + 1,
+        })),
+      ),
+      unavailableSources: [],
+      degradedSources: [],
+      traces: [],
+    };
+  }
 
-    const text = formatGroundedSourceText({ sources: [source], evidence });
+  it('labels every passage with its evidence key and only prints source ids when asked', () => {
+    const source = sourceOf('source-1', 'Lecture Notes', [
+      chunkOf('chunk-1', 'First body'),
+    ]);
+    const grounding = groundingOf([source]);
 
-    expect(text).toContain('Source: "Lecture Notes" (Source ID: source-1)');
-    expect(text).toContain('[Evidence R1]');
-    expect(text).toContain('First body');
+    const withoutIds = formatGroundedSourceText(grounding);
+    expect(withoutIds.text).toContain('Source: "Lecture Notes"');
+    expect(withoutIds.text).not.toContain('Source ID:');
+    expect(withoutIds.text).toContain('[Evidence R1]');
+    expect(withoutIds.text).toContain('First body');
+    expect(withoutIds.renderedChunkIds).toEqual(['chunk-1']);
+
+    const withIds = formatGroundedSourceText(grounding, {
+      includeSourceId: true,
+    });
+    expect(withIds.text).toContain(
+      'Source: "Lecture Notes" (Source ID: source-1)',
+    );
   });
 
-  it('keeps every source when the prompt budget is tight', () => {
-    const sources = [1, 2, 3].map((index) =>
-      groundedSource(`source-${index}`, `Source ${index}`, [
-        `Source ${index} body `.repeat(200),
-      ]),
+  it('never exceeds the cap, however many sources are selected', () => {
+    const sources = Array.from({ length: 60 }, (_, sourceIndex) =>
+      sourceOf(
+        `source-${sourceIndex}`,
+        `Source ${sourceIndex}`,
+        Array.from({ length: 2 }, (_, chunkIndex) =>
+          chunkOf(
+            `source-${sourceIndex}-chunk-${chunkIndex}`,
+            `Source ${sourceIndex} body ${chunkIndex} `.repeat(120),
+            chunkIndex,
+          ),
+        ),
+      ),
     );
-    const evidence = sources.flatMap((source, index) => [
-      {
-        ...source.chunks[0],
-        citationKey: `R${index + 1}`,
-        rank: index + 1,
-      },
-    ]);
 
-    const text = formatGroundedSourceText({ sources, evidence }, 2_500);
+    const formatted = formatGroundedSourceText(groundingOf(sources));
 
-    for (const index of [1, 2, 3]) {
-      expect(text).toContain(`Source ID: source-${index}`);
+    expect(formatted.text.length).toBeLessThanOrEqual(
+      GENERATION_MAX_PROMPT_SOURCE_CHARS,
+    );
+    expect(formatted.droppedBlocks).toBeGreaterThan(0);
+    expect(formatted.truncatedSourceIds.length).toBeGreaterThan(0);
+  });
+
+  it('keeps a tail section when the budget cuts a source short', async () => {
+    const seeded = await seed([LONG_SOURCE]);
+    const service = buildGroundingService([LONG_SOURCE]);
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'study_guide',
+      brief: 'Review the mushroom guide',
+      sourceIds: [seeded.sourceIdByGoldenId.get('long')!],
+    });
+
+    // A budget that fits roughly one round of blocks: every section keeps its
+    // first block, and the rest is dropped and reported.
+    const formatted = formatGroundedSourceText(grounding, { maxChars: 4_000 });
+
+    expect(formatted.text.length).toBeLessThanOrEqual(4_000);
+    expect(formatted.droppedBlocks).toBeGreaterThan(0);
+    for (const word of LONG_SECTION_WORDS) {
+      expect(formatted.text).toContain(`${word} notes for part`);
     }
   });
 });

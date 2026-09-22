@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
@@ -34,10 +34,11 @@ export const GENERATION_EVIDENCE_CHUNKS_PER_SOURCE = 16;
 export const GENERATION_MAX_SECTION_PASSES_PER_SOURCE = 8;
 
 /**
- * Retrieval passes per Generation, across every selected Source. The cap is
- * shared fairly: with many selected sources each gets one pass (the previous
- * one-bounded-set-per-source behavior), while a single long source gets the
- * full per-source depth.
+ * Retrieval passes per Generation across every selected Source. The cap is
+ * soft: it is divided evenly across the selected sources, but every source
+ * keeps at least one pass so no selected source is dropped from the plan.
+ * Above this many sources the total exceeds the number; the grounding logs
+ * that instead of silently trimming the selection.
  */
 export const GENERATION_MAX_RETRIEVAL_PASSES = 16;
 
@@ -55,20 +56,20 @@ export const GENERATION_MAX_PASS_QUERY_CHARS = 600;
 /** The total source text a Generation prompt carries. */
 export const GENERATION_MAX_PROMPT_SOURCE_CHARS = 100_000;
 
-/**
- * The floor a source's share of the prompt budget can shrink to when many
- * sources compete for it. Every selected source keeps a readable excerpt, so
- * the tail of the selection order is never dropped wholesale.
- */
-export const GENERATION_MIN_SOURCE_TEXT_CHARS = 2_000;
-
-/** One selected Source with the evidence retrieved for it, in chunk order. */
+/** One selected Source with the evidence retrieved for it. */
 export interface GroundedSource {
   id: string;
   title: string;
   kind: string;
   url: string | null;
+  /** Evidence in chunk order, the order citations and the trace report it. */
   chunks: RetrievedChunk[];
+  /**
+   * Evidence in the order the prompt presents it: round robin across the
+   * source's retrieval passes, so the first blocks span sections and a prompt
+   * budget cut costs every section a little instead of lopping off the tail.
+   */
+  promptChunks: RetrievedChunk[];
 }
 
 /** A selected Source that contributed no evidence to the Generation. */
@@ -118,6 +119,8 @@ interface PlannedPass {
  */
 @Injectable()
 export class GenerationGroundingService {
+  private readonly logger = new Logger(GenerationGroundingService.name);
+
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
@@ -199,6 +202,12 @@ export class GenerationGroundingService {
       );
     }
 
+    if (passes.length > GENERATION_MAX_RETRIEVAL_PASSES) {
+      this.logger.warn(
+        `Generation grounding planned ${passes.length} retrieval passes for ${selectedIds.length} selected sources, above the soft cap of ${GENERATION_MAX_RETRIEVAL_PASSES}; every source keeps at least one pass so none is dropped.`,
+      );
+    }
+
     const outcomes = await runWithConcurrency(
       passes.map(
         (pass) => () =>
@@ -227,12 +236,14 @@ export class GenerationGroundingService {
       const passIndexes = passes.flatMap((pass, index) =>
         pass.sourceId === sourceId ? [index] : [],
       );
-      const chunks = selectPerPass(
+      // `selectPerPass` returns the chunks in round-robin order across the
+      // passes; that is the order the prompt presents them in.
+      const promptChunks = selectPerPass(
         chunksByPass,
         passIndexes,
         GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
       );
-      if (!source || chunks.length === 0) {
+      if (!source || promptChunks.length === 0) {
         unavailableSources.push({
           id: sourceId,
           title: source?.title ?? sourceId,
@@ -240,13 +251,16 @@ export class GenerationGroundingService {
         });
         continue;
       }
-      chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
+      const chunks = [...promptChunks].sort(
+        (a, b) => a.chunkIndex - b.chunkIndex,
+      );
       groundedSources.push({
         id: source.id,
         title: source.title,
         kind: source.kind,
         url: source.url,
         chunks,
+        promptChunks,
       });
     }
 
@@ -332,7 +346,8 @@ function buildPassQuery(
  * Spends a source's evidence budget round robin across its retrieval passes:
  * the best chunk of each pass first, then the second best, and so on. A long
  * source therefore keeps a foothold in every section it was planned from
- * instead of letting one section fill the budget.
+ * instead of letting one section fill the budget, and the returned order is
+ * also the prompt order.
  */
 function selectPerPass(
   chunksByPass: RetrievedChunk[][],
@@ -357,38 +372,151 @@ function selectPerPass(
   return selected;
 }
 
+const SOURCE_SEPARATOR = '\n\n---\n\n';
+const BLOCK_SEPARATOR = '\n\n';
+
+export interface FormattedGroundedSourceText {
+  text: string;
+  /** Evidence blocks the prompt budget excluded, across all sources. */
+  droppedBlocks: number;
+  /** Source ids whose excerpt was cut mid-block to fit the budget. */
+  truncatedSourceIds: string[];
+  /**
+   * Chunk ids the prompt renders, complete or truncated. The evaluation uses
+   * this to measure what the model could actually see and cite.
+   */
+  renderedChunkIds: string[];
+  /** Chunk ids cut mid-block by the budget. */
+  truncatedChunkIds: string[];
+}
+
+export interface FormatGroundedSourceTextOptions {
+  /** Hard cap on the whole source block. Defaults to the Generation budget. */
+  maxChars?: number;
+  /**
+   * Print the `Source ID` line. The kinds whose content references sourceIds
+   * (study guide, practice problems, case study) need it; the others do not,
+   * and it only spends prompt budget.
+   */
+  includeSourceId?: boolean;
+}
+
 /**
  * Formats the grounding for the Generation prompt. Each retrieved chunk is
- * labeled with its evidence key so the model can cite it, and the prompt
- * budget is split fairly across the selected sources: when the sources do not
- * all fit, every source keeps a readable share and the tail of the selection
- * order is not the only thing cut.
+ * labeled with its evidence key so the model can cite it, each source's
+ * blocks are presented in the round-robin order the grounding planned, and
+ * the budget is split fairly across the selected sources so the total never
+ * exceeds the cap. Blocks the budget excluded and excerpts it cut are
+ * reported, so a truncation is never silent.
  */
 export function formatGroundedSourceText(
   grounding: Pick<GenerationGrounding, 'sources' | 'evidence'>,
-  maxChars = GENERATION_MAX_PROMPT_SOURCE_CHARS,
-): string {
+  options: FormatGroundedSourceTextOptions = {},
+): FormattedGroundedSourceText {
+  const maxChars = options.maxChars ?? GENERATION_MAX_PROMPT_SOURCE_CHARS;
+  const includeSourceId = options.includeSourceId ?? false;
   const { sources, evidence } = grounding;
-  if (sources.length === 0) return '';
+  const empty: FormattedGroundedSourceText = {
+    text: '',
+    droppedBlocks: 0,
+    truncatedSourceIds: [],
+    renderedChunkIds: [],
+    truncatedChunkIds: [],
+  };
+  if (sources.length === 0 || maxChars <= 0) return empty;
+
   const keyByChunkId = new Map(
     evidence.map((item) => [item.chunkId, item.citationKey]),
   );
-  const share = Math.max(
-    GENERATION_MIN_SOURCE_TEXT_CHARS,
-    Math.floor(maxChars / sources.length),
+  const headerOf = (source: GroundedSource) =>
+    includeSourceId
+      ? `Source: "${source.title}" (Source ID: ${source.id})`
+      : `Source: "${source.title}"`;
+  const blocksBySource = sources.map((source) =>
+    (source.promptChunks.length > 0 ? source.promptChunks : source.chunks).map(
+      (chunk) => ({
+        chunkId: chunk.chunkId,
+        text: formatEvidenceBlock(chunk, keyByChunkId.get(chunk.chunkId)),
+      }),
+    ),
   );
 
-  return sources
-    .map((source) => {
-      const blocks = source.chunks.map((chunk) => {
-        const key = keyByChunkId.get(chunk.chunkId) ?? '';
-        const body = stripChunkContentHeader(chunk.content);
-        return key ? `[Evidence ${key}]\n${body}` : body;
-      });
-      const text = `Source: "${source.title}" (Source ID: ${source.id})\n\n${blocks.join('\n\n')}`;
-      return text.length > share ? text.slice(0, share) : text;
-    })
-    .join('\n\n---\n\n');
+  // The headers, section separators, and per-section block separator come out
+  // of the budget first, then what is left is split evenly. The arithmetic
+  // makes the cap hard: the total of the sections can never exceed
+  // headers + separators + sources * share.
+  const headerChars = sources.reduce(
+    (sum, source) => sum + headerOf(source).length,
+    0,
+  );
+  const separatorChars =
+    SOURCE_SEPARATOR.length * Math.max(0, sources.length - 1);
+  const blockSeparatorChars = BLOCK_SEPARATOR.length * sources.length;
+  const share = Math.floor(
+    Math.max(0, maxChars - headerChars - separatorChars - blockSeparatorChars) /
+      sources.length,
+  );
+
+  const droppedBlocks: number[] = [];
+  const truncatedSourceIds: string[] = [];
+  const renderedChunkIds: string[] = [];
+  const truncatedChunkIds: string[] = [];
+  const sections: string[] = [];
+
+  for (let index = 0; index < sources.length; index++) {
+    const source = sources[index];
+    const blocks = blocksBySource[index];
+    const kept: string[] = [];
+    let used = 0;
+    for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
+      const block = blocks[blockIndex];
+      const joinChars = kept.length === 0 ? 0 : BLOCK_SEPARATOR.length;
+      if (used + joinChars + block.text.length <= share) {
+        kept.push(block.text);
+        used += joinChars + block.text.length;
+        renderedChunkIds.push(block.chunkId);
+        continue;
+      }
+      if (kept.length === 0 && share > 0) {
+        // The first block does not fit the share: keep a truncated excerpt so
+        // the source still has a foothold, and record the cut.
+        kept.push(block.text.slice(0, share));
+        renderedChunkIds.push(block.chunkId);
+        truncatedChunkIds.push(block.chunkId);
+        truncatedSourceIds.push(source.id);
+        droppedBlocks.push(blocks.length - 1);
+      } else {
+        droppedBlocks.push(blocks.length - kept.length);
+      }
+      break;
+    }
+    if (kept.length > 0) {
+      sections.push(
+        `${headerOf(source)}${BLOCK_SEPARATOR}${kept.join(BLOCK_SEPARATOR)}`,
+      );
+    }
+  }
+
+  let text = sections.join(SOURCE_SEPARATOR);
+  // Defensive: the accounting above already keeps the total within the cap,
+  // but the prompt contract is a hard cap, so never exceed it.
+  if (text.length > maxChars) text = text.slice(0, maxChars);
+
+  return {
+    text,
+    droppedBlocks: droppedBlocks.reduce((sum, count) => sum + count, 0),
+    truncatedSourceIds,
+    renderedChunkIds,
+    truncatedChunkIds,
+  };
+}
+
+function formatEvidenceBlock(
+  chunk: RetrievedChunk,
+  citationKey: string | undefined,
+): string {
+  const body = stripChunkContentHeader(chunk.content);
+  return citationKey ? `[Evidence ${citationKey}]\n${body}` : body;
 }
 
 /** Runs the tasks with a bounded number in flight, preserving result order. */

@@ -29,6 +29,10 @@
     "tradeoffs": "Tradeoffs",
     "yourResponse": "Your Response"
   },
+  "citations": {
+    "title": "Citations",
+    "aria": "Source citations"
+  },
   "cloze": {
     "blankAnswer": "Blank {{number}}:",
     "blankAria": "Answer for blank {{number}}",

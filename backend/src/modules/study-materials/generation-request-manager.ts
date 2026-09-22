@@ -34,6 +34,18 @@ export interface StartGenerationInput {
     crossLinks: boolean;
     detailLevel: 'basic' | 'detailed';
   };
+  slidesOptions?: {
+    slideCount: number;
+    theme:
+      | 'dark'
+      | 'light'
+      | 'accent'
+      | 'editorial'
+      | 'academic'
+      | 'technical'
+      | 'warm';
+    detailLevel: 'basic' | 'detailed';
+  };
 }
 
 @Injectable()

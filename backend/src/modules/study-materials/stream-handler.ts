@@ -17,6 +17,7 @@ import {
   formatGroundedSourceText,
   type GenerationGrounding,
 } from './generation-grounding';
+import type { StartGenerationInput } from './generation-request-manager';
 import { getPromptTemplate } from './prompts';
 import type {
   QuizGenerationOptions,
@@ -43,58 +44,16 @@ import { withSlidePreviews } from './slides-preview';
 import {
   StudyGuideContent,
   prepareGeneratedStudyGuide,
-  type StudyGuideGenerationOptions,
 } from './study-guide-content';
-import {
-  prepareGeneratedPracticeProblems,
-  type PracticeProblemsGenerationOptions,
-} from './practice-problems-content';
-import {
-  prepareGeneratedCaseStudy,
-  type CaseStudyGenerationOptions,
-} from './case-study-content';
+import { prepareGeneratedPracticeProblems } from './practice-problems-content';
+import { prepareGeneratedCaseStudy } from './case-study-content';
 
 export interface StreamResult {
   materialId: string;
 }
 
 /** The Generation request fields the stream handler needs. */
-export interface StreamInput {
-  kind: StudyMaterialKind;
-  studyGuideOptions?: StudyGuideGenerationOptions;
-  practiceProblemsOptions?: PracticeProblemsGenerationOptions;
-  caseStudyOptions?: CaseStudyGenerationOptions;
-  brief: string;
-  folderId?: string | null;
-  model?: string;
-  language?: string;
-  questionCount?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
-  roadmapOptions?: {
-    phaseCount: number;
-    detailLevel: 'basic' | 'detailed';
-  };
-  mindMapOptions?: {
-    nodeCount: number;
-    structure: 'radial' | 'hierarchical' | 'organic';
-    colorGroups: boolean;
-    crossLinks: boolean;
-    detailLevel: 'basic' | 'detailed';
-  };
-  slidesOptions?: {
-    slideCount: number;
-    theme:
-      | 'dark'
-      | 'light'
-      | 'accent'
-      | 'editorial'
-      | 'academic'
-      | 'technical'
-      | 'warm';
-    detailLevel: 'basic' | 'detailed';
-  };
-}
+export type StreamInput = Omit<StartGenerationInput, 'sourceIds'>;
 
 @Injectable()
 export class StreamHandler {
@@ -121,8 +80,20 @@ export class StreamHandler {
       promptTemplate.instructions +
       languageDirective(input.language) +
       citationDirective(hasEvidence);
-    const sourceText = formatGroundedSourceText(grounding);
-    const userPrompt = promptTemplate.user(input.brief, sourceText, {
+    const formatted = formatGroundedSourceText(grounding, {
+      // Only the kinds whose content references sourceIds need the ID line in
+      // the prompt; the rest would spend budget on an unused identifier.
+      includeSourceId: kindReferencesSources(input.kind),
+    });
+    if (
+      formatted.droppedBlocks > 0 ||
+      formatted.truncatedSourceIds.length > 0
+    ) {
+      this.logger.warn(
+        `Generation ${requestId} prompt budget: dropped ${formatted.droppedBlocks} evidence block(s) and truncated ${formatted.truncatedSourceIds.length} source excerpt(s) (${formatted.truncatedSourceIds.join(', ') || 'none'})`,
+      );
+    }
+    const userPrompt = promptTemplate.user(input.brief, formatted.text, {
       questionCount: input.questionCount,
       difficulty: input.difficulty,
       cardStyle: input.cardStyle,
@@ -211,6 +182,10 @@ export class StreamHandler {
                 done: true,
                 requestId,
                 materialId: inserted.id,
+                grounding: {
+                  droppedBlocks: formatted.droppedBlocks,
+                  truncatedSourceIds: formatted.truncatedSourceIds,
+                },
               })}\n`,
             ),
           );
@@ -342,6 +317,10 @@ export class StreamHandler {
                   done: true,
                   requestId,
                   materialId: inserted.id,
+                  grounding: {
+                    droppedBlocks: formatted.droppedBlocks,
+                    truncatedSourceIds: formatted.truncatedSourceIds,
+                  },
                 })}\n`,
               ),
             );
@@ -436,6 +415,18 @@ function isAbortError(error: unknown): boolean {
   return (
     error instanceof Error &&
     (error.name === 'AbortError' || error.name === 'ResponseAborted')
+  );
+}
+
+/**
+ * The kinds whose generated content carries sourceIds: only they need the
+ * Source ID line in the prompt.
+ */
+function kindReferencesSources(kind: StudyMaterialKind): boolean {
+  return (
+    kind === 'study_guide' ||
+    kind === 'practice_problems' ||
+    kind === 'case_study'
   );
 }
 

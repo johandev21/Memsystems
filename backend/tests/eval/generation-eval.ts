@@ -2,23 +2,24 @@
  * The Generation grounding evaluation: seeds the golden corpus, runs the real
  * GenerationGroundingService (and therefore the real retrieval pipeline) for
  * every labeled Generation request, and reports how much of each selected
- * source the grounding represents and whether the generated material can cite
- * the labeled sections.
+ * source reaches the model through the real prompt builder and whether the
+ * generated material can cite the labeled sections.
  *
  * The `raw-slice` mode is the regression configuration: it bypasses the
  * retrieval pipeline and hands the model the first bounded set of chunks per
- * source, which cannot reach the tail of a long source. The gate must fail
- * when that mode loses a labeled section. `single-pass` is the pre-ticket
- * query plan (one brief query per source, no section passes) and is reported
- * for comparison rather than gated: on a corpus this small one bounded set
- * still spreads across the sections, which is why the gate's regression mode
- * is the raw slice.
+ * source, which cannot reach the tail of a long source. `single-pass` is the
+ * pre-ticket query plan (one brief query per source, no section passes) and is
+ * reported for comparison rather than gated: on a corpus this small one
+ * bounded set still spreads across the sections, which is why the gate's
+ * regression mode is the raw slice.
+ *
+ * Both modes go through the production `formatGroundedSourceText`, and the
+ * metrics are computed from what that prompt actually renders, so a
+ * regression in the prompt builder fails the gate too.
  */
 
-import { createId } from '@paralleldrive/cuid2';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { sourceChunks } from '../../src/database/schema';
-import { chunkContextHeader } from '../../src/modules/ai/chunking.service';
 import {
   DEFAULT_FUSION_K,
   RetrievalService,
@@ -27,6 +28,7 @@ import { createCitationEvidence } from '../../src/modules/chat/chat-citations';
 import {
   GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
   GenerationGroundingService,
+  formatGroundedSourceText,
   type GenerationGrounding,
   type GroundedSource,
 } from '../../src/modules/study-materials/generation-grounding';
@@ -35,16 +37,14 @@ import {
   extractGenerationCitations,
 } from '../../src/modules/study-materials/generation-citations';
 import { db } from '../db';
-import { seedNotebook, seedSource } from '../fixtures';
 import { DeterministicEmbedder } from './deterministic-embedder';
 import { DeterministicReranker } from './deterministic-reranker';
+import { contextualText, seedGoldenCorpus } from './seed-corpus';
 import {
   GOLDEN_GENERATIONS,
   GOLDEN_GENERATION_SOURCES,
   GOLDEN_SOURCES,
-  type GoldenChunk,
   type GoldenGeneration,
-  type GoldenSource,
 } from './golden-set';
 
 export const EVAL_GENERATION_EMBEDDING_MODEL = 'eval-deterministic-embedder';
@@ -83,8 +83,12 @@ export interface GenerationEvalRequestResult {
   citationAccuracy: number;
   citationAttachment: number;
   evidenceChunks: number;
-  /** Seeded ids of the evidence, for diagnosing a failure. */
-  evidenceChunkIds: string[];
+  /** Chunks the real prompt builder rendered, for diagnosing a failure. */
+  renderedChunkIds: string[];
+  /** Characters of source block the prompt carried. */
+  promptChars: number;
+  /** Evidence blocks the prompt budget excluded. */
+  droppedBlocks: number;
   traces: number;
 }
 
@@ -133,7 +137,10 @@ export async function evaluateGenerationGrounding(
     source.chunks.map((chunk) => contextualText(source, chunk)),
   );
   const embedder = new DeterministicEmbedder(corpus);
-  const seeded = await seedGoldenCorpus(embedder, allSources);
+  const seeded = await seedGoldenCorpus(embedder, {
+    sources: allSources,
+    title: 'Generation Grounding Evaluation Corpus',
+  });
 
   const retrieval = new RetrievalService(
     db as never,
@@ -216,6 +223,16 @@ export function evaluateGenerationGate(
   for (const metric of GENERATION_QUALITY_METRICS) {
     const expected = baseline.metrics[metric];
     const actual = report.metrics[metric];
+    // A missing baseline metric must fail loudly, not pass as `actual < NaN`.
+    if (!Number.isFinite(expected)) {
+      failures.push({
+        metric,
+        baseline: Number.NaN,
+        actual,
+        message: `${metric} has no checked-in baseline; refresh baseline.json with RETRIEVAL_EVAL_UPDATE=1.`,
+      });
+      continue;
+    }
     const floor =
       expected - Math.abs(expected) * baseline.tolerance.metricRatio;
     if (actual < floor) {
@@ -230,84 +247,6 @@ export function evaluateGenerationGate(
   return failures;
 }
 
-function contextualText(source: GoldenSource, chunk: GoldenChunk): string {
-  return `${chunkContextHeader({
-    title: source.title,
-    kind: source.kind,
-    headingPath: chunk.headingPath ?? [],
-  })}${chunk.text}`;
-}
-
-interface SeededCorpus {
-  notebookId: string;
-  sourceIdByGoldenId: Map<string, string>;
-  goldenIdBySeededSourceId: Map<string, string>;
-  chunkIdByGoldenId: Map<string, string>;
-  sourceByGoldenId: Map<string, GoldenSource>;
-}
-
-/** Persists the golden corpus the same way the indexing pipeline would. */
-async function seedGoldenCorpus(
-  embedder: DeterministicEmbedder,
-  sources: GoldenSource[],
-): Promise<SeededCorpus> {
-  const notebook = await seedNotebook({
-    title: 'Generation Grounding Evaluation Corpus',
-  });
-  const runId = createId();
-  const sourceIdByGoldenId = new Map<string, string>();
-  const goldenIdBySeededSourceId = new Map<string, string>();
-  const chunkIdByGoldenId = new Map<string, string>();
-  const sourceByGoldenId = new Map<string, GoldenSource>();
-
-  for (const source of sources) {
-    const seeded = await seedSource(notebook.id, {
-      id: `eval-${runId}-source-${source.id}`,
-      kind: source.kind,
-      title: source.title,
-      rawText: source.chunks.map((chunk) => chunk.text).join('\n\n'),
-      processingStatus: source.processingStatus,
-      url: source.kind === 'url' ? `https://example.test/${source.id}` : null,
-    });
-    sourceIdByGoldenId.set(source.id, seeded.id);
-    goldenIdBySeededSourceId.set(seeded.id, source.id);
-    sourceByGoldenId.set(source.id, source);
-
-    await db.insert(sourceChunks).values(
-      source.chunks.map((chunk, index) => {
-        const id = `eval-${runId}-chunk-${chunk.id}`;
-        chunkIdByGoldenId.set(chunk.id, id);
-        const contextHeader = chunkContextHeader({
-          title: source.title,
-          kind: source.kind,
-          headingPath: chunk.headingPath ?? [],
-        });
-        const searchableText = `${contextHeader}${chunk.text}`;
-        return {
-          id,
-          sourceId: seeded.id,
-          notebookId: notebook.id,
-          chunkIndex: index,
-          content: chunk.text,
-          searchableText,
-          contextHeader,
-          headingPath: chunk.headingPath ?? [],
-          sourceKind: source.kind,
-          embedding: embedder.embed(searchableText),
-        };
-      }),
-    );
-  }
-
-  return {
-    notebookId: notebook.id,
-    sourceIdByGoldenId,
-    goldenIdBySeededSourceId,
-    chunkIdByGoldenId,
-    sourceByGoldenId,
-  };
-}
-
 /**
  * The pre-ticket grounding: one bounded retrieval per selected source, with
  * no section passes. The tail of a long source is decided by one query's
@@ -318,11 +257,13 @@ async function singlePassGrounding(
   notebookId: string,
   request: GoldenGeneration,
   selectedSourceIds: string[],
-  seeded: SeededCorpus,
+  seeded: Awaited<ReturnType<typeof seedGoldenCorpus>>,
 ): Promise<GenerationGrounding> {
   const sources: GroundedSource[] = [];
   const traces: GenerationGrounding['traces'] = [];
-  for (const sourceId of selectedSourceIds) {
+  for (let index = 0; index < selectedSourceIds.length; index++) {
+    const sourceId = selectedSourceIds[index];
+    const sourceMeta = seeded.sourceByGoldenId.get(request.sourceIds[index]);
     const outcome = await retrieval.retrieve({
       notebookId,
       query: request.brief.trim() || request.kind.replaceAll('_', ' '),
@@ -333,15 +274,13 @@ async function singlePassGrounding(
     });
     traces.push(outcome.trace);
     if (outcome.chunks.length === 0) continue;
-    const goldenSource = seeded.sourceByGoldenId.get(
-      seeded.goldenIdBySeededSourceId.get(sourceId) ?? '',
-    );
     sources.push({
       id: sourceId,
-      title: goldenSource?.title ?? sourceId,
-      kind: goldenSource?.kind ?? 'text',
+      title: sourceMeta?.title ?? sourceId,
+      kind: sourceMeta?.kind ?? 'text',
       url: null,
       chunks: outcome.chunks,
+      promptChunks: outcome.chunks,
     });
   }
   return {
@@ -357,13 +296,14 @@ async function singlePassGrounding(
 
 /**
  * The fully bypassed grounding: no retrieval, just the first bounded set of
- * chunks per selected source in index order.
+ * chunks per selected source in index order. It still runs through the real
+ * prompt builder, so the gate measures the production prompt path.
  */
 async function rawSliceGrounding(
   notebookId: string,
   request: GoldenGeneration,
   selectedSourceIds: string[],
-  seeded: SeededCorpus,
+  seeded: Awaited<ReturnType<typeof seedGoldenCorpus>>,
 ): Promise<GenerationGrounding> {
   const rows = await db
     .select({
@@ -391,21 +331,13 @@ async function rawSliceGrounding(
   }
 
   const sources: GroundedSource[] = [];
-  for (const goldenId of request.sourceIds) {
-    const seededId = seeded.sourceIdByGoldenId.get(goldenId);
-    if (!seededId) continue;
+  for (let index = 0; index < request.sourceIds.length; index++) {
+    const goldenId = request.sourceIds[index];
+    const seededId = selectedSourceIds[index];
     const sourceMeta = seeded.sourceByGoldenId.get(goldenId);
-    const chunks = (bySeededSourceId.get(seededId) ?? []).slice(
-      0,
-      GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
-    );
-    if (chunks.length === 0) continue;
-    sources.push({
-      id: seededId,
-      title: sourceMeta?.title ?? goldenId,
-      kind: sourceMeta?.kind ?? 'text',
-      url: null,
-      chunks: chunks.map((row) => ({
+    const chunks = (bySeededSourceId.get(seededId) ?? [])
+      .slice(0, GENERATION_EVIDENCE_CHUNKS_PER_SOURCE)
+      .map((row) => ({
         chunkId: row.id,
         chunkIndex: row.chunkIndex,
         sourceId: row.sourceId,
@@ -416,7 +348,15 @@ async function rawSliceGrounding(
         kind: sourceMeta?.kind ?? 'text',
         sourceVersionId: row.sourceVersionId ?? null,
         locator: row.locator ?? null,
-      })),
+      }));
+    if (chunks.length === 0) continue;
+    sources.push({
+      id: seededId,
+      title: sourceMeta?.title ?? goldenId,
+      kind: sourceMeta?.kind ?? 'text',
+      url: null,
+      chunks,
+      promptChunks: chunks,
     });
   }
 
@@ -434,11 +374,13 @@ async function rawSliceGrounding(
 function buildRequestResult(
   request: GoldenGeneration,
   grounding: GenerationGrounding,
-  seeded: SeededCorpus,
+  seeded: Awaited<ReturnType<typeof seedGoldenCorpus>>,
 ): GenerationEvalRequestResult {
-  const evidenceChunkIds = new Set(
-    grounding.evidence.map((item) => item.chunkId),
-  );
+  // The real prompt builder decides what the model can see and cite.
+  const formatted = formatGroundedSourceText(grounding, {
+    includeSourceId: false,
+  });
+  const promptChunkIds = new Set(formatted.renderedChunkIds);
   const selectedSeededIds = new Set(
     request.sourceIds.map((goldenId) =>
       seeded.sourceIdByGoldenId.get(goldenId),
@@ -466,21 +408,21 @@ function buildRequestResult(
 
   const coveredSections = request.expectedSections.filter((section) =>
     (chunkIdsBySection.get(section) ?? []).some((chunkId) =>
-      evidenceChunkIds.has(chunkId),
+      promptChunkIds.has(chunkId),
     ),
   );
 
-  // The harness plays an ideal grounded answer: it cites the first retrieved
-  // chunk of every labeled section through that chunk's evidence key, and an
-  // invented key for a section with no evidence. The real extractor and
-  // attachment decide what the material ends up carrying.
+  // The harness plays an ideal grounded answer: it cites the first chunk of
+  // every labeled section that the prompt rendered, through that chunk's
+  // evidence key, and an invented key for a section the prompt lost. The real
+  // extractor and attachment decide what the material ends up carrying.
   const keyByChunkId = new Map(
     grounding.evidence.map((item) => [item.chunkId, item.citationKey]),
   );
   const answer = request.expectedSections
     .map((section, index) => {
-      const first = (chunkIdsBySection.get(section) ?? []).find((chunkId) =>
-        keyByChunkId.has(chunkId),
+      const first = (chunkIdsBySection.get(section) ?? []).find(
+        (chunkId) => promptChunkIds.has(chunkId) && keyByChunkId.has(chunkId),
       );
       const key = first ? keyByChunkId.get(first) : 'R99';
       return `Claim ${index + 1} [ref:${key}].`;
@@ -517,7 +459,9 @@ function buildRequestResult(
     citationAccuracy: expectedCount ? citedSections.size / expectedCount : 1,
     citationAttachment: citations.length > 0 ? 1 : 0,
     evidenceChunks: grounding.evidence.length,
-    evidenceChunkIds: grounding.evidence.map((item) => item.chunkId),
+    renderedChunkIds: formatted.renderedChunkIds,
+    promptChars: formatted.text.length,
+    droppedBlocks: formatted.droppedBlocks,
     traces: grounding.traces.length,
   };
 }

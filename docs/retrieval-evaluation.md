@@ -157,11 +157,18 @@ cannot reach them.
 The gate runs one deliberate regression: `grounding: 'raw-slice'` bypasses the
 retrieval pipeline and keeps only the first bounded set of chunks per source
 in index order, which loses the tail sections, so `sectionCoverage` and
-`citationAccuracy` fall below the baseline and the gate fails. The harness
-also reports `grounding: 'single-pass'` — the pre-ticket query plan, one brief
-query per source with no section passes — for comparison. On a corpus this
-small a single bounded set still spreads across the sections, which is why
-the gated regression is the raw slice rather than the single pass.
+`citationAccuracy` fall below the baseline and the gate fails. Both the shipped
+grounding and the regression are formatted by the production
+`formatGroundedSourceText`, and the metrics are computed from the chunks that
+prompt actually renders, so a regression in the prompt builder fails the gate
+too. The harness also reports `grounding: 'single-pass'` — the pre-ticket query
+plan, one brief query per source with no section passes — for comparison. On a
+corpus this small a single bounded set still spreads across the sections, which
+is why the gated regression is the raw slice rather than the single pass.
+
+The gate fails loudly when `baseline.json` has no `generation` section or is
+missing one of its metrics, instead of comparing against `undefined` and
+passing.
 
 ## Metrics
 

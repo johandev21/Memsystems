@@ -124,6 +124,7 @@ describe('study guide generation boundary', () => {
               kind: 'text',
               url: null,
               chunks: [sourceChunk],
+              promptChunks: [sourceChunk],
             },
           ],
           evidence: [{ ...sourceChunk, citationKey: 'R1', rank: 1 }],
@@ -197,6 +198,7 @@ describe('study guide generation boundary', () => {
             kind: 'text',
             url: null,
             chunks: [sourceChunk],
+            promptChunks: [sourceChunk],
           },
         ],
         evidence: [{ ...sourceChunk, citationKey: 'R1', rank: 1 }],
@@ -209,6 +211,71 @@ describe('study guide generation boundary', () => {
 
     const reopened = await materials.get('material-1');
     expect(reopened.content).toMatchObject({ citations: [] });
+  });
+
+  it('keeps the tail sections of a source when the prompt budget cuts it', async () => {
+    const { handler } = setup();
+    vi.mocked(streamText).mockReturnValue({
+      partialOutputStream: (async function* () {
+        yield content;
+      })(),
+      output: Promise.resolve(content),
+    } as never);
+
+    // Eight sections of two chunks each. The evidence is presented round robin
+    // across sections, so the budget cut costs every section a little instead
+    // of lopping off the tail; head to tail it would drop section 7 entirely.
+    const chunks = Array.from({ length: 8 }, (_, section) =>
+      Array.from({ length: 2 }, (_, part) => ({
+        ...sourceChunk,
+        chunkId: `chunk-${section}-${part}`,
+        chunkIndex: section * 2 + part,
+        content: `Source: "Ethics"\nSection ${section} marker ${'x'.repeat(8_000)}`,
+      })),
+    ).flat();
+    const promptChunks = [
+      ...chunks.filter((chunk) => chunk.chunkIndex % 2 === 0),
+      ...chunks.filter((chunk) => chunk.chunkIndex % 2 === 1),
+    ];
+    const evidence = promptChunks.map((chunk, index) => ({
+      ...chunk,
+      citationKey: `R${index + 1}`,
+      rank: index + 1,
+    }));
+
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'study_guide',
+        brief: 'Ethics',
+        model: 'test-model',
+        studyGuideOptions: { format: 'revision', sectionCount: 1 },
+      },
+      {
+        sources: [
+          {
+            id: 'source-1',
+            title: 'Ethics',
+            kind: 'text',
+            url: null,
+            chunks,
+            promptChunks,
+          },
+        ],
+        evidence,
+      },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    const frames = await drain(stream);
+
+    const prompt = vi.mocked(streamText).mock.calls[0][0].prompt as string;
+    expect(prompt.length).toBeLessThanOrEqual(100_000);
+    expect(prompt).toContain('Section 7 marker');
+    // What the budget dropped is reported in the terminal frame, not silent.
+    expect(frames).toContain('"droppedBlocks"');
+    expect(frames).toContain('"truncatedSourceIds"');
   });
 
   it('does not ask for citations when the generation is ungrounded', async () => {

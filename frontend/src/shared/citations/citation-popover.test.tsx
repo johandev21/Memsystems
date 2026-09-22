@@ -1,16 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { CitedSourceDTO } from "../api/chat";
-import { MessageReferences, ReferencePopover } from "./reference-popover";
+import type { CitationReference } from "./citation";
+import { CitationChipRow, CitationPopover } from "./citation-popover";
 
-function reference(overrides: Partial<CitedSourceDTO> = {}): CitedSourceDTO {
+function reference(overrides: Partial<CitationReference> = {}): CitationReference {
   return {
     id: "source-1",
-    schemaVersion: 1,
     citationKey: "R1",
-    chunkId: "chunk-1",
-    chunkIndex: 0,
     number: 1,
     title: "Internet Encyclopedia of Philosophy",
     kind: "url",
@@ -22,10 +19,10 @@ function reference(overrides: Partial<CitedSourceDTO> = {}): CitedSourceDTO {
   };
 }
 
-describe("ReferencePopover", () => {
+describe("CitationPopover", () => {
   it("shows the source title and supporting excerpt", async () => {
     const user = userEvent.setup();
-    render(<ReferencePopover reference={reference()} />);
+    render(<CitationPopover reference={reference()} />);
 
     const trigger = screen.getByRole("button", {
       name: "Reference 1: Internet Encyclopedia of Philosophy",
@@ -44,13 +41,12 @@ describe("ReferencePopover", () => {
 
   it("renders remaining references as compact numbered triggers", () => {
     render(
-      <MessageReferences
+      <CitationChipRow
         references={[
           reference(),
           reference({
             id: "source-2",
             citationKey: "R2",
-            chunkId: "chunk-2",
             number: 12,
             title: "The Republic",
           }),
@@ -71,7 +67,7 @@ describe("ReferencePopover", () => {
   it("keeps deleted or invalid references readable without an external action", async () => {
     const user = userEvent.setup();
     render(
-      <ReferencePopover
+      <CitationPopover
         reference={reference({
           isAvailable: false,
           url: "javascript:alert(1)",
@@ -98,7 +94,7 @@ describe("ReferencePopover", () => {
   it("shows a useful locator while preserving the external source link", async () => {
     const user = userEvent.setup();
     render(
-      <ReferencePopover
+      <CitationPopover
         reference={reference({
           locator: {
             pageNumber: 4,
@@ -127,7 +123,7 @@ describe("ReferencePopover", () => {
     window.addEventListener("open-source-viewer", eventListener);
 
     render(
-      <ReferencePopover
+      <CitationPopover
         reference={reference({
           id: "source-img-123",
           kind: "file",
@@ -173,7 +169,7 @@ describe("ReferencePopover", () => {
     window.addEventListener("open-source-viewer", eventListener);
 
     render(
-      <ReferencePopover
+      <CitationPopover
         reference={reference({
           id: "source-vid-456",
           kind: "file",
@@ -217,7 +213,7 @@ describe("ReferencePopover", () => {
     window.addEventListener("open-source-viewer", eventListener);
 
     render(
-      <ReferencePopover
+      <CitationPopover
         reference={reference({
           id: "source-pptx-789",
           kind: "file",
@@ -259,7 +255,7 @@ describe("ReferencePopover", () => {
     window.addEventListener("open-source-viewer", eventListener);
 
     render(
-      <ReferencePopover
+      <CitationPopover
         reference={reference({
           id: "source-code-101",
           kind: "file",

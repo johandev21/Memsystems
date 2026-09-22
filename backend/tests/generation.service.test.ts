@@ -156,6 +156,38 @@ describe('GenerationService message keys', () => {
     });
   });
 
+  it('persists the traces of the passes it ran before rejecting unavailable sources', async () => {
+    const { service, ground, recordTrace } = setup();
+    ground.mockResolvedValue(
+      grounding({
+        traces: [trace('Cell biology Part 1'), trace('Cell biology Part 2')],
+        unavailableSources: [
+          { id: 'source-2', title: 'Second source', kind: 'text' },
+        ],
+      }),
+    );
+
+    await expect(
+      service.generate('notebook-1', {
+        kind: 'quiz',
+        brief: 'Cell biology',
+        sourceIds: ['source-1', 'source-2'],
+      }),
+    ).rejects.toMatchObject({
+      messageKey: 'errors.generation.sourcesUnavailable',
+    });
+
+    // The Generation never streamed, so there is no request id to correlate
+    // with, but the retrieval work is still diagnosable.
+    expect(recordTrace).toHaveBeenCalledTimes(2);
+    expect(recordTrace).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
+      kind: 'generation',
+      generationRequestId: undefined,
+      trace: expect.objectContaining({ query: 'Cell biology Part 1' }),
+    });
+  });
+
   it('keys the study guide brief requirement', async () => {
     const { service } = setup();
 
@@ -270,6 +302,7 @@ describe('GenerationService retrieval grounding', () => {
             kind: 'text',
             url: null,
             chunks: [first],
+            promptChunks: [first],
           },
           {
             id: 'source-2',
@@ -277,6 +310,7 @@ describe('GenerationService retrieval grounding', () => {
             kind: 'text',
             url: null,
             chunks: [second],
+            promptChunks: [second],
           },
         ],
         evidence,

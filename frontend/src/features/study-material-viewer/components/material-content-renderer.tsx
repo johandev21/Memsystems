@@ -5,10 +5,12 @@ import type {
   SlidesEditorContentType,
 } from "@/features/study-material-generation";
 import { useTranslation } from "react-i18next";
+import { stripCitationMarkersFromContent } from "@/shared/citations/citation";
 import type { MindMapContentType } from "../shapes/mind-map";
 import type { StudyMaterialDTO } from "../types";
 import { CaseStudyView } from "./CaseStudyView";
 import { FlashcardView } from "./FlashcardView";
+import { MaterialCitations } from "./material-citations";
 import { MindMapView } from "./MindMapView";
 import { PracticeProblemsView } from "./PracticeProblemsView";
 import { QuizView } from "./QuizView";
@@ -35,12 +37,18 @@ export function MaterialContentRenderer({
 }: MaterialContentRendererProps) {
   const { t } = useTranslation("viewer");
 
+  // The model's raw `[ref:Rn]` markers are stripped from the prose for every
+  // kind; the citations they point at are surfaced by MaterialCitations, which
+  // reads the original content.
+  const content = stripCitationMarkersFromContent(material.content);
+
+  let view: React.ReactNode;
   switch (material.kind) {
     case "case_study":
-      return (
+      view = (
         <CaseStudyView
           materialId={material.id}
-          content={material.content}
+          content={content}
           notebookId={material.notebookId}
           onOpenSource={() => {
             if (forceFullscreen) handleClose();
@@ -48,11 +56,12 @@ export function MaterialContentRenderer({
           }}
         />
       );
+      break;
     case "practice_problems":
-      return (
+      view = (
         <PracticeProblemsView
           materialId={material.id}
-          content={material.content}
+          content={content}
           notebookId={material.notebookId}
           onClose={onClose}
           registerBeforeClose={(fn) => {
@@ -64,10 +73,11 @@ export function MaterialContentRenderer({
           }}
         />
       );
+      break;
     case "study_guide":
-      return (
+      view = (
         <StudyGuideView
-          content={material.content}
+          content={content}
           notebookId={material.notebookId}
           onOpenSource={() => {
             if (forceFullscreen) onClose();
@@ -75,40 +85,48 @@ export function MaterialContentRenderer({
           }}
         />
       );
+      break;
     case "quiz":
-      return <QuizView content={material.content as QuizEditorContentType} />;
+      view = <QuizView content={content as QuizEditorContentType} />;
+      break;
     case "simple_flashcard":
-      return (
+      view = (
         <FlashcardView
           materialId={material.id}
           materialTitle={material.title}
-          content={material.content as FlashcardEditorContentType}
+          content={content as FlashcardEditorContentType}
         />
       );
+      break;
     case "roadmap":
-      return (
-        <RoadmapView
-          materialId={material.id}
-          content={material.content as RoadmapEditorContentType}
-        />
-      );
+      view = <RoadmapView materialId={material.id} content={content as RoadmapEditorContentType} />;
+      break;
     case "mind_map":
-      return (
+      view = (
         <MindMapView
           materialId={material.id}
           materialTitle={material.title}
-          content={material.content as MindMapContentType}
+          content={content as MindMapContentType}
         />
       );
+      break;
     case "slides":
-      return (
+      view = (
         <SlidesView
           materialId={material.id}
           materialTitle={material.title}
-          content={material.content as SlidesEditorContentType}
+          content={content as SlidesEditorContentType}
         />
       );
+      break;
     default:
-      return <div className="p-8 text-center text-text-tertiary">{t("unsupportedMaterial")}</div>;
+      view = <div className="p-8 text-center text-text-tertiary">{t("unsupportedMaterial")}</div>;
   }
+
+  return (
+    <>
+      {view}
+      <MaterialCitations content={material.content} notebookId={material.notebookId} />
+    </>
+  );
 }
