@@ -4,11 +4,11 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { retrievalTraces } from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
-import type { RetrievalTrace } from './retrieval-trace';
+import type { RetrievalTrace, RetrievalTraceKind } from './retrieval-trace';
 
 export interface RecordRetrievalTraceInput {
   notebookId: string;
-  kind: 'chat' | 'generation';
+  kind: RetrievalTraceKind;
   chatMessageId?: string;
   generationRequestId?: string;
   trace: RetrievalTrace;

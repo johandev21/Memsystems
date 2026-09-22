@@ -37,18 +37,19 @@ are not a statement about production relevance.
 | `mrr` | Mean reciprocal rank of the first relevant chunk. | higher is better |
 | `ndcgAtK` | Binary-relevance nDCG over the retrieved order. | higher is better |
 | `contextPrecision` | Share of retrieved chunks labeled relevant, over queries that retrieved something. | higher is better |
-| `citationAccuracy` | Share of emitted citations that resolve to a labeled relevant chunk. The harness emits one citation per Evidence key and runs the real citation extractor. | higher is better |
+| `citationAccuracy` | Share of expected citations that resolve to the labeled relevant chunk. The harness plays an ideal answer citing each labeled relevant chunk through its Evidence key, plus an invented key that must be dropped by the real citation extractor. | higher is better |
 | `refusalAccuracy` | Share of queries whose abstention matched the label: answerable queries must answer, unanswerable ones must abstain. | higher is better |
 | `faithfulness` | Deterministic proxy: share of answered queries whose top-ranked chunk is relevant. A model-judged faithfulness check needs provider calls and is out of scope for the keyless gate. | higher is better |
 | `latencyMsP50`, `latencyMsP95` | Wall-clock retrieval duration per query. | reported; p95 is gated by an absolute ceiling |
-| `costTokens` | Estimated query embedding tokens (about 4 characters per token), summed over queries. | lower is better |
+| `costTokensPerQuery` | Estimated query embedding tokens (about 4 characters per token), averaged over queries so adding a labeled query does not move the metric by itself. | lower is better |
 
 ## Tolerance and baseline
 
 `baseline.json` holds the metrics and the tolerance:
 
 - Quality metrics fail when they drop more than 5% relative to the baseline.
-- `costTokens` fails when it grows more than 20% relative to the baseline.
+- `costTokensPerQuery` fails when it grows more than 20% relative to the
+  baseline.
 - `latencyMsP95` fails above the absolute 2000 ms ceiling, chosen to avoid
   flaking on shared CI runners while still catching pathological regressions.
 
@@ -76,7 +77,9 @@ wrong way is a regression, not a new baseline.
 
 Adding a Source or a chunk follows the same shape: append it to
 `GOLDEN_SOURCES` and keep its `id` stable, because labels and the baseline
-refer to chunk ids. Never reuse or rename an id.
+refer to chunk ids. Never reuse or rename an id. Any corpus change also shifts
+the deterministic embedder's IDF weights, so expect metrics to move a little
+even for unchanged queries; refresh the baseline after reviewing the report.
 
 ## Running locally
 

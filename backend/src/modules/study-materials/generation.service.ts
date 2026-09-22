@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { NotFoundError } from '../../common/errors/domain-error';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ConnectionService } from '../ai/connection.service';
+import { stripChunkContentHeader } from '../ai/chunking.service';
 import { RetrievalService, type RetrievedChunk } from '../ai/retrieval.service';
 import { RetrievalTraceService } from '../ai/retrieval-trace.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
@@ -215,6 +216,10 @@ function groupChunksBySource(
 
   return sourceIds.flatMap((sourceId) => {
     const list = bySource.get(sourceId);
+    // A selected source without indexed chunks contributes nothing, matching
+    // the previous behavior for unknown ids. Reporting unavailable or
+    // degraded selected sources consistently is the retrieval-grounded
+    // generation ticket's job.
     if (!list || list.length === 0) return [];
     const ordered = [...list].sort((a, b) => a.chunkIndex - b.chunkIndex);
     return [
@@ -222,17 +227,9 @@ function groupChunksBySource(
         id: sourceId,
         title: ordered[0].title,
         rawText: ordered
-          .map((chunk) => stripChunkHeader(chunk.content))
+          .map((chunk) => stripChunkContentHeader(chunk.content))
           .join('\n\n'),
       },
     ];
   });
-}
-
-/**
- * Indexed chunk content starts with a `Source: "<title>"` header; the prompt
- * adds the title itself, so the header would only be noise.
- */
-function stripChunkHeader(content: string): string {
-  return content.replace(/^Source: "[^\n]*"\n/, '');
 }

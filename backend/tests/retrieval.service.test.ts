@@ -35,9 +35,7 @@ function serviceWithRows(
   return { service, execute };
 }
 
-function chunkRow(
-  overrides: Record<string, unknown>,
-): Record<string, unknown> {
+function chunkRow(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
     chunk_id: 'chunk-1',
     chunk_index: 0,
@@ -210,9 +208,7 @@ describe('RetrievalService retrieval trace', () => {
         ],
       },
     ]);
-    expect(outcome.trace.fusedOrder).toEqual(
-      outcome.trace.legs[0].candidates,
-    );
+    expect(outcome.trace.fusedOrder).toEqual(outcome.trace.legs[0].candidates);
     expect(outcome.trace.chosen.map((candidate) => candidate.chunkId)).toEqual([
       'chunk-good',
     ]);
@@ -398,9 +394,7 @@ describe('RetrievalService relevance floor', () => {
 
     expect(result.abstained).toBe(false);
     expect(result.abstentionReason).toBeNull();
-    expect(result.chunks.map((chunk) => chunk.chunkId)).toEqual([
-      'chunk-good',
-    ]);
+    expect(result.chunks.map((chunk) => chunk.chunkId)).toEqual(['chunk-good']);
     expect(result.unhelpfulSources).toEqual([
       { id: 'source-2', title: 'Other source', kind: 'url', url: null },
     ]);
@@ -493,7 +487,9 @@ describe('RetrievalService relevance floor', () => {
       relevanceFloor: 0,
     });
 
-    expect(result.chunks.map((chunk) => chunk.chunkId)).toEqual(['chunk-faint']);
+    expect(result.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'chunk-faint',
+    ]);
     expect(result.trace.relevanceFloor).toBe(0);
   });
 });
@@ -514,16 +510,22 @@ describe('loadRetrievalRelevanceConfig', () => {
   });
 
   it('clamps the floor into the valid similarity range', () => {
-    expect(loadRetrievalRelevanceConfig({ RETRIEVAL_RELEVANCE_FLOOR: '5' })).toEqual({
+    expect(
+      loadRetrievalRelevanceConfig({ RETRIEVAL_RELEVANCE_FLOOR: '5' }),
+    ).toEqual({
       relevanceFloor: 1,
     });
-    expect(loadRetrievalRelevanceConfig({ RETRIEVAL_RELEVANCE_FLOOR: '-2' })).toEqual({
+    expect(
+      loadRetrievalRelevanceConfig({ RETRIEVAL_RELEVANCE_FLOOR: '-2' }),
+    ).toEqual({
       relevanceFloor: 0,
     });
   });
 
   it('ignores values that are not numbers', () => {
-    expect(loadRetrievalRelevanceConfig({ RETRIEVAL_RELEVANCE_FLOOR: 'high' })).toEqual({
+    expect(
+      loadRetrievalRelevanceConfig({ RETRIEVAL_RELEVANCE_FLOOR: 'high' }),
+    ).toEqual({
       relevanceFloor: DEFAULT_RELEVANCE_FLOOR,
     });
   });
@@ -543,7 +545,11 @@ describe('AiModule relevance floor wiring', () => {
     // chunk-borderline scores 0.45 — above the 0.3 default, below the
     // RETRIEVAL_RELEVANCE_FLOOR=0.5 set for this test.
     const strong = [1, ...Array.from({ length: 1023 }, () => 0)];
-    const borderline = [0.45, Math.sqrt(1 - 0.45 ** 2), ...Array.from({ length: 1022 }, () => 0)];
+    const borderline = [
+      0.45,
+      Math.sqrt(1 - 0.45 ** 2),
+      ...Array.from({ length: 1022 }, () => 0),
+    ];
     await db.insert(sourceChunks).values([
       {
         id: 'chunk-strong',
@@ -582,7 +588,9 @@ describe('AiModule relevance floor wiring', () => {
         query: 'query',
       });
 
-      expect(result.chunks.map((chunk) => chunk.chunkId)).toEqual(['chunk-strong']);
+      expect(result.chunks.map((chunk) => chunk.chunkId)).toEqual([
+        'chunk-strong',
+      ]);
       expect(result.unhelpfulSources).toEqual([
         { id: source.id, title: 'Ready source', kind: 'text', url: null },
       ]);

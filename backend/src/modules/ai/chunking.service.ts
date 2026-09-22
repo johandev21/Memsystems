@@ -41,6 +41,21 @@ export interface ChunkOutput {
 
 export const CHUNKING_VERSION = 1;
 
+/**
+ * Every indexed chunk body starts with this header so the embedded text
+ * carries the source title. Callers that need the bare body (for example the
+ * Generation prompt, which adds the title itself) strip it with
+ * `stripChunkContentHeader`.
+ */
+export function chunkContentHeader(title: string): string {
+  return `Source: "${title}"\n`;
+}
+
+/** Removes the header added by `chunkContentHeader`, if present. */
+export function stripChunkContentHeader(content: string): string {
+  return content.replace(/^Source: "[^\n]*"\n/, '');
+}
+
 function splitOnBoundaries(text: string, chunkSize: number): string[] {
   if (text.length <= chunkSize) return [text];
 
@@ -141,7 +156,7 @@ export class ChunkingService {
           }));
 
     return pieces.map((piece, index) => {
-      const content = `Source: "${input.title}"\n${piece.content}`;
+      const content = `${chunkContentHeader(input.title)}${piece.content}`;
       return {
         sourceId: input.id,
         notebookId: input.notebookId,

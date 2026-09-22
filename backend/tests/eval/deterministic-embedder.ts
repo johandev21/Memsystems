@@ -103,9 +103,7 @@ export interface EvalEmbedder {
 export function tokenizeForEval(text: string): string[] {
   const matches = text.toLowerCase().match(/[a-z0-9]+/g);
   if (!matches) return [];
-  return matches.filter(
-    (token) => token.length >= 2 && !STOP_WORDS.has(token),
-  );
+  return matches.filter((token) => token.length >= 2 && !STOP_WORDS.has(token));
 }
 
 export class DeterministicEmbedder implements EvalEmbedder {
@@ -118,10 +116,7 @@ export class DeterministicEmbedder implements EvalEmbedder {
     const documentFrequency = new Map<string, number>();
     for (const document of corpus) {
       for (const token of new Set(tokenizeForEval(document))) {
-        documentFrequency.set(
-          token,
-          (documentFrequency.get(token) ?? 0) + 1,
-        );
+        documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1);
       }
     }
     for (const [token, frequency] of documentFrequency) {

@@ -1,12 +1,16 @@
 /**
- * The structured record of one retrieval call. Traces are persisted for
- * every Chat turn and Study Material Generation so a poor answer can be
- * diagnosed as an ingestion, retrieval, or generation failure.
+ * The structured record of one retrieval call. Chat turns that query text and
+ * Study Material Generations that select sources persist it, so a poor answer
+ * can be diagnosed as an ingestion, retrieval, or generation failure. A turn
+ * or generation that performs no retrieval has no trace.
  *
  * A trace never carries provider keys, the query embedding, or chunk text:
  * it stores the query, the ranking evidence (ids, scores, ranks), the
  * threshold that was applied, and the latency and token cost.
  */
+
+/** Who a trace belongs to. */
+export type RetrievalTraceKind = 'chat' | 'generation';
 
 /** Why retrieval produced no Evidence. */
 export type RetrievalAbstentionReason = 'no_indexed_chunks' | 'below_threshold';

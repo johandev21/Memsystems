@@ -165,12 +165,25 @@ export class RetrievalService {
 
     // An explicitly empty selection can never match a chunk.
     if (sourceIds && sourceIds.length === 0) {
-      return emptyOutcome(
-        request,
-        topK,
-        relevanceFloor,
-        performance.now() - startedAt,
-      );
+      return {
+        chunks: [],
+        abstained: true,
+        abstentionReason: 'no_indexed_chunks',
+        unhelpfulSources: [],
+        trace: buildTrace({
+          query: request.query,
+          topK,
+          sourceIds,
+          relevanceFloor,
+          legs: [],
+          fusedOrder: [],
+          chosen: [],
+          abstained: true,
+          abstentionReason: 'no_indexed_chunks',
+          elapsedMs: performance.now() - startedAt,
+          embeddingInputTokens: 0,
+        }),
+      };
     }
 
     const queryEmbedding = await this.embeddingService.embedQuery(
@@ -183,11 +196,12 @@ export class RetrievalService {
       sourceIds,
     );
 
-    const ranked = rows.map((row, index) => candidateFromRow(row, index));
+    const ranked: RetrievalTraceCandidate[] = [];
     const chunks: RetrievedChunk[] = [];
     const chosen: RetrievalTraceCandidate[] = [];
     const belowFloor: RetrievedChunk[] = [];
-    for (const row of rows) {
+    rows.forEach((row, index) => {
+      ranked.push(candidateFromRow(row, index));
       const chunk = chunkFromRow(row);
       if (chunk.score >= relevanceFloor) {
         chunks.push(chunk);
@@ -195,7 +209,7 @@ export class RetrievalService {
       } else {
         belowFloor.push(chunk);
       }
-    }
+    });
 
     const abstained = chunks.length === 0;
     const abstentionReason: RetrievalAbstentionReason | null = abstained
@@ -204,36 +218,26 @@ export class RetrievalService {
         : 'below_threshold'
       : null;
 
-    const trace: RetrievalTrace = {
-      version: 1,
-      query: request.query,
-      topK,
-      scope: {
-        kind: sourceIds ? 'selected_sources' : 'notebook',
-        sourceIds,
-      },
-      relevanceFloor,
-      embedding: {
-        model: EMBEDDING_MODEL,
-        dimensions: EMBEDDING_DIMENSIONS,
-      },
-      legs: [{ kind: 'dense', candidates: ranked }],
-      // One dense leg today: fusion is the identity until hybrid retrieval
-      // lands behind this seam.
-      fusedOrder: ranked,
-      chosen,
-      abstained,
-      abstentionReason,
-      latencyMs: Math.max(0, Math.round(performance.now() - startedAt)),
-      cost: { embeddingInputTokens: estimateVoyageTokens(request.query) },
-    };
-
     return {
       chunks,
       abstained,
       abstentionReason,
       unhelpfulSources: distinctSources(belowFloor),
-      trace,
+      trace: buildTrace({
+        query: request.query,
+        topK,
+        sourceIds,
+        relevanceFloor,
+        legs: [{ kind: 'dense', candidates: ranked }],
+        // One dense leg today: fusion is the identity until hybrid retrieval
+        // lands behind this seam.
+        fusedOrder: ranked,
+        chosen,
+        abstained,
+        abstentionReason,
+        elapsedMs: performance.now() - startedAt,
+        embeddingInputTokens: estimateVoyageTokens(request.query),
+      }),
     };
   }
 
@@ -244,6 +248,18 @@ export class RetrievalService {
     sourceIds: string[] | null,
   ): Promise<RetrievalChunkRow[]> {
     const vectorLiteral = `[${embedding.join(',')}]`;
+    const chunkProjection = sql`
+      sc.id AS chunk_id,
+      sc.chunk_index,
+      sc.source_id,
+      s.title,
+      s.url,
+      s.kind,
+      sc.source_version_id,
+      sc.locator,
+      sc.content,
+      1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score
+    `;
 
     if (sourceIds) {
       const sourceFilter = sql`AND sc.source_id IN (${sql.join(
@@ -255,16 +271,7 @@ export class RetrievalService {
         sql`
           SELECT * FROM (
             SELECT
-              sc.id AS chunk_id,
-              sc.chunk_index,
-              sc.source_id,
-              s.title,
-              s.url,
-              s.kind,
-              sc.source_version_id,
-              sc.locator,
-              sc.content,
-              1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score,
+              ${chunkProjection},
               row_number() OVER (
                 PARTITION BY sc.source_id
                 ORDER BY sc.embedding <=> ${vectorLiteral}::vector, sc.id
@@ -284,17 +291,7 @@ export class RetrievalService {
 
     const result = await this.db.execute(
       sql`
-        SELECT
-          sc.id AS chunk_id,
-          sc.chunk_index,
-          sc.source_id,
-          s.title,
-          s.url,
-          s.kind,
-          sc.source_version_id,
-          sc.locator,
-          sc.content,
-          1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score
+        SELECT ${chunkProjection}
         FROM source_chunks sc
         JOIN sources s ON s.id = sc.source_id
         WHERE sc.notebook_id = ${notebookId}
@@ -305,6 +302,42 @@ export class RetrievalService {
     );
     return result.rows as unknown as RetrievalChunkRow[];
   }
+}
+
+function buildTrace(input: {
+  query: string;
+  topK: number;
+  sourceIds: string[] | null;
+  relevanceFloor: number;
+  legs: RetrievalTrace['legs'];
+  fusedOrder: RetrievalTraceCandidate[];
+  chosen: RetrievalTraceCandidate[];
+  abstained: boolean;
+  abstentionReason: RetrievalAbstentionReason | null;
+  elapsedMs: number;
+  embeddingInputTokens: number;
+}): RetrievalTrace {
+  return {
+    version: 1,
+    query: input.query,
+    topK: input.topK,
+    scope: {
+      kind: input.sourceIds ? 'selected_sources' : 'notebook',
+      sourceIds: input.sourceIds,
+    },
+    relevanceFloor: input.relevanceFloor,
+    embedding: {
+      model: EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+    },
+    legs: input.legs,
+    fusedOrder: input.fusedOrder,
+    chosen: input.chosen,
+    abstained: input.abstained,
+    abstentionReason: input.abstentionReason,
+    latencyMs: Math.max(0, Math.round(input.elapsedMs)),
+    cost: { embeddingInputTokens: input.embeddingInputTokens },
+  };
 }
 
 function candidateFromRow(
@@ -332,43 +365,6 @@ function chunkFromRow(row: RetrievalChunkRow): RetrievedChunk {
     locator: row.locator ?? null,
     content: row.content,
     score: Number(row.score),
-  };
-}
-
-function emptyOutcome(
-  request: RetrievalRequest,
-  topK: number,
-  relevanceFloor: number,
-  elapsedMs: number,
-): RetrievalOutcome {
-  const trace: RetrievalTrace = {
-    version: 1,
-    query: request.query,
-    topK,
-    scope: {
-      kind: 'selected_sources',
-      sourceIds: [...(request.sourceIds ?? [])],
-    },
-    relevanceFloor,
-    embedding: {
-      model: EMBEDDING_MODEL,
-      dimensions: EMBEDDING_DIMENSIONS,
-    },
-    legs: [],
-    fusedOrder: [],
-    chosen: [],
-    abstained: true,
-    abstentionReason: 'no_indexed_chunks',
-    latencyMs: Math.max(0, Math.round(elapsedMs)),
-    cost: { embeddingInputTokens: 0 },
-  };
-
-  return {
-    chunks: [],
-    abstained: true,
-    abstentionReason: 'no_indexed_chunks',
-    unhelpfulSources: [],
-    trace,
   };
 }
 

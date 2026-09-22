@@ -8,10 +8,7 @@ import {
   type RetrievalEvalBaseline,
 } from './eval/retrieval-eval';
 
-const baselinePath = path.resolve(
-  process.cwd(),
-  'tests/eval/baseline.json',
-);
+const baselinePath = path.resolve(process.cwd(), 'tests/eval/baseline.json');
 const baseline = JSON.parse(
   readFileSync(baselinePath, 'utf8'),
 ) as RetrievalEvalBaseline;
@@ -63,16 +60,19 @@ describe('retrieval evaluation gate', () => {
   it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
     'detects a deliberately introduced retrieval regression',
     async () => {
-    const constant = await evaluateRetrieval({ embedder: constantEmbedder });
-    expect(
-      evaluateRetrievalGate(constant, baseline).map((failure) => failure.metric),
-    ).toContain('recallAtK');
-
-    const floorless = await evaluateRetrieval({ relevanceFloor: 0 });
-    expect(
-      evaluateRetrievalGate(floorless, baseline).map(
+      const constant = await evaluateRetrieval({ embedder: constantEmbedder });
+      const constantFailures = evaluateRetrievalGate(constant, baseline).map(
         (failure) => failure.metric,
-      ),
-    ).toContain('refusalAccuracy');
-  });
+      );
+      expect(constantFailures).toContain('recallAtK');
+      expect(constantFailures).toContain('citationAccuracy');
+
+      const floorless = await evaluateRetrieval({ relevanceFloor: 0 });
+      expect(
+        evaluateRetrievalGate(floorless, baseline).map(
+          (failure) => failure.metric,
+        ),
+      ).toContain('refusalAccuracy');
+    },
+  );
 });

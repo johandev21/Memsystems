@@ -26,11 +26,7 @@ import {
   DeterministicEmbedder,
   type EvalEmbedder,
 } from './deterministic-embedder';
-import {
-  GOLDEN_QUERIES,
-  GOLDEN_SOURCES,
-  type GoldenQuery,
-} from './golden-set';
+import { GOLDEN_QUERIES, GOLDEN_SOURCES, type GoldenQuery } from './golden-set';
 
 /**
  * Evidence depth and relevance floor used by the harness. The floor is
@@ -59,7 +55,7 @@ export interface RetrievalEvalQueryResult {
   recall: number;
   ndcg: number;
   contextPrecision: number | null;
-  citationPrecision: number | null;
+  citationAccuracy: number | null;
   faithfulness: number | null;
   refusalCorrect: boolean;
   latencyMs: number;
@@ -76,7 +72,7 @@ export interface RetrievalEvalMetrics {
   faithfulness: number;
   latencyMsP50: number;
   latencyMsP95: number;
-  costTokens: number;
+  costTokensPerQuery: number;
 }
 
 export interface RetrievalEvalReport {
@@ -176,8 +172,7 @@ async function seedGoldenCorpus(embedder: EvalEmbedder): Promise<{
       title: source.title,
       rawText: source.chunks.map((chunk) => chunk.text).join('\n\n'),
       processingStatus: source.processingStatus,
-      url:
-        source.kind === 'url' ? `https://example.test/${source.id}` : null,
+      url: source.kind === 'url' ? `https://example.test/${source.id}` : null,
     });
 
     await db.insert(sourceChunks).values(
@@ -217,16 +212,24 @@ function buildQueryResult(
     relevant.has(id),
   );
 
-  // Citation accuracy: a grounded answer cites the evidence it used. The
-  // harness emits one citation per Evidence key and counts how many resolve
-  // to a labeled relevant chunk; unresolvable keys are dropped by
-  // `extractCitationEntries`, which is the guarantee under test.
+  // Citation accuracy: the harness plays an ideal answer that cites the
+  // labeled relevant chunks through their Evidence keys, plus an invented key
+  // that must never resolve. Accuracy is the share of expected citations the
+  // real extractor resolves to a labeled chunk, so a broken key-to-chunk map
+  // or a missed relevant chunk both lower it.
   const evidence = createCitationEvidence(outcome.chunks);
-  const answer = evidence
-    .map((item) => `A grounded claim [ref:${item.citationKey}].`)
-    .join(' ');
+  const evidenceKeyByChunkId = new Map(
+    evidence.map((item) => [item.chunkId, item.citationKey]),
+  );
+  const expectedKeys = relevantChunkIds
+    .map((id) => evidenceKeyByChunkId.get(id))
+    .filter((key): key is string => Boolean(key));
+  const answer = [
+    ...expectedKeys.map((key) => `A grounded claim [ref:${key}].`),
+    'An invented claim [ref:R99].',
+  ].join(' ');
   const citations = extractCitationEntries(answer, evidence);
-  const citedRelevant = citations.filter(
+  const resolvedRelevant = citations.filter(
     (entry) => entry.chunkId && relevant.has(entry.chunkId),
   ).length;
 
@@ -247,8 +250,10 @@ function buildQueryResult(
       retrievedChunkIds.length > 0
         ? relevantRetrieved.length / retrievedChunkIds.length
         : null,
-    citationPrecision:
-      citations.length > 0 ? citedRelevant / citations.length : null,
+    citationAccuracy:
+      relevantChunkIds.length > 0
+        ? resolvedRelevant / relevantChunkIds.length
+        : null,
     faithfulness: outcome.abstained
       ? null
       : retrievedChunkIds.length > 0 && relevant.has(retrievedChunkIds[0])
@@ -268,8 +273,8 @@ function computeMetrics(
     (query) => query.retrievedChunkIds.length > 0,
   );
   const answered = queries.filter((query) => query.faithfulness !== null);
-  const withCitations = queries.filter(
-    (query) => query.citationPrecision !== null,
+  const withExpectedCitations = queries.filter(
+    (query) => query.citationAccuracy !== null,
   );
   const latencies = queries.map((query) => query.latencyMs);
 
@@ -281,17 +286,20 @@ function computeMetrics(
       ),
     ),
     ndcgAtK: mean(answerable.map((query) => query.ndcg)),
-    contextPrecision: mean(withRetrieved.map((query) => query.contextPrecision ?? 0)),
-    citationAccuracy: mean(
-      withCitations.map((query) => query.citationPrecision ?? 0),
+    contextPrecision: mean(
+      withRetrieved.map((query) => query.contextPrecision ?? 0),
     ),
-    refusalAccuracy: mean(queries.map((query) => (query.refusalCorrect ? 1 : 0))),
+    citationAccuracy: mean(
+      withExpectedCitations.map((query) => query.citationAccuracy ?? 0),
+    ),
+    refusalAccuracy: mean(
+      queries.map((query) => (query.refusalCorrect ? 1 : 0)),
+    ),
     faithfulness: mean(answered.map((query) => query.faithfulness ?? 0)),
     latencyMsP50: percentile(latencies, 50),
     latencyMsP95: percentile(latencies, 95),
-    costTokens: queries.reduce(
-      (sum, query) => sum + query.embeddingInputTokens,
-      0,
+    costTokensPerQuery: mean(
+      queries.map((query) => query.embeddingInputTokens),
     ),
   };
 }
@@ -305,7 +313,8 @@ export function evaluateRetrievalGate(
   for (const metric of QUALITY_METRICS) {
     const expected = baseline.metrics[metric];
     const actual = report.metrics[metric];
-    const floor = expected - Math.abs(expected) * baseline.tolerance.metricRatio;
+    const floor =
+      expected - Math.abs(expected) * baseline.tolerance.metricRatio;
     if (actual < floor) {
       failures.push({
         metric,
@@ -326,13 +335,14 @@ export function evaluateRetrievalGate(
   }
 
   const costCeiling =
-    baseline.metrics.costTokens * (1 + baseline.tolerance.costTokensRatio);
-  if (report.metrics.costTokens > costCeiling) {
+    baseline.metrics.costTokensPerQuery *
+    (1 + baseline.tolerance.costTokensRatio);
+  if (report.metrics.costTokensPerQuery > costCeiling) {
     failures.push({
-      metric: 'costTokens',
-      baseline: baseline.metrics.costTokens,
-      actual: report.metrics.costTokens,
-      message: `query embedding cost ${report.metrics.costTokens} tokens exceeds the ${costCeiling.toFixed(1)} token ceiling.`,
+      metric: 'costTokensPerQuery',
+      baseline: baseline.metrics.costTokensPerQuery,
+      actual: report.metrics.costTokensPerQuery,
+      message: `average query embedding cost ${report.metrics.costTokensPerQuery.toFixed(1)} tokens exceeds the ${costCeiling.toFixed(1)} token ceiling.`,
     });
   }
 

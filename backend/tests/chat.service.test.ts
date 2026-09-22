@@ -651,7 +651,9 @@ describe('ChatService no-evidence reply', () => {
         }),
       }),
     });
-    expect(assistantInsert?.content).toContain('could not find usable material');
+    expect(assistantInsert?.content).toContain(
+      'could not find usable material',
+    );
     expect(assistantInsert?.content).toContain('Lecture notes');
     expect(response.userMessageId).toEqual(expect.any(String));
     expect(harness.recordTrace).toHaveBeenCalledWith(
