@@ -19,9 +19,9 @@ import {
   estimateVoyageTokens,
 } from './providers/voyage.client';
 import {
-  DEFAULT_REWRITE_CONFIG,
   QueryUnderstandingService,
-  type QueryUnderstanding,
+  passthroughUnderstanding,
+  traceRewrite,
   type RetrievalHistoryTurn,
 } from './query-understanding';
 import { reciprocalRankFusion, type FusedCandidate } from './rank-fusion';
@@ -430,7 +430,9 @@ export class RetrievalService {
       this.hybridConfig.lexicalCandidateDepth ?? candidateDepth,
       policy.topK,
     );
-    const fusion: RetrievalTraceFusion = {
+    // The fusion record is also what an empty outcome reports, so it is
+    // built once the number of query variants is known.
+    const buildFusion = (variants: number): RetrievalTraceFusion => ({
       k: this.hybridConfig.fusionK,
       weights: {
         dense: this.hybridConfig.denseWeight,
@@ -440,14 +442,14 @@ export class RetrievalService {
         dense: denseDepth,
         lexical: this.hybridConfig.enabled ? lexicalDepth : 0,
       },
-      variants: 1,
-    };
+      variants,
+    });
 
     // An explicitly empty selection can never match a chunk, and there is
     // nothing for query understanding to search.
     if (policy.sourceIds && policy.sourceIds.length === 0) {
       return this.emptyOutcome(request, policy, {
-        fusion,
+        fusion: buildFusion(1),
         rewrite: null,
         abstentionReason: 'no_indexed_chunks',
         skippedReason: 'no_candidates',
@@ -467,12 +469,12 @@ export class RetrievalService {
       : passthroughUnderstanding(request.query);
     const queries = understanding.queries;
     const rewrite = traceRewrite(understanding, request.query);
-    fusion.variants = queries.length;
+    const fusion = buildFusion(queries.length);
 
     // Every query variant runs the same legs over the same scope and fuses
     // into one candidate list. The reranker and the Evidence threshold see
-    // the fused list, so a paraphrase can only add candidates, never
-    // displace the primary query's order by itself.
+    // the fused list, so a paraphrase can add candidates the primary query's
+    // legs never returned.
     const legRuns = await Promise.all(
       queries.map(async (query, variant) => {
         // The primary variant embeds the hypothetical answer instead of the
@@ -503,8 +505,12 @@ export class RetrievalService {
       }),
     );
 
-    // Each variant contributes equally to the fusion; with a single query
-    // the weights are exactly the configured leg weights.
+    // Every variant contributes an equal share: with N variants each leg's
+    // weight is divided by N, so the total RRF score is comparable to a
+    // single-query run but no variant is privileged. The tradeoff is that a
+    // paraphrase-only candidate ranked by both of its legs can outrank a
+    // primary-query candidate ranked by one. With a single query the weights
+    // are exactly the configured leg weights.
     const variantWeight = 1 / legRuns.length;
     const legs: {
       kind: RetrievalTraceLeg['kind'];
@@ -552,6 +558,8 @@ export class RetrievalService {
         legs: traceLegs,
         fusion,
         rewrite,
+        rewriteInputTokens: understanding.inputTokens,
+        rewriteOutputTokens: understanding.outputTokens,
         abstentionReason: 'no_indexed_chunks',
         skippedReason: 'no_candidates',
         elapsedMs: performance.now() - startedAt,
@@ -635,6 +643,9 @@ export class RetrievalService {
       legs?: RetrievalTraceLeg[];
       fusion: RetrievalTraceFusion;
       rewrite: RetrievalTraceRewrite | null;
+      /** Tokens the rewrite model spent; 0 when it did not run. */
+      rewriteInputTokens?: number;
+      rewriteOutputTokens?: number;
       abstentionReason: RetrievalAbstentionReason;
       skippedReason: RetrievalRerankSkippedReason;
       elapsedMs: number;
@@ -668,8 +679,8 @@ export class RetrievalService {
         abstentionReason: input.abstentionReason,
         elapsedMs: input.elapsedMs,
         embeddingInputTokens: input.embeddingInputTokens ?? 0,
-        rewriteInputTokens: 0,
-        rewriteOutputTokens: 0,
+        rewriteInputTokens: input.rewriteInputTokens ?? 0,
+        rewriteOutputTokens: input.rewriteOutputTokens ?? 0,
       }),
     };
   }
@@ -952,38 +963,6 @@ function buildTrace(input: {
       rewriteInputTokens: input.rewriteInputTokens,
       rewriteOutputTokens: input.rewriteOutputTokens,
     },
-  };
-}
-
-/** Query understanding when the stage is not wired: search the message as sent. */
-function passthroughUnderstanding(query: string): QueryUnderstanding {
-  return {
-    enabled: false,
-    queries: [query],
-    hypotheticalAnswer: null,
-    trigger: null,
-    strategy: null,
-    reason: 'disabled',
-    model: DEFAULT_REWRITE_CONFIG.model,
-    inputTokens: 0,
-    outputTokens: 0,
-  };
-}
-
-function traceRewrite(
-  understanding: QueryUnderstanding,
-  original: string,
-): RetrievalTraceRewrite {
-  return {
-    enabled: understanding.enabled,
-    original,
-    query: understanding.queries[0],
-    variants: understanding.queries.slice(1),
-    hypotheticalAnswer: understanding.hypotheticalAnswer !== null,
-    trigger: understanding.trigger,
-    strategy: understanding.strategy,
-    reason: understanding.reason,
-    model: understanding.model,
   };
 }
 

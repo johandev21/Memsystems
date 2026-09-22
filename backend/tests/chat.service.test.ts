@@ -82,9 +82,9 @@ async function createChatServiceHarness() {
         where: vi.fn(() => {
           const rows = Promise.resolve(degradedRowsState.rows);
           return {
-            orderBy: vi.fn().mockImplementation(() =>
-              Promise.resolve(historyRowsState.rows),
-            ),
+            orderBy: vi
+              .fn()
+              .mockImplementation(() => Promise.resolve(historyRowsState.rows)),
             then: rows.then.bind(rows),
           };
         }),

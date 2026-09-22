@@ -266,7 +266,7 @@ describe('RetrievalService retrieval trace', () => {
         original: 'derivative',
         query: 'derivative',
         variants: [],
-        hypotheticalAnswer: false,
+        hypotheticalAnswer: null,
         strategy: null,
         reason: 'disabled',
         trigger: null,
@@ -768,13 +768,15 @@ describe('RetrievalService reranking', () => {
   });
 
   it('skips reranking when the candidate set exceeds the provider document limit', async () => {
-    const rows = Array.from({ length: MAX_RERANK_DOCUMENTS + 1 }, (_value, index) =>
-      chunkRow({
-        chunk_id: `chunk-${index}`,
-        content: `Passage ${index}`,
-        score: 0.9 - index * 0.001,
-        source_id: `source-${index}`,
-      }),
+    const rows = Array.from(
+      { length: MAX_RERANK_DOCUMENTS + 1 },
+      (_value, index) =>
+        chunkRow({
+          chunk_id: `chunk-${index}`,
+          content: `Passage ${index}`,
+          score: 0.9 - index * 0.001,
+          source_id: `source-${index}`,
+        }),
     );
     const reranker = scriptedReranker({});
     const { service } = serviceWithRows(rows, undefined, {
@@ -927,6 +929,15 @@ describe('RetrievalService selected sources scope', () => {
     expect(outcome.trace.scope).toEqual({
       kind: 'selected_sources',
       sourceIds: [],
+    });
+    // Nothing ran, so there is no rewrite decision and no rewrite cost.
+    expect(outcome.trace.rewrite).toBeNull();
+    expect(outcome.trace.fusion.variants).toBe(1);
+    expect(outcome.trace.cost).toEqual({
+      embeddingInputTokens: 0,
+      rerankInputTokens: 0,
+      rewriteInputTokens: 0,
+      rewriteOutputTokens: 0,
     });
     expect(embedQuery).not.toHaveBeenCalled();
   });
@@ -1356,9 +1367,9 @@ describe('RetrievalService hybrid retrieval', () => {
       'dense',
       'lexical',
     ]);
-    expect(outcome.trace.fusedOrder.map((candidate) => candidate.chunkId)).toEqual(
-      ['chunk-c', 'chunk-b', 'chunk-a'],
-    );
+    expect(
+      outcome.trace.fusedOrder.map((candidate) => candidate.chunkId),
+    ).toEqual(['chunk-c', 'chunk-b', 'chunk-a']);
     expect(outcome.trace.fusion).toEqual({
       k: DEFAULT_FUSION_K,
       weights: { dense: 1, lexical: 1 },
@@ -1564,9 +1575,10 @@ describe('RetrievalService hybrid retrieval', () => {
       leg.candidates.map((candidate) => candidate.chunkId),
     );
     expect(new Set(legChunkIds)).toEqual(new Set(['hybrid-a', 'hybrid-b']));
-    expect(
-      notebookWide.chunks.map((chunk) => chunk.chunkId).sort(),
-    ).toEqual(['hybrid-a', 'hybrid-b']);
+    expect(notebookWide.chunks.map((chunk) => chunk.chunkId).sort()).toEqual([
+      'hybrid-a',
+      'hybrid-b',
+    ]);
 
     const selected = await service.retrieve({
       notebookId: notebook.id,
@@ -1578,14 +1590,16 @@ describe('RetrievalService hybrid retrieval', () => {
         'hybrid-a',
       ]);
     }
-    expect(selected.chunks.map((chunk) => chunk.chunkId)).toEqual([
-      'hybrid-a',
-    ]);
+    expect(selected.chunks.map((chunk) => chunk.chunkId)).toEqual(['hybrid-a']);
   });
 
   it('gates a lexical-only candidate by its dense score when reranking is unavailable', async () => {
     const rows = [
-      chunkRow({ chunk_id: 'chunk-dense', content: 'Dense passage', score: 0.9 }),
+      chunkRow({
+        chunk_id: 'chunk-dense',
+        content: 'Dense passage',
+        score: 0.9,
+      }),
     ];
     const lexicalRows = [
       chunkRow({
@@ -1640,7 +1654,11 @@ describe('RetrievalService hybrid retrieval', () => {
 
   it('traces a zero-weight leg but leaves it out of the fusion', async () => {
     const rows = [
-      chunkRow({ chunk_id: 'chunk-dense', content: 'Dense passage', score: 0.9 }),
+      chunkRow({
+        chunk_id: 'chunk-dense',
+        content: 'Dense passage',
+        score: 0.9,
+      }),
     ];
     const lexicalRows = [
       chunkRow({
@@ -1699,7 +1717,7 @@ describe('RetrievalService query understanding', () => {
       original: 'How do mitochondria generate ATP in a cell?',
       query: 'How do mitochondria generate ATP in a cell?',
       variants: [],
-      hypotheticalAnswer: false,
+      hypotheticalAnswer: null,
       trigger: null,
       strategy: null,
       reason: 'search_ready',
@@ -1742,7 +1760,7 @@ describe('RetrievalService query understanding', () => {
         message:
           'Give me a short chapter summary explaining osmosis across a selectively permeable membrane.',
         // Paraphrases are only requested for short or ambiguous messages.
-        variants: 0,
+        variantCount: 0,
       }),
     );
     expect(embedQuery).toHaveBeenCalledWith(
@@ -1764,7 +1782,45 @@ describe('RetrievalService query understanding', () => {
     expect(outcome.trace.cost.rewriteOutputTokens).toBe(14);
   });
 
-  it('fuses the paraphrases as extra candidate lists', async () => {
+  it('keeps the rewrite decision and cost when the legs fuse nothing', async () => {
+    const understanding = understandingWith({
+      query: 'osmosis selectively permeable membrane',
+      variants: [],
+      hypotheticalAnswer: null,
+      inputTokens: 96,
+      outputTokens: 11,
+    });
+    const execute = vi.fn().mockResolvedValue({ rows: [] });
+    const service = new RetrievalService(
+      { execute } as never,
+      { embedQuery: vi.fn().mockResolvedValue([0.1, 0.2]) } as never,
+      { relevanceFloor: 0 },
+      { ...DEFAULT_RERANK_CONFIG, enabled: false },
+      undefined,
+      undefined,
+      understanding,
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query:
+        'Give me a short chapter summary explaining osmosis across a selectively permeable membrane.',
+    });
+
+    expect(outcome.abstained).toBe(true);
+    expect(outcome.abstentionReason).toBe('no_indexed_chunks');
+    expect(outcome.trace.rewrite).toMatchObject({
+      trigger: 'meta_instructions',
+      strategy: 'model',
+      reason: null,
+      query: 'osmosis selectively permeable membrane',
+    });
+    // The model ran, so its tokens survive even though nothing was retrieved.
+    expect(outcome.trace.cost.rewriteInputTokens).toBe(96);
+    expect(outcome.trace.cost.rewriteOutputTokens).toBe(11);
+  });
+
+  it('fuses paraphrases and lets a paraphrase-only candidate surface in the fused order', async () => {
     const understanding = understandingWith({
       query: 'primary query',
       variants: ['paraphrase query'],
@@ -1772,7 +1828,10 @@ describe('RetrievalService query understanding', () => {
       inputTokens: 0,
       outputTokens: 0,
     });
-    // The paraphrase's legs are the only route to chunk-paraphrase.
+    // The paraphrase's legs are the only route to chunk-paraphrase, and both
+    // of them rank it first; the primary's dense leg is the only route to
+    // chunk-primary. Equal-share variant weights mean the paraphrase-only
+    // candidate outscores the primary-query candidate.
     const execute = vi
       .fn()
       .mockResolvedValueOnce({
@@ -1790,7 +1849,16 @@ describe('RetrievalService query understanding', () => {
           }),
         ],
       })
-      .mockResolvedValueOnce({ rows: [] });
+      .mockResolvedValueOnce({
+        rows: [
+          chunkRow({
+            chunk_id: 'chunk-paraphrase',
+            content: 'Paraphrase passage',
+            source_id: 'source-2',
+            score: 0.4,
+          }),
+        ],
+      });
     const service = new RetrievalService(
       { execute } as never,
       { embedQuery: vi.fn().mockResolvedValue([0.1, 0.2]) } as never,
@@ -1813,9 +1881,14 @@ describe('RetrievalService query understanding', () => {
       ['lexical', 1],
     ]);
     expect(outcome.trace.fusion.variants).toBe(2);
+    // Both candidates are at rank 1 of their leg; the paraphrase is ranked
+    // by two legs while the primary is ranked by one, so it comes first.
+    expect(
+      outcome.trace.fusedOrder.map((candidate) => candidate.chunkId),
+    ).toEqual(['chunk-paraphrase', 'chunk-primary']);
     expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual([
-      'chunk-primary',
       'chunk-paraphrase',
+      'chunk-primary',
     ]);
     expect(outcome.trace.rewrite).toMatchObject({
       query: 'primary query',
@@ -1860,7 +1933,7 @@ describe('RetrievalService query understanding', () => {
     expect(embedQuery).toHaveBeenCalledWith(hypothetical);
     expect(outcome.trace.rewrite).toMatchObject({
       query: 'mitochondria atp',
-      hypotheticalAnswer: true,
+      hypotheticalAnswer: hypothetical,
       strategy: 'model',
     });
     expect(outcome.trace.cost.embeddingInputTokens).toBe(

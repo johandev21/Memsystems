@@ -18,7 +18,7 @@ function trace(overrides: Partial<RetrievalTrace> = {}): RetrievalTrace {
       original: 'Explain osmosis',
       query: 'Explain osmosis',
       variants: [],
-      hypotheticalAnswer: false,
+      hypotheticalAnswer: null,
       trigger: null,
       strategy: null,
       reason: 'search_ready',

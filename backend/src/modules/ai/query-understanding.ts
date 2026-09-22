@@ -1,5 +1,9 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { clamp, parseBoolean, parsePositiveInt } from './config-parsing';
+import {
+  MAX_TRACE_HYPOTHETICAL_CHARS,
+  type RetrievalTraceRewrite,
+} from './retrieval-trace';
 
 /**
  * Query understanding is the retrieval stage that runs before the search
@@ -59,7 +63,7 @@ export interface QueryRewriteRequest {
   /** Recent turns, oldest first, already trimmed to the stage's bounds. */
   history: RetrievalHistoryTurn[];
   /** How many paraphrases to return; 0 when multi-query is disabled. */
-  variants: number;
+  variantCount: number;
   /** Whether to return a hypothetical answer passage for short queries. */
   hypotheticalAnswer: boolean;
   /** Aborted when the rewrite exceeds its latency budget. */
@@ -376,7 +380,20 @@ const REFERENCE_WORDS = new Set([
   'fifth',
 ]);
 
-/** Directives about how to answer, which must not dominate the query. */
+/**
+ * Directives about how to answer, which must not dominate the query. Shared by
+ * the skip decision and the heuristic, so a message that is rewritten because
+ * of one of these patterns has the pattern stripped as well.
+ */
+const TONE_WORDS =
+  'friendly|casual|formal|professional|academic|conversational|humorous|playful|serious|encouraging|patient|enthusiastic|warm|reassuring|neutral';
+
+const NARRATIVE_FORMS =
+  'story|poem|dialogue|letter|email|news\\s+article|blog\\s+post|script|song|fable|parable|journey|scenario';
+
+const AUDIENCES =
+  'beginners?|children|kids?|students?|experts?|laypeople|layperson|novices?|general\\s+audience|five[- ]year[- ]olds?|\\d+[- ]year[- ]olds?';
+
 const META_PATTERNS: RegExp[] = [
   // Length or count directives: "in two sentences", "in 300 words".
   /\b(?:in|as|using|with)\s+(?:a\s+|an\s+|the\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|a\s+few|several)\s+(?:words?|sentences?|paragraphs?|bullets?|bullet\s+points?|points?|lines?|steps?|items?)\b/gi,
@@ -390,6 +407,20 @@ const META_PATTERNS: RegExp[] = [
   // Language directives: "answer in Spanish".
   /\b(?:answer|reply|respond|write|translate|format|give|explain)\s+(?:it\s+|this\s+|that\s+|the\s+answer\s+|your\s+answer\s+)?(?:in|as)\s+(?:spanish|english|french|german|portuguese|italian|dutch)\b/gi,
   /\bin\s+(?:spanish|english|french|german|portuguese|italian|dutch)\b/gi,
+  // Tone, voice, or style requests: "in a friendly tone", "formal voice".
+  new RegExp(
+    `\\b(?:in|with|using)\\s+(?:a\\s+|an\\s+|the\\s+)?(?:${TONE_WORDS})\\s+(?:tone|voice|style|language|manner|way)\\b`,
+    'gi',
+  ),
+  new RegExp(`\\b(?:${TONE_WORDS})\\s+(?:tone|voice|style)\\b`, 'gi'),
+  // Narrative form requests: "as a story", "in the form of a poem".
+  new RegExp(
+    `\\b(?:as|in\\s+the\\s+form\\s+of|like)\\s+(?:a\\s+|an\\s+|the\\s+)?(?:short\\s+|brief\\s+|quick\\s+|simple\\s+)?(?:${NARRATIVE_FORMS})\\b`,
+    'gi',
+  ),
+  // Audience requests: "for a beginner", "like I'm five".
+  new RegExp(`\\bfor\\s+(?:a\\s+|an\\s+|the\\s+)?(?:${AUDIENCES})\\b`, 'gi'),
+  /\blike\s+i(?:'m|\s+am)\s+(?:five|5|a\s+child|a\s+beginner|\d+)\b/gi,
 ];
 
 /**
@@ -586,6 +617,29 @@ export function sanitizeRewriteQuery(text: string): string | null {
     : cleaned;
 }
 
+/**
+ * Sanitizes, dedupes, and caps the model's paraphrases: blanks, copies of the
+ * primary query, and repeats are dropped, and no more than `max` survive.
+ * Shared by the reply parser and the stage, so a custom rewriter gets the
+ * same contract as the gateway client.
+ */
+export function sanitizeRewriteVariants(
+  candidates: readonly unknown[],
+  query: string,
+  max: number,
+): string[] {
+  const variants: string[] = [];
+  if (max < 1) return variants;
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') continue;
+    const variant = sanitizeRewriteQuery(candidate);
+    if (!variant || variant === query || variants.includes(variant)) continue;
+    variants.push(variant);
+    if (variants.length >= max) break;
+  }
+  return variants;
+}
+
 export interface ParsedRewriteResponse {
   query: string;
   variants: string[];
@@ -599,7 +653,7 @@ export interface ParsedRewriteResponse {
  */
 export function parseRewriteResponse(
   text: string,
-  options: { variants: number; hypotheticalAnswer: boolean },
+  options: { variantCount: number; hypotheticalAnswer: boolean },
 ): ParsedRewriteResponse | null {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
@@ -622,16 +676,11 @@ export function parseRewriteResponse(
       : null;
   if (!query) return null;
 
-  const variants: string[] = [];
-  if (options.variants > 0 && Array.isArray(record.variants)) {
-    for (const candidate of record.variants) {
-      if (typeof candidate !== 'string') continue;
-      const variant = sanitizeRewriteQuery(candidate);
-      if (!variant || variant === query || variants.includes(variant)) continue;
-      variants.push(variant);
-      if (variants.length >= options.variants) break;
-    }
-  }
+  const variants = sanitizeRewriteVariants(
+    Array.isArray(record.variants) ? record.variants : [],
+    query,
+    options.variantCount,
+  );
 
   let hypotheticalAnswer: string | null = null;
   if (
@@ -672,7 +721,7 @@ Rules:
 export function buildRewritePrompt(request: {
   message: string;
   history: RetrievalHistoryTurn[];
-  variants: number;
+  variantCount: number;
   hypotheticalAnswer: boolean;
 }): string {
   const lines: string[] = [];
@@ -686,7 +735,7 @@ export function buildRewritePrompt(request: {
     lines.push('Recent turns: none.', '');
   }
   lines.push(
-    `Requests: ${request.variants > 0 ? `up to ${request.variants} paraphrase variant(s)` : 'no variants'}; ${
+    `Requests: ${request.variantCount > 0 ? `up to ${request.variantCount} paraphrase variant(s)` : 'no variants'}; ${
       request.hypotheticalAnswer
         ? 'a hypothetical answer passage is requested'
         : 'no hypothetical answer'
@@ -712,6 +761,47 @@ export interface QueryUnderstanding {
   model: string;
   inputTokens: number;
   outputTokens: number;
+}
+
+/**
+ * The stage outcome when query understanding is not wired: the message is
+ * searched as sent and the trace records that rewriting was disabled.
+ */
+export function passthroughUnderstanding(query: string): QueryUnderstanding {
+  return {
+    enabled: false,
+    queries: [query],
+    hypotheticalAnswer: null,
+    trigger: null,
+    strategy: null,
+    reason: 'disabled',
+    model: DEFAULT_REWRITE_CONFIG.model,
+    inputTokens: 0,
+    outputTokens: 0,
+  };
+}
+
+/**
+ * Maps the stage outcome onto the trace block. The hypothetical answer is
+ * kept (bounded) rather than reduced to a flag, so a turn can be replayed.
+ */
+export function traceRewrite(
+  understanding: QueryUnderstanding,
+  original: string,
+): RetrievalTraceRewrite {
+  return {
+    enabled: understanding.enabled,
+    original,
+    query: understanding.queries[0],
+    variants: understanding.queries.slice(1),
+    hypotheticalAnswer: understanding.hypotheticalAnswer
+      ? understanding.hypotheticalAnswer.slice(0, MAX_TRACE_HYPOTHETICAL_CHARS)
+      : null,
+    trigger: understanding.trigger,
+    strategy: understanding.strategy,
+    reason: understanding.reason,
+    model: understanding.model,
+  };
 }
 
 /**
@@ -774,12 +864,14 @@ export class QueryUnderstandingService {
     // Paraphrases are for short or ambiguous questions, where a single query
     // string carries too little signal; a message that was rewritten for its
     // meta-instructions or its references already runs a usable query.
-    const wantsVariants =
-      this.config.multiQuery && decision.trigger === 'ambiguous';
+    const variantCount =
+      this.config.multiQuery && decision.trigger === 'ambiguous'
+        ? this.config.variantCount
+        : 0;
     const request: QueryRewriteRequest = {
       message,
       history,
-      variants: wantsVariants ? this.config.variantCount : 0,
+      variantCount,
       hypotheticalAnswer: wantsHypothetical,
     };
 
@@ -791,21 +883,21 @@ export class QueryUnderstandingService {
           this.config.timeoutMs,
           () => controller.abort(),
         );
-        // A rewrite that raced the deadline may resolve or reject after the
-        // abort; the aborted signal is the authoritative timeout signal.
-        if (controller.signal.aborted) {
+        // A rewrite that raced the deadline may settle after the abort; the
+        // aborted signal is the authoritative timeout signal.
+        if (controller.signal.aborted || outcome.timedOut) {
           this.logger.warn(
             `Rewrite exceeded its ${this.config.timeoutMs}ms budget; using the heuristic.`,
           );
           return this.heuristic(message, history, base, 'timeout');
         }
-        if (outcome === REWRITE_TIMED_OUT || outcome === null) {
+        if (outcome.result === null) {
           return this.heuristic(message, history, base, 'no_provider');
         }
         // The rewriter service validates its own model's reply, but the stage
         // owns the contract: a custom rewriter that returns a blank query
         // degrades instead of searching for nothing.
-        const query = sanitizeRewriteQuery(outcome.query);
+        const query = sanitizeRewriteQuery(outcome.result.query);
         if (!query) {
           this.logger.warn(
             'Rewrite returned an empty query; using the heuristic.',
@@ -815,25 +907,19 @@ export class QueryUnderstandingService {
         // Only the paraphrases that were asked for are fused; a model that
         // volunteers variants for a message that did not need them is
         // ignored rather than trusted.
-        const variants: string[] = [];
-        if (wantsVariants) {
-          for (const candidate of outcome.variants) {
-            const variant = sanitizeRewriteQuery(candidate);
-            if (!variant || variant === query || variants.includes(variant)) {
-              continue;
-            }
-            variants.push(variant);
-            if (variants.length >= this.config.variantCount) break;
-          }
-        }
+        const variants = sanitizeRewriteVariants(
+          outcome.result.variants,
+          query,
+          variantCount,
+        );
         return {
           ...base,
           queries: [query, ...variants],
-          hypotheticalAnswer: outcome.hypotheticalAnswer,
+          hypotheticalAnswer: outcome.result.hypotheticalAnswer,
           strategy: 'model',
           reason: null,
-          inputTokens: outcome.inputTokens,
-          outputTokens: outcome.outputTokens,
+          inputTokens: outcome.result.inputTokens,
+          outputTokens: outcome.result.outputTokens,
         };
       } catch (error) {
         if (controller.signal.aborted) {
@@ -879,21 +965,24 @@ export class QueryUnderstandingService {
   }
 }
 
-const REWRITE_TIMED_OUT = Symbol('rewrite-timed-out');
-
+/**
+ * Races the rewrite against its latency budget. The timeout is observable in
+ * the returned shape, so the caller records `timeout` rather than inferring it
+ * from the aborted signal; `onTimeout` still aborts the underlying call.
+ */
 async function withTimeout(
   promise: Promise<QueryRewriteResult | null>,
   timeoutMs: number,
   onTimeout: () => void,
-): Promise<QueryRewriteResult | null | typeof REWRITE_TIMED_OUT> {
+): Promise<{ timedOut: boolean; result: QueryRewriteResult | null }> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      promise,
-      new Promise<typeof REWRITE_TIMED_OUT>((resolve) => {
+      promise.then((result) => ({ timedOut: false, result })),
+      new Promise<{ timedOut: true; result: null }>((resolve) => {
         timer = setTimeout(() => {
           onTimeout();
-          resolve(REWRITE_TIMED_OUT);
+          resolve({ timedOut: true, result: null });
         }, timeoutMs);
       }),
     ]);

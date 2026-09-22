@@ -34,9 +34,7 @@ export interface GoldenTurn {
  * rewriting is enabled.
  */
 export type GoldenUnderstanding =
-  | 'meta_instructions'
-  | 'follow_up'
-  | 'ambiguous';
+  'meta_instructions' | 'follow_up' | 'ambiguous';
 
 export interface GoldenQuery {
   id: string;

@@ -15,18 +15,23 @@ import {
   isAmbiguousQuery,
   loadRetrievalRewriteConfig,
   parseRewriteResponse,
+  passthroughUnderstanding,
   stripMetaInstructions,
+  traceRewrite,
   type QueryRewriteRequest,
   type QueryRewriteResult,
   type QueryRewriter,
 } from '../src/modules/ai/query-understanding';
+import { MAX_TRACE_HYPOTHETICAL_CHARS } from '../src/modules/ai/retrieval-trace';
 
 function rewriter(
   result: Awaited<ReturnType<QueryRewriter['rewrite']>> | (() => never),
 ): QueryRewriter & { calls: QueryRewriteRequest[] } {
   const calls: QueryRewriteRequest[] = [];
   const rewrite = vi.fn(
-    async (request: QueryRewriteRequest): Promise<QueryRewriteResult | null> => {
+    async (
+      request: QueryRewriteRequest,
+    ): Promise<QueryRewriteResult | null> => {
       calls.push(request);
       if (typeof result === 'function') return result();
       return result;
@@ -41,7 +46,11 @@ const AT_MITOS: [{ role: 'user'; content: string }] = [
 
 describe('query rewrite decision', () => {
   it('skips a single-shot factual question that already reads as a search query', () => {
-    expect(decideRewrite('How do mitochondria generate ATP in a cell?', { enabled: true })).toEqual({
+    expect(
+      decideRewrite('How do mitochondria generate ATP in a cell?', {
+        enabled: true,
+      }),
+    ).toEqual({
       shouldRewrite: false,
       trigger: null,
       skipReason: 'search_ready',
@@ -63,7 +72,10 @@ describe('query rewrite decision', () => {
       'What is the Schrodinger equation for a hydrogen atom?',
     ];
     for (const message of searchReady) {
-      expect(decideRewrite(message, { enabled: true }).shouldRewrite, message).toBe(false);
+      expect(
+        decideRewrite(message, { enabled: true }).shouldRewrite,
+        message,
+      ).toBe(false);
     }
   });
 
@@ -87,9 +99,50 @@ describe('query rewrite decision', () => {
 
   it('does not mistake subject phrases for format directives', () => {
     expect(
-      hasMetaInstructions('Explain the slope coefficient in simple linear regression.'),
+      hasMetaInstructions(
+        'Explain the slope coefficient in simple linear regression.',
+      ),
     ).toBe(false);
     expect(hasMetaInstructions('What is the grading policy for CS-3300?')).toBe(
+      false,
+    );
+  });
+
+  it('rewrites tone, narrative, and audience requests', () => {
+    expect(
+      decideRewrite('Explain osmosis across a membrane in a friendly tone.', {
+        enabled: true,
+      }),
+    ).toEqual({
+      shouldRewrite: true,
+      trigger: 'meta_instructions',
+      skipReason: null,
+    });
+    expect(
+      hasMetaInstructions(
+        'Explain osmosis across a membrane in a friendly tone.',
+      ),
+    ).toBe(true);
+    expect(hasMetaInstructions('Tell me about the treaty as a story.')).toBe(
+      true,
+    );
+    expect(hasMetaInstructions('Rewrite the summary in a formal voice.')).toBe(
+      true,
+    );
+    expect(hasMetaInstructions('Explain photosynthesis for a beginner.')).toBe(
+      true,
+    );
+    expect(hasMetaInstructions("Explain gravity like I'm five.")).toBe(true);
+  });
+
+  it('does not mistake a subject for a tone or audience directive', () => {
+    expect(
+      hasMetaInstructions('How does the academic peer review process work?'),
+    ).toBe(false);
+    expect(
+      hasMetaInstructions('What is the role of the letter of credit?'),
+    ).toBe(false);
+    expect(hasMetaInstructions('How do children acquire language?')).toBe(
       false,
     );
   });
@@ -102,7 +155,11 @@ describe('query rewrite decision', () => {
     expect(hasFollowUpReference('How do mitochondria generate ATP?')).toBe(
       false,
     );
-    expect(decideRewrite('Can you expand on that in more detail?', { enabled: true })).toEqual({
+    expect(
+      decideRewrite('Can you expand on that in more detail?', {
+        enabled: true,
+      }),
+    ).toEqual({
       shouldRewrite: true,
       trigger: 'follow_up',
       skipReason: null,
@@ -119,9 +176,9 @@ describe('query rewrite decision', () => {
   });
 
   it('honors the disabled switch and empty messages', () => {
-    expect(decideRewrite('Give me a short summary.', { enabled: false })).toEqual(
-      { shouldRewrite: false, trigger: null, skipReason: 'disabled' },
-    );
+    expect(
+      decideRewrite('Give me a short summary.', { enabled: false }),
+    ).toEqual({ shouldRewrite: false, trigger: null, skipReason: 'disabled' });
     expect(decideRewrite('   ', { enabled: true })).toEqual({
       shouldRewrite: false,
       trigger: null,
@@ -145,6 +202,20 @@ describe('heuristic rewrite', () => {
     );
   });
 
+  it('strips tone and narrative directives from the query', () => {
+    expect(
+      buildHeuristicRewrite(
+        'Explain osmosis across a membrane in a friendly tone.',
+      ),
+    ).toBe('osmosis membrane');
+    expect(
+      buildHeuristicRewrite('Explain the Treaty of Versailles as a story.'),
+    ).toBe('treaty versailles');
+    expect(
+      buildHeuristicRewrite('Explain photosynthesis for a beginner.'),
+    ).toBe('photosynthesis');
+  });
+
   it('keeps the original message when stripping would leave nothing', () => {
     expect(stripMetaInstructions('Give me a short summary.')).toBe(
       'Give me a short summary.',
@@ -160,7 +231,10 @@ describe('heuristic rewrite', () => {
   it('resolves from the last message when the history has no user turn', () => {
     expect(
       historyTopicTerms([
-        { role: 'assistant', content: 'Osmosis moves water across a membrane.' },
+        {
+          role: 'assistant',
+          content: 'Osmosis moves water across a membrane.',
+        },
       ]),
     ).toEqual(['osmosis', 'moves', 'water', 'membrane']);
   });
@@ -176,7 +250,7 @@ describe('parseRewriteResponse', () => {
   it('reads the query, variants, and hypothetical answer out of the JSON reply', () => {
     const parsed = parseRewriteResponse(
       'Sure:\n{"query":"osmosis water membrane","variants":["water potential gradient"],"hypotheticalAnswer":"Osmosis moves water."}',
-      { variants: 2, hypotheticalAnswer: true },
+      { variantCount: 2, hypotheticalAnswer: true },
     );
     expect(parsed).toEqual({
       query: 'osmosis water membrane',
@@ -191,7 +265,7 @@ describe('parseRewriteResponse', () => {
         query: 'base',
         variants: ['base', 'one', 'two', 'three'],
       }),
-      { variants: 2, hypotheticalAnswer: false },
+      { variantCount: 2, hypotheticalAnswer: false },
     );
     expect(parsed?.variants).toEqual(['one', 'two']);
   });
@@ -199,22 +273,27 @@ describe('parseRewriteResponse', () => {
   it('never returns a hypothetical answer that was not requested', () => {
     const parsed = parseRewriteResponse(
       JSON.stringify({ query: 'base', hypotheticalAnswer: 'answer' }),
-      { variants: 0, hypotheticalAnswer: false },
+      { variantCount: 0, hypotheticalAnswer: false },
     );
     expect(parsed?.hypotheticalAnswer).toBeNull();
   });
 
   it('rejects replies without a usable query', () => {
-    expect(parseRewriteResponse('no json here', { variants: 2, hypotheticalAnswer: false })).toBeNull();
+    expect(
+      parseRewriteResponse('no json here', {
+        variantCount: 2,
+        hypotheticalAnswer: false,
+      }),
+    ).toBeNull();
     expect(
       parseRewriteResponse('{"variants":["x"]}', {
-        variants: 2,
+        variantCount: 2,
         hypotheticalAnswer: false,
       }),
     ).toBeNull();
     expect(
       parseRewriteResponse('{"query":"   "}', {
-        variants: 2,
+        variantCount: 2,
         hypotheticalAnswer: false,
       }),
     ).toBeNull();
@@ -268,7 +347,7 @@ describe('QueryUnderstandingService', () => {
         message: 'Give me a short summary of the cell powerhouse.',
         history: AT_MITOS,
         // Paraphrases are only requested for short or ambiguous messages.
-        variants: 0,
+        variantCount: 0,
         hypotheticalAnswer: false,
       }),
     );
@@ -292,11 +371,13 @@ describe('QueryUnderstandingService', () => {
     });
     const service = new QueryUnderstandingService(config, model);
 
-    const understanding = await service.understand({ message: 'the powerhouse?' });
+    const understanding = await service.understand({
+      message: 'the powerhouse?',
+    });
 
     expect(model.rewrite).toHaveBeenCalledWith(
       expect.objectContaining({
-        variants: DEFAULT_REWRITE_VARIANT_COUNT,
+        variantCount: DEFAULT_REWRITE_VARIANT_COUNT,
         hypotheticalAnswer: false,
       }),
     );
@@ -321,7 +402,9 @@ describe('QueryUnderstandingService', () => {
       model,
     );
 
-    const understanding = await service.understand({ message: 'the powerhouse?' });
+    const understanding = await service.understand({
+      message: 'the powerhouse?',
+    });
 
     expect(model.calls[0].hypotheticalAnswer).toBe(true);
     expect(understanding.hypotheticalAnswer).toBe('Mitochondria produce ATP.');
@@ -331,7 +414,8 @@ describe('QueryUnderstandingService', () => {
     const service = new QueryUnderstandingService(config);
 
     const understanding = await service.understand({
-      message: 'Give me a short chapter summary explaining osmosis across a selectively permeable membrane.',
+      message:
+        'Give me a short chapter summary explaining osmosis across a selectively permeable membrane.',
     });
 
     expect(understanding).toMatchObject({
@@ -447,6 +531,52 @@ describe('QueryUnderstandingService', () => {
   });
 });
 
+describe('query understanding trace mapping', () => {
+  it('records a passthrough when the stage is not wired', () => {
+    expect(passthroughUnderstanding('How does osmosis work?')).toEqual({
+      enabled: false,
+      queries: ['How does osmosis work?'],
+      hypotheticalAnswer: null,
+      trigger: null,
+      strategy: null,
+      reason: 'disabled',
+      model: DEFAULT_REWRITE_MODEL,
+      inputTokens: 0,
+      outputTokens: 0,
+    });
+  });
+
+  it('records the paraphrases and keeps the hypothetical answer bounded', () => {
+    const hypothetical = 'x'.repeat(MAX_TRACE_HYPOTHETICAL_CHARS + 300);
+    const trace = traceRewrite(
+      {
+        enabled: true,
+        queries: ['primary', 'variant one', 'variant two'],
+        hypotheticalAnswer: hypothetical,
+        trigger: 'ambiguous',
+        strategy: 'model',
+        reason: null,
+        model: DEFAULT_REWRITE_MODEL,
+        inputTokens: 40,
+        outputTokens: 12,
+      },
+      'the original message',
+    );
+
+    expect(trace).toEqual({
+      enabled: true,
+      original: 'the original message',
+      query: 'primary',
+      variants: ['variant one', 'variant two'],
+      hypotheticalAnswer: 'x'.repeat(MAX_TRACE_HYPOTHETICAL_CHARS),
+      trigger: 'ambiguous',
+      strategy: 'model',
+      reason: null,
+      model: DEFAULT_REWRITE_MODEL,
+    });
+  });
+});
+
 describe('loadRetrievalRewriteConfig', () => {
   it('falls back to the documented defaults', () => {
     expect(loadRetrievalRewriteConfig({})).toEqual(DEFAULT_REWRITE_CONFIG);
@@ -500,10 +630,8 @@ describe('loadRetrievalRewriteConfig', () => {
 
 describe('contentWords', () => {
   it('keeps identifiers and numbers while dropping instruction verbs', () => {
-    expect(contentWords('Explain the CS-3300 grading policy briefly.')).toEqual([
-      'cs-3300',
-      'grading',
-      'policy',
-    ]);
+    expect(contentWords('Explain the CS-3300 grading policy briefly.')).toEqual(
+      ['cs-3300', 'grading', 'policy'],
+    );
   });
 });

@@ -219,10 +219,7 @@ export async function evaluateRetrieval(
     options.reranker ??
     (rerankEnabled ? new DeterministicReranker(corpus) : null);
   const rewriter = options.rewriter ?? new DeterministicRewriter(corpus);
-  const understanding = new QueryUnderstandingService(
-    rewriteConfig,
-    rewriter,
-  );
+  const understanding = new QueryUnderstandingService(rewriteConfig, rewriter);
 
   const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(embedder);
   const service = new RetrievalService(

@@ -5,8 +5,10 @@
  * or generation that performs no retrieval has no trace.
  *
  * A trace never carries provider keys, the query embedding, or chunk text:
- * it stores the query, the ranking evidence (ids, scores, ranks), the
- * thresholds that were applied, and the latency and token cost.
+ * it stores the query, the query-understanding decision and the bounded
+ * hypothetical answer a short query may have embedded, the ranking evidence
+ * (ids, scores, ranks), the thresholds that were applied, and the latency and
+ * token cost.
  */
 
 import type {
@@ -102,6 +104,13 @@ export interface RetrievalTraceFusion {
 }
 
 /**
+ * How much of a hypothetical answer the trace keeps. The passage is
+ * model-generated prose, not chunk text or a secret, and storing it verbatim
+ * makes the turn replayable.
+ */
+export const MAX_TRACE_HYPOTHETICAL_CHARS = 500;
+
+/**
  * Query understanding's record of one call: what the caller asked, what the
  * legs actually searched, and how that query was produced. `reason` records
  * the skip decision when rewriting did not run and the degradation when the
@@ -116,8 +125,11 @@ export interface RetrievalTraceRewrite {
   query: string;
   /** Paraphrases fused as extra candidate lists, excluding `query`. */
   variants: string[];
-  /** True when the primary dense leg embedded a hypothetical answer. */
-  hypotheticalAnswer: boolean;
+  /**
+   * The hypothetical answer the primary dense leg embedded instead of the
+   * query, bounded to `MAX_TRACE_HYPOTHETICAL_CHARS`; null when none ran.
+   */
+  hypotheticalAnswer: string | null;
   /** Why the message was rewritten; null when it was searched unchanged. */
   trigger: QueryRewriteTrigger | null;
   /** How `query` was produced; null when the original message was searched. */

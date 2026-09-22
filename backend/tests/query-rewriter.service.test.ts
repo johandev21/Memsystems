@@ -32,7 +32,7 @@ describe('QueryRewriterService', () => {
       rewriter.rewrite({
         message: 'Give me a short summary of osmosis.',
         history: [],
-        variants: 2,
+        variantCount: 2,
         hypotheticalAnswer: false,
       }),
     ).resolves.toBeNull();
@@ -52,7 +52,7 @@ describe('QueryRewriterService', () => {
       history: [
         { role: 'user', content: 'What is osmosis across a membrane?' },
       ],
-      variants: 1,
+      variantCount: 1,
       hypotheticalAnswer: false,
     });
 
@@ -86,7 +86,7 @@ describe('QueryRewriterService', () => {
     const result = await rewriter.rewrite({
       message: 'osmosis?',
       history: [],
-      variants: 0,
+      variantCount: 0,
       hypotheticalAnswer: false,
     });
 
@@ -102,7 +102,7 @@ describe('QueryRewriterService', () => {
       rewriter.rewrite({
         message: 'osmosis?',
         history: [],
-        variants: 0,
+        variantCount: 0,
         hypotheticalAnswer: false,
       }),
     ).rejects.toThrow('no usable query');
@@ -116,7 +116,7 @@ describe('QueryRewriterService', () => {
       rewriter.rewrite({
         message: 'osmosis?',
         history: [],
-        variants: 0,
+        variantCount: 0,
         hypotheticalAnswer: false,
       }),
     ).rejects.toThrow('gateway 503');

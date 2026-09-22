@@ -1,20 +1,20 @@
 /**
  * Deterministic rewrite model for the retrieval evaluation harness.
  *
- * The continuous integration gate has no gateway key, so the rewrite model is
- * replaced by a stand-in that implements the same contract against the golden
- * corpus. It runs the pipeline's own heuristic first (strip meta-instructions,
- * resolve history references) and then adds two pieces the heuristic does not
- * have: a small table of colloquial terms mapped to corpus vocabulary, and a
- * paraphrase built from the distinctive terms of the chunk that best matches
- * the query. It is a test double, not a rewriter: its job is to make the
- * harness depend on query understanding the same way production does.
+ * It is a corpus-vocabulary stand-in, not a language model: to exercise the
+ * rewrite seam keylessly it maps colloquial terms to the golden corpus's own
+ * words (for example "respiration" to "mitochondria triphosphate", because
+ * the corpus spells ATP out) and borrows the most distinctive terms of the
+ * chunk that best matches the query. The gate it feeds therefore proves the
+ * rewrite seam and the paraphrase-fusion path, not model quality.
  *
- * The chain that matters for the gate: the study guide's degraded chunks
+ * The chains that matter for the gate: the study guide's degraded chunks
  * supply the words "chapter" and "summary" to the corpus's IDF, so a message
- * that wraps its subject in those words dilutes its own embedding; and a
+ * that wraps its subject in those words dilutes its own embedding; a
  * follow-up that only points at the previous turn has no subject words at
- * all. Both queries miss without a rewrite and hit with one.
+ * all; and a short question whose one corpus term lives in a glossary stub
+ * needs the material's vocabulary. Those queries miss without a rewrite and
+ * hit with one.
  */
 
 import { estimateVoyageTokens } from '../../src/modules/ai/providers/voyage.client';
@@ -51,11 +51,10 @@ export class DeterministicRewriter implements QueryRewriter {
   async rewrite(request: QueryRewriteRequest): Promise<QueryRewriteResult> {
     const base = buildHeuristicRewrite(request.message, request.history);
     const query = this.expandAliases(base);
-    const variants: string[] = [];
-    if (request.variants > 0) {
-      const paraphrase = this.paraphrase(query);
-      if (paraphrase) variants.push(paraphrase);
-    }
+    // Built once and reused: multi-query asks for it, a hypothetical answer
+    // borrows it when requested.
+    const paraphrase = this.paraphrase(query);
+    const variants = request.variantCount > 0 && paraphrase ? [paraphrase] : [];
 
     const input = [
       request.message,
@@ -65,9 +64,9 @@ export class DeterministicRewriter implements QueryRewriter {
 
     return {
       query,
-      variants: variants.slice(0, request.variants),
+      variants,
       hypotheticalAnswer: request.hypotheticalAnswer
-        ? (this.paraphrase(query) ?? query)
+        ? (paraphrase ?? query)
         : null,
       inputTokens: estimateVoyageTokens(input),
       outputTokens: estimateVoyageTokens(output),

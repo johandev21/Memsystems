@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { generateText } from 'ai';
 import { AiService } from './ai.service';
 import { estimateVoyageTokens } from './providers/voyage.client';
@@ -24,7 +24,6 @@ import {
  */
 @Injectable()
 export class QueryRewriterService implements QueryRewriter {
-  private readonly logger = new Logger(QueryRewriterService.name);
   private readonly config: RetrievalRewriteConfig;
 
   constructor(
@@ -53,7 +52,7 @@ export class QueryRewriterService implements QueryRewriter {
     });
 
     const parsed = parseRewriteResponse(result.text, {
-      variants: request.variants,
+      variantCount: request.variantCount,
       hypotheticalAnswer: request.hypotheticalAnswer,
     });
     if (!parsed) {
