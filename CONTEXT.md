@@ -146,6 +146,18 @@ _Avoid_: keyword search, BM25
 The rank-based merge of the dense and lexical candidate lists. It orders by the ranks each list gave a candidate instead of comparing their scores.
 _Avoid_: score fusion, reranking (reranking is the later cross-encoder stage)
 
+**Query Understanding**:
+The retrieval stage that turns a chat message into the query the search legs run. It strips instructions about tone, length, and format, resolves follow-up references from the recent turns, and can add paraphrases that are fused with the primary query.
+_Avoid_: query rewriting, query expansion, query planning
+
+**Rewritten Query**:
+The search query query understanding produced from a chat message. It is what the legs and the reranker run, and what the retrieval trace records alongside the original message.
+_Avoid_: transformed query, expanded query
+
+**Hypothetical Answer**:
+A generated passage that would answer a short query, embedded for the dense leg when the query itself carries too little to match on.
+_Avoid_: HyDE, pseudo-document, generated document
+
 ### Settings and appearance
 
 **Palette**:

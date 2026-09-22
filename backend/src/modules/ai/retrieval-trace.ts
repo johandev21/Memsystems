@@ -5,9 +5,18 @@
  * or generation that performs no retrieval has no trace.
  *
  * A trace never carries provider keys, the query embedding, or chunk text:
- * it stores the query, the ranking evidence (ids, scores, ranks), the
- * thresholds that were applied, and the latency and token cost.
+ * it stores the query, the query-understanding decision and the bounded
+ * hypothetical answer a short query may have embedded, the ranking evidence
+ * (ids, scores, ranks), the thresholds that were applied, and the latency and
+ * token cost.
  */
+
+import type {
+  QueryRewriteTrigger,
+  RetrievalRewriteReason,
+} from './query-understanding';
+
+export type { QueryRewriteTrigger, RetrievalRewriteReason };
 
 /** Who a trace belongs to. */
 export type RetrievalTraceKind = 'chat' | 'generation';
@@ -65,10 +74,16 @@ export interface RetrievalTraceRerank {
 
 /**
  * The ranked output of one retrieval leg: the dense nearest-neighbor search
- * and the lexical full-text search.
+ * and the lexical full-text search, for one query variant.
  */
 export interface RetrievalTraceLeg {
   kind: 'dense' | 'lexical';
+  /**
+   * Index into the queries the pipeline ran: 0 is the primary query and
+   * `i + 1` is `rewrite.variants[i]`. Always 0 when query understanding is
+   * disabled or skipped.
+   */
+  variant: number;
   candidates: RetrievalTraceCandidate[];
 }
 
@@ -80,6 +95,49 @@ export interface RetrievalTraceFusion {
   weights: { dense: number; lexical: number };
   /** Candidates each leg over-fetched; the lexical depth is 0 when off. */
   depths: { dense: number; lexical: number };
+  /**
+   * How many query variants were fused. 1 means only the original or
+   * rewritten message was searched; higher values mean each variant's legs
+   * contributed `weight / variants` to the fusion.
+   */
+  variants: number;
+}
+
+/**
+ * How much of a hypothetical answer the trace keeps. The passage is
+ * model-generated prose, not chunk text or a secret, and storing it verbatim
+ * makes the turn replayable.
+ */
+export const MAX_TRACE_HYPOTHETICAL_CHARS = 500;
+
+/**
+ * Query understanding's record of one call: what the caller asked, what the
+ * legs actually searched, and how that query was produced. `reason` records
+ * the skip decision when rewriting did not run and the degradation when the
+ * model was unavailable, slow, or broken.
+ */
+export interface RetrievalTraceRewrite {
+  /** Whether the rewrite stage was enabled for the call. */
+  enabled: boolean;
+  /** The message the caller sent. */
+  original: string;
+  /** The primary query the legs and the reranker ran. */
+  query: string;
+  /** Paraphrases fused as extra candidate lists, excluding `query`. */
+  variants: string[];
+  /**
+   * The hypothetical answer the primary dense leg embedded instead of the
+   * query, bounded to `MAX_TRACE_HYPOTHETICAL_CHARS`; null when none ran.
+   */
+  hypotheticalAnswer: string | null;
+  /** Why the message was rewritten; null when it was searched unchanged. */
+  trigger: QueryRewriteTrigger | null;
+  /** How `query` was produced; null when the original message was searched. */
+  strategy: 'model' | 'heuristic' | null;
+  /** Why the model did not produce `query`; null when it did. */
+  reason: RetrievalRewriteReason | null;
+  /** The configured rewrite model. */
+  model: string;
 }
 
 /** What the call was allowed to search. */
@@ -91,7 +149,7 @@ export interface RetrievalTraceScope {
 
 export interface RetrievalTrace {
   /** A stable shape version for traces persisted across schema changes. */
-  version: 3;
+  version: 4;
   query: string;
   topK: number;
   scope: RetrievalTraceScope;
@@ -104,6 +162,11 @@ export interface RetrievalTrace {
     model: string;
     dimensions: number;
   };
+  /**
+   * The query-understanding decision and its output. Null when the call
+   * short-circuited before the stage ran, such as an empty source selection.
+   */
+  rewrite: RetrievalTraceRewrite | null;
   legs: RetrievalTraceLeg[];
   /** The fusion knobs applied to the legs. */
   fusion: RetrievalTraceFusion;
@@ -120,9 +183,13 @@ export interface RetrievalTrace {
   /** Wall-clock duration of the retrieval call, in milliseconds. */
   latencyMs: number;
   cost: {
-    /** Estimated tokens sent to the embedding provider for the query. */
+    /** Estimated tokens sent to the embedding provider for the queries. */
     embeddingInputTokens: number;
     /** Tokens reported by the reranker; 0 when reranking did not run. */
     rerankInputTokens: number;
+    /** Tokens the rewrite model consumed; 0 when it did not run. */
+    rewriteInputTokens: number;
+    /** Tokens the rewrite model produced; 0 when it did not run. */
+    rewriteOutputTokens: number;
   };
 }

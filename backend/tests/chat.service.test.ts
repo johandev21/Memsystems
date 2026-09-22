@@ -19,17 +19,19 @@ vi.mock('ai', async (importOriginal) => {
 });
 
 const baseRetrievalTrace = {
-  version: 3,
+  version: 4,
   query: 'Explain Plato',
   topK: 8,
   scope: { kind: 'notebook', sourceIds: null },
   relevanceFloor: 0.3,
   embedding: { model: 'voyage-4', dimensions: 1024 },
-  legs: [{ kind: 'dense', candidates: [] }],
+  rewrite: null,
+  legs: [{ kind: 'dense', variant: 0, candidates: [] }],
   fusion: {
     k: 60,
     weights: { dense: 1, lexical: 1 },
     depths: { dense: 32, lexical: 32 },
+    variants: 1,
   },
   fusedOrder: [],
   rerank: {
@@ -44,7 +46,12 @@ const baseRetrievalTrace = {
   abstained: false,
   abstentionReason: null,
   latencyMs: 8,
-  cost: { embeddingInputTokens: 3, rerankInputTokens: 0 },
+  cost: {
+    embeddingInputTokens: 3,
+    rerankInputTokens: 0,
+    rewriteInputTokens: 0,
+    rewriteOutputTokens: 0,
+  },
 };
 
 const retrievalOk = (
@@ -67,6 +74,7 @@ const retrievalOk = (
 async function createChatServiceHarness() {
   const insertedValues: Record<string, unknown>[] = [];
   const degradedRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
+  const historyRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
 
   const db = {
     select: vi.fn(() => ({
@@ -74,7 +82,9 @@ async function createChatServiceHarness() {
         where: vi.fn(() => {
           const rows = Promise.resolve(degradedRowsState.rows);
           return {
-            orderBy: vi.fn().mockResolvedValue([]),
+            orderBy: vi
+              .fn()
+              .mockImplementation(() => Promise.resolve(historyRowsState.rows)),
             then: rows.then.bind(rows),
           };
         }),
@@ -166,6 +176,9 @@ async function createChatServiceHarness() {
     set degradedSourceRows(rows: Record<string, unknown>[]) {
       degradedRowsState.rows = rows;
     },
+    set historyRows(rows: Record<string, unknown>[]) {
+      historyRowsState.rows = rows;
+    },
   };
 }
 
@@ -201,12 +214,50 @@ describe('ChatService streaming lifecycle', () => {
     expect(retrieve).toHaveBeenCalledWith({
       notebookId: 'notebook-1',
       query: 'Explain Plato',
+      history: [],
     });
     expect(recordTrace).toHaveBeenCalledWith({
       notebookId: 'notebook-1',
       kind: 'chat',
       chatMessageId: responseOptions.generateMessageId(),
       trace: expect.objectContaining({ query: 'Explain Plato' }),
+    });
+  });
+
+  it('passes the recent turns to retrieval so follow-ups can be resolved', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      {
+        id: 'user-0',
+        role: 'user',
+        content: 'What is osmosis across a membrane?',
+        parts: null,
+        createdAt: new Date('2026-08-22T09:00:00.000Z'),
+      },
+      {
+        id: 'assistant-0',
+        role: 'assistant',
+        content: 'Osmosis moves water across a membrane [ref:R1].',
+        parts: null,
+        createdAt: new Date('2026-08-22T09:01:00.000Z'),
+      },
+    ];
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Can you expand on that in more detail?',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(harness.retrieve).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
+      query: 'Can you expand on that in more detail?',
+      history: [
+        { role: 'user', content: 'What is osmosis across a membrane?' },
+        {
+          role: 'assistant',
+          content: 'Osmosis moves water across a membrane [ref:R1].',
+        },
+      ],
     });
   });
 

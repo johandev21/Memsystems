@@ -9,12 +9,12 @@
     "recallAtK": 1,
     "mrr": 1,
     "ndcgAtK": 1,
-    "contextPrecision": 0.9166666666666666,
+    "contextPrecision": 0.9,
     "citationAccuracy": 1,
     "refusalAccuracy": 1,
     "faithfulness": 1,
     "latencyMsP50": 2,
-    "latencyMsP95": 11,
-    "costTokensPerQuery": 902.0666666666667
+    "latencyMsP95": 16,
+    "costTokensPerQuery": 860.1111111111111
   }
 }

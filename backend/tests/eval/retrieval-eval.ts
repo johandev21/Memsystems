@@ -20,6 +20,11 @@ import {
   DEFAULT_FUSION_K,
   RetrievalService,
 } from '../../src/modules/ai/retrieval.service';
+import {
+  QueryUnderstandingService,
+  type QueryRewriter,
+  type RetrievalRewriteConfig,
+} from '../../src/modules/ai/query-understanding';
 import type { Reranker } from '../../src/modules/ai/reranker.service';
 import {
   createCitationEvidence,
@@ -32,6 +37,7 @@ import {
   type EvalEmbedder,
 } from './deterministic-embedder';
 import { DeterministicReranker } from './deterministic-reranker';
+import { DeterministicRewriter } from './deterministic-rewriter';
 import {
   GOLDEN_QUERIES,
   GOLDEN_SOURCES,
@@ -73,6 +79,17 @@ export const EVAL_EMBEDDING_MODEL = 'eval-deterministic-embedder';
  */
 export const EVAL_LEXICAL_CANDIDATE_DEPTH = 8;
 
+/**
+ * Query understanding's harness configuration. The rewrite model is the
+ * keyless deterministic stand-in; the timeout is generous because the
+ * stand-in never calls a provider. Paraphrases and hypothetical answers are
+ * requested by the labeled ambiguous queries, and the run reports the
+ * rewrite cost alongside the embedding and rerank cost.
+ */
+export const EVAL_REWRITE_MODEL = 'eval-deterministic-rewriter';
+export const EVAL_REWRITE_TIMEOUT_MS = 200;
+export const EVAL_REWRITE_VARIANT_COUNT = 2;
+
 export interface RetrievalEvalOptions {
   topK?: number;
   relevanceFloor?: number;
@@ -91,6 +108,14 @@ export interface RetrievalEvalOptions {
    * retrievable.
    */
   contextualize?: boolean;
+  /** Set false to measure the pipeline without query understanding. */
+  rewrite?: boolean;
+  /** Set false to measure the pipeline without paraphrase fusion. */
+  multiQuery?: boolean;
+  /** Set true to measure the pipeline with hypothetical answers enabled. */
+  hypotheticalAnswer?: boolean;
+  /** Override to inject a deliberately regressed rewriter. */
+  rewriter?: QueryRewriter;
 }
 
 export interface RetrievalEvalQueryResult {
@@ -100,6 +125,10 @@ export interface RetrievalEvalQueryResult {
   abstained: boolean;
   relevantChunkIds: string[];
   retrievedChunkIds: string[];
+  /** The primary query the pipeline searched after rewriting. */
+  searchedQuery: string;
+  rewriteStrategy: 'model' | 'heuristic' | null;
+  rewriteReason: string | null;
   firstRelevantRank: number | null;
   recall: number;
   ndcg: number;
@@ -110,6 +139,8 @@ export interface RetrievalEvalQueryResult {
   latencyMs: number;
   embeddingInputTokens: number;
   rerankInputTokens: number;
+  rewriteInputTokens: number;
+  rewriteOutputTokens: number;
 }
 
 export interface RetrievalEvalMetrics {
@@ -142,6 +173,14 @@ export interface RetrievalEvalReport {
     lexicalWeight: number;
     denseCandidateDepth: number;
     lexicalCandidateDepth: number;
+  };
+  rewrite: {
+    enabled: boolean;
+    model: string;
+    timeoutMs: number;
+    multiQuery: boolean;
+    variantCount: number;
+    hypotheticalAnswer: boolean;
   };
   metrics: RetrievalEvalMetrics;
   queries: RetrievalEvalQueryResult[];
@@ -189,6 +228,15 @@ export async function evaluateRetrieval(
   // the run disables it: the section tokens exist in the corpus, the chunk
   // representation just does not carry them. That is what makes the gate
   // catch a run that loses the context.
+  const rewriteEnabled = options.rewrite ?? true;
+  const rewriteConfig: RetrievalRewriteConfig = {
+    enabled: rewriteEnabled,
+    model: EVAL_REWRITE_MODEL,
+    timeoutMs: EVAL_REWRITE_TIMEOUT_MS,
+    multiQuery: options.multiQuery ?? true,
+    variantCount: EVAL_REWRITE_VARIANT_COUNT,
+    hypotheticalAnswer: options.hypotheticalAnswer ?? false,
+  };
   const corpus = GOLDEN_SOURCES.flatMap((source) =>
     source.chunks.map((chunk) => contextualText(source, chunk)),
   );
@@ -196,6 +244,8 @@ export async function evaluateRetrieval(
   const reranker =
     options.reranker ??
     (rerankEnabled ? new DeterministicReranker(corpus) : null);
+  const rewriter = options.rewriter ?? new DeterministicRewriter(corpus);
+  const understanding = new QueryUnderstandingService(rewriteConfig, rewriter);
 
   const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(
     embedder,
@@ -224,6 +274,7 @@ export async function evaluateRetrieval(
       denseCandidateDepth: EVAL_CANDIDATE_DEPTH,
       lexicalCandidateDepth: EVAL_LEXICAL_CANDIDATE_DEPTH,
     },
+    understanding,
   );
 
   const queries: RetrievalEvalQueryResult[] = [];
@@ -233,6 +284,7 @@ export async function evaluateRetrieval(
       query: query.text,
       topK,
       relevanceFloor,
+      history: query.history,
     });
     queries.push(buildQueryResult(query, outcome, chunkIdByGoldenId, topK));
   }
@@ -254,6 +306,14 @@ export async function evaluateRetrieval(
       lexicalWeight: 1,
       denseCandidateDepth: EVAL_CANDIDATE_DEPTH,
       lexicalCandidateDepth: EVAL_LEXICAL_CANDIDATE_DEPTH,
+    },
+    rewrite: {
+      enabled: rewriteEnabled,
+      model: EVAL_REWRITE_MODEL,
+      timeoutMs: EVAL_REWRITE_TIMEOUT_MS,
+      multiQuery: rewriteConfig.multiQuery,
+      variantCount: EVAL_REWRITE_VARIANT_COUNT,
+      hypotheticalAnswer: rewriteConfig.hypotheticalAnswer,
     },
     metrics: computeMetrics(queries),
     queries,
@@ -376,6 +436,9 @@ function buildQueryResult(
     abstained: outcome.abstained,
     relevantChunkIds,
     retrievedChunkIds,
+    searchedQuery: outcome.trace.rewrite?.query ?? query.text,
+    rewriteStrategy: outcome.trace.rewrite?.strategy ?? null,
+    rewriteReason: outcome.trace.rewrite?.reason ?? null,
     firstRelevantRank: firstRelevantIndex >= 0 ? firstRelevantIndex + 1 : null,
     recall:
       relevantChunkIds.length > 0
@@ -399,6 +462,8 @@ function buildQueryResult(
     latencyMs: outcome.trace.latencyMs,
     embeddingInputTokens: outcome.trace.cost.embeddingInputTokens,
     rerankInputTokens: outcome.trace.cost.rerankInputTokens,
+    rewriteInputTokens: outcome.trace.cost.rewriteInputTokens,
+    rewriteOutputTokens: outcome.trace.cost.rewriteOutputTokens,
   };
 }
 
@@ -437,7 +502,11 @@ function computeMetrics(
     latencyMsP95: percentile(latencies, 95),
     costTokensPerQuery: mean(
       queries.map(
-        (query) => query.embeddingInputTokens + query.rerankInputTokens,
+        (query) =>
+          query.embeddingInputTokens +
+          query.rerankInputTokens +
+          query.rewriteInputTokens +
+          query.rewriteOutputTokens,
       ),
     ),
   };

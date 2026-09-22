@@ -15,6 +15,13 @@ import {
 } from './embedding.service';
 import { IndexingService } from './indexing.service';
 import { ModelSyncService } from './model-sync.service';
+import {
+  QUERY_REWRITER,
+  QueryUnderstandingService,
+  RETRIEVAL_REWRITE_CONFIG,
+  loadRetrievalRewriteConfig,
+} from './query-understanding';
+import { QueryRewriterService } from './query-rewriter.service';
 import { RerankerService } from './reranker.service';
 import {
   RETRIEVAL_HYBRID_CONFIG,
@@ -60,6 +67,16 @@ import { UserSettingsService } from './user-settings.service';
       provide: RETRIEVAL_HYBRID_CONFIG,
       useFactory: loadRetrievalHybridConfig,
     },
+    {
+      provide: RETRIEVAL_REWRITE_CONFIG,
+      useFactory: loadRetrievalRewriteConfig,
+    },
+    QueryRewriterService,
+    {
+      provide: QUERY_REWRITER,
+      useExisting: QueryRewriterService,
+    },
+    QueryUnderstandingService,
     RerankerService,
     RetrievalService,
     RetrievalTraceService,
@@ -73,6 +90,7 @@ import { UserSettingsService } from './user-settings.service';
     ChunkingService,
     IndexingService,
     EMBEDDING_CONFIG,
+    QueryUnderstandingService,
     RerankerService,
     RetrievalService,
     RetrievalTraceService,

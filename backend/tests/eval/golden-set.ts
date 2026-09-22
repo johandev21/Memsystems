@@ -28,12 +28,32 @@ export interface GoldenSource {
   chunks: GoldenChunk[];
 }
 
+export interface GoldenTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * The query-understanding trigger a query is labeled to exercise. The gate
+ * asserts that the queries carrying a label measurably improve when
+ * rewriting is enabled.
+ */
+export type GoldenUnderstanding =
+  'meta_instructions' | 'follow_up' | 'ambiguous';
+
 export interface GoldenQuery {
   id: string;
   text: string;
   /** False for queries the corpus cannot answer, which must abstain. */
   answerable: boolean;
   relevantChunkIds: string[];
+  /**
+   * Recent turns passed with the retrieval request. A follow-up is only
+   * answerable after the rewrite resolves its references from them.
+   */
+  history?: GoldenTurn[];
+  /** How this query depends on query understanding, when it does. */
+  understanding?: GoldenUnderstanding;
 }
 
 export const GOLDEN_SOURCES: GoldenSource[] = [
@@ -331,5 +351,46 @@ export const GOLDEN_QUERIES: GoldenQuery[] = [
     text: 'What is the Schrodinger equation for a hydrogen atom?',
     answerable: false,
     relevantChunkIds: [],
+  },
+  // --- Query understanding -------------------------------------------------
+  // These three queries are answered only when the pipeline rewrites the
+  // message before searching. The gate fails when rewriting is disabled.
+  {
+    id: 'q-meta-summary',
+    // "chapter" and "summary" only occur in the degraded study guide, so
+    // without stripping them the query's own words outweigh its subject.
+    text: 'Give me a detailed chapter summary of osmosis.',
+    answerable: true,
+    relevantChunkIds: ['bio-osmosis'],
+    understanding: 'meta_instructions',
+  },
+  {
+    id: 'q-followup-expand',
+    // No subject words at all: the reference has to be resolved from the
+    // previous turn before there is anything to search.
+    text: 'Can you expand on that in more detail?',
+    answerable: true,
+    relevantChunkIds: ['bio-mitochondria'],
+    history: [
+      {
+        role: 'user',
+        content: 'How do mitochondria generate ATP in a cell?',
+      },
+      {
+        role: 'assistant',
+        content:
+          'Mitochondria produce ATP through oxidative phosphorylation across the inner mitochondrial membrane.',
+      },
+    ],
+    understanding: 'follow_up',
+  },
+  {
+    id: 'q-ambiguous-respiration',
+    // A short question whose only corpus term lives in a glossary stub; the
+    // rewrite expands it into the material's own vocabulary.
+    text: 'Where does respiration happen?',
+    answerable: true,
+    relevantChunkIds: ['bio-mitochondria'],
+    understanding: 'ambiguous',
   },
 ];

@@ -3,11 +3,23 @@ import { sql, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
+import {
+  clamp,
+  parseBoolean,
+  parsePositiveInt,
+  parseRatio,
+} from './config-parsing';
 import { EMBEDDING_DIMENSIONS, EmbeddingService } from './embedding.service';
 import {
   MAX_RERANK_DOCUMENTS,
   estimateVoyageTokens,
 } from './providers/voyage.client';
+import {
+  QueryUnderstandingService,
+  passthroughUnderstanding,
+  traceRewrite,
+  type RetrievalHistoryTurn,
+} from './query-understanding';
 import { reciprocalRankFusion, type FusedCandidate } from './rank-fusion';
 import { RerankerService, type Reranker } from './reranker.service';
 import type {
@@ -18,6 +30,7 @@ import type {
   RetrievalTraceFusion,
   RetrievalTraceLeg,
   RetrievalTraceRerankedCandidate,
+  RetrievalTraceRewrite,
 } from './retrieval-trace';
 
 export type { RetrievalAbstentionReason } from './retrieval-trace';
@@ -109,6 +122,11 @@ export interface RetrievalRequest {
   query: string;
   topK?: number;
   sourceIds?: string[];
+  /**
+   * Recent turns the rewrite may resolve follow-up references from, oldest
+   * first. Chat passes its last few messages; Generation passes none.
+   */
+  history?: RetrievalHistoryTurn[];
   /** Overrides the configured floor for this call (grounding may pass 0). */
   relevanceFloor?: number;
   /** Overrides the configured rerank threshold (grounding may pass 0). */
@@ -282,37 +300,11 @@ export function loadRetrievalHybridConfig(
   };
 }
 
-function parseBoolean(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback;
-  const normalized = value.trim().toLowerCase();
-  if (['false', '0', 'no', 'off'].includes(normalized)) return false;
-  if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
-  return fallback;
-}
-
-function parsePositiveInt(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
-  return parsed;
-}
-
-function parseRatio(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return parsed;
-}
-
 function parseDepthOverride(value: string | undefined): number | null {
   if (value === undefined) return null;
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed) || parsed < 1) return null;
   return clamp(parsed, 1, MAX_RERANK_DOCUMENTS);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 interface RetrievalChunkRow {
@@ -403,6 +395,9 @@ export class RetrievalService {
     @Optional()
     @Inject(RETRIEVAL_HYBRID_CONFIG)
     hybridConfig?: RetrievalHybridConfig,
+    @Optional()
+    @Inject(QueryUnderstandingService)
+    private readonly queryUnderstanding?: QueryUnderstandingService,
   ) {
     this.relevanceFloor =
       relevanceConfig?.relevanceFloor ?? DEFAULT_RELEVANCE_FLOOR;
@@ -438,7 +433,9 @@ export class RetrievalService {
       this.hybridConfig.lexicalCandidateDepth ?? candidateDepth,
       policy.topK,
     );
-    const fusion: RetrievalTraceFusion = {
+    // The fusion record is also what an empty outcome reports, so it is
+    // built once the number of query variants is known.
+    const buildFusion = (variants: number): RetrievalTraceFusion => ({
       k: this.hybridConfig.fusionK,
       weights: {
         dense: this.hybridConfig.denseWeight,
@@ -448,61 +445,101 @@ export class RetrievalService {
         dense: denseDepth,
         lexical: this.hybridConfig.enabled ? lexicalDepth : 0,
       },
-    };
+      variants,
+    });
 
-    // An explicitly empty selection can never match a chunk.
+    // An explicitly empty selection can never match a chunk, and there is
+    // nothing for query understanding to search.
     if (policy.sourceIds && policy.sourceIds.length === 0) {
       return this.emptyOutcome(request, policy, {
-        fusion,
+        fusion: buildFusion(1),
+        rewrite: null,
         abstentionReason: 'no_indexed_chunks',
         skippedReason: 'no_candidates',
         elapsedMs: performance.now() - startedAt,
       });
     }
 
-    const queryEmbedding = await this.embeddingService.embedQuery(
-      request.query,
-    );
-    // The legs are separate candidate lists over the same scope; run them
-    // together and fuse their ranks rather than their scores.
-    const [denseRows, lexicalRows] = await Promise.all([
-      this.searchDense(
-        request.notebookId,
-        queryEmbedding,
-        denseDepth,
-        policy.sourceIds,
-      ),
-      this.hybridConfig.enabled
-        ? this.searchLexical(
-            request.notebookId,
-            request.query,
-            queryEmbedding,
-            lexicalDepth,
-            policy.sourceIds,
-          )
-        : Promise.resolve<RetrievalChunkRow[]>([]),
-    ]);
+    // Query understanding runs before the legs: it decides whether the
+    // message is worth rewriting, resolves follow-up references from the
+    // recent turns, and can contribute paraphrases and a hypothetical
+    // answer. Its decision is recorded in the trace either way.
+    const understanding = this.queryUnderstanding
+      ? await this.queryUnderstanding.understand({
+          message: request.query,
+          history: request.history,
+        })
+      : passthroughUnderstanding(request.query);
+    const queries = understanding.queries;
+    const rewrite = traceRewrite(understanding, request.query);
+    const fusion = buildFusion(queries.length);
 
+    // Every query variant runs the same legs over the same scope and fuses
+    // into one candidate list. The reranker and the Evidence threshold see
+    // the fused list, so a paraphrase can add candidates the primary query's
+    // legs never returned.
+    const legRuns = await Promise.all(
+      queries.map(async (query, variant) => {
+        // The primary variant embeds the hypothetical answer instead of the
+        // query when the stage produced one; paraphrases embed themselves.
+        const embedded =
+          variant === 0 && understanding.hypotheticalAnswer
+            ? understanding.hypotheticalAnswer
+            : query;
+        const queryEmbedding = await this.embeddingService.embedQuery(embedded);
+        const [denseRows, lexicalRows] = await Promise.all([
+          this.searchDense(
+            request.notebookId,
+            queryEmbedding,
+            denseDepth,
+            policy.sourceIds,
+          ),
+          this.hybridConfig.enabled
+            ? this.searchLexical(
+                request.notebookId,
+                query,
+                queryEmbedding,
+                lexicalDepth,
+                policy.sourceIds,
+              )
+            : Promise.resolve<RetrievalChunkRow[]>([]),
+        ]);
+        return { variant, embedded, denseRows, lexicalRows };
+      }),
+    );
+
+    // Every variant contributes an equal share: with N variants each leg's
+    // weight is divided by N, so the total RRF score is comparable to a
+    // single-query run but no variant is privileged. The tradeoff is that a
+    // paraphrase-only candidate ranked by both of its legs can outrank a
+    // primary-query candidate ranked by one. With a single query the weights
+    // are exactly the configured leg weights.
+    const variantWeight = 1 / legRuns.length;
     const legs: {
       kind: RetrievalTraceLeg['kind'];
+      variant: number;
       weight: number;
       candidates: RetrievalChunkRow[];
-    }[] = [
-      {
-        kind: 'dense',
-        weight: this.hybridConfig.denseWeight,
-        candidates: denseRows,
-      },
-    ];
-    if (this.hybridConfig.enabled) {
+    }[] = [];
+    for (const run of legRuns) {
       legs.push({
-        kind: 'lexical',
-        weight: this.hybridConfig.lexicalWeight,
-        candidates: lexicalRows,
+        kind: 'dense',
+        variant: run.variant,
+        weight: this.hybridConfig.denseWeight * variantWeight,
+        candidates: run.denseRows,
       });
+      if (this.hybridConfig.enabled) {
+        legs.push({
+          kind: 'lexical',
+          variant: run.variant,
+          weight: this.hybridConfig.lexicalWeight * variantWeight,
+          candidates: run.lexicalRows,
+        });
+      }
     }
     const traceLegs: RetrievalTraceLeg[] = legs.map((leg) => ({
       kind: leg.kind,
+      variant: leg.variant,
       candidates: leg.candidates.map((row, index) =>
         traceCandidate(row, index + 1, Number(row.score)),
       ),
@@ -513,15 +550,23 @@ export class RetrievalService {
       (row) => row.chunk_id,
       this.hybridConfig.fusionK,
     );
+    // Every embedded text is billed, including a hypothetical answer.
+    const embeddingInputTokens = legRuns.reduce(
+      (sum, run) => sum + estimateVoyageTokens(run.embedded),
+      0,
+    );
 
     if (fused.length === 0) {
       return this.emptyOutcome(request, policy, {
         legs: traceLegs,
         fusion,
+        rewrite,
+        rewriteInputTokens: understanding.inputTokens,
+        rewriteOutputTokens: understanding.outputTokens,
         abstentionReason: 'no_indexed_chunks',
         skippedReason: 'no_candidates',
         elapsedMs: performance.now() - startedAt,
-        embeddingInputTokens: estimateVoyageTokens(request.query),
+        embeddingInputTokens,
       });
     }
 
@@ -532,7 +577,7 @@ export class RetrievalService {
       traceCandidate(candidate.candidate, index + 1, candidate.score),
     );
 
-    const rerank = await this.rerankCandidates(request.query, deduped);
+    const rerank = await this.rerankCandidates(queries[0], deduped);
     // Reranking gates Evidence on the cross-encoder score; without it, the
     // dense cosine floor is the gate, so a lexical-only candidate that is
     // semantically distant is dropped rather than padding the answer.
@@ -571,6 +616,7 @@ export class RetrievalService {
         sourceIds: policy.sourceIds,
         relevanceFloor: policy.relevanceFloor,
         embeddingModel: this.embeddingModelName(),
+        rewrite,
         legs: traceLegs,
         fusion,
         fusedOrder,
@@ -586,7 +632,9 @@ export class RetrievalService {
         abstained,
         abstentionReason,
         elapsedMs: performance.now() - startedAt,
-        embeddingInputTokens: estimateVoyageTokens(request.query),
+        embeddingInputTokens,
+        rewriteInputTokens: understanding.inputTokens,
+        rewriteOutputTokens: understanding.outputTokens,
       }),
     };
   }
@@ -598,6 +646,10 @@ export class RetrievalService {
     input: {
       legs?: RetrievalTraceLeg[];
       fusion: RetrievalTraceFusion;
+      rewrite: RetrievalTraceRewrite | null;
+      /** Tokens the rewrite model spent; 0 when it did not run. */
+      rewriteInputTokens?: number;
+      rewriteOutputTokens?: number;
       abstentionReason: RetrievalAbstentionReason;
       skippedReason: RetrievalRerankSkippedReason;
       elapsedMs: number;
@@ -615,6 +667,7 @@ export class RetrievalService {
         sourceIds: policy.sourceIds,
         relevanceFloor: policy.relevanceFloor,
         embeddingModel: this.embeddingModelName(),
+        rewrite: input.rewrite,
         legs: input.legs ?? [],
         fusion: input.fusion,
         fusedOrder: [],
@@ -631,6 +684,8 @@ export class RetrievalService {
         abstentionReason: input.abstentionReason,
         elapsedMs: input.elapsedMs,
         embeddingInputTokens: input.embeddingInputTokens ?? 0,
+        rewriteInputTokens: input.rewriteInputTokens ?? 0,
+        rewriteOutputTokens: input.rewriteOutputTokens ?? 0,
       }),
     };
   }
@@ -878,6 +933,7 @@ function buildTrace(input: {
   sourceIds: string[] | null;
   relevanceFloor: number;
   embeddingModel: string;
+  rewrite: RetrievalTraceRewrite | null;
   legs: RetrievalTraceLeg[];
   fusion: RetrievalTraceFusion;
   fusedOrder: RetrievalTraceCandidate[];
@@ -887,9 +943,11 @@ function buildTrace(input: {
   abstentionReason: RetrievalAbstentionReason | null;
   elapsedMs: number;
   embeddingInputTokens: number;
+  rewriteInputTokens: number;
+  rewriteOutputTokens: number;
 }): RetrievalTrace {
   return {
-    version: 3,
+    version: 4,
     query: input.query,
     topK: input.topK,
     scope: {
@@ -901,6 +959,7 @@ function buildTrace(input: {
       model: input.embeddingModel,
       dimensions: EMBEDDING_DIMENSIONS,
     },
+    rewrite: input.rewrite,
     legs: input.legs,
     fusion: input.fusion,
     fusedOrder: input.fusedOrder,
@@ -912,6 +971,8 @@ function buildTrace(input: {
     cost: {
       embeddingInputTokens: input.embeddingInputTokens,
       rerankInputTokens: input.rerank.inputTokens,
+      rewriteInputTokens: input.rewriteInputTokens,
+      rewriteOutputTokens: input.rewriteOutputTokens,
     },
   };
 }

@@ -100,20 +100,27 @@ export class AiService {
         params: { model: modelId },
       });
     }
-    if (!(await this.hasEffectiveAuth())) {
+    const provider = await this.getProviderIfConnected();
+    if (!provider) {
       throw new BadRequestError(
         'AI Gateway is not connected. Add your AI Gateway key in Settings.',
         { messageKey: 'errors.ai.gateway.notConnected' },
       );
     }
-    // The global gateway key lives in the singleton app_settings row.
+    return provider;
+  }
+
+  /**
+   * The gateway provider for a background task (retrieval query rewriting),
+   * or `null` when the AI Gateway is not connected. Unlike
+   * `getProviderForModel` it validates no model id and never throws: the
+   * caller degrades instead of failing the turn.
+   */
+  async getProviderIfConnected(): Promise<Provider | null> {
+    if (!(await this.hasEffectiveAuth())) return null;
     const apiKey = await this.userSettingsService.getGatewayApiKey();
-    if (!apiKey) {
-      throw new BadRequestError(
-        'AI Gateway is not connected. Add your AI Gateway key in Settings.',
-        { messageKey: 'errors.ai.gateway.notConnected' },
-      );
-    }
+    if (!apiKey) return null;
+    // The global gateway key lives in the singleton app_settings row.
     return createGatewayProvider({
       apiKey,
       getModels: () => this.modelSyncService.getModels(),

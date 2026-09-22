@@ -7,11 +7,16 @@ import {
   evaluateRetrievalGate,
   type RetrievalEvalBaseline,
 } from './eval/retrieval-eval';
+import { GOLDEN_QUERIES } from './eval/golden-set';
 
 const baselinePath = path.resolve(process.cwd(), 'tests/eval/baseline.json');
 const baseline = JSON.parse(
   readFileSync(baselinePath, 'utf8'),
 ) as RetrievalEvalBaseline;
+
+function goldenQueryById(id: string) {
+  return GOLDEN_QUERIES.find((query) => query.id === id);
+}
 
 /** An embedder that maps everything to the same vector, destroying ranking. */
 const constantEmbedder: EvalEmbedder = {
@@ -47,6 +52,9 @@ describe('retrieval evaluation gate', () => {
           metrics: report.metrics,
           queries: report.queries.map((query) => ({
             queryId: query.queryId,
+            searchedQuery: query.searchedQuery,
+            rewriteStrategy: query.rewriteStrategy,
+            rewriteReason: query.rewriteReason,
             retrievedChunkIds: query.retrievedChunkIds,
             abstained: query.abstained,
           })),
@@ -133,6 +141,57 @@ describe('retrieval evaluation gate', () => {
       );
       expect(failures).toContain('recallAtK');
       expect(failures).toContain('refusalAccuracy');
+    },
+  );
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'detects query understanding being disabled',
+    async () => {
+      const unrewritten = await evaluateRetrieval({ rewrite: false });
+      const failures = evaluateRetrievalGate(unrewritten, baseline).map(
+        (failure) => failure.metric,
+      );
+      // The labeled meta, follow-up and ambiguous queries are only
+      // answerable after the rewrite: without it they abstain or retrieve
+      // the wrong chunk, so recall, citations and refusal accuracy all fall.
+      expect(failures).toContain('recallAtK');
+      expect(failures).toContain('citationAccuracy');
+      expect(failures).toContain('refusalAccuracy');
+      expect(failures).not.toContain('latencyMsP95');
+    },
+  );
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'improves recall on the labeled query-understanding queries',
+    async () => {
+      const withRewrite = await evaluateRetrieval();
+      const withoutRewrite = await evaluateRetrieval({ rewrite: false });
+      const labeled = withRewrite.queries.filter((query) => {
+        const golden = goldenQueryById(query.queryId);
+        return golden?.understanding !== undefined;
+      });
+      expect(labeled.length).toBeGreaterThanOrEqual(3);
+
+      for (const query of labeled) {
+        const unrewritten = withoutRewrite.queries.find(
+          (candidate) => candidate.queryId === query.queryId,
+        )!;
+        // Each labeled query is answerable only with query understanding.
+        expect(query.recall, query.queryId).toBe(1);
+        expect(unrewritten.recall, query.queryId).toBeLessThan(1);
+        expect(query.rewriteStrategy, query.queryId).not.toBeNull();
+      }
+    },
+  );
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'keeps the gate green with paraphrase fusion and hypothetical answers enabled',
+    async () => {
+      const report = await evaluateRetrieval({
+        multiQuery: true,
+        hypotheticalAnswer: true,
+      });
+      expect(evaluateRetrievalGate(report, baseline)).toEqual([]);
     },
   );
 });

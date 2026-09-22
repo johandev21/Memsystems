@@ -3,6 +3,7 @@ import {
   DomainError,
   ServiceUnavailableError,
 } from '../../common/errors/domain-error';
+import { parseBoolean } from './config-parsing';
 import { voyageContextualEmbed, voyageEmbed } from './providers/voyage.client';
 import { UserSettingsService } from './user-settings.service';
 
@@ -299,12 +300,4 @@ function isCapabilityError(error: unknown): boolean {
     error instanceof DomainError &&
     (error.status === 400 || error.status === 403)
   );
-}
-
-function parseBoolean(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback;
-  const normalized = value.trim().toLowerCase();
-  if (['false', '0', 'no', 'off'].includes(normalized)) return false;
-  if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
-  return fallback;
 }

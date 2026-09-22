@@ -5,10 +5,10 @@ live with the backend tests, and the runner is a continuous integration gate:
 a retrieval change that regresses a metric beyond the documented tolerance
 fails `pnpm run test`.
 
-The gate covers the retrieval pipeline (query embedding, dense and lexical
-search legs, reciprocal rank fusion, dedupe, reranking, relevance thresholds,
-Evidence selection) and the contextual chunk representation the pipeline
-retrieves over. The remaining retrieval tickets — query understanding and
+The gate covers the retrieval pipeline (query understanding, query embedding,
+dense and lexical search legs, reciprocal rank fusion, dedupe, reranking,
+relevance thresholds, Evidence selection) and the contextual chunk
+representation the pipeline retrieves over. The remaining retrieval tickets —
 Generation grounding — are expected to move these metrics and to update the
 baseline with evidence.
 
@@ -20,8 +20,9 @@ baseline with evidence.
 | `backend/tests/eval/deterministic-embedder.ts` | A deterministic lexical embedder used instead of Voyage, so the gate runs keyless in CI. |
 | `backend/tests/eval/deterministic-reranker.ts` | A deterministic cross-encoder stand-in, so the gate exercises the rerank stage keylessly. |
 | `backend/tests/eval/retrieval-eval.ts` | Seeds the corpus, runs every query through `RetrievalService`, and computes the metrics and the gate. |
+| `backend/tests/eval/deterministic-rewriter.ts` | A deterministic rewrite model over the golden corpus, so the gate exercises query understanding keylessly. |
 | `backend/tests/eval/baseline.json` | The checked-in baseline metrics and the documented tolerance. |
-| `backend/tests/retrieval-eval.test.ts` | The Vitest gate, plus the tests that prove a deliberate regression and a disabled reranker are caught. |
+| `backend/tests/retrieval-eval.test.ts` | The Vitest gate, plus the tests that prove a deliberate regression, a disabled reranker, a disabled lexical leg, and disabled query understanding are caught. |
 
 The runner calls the real retrieval pipeline against the disposable test
 database (see [testing.md](testing.md)). It does not call Voyage: the
@@ -88,6 +89,51 @@ chunks that respect the minimum and target, and that the split loses no text.
 Sections shorter than the minimum stay their own chunk (a citation keeps its
 locator); only fragments within a section merge.
 
+## Query understanding
+
+Query understanding runs before the legs: it decides whether a rewrite is
+worth a model call, rewrites the message into a search query, resolves
+follow-up references from the recent turns, and can return paraphrases (fused
+through the same RRF) and a hypothetical answer for short queries. The
+harness runs the real stage. Because CI has no gateway key, the rewrite model
+is `deterministic-rewriter.ts`, a stand-in that runs the pipeline's own
+heuristic (strip meta-instructions, resolve history references) and then maps
+colloquial terms to the golden corpus's vocabulary (for example
+"respiration" to "mitochondria triphosphate", because the corpus spells ATP
+out). It is a test double, not a rewriter; the production path is exercised at
+the unit level (`tests/query-understanding.test.ts`,
+`tests/query-rewriter.service.test.ts`) and through `RetrievalService`
+(`tests/retrieval.service.test.ts`).
+
+Three labeled queries carry an `understanding` label and are answerable only
+after the rewrite:
+
+- `q-meta-summary` wraps its subject in "detailed chapter summary", words
+  that only occur in the degraded study guide. Without stripping them, the
+  query's own words outweigh its subject and nothing clears the rerank
+  threshold.
+- `q-followup-expand` is a bare reference ("Can you expand on that in more
+  detail?") whose history supplies the subject; without resolution the query
+  has no corpus vocabulary at all and retrieval abstains.
+- `q-ambiguous-respiration` asks a short question whose only corpus term
+  ("respiration") lives in a glossary stub; the rewrite expands it into the
+  material's vocabulary.
+
+`RetrievalEvalOptions` keeps the switch used by the gate (`rewrite: false`
+runs the pipeline on the original messages), plus `multiQuery` and
+`hypotheticalAnswer` for measuring those knobs. The gate test
+`detects query understanding being disabled` fails `recallAtK`,
+`citationAccuracy`, and `refusalAccuracy` when rewriting is off, and
+`improves recall on the labeled query-understanding queries` asserts each
+labeled query improves from a miss to a full recall.
+
+The rewrite shares the pipeline's 2000 ms p95 latency ceiling. Its model call
+is bounded by `RETRIEVAL_REWRITE_TIMEOUT_MS` (default 1200 ms); a message that
+already reads as a search query never pays for it. The harness's
+`costTokensPerQuery` includes the rewrite model's input and output tokens
+alongside the query embedding and rerank tokens, so enabling rewriting shows
+up in the cost metric rather than hiding behind it.
+
 ## Metrics
 
 | Metric | Meaning | Direction |
@@ -100,7 +146,7 @@ locator); only fragments within a section merge.
 | `refusalAccuracy` | Share of queries whose abstention matched the label: answerable queries must answer, unanswerable ones must abstain. | higher is better |
 | `faithfulness` | Deterministic proxy: share of answered queries whose top-ranked chunk is relevant. A model-judged faithfulness check needs provider calls and is out of scope for the keyless gate. | higher is better |
 | `latencyMsP50`, `latencyMsP95` | Wall-clock retrieval duration per query. | reported; p95 is gated by an absolute ceiling |
-| `costTokensPerQuery` | Estimated query cost: embedding tokens plus reranker tokens (about 4 characters per token), averaged over queries so adding a labeled query does not move the metric by itself. Hybrid retrieval reranks the fused candidates from both legs, so it costs more than dense-only retrieval. | lower is better |
+| `costTokensPerQuery` | Estimated query cost: rewrite-model input and output tokens plus embedding tokens plus reranker tokens (about 4 characters per token), averaged over queries so adding a labeled query does not move the metric by itself. Hybrid retrieval reranks the fused candidates from both legs, so it costs more than dense-only retrieval; query understanding adds one bounded rewrite call per rewritten message. | lower is better |
 
 ## Tolerance and baseline
 
@@ -137,10 +183,15 @@ wrong way is a regression, not a new baseline.
    `answerable: false` when the corpus cannot answer it.
 2. Point `relevantChunkIds` at the existing golden chunk ids that answer it,
    or at `[]` when unanswerable.
-3. Run the gate once without refreshing the baseline. A new query that
+3. Add `history` when the query is a follow-up that must be resolved from the
+   recent turns, and set `understanding` to the trigger the query is labeled
+   to exercise (`meta_instructions`, `follow_up`, or `ambiguous`). The
+   `improves recall on the labeled query-understanding queries` gate test
+   asserts every labeled query improves when rewriting is enabled.
+4. Run the gate once without refreshing the baseline. A new query that
    retrieval already answers may still be inside tolerance; a query it misses
    fails `recallAtK` or `refusalAccuracy` and shows what to fix.
-4. Once the retrieval behavior is right, refresh the baseline.
+5. Once the retrieval behavior is right, refresh the baseline.
 
 Adding a Source or a chunk follows the same shape: append it to
 `GOLDEN_SOURCES` and keep its `id` stable, because labels and the baseline
@@ -166,10 +217,13 @@ applies migrations to the test database, and runs `lint`, `typecheck`, and
 the workflow.
 
 The gate test also runs deliberately broken configurations — a constant
-embedder, a disabled floor, a disabled reranker, a disabled lexical leg, and a
-disabled contextual header — and asserts that the gate reports failures, so
-the gate itself is tested rather than assumed. Disabling the lexical leg is
-expected to fail `recallAtK` and `citationAccuracy`: the catalog answer is only
+embedder, a disabled floor, a disabled reranker, a disabled lexical leg, a
+disabled contextual header, and disabled query understanding — and asserts
+that the gate reports failures, so the gate itself is tested rather than
+assumed. Disabling the lexical leg is expected to fail `recallAtK`,
+`citationAccuracy`, and `refusalAccuracy`: the catalog answer is only
 reachable through fusion. Disabling the contextual header is expected to fail
-`recallAtK` and `refusalAccuracy`: the section-dependent lab-manual queries lose
-the tokens that make them retrievable and abstain.
+`recallAtK` and `refusalAccuracy`: the section-dependent lab-manual queries
+lose the tokens that make them retrievable and abstain. Disabling query
+understanding fails the same three metrics as the lexical leg: the labeled
+meta, follow-up, and ambiguous queries are only answerable after a rewrite.
