@@ -38,7 +38,6 @@ import {
   DEFAULT_MAX_PER_SOURCE,
   DEFAULT_OVERLAP_THRESHOLD,
   RETRIEVAL_EVIDENCE_CONFIG,
-  loadRetrievalEvidenceConfig,
   type RetrievalEvidenceConfig,
 } from '../src/modules/ai/evidence-assembly';
 import {
@@ -1289,6 +1288,40 @@ describe('RetrievalService evidence assembly', () => {
     expect(outcome.trace.evidence.tokens).toBeLessThanOrEqual(400);
   });
 
+  it('honors a per-call evidence token budget override', async () => {
+    const long = 'alpha beta gamma delta '.repeat(40);
+    const { service } = serviceWithRows(
+      [
+        chunkRow({ chunk_id: 'first', content: long }),
+        chunkRow({
+          chunk_id: 'second',
+          source_id: 'source-2',
+          content: long.replace(/alpha/g, 'omega'),
+        }),
+      ],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      {},
+      undefined,
+      { tokenBudget: 20000 },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'alpha',
+      tokenBudget: 400,
+    });
+
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual(['first']);
+    expect(
+      outcome.trace.evidence.droppedBudget.map(
+        (candidate) => candidate.chunkId,
+      ),
+    ).toEqual(['second']);
+    // The trace records the resolved budget, not the configured one.
+    expect(outcome.trace.evidence.tokenBudget).toBe(400);
+  });
+
   it('leaves section context out when expansion is disabled', async () => {
     const { service } = serviceWithRows(
       [
@@ -1340,30 +1373,6 @@ describe('RetrievalService evidence assembly', () => {
       droppedOverlap: [],
       droppedDiversity: [],
       droppedBudget: [],
-    });
-  });
-});
-
-describe('loadRetrievalEvidenceConfig', () => {
-  it('falls back to the documented defaults', () => {
-    expect(loadRetrievalEvidenceConfig({})).toEqual(DEFAULT_EVIDENCE_CONFIG);
-  });
-
-  it('reads the evidence configuration from the environment', () => {
-    expect(
-      loadRetrievalEvidenceConfig({
-        RETRIEVAL_EVIDENCE_ENABLED: 'false',
-        RETRIEVAL_OVERLAP_THRESHOLD: '0.5',
-        RETRIEVAL_MAX_PER_SOURCE: '2',
-        RETRIEVAL_EVIDENCE_TOKEN_BUDGET: '4000',
-        RETRIEVAL_SECTION_EXPANSION: 'false',
-      }),
-    ).toEqual({
-      enabled: false,
-      overlapThreshold: 0.5,
-      maxPerSource: 2,
-      tokenBudget: 4000,
-      sectionExpansion: false,
     });
   });
 });

@@ -972,4 +972,84 @@ describe('ChatService no-evidence reply', () => {
     expect(streamOptions.instructions).toContain('Justice is harmony.');
     expect(streamOptions.instructions).not.toContain('Nav page');
   });
+
+  it('does not character-slice the assembled Evidence block', async () => {
+    // Longer than the old 80,000-character slice: the token budget bounds
+    // retrieval, so the Chat renders the assembled block whole.
+    const tail = 'THE-TAIL-MARKER';
+    const content = `${'alpha '.repeat(20000)}${tail}`;
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Long source',
+            content,
+            sectionPath: [],
+            score: 0.8,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [],
+      }),
+    );
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain the long source',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      instructions: string;
+    };
+    expect(streamOptions.instructions.length).toBeGreaterThan(80000);
+    expect(streamOptions.instructions).toContain(tail);
+  });
+
+  it('renders the assembled section context in the model Evidence block', async () => {
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Organic Chemistry Laboratory Manual',
+            content:
+              'Heat the round-bottom flask slowly and collect the fraction that boils.',
+            sectionPath: ['Experiment 3', 'Fractional Distillation'],
+            score: 0.8,
+            url: null,
+            kind: 'file',
+            sourceVersionId: null,
+            locator: { pageNumber: 12 },
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [],
+      }),
+    );
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain the distillation experiment',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      instructions: string;
+    };
+    expect(streamOptions.instructions).toContain(
+      'Section: Experiment 3 > Fractional Distillation',
+    );
+    expect(streamOptions.instructions).toContain('Heat the round-bottom flask');
+    expect(streamOptions.instructions).not.toMatch(/Relevance/);
+  });
 });

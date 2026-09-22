@@ -96,6 +96,30 @@ describe('assembleEvidence overlap dedupe', () => {
     expect(droppedOverlap).toEqual([]);
   });
 
+  it('keeps a passage whose words appear in another order', () => {
+    const { items, droppedOverlap } = assembleEvidence({
+      candidates: [
+        passage('first', {
+          content: 'Alpha beta gamma delta epsilon zeta.',
+        }),
+        passage('reordered', {
+          sourceId: 'source-2',
+          content: 'Zeta epsilon delta gamma beta alpha.',
+        }),
+      ],
+      topK: 4,
+      perSource: false,
+      config: config(),
+    });
+
+    // Same vocabulary, different arrangement: not an overlap.
+    expect(items.map((item) => item.passage.chunkId)).toEqual([
+      'first',
+      'reordered',
+    ]);
+    expect(droppedOverlap).toEqual([]);
+  });
+
   it('ignores the overlap check when the threshold is 1', () => {
     const full = 'Alpha beta gamma delta epsilon zeta.';
     const { droppedOverlap } = assembleEvidence({

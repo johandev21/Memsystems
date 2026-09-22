@@ -63,7 +63,7 @@ describe('chat citation mapping', () => {
     ]);
     expect(citations.map((citation) => citation.number)).toEqual([1, 2]);
     expect(citations[0]).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       sourceId: 'source-2',
       chunkId: 'chunk-2',
       chunkIndex: 4,
@@ -270,12 +270,28 @@ describe('citation supporting spans', () => {
     expect(fallback.coverage).toBe(0);
   });
 
-  it('caps a long span without cutting a word in half', () => {
-    const span = selectSupportingSpan(`${'word '.repeat(150)}`, 'word');
-    expect(span.text.length).toBeLessThanOrEqual(
-      MAX_CITATION_EXCERPT_LENGTH + 2,
+  it('caps a long span without cutting a word in half or appending an ellipsis', () => {
+    const content = `${'word '.repeat(150)}`;
+    const span = selectSupportingSpan(content, 'word');
+
+    expect(span.text.length).toBeLessThanOrEqual(MAX_CITATION_EXCERPT_LENGTH);
+    expect(span.text.endsWith('...')).toBe(false);
+    // The capped span stays a literal substring of the chunk.
+    expect(content.includes(span.text)).toBe(true);
+  });
+
+  it('stores a span that crosses a newline literally', () => {
+    const content =
+      'Heat the round-bottom flask slowly and collect the fraction.\nRecord the volume of the distillate and cap the flask immediately.';
+    const evidence = createCitationEvidence([chunk({ content })]);
+
+    const [citation] = extractCitationEntries(
+      'Heat the flask slowly and collect the fraction, then record the volume of the distillate. [ref:R1]',
+      evidence,
     );
-    expect(span.text.endsWith('...')).toBe(true);
+
+    expect(citation.quote).toContain('\n');
+    expect(content.includes(citation.quote!)).toBe(true);
   });
 
   it('renders the section context and never the retrieval score', () => {

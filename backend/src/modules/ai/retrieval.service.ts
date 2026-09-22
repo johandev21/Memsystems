@@ -30,6 +30,7 @@ import {
 } from './query-understanding';
 import { reciprocalRankFusion, type FusedCandidate } from './rank-fusion';
 import { RerankerService, type Reranker } from './reranker.service';
+import { jaccardSimilarity, textSignature } from './text-similarity';
 import type {
   RetrievalAbstentionReason,
   RetrievalRerankSkippedReason,
@@ -146,6 +147,12 @@ export interface RetrievalRequest {
   relevanceFloor?: number;
   /** Overrides the configured rerank threshold (grounding may pass 0). */
   rerankThreshold?: number;
+  /**
+   * Overrides the configured evidence token budget for this call. Callers
+   * that know the answering model's context window can bound the Evidence to
+   * a conservative fraction of it; when unset, the configured budget stands.
+   */
+  tokenBudget?: number;
 }
 
 /** Minimum cosine similarity for a chunk to serve as Evidence. */
@@ -618,11 +625,15 @@ export class RetrievalService {
     // set, selected passages carry their section context, and the whole set
     // stays inside the token budget. The assembly is deterministic, so the
     // same candidates always produce the same Evidence order.
+    const evidenceConfig: RetrievalEvidenceConfig = {
+      ...this.evidenceConfig,
+      tokenBudget: request.tokenBudget ?? this.evidenceConfig.tokenBudget,
+    };
     const assembly = assembleEvidence({
       candidates: above.map(passageFromCandidate),
       topK: policy.topK,
       perSource: policy.sourceIds !== null,
-      config: this.evidenceConfig,
+      config: evidenceConfig,
     });
     const candidateByChunkId = new Map(
       above.map((candidate) => [candidate.row.chunk_id, candidate]),
@@ -673,7 +684,7 @@ export class RetrievalService {
         },
         evidence: traceEvidence(
           assembly,
-          this.evidenceConfig,
+          evidenceConfig,
           candidateByChunkId,
           rankByChunkId,
         ),
@@ -1030,6 +1041,21 @@ function buildTrace(input: {
   };
 }
 
+/** The resolved Evidence-assembly knobs as the trace records them. */
+function evidenceKnobs(config: RetrievalEvidenceConfig): {
+  overlapThreshold: number;
+  maxPerSource: number;
+  tokenBudget: number;
+  sectionExpansion: boolean;
+} {
+  return {
+    overlapThreshold: config.overlapThreshold,
+    maxPerSource: config.maxPerSource,
+    tokenBudget: config.tokenBudget,
+    sectionExpansion: config.sectionExpansion,
+  };
+}
+
 /**
  * Projects the assembly result onto the trace. Dropped candidates carry the
  * rank and fused score they held among the above-threshold candidates, so a
@@ -1051,10 +1077,7 @@ function traceEvidence(
   };
 
   return {
-    overlapThreshold: config.overlapThreshold,
-    maxPerSource: config.maxPerSource,
-    tokenBudget: config.tokenBudget,
-    sectionExpansion: config.sectionExpansion,
+    ...evidenceKnobs(config),
     tokens: assembly.tokens,
     budgetExhausted: assembly.budgetExhausted,
     items: assembly.items.map((item) => ({
@@ -1078,10 +1101,7 @@ function emptyTraceEvidence(
   config: RetrievalEvidenceConfig,
 ): RetrievalTraceEvidence {
   return {
-    overlapThreshold: config.overlapThreshold,
-    maxPerSource: config.maxPerSource,
-    tokenBudget: config.tokenBudget,
-    sectionExpansion: config.sectionExpansion,
+    ...evidenceKnobs(config),
     tokens: 0,
     budgetExhausted: false,
     items: [],
@@ -1181,7 +1201,7 @@ function dedupeNearDuplicates(
     tokens: Set<string>;
   }[] = [];
   for (const candidate of candidates) {
-    const tokens = tokenizeForSimilarity(candidate.candidate.content);
+    const tokens = textSignature(candidate.candidate.content).tokens;
     const duplicate = kept.some(
       (entry) =>
         jaccardSimilarity(entry.tokens, tokens) >= NEAR_DUPLICATE_SIMILARITY,
@@ -1189,25 +1209,6 @@ function dedupeNearDuplicates(
     if (!duplicate) kept.push({ candidate, tokens });
   }
   return kept.map((entry) => entry.candidate);
-}
-
-/**
- * Unicode-aware word tokens, so accented Spanish text is not mangled. Single
- * characters are kept: chunks that differ only by a number ("Chapter 1" vs
- * "Chapter 2") must not collapse into duplicates.
- */
-function tokenizeForSimilarity(text: string): Set<string> {
-  return new Set(text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
-}
-
-function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 && b.size === 0) return 0;
-  let intersection = 0;
-  for (const token of a) {
-    if (b.has(token)) intersection++;
-  }
-  const union = a.size + b.size - intersection;
-  return union === 0 ? 0 : intersection / union;
 }
 
 function distinctSources(chunks: RetrievedChunk[]): UnhelpfulSource[] {

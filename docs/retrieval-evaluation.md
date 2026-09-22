@@ -138,16 +138,24 @@ up in the cost metric rather than hiding behind it.
 ## Evidence assembly and citations
 
 After the threshold, `RetrievalService` assembles the final Evidence set
-(`backend/src/modules/ai/evidence-assembly.ts`): a passage contained in a
-better-ranked passage is dropped, one Source cannot fill the set
-(`RETRIEVAL_MAX_PER_SOURCE`, with backfill when other Sources run out),
-selected passages carry their section heading path, and the set is bounded by
-`RETRIEVAL_EVIDENCE_TOKEN_BUDGET` instead of a character slice. The assembly
-is pure and deterministic, and the run exposes the resolved knobs through the
-trace's `evidence` block. `tests/evidence-assembly.test.ts` covers dedupe,
-the diversity cap, the budget, section expansion, and determinism;
-`tests/retrieval.service.test.ts` proves the assembled set and its drops
-reach the trace and the returned chunks.
+(`backend/src/modules/ai/evidence-assembly.ts`): a passage a better-ranked
+passage contains is dropped (order-sensitive token-bigram containment, so a
+passage whose words merely appear elsewhere in another arrangement survives),
+one Source cannot fill the set (`RETRIEVAL_MAX_PER_SOURCE`, with backfill when
+other Sources run out), selected passages carry their section heading path,
+and the set is bounded by `RETRIEVAL_EVIDENCE_TOKEN_BUDGET` instead of a
+character slice. "Section context" here means the heading path attached to
+the model-facing passage, not neighbouring chunk text: every passage stays
+the chunk the reranker judged and citations stay per chunk, and the header's
+tokens count against the budget. A caller that knows its model's context
+window can pass a per-request `tokenBudget`; the model catalog exposes none
+today, so the documented default is the conservative bound and the Chat
+renders the assembled block without a character slice. The assembly is pure
+and deterministic, and the run exposes the resolved knobs through the trace's
+`evidence` block. `tests/evidence-assembly.test.ts` covers dedupe (including
+reordered and longer passages), the diversity cap, the budget, section
+expansion, and determinism; `tests/retrieval.service.test.ts` proves the
+assembled set and its drops reach the trace and the returned chunks.
 
 The citation metric plays an ideal answer against the real post-generation
 check: an explicit marker per labeled relevant chunk, one unmarked claim
@@ -169,6 +177,23 @@ and `detects a citation mapping that lets an invented key resolve` fails it
 when unresolvable keys are accepted. `tests/chat-citations.test.ts` covers
 span extraction and trailing markers, invalid-citation removal, attribution,
 and the Evidence block (no retrieval score, section context rendered).
+
+The measured improvement over the pre-ticket check, from the same runner
+(`citationAccuracy`, tolerance floor 0.95):
+
+| Configuration | `citationAccuracy` |
+| --- | --- |
+| Verification and attribution enabled (checked-in baseline) | 1.0 |
+| Attribution disabled (`citationAttribution: false`) | 0.5 |
+| Regressed verifier that accepts the invented key | 0.0 |
+
+Every answerable query plays two expected citations (an explicit marker for
+its labeled chunk and an unmarked claim copied from it) plus the invented
+`R99`; attribution disabled leaves only the explicit citation resolving, and
+a verifier that accepts `R99` scores the query zero. This is also why the
+metric is stricter than its pre-ticket form, where the quote was the whole
+chunk and no unmarked claim was attributed: that check could not tell either
+regression apart.
 
 ## Metrics
 

@@ -43,7 +43,6 @@ import {
 } from './chat-no-evidence';
 
 const MAX_HISTORY_MESSAGES = 6;
-const MAX_SOURCE_TEXT = 80000;
 
 const SYSTEM_PROMPT = `You are a knowledgeable tutor and research assistant. Help the user master their topics of interest using the provided source passages or your general knowledge.
 
@@ -340,10 +339,14 @@ export class ChatService {
     const retrievedChunks = retrievalOutcome?.chunks ?? [];
     const citationEvidence = createCitationEvidence(retrievedChunks);
 
-    const sourceContext = formatCitationContext(citationEvidence).slice(
-      0,
-      MAX_SOURCE_TEXT,
-    );
+    // The Evidence block is already bounded by the retrieval token budget
+    // (`RETRIEVAL_EVIDENCE_TOKEN_BUDGET`, or the request's override), so it is
+    // rendered whole: a character slice here could cut the tail of an
+    // assembled passage. The model catalog exposes no context window today, so
+    // the configured budget is the only bound and is documented as
+    // conservative and tunable; a caller that knows its model's window can
+    // pass a `tokenBudget` override to retrieval.
+    const sourceContext = formatCitationContext(citationEvidence);
 
     const history = [
       ...priorHistory,

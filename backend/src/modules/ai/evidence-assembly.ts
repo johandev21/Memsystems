@@ -1,11 +1,13 @@
 import {
   clamp,
   parseBoolean,
+  parseNonNegativeInt,
   parsePositiveInt,
   parseRatio,
 } from './config-parsing';
 import { stripChunkContentHeader } from './chunking.service';
 import { estimateVoyageTokens } from './providers/voyage.client';
+import { containedShare, textSignature } from './text-similarity';
 
 /**
  * Evidence assembly turns the candidates that cleared the relevance threshold
@@ -36,7 +38,14 @@ export interface RetrievalEvidenceConfig {
   maxPerSource: number;
   /** Estimated-token ceiling for the assembled passages. */
   tokenBudget: number;
-  /** Carry each selected chunk's section heading path into its passage. */
+  /**
+   * Carry each selected chunk's section heading path into its passage. The
+   * section context is the heading path itself: assembly attaches it to the
+   * model-facing passage (and to the citation's context) rather than fetching
+   * neighbouring chunk text, so every passage stays the chunk the reranker
+   * judged and citations stay per chunk. The header's tokens count against
+   * the budget like any other passage text.
+   */
   sectionExpansion: boolean;
 }
 
@@ -57,9 +66,10 @@ export const DEFAULT_OVERLAP_THRESHOLD = 0.8;
 export const DEFAULT_MAX_PER_SOURCE = 4;
 
 /**
- * Documented default Evidence budget. It mirrors the Chat's 80,000-character
- * context cap (roughly 20,000 tokens at the provider's 4 chars/token ratio),
- * so assembly bounds the context before the character slice does.
+ * Documented default Evidence budget. The model catalog exposes no context
+ * window, so this is the conservative bound on the answer context, roughly a
+ * quarter of a small model's window; callers that know their model's window
+ * can pass a per-request `tokenBudget` override.
  */
 export const DEFAULT_EVIDENCE_TOKEN_BUDGET = 20000;
 
@@ -105,16 +115,6 @@ export function loadRetrievalEvidenceConfig(
     ),
     sectionExpansion: parseBoolean(env.RETRIEVAL_SECTION_EXPANSION, true),
   };
-}
-
-function parseNonNegativeInt(
-  value: string | undefined,
-  fallback: number,
-): number {
-  if (value === undefined) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
-  return parsed;
 }
 
 /** The passage content without the source-title header the chunk carries. */
@@ -198,31 +198,34 @@ export function assembleEvidence(input: {
 
 /**
  * Drops a passage when a better-ranked passage already contains it. The
- * similarity is directional containment, not Jaccard: a short excerpt
+ * similarity is order-sensitive containment, not Jaccard: a short excerpt
  * repeated inside a long passage is an overlap, while a longer candidate that
- * merely contains an earlier passage adds text and is kept.
+ * merely contains an earlier passage adds text and is kept, and a passage
+ * whose words appear elsewhere in a different arrangement is not an overlap.
  */
 function removeOverlapping(
   candidates: EvidencePassage[],
   threshold: number,
 ): { unique: EvidencePassage[]; droppedOverlap: EvidencePassage[] } {
   const unique: EvidencePassage[] = [];
-  const keptTokens: Set<string>[] = [];
+  const keptSignatures: ReturnType<typeof textSignature>[] = [];
   const droppedOverlap: EvidencePassage[] = [];
 
   for (const passage of candidates) {
-    const tokens = tokenSet(chunkBody(passage.content));
+    const signature = textSignature(chunkBody(passage.content));
     const contained =
       threshold > 0 &&
       threshold < 1 &&
-      tokens.size > 0 &&
-      keptTokens.some((kept) => containedShare(tokens, kept) >= threshold);
+      signature.tokens.size > 0 &&
+      keptSignatures.some(
+        (kept) => containedShare(signature, kept) >= threshold,
+      );
     if (contained) {
       droppedOverlap.push(passage);
       continue;
     }
     unique.push(passage);
-    keptTokens.push(tokens);
+    keptSignatures.push(signature);
   }
 
   return { unique, droppedOverlap };
@@ -335,22 +338,4 @@ function sectionLine(sectionPath: string[]): string {
   // Keep in step with `formatCitationContext` in chat-citations, which
   // renders the same line into the model-facing passage.
   return `Section: ${sectionPath.join(' > ')}\n`;
-}
-
-/** Unicode-aware word tokens, matching the retrieval dedupe tokenizer. */
-function tokenSet(text: string): Set<string> {
-  return new Set(text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
-}
-
-/**
- * The share of the candidate's tokens that the earlier passage also
- * contains: how much of the candidate is already in the model's context.
- */
-function containedShare(candidate: Set<string>, kept: Set<string>): number {
-  if (candidate.size === 0) return 0;
-  let shared = 0;
-  for (const token of candidate) {
-    if (kept.has(token)) shared++;
-  }
-  return shared / candidate.size;
 }

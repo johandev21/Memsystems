@@ -3,7 +3,7 @@ import { chunkBody } from '../ai/evidence-assembly';
 
 export { type CitationLocator } from '../ai/retrieval.service';
 
-export const CITATION_SCHEMA_VERSION = 2;
+export const CITATION_SCHEMA_VERSION = 3;
 export const MAX_CITATION_EXCERPT_LENGTH = 500;
 
 /** Content words a reply segment needs before it can be a claim. */
@@ -507,15 +507,21 @@ function coverageOf(claimTerms: Set<string>, spanTokens: Set<string>): number {
   return hit / claimTerms.size;
 }
 
-/** Caps a span at the excerpt limit without cutting a word in half. */
+/**
+ * Caps a span at the excerpt limit, cutting at a whitespace boundary. The
+ * stored span stays a literal substring of the chunk it cites: no whitespace
+ * normalization and no ellipsis, so a stored quote can always be located in
+ * the source text. Only outer whitespace is trimmed.
+ */
 function capSpan(text: string): string {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= MAX_CITATION_EXCERPT_LENGTH) return normalized;
-  const shortened = normalized.slice(0, MAX_CITATION_EXCERPT_LENGTH - 1);
-  const lastWordBoundary = shortened.lastIndexOf(' ');
-  const excerpt =
-    lastWordBoundary > 0 ? shortened.slice(0, lastWordBoundary) : shortened;
-  return `${excerpt.trimEnd()}...`;
+  const trimmed = text.trim();
+  if (trimmed.length <= MAX_CITATION_EXCERPT_LENGTH) return trimmed;
+  const shortened = trimmed.slice(0, MAX_CITATION_EXCERPT_LENGTH);
+  const boundary = Math.max(
+    shortened.lastIndexOf(' '),
+    shortened.lastIndexOf('\n'),
+  );
+  return boundary > 0 ? shortened.slice(0, boundary) : shortened;
 }
 
 export function normalizeStoredCitation(
