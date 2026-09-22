@@ -30,10 +30,10 @@ import {
   type CitedSourceEntry,
   type StoredCitedSourceEntry,
   createCitationEvidence,
-  extractCitationEntries,
   formatCitationContext,
   normalizeStoredCitation,
   sanitizeReferenceUrl,
+  verifyCitations,
 } from './chat-citations';
 import {
   composeNoEvidenceReply,
@@ -479,7 +479,19 @@ export class ChatService {
       if (assistantMessagePersisted || !text.trim()) return;
       assistantMessagePersisted = true;
 
-      const citedEntries = extractCitationEntries(text, citationEvidence);
+      // Post-generation verification: every key the reply emitted must map to
+      // a retrieved chunk, entries store their supporting span, and unmarked
+      // claims are attributed to the nearest Evidence. Unresolvable
+      // references are dropped from the stored citations.
+      const verification = verifyCitations(text, citationEvidence);
+      if (verification.droppedKeys.length > 0) {
+        this.logger.warn(
+          `Dropped ${verification.droppedKeys.length} unresolvable citation key(s): ${verification.droppedKeys
+            .slice(0, 10)
+            .join(', ')}`,
+        );
+      }
+      const citedEntries = verification.entries;
 
       const parts: Record<string, unknown>[] = [];
       if (reasoning && reasoning.trim()) {
@@ -493,6 +505,11 @@ export class ChatService {
         modelId,
         createdAt: startTime.toISOString(),
         completedAt: new Date().toISOString(),
+        citationCheck: {
+          resolved: citedEntries.length,
+          attributed: verification.attributedClaims,
+          dropped: verification.droppedKeys.length,
+        },
         ...customMetadata,
       };
 

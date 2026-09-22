@@ -158,6 +158,18 @@ _Avoid_: transformed query, expanded query
 A generated passage that would answer a short query, embedded for the dense leg when the query itself carries too little to match on.
 _Avoid_: HyDE, pseudo-document, generated document
 
+**Evidence Assembly**:
+The stage that turns the candidates above the relevance threshold into the final Evidence set: overlapping passages collapse, a Source cannot fill the set, selected passages carry their section context, and the set stays inside the token budget.
+_Avoid_: context packing, truncation, evidence selection
+
+**Supporting Span**:
+The one or two sentences of a Source Chunk that a Citation points at, instead of the whole chunk.
+_Avoid_: excerpt, snippet (the excerpt is the stored text; the span is the passage it points at)
+
+**Nearest-Evidence Attribution**:
+The post-generation check that links a claim the model left unmarked to the Evidence passage that best supports it.
+_Avoid_: auto-citation, inferred citation
+
 ### Settings and appearance
 
 **Palette**:

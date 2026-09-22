@@ -19,6 +19,7 @@ import { chunkContextHeader } from '../../src/modules/ai/chunking.service';
 import {
   DEFAULT_FUSION_K,
   RetrievalService,
+  type RetrievedChunk,
 } from '../../src/modules/ai/retrieval.service';
 import {
   QueryUnderstandingService,
@@ -28,8 +29,11 @@ import {
 import type { Reranker } from '../../src/modules/ai/reranker.service';
 import {
   createCitationEvidence,
-  extractCitationEntries,
+  verifyCitations,
+  type CitationEvidence,
+  type CitationVerification,
 } from '../../src/modules/chat/chat-citations';
+import { chunkBody } from '../../src/modules/ai/evidence-assembly';
 import { db } from '../db';
 import { seedNotebook, seedSource } from '../fixtures';
 import {
@@ -116,7 +120,25 @@ export interface RetrievalEvalOptions {
   hypotheticalAnswer?: boolean;
   /** Override to inject a deliberately regressed rewriter. */
   rewriter?: QueryRewriter;
+  /**
+   * Set false to measure the pipeline without nearest-Evidence attribution.
+   * The gate uses it to prove a reply without markers loses its grounded
+   * claims when attribution is disabled.
+   */
+  citationAttribution?: boolean;
+  /**
+   * Override the post-generation citation check. The gate injects a verifier
+   * that lets an invented key resolve and asserts citation accuracy fails.
+   */
+  citationVerifier?: CitationVerifier;
 }
+
+/** The post-generation citation check the harness runs. */
+export type CitationVerifier = (
+  text: string,
+  evidence: CitationEvidence[],
+  options?: { attribution?: boolean },
+) => CitationVerification;
 
 export interface RetrievalEvalQueryResult {
   queryId: string;
@@ -134,6 +156,10 @@ export interface RetrievalEvalQueryResult {
   ndcg: number;
   contextPrecision: number | null;
   citationAccuracy: number | null;
+  /** Unmarked claims the verifier attributed to a retrieved chunk. */
+  attributedClaims: number;
+  /** Keys the played answer emitted that did not resolve. */
+  droppedCitationKeys: string[];
   faithfulness: number | null;
   refusalCorrect: boolean;
   latencyMs: number;
@@ -286,7 +312,12 @@ export async function evaluateRetrieval(
       relevanceFloor,
       history: query.history,
     });
-    queries.push(buildQueryResult(query, outcome, chunkIdByGoldenId, topK));
+    queries.push(
+      buildQueryResult(query, outcome, chunkIdByGoldenId, topK, {
+        attribution: options.citationAttribution ?? true,
+        citationVerifier: options.citationVerifier ?? verifyCitations,
+      }),
+    );
   }
 
   return {
@@ -395,6 +426,10 @@ function buildQueryResult(
   outcome: Awaited<ReturnType<RetrievalService['retrieve']>>,
   chunkIdByGoldenId: Map<string, string>,
   topK: number,
+  citationOptions: {
+    attribution: boolean;
+    citationVerifier: CitationVerifier;
+  },
 ): RetrievalEvalQueryResult {
   const relevantChunkIds = query.relevantChunkIds.map((goldenId) => {
     const id = chunkIdByGoldenId.get(goldenId);
@@ -409,10 +444,12 @@ function buildQueryResult(
   );
 
   // Citation accuracy: the harness plays an ideal answer that cites the
-  // labeled relevant chunks through their Evidence keys, plus an invented key
-  // that must never resolve. Accuracy is the share of expected citations the
-  // real extractor resolves to a labeled chunk, so a broken key-to-chunk map
-  // or a missed relevant chunk both lower it.
+  // labeled relevant chunks through their Evidence keys, adds one unmarked
+  // claim copied from a relevant passage, and adds an invented key that must
+  // never resolve. Accuracy counts the explicit citations that resolve to a
+  // labeled chunk with a supporting span, plus the unmarked claim when the
+  // verifier attributes it; a broken key-to-chunk map, a missed relevant
+  // chunk, a whole-chunk quote, or disabled attribution all lower it.
   const evidence = createCitationEvidence(outcome.chunks);
   const evidenceKeyByChunkId = new Map(
     evidence.map((item) => [item.chunkId, item.citationKey]),
@@ -420,14 +457,47 @@ function buildQueryResult(
   const expectedKeys = relevantChunkIds
     .map((id) => evidenceKeyByChunkId.get(id))
     .filter((key): key is string => Boolean(key));
+  const expectedClaims = expectedKeys.map((key) => {
+    const item = evidence.find((candidate) => candidate.citationKey === key)!;
+    return `${claimSentence(item.content)} [ref:${key}].`;
+  });
+  const attributionTarget = evidence.find((item) => relevant.has(item.chunkId));
+  const bareClaim = attributionTarget
+    ? secondClaimSentence(attributionTarget.content)
+    : null;
   const answer = [
-    ...expectedKeys.map((key) => `A grounded claim [ref:${key}].`),
+    ...expectedClaims,
+    ...(bareClaim ? [bareClaim] : []),
     'An invented claim [ref:R99].',
   ].join(' ');
-  const citations = extractCitationEntries(answer, evidence);
-  const resolvedRelevant = citations.filter(
-    (entry) => entry.chunkId && relevant.has(entry.chunkId),
+  const verification = citationOptions.citationVerifier(answer, evidence, {
+    attribution: citationOptions.attribution,
+  });
+  const resolvedExplicit = verification.entries.filter(
+    (entry) =>
+      entry.attribution === 'explicit' &&
+      entry.chunkId !== null &&
+      relevant.has(entry.chunkId) &&
+      entry.quote !== null &&
+      isSupportingSpan(entry.quote, entry.chunkId, evidence, answer),
   ).length;
+  const attributionResolved = verification.attributedClaims > 0;
+  const inventedKeyDropped = !verification.entries.some(
+    (entry) => entry.citationKey === 'R99',
+  );
+  // The denominator is the labeled chunks plus the unmarked claim, so a
+  // relevant chunk that retrieval missed counts as a failed citation rather
+  // than dropping out of the metric.
+  const expectedCount = relevantChunkIds.length + (bareClaim ? 1 : 0);
+  // An invented key that resolves is a mapping regression: every citation on
+  // that turn is untrustworthy, so the query scores zero rather than being
+  // dropped from the metric.
+  const citationAccuracy =
+    expectedCount > 0
+      ? inventedKeyDropped
+        ? (resolvedExplicit + (attributionResolved ? 1 : 0)) / expectedCount
+        : 0
+      : null;
 
   return {
     queryId: query.id,
@@ -449,10 +519,9 @@ function buildQueryResult(
       retrievedChunkIds.length > 0
         ? relevantRetrieved.length / retrievedChunkIds.length
         : null,
-    citationAccuracy:
-      relevantChunkIds.length > 0
-        ? resolvedRelevant / relevantChunkIds.length
-        : null,
+    citationAccuracy,
+    attributedClaims: verification.attributedClaims,
+    droppedCitationKeys: verification.droppedKeys,
     faithfulness: outcome.abstained
       ? null
       : retrievedChunkIds.length > 0 && relevant.has(retrievedChunkIds[0])
@@ -465,6 +534,61 @@ function buildQueryResult(
     rewriteInputTokens: outcome.trace.cost.rewriteInputTokens,
     rewriteOutputTokens: outcome.trace.cost.rewriteOutputTokens,
   };
+}
+
+/** The first sentence of a passage, without its source-title header. */
+function claimSentence(content: string): string {
+  const body = chunkBody(content).replace(/\s+/g, ' ').trim();
+  const end = body.search(/[.!?](\s|$)/);
+  return end === -1 ? body : body.slice(0, end + 1);
+}
+
+/**
+ * A second, differently worded claim from the same passage: the sentence
+ * after the first, so the verifier can attribute it even though the first
+ * sentence's explicit marker already cites the passage.
+ */
+function secondClaimSentence(content: string): string {
+  const body = chunkBody(content).replace(/\s+/g, ' ').trim();
+  const firstEnd = body.search(/[.!?](\s|$)/);
+  if (firstEnd === -1) return body;
+  const rest = body.slice(firstEnd + 1).trim();
+  if (!rest) return body;
+  const secondEnd = rest.search(/[.!?](\s|$)/);
+  return secondEnd === -1 ? rest : rest.slice(0, secondEnd + 1);
+}
+
+/**
+ * The support check: the stored quote must be a span of the chunk it cites
+ * and must share a content word with the played answer, so a whole-chunk
+ * copy or a quote from another passage does not count as a citation.
+ */
+function isSupportingSpan(
+  quote: string,
+  chunkId: string,
+  evidence: CitationEvidence[],
+  answer: string,
+): boolean {
+  const item = evidence.find((candidate) => candidate.chunkId === chunkId);
+  if (!item) return false;
+  const body = chunkBody(item.content);
+  if (!body.includes(quote)) return false;
+  const terms = new Set(
+    quote
+      .toLowerCase()
+      .match(/[a-z0-9]+/g)
+      ?.filter((word) => word.length >= 4),
+  );
+  const answerTerms = new Set(
+    answer
+      .toLowerCase()
+      .match(/[a-z0-9]+/g)
+      ?.filter((word) => word.length >= 4),
+  );
+  for (const term of terms) {
+    if (answerTerms.has(term)) return true;
+  }
+  return false;
 }
 
 function computeMetrics(

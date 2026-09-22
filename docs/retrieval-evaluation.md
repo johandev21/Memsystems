@@ -7,10 +7,11 @@ fails `pnpm run test`.
 
 The gate covers the retrieval pipeline (query understanding, query embedding,
 dense and lexical search legs, reciprocal rank fusion, dedupe, reranking,
-relevance thresholds, Evidence selection) and the contextual chunk
-representation the pipeline retrieves over. The remaining retrieval tickets —
-Generation grounding — are expected to move these metrics and to update the
-baseline with evidence.
+relevance thresholds, Evidence assembly) and the post-generation citation
+check (supporting spans, unresolvable-key removal, nearest-Evidence
+attribution), plus the contextual chunk representation the pipeline retrieves
+over. The remaining retrieval ticket — Generation grounding — is expected to
+move these metrics and to update the baseline with evidence.
 
 ## Pieces
 
@@ -22,7 +23,7 @@ baseline with evidence.
 | `backend/tests/eval/retrieval-eval.ts` | Seeds the corpus, runs every query through `RetrievalService`, and computes the metrics and the gate. |
 | `backend/tests/eval/deterministic-rewriter.ts` | A deterministic rewrite model over the golden corpus, so the gate exercises query understanding keylessly. |
 | `backend/tests/eval/baseline.json` | The checked-in baseline metrics and the documented tolerance. |
-| `backend/tests/retrieval-eval.test.ts` | The Vitest gate, plus the tests that prove a deliberate regression, a disabled reranker, a disabled lexical leg, and disabled query understanding are caught. |
+| `backend/tests/retrieval-eval.test.ts` | The Vitest gate, plus the tests that prove a deliberate regression, a disabled reranker, a disabled lexical leg, a disabled contextual header, disabled query understanding, disabled attribution, and a citation mapping that accepts an invented key are caught. |
 
 The runner calls the real retrieval pipeline against the disposable test
 database (see [testing.md](testing.md)). It does not call Voyage: the
@@ -134,6 +135,41 @@ already reads as a search query never pays for it. The harness's
 alongside the query embedding and rerank tokens, so enabling rewriting shows
 up in the cost metric rather than hiding behind it.
 
+## Evidence assembly and citations
+
+After the threshold, `RetrievalService` assembles the final Evidence set
+(`backend/src/modules/ai/evidence-assembly.ts`): a passage contained in a
+better-ranked passage is dropped, one Source cannot fill the set
+(`RETRIEVAL_MAX_PER_SOURCE`, with backfill when other Sources run out),
+selected passages carry their section heading path, and the set is bounded by
+`RETRIEVAL_EVIDENCE_TOKEN_BUDGET` instead of a character slice. The assembly
+is pure and deterministic, and the run exposes the resolved knobs through the
+trace's `evidence` block. `tests/evidence-assembly.test.ts` covers dedupe,
+the diversity cap, the budget, section expansion, and determinism;
+`tests/retrieval.service.test.ts` proves the assembled set and its drops
+reach the trace and the returned chunks.
+
+The citation metric plays an ideal answer against the real post-generation
+check: an explicit marker per labeled relevant chunk, one unmarked claim
+copied from a relevant passage, and an invented `R99` key. A query scores as
+the share of expected citations that
+
+- resolve to a labeled chunk through an explicit marker,
+- store a supporting span of that chunk (a substring that shares a content
+  word with the played claim), and
+- are attributed from the unmarked claim when attribution is enabled.
+
+An invented key that resolves scores the query zero, because every citation
+on that turn is untrustworthy. The denominator is the labeled chunks plus the
+unmarked claim, so a relevant chunk retrieval missed counts as a failed
+citation instead of dropping out of the metric. Two gate tests keep the check
+honest: `detects grounding attribution being disabled` fails
+`citationAccuracy` when the verifier no longer attributes unmarked claims,
+and `detects a citation mapping that lets an invented key resolve` fails it
+when unresolvable keys are accepted. `tests/chat-citations.test.ts` covers
+span extraction and trailing markers, invalid-citation removal, attribution,
+and the Evidence block (no retrieval score, section context rendered).
+
 ## Metrics
 
 | Metric | Meaning | Direction |
@@ -142,7 +178,7 @@ up in the cost metric rather than hiding behind it.
 | `mrr` | Mean reciprocal rank of the first relevant chunk. | higher is better |
 | `ndcgAtK` | Binary-relevance nDCG over the retrieved order. | higher is better |
 | `contextPrecision` | Share of retrieved chunks labeled relevant, over queries that retrieved something. | higher is better |
-| `citationAccuracy` | Share of expected citations that resolve to the labeled relevant chunk. The harness plays an ideal answer citing each labeled relevant chunk through its Evidence key, plus an invented key that must be dropped by the real citation extractor. | higher is better |
+| `citationAccuracy` | Share of expected citations that resolve to the labeled relevant chunk with a supporting span, plus the unmarked claim when the verifier attributes it. The harness plays an ideal answer citing each labeled relevant chunk through its Evidence key, adding one unmarked claim copied from a relevant passage and an invented key that must be dropped; a resolved invented key scores the query zero. | higher is better |
 | `refusalAccuracy` | Share of queries whose abstention matched the label: answerable queries must answer, unanswerable ones must abstain. | higher is better |
 | `faithfulness` | Deterministic proxy: share of answered queries whose top-ranked chunk is relevant. A model-judged faithfulness check needs provider calls and is out of scope for the keyless gate. | higher is better |
 | `latencyMsP50`, `latencyMsP95` | Wall-clock retrieval duration per query. | reported; p95 is gated by an absolute ceiling |
@@ -218,12 +254,15 @@ the workflow.
 
 The gate test also runs deliberately broken configurations — a constant
 embedder, a disabled floor, a disabled reranker, a disabled lexical leg, a
-disabled contextual header, and disabled query understanding — and asserts
-that the gate reports failures, so the gate itself is tested rather than
-assumed. Disabling the lexical leg is expected to fail `recallAtK`,
+disabled contextual header, disabled query understanding, disabled grounding
+attribution, and a citation mapping that accepts an invented key — and
+asserts that the gate reports failures, so the gate itself is tested rather
+than assumed. Disabling the lexical leg is expected to fail `recallAtK`,
 `citationAccuracy`, and `refusalAccuracy`: the catalog answer is only
 reachable through fusion. Disabling the contextual header is expected to fail
 `recallAtK` and `refusalAccuracy`: the section-dependent lab-manual queries
 lose the tokens that make them retrievable and abstain. Disabling query
 understanding fails the same three metrics as the lexical leg: the labeled
 meta, follow-up, and ambiguous queries are only answerable after a rewrite.
+Disabling attribution and accepting an invented key both fail
+`citationAccuracy`, which is what makes the citation metric load-bearing.

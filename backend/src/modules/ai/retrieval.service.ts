@@ -11,6 +11,14 @@ import {
 } from './config-parsing';
 import { EMBEDDING_DIMENSIONS, EmbeddingService } from './embedding.service';
 import {
+  DEFAULT_EVIDENCE_CONFIG,
+  RETRIEVAL_EVIDENCE_CONFIG,
+  assembleEvidence,
+  type EvidenceAssembly,
+  type EvidencePassage,
+  type RetrievalEvidenceConfig,
+} from './evidence-assembly';
+import {
   MAX_RERANK_DOCUMENTS,
   estimateVoyageTokens,
 } from './providers/voyage.client';
@@ -27,6 +35,7 @@ import type {
   RetrievalRerankSkippedReason,
   RetrievalTrace,
   RetrievalTraceCandidate,
+  RetrievalTraceEvidence,
   RetrievalTraceFusion,
   RetrievalTraceLeg,
   RetrievalTraceRerankedCandidate,
@@ -73,9 +82,15 @@ export interface RetrievedChunk {
   title: string;
   content: string;
   /**
+   * The heading path of the chunk's section, empty when assembly did not
+   * carry section context. It is what the model-facing passage shows as
+   * `Section:` and what a citation can display as its location context.
+   */
+  sectionPath: string[];
+  /**
    * The dense retrieval score (cosine similarity). Reranking reorders chunks
-   * but never overwrites this value, so the score shown in the Evidence block
-   * is not the reranker score.
+   * but never overwrites this value. The score is trace-only: it is no longer
+   * shown in the Evidence block the model reads.
    */
   score: number;
   url: string | null;
@@ -317,6 +332,8 @@ interface RetrievalChunkRow {
   source_version_id: string | null;
   locator: CitationLocator | null;
   content: string;
+  /** The heading path of the chunk's section; null on legacy chunks. */
+  heading_path: string[] | null;
   /** Contextual searchable text; what the reranker scores. */
   searchable_text: string;
   /** The leg's own score: cosine similarity or `ts_rank_cd`. */
@@ -378,6 +395,7 @@ export class RetrievalService {
   private readonly relevanceFloor: number;
   private readonly rerankConfig: RetrievalRerankConfig;
   private readonly hybridConfig: RetrievalHybridConfig;
+  private readonly evidenceConfig: RetrievalEvidenceConfig;
 
   constructor(
     @Inject(DRIZZLE)
@@ -398,11 +416,15 @@ export class RetrievalService {
     @Optional()
     @Inject(QueryUnderstandingService)
     private readonly queryUnderstanding?: QueryUnderstandingService,
+    @Optional()
+    @Inject(RETRIEVAL_EVIDENCE_CONFIG)
+    evidenceConfig?: RetrievalEvidenceConfig,
   ) {
     this.relevanceFloor =
       relevanceConfig?.relevanceFloor ?? DEFAULT_RELEVANCE_FLOOR;
     this.rerankConfig = rerankConfig ?? DEFAULT_RERANK_CONFIG;
     this.hybridConfig = hybridConfig ?? DEFAULT_HYBRID_CONFIG;
+    this.evidenceConfig = evidenceConfig ?? DEFAULT_EVIDENCE_CONFIG;
   }
 
   /** The model the query embedding used, for the retrieval trace. */
@@ -588,16 +610,37 @@ export class RetrievalService {
     const below: RetrievedChunk[] = [];
     for (const candidate of rerank.candidates) {
       if (candidateScore(candidate) >= threshold) above.push(candidate);
-      else below.push(chunkFromRow(candidate.row));
+      else below.push(chunkFromRow(candidate.row, []));
     }
 
-    const selected = selectEvidence(
-      above,
-      policy.topK,
-      policy.sourceIds !== null,
+    // Assembly turns the above-threshold candidates into the Evidence set the
+    // model reads: overlapping passages collapse, a Source cannot fill the
+    // set, selected passages carry their section context, and the whole set
+    // stays inside the token budget. The assembly is deterministic, so the
+    // same candidates always produce the same Evidence order.
+    const assembly = assembleEvidence({
+      candidates: above.map(passageFromCandidate),
+      topK: policy.topK,
+      perSource: policy.sourceIds !== null,
+      config: this.evidenceConfig,
+    });
+    const candidateByChunkId = new Map(
+      above.map((candidate) => [candidate.row.chunk_id, candidate]),
     );
-    const chunks = selected.map((candidate) => chunkFromRow(candidate.row));
-    const chosen = selected.map((candidate, index) =>
+    const rankByChunkId = new Map(
+      above.map((candidate, index) => [candidate.row.chunk_id, index + 1]),
+    );
+    const selected = assembly.items.map((item) => ({
+      candidate: candidateByChunkId.get(item.passage.chunkId)!,
+      sectionExpanded: item.sectionExpanded,
+    }));
+    const chunks = selected.map(({ candidate, sectionExpanded }) =>
+      chunkFromRow(
+        candidate.row,
+        sectionExpanded ? (candidate.row.heading_path ?? []) : [],
+      ),
+    );
+    const chosen = selected.map(({ candidate }, index) =>
       traceCandidate(candidate.row, index + 1, candidate.fusedScore),
     );
     const abstained = chunks.length === 0;
@@ -628,6 +671,12 @@ export class RetrievalService {
           candidates: rerank.traceCandidates,
           inputTokens: rerank.inputTokens,
         },
+        evidence: traceEvidence(
+          assembly,
+          this.evidenceConfig,
+          candidateByChunkId,
+          rankByChunkId,
+        ),
         chosen,
         abstained,
         abstentionReason,
@@ -679,6 +728,7 @@ export class RetrievalService {
           candidates: [],
           inputTokens: 0,
         },
+        evidence: emptyTraceEvidence(this.evidenceConfig),
         chosen: [],
         abstained: true,
         abstentionReason: input.abstentionReason,
@@ -923,6 +973,7 @@ function chunkColumns(): SQL {
     sc.source_version_id,
     sc.locator,
     sc.content,
+    sc.heading_path,
     sc.searchable_text
   `;
 }
@@ -938,6 +989,7 @@ function buildTrace(input: {
   fusion: RetrievalTraceFusion;
   fusedOrder: RetrievalTraceCandidate[];
   rerank: RetrievalTrace['rerank'];
+  evidence: RetrievalTraceEvidence;
   chosen: RetrievalTraceCandidate[];
   abstained: boolean;
   abstentionReason: RetrievalAbstentionReason | null;
@@ -947,7 +999,7 @@ function buildTrace(input: {
   rewriteOutputTokens: number;
 }): RetrievalTrace {
   return {
-    version: 4,
+    version: 5,
     query: input.query,
     topK: input.topK,
     scope: {
@@ -964,6 +1016,7 @@ function buildTrace(input: {
     fusion: input.fusion,
     fusedOrder: input.fusedOrder,
     rerank: input.rerank,
+    evidence: input.evidence,
     chosen: input.chosen,
     abstained: input.abstained,
     abstentionReason: input.abstentionReason,
@@ -974,6 +1027,77 @@ function buildTrace(input: {
       rewriteInputTokens: input.rewriteInputTokens,
       rewriteOutputTokens: input.rewriteOutputTokens,
     },
+  };
+}
+
+/**
+ * Projects the assembly result onto the trace. Dropped candidates carry the
+ * rank and fused score they held among the above-threshold candidates, so a
+ * diagnosis can tell which passage displaced them.
+ */
+function traceEvidence(
+  assembly: EvidenceAssembly,
+  config: RetrievalEvidenceConfig,
+  candidateByChunkId: Map<string, RankedCandidate>,
+  rankByChunkId: Map<string, number>,
+): RetrievalTraceEvidence {
+  const asCandidate = (passage: EvidencePassage): RetrievalTraceCandidate => {
+    const candidate = candidateByChunkId.get(passage.chunkId)!;
+    return traceCandidate(
+      candidate.row,
+      rankByChunkId.get(passage.chunkId) ?? 0,
+      candidate.fusedScore,
+    );
+  };
+
+  return {
+    overlapThreshold: config.overlapThreshold,
+    maxPerSource: config.maxPerSource,
+    tokenBudget: config.tokenBudget,
+    sectionExpansion: config.sectionExpansion,
+    tokens: assembly.tokens,
+    budgetExhausted: assembly.budgetExhausted,
+    items: assembly.items.map((item) => ({
+      chunkId: item.passage.chunkId,
+      sourceId: item.passage.sourceId,
+      chunkIndex: item.passage.chunkIndex,
+      tokens: item.tokens,
+      sectionExpanded: item.sectionExpanded,
+    })),
+    droppedOverlap: assembly.droppedOverlap.map(asCandidate),
+    droppedDiversity: assembly.droppedDiversity.map(asCandidate),
+    droppedBudget: assembly.droppedBudget.map(asCandidate),
+  };
+}
+
+/**
+ * The empty-outcome Evidence record: the resolved knobs with nothing
+ * assembled, so the trace never omits why the set is empty.
+ */
+function emptyTraceEvidence(
+  config: RetrievalEvidenceConfig,
+): RetrievalTraceEvidence {
+  return {
+    overlapThreshold: config.overlapThreshold,
+    maxPerSource: config.maxPerSource,
+    tokenBudget: config.tokenBudget,
+    sectionExpansion: config.sectionExpansion,
+    tokens: 0,
+    budgetExhausted: false,
+    items: [],
+    droppedOverlap: [],
+    droppedDiversity: [],
+    droppedBudget: [],
+  };
+}
+
+function passageFromCandidate(candidate: RankedCandidate): EvidencePassage {
+  return {
+    chunkId: candidate.row.chunk_id,
+    sourceId: candidate.row.source_id,
+    chunkIndex: candidate.row.chunk_index,
+    sectionPath: candidate.row.heading_path ?? [],
+    content: candidate.row.content,
   };
 }
 
@@ -991,7 +1115,10 @@ function traceCandidate(
   };
 }
 
-function chunkFromRow(row: RetrievalChunkRow): RetrievedChunk {
+function chunkFromRow(
+  row: RetrievalChunkRow,
+  sectionPath: string[],
+): RetrievedChunk {
   return {
     chunkId: row.chunk_id,
     chunkIndex: row.chunk_index,
@@ -1002,6 +1129,7 @@ function chunkFromRow(row: RetrievalChunkRow): RetrievedChunk {
     sourceVersionId: row.source_version_id ?? null,
     locator: row.locator ?? null,
     content: row.content,
+    sectionPath,
     score: denseScoreOf(row),
   };
 }
@@ -1080,30 +1208,6 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   }
   const union = a.size + b.size - intersection;
   return union === 0 ? 0 : intersection / union;
-}
-
-/**
- * Bounds the final Evidence set. Notebook-wide, the best `topK` candidates
- * are kept; for selected sources, `topK` bounds each source independently so
- * every selected source contributes its best chunks.
- */
-function selectEvidence(
-  above: RankedCandidate[],
-  topK: number,
-  perSource: boolean,
-): RankedCandidate[] {
-  if (!perSource) return above.slice(0, topK);
-
-  const counts = new Map<string, number>();
-  const selected: RankedCandidate[] = [];
-  for (const candidate of above) {
-    const sourceId = candidate.row.source_id;
-    const count = counts.get(sourceId) ?? 0;
-    if (count >= topK) continue;
-    counts.set(sourceId, count + 1);
-    selected.push(candidate);
-  }
-  return selected;
 }
 
 function distinctSources(chunks: RetrievedChunk[]): UnhelpfulSource[] {

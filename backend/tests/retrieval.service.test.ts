@@ -33,6 +33,15 @@ import {
   type RetrievalRerankConfig,
 } from '../src/modules/ai/retrieval.service';
 import {
+  DEFAULT_EVIDENCE_CONFIG,
+  DEFAULT_EVIDENCE_TOKEN_BUDGET,
+  DEFAULT_MAX_PER_SOURCE,
+  DEFAULT_OVERLAP_THRESHOLD,
+  RETRIEVAL_EVIDENCE_CONFIG,
+  loadRetrievalEvidenceConfig,
+  type RetrievalEvidenceConfig,
+} from '../src/modules/ai/evidence-assembly';
+import {
   DEFAULT_REWRITE_CONFIG,
   DEFAULT_REWRITE_MODEL,
   QueryUnderstandingService,
@@ -53,6 +62,7 @@ function serviceWithRows(
     lexicalRows?: Record<string, unknown>[];
   },
   understanding?: QueryUnderstandingService,
+  evidence?: Partial<RetrievalEvidenceConfig>,
 ) {
   // The first leg searched is always the dense leg, so the scripted rows
   // describe it; the lexical leg returns `lexicalRows` when one is given.
@@ -68,6 +78,7 @@ function serviceWithRows(
     rerank?.reranker as never,
     hybrid?.config ? { ...DEFAULT_HYBRID_CONFIG, ...hybrid.config } : undefined,
     understanding,
+    evidence ? { ...DEFAULT_EVIDENCE_CONFIG, ...evidence } : undefined,
   );
   return { service, execute };
 }
@@ -122,6 +133,7 @@ function chunkRow(overrides: Record<string, unknown>): Record<string, unknown> {
     source_version_id: 'version-4',
     locator: null,
     content: 'The derivative measures instantaneous change.',
+    heading_path: [],
     score: 0.9,
     ...overrides,
   };
@@ -158,6 +170,7 @@ describe('RetrievalService citation locations', () => {
         sourceId: 'source-1',
         title: 'Lecture notes',
         content: 'The derivative measures instantaneous change.',
+        sectionPath: [],
         score: 0.93,
         url: null,
         kind: 'file',
@@ -266,7 +279,7 @@ describe('RetrievalService retrieval trace', () => {
     });
 
     expect(outcome.trace).toMatchObject({
-      version: 4,
+      version: 5,
       query: 'derivative',
       topK: 5,
       scope: { kind: 'notebook', sourceIds: null },
@@ -298,6 +311,24 @@ describe('RetrievalService retrieval trace', () => {
         threshold: DEFAULT_RERANK_THRESHOLD,
         candidates: [],
         inputTokens: 0,
+      },
+      evidence: {
+        overlapThreshold: DEFAULT_OVERLAP_THRESHOLD,
+        maxPerSource: DEFAULT_MAX_PER_SOURCE,
+        tokenBudget: DEFAULT_EVIDENCE_TOKEN_BUDGET,
+        sectionExpansion: true,
+        budgetExhausted: false,
+        items: [
+          {
+            chunkId: 'chunk-good',
+            sourceId: 'source-1',
+            chunkIndex: 0,
+            sectionExpanded: false,
+          },
+        ],
+        droppedOverlap: [],
+        droppedDiversity: [],
+        droppedBudget: [],
       },
       abstained: false,
       abstentionReason: null,
@@ -1088,6 +1119,354 @@ describe('RetrievalService relevance floor', () => {
       'chunk-faint',
     ]);
     expect(result.trace.relevanceFloor).toBe(0);
+  });
+});
+
+describe('RetrievalService evidence assembly', () => {
+  const noRerank: Partial<RetrievalRerankConfig> = { enabled: false };
+
+  it('applies the per-source cap and backfills from the overflow', async () => {
+    const { service } = serviceWithRows(
+      [
+        chunkRow({
+          chunk_id: 'a-1',
+          source_id: 'source-a',
+          content: 'Alpha one',
+        }),
+        chunkRow({
+          chunk_id: 'a-2',
+          source_id: 'source-a',
+          content: 'Alpha two',
+        }),
+        chunkRow({
+          chunk_id: 'a-3',
+          source_id: 'source-a',
+          content: 'Alpha three',
+        }),
+        chunkRow({
+          chunk_id: 'b-1',
+          source_id: 'source-b',
+          content: 'Beta one',
+        }),
+      ],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      {},
+      undefined,
+      { maxPerSource: 2 },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'alpha beta',
+      topK: 4,
+    });
+
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'a-1',
+      'a-2',
+      'b-1',
+      'a-3',
+    ]);
+    expect(outcome.trace.evidence).toMatchObject({
+      maxPerSource: 2,
+      droppedDiversity: [],
+      budgetExhausted: false,
+    });
+    expect(outcome.trace.evidence.items.map((item) => item.chunkId)).toEqual([
+      'a-1',
+      'a-2',
+      'b-1',
+      'a-3',
+    ]);
+  });
+
+  it('drops an overlapping passage and records it', async () => {
+    const full =
+      'Osmosis is the net movement of water across a selectively permeable membrane.';
+    const { service } = serviceWithRows(
+      [
+        chunkRow({ chunk_id: 'full', content: full }),
+        chunkRow({
+          chunk_id: 'excerpt',
+          source_id: 'source-2',
+          content:
+            'the net movement of water across a selectively permeable membrane',
+        }),
+        chunkRow({
+          chunk_id: 'distinct',
+          source_id: 'source-3',
+          content: 'Enzymes lower the activation energy of a reaction.',
+        }),
+      ],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'osmosis water membrane',
+    });
+
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual([
+      'full',
+      'distinct',
+    ]);
+    expect(
+      outcome.trace.evidence.droppedOverlap.map(
+        (candidate) => candidate.chunkId,
+      ),
+    ).toEqual(['excerpt']);
+    // The drop keeps the rank the candidate held above the threshold.
+    expect(outcome.trace.evidence.droppedOverlap[0]).toMatchObject({ rank: 2 });
+  });
+
+  it('carries the section context of selected chunks and reports the expansion', async () => {
+    const { service } = serviceWithRows(
+      [
+        chunkRow({
+          chunk_id: 'lab',
+          heading_path: ['Experiment 3', 'Fractional Distillation'],
+          content: 'Heat the flask slowly and collect the fraction.',
+        }),
+        chunkRow({
+          chunk_id: 'plain',
+          source_id: 'source-2',
+          content: 'No section here.',
+        }),
+      ],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'fraction',
+    });
+
+    expect(outcome.chunks[0].sectionPath).toEqual([
+      'Experiment 3',
+      'Fractional Distillation',
+    ]);
+    expect(outcome.chunks[1].sectionPath).toEqual([]);
+    expect(
+      outcome.trace.evidence.items.map((item) => item.sectionExpanded),
+    ).toEqual([true, false]);
+    expect(outcome.trace.evidence.items[0].tokens).toBeGreaterThan(0);
+  });
+
+  it('honors the evidence token budget and records what it dropped', async () => {
+    const long = 'alpha beta gamma delta '.repeat(40);
+    const { service } = serviceWithRows(
+      [
+        chunkRow({ chunk_id: 'first', content: long }),
+        chunkRow({
+          chunk_id: 'second',
+          source_id: 'source-2',
+          content: long.replace(/alpha/g, 'omega'),
+        }),
+      ],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      {},
+      undefined,
+      // Each passage is ~220 tokens; the second pushes past 400.
+      { tokenBudget: 400 },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'alpha',
+    });
+
+    expect(outcome.chunks.map((chunk) => chunk.chunkId)).toEqual(['first']);
+    expect(
+      outcome.trace.evidence.droppedBudget.map(
+        (candidate) => candidate.chunkId,
+      ),
+    ).toEqual(['second']);
+    expect(outcome.trace.evidence.budgetExhausted).toBe(true);
+    expect(outcome.trace.evidence.tokens).toBeLessThanOrEqual(400);
+  });
+
+  it('leaves section context out when expansion is disabled', async () => {
+    const { service } = serviceWithRows(
+      [
+        chunkRow({
+          chunk_id: 'lab',
+          heading_path: ['Experiment 3', 'Fractional Distillation'],
+        }),
+      ],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      {},
+      undefined,
+      { sectionExpansion: false },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'fraction',
+    });
+
+    expect(outcome.chunks[0].sectionPath).toEqual([]);
+    expect(outcome.trace.evidence.sectionExpansion).toBe(false);
+    expect(outcome.trace.evidence.items[0].sectionExpanded).toBe(false);
+  });
+
+  it('records the resolved evidence knobs on an empty outcome', async () => {
+    const { service } = serviceWithRows(
+      [],
+      { relevanceFloor: 0 },
+      { config: noRerank },
+      {},
+      undefined,
+      { maxPerSource: 3 },
+    );
+
+    const outcome = await service.retrieve({
+      notebookId: 'notebook-1',
+      query: 'anything',
+    });
+
+    expect(outcome.trace.evidence).toEqual({
+      overlapThreshold: DEFAULT_OVERLAP_THRESHOLD,
+      maxPerSource: 3,
+      tokenBudget: DEFAULT_EVIDENCE_TOKEN_BUDGET,
+      sectionExpansion: true,
+      tokens: 0,
+      budgetExhausted: false,
+      items: [],
+      droppedOverlap: [],
+      droppedDiversity: [],
+      droppedBudget: [],
+    });
+  });
+});
+
+describe('loadRetrievalEvidenceConfig', () => {
+  it('falls back to the documented defaults', () => {
+    expect(loadRetrievalEvidenceConfig({})).toEqual(DEFAULT_EVIDENCE_CONFIG);
+  });
+
+  it('reads the evidence configuration from the environment', () => {
+    expect(
+      loadRetrievalEvidenceConfig({
+        RETRIEVAL_EVIDENCE_ENABLED: 'false',
+        RETRIEVAL_OVERLAP_THRESHOLD: '0.5',
+        RETRIEVAL_MAX_PER_SOURCE: '2',
+        RETRIEVAL_EVIDENCE_TOKEN_BUDGET: '4000',
+        RETRIEVAL_SECTION_EXPANSION: 'false',
+      }),
+    ).toEqual({
+      enabled: false,
+      overlapThreshold: 0.5,
+      maxPerSource: 2,
+      tokenBudget: 4000,
+      sectionExpansion: false,
+    });
+  });
+});
+
+describe('AiModule evidence wiring', () => {
+  it('reads the evidence configuration from the environment through the config provider', async () => {
+    const notebook = await seedNotebook();
+    const sourceA = await seedSource(notebook.id, {
+      kind: 'text',
+      title: 'Source A',
+      rawText: 'Alpha one alpha two',
+      processingStatus: 'ready',
+    });
+    const sourceB = await seedSource(notebook.id, {
+      kind: 'text',
+      title: 'Source B',
+      rawText: 'Beta one beta two',
+      processingStatus: 'ready',
+    });
+    const embedding = [1, ...Array.from({ length: 1023 }, () => 0)];
+    await db.insert(sourceChunks).values([
+      {
+        id: 'evidence-a-1',
+        sourceId: sourceA.id,
+        notebookId: notebook.id,
+        chunkIndex: 0,
+        content: 'Alpha one',
+        searchableText: 'Alpha one',
+        headingPath: [],
+        sourceKind: 'text',
+        embedding,
+      },
+      {
+        id: 'evidence-a-2',
+        sourceId: sourceA.id,
+        notebookId: notebook.id,
+        chunkIndex: 1,
+        content: 'Alpha two',
+        searchableText: 'Alpha two',
+        headingPath: [],
+        sourceKind: 'text',
+        embedding,
+      },
+      {
+        id: 'evidence-b-1',
+        sourceId: sourceB.id,
+        notebookId: notebook.id,
+        chunkIndex: 0,
+        content: 'Beta one',
+        searchableText: 'Beta one',
+        headingPath: [],
+        sourceKind: 'text',
+        embedding,
+      },
+      {
+        id: 'evidence-b-2',
+        sourceId: sourceB.id,
+        notebookId: notebook.id,
+        chunkIndex: 1,
+        content: 'Beta two',
+        searchableText: 'Beta two',
+        headingPath: [],
+        sourceKind: 'text',
+        embedding,
+      },
+    ]);
+
+    process.env.RETRIEVAL_MAX_PER_SOURCE = '1';
+    try {
+      const moduleRef = await Test.createTestingModule({
+        imports: [DatabaseModule, AiModule],
+      })
+        .overrideProvider(DRIZZLE)
+        .useValue(db)
+        .overrideProvider(PG_POOL)
+        .useValue({})
+        .overrideProvider(EmbeddingService)
+        .useValue({
+          embedQuery: vi.fn().mockResolvedValue(embedding),
+          queryEmbeddingModel: () => EMBEDDING_MODEL,
+          getVoyageApiKey: vi.fn().mockResolvedValue(null),
+        })
+        .compile();
+
+      const service = moduleRef.get(RetrievalService);
+      const result = await service.retrieve({
+        notebookId: notebook.id,
+        query: 'alpha beta',
+      });
+
+      // With a cap of one, the two sources interleave before either
+      // contributes a second passage; without the cap the order would keep
+      // both alpha chunks first.
+      expect(result.trace.evidence.maxPerSource).toBe(1);
+      expect(result.trace.evidence.items.map((item) => item.sourceId)).toEqual([
+        sourceA.id,
+        sourceB.id,
+        sourceA.id,
+        sourceB.id,
+      ]);
+    } finally {
+      delete process.env.RETRIEVAL_MAX_PER_SOURCE;
+    }
   });
 });
 

@@ -111,6 +111,51 @@ export interface RetrievalTraceFusion {
 export const MAX_TRACE_HYPOTHETICAL_CHARS = 500;
 
 /**
+ * One assembled Evidence passage: what it cost in the model's context and
+ * whether its section context was carried into it.
+ */
+export interface RetrievalTraceEvidenceItem {
+  chunkId: string;
+  sourceId: string;
+  chunkIndex: number;
+  /** Estimated tokens of the assembled passage. */
+  tokens: number;
+  /** True when the passage carries its section heading path. */
+  sectionExpanded: boolean;
+}
+
+/**
+ * The Evidence-assembly stage: the knobs it applied, the assembled passages
+ * in final order, and the candidates it dropped and why. `chosen` in the
+ * trace is the same order expressed as ranked candidates.
+ */
+export interface RetrievalTraceEvidence {
+  /** Share of a passage's tokens a better-ranked passage contained. */
+  overlapThreshold: number;
+  /** The per-Source cap before backfill; 0 means unlimited. */
+  maxPerSource: number;
+  /** The estimated-token ceiling applied to the assembled passages. */
+  tokenBudget: number;
+  /** Whether selected passages could carry their section heading path. */
+  sectionExpansion: boolean;
+  /** Estimated tokens of all assembled passages. */
+  tokens: number;
+  /**
+   * True when the budget bit: a passage was dropped, or the first passage
+   * alone already exceeded it.
+   */
+  budgetExhausted: boolean;
+  /** Assembled passages in final Evidence order; same order as `chosen`. */
+  items: RetrievalTraceEvidenceItem[];
+  /** Passages a better-ranked passage contained, in rank order. */
+  droppedOverlap: RetrievalTraceCandidate[];
+  /** Passages the diversity cap and top-k left out, in rank order. */
+  droppedDiversity: RetrievalTraceCandidate[];
+  /** Passages dropped once the token budget was exhausted, in rank order. */
+  droppedBudget: RetrievalTraceCandidate[];
+}
+
+/**
  * Query understanding's record of one call: what the caller asked, what the
  * legs actually searched, and how that query was produced. `reason` records
  * the skip decision when rewriting did not run and the degradation when the
@@ -149,7 +194,7 @@ export interface RetrievalTraceScope {
 
 export interface RetrievalTrace {
   /** A stable shape version for traces persisted across schema changes. */
-  version: 4;
+  version: 5;
   query: string;
   topK: number;
   scope: RetrievalTraceScope;
@@ -176,7 +221,9 @@ export interface RetrievalTrace {
    */
   fusedOrder: RetrievalTraceCandidate[];
   rerank: RetrievalTraceRerank;
-  /** Candidates that cleared the threshold, in final Evidence order. */
+  /** The Evidence-assembly decisions and the passages they produced. */
+  evidence: RetrievalTraceEvidence;
+  /** Assembled Evidence in final order, expressed as ranked candidates. */
   chosen: RetrievalTraceCandidate[];
   abstained: boolean;
   abstentionReason: RetrievalAbstentionReason | null;

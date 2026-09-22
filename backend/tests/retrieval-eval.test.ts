@@ -5,8 +5,10 @@ import type { EvalEmbedder } from './eval/deterministic-embedder';
 import {
   evaluateRetrieval,
   evaluateRetrievalGate,
+  type CitationVerifier,
   type RetrievalEvalBaseline,
 } from './eval/retrieval-eval';
+import { verifyCitations } from '../src/modules/chat/chat-citations';
 import { GOLDEN_QUERIES } from './eval/golden-set';
 
 const baselinePath = path.resolve(process.cwd(), 'tests/eval/baseline.json');
@@ -192,6 +194,70 @@ describe('retrieval evaluation gate', () => {
         hypotheticalAnswer: true,
       });
       expect(evaluateRetrievalGate(report, baseline)).toEqual([]);
+    },
+  );
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'detects grounding attribution being disabled',
+    async () => {
+      const withoutAttribution = await evaluateRetrieval({
+        citationAttribution: false,
+      });
+      const failures = evaluateRetrievalGate(withoutAttribution, baseline).map(
+        (failure) => failure.metric,
+      );
+      // The played answer carries one unmarked claim copied from a relevant
+      // passage; without nearest-Evidence attribution it resolves to nothing,
+      // so citation accuracy falls below the baseline.
+      expect(failures).toContain('citationAccuracy');
+      expect(
+        withoutAttribution.queries.every(
+          (query) => query.attributedClaims === 0,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'detects a citation mapping that lets an invented key resolve',
+    async () => {
+      // A regression in the post-generation check: an unresolvable key maps
+      // to a real Evidence entry instead of being dropped. The invented-key
+      // probe in every played answer must catch it.
+      const acceptsInventedKeys: CitationVerifier = (
+        text,
+        evidence,
+        options,
+      ) => {
+        const verification = verifyCitations(text, evidence, options);
+        if (
+          verification.droppedKeys.length === 0 ||
+          verification.entries.length === 0
+        ) {
+          return verification;
+        }
+        return {
+          ...verification,
+          droppedKeys: [],
+          entries: [
+            ...verification.entries,
+            {
+              ...verification.entries[0],
+              citationKey: verification.droppedKeys[0],
+              number: verification.entries.length + 1,
+            },
+          ],
+        };
+      };
+
+      const regressed = await evaluateRetrieval({
+        citationVerifier: acceptsInventedKeys,
+      });
+      const failures = evaluateRetrievalGate(regressed, baseline).map(
+        (failure) => failure.metric,
+      );
+      expect(failures).toContain('citationAccuracy');
+      expect(regressed.metrics.citationAccuracy).toBe(0);
     },
   );
 });
