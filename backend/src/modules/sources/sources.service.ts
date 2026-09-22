@@ -578,10 +578,13 @@ export class SourcesService {
     return { enqueued: count };
   }
 
-  /** Re-indexes every source, e.g. after an embedding-model switch. */
+  /**
+   * Re-indexes every source, e.g. after an embedding-model switch or a
+   * representation version bump. The work fans out per Source through the
+   * job queue, so the response reports how many Sources will be rebuilt.
+   */
   async reembedAll() {
-    const count = await this.sourceJobsService.reembedAll();
-    return { enqueued: count };
+    return this.sourceJobsService.reembedAll();
   }
 
   async getDownload(id: string, expiresInSeconds = 300): Promise<DownloadInfo> {

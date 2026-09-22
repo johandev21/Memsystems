@@ -3,7 +3,12 @@ import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { jobs, sourceVersions, sources } from '../../database/schema';
-import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL } from '../ai/embedding.service';
+import {
+  EMBEDDING_CONFIG,
+  EMBEDDING_DIMENSIONS,
+  loadEmbeddingConfig,
+  type EmbeddingConfig,
+} from '../ai/embedding.service';
 import {
   INDEX_PROCESSING_VERSION,
   IndexingService,
@@ -35,13 +40,26 @@ export class SourceIndexingHandler implements JobHandler<
   readonly concurrency = 2;
   readonly maxAttempts = 3;
   readonly backoffBaseMs = 5_000;
+  private readonly embeddingConfig: EmbeddingConfig;
 
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly indexingService: IndexingService,
     @Optional() private readonly versions?: SourceVersionService,
-  ) {}
+    @Optional()
+    @Inject(EMBEDDING_CONFIG)
+    embeddingConfig?: EmbeddingConfig,
+  ) {
+    this.embeddingConfig = embeddingConfig ?? loadEmbeddingConfig();
+  }
+
+  /** The model the next indexing run will embed with. */
+  private expectedEmbeddingModel(): string {
+    return this.embeddingConfig.contextualEnabled
+      ? this.embeddingConfig.contextualModel
+      : this.embeddingConfig.fallbackModel;
+  }
 
   async shouldSkip(
     job: Job<SourceIndexingJobPayload, IndexResult>,
@@ -78,7 +96,7 @@ export class SourceIndexingHandler implements JobHandler<
       (!job.payload.sourceVersionId ||
         priorResult.sourceVersionId === job.payload.sourceVersionId) &&
       priorResult.processingVersion === INDEX_PROCESSING_VERSION &&
-      priorResult.embeddingModel === EMBEDDING_MODEL &&
+      priorResult.embeddingModel === this.expectedEmbeddingModel() &&
       priorResult.embeddingDimensions === EMBEDDING_DIMENSIONS
     ) {
       if (this.versions) {

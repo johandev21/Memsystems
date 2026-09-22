@@ -786,6 +786,7 @@ describe.sequential('SourcesService', () => {
         {
           sourceId: source.id,
           notebookId: notebook.id,
+          sourceKind: 'file',
           sourceVersionId: version.id,
           chunkIndex: 0,
           content: 'Hello world',

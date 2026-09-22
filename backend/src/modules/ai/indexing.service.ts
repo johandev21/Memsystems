@@ -8,18 +8,39 @@ import {
   sourceChunks,
   sourceSegments,
   sources,
+  type SourceSegmentMetadata,
 } from '../../database/schema';
 import { InternalError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
-import { ChunkingService } from './chunking.service';
-import {
-  EmbeddingService,
-  EMBEDDING_DIMENSIONS,
-  EMBEDDING_MODEL,
-} from './embedding.service';
+import { ChunkingService, CHUNKING_VERSION } from './chunking.service';
+import { EmbeddingService, EMBEDDING_DIMENSIONS } from './embedding.service';
 
-/** Bump when the chunk/embed/replace workflow changes; used for idempotency. */
-export const INDEX_PROCESSING_VERSION = 1;
+/**
+ * Bump when the chunk/embed/replace workflow changes; used for idempotency.
+ * Version 2 is the structure-aware chunking plus contextual chunk embedding
+ * representation (see also `CHUNKING_VERSION` in chunking.service.ts).
+ */
+export const INDEX_PROCESSING_VERSION = 2;
+
+/**
+ * The representation key recorded in `app_settings` after a reindex-all run:
+ * the chunking and indexing versions plus the effective embedding model and
+ * dimensions. A mismatch means stored chunks predate the running
+ * representation and must be rebuilt.
+ */
+export function indexingRepresentationKey(
+  embeddingModel: string,
+  dimensions: number,
+): string {
+  return `chunking=${CHUNKING_VERSION};indexing=${INDEX_PROCESSING_VERSION};model=${embeddingModel};dims=${dimensions}`;
+}
+
+/** Reads the heading path a segment persisted in its metadata. */
+function headingPathOf(metadata: SourceSegmentMetadata | null): string[] {
+  const value = metadata?.headingPath;
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
 
 const CHUNK_INSERT_BATCH = 200;
 
@@ -59,6 +80,7 @@ export class IndexingService {
       .select({
         id: sources.id,
         notebookId: sources.notebookId,
+        kind: sources.kind,
         title: sources.title,
         rawText: sources.rawText,
         contentHash: sources.contentHash,
@@ -76,6 +98,7 @@ export class IndexingService {
     let segments: {
       id: string;
       content: string;
+      headingPath: string[];
       locator?: Record<string, unknown> | null;
     }[] = [];
     if (sourceVersionId) {
@@ -83,6 +106,7 @@ export class IndexingService {
         .select({
           id: sourceSegments.id,
           content: sourceSegments.content,
+          metadata: sourceSegments.metadata,
           locator: sourceSegments.locator,
         })
         .from(sourceSegments)
@@ -91,6 +115,7 @@ export class IndexingService {
       segments = rows.map((segment) => ({
         id: segment.id,
         content: segment.content,
+        headingPath: headingPathOf(segment.metadata),
         locator: segment.locator as Record<string, unknown>,
       }));
     }
@@ -98,6 +123,7 @@ export class IndexingService {
     const chunks = this.chunkingService.chunkSource({
       id: source.id,
       notebookId: source.notebookId,
+      kind: source.kind,
       title: source.title,
       rawText: source.rawText,
       sourceVersionId,
@@ -107,15 +133,21 @@ export class IndexingService {
       return this.emptyResult(source.contentHash ?? null, sourceVersionId);
     }
 
-    const contents = chunks.map((c) => c.content);
-    const embeddings = await this.embeddingService.embedDocuments(contents);
+    // One Source's ordered chunks are embedded as one contextual group, so
+    // every chunk encodes its document context.
+    const embedding = await this.embeddingService.embedDocumentGroups([
+      chunks.map((chunk) => chunk.searchableText),
+    ]);
 
-    if (embeddings.length !== chunks.length) {
+    if (embedding.embeddings.length !== chunks.length) {
       throw new InternalError(
-        `Embedding count mismatch: expected ${chunks.length}, received ${embeddings.length}`,
+        `Embedding count mismatch: expected ${chunks.length}, received ${embedding.embeddings.length}`,
         {
           messageKey: 'errors.ai.indexing.embeddingCountMismatch',
-          params: { expected: chunks.length, received: embeddings.length },
+          params: {
+            expected: chunks.length,
+            received: embedding.embeddings.length,
+          },
         },
       );
     }
@@ -167,7 +199,7 @@ export class IndexingService {
       ) {
         const batch = chunks.slice(offset, offset + CHUNK_INSERT_BATCH);
         const rows = batch.map((chunk, i) => {
-          const embedding = embeddings[offset + i];
+          const vector = embedding.embeddings[offset + i];
           const row = {
             id: createId(),
             sourceId: chunk.sourceId,
@@ -175,7 +207,10 @@ export class IndexingService {
             chunkIndex: chunk.chunkIndex,
             content: chunk.content,
             searchableText: chunk.searchableText,
-            embedding,
+            contextHeader: chunk.contextHeader,
+            headingPath: chunk.headingPath,
+            sourceKind: chunk.sourceKind,
+            embedding: vector,
             sourceVersionId: chunk.sourceVersionId,
             locator: chunk.locator,
             segmentIds: chunk.segmentIds,
@@ -204,7 +239,7 @@ export class IndexingService {
       cancelled: false,
       contentHash: source.contentHash ?? null,
       processingVersion: INDEX_PROCESSING_VERSION,
-      embeddingModel: EMBEDDING_MODEL,
+      embeddingModel: embedding.model,
       embeddingDimensions: EMBEDDING_DIMENSIONS,
       sourceVersionId,
     };
@@ -227,7 +262,7 @@ export class IndexingService {
       cancelled,
       contentHash,
       processingVersion: INDEX_PROCESSING_VERSION,
-      embeddingModel: EMBEDDING_MODEL,
+      embeddingModel: this.embeddingService.documentEmbeddingModel(),
       embeddingDimensions: EMBEDDING_DIMENSIONS,
       sourceVersionId,
     };

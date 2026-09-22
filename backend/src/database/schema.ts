@@ -634,9 +634,23 @@ export const sourceChunks = pgTable(
     contentHash: varchar('content_hash', { length: 64 }),
     content: text('content').notNull(),
     /**
-     * The contextualized text the lexical leg indexes: document context,
-     * section context, and the chunk body. Today it mirrors `content`; the
-     * structure-aware chunking ticket changes what it carries.
+     * The heading path of the source segment the chunk came from, for example
+     * `['Chapter 2', 'The Citric Acid Cycle']`. First-class metadata so a
+     * retrieval filter or a citation display never has to re-parse the text.
+     */
+    headingPath: jsonb('heading_path').$type<string[]>().notNull().default([]),
+    /** The kind of the Source the chunk belongs to. */
+    sourceKind: sourceKindEnum('source_kind').notNull(),
+    /**
+     * The document and section context header prepended to `searchable_text`
+     * (source title, source kind, heading path). Stored so the contextual
+     * representation can be inspected without recomputing it.
+     */
+    contextHeader: text('context_header').notNull().default(''),
+    /**
+     * The contextualized text the dense and lexical legs index: document
+     * context, section context, and the chunk body. The stored `content`
+     * remains the text shown to the model and used for citations.
      */
     searchableText: text('searchable_text').notNull(),
     /**
@@ -850,6 +864,13 @@ export const appSettings = pgTable('app_settings', {
   gatewayApiKey: text('gateway_api_key'),
   // Global Voyage AI key (AES-256-GCM encrypted) for embeddings.
   voyageApiKey: text('voyage_api_key'),
+  /**
+   * The indexing representation (chunking/indexing versions plus the
+   * embedding model and dimensions) applied to every Source by the last
+   * reindex-all run. When the running representation differs, the app fans
+   * out a reindex-all job so stored chunks catch up without per-source work.
+   */
+  indexingRepresentation: varchar('indexing_representation', { length: 200 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()

@@ -1,5 +1,10 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Logger, Module, OnModuleInit } from '@nestjs/common';
 import { AiModule } from '../ai/ai.module';
+import {
+  EMBEDDING_DIMENSIONS,
+  EmbeddingService,
+} from '../ai/embedding.service';
+import { indexingRepresentationKey } from '../ai/indexing.service';
 import { CrawlerModule } from '../crawler/crawler.module';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { NotebooksModule } from '../notebooks/notebooks.module';
@@ -9,6 +14,7 @@ import { SourceAcquisitionService } from './source-acquisition.service';
 import { SourceExtractionService } from './source-extraction.service';
 import { SourceIndexingHandler } from './source-indexing.handler';
 import { SourceProcessingHandler } from './source-processing.handler';
+import { SourceReindexAllHandler } from './source-reindex-all.handler';
 import { SourceJobsService } from './source-jobs.service';
 import { SourceVersionService } from './source-version.service';
 import { SourceUploadsController } from './source-uploads.controller';
@@ -79,6 +85,7 @@ import { WebSearchService } from './web-search.service';
     SourceAcquisitionService,
     SourceIndexingHandler,
     SourceProcessingHandler,
+    SourceReindexAllHandler,
     SourceVersionService,
     SourceUploadsService,
     WebSearchHandler,
@@ -111,16 +118,54 @@ import { WebSearchService } from './web-search.service';
   ],
 })
 export class SourcesModule implements OnModuleInit {
+  private readonly logger = new Logger(SourcesModule.name);
+
   constructor(
     private readonly jobQueue: JobQueueService,
+    private readonly sourceJobsService: SourceJobsService,
+    private readonly embeddingService: EmbeddingService,
     private readonly sourceIndexingHandler: SourceIndexingHandler,
     private readonly sourceProcessingHandler: SourceProcessingHandler,
+    private readonly sourceReindexAllHandler: SourceReindexAllHandler,
     private readonly webSearchHandler: WebSearchHandler,
   ) {}
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
     this.jobQueue.registerHandler(this.sourceIndexingHandler);
     this.jobQueue.registerHandler(this.sourceProcessingHandler);
+    this.jobQueue.registerHandler(this.sourceReindexAllHandler);
     this.jobQueue.registerHandler(this.webSearchHandler);
+
+    await this.ensureIndexingRepresentation();
+  }
+
+  /**
+   * A representation version bump (or a switch of the embedding path)
+   * invalidates every stored chunk. Remember what has been applied and fan
+   * out one reindex-all job exactly once, so no Source is left behind and no
+   * Source has to be reindexed by hand. Without a Voyage key the fan-out is
+   * deferred: indexing jobs would only fail and mark Sources failed, so the
+   * check retries on the next startup, after the key is configured.
+   */
+  private async ensureIndexingRepresentation(): Promise<void> {
+    try {
+      const apiKey = await this.embeddingService.getVoyageApiKey();
+      if (!apiKey) return;
+
+      await this.sourceJobsService.ensureRepresentationCurrent(
+        indexingRepresentationKey(
+          this.embeddingService.documentEmbeddingModel(),
+          EMBEDDING_DIMENSIONS,
+        ),
+      );
+    } catch (error) {
+      // A stale bookmark must never stop the app from booting; the check
+      // runs again on the next start.
+      this.logger.warn(
+        `Could not check the indexing representation: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 }
