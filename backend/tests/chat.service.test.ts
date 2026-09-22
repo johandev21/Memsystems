@@ -19,7 +19,7 @@ vi.mock('ai', async (importOriginal) => {
 });
 
 const baseRetrievalTrace = {
-  version: 4,
+  version: 5,
   query: 'Explain Plato',
   topK: 8,
   scope: { kind: 'notebook', sourceIds: null },
@@ -41,6 +41,18 @@ const baseRetrievalTrace = {
     threshold: 0.4,
     candidates: [],
     inputTokens: 0,
+  },
+  evidence: {
+    overlapThreshold: 0.8,
+    maxPerSource: 4,
+    tokenBudget: 20000,
+    sectionExpansion: true,
+    tokens: 0,
+    budgetExhausted: false,
+    items: [],
+    droppedOverlap: [],
+    droppedDiversity: [],
+    droppedBudget: [],
   },
   chosen: [],
   abstained: false,
@@ -424,6 +436,114 @@ describe('ChatService streaming lifecycle', () => {
         finishReason: 'stop',
         usage: { inputTokens: 15, outputTokens: 40, totalTokens: 55 },
       }),
+    });
+  });
+
+  it('verifies citations against the retrieved Evidence before persisting them', async () => {
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Cell Biology Lecture Notes',
+            content:
+              'Osmosis is the net movement of water molecules across a selectively permeable membrane. The osmotic pressure depends on the solute gradient.',
+            sectionPath: ['Chapter 1', 'Membranes'],
+            score: 0.8,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: { pageNumber: 12 },
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [],
+      }),
+    );
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain osmosis',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      onEnd: (event: { text: string; finishReason?: string }) => Promise<void>;
+    };
+    await streamOptions.onEnd({
+      text: 'The osmotic pressure depends on the solute gradient. [ref:R1] Osmosis moves water across a membrane. [ref:R9]',
+      finishReason: 'stop',
+    });
+
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+    expect(assistantInsert?.citedSourceIds).toEqual([
+      expect.objectContaining({
+        citationKey: 'R1',
+        chunkId: 'chunk-1',
+        locator: { pageNumber: 12 },
+        quote: 'The osmotic pressure depends on the solute gradient.',
+        attribution: 'explicit',
+      }),
+    ]);
+    expect(assistantInsert?.metadata).toMatchObject({
+      citationCheck: { resolved: 1, attributed: 1, dropped: 1 },
+    });
+  });
+
+  it('attributes an unmarked claim to the nearest Evidence on persist', async () => {
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Cell Biology Lecture Notes',
+            content:
+              'Osmosis is the net movement of water molecules across a selectively permeable membrane.',
+            sectionPath: [],
+            score: 0.8,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [],
+      }),
+    );
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain osmosis',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      onEnd: (event: { text: string; finishReason?: string }) => Promise<void>;
+    };
+    await streamOptions.onEnd({
+      text: 'Osmosis moves water molecules across a selectively permeable membrane.',
+      finishReason: 'stop',
+    });
+
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+    expect(assistantInsert?.citedSourceIds).toEqual([
+      expect.objectContaining({
+        citationKey: 'R1',
+        chunkId: 'chunk-1',
+        attribution: 'nearest',
+      }),
+    ]);
+    expect(assistantInsert?.metadata).toMatchObject({
+      citationCheck: { resolved: 1, attributed: 1, dropped: 0 },
     });
   });
 
@@ -851,5 +971,85 @@ describe('ChatService no-evidence reply', () => {
     };
     expect(streamOptions.instructions).toContain('Justice is harmony.');
     expect(streamOptions.instructions).not.toContain('Nav page');
+  });
+
+  it('does not character-slice the assembled Evidence block', async () => {
+    // Longer than the old 80,000-character slice: the token budget bounds
+    // retrieval, so the Chat renders the assembled block whole.
+    const tail = 'THE-TAIL-MARKER';
+    const content = `${'alpha '.repeat(20000)}${tail}`;
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Long source',
+            content,
+            sectionPath: [],
+            score: 0.8,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [],
+      }),
+    );
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain the long source',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      instructions: string;
+    };
+    expect(streamOptions.instructions.length).toBeGreaterThan(80000);
+    expect(streamOptions.instructions).toContain(tail);
+  });
+
+  it('renders the assembled section context in the model Evidence block', async () => {
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Organic Chemistry Laboratory Manual',
+            content:
+              'Heat the round-bottom flask slowly and collect the fraction that boils.',
+            sectionPath: ['Experiment 3', 'Fractional Distillation'],
+            score: 0.8,
+            url: null,
+            kind: 'file',
+            sourceVersionId: null,
+            locator: { pageNumber: 12 },
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [],
+      }),
+    );
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain the distillation experiment',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      instructions: string;
+    };
+    expect(streamOptions.instructions).toContain(
+      'Section: Experiment 3 > Fractional Distillation',
+    );
+    expect(streamOptions.instructions).toContain('Heat the round-bottom flask');
+    expect(streamOptions.instructions).not.toMatch(/Relevance/);
   });
 });

@@ -30,10 +30,10 @@ import {
   type CitedSourceEntry,
   type StoredCitedSourceEntry,
   createCitationEvidence,
-  extractCitationEntries,
   formatCitationContext,
   normalizeStoredCitation,
   sanitizeReferenceUrl,
+  verifyCitations,
 } from './chat-citations';
 import {
   composeNoEvidenceReply,
@@ -43,7 +43,6 @@ import {
 } from './chat-no-evidence';
 
 const MAX_HISTORY_MESSAGES = 6;
-const MAX_SOURCE_TEXT = 80000;
 
 const SYSTEM_PROMPT = `You are a knowledgeable tutor and research assistant. Help the user master their topics of interest using the provided source passages or your general knowledge.
 
@@ -340,10 +339,14 @@ export class ChatService {
     const retrievedChunks = retrievalOutcome?.chunks ?? [];
     const citationEvidence = createCitationEvidence(retrievedChunks);
 
-    const sourceContext = formatCitationContext(citationEvidence).slice(
-      0,
-      MAX_SOURCE_TEXT,
-    );
+    // The Evidence block is already bounded by the retrieval token budget
+    // (`RETRIEVAL_EVIDENCE_TOKEN_BUDGET`, or the request's override), so it is
+    // rendered whole: a character slice here could cut the tail of an
+    // assembled passage. The model catalog exposes no context window today, so
+    // the configured budget is the only bound and is documented as
+    // conservative and tunable; a caller that knows its model's window can
+    // pass a `tokenBudget` override to retrieval.
+    const sourceContext = formatCitationContext(citationEvidence);
 
     const history = [
       ...priorHistory,
@@ -479,7 +482,19 @@ export class ChatService {
       if (assistantMessagePersisted || !text.trim()) return;
       assistantMessagePersisted = true;
 
-      const citedEntries = extractCitationEntries(text, citationEvidence);
+      // Post-generation verification: every key the reply emitted must map to
+      // a retrieved chunk, entries store their supporting span, and unmarked
+      // claims are attributed to the nearest Evidence. Unresolvable
+      // references are dropped from the stored citations.
+      const verification = verifyCitations(text, citationEvidence);
+      if (verification.droppedKeys.length > 0) {
+        this.logger.warn(
+          `Dropped ${verification.droppedKeys.length} unresolvable citation key(s): ${verification.droppedKeys
+            .slice(0, 10)
+            .join(', ')}`,
+        );
+      }
+      const citedEntries = verification.entries;
 
       const parts: Record<string, unknown>[] = [];
       if (reasoning && reasoning.trim()) {
@@ -493,6 +508,11 @@ export class ChatService {
         modelId,
         createdAt: startTime.toISOString(),
         completedAt: new Date().toISOString(),
+        citationCheck: {
+          resolved: citedEntries.length,
+          attributed: verification.attributedClaims,
+          dropped: verification.droppedKeys.length,
+        },
         ...customMetadata,
       };
 

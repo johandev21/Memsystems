@@ -14,6 +14,10 @@ import {
   loadEmbeddingConfig,
 } from './embedding.service';
 import { IndexingService } from './indexing.service';
+import {
+  RETRIEVAL_EVIDENCE_CONFIG,
+  loadRetrievalEvidenceConfig,
+} from './evidence-assembly';
 import { ModelSyncService } from './model-sync.service';
 import {
   QUERY_REWRITER,
@@ -70,6 +74,10 @@ import { UserSettingsService } from './user-settings.service';
     {
       provide: RETRIEVAL_REWRITE_CONFIG,
       useFactory: loadRetrievalRewriteConfig,
+    },
+    {
+      provide: RETRIEVAL_EVIDENCE_CONFIG,
+      useFactory: loadRetrievalEvidenceConfig,
     },
     QueryRewriterService,
     {

@@ -25,6 +25,17 @@ export function parsePositiveInt(
   return parsed;
 }
 
+/** Parses a value that accepts zero as a documented "unlimited" sentinel. */
+export function parseNonNegativeInt(
+  value: string | undefined,
+  fallback: number,
+): number {
+  if (value === undefined || value.trim() === '') return fallback;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return parsed;
+}
+
 export function parseRatio(
   value: string | undefined,
   fallback: number,
