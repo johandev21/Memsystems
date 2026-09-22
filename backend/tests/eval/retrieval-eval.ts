@@ -16,6 +16,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { sourceChunks } from '../../src/database/schema';
 import { RetrievalService } from '../../src/modules/ai/retrieval.service';
+import type { Reranker } from '../../src/modules/ai/reranker.service';
 import {
   createCitationEvidence,
   extractCitationEntries,
@@ -26,6 +27,7 @@ import {
   DeterministicEmbedder,
   type EvalEmbedder,
 } from './deterministic-embedder';
+import { DeterministicReranker } from './deterministic-reranker';
 import { GOLDEN_QUERIES, GOLDEN_SOURCES, type GoldenQuery } from './golden-set';
 
 /**
@@ -37,11 +39,26 @@ import { GOLDEN_QUERIES, GOLDEN_SOURCES, type GoldenQuery } from './golden-set';
 export const EVAL_TOP_K = 4;
 export const EVAL_RELEVANCE_FLOOR = 0.25;
 
+/**
+ * The reranker stand-in is a coverage model, so its scores are calibrated
+ * for the harness: 0.5 drops glossary entries that share one distinctive
+ * term with the query while keeping passages that answer it. The candidate
+ * depth is deliberately smaller than production: the golden corpus is small,
+ * and over-fetching all of it would let the reranker mask a broken dense leg.
+ */
+export const EVAL_CANDIDATE_DEPTH = 8;
+export const EVAL_RERANK_MODEL = 'eval-coverage-reranker';
+export const EVAL_RERANK_THRESHOLD = 0.5;
+
 export interface RetrievalEvalOptions {
   topK?: number;
   relevanceFloor?: number;
   /** Override to inject a deliberately regressed embedder. */
   embedder?: EvalEmbedder;
+  /** Set false to measure the pipeline without reranking. */
+  rerank?: boolean;
+  /** Override to inject a deliberately regressed reranker. */
+  reranker?: Reranker;
 }
 
 export interface RetrievalEvalQueryResult {
@@ -60,6 +77,7 @@ export interface RetrievalEvalQueryResult {
   refusalCorrect: boolean;
   latencyMs: number;
   embeddingInputTokens: number;
+  rerankInputTokens: number;
 }
 
 export interface RetrievalEvalMetrics {
@@ -78,6 +96,12 @@ export interface RetrievalEvalMetrics {
 export interface RetrievalEvalReport {
   topK: number;
   relevanceFloor: number;
+  rerank: {
+    enabled: boolean;
+    model: string;
+    candidateDepth: number;
+    threshold: number;
+  };
   metrics: RetrievalEvalMetrics;
   queries: RetrievalEvalQueryResult[];
 }
@@ -117,13 +141,14 @@ export async function evaluateRetrieval(
 ): Promise<RetrievalEvalReport> {
   const topK = options.topK ?? EVAL_TOP_K;
   const relevanceFloor = options.relevanceFloor ?? EVAL_RELEVANCE_FLOOR;
-  const embedder =
-    options.embedder ??
-    new DeterministicEmbedder(
-      GOLDEN_SOURCES.flatMap((source) =>
-        source.chunks.map((chunk) => chunk.text),
-      ),
-    );
+  const rerankEnabled = options.rerank ?? true;
+  const corpus = GOLDEN_SOURCES.flatMap((source) =>
+    source.chunks.map((chunk) => chunk.text),
+  );
+  const embedder = options.embedder ?? new DeterministicEmbedder(corpus);
+  const reranker =
+    options.reranker ??
+    (rerankEnabled ? new DeterministicReranker(corpus) : null);
 
   const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(embedder);
   const service = new RetrievalService(
@@ -132,6 +157,14 @@ export async function evaluateRetrieval(
       embedQuery: async (text: string) => embedder.embed(text),
     } as never,
     { relevanceFloor },
+    {
+      enabled: rerankEnabled,
+      model: EVAL_RERANK_MODEL,
+      candidateDepth: EVAL_CANDIDATE_DEPTH,
+      threshold: EVAL_RERANK_THRESHOLD,
+      topK,
+    },
+    reranker as never,
   );
 
   const queries: RetrievalEvalQueryResult[] = [];
@@ -148,6 +181,12 @@ export async function evaluateRetrieval(
   return {
     topK,
     relevanceFloor,
+    rerank: {
+      enabled: rerankEnabled,
+      model: EVAL_RERANK_MODEL,
+      candidateDepth: EVAL_CANDIDATE_DEPTH,
+      threshold: EVAL_RERANK_THRESHOLD,
+    },
     metrics: computeMetrics(queries),
     queries,
   };
@@ -262,6 +301,7 @@ function buildQueryResult(
     refusalCorrect: query.answerable ? !outcome.abstained : outcome.abstained,
     latencyMs: outcome.trace.latencyMs,
     embeddingInputTokens: outcome.trace.cost.embeddingInputTokens,
+    rerankInputTokens: outcome.trace.cost.rerankInputTokens,
   };
 }
 
@@ -299,7 +339,7 @@ function computeMetrics(
     latencyMsP50: percentile(latencies, 50),
     latencyMsP95: percentile(latencies, 95),
     costTokensPerQuery: mean(
-      queries.map((query) => query.embeddingInputTokens),
+      queries.map((query) => query.embeddingInputTokens + query.rerankInputTokens),
     ),
   };
 }

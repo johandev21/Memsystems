@@ -7,9 +7,12 @@ import { ConnectionService } from './connection.service';
 import { EmbeddingService } from './embedding.service';
 import { IndexingService } from './indexing.service';
 import { ModelSyncService } from './model-sync.service';
+import { RerankerService } from './reranker.service';
 import {
+  RETRIEVAL_RERANK_CONFIG,
   RETRIEVAL_RELEVANCE_CONFIG,
   RetrievalService,
+  loadRetrievalRerankConfig,
   loadRetrievalRelevanceConfig,
 } from './retrieval.service';
 import { RetrievalTraceService } from './retrieval-trace.service';
@@ -31,6 +34,11 @@ import { UserSettingsService } from './user-settings.service';
       provide: RETRIEVAL_RELEVANCE_CONFIG,
       useFactory: loadRetrievalRelevanceConfig,
     },
+    {
+      provide: RETRIEVAL_RERANK_CONFIG,
+      useFactory: loadRetrievalRerankConfig,
+    },
+    RerankerService,
     RetrievalService,
     RetrievalTraceService,
   ],
@@ -42,6 +50,7 @@ import { UserSettingsService } from './user-settings.service';
     EmbeddingService,
     ChunkingService,
     IndexingService,
+    RerankerService,
     RetrievalService,
     RetrievalTraceService,
   ],

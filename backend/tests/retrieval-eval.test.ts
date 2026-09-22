@@ -60,6 +60,9 @@ describe('retrieval evaluation gate', () => {
   it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
     'detects a deliberately introduced retrieval regression',
     async () => {
+      // The constant embedder destroys the candidate ranking the dense leg
+      // feeds the reranker, so recall and citations fall even with the
+      // reranker on.
       const constant = await evaluateRetrieval({ embedder: constantEmbedder });
       const constantFailures = evaluateRetrievalGate(constant, baseline).map(
         (failure) => failure.metric,
@@ -67,12 +70,33 @@ describe('retrieval evaluation gate', () => {
       expect(constantFailures).toContain('recallAtK');
       expect(constantFailures).toContain('citationAccuracy');
 
-      const floorless = await evaluateRetrieval({ relevanceFloor: 0 });
+      // A disabled floor only regresses when reranking is also off: the
+      // rerank threshold is what gates unanswerable queries otherwise.
+      const floorless = await evaluateRetrieval({
+        relevanceFloor: 0,
+        rerank: false,
+      });
       expect(
         evaluateRetrievalGate(floorless, baseline).map(
           (failure) => failure.metric,
         ),
       ).toContain('refusalAccuracy');
+    },
+  );
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'detects the reranker being disabled',
+    async () => {
+      const unreranked = await evaluateRetrieval({ rerank: false });
+      const failures = evaluateRetrievalGate(unreranked, baseline).map(
+        (failure) => failure.metric,
+      );
+      // The dense leg over-ranks short glossary entries and returns fewer
+      // relevant passages first, so disabling the reranker must fail the
+      // ranking-quality and precision metrics the baseline protects.
+      expect(failures).toContain('contextPrecision');
+      expect(failures).toContain('mrr');
+      expect(failures).toContain('ndcgAtK');
     },
   );
 });

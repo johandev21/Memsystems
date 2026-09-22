@@ -108,6 +108,34 @@ export const GOLDEN_SOURCES: GoldenSource[] = [
       },
     ],
   },
+  {
+    id: 'glossary',
+    title: 'Course Glossary',
+    kind: 'text',
+    processingStatus: 'ready',
+    // Short glossary entries are legitimate source content and legitimate
+    // retrieval noise: they share a distinctive term with a query but do not
+    // answer it. The dense leg over-ranks them because they are short; the
+    // reranker demotes them. The gate fails if that stops happening.
+    chunks: [
+      {
+        id: 'gloss-mitochondria',
+        text: 'Mitochondria: see cellular respiration.',
+      },
+      {
+        id: 'gloss-osmosis',
+        text: 'Osmosis: see diffusion and water potential.',
+      },
+      {
+        id: 'gloss-pvalue',
+        text: 'P-value: see significance testing.',
+      },
+      {
+        id: 'gloss-barbarossa',
+        text: 'Operation Barbarossa: see the Eastern Front.',
+      },
+    ],
+  },
 ];
 
 export const GOLDEN_QUERIES: GoldenQuery[] = [

@@ -63,8 +63,10 @@ export class GenerationService {
             sourceIds: input.sourceIds,
             topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
             // Selected sources are in scope by definition; the relevance
-            // floor only gates Notebook-wide Evidence for Chat.
+            // floor and rerank threshold only gate Notebook-wide Evidence
+            // for Chat.
             relevanceFloor: 0,
+            rerankThreshold: 0,
           })
         : null;
 

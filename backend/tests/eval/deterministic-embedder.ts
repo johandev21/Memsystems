@@ -106,22 +106,32 @@ export function tokenizeForEval(text: string): string[] {
   return matches.filter((token) => token.length >= 2 && !STOP_WORDS.has(token));
 }
 
+/**
+ * Inverse document frequency per token, shared by the deterministic embedder
+ * and the deterministic reranker so both weight the same terms the same way.
+ */
+export function buildIdfWeights(corpus: string[]): Map<string, number> {
+  const documentFrequency = new Map<string, number>();
+  for (const document of corpus) {
+    for (const token of new Set(tokenizeForEval(document))) {
+      documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1);
+    }
+  }
+  const idf = new Map<string, number>();
+  for (const [token, frequency] of documentFrequency) {
+    idf.set(token, Math.log((corpus.length + 1) / (frequency + 1)) + 1);
+  }
+  return idf;
+}
+
 export class DeterministicEmbedder implements EvalEmbedder {
-  private readonly idf = new Map<string, number>();
+  private readonly idf: Map<string, number>;
 
   constructor(
     corpus: string[],
     private readonly dimensions = EVAL_EMBEDDING_DIMENSIONS,
   ) {
-    const documentFrequency = new Map<string, number>();
-    for (const document of corpus) {
-      for (const token of new Set(tokenizeForEval(document))) {
-        documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1);
-      }
-    }
-    for (const [token, frequency] of documentFrequency) {
-      this.idf.set(token, Math.log((corpus.length + 1) / (frequency + 1)) + 1);
-    }
+    this.idf = buildIdfWeights(corpus);
   }
 
   embed(text: string): number[] {

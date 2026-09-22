@@ -14,7 +14,7 @@ function retrievalOutcome(
     abstentionReason: 'no_indexed_chunks',
     unhelpfulSources: [],
     trace: {
-      version: 1,
+      version: 2,
       query: 'Cell biology',
       topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
       scope: { kind: 'selected_sources', sourceIds: ['source-1'] },
@@ -22,11 +22,19 @@ function retrievalOutcome(
       embedding: { model: 'voyage-4', dimensions: 1024 },
       legs: [{ kind: 'dense', candidates: [] }],
       fusedOrder: [],
+      rerank: {
+        model: 'rerank-2.5',
+        applied: false,
+        skippedReason: 'unavailable',
+        threshold: 0,
+        candidates: [],
+        inputTokens: 0,
+      },
       chosen: [],
       abstained: true,
       abstentionReason: 'no_indexed_chunks',
       latencyMs: 4,
-      cost: { embeddingInputTokens: 4 },
+      cost: { embeddingInputTokens: 4, rerankInputTokens: 0 },
     },
     ...overrides,
   };
@@ -238,6 +246,7 @@ describe('GenerationService retrieval grounding', () => {
       sourceIds: ['source-1', 'source-2'],
       topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
       relevanceFloor: 0,
+      rerankThreshold: 0,
     });
 
     expect(streamHandler.createStream.mock.calls[0][2]).toEqual([

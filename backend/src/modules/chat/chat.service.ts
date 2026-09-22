@@ -19,7 +19,6 @@ import { toClientStreamError } from '../ai/stream-error';
 import { resolveModelId } from '../ai/providers/model-catalog';
 import { languageDirective } from '../../common/i18n/language';
 import {
-  DEFAULT_TOP_K,
   RetrievalService,
   type RetrievalOutcome,
 } from '../ai/retrieval.service';
@@ -255,7 +254,6 @@ export class ChatService {
       ? await this.retrievalService.retrieve({
           notebookId,
           query: input.content,
-          topK: DEFAULT_TOP_K,
         })
       : null;
     if (retrievalOutcome) {

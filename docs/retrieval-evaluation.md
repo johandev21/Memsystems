@@ -6,9 +6,10 @@ a retrieval change that regresses a metric beyond the documented tolerance
 fails `pnpm run test`.
 
 The gate covers the retrieval pipeline (query embedding, search legs, fusion,
-relevance threshold, Evidence selection). The later retrieval tickets —
-reranking, hybrid search, chunking, query understanding, Generation grounding
-— are expected to move these metrics and to update the baseline with evidence.
+dedupe, reranking, relevance thresholds, Evidence selection). The later
+retrieval tickets — hybrid search, chunking, query understanding, Generation
+grounding — are expected to move these metrics and to update the baseline with
+evidence.
 
 ## Pieces
 
@@ -16,18 +17,29 @@ reranking, hybrid search, chunking, query understanding, Generation grounding
 | --- | --- |
 | `backend/tests/eval/golden-set.ts` | The corpus of Sources and Source Chunks and the labeled queries. |
 | `backend/tests/eval/deterministic-embedder.ts` | A deterministic lexical embedder used instead of Voyage, so the gate runs keyless in CI. |
+| `backend/tests/eval/deterministic-reranker.ts` | A deterministic cross-encoder stand-in, so the gate exercises the rerank stage keylessly. |
 | `backend/tests/eval/retrieval-eval.ts` | Seeds the corpus, runs every query through `RetrievalService`, and computes the metrics and the gate. |
 | `backend/tests/eval/baseline.json` | The checked-in baseline metrics and the documented tolerance. |
-| `backend/tests/retrieval-eval.test.ts` | The Vitest gate, plus the test that proves a deliberate regression is caught. |
+| `backend/tests/retrieval-eval.test.ts` | The Vitest gate, plus the tests that prove a deliberate regression and a disabled reranker are caught. |
 
 The runner calls the real retrieval pipeline against the disposable test
 database (see [testing.md](testing.md)). It does not call Voyage: the
 deterministic embedder maps text to 1024-dimension vectors by hashing TF-IDF
 weighted tokens, so a query stays close to chunks that share its distinctive
 vocabulary. Its score scale is compressed compared with Voyage, and the
-harness uses a floor calibrated for it (`EVAL_RELEVANCE_FLOOR` in
-`retrieval-eval.ts`). The metrics protect against relative regressions; they
-are not a statement about production relevance.
+harness uses thresholds calibrated for it (`EVAL_RELEVANCE_FLOOR`,
+`EVAL_RERANK_THRESHOLD` in `retrieval-eval.ts`). The metrics protect against
+relative regressions; they are not a statement about production relevance.
+
+The deterministic reranker scores each query-document pair by the share of the
+query's IDF mass the document contains, reduced for fragments too short to
+carry an answer. It is deliberately different from the dense leg, whose cosine
+normalization lets a short glossary stub outrank a longer passage that answers
+the query. The golden corpus contains such stubs, so the gate can tell reranked
+from unreranked retrieval: with reranking disabled, `mrr`, `nDCG`, and
+`contextPrecision` all fall below the baseline and the gate fails. The harness
+over-fetches fewer candidates than production (`EVAL_CANDIDATE_DEPTH`) so a
+broken dense leg still shows up in recall even while reranking is on.
 
 ## Metrics
 
@@ -41,7 +53,7 @@ are not a statement about production relevance.
 | `refusalAccuracy` | Share of queries whose abstention matched the label: answerable queries must answer, unanswerable ones must abstain. | higher is better |
 | `faithfulness` | Deterministic proxy: share of answered queries whose top-ranked chunk is relevant. A model-judged faithfulness check needs provider calls and is out of scope for the keyless gate. | higher is better |
 | `latencyMsP50`, `latencyMsP95` | Wall-clock retrieval duration per query. | reported; p95 is gated by an absolute ceiling |
-| `costTokensPerQuery` | Estimated query embedding tokens (about 4 characters per token), averaged over queries so adding a labeled query does not move the metric by itself. | lower is better |
+| `costTokensPerQuery` | Estimated query cost: embedding tokens plus reranker tokens (about 4 characters per token), averaged over queries so adding a labeled query does not move the metric by itself. | lower is better |
 
 ## Tolerance and baseline
 
@@ -98,6 +110,6 @@ applies migrations to the test database, and runs `lint`, `typecheck`, and
 `test`. The retrieval gate lives inside the test step, so a regression fails
 the workflow.
 
-The gate test also runs a deliberately broken configuration — a constant
-embedder and a disabled floor — and asserts that the gate reports failures,
-so the gate itself is tested rather than assumed.
+The gate test also runs deliberately broken configurations — a constant
+embedder, a disabled floor, and a disabled reranker — and asserts that the
+gate reports failures, so the gate itself is tested rather than assumed.

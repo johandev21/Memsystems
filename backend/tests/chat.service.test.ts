@@ -19,7 +19,7 @@ vi.mock('ai', async (importOriginal) => {
 });
 
 const baseRetrievalTrace = {
-  version: 1,
+  version: 2,
   query: 'Explain Plato',
   topK: 8,
   scope: { kind: 'notebook', sourceIds: null },
@@ -27,11 +27,19 @@ const baseRetrievalTrace = {
   embedding: { model: 'voyage-4', dimensions: 1024 },
   legs: [{ kind: 'dense', candidates: [] }],
   fusedOrder: [],
+  rerank: {
+    model: 'rerank-2.5',
+    applied: false,
+    skippedReason: 'unavailable',
+    threshold: 0.4,
+    candidates: [],
+    inputTokens: 0,
+  },
   chosen: [],
   abstained: false,
   abstentionReason: null,
   latencyMs: 8,
-  cost: { embeddingInputTokens: 3 },
+  cost: { embeddingInputTokens: 3, rerankInputTokens: 0 },
 };
 
 const retrievalOk = (
@@ -188,7 +196,6 @@ describe('ChatService streaming lifecycle', () => {
     expect(retrieve).toHaveBeenCalledWith({
       notebookId: 'notebook-1',
       query: 'Explain Plato',
-      topK: 8,
     });
     expect(recordTrace).toHaveBeenCalledWith({
       notebookId: 'notebook-1',
