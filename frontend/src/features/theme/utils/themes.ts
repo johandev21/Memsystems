@@ -12,7 +12,7 @@ export interface ThemeMeta {
   descriptionKey: ThemeDescriptionKey;
   /** Hue family for preview gradient generation */
   hue: number;
-  /** Light mode preview accents */
+  /** Preview swatch accents (light-mode / dark-mode) */
   preview: {
     light: string;
     dark: string;

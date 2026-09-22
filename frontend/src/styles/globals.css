@@ -54,6 +54,7 @@
   --color-popover-selected: var(--popover-selected);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
   --color-panel-bg: var(--panel-bg);
   --color-panel-header-bg: var(--panel-header-bg);
   --color-composer-bg: var(--composer-bg);
@@ -102,6 +103,7 @@
   --foreground: oklch(0.145 0 0);
   --card: oklch(0.99 0 0);
   --card-foreground: oklch(0.145 0 0);
+  --card-hover: color-mix(in oklch, var(--card) 98%, black);
   --popover: oklch(0.99 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
@@ -139,6 +141,7 @@
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
+  --card-hover: color-mix(in oklch, var(--card) 80%, var(--background));
   --popover: oklch(0.269 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
