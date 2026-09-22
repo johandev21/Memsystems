@@ -509,6 +509,71 @@ describe('SourceProcessingHandler', () => {
     expect(result.segmentCount).toBe(1);
   });
 
+  it('marks a navigation-only extraction degraded and never enqueues indexing', async () => {
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'file',
+      title: 'study-guide.html',
+      rawText: '',
+      s3Key: 'sources/study-guide.html',
+      contentType: 'text/html',
+      modality: 'document',
+    });
+
+    const navigationText = Array.from(
+      { length: 80 },
+      (_, i) =>
+        `[Chapter ${i} study guide summary notes](https://example.com/chapter-${i})`,
+    ).join('\n');
+
+    const { handler, queue } = createHandler({
+      acquisition: {
+        acquireFile: vi.fn().mockResolvedValue({
+          title: 'Study guide',
+          text: navigationText,
+          contentHash: 'hash-navigation-1',
+          extractionMethod: 'readability',
+          sections: [
+            { headingPath: [], content: navigationText, ordinal: 0 },
+          ],
+        }),
+      },
+    });
+
+    const job = {
+      id: 'proc-job-degraded-1',
+      type: 'source_processing',
+      payload: { sourceId: source.id, notebookId: notebook.id },
+      attemptCount: 1,
+      maxAttempts: 3,
+    } as any;
+
+    const result = await handler.process(job);
+
+    expect(queue.enqueueIfActive).not.toHaveBeenCalled();
+
+    const [version] = await db
+      .select()
+      .from(sourceVersions)
+      .where(eq(sourceVersions.id, result.sourceVersionId));
+    expect(version.quality).toMatchObject({
+      status: 'degraded',
+      reason: 'navigation',
+    });
+    expect(version.status).toBe('degraded');
+
+    const [updatedSource] = await db
+      .select()
+      .from(sources)
+      .where(eq(sources.id, source.id));
+    expect(updatedSource.processingStatus).toBe('degraded');
+    expect(updatedSource.processingStage).toBeNull();
+    expect(updatedSource.processingErrorCode).toBe('quality_navigation');
+    expect(updatedSource.processingErrorMessage).toBe(
+      'errors.sources.quality.navigation',
+    );
+  });
+
   it('throws SourceProcessingCancelledError when job is no longer active in queue', async () => {
     const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {

@@ -135,6 +135,11 @@
       "processing": {
         "noArtifact": "La fuente no tiene un artefacto original procesable"
       },
+      "quality": {
+        "boilerplate": "Casi toda esta fuente repite texto repetitivo, por lo que no puede usarse como evidencia.",
+        "navigation": "Casi toda esta fuente son enlaces o navegación, por lo que no puede usarse como evidencia.",
+        "paywall": "Esta fuente es sobre todo un muro de pago o un mensaje de inicio de sesión, por lo que no puede usarse como evidencia."
+      },
       "source": {
         "notFound": "Fuente no encontrada"
       },

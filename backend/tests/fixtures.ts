@@ -69,7 +69,7 @@ export async function seedSource(
       | null;
     fileSize?: number | null;
     processingStatus?:
-      'pending' | 'processing' | 'ready' | 'failed' | 'cancelled';
+      'pending' | 'processing' | 'ready' | 'degraded' | 'failed' | 'cancelled';
     processingStage?:
       | 'uploading'
       | 'extracting'

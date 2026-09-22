@@ -4,6 +4,7 @@ import type {
   SourceModality,
   SourceProcessingStage,
   SourceProcessingStatus,
+  SourceQualityReason,
 } from "../types";
 
 type DynamicTranslate = (
@@ -24,6 +25,42 @@ export function sourceProcessingStatus(source: Source): SourceProcessingStatus {
 export function isSourceProcessing(source: Source): boolean {
   const status = sourceProcessingStatus(source);
   return status === "pending" || status === "processing";
+}
+
+export function isSourceDegraded(source: Source): boolean {
+  return sourceProcessingStatus(source) === "degraded";
+}
+
+/** Maps the persisted `quality_<reason>` error code to its reason. */
+export function sourceQualityReason(source: Source): SourceQualityReason | null {
+  const code = sourceProcessingErrorCode(source);
+  switch (code) {
+    case "quality_navigation":
+      return "navigation";
+    case "quality_boilerplate":
+      return "boilerplate";
+    case "quality_paywall":
+      return "paywall";
+    default:
+      return null;
+  }
+}
+
+export function sourceQualityReasonLabel(source: Source): string | undefined {
+  const reason = sourceQualityReason(source);
+  if (!reason) return undefined;
+  return i18n.t(`quality.reason.${reason}`, { ns: "sources" });
+}
+
+export function sourceQualityCorrectiveAction(
+  source: Source,
+): string | undefined {
+  if (!isSourceDegraded(source)) return undefined;
+  const reason = sourceQualityReason(source);
+  return i18n.t(
+    reason ? `quality.action.${reason}` : "quality.action.default",
+    { ns: "sources" },
+  );
 }
 
 export function sourceProcessingError(source: Source): string | undefined {
@@ -51,6 +88,8 @@ export function processingStageLabel(
   if (status === "pending")
     return i18n.t("processing.queued", { ns: "sources" });
   if (status === "ready") return i18n.t("processing.ready", { ns: "sources" });
+  if (status === "degraded")
+    return i18n.t("processing.degraded", { ns: "sources" });
   if (status === "failed") return i18n.t("processing.failed", { ns: "sources" });
   if (status === "cancelled") return i18n.t("processing.cancelled", { ns: "sources" });
 

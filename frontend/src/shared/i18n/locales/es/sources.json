@@ -41,6 +41,7 @@
   "processing": {
     "analyzingVisuals": "Analizando elementos visuales…",
     "cancelled": "Cancelado",
+    "degraded": "Degradada",
     "extracting": "Extrayendo contenido…",
     "failed": "El procesamiento falló",
     "indexing": "Indexando fuente…",
@@ -50,6 +51,21 @@
     "transcribingAudio": "Transcribiendo audio…",
     "transcribingVideo": "Transcribiendo vídeo…",
     "uploading": "Subiendo original…"
+  },
+  "quality": {
+    "action": {
+      "boilerplate": "Importa la versión en archivo o pega el texto en una fuente nueva.",
+      "default": "Importa la versión en archivo o pega el texto en una fuente nueva.",
+      "navigation": "Importa la versión en archivo o pega el texto en una fuente nueva.",
+      "paywall": "Pega el texto al que tengas acceso o importa la versión en archivo."
+    },
+    "degradedTitle": "Esta fuente no tiene contenido utilizable",
+    "reason": {
+      "boilerplate": "Casi toda esta fuente repite el mismo texto repetitivo en lugar de material único.",
+      "navigation": "Casi toda esta fuente son enlaces, navegación o un índice.",
+      "paywall": "Esta fuente es sobre todo un muro de pago o un mensaje de inicio de sesión.",
+      "unknown": "Esta fuente no produjo material de lectura utilizable."
+    }
   },
   "reader": {
     "backToSources": "Volver a las fuentes",

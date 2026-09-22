@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq, ne } from 'drizzle-orm';
-import { sourceSegments, sourceVersions, sources } from '../../database/schema';
+import {
+  SourceQualityAssessment,
+  sourceSegments,
+  sourceVersions,
+  sources,
+} from '../../database/schema';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
@@ -11,6 +16,7 @@ import {
   EXTRACTOR_VERSION,
   NORMALIZATION_VERSION,
 } from './document-normalizer.service';
+import { qualityFailureOf } from './source-quality.service';
 
 /** The small persistence seam shared by synchronous and queued ingestion. */
 export interface PersistedSourceVersion {
@@ -18,6 +24,7 @@ export interface PersistedSourceVersion {
   sourceId: string;
   contentHash: string;
   segmentCount: number;
+  quality: SourceQualityAssessment | null;
 }
 
 export class SourceVersionCancelledError extends Error {
@@ -48,11 +55,30 @@ export class SourceVersionService {
     sourceId: string,
     document: NormalizedDocument,
     artifactKey: string | null = null,
+    quality: SourceQualityAssessment | null = null,
   ): Promise<PersistedSourceVersion> {
     const versionId = createId();
     const sections = toSegments(document);
     let persistedId = versionId;
     let persistedSegmentCount = sections.length;
+
+    const failure = quality ? qualityFailureOf(quality) : null;
+    const degraded = failure !== null;
+    // A degraded version keeps its extraction for inspection, but the source
+    // must not look ready and no Evidence may be indexed from it.
+    const lifecycle = failure
+      ? {
+          processingStatus: 'degraded' as const,
+          processingStage: null,
+          processingErrorCode: failure.code,
+          processingErrorMessage: failure.messageKey,
+        }
+      : {
+          processingStatus: 'processing' as const,
+          processingStage: 'indexing' as const,
+          processingErrorCode: null,
+          processingErrorMessage: null,
+        };
 
     await this.db.transaction(async (tx) => {
       const [source] = await tx
@@ -85,16 +111,19 @@ export class SourceVersionService {
           .from(sourceSegments)
           .where(eq(sourceSegments.sourceVersionId, existing.id));
         persistedSegmentCount = existingSegments.length;
+        if (quality) {
+          await tx
+            .update(sourceVersions)
+            .set({ quality, status: degraded ? 'degraded' : 'ready' })
+            .where(eq(sourceVersions.id, existing.id));
+        }
         await tx
           .update(sources)
           .set({
+            ...lifecycle,
             rawText: document.text,
             contentHash: document.contentHash,
             currentVersionId: existing.id,
-            processingStatus: 'processing',
-            processingStage: 'indexing',
-            processingErrorCode: null,
-            processingErrorMessage: null,
           })
           .where(eq(sources.id, sourceId));
         return;
@@ -108,7 +137,8 @@ export class SourceVersionService {
         extractorId: document.extractionMethod,
         extractorVersion: EXTRACTOR_VERSION,
         normalizationVersion: NORMALIZATION_VERSION,
-        status: 'ready',
+        status: degraded ? 'degraded' : 'ready',
+        quality,
         errorCode: null,
         errorMessage: null,
       });
@@ -136,16 +166,13 @@ export class SourceVersionService {
       await tx
         .update(sources)
         .set({
+          ...lifecycle,
           rawText: document.text,
           contentHash: document.contentHash,
           extractionMethod: document.extractionMethod,
           extractorVersion: EXTRACTOR_VERSION,
           normalizationVersion: NORMALIZATION_VERSION,
           currentVersionId: versionId,
-          processingStatus: 'processing',
-          processingStage: 'indexing',
-          processingErrorCode: null,
-          processingErrorMessage: null,
         })
         .where(eq(sources.id, sourceId));
     });
@@ -155,6 +182,7 @@ export class SourceVersionService {
       sourceId,
       contentHash: document.contentHash,
       segmentCount: persistedSegmentCount,
+      quality,
     };
   }
 

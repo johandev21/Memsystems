@@ -1,12 +1,15 @@
-import { File, Loader2 } from "lucide-react";
+import { AlertTriangle, File, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import type { SourceWithContent } from "../../types";
 import {
+  isSourceDegraded,
   isSourceProcessing,
   processingStageLabel,
   sourceProcessingError,
   sourceProcessingStatus,
+  sourceQualityCorrectiveAction,
+  sourceQualityReason,
 } from "../../utils/source-processing";
 
 export function SourceProcessingState({
@@ -20,6 +23,27 @@ export function SourceProcessingState({
   const status = sourceProcessingStatus(source);
   const active = isSourceProcessing(source);
   const error = sourceProcessingError(source);
+
+  if (isSourceDegraded(source)) {
+    const reason = sourceQualityReason(source);
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="flex size-12 items-center justify-center rounded-full bg-warning/10 text-warning">
+          <AlertTriangle className="size-6" />
+        </div>
+        <h2 className="text-lg font-bold">{t("quality.degradedTitle")}</h2>
+        <p className="max-w-sm text-xs text-muted-foreground">
+          {reason ? t(`quality.reason.${reason}`) : t("quality.reason.unknown")}
+        </p>
+        <p className="max-w-sm text-xs font-medium text-foreground">
+          {sourceQualityCorrectiveAction(source) ?? t("quality.action.default")}
+        </p>
+        <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
+          {t("states.backToSources")}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">

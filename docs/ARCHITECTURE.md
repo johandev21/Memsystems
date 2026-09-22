@@ -54,7 +54,7 @@ Single Drizzle schema: `backend/src/database/schema.ts`. Migrations live in `bac
 | `notebook_folders` | Library folder tree. `parentId` is a self reference with cascade delete. |
 | `notebooks` | Top-level workspace. `folderId` → library folder (set null). Holds banner key, banner variants, and banner focal point. |
 | `sources` | Ingested material in a notebook (cascade). Tracks kind, modality, processing status and stage, current version, content hash, and acquisition metadata. |
-| `source_versions` | Immutable interpretation of a source. Owns ordered `source_segments`. |
+| `source_versions` | Immutable interpretation of a source. Owns ordered `source_segments` and a content-quality assessment (score, reason, signals). |
 | `source_chunks` | Embedding units with a 1024-dimension vector and an HNSW cosine index. Chunks point at their version and segments. |
 | `source_upload_intents` | Two-phase upload records: token key, storage key, expected and uploaded size and hash, status, and expiry. |
 | `study_material_folders` | Study material folder tree inside one notebook. Soft delete through `deletedAt`. |
@@ -101,6 +101,8 @@ Domain errors carry an HTTP status, a code, and a `messageKey` for frontend tran
 - Chunk replacement is atomic. Old chunks are deleted only after embeddings succeed, inside a transaction fenced on job status, source version, content hash, and raw text.
 - Indexing is idempotent through a `shouldSkip` check on content hash, processing version, and embedding model and dimensions.
 - Chunking uses 1000 characters with 200 overlap and prefixes each chunk with `Source: "<title>"`. Segments win over raw text.
+- Ingestion runs a content-quality gate after normalization. A version whose text is mostly links, repeated boilerplate, or a paywall interstitial is marked degraded with a reason and is not indexed. Retrieval excludes degraded sources, so they are never presented as Evidence.
+- Web extraction retries with a looser main-content heuristic when the first extraction is link-dense or below the length floor, choosing the least link-dense candidate.
 - Retrieval takes the top 8 chunks by cosine distance. Chat sends at most the last 6 history messages and 80,000 characters of evidence.
 - Citations only match evidence keys emitted in the same reply. Display numbers follow first appearance. Excerpts are capped at 500 characters and URLs are forced to http(s).
 - Model substitution is forbidden. If the gateway serves a different canonical slug, the request fails with `model_substituted`. There is no fallback-model chain.
@@ -170,7 +172,7 @@ Desktop shows three resizable panes: sources, chat, and studio. Mobile shows tab
 - **File**: two-phase upload. The client creates an upload intent, uploads the file, then finalizes. Limits: image 20 MB, audio 500 MB, video 1 GB, PPTX and EPUB 200 MB, tabular 100 MB, default 50 MB.
 - **Web search**: candidates are discovered with Firecrawl and imported one by one. Import requires at least 1000 characters of scraped text and deduplicates by URL.
 
-Processing stages are uploading, extracting (or transcribing for audio and video, then analyzing visuals), and indexing. Failures retry up to 3 times, then the source is marked failed. The user can retry, cancel, or reindex. Transcripts can be replaced, which creates a new version and reindexes.
+Processing stages are uploading, extracting (or transcribing for audio and video, then analyzing visuals), and indexing. Failures retry up to 3 times, then the source is marked failed. The user can retry, cancel, or reindex. Transcripts can be replaced, which creates a new version and reindexes. After extraction, every prose source passes a content-quality gate: a source that is mostly links, repeated boilerplate, or a paywall message is marked degraded instead of ready, the reason is shown in the Sources pane with a corrective action, and it is not indexed as Evidence. Retrying a degraded source re-runs extraction so the gate can re-evaluate it.
 
 ### Chat
 

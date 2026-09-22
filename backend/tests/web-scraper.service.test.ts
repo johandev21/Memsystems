@@ -104,4 +104,36 @@ describe('WebScraperService', () => {
     expect(scraped.title).toBe('Broken');
     expect(scraped.text).toContain('Title');
   });
+
+  it('retries with a looser heuristic when the first extraction is link-dense', () => {
+    const tableOfContents = Array.from(
+      { length: 60 },
+      (_, i) =>
+        `<li><a href="/chapter-${i}">Chapter ${i} study guide summary notes</a></li>`,
+    ).join('');
+    const linkDensePage = `
+      <!DOCTYPE html>
+      <html>
+        <head><title>Beyond Good and Evil Summary</title></head>
+        <body>
+          <div class="toc"><h2>Table of Contents</h2><ul>${tableOfContents}</ul></div>
+          <div class="article-body">
+            <h1>Beyond Good and Evil Summary</h1>
+            <p>Nietzsche's Beyond Good and Evil attacks the dogmatic opposition of good and evil that Western philosophy inherited from Plato and the Christian tradition. The book is organized into nine parts, each pursuing a different facet of the same question: what would a philosophy look like if it took the perspectival nature of knowledge seriously?</p>
+            <p>The first part examines the prejudices of philosophers. Nietzsche argues that the will to truth is itself a moral commitment, and that the apparent opposites of true and false, good and evil, rest on a faith that cannot justify itself.</p>
+            <p>The remaining parts develop the critique of religion, morality, and the philosophers of the future. The famous closing chapters insist that a genuine philosopher legislates values rather than merely describing them.</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const scraped = service.extractHtml(
+      linkDensePage,
+      'https://example.com/beyond-good-and-evil',
+    );
+
+    expect(scraped.text).toContain('perspectival nature of knowledge');
+    expect(scraped.text).not.toContain('Chapter 3 study guide');
+    expect(scraped.linkDensity).toBeLessThan(0.4);
+  });
 });

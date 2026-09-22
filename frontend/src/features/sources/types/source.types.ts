@@ -10,7 +10,15 @@ export type SourceModality =
   | "slides"
   | "ebook";
 
-export type SourceProcessingStatus = "pending" | "processing" | "ready" | "failed" | "cancelled";
+export type SourceProcessingStatus =
+  | "pending"
+  | "processing"
+  | "ready"
+  | "degraded"
+  | "failed"
+  | "cancelled";
+
+export type SourceQualityReason = "navigation" | "boilerplate" | "paywall";
 
 export type SourceProcessingStage =
   | "uploading"

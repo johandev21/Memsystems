@@ -1,7 +1,12 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { createDatabaseConnection } from '../src/database/connection';
-import { jobs, sourceChunks, sources } from '../src/database/schema';
+import {
+  jobs,
+  sourceChunks,
+  sources,
+  sourceVersions,
+} from '../src/database/schema';
 import { ChunkingService } from '../src/modules/ai/chunking.service';
 import { EMBEDDING_DIMENSIONS } from '../src/modules/ai/embedding.service';
 import { IndexingService } from '../src/modules/ai/indexing.service';
@@ -9,6 +14,10 @@ import {
   JobQueueConfig,
   JobQueueService,
 } from '../src/modules/jobs/job-queue.service';
+import {
+  EXTRACTOR_VERSION,
+  NORMALIZATION_VERSION,
+} from '../src/modules/sources/document-normalizer.service';
 import { SourceIndexingHandler } from '../src/modules/sources/source-indexing.handler';
 import { SourceJobsService } from '../src/modules/sources/source-jobs.service';
 import { SourceVersionService } from '../src/modules/sources/source-version.service';
@@ -185,6 +194,92 @@ describe('SourceJobsService', () => {
     expect(embedding.embedDocuments.mock.calls.length).toBe(firstRunCalls);
     const latest = await service.latestForSource(source.id);
     expect(latest?.status).toBe('ready');
+  });
+
+  it('keeps a degraded source degraded when an indexing job completes', async () => {
+    const embedding = fakeEmbeddingService();
+    const indexing = new IndexingService(
+      db as any,
+      new ChunkingService(),
+      embedding,
+    );
+    const queue = new JobQueueService(db as any, {
+      concurrency: 1,
+      pollIntervalMs: 60_000,
+      defaultBackoffBaseMs: 1_000,
+      defaultMaxAttempts: 3,
+      autoStart: false,
+    });
+    queue.registerHandler(
+      new SourceIndexingHandler(
+        db as any,
+        indexing,
+        new SourceVersionService(db as any),
+      ),
+    );
+
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      title: 'Degraded Source',
+      rawText: LONG_TEXT,
+      kind: 'text',
+      contentHash: 'degraded-hash-1',
+      processingStatus: 'degraded',
+    });
+    const [version] = await db
+      .insert(sourceVersions)
+      .values({
+        id: 'version-degraded-1',
+        sourceId: source.id,
+        contentHash: 'degraded-hash-1',
+        extractorId: 'text',
+        extractorVersion: EXTRACTOR_VERSION,
+        normalizationVersion: NORMALIZATION_VERSION,
+        status: 'degraded',
+        quality: {
+          status: 'degraded',
+          score: 0,
+          reason: 'navigation',
+          signals: {
+            wordCount: 480,
+            linkDensity: 1,
+            repetitionRatio: 0,
+            paywallHits: 0,
+          },
+        },
+      })
+      .returning();
+    await db
+      .update(sources)
+      .set({ currentVersionId: version.id })
+      .where(eq(sources.id, source.id));
+
+    await queue.enqueue(
+      'source_indexing',
+      {
+        sourceId: source.id,
+        notebookId: notebook.id,
+        contentHash: 'degraded-hash-1',
+        sourceVersionId: version.id,
+      },
+      { groupKey: `source:${source.id}` },
+    );
+    await queue.drain();
+
+    const [updated] = await db
+      .select({
+        processingStatus: sources.processingStatus,
+        processingErrorCode: sources.processingErrorCode,
+        processingErrorMessage: sources.processingErrorMessage,
+      })
+      .from(sources)
+      .where(eq(sources.id, source.id));
+
+    expect(updated.processingStatus).toBe('degraded');
+    expect(updated.processingErrorCode).toBe('quality_navigation');
+    expect(updated.processingErrorMessage).toBe(
+      'errors.sources.quality.navigation',
+    );
   });
 
   it('re-embeds when content changes', async () => {

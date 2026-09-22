@@ -2,7 +2,7 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { jobs, sources } from '../../database/schema';
+import { jobs, sourceVersions, sources } from '../../database/schema';
 import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL } from '../ai/embedding.service';
 import {
   INDEX_PROCESSING_VERSION,
@@ -12,6 +12,7 @@ import {
 import { DomainError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { Job, JobHandler } from '../jobs/job-handler.interface';
+import { qualityFailureOf } from './source-quality.service';
 import { SourceVersionService } from './source-version.service';
 
 export interface SourceIndexingJobPayload {
@@ -192,14 +193,39 @@ export class SourceIndexingHandler implements JobHandler<
         return;
       }
 
+      // Re-indexing never promotes a degraded version: its content was judged
+      // unusable, so the source keeps the degraded state and reason.
+      const [version] = sourceVersionId
+        ? await tx
+            .select({
+              status: sourceVersions.status,
+              quality: sourceVersions.quality,
+            })
+            .from(sourceVersions)
+            .where(eq(sourceVersions.id, sourceVersionId))
+        : [];
+      const failure = version?.quality
+        ? qualityFailureOf(version.quality)
+        : null;
+      const degraded = version?.status === 'degraded' || failure !== null;
+
       await tx
         .update(sources)
-        .set({
-          processingStatus: 'ready',
-          processingStage: null,
-          processingErrorCode: null,
-          processingErrorMessage: null,
-        })
+        .set(
+          degraded
+            ? {
+                processingStatus: 'degraded',
+                processingStage: null,
+                processingErrorCode: failure?.code ?? 'content_quality',
+                processingErrorMessage: failure?.messageKey ?? null,
+              }
+            : {
+                processingStatus: 'ready',
+                processingStage: null,
+                processingErrorCode: null,
+                processingErrorMessage: null,
+              },
+        )
         .where(eq(sources.id, sourceId));
     });
   }

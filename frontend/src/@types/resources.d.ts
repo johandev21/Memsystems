@@ -298,6 +298,11 @@ export default interface Resources {
         "processing": {
           "noArtifact": "Source has no processable original artifact"
         },
+        "quality": {
+          "boilerplate": "Most of this source repeats boilerplate text, so it cannot be used as evidence.",
+          "navigation": "Most of this source is links or navigation, so it cannot be used as evidence.",
+          "paywall": "This source is mostly a paywall or sign-in message, so it cannot be used as evidence."
+        },
         "source": {
           "notFound": "Source not found"
         },
@@ -1228,6 +1233,7 @@ export default interface Resources {
     "processing": {
       "analyzingVisuals": "Analyzing visuals…",
       "cancelled": "Cancelled",
+      "degraded": "Degraded",
       "extracting": "Extracting content…",
       "failed": "Processing failed",
       "indexing": "Indexing source…",
@@ -1237,6 +1243,21 @@ export default interface Resources {
       "transcribingAudio": "Transcribing audio…",
       "transcribingVideo": "Transcribing video…",
       "uploading": "Uploading original…"
+    },
+    "quality": {
+      "action": {
+        "boilerplate": "Import the file version or paste the text into a new source.",
+        "default": "Import the file version or paste the text into a new source.",
+        "navigation": "Import the file version or paste the text into a new source.",
+        "paywall": "Paste the text you can access or import the file version."
+      },
+      "degradedTitle": "This source has no usable content",
+      "reason": {
+        "boilerplate": "Most of this source repeats the same boilerplate instead of unique material.",
+        "navigation": "Most of this source is links, navigation, or a table of contents.",
+        "paywall": "This source is mostly a paywall or sign-in message.",
+        "unknown": "This source did not yield usable reading material."
+      }
     },
     "reader": {
       "backToSources": "Back to sources",

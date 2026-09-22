@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Source } from "../types";
 import {
+  isSourceDegraded,
   isSourceProcessing,
   processingStageLabel,
   sourceProcessingError,
   sourceProcessingStatus,
+  sourceQualityCorrectiveAction,
+  sourceQualityReason,
+  sourceQualityReasonLabel,
 } from "./source-processing";
 
 const source = (overrides: Partial<Source> = {}): Source => ({
@@ -46,5 +50,30 @@ describe("source processing state", () => {
       "Could not parse PDF",
     );
     expect(sourceProcessingError(source({ errorMessage: "Old error" }))).toBe("Old error");
+  });
+
+  it("labels a degraded source and explains the reason and the corrective action", () => {
+    const degraded = source({
+      processingStatus: "degraded",
+      processingErrorCode: "quality_navigation",
+      processingErrorMessage: "errors.sources.quality.navigation",
+    });
+
+    expect(sourceProcessingStatus(degraded)).toBe("degraded");
+    expect(isSourceDegraded(degraded)).toBe(true);
+    expect(isSourceProcessing(degraded)).toBe(false);
+    expect(processingStageLabel("degraded")).toBe("Degraded");
+    expect(sourceQualityReason(degraded)).toBe("navigation");
+    expect(sourceQualityReasonLabel(degraded)).toMatch(/table of contents/i);
+    expect(sourceQualityCorrectiveAction(degraded)).toMatch(/paste the text/i);
+  });
+
+  it("falls back to a generic corrective action for an unknown degraded reason", () => {
+    const degraded = source({ processingStatus: "degraded" });
+
+    expect(sourceQualityReason(degraded)).toBeNull();
+    expect(sourceQualityReasonLabel(degraded)).toBeUndefined();
+    expect(sourceQualityCorrectiveAction(degraded)).toMatch(/paste the text/i);
+    expect(sourceQualityCorrectiveAction(source())).toBeUndefined();
   });
 });

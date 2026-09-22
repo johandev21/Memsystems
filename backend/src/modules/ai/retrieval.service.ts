@@ -73,6 +73,7 @@ export class RetrievalService {
         FROM source_chunks sc
         JOIN sources s ON s.id = sc.source_id
         WHERE sc.notebook_id = ${notebookId}
+          AND s.processing_status <> 'degraded'
         ORDER BY sc.embedding <=> ${vectorLiteral}::vector
         LIMIT ${topK}
       `,

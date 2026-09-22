@@ -30,6 +30,7 @@ export const sourceProcessingStatusEnum = pgEnum('source_processing_status', [
   'pending',
   'processing',
   'ready',
+  'degraded',
   'failed',
   'cancelled',
 ]);
@@ -113,6 +114,29 @@ export interface SourceSegmentLocator {
 }
 
 export type SourceSegmentMetadata = Record<string, unknown>;
+
+/** Reasons an extracted source version can be judged unusable as Evidence. */
+export type SourceQualityReason = 'navigation' | 'boilerplate' | 'paywall';
+
+/** Raw measurements behind a quality assessment, kept for auditability. */
+export interface SourceQualitySignals {
+  /** Substantive word count over the extracted text. */
+  wordCount: number;
+  /** Share of words that belong to links (0..1). */
+  linkDensity: number;
+  /** Share of repeated lines, a boilerplate proxy (0..1). */
+  repetitionRatio: number;
+  /** Number of distinct paywall or interstitial markers matched. */
+  paywallHits: number;
+}
+
+export interface SourceQualityAssessment {
+  status: 'ready' | 'degraded';
+  /** Composite score, 0 (unusable) to 1 (clean prose). */
+  score: number;
+  reason: SourceQualityReason | null;
+  signals: SourceQualitySignals;
+}
 
 export interface WebSearchCandidateRow {
   title: string;
@@ -264,6 +288,8 @@ export const sourceVersions = pgTable(
     modelProvider: varchar('model_provider', { length: 100 }),
     modelId: varchar('model_id', { length: 200 }),
     status: sourceProcessingStatusEnum('status').default('pending').notNull(),
+    /** Content-quality assessment produced at ingestion; null for legacy rows. */
+    quality: jsonb('quality').$type<SourceQualityAssessment | null>(),
     errorCode: varchar('error_code', { length: 100 }),
     errorMessage: text('error_message'),
     createdAt: timestamp('created_at').defaultNow().notNull(),

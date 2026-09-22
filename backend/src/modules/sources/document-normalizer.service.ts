@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { JSDOM } from 'jsdom';
 import { ScrapedPage } from './web-scraper.service';
+import { measureHtmlLinkDensity } from './source-quality.service';
 import type {
   FirecrawlDocumentInput,
   FirecrawlMetaInput,
@@ -88,6 +89,12 @@ export interface NormalizedDocument {
   contentType?: string;
   contentHash: string;
   sections: DocumentSection[];
+  /**
+   * Word-based link density measured from the extracted article HTML. HTML
+   * extraction drops link markup, so the quality gate reads this signal
+   * instead of recomputing it from plain text.
+   */
+  linkDensity?: number;
 }
 
 export interface FileDocumentInput {
@@ -374,6 +381,7 @@ export class DocumentNormalizerService {
       contentType: meta.contentType,
       contentHash: contentHashOf(text),
       sections,
+      linkDensity: measureHtmlLinkDensity(page.html),
     };
   }
 

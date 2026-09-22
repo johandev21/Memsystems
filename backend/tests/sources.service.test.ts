@@ -106,6 +106,43 @@ describe.sequential('SourcesService', () => {
     ).rejects.toThrow('exceeds maximum size');
   });
 
+  it('createText marks a navigation-only paste degraded and skips indexing', async () => {
+    const { service, jobs, db } = createSourcesService();
+    const notebook = await seedNotebook();
+    const navigationText = Array.from(
+      { length: 80 },
+      (_, i) =>
+        `[Chapter ${i} study guide summary notes](https://example.com/chapter-${i})`,
+    ).join('\n');
+
+    const row = await service.createText(notebook.id, {
+      title: 'Beyond Good and Evil Summary',
+      rawText: navigationText,
+    });
+
+    expect(row.processingStatus).toBe('degraded');
+    expect(jobs.enqueue).not.toHaveBeenCalled();
+
+    const [stored] = await db
+      .select()
+      .from(sources)
+      .where(eq(sources.id, row.id));
+    expect(stored.processingStatus).toBe('degraded');
+    expect(stored.processingErrorCode).toBe('quality_navigation');
+    expect(stored.processingErrorMessage).toBe(
+      'errors.sources.quality.navigation',
+    );
+
+    const [version] = await db
+      .select()
+      .from(sourceVersions)
+      .where(eq(sourceVersions.id, stored.currentVersionId!));
+    expect(version.quality).toMatchObject({
+      status: 'degraded',
+      reason: 'navigation',
+    });
+  });
+
   it('createUrl persists fetch provenance and normalized metadata', async () => {
     const acquisition = {
       acquireUrl: vi.fn().mockResolvedValue({
@@ -260,6 +297,38 @@ describe.sequential('SourcesService', () => {
     });
 
     await expect(service.reindex('non-existent-source-id')).rejects.toThrow();
+  });
+
+  it('retry re-runs extraction for a degraded source instead of re-indexing it', async () => {
+    const jobs = {
+      enqueue: vi.fn().mockResolvedValue({ id: 'job-1' }),
+      enqueueProcessing: vi
+        .fn()
+        .mockResolvedValue({ id: 'processing-job-1' }),
+      cancelForSource: vi.fn(),
+      latestForSource: vi.fn(),
+      reindexNotebook: vi.fn(),
+    } as any;
+    const { service, db } = createSourcesService({ jobs });
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'url',
+      title: 'Degraded',
+      rawText: 'Chapter 1 Chapter 2',
+      url: 'https://example.com/nav',
+      processingStatus: 'degraded',
+    });
+
+    await service.retry(source.id);
+
+    expect(jobs.enqueueProcessing).toHaveBeenCalledWith(source.id);
+    expect(jobs.enqueue).not.toHaveBeenCalled();
+
+    const [updated] = await db
+      .select()
+      .from(sources)
+      .where(eq(sources.id, source.id));
+    expect(updated.processingStatus).toBe('pending');
   });
 
   it('get includes the latest indexing job status', async () => {

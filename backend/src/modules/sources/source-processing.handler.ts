@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
@@ -35,6 +35,7 @@ import { PptxParserService } from './pptx-parser.service';
 import { EpubParserService } from './epub-parser.service';
 import { TabularInspectorService } from './tabular-inspector.service';
 import { TabularParserService } from './tabular-parser.service';
+import { SourceQualityService } from './source-quality.service';
 import { DomainError, InternalError } from '../../common/errors/domain-error';
 
 export interface SourceProcessingJobPayload {
@@ -87,7 +88,12 @@ export class SourceProcessingHandler implements JobHandler<
     private readonly epubParser: EpubParserService,
     private readonly tabularInspector: TabularInspectorService,
     private readonly tabularParser: TabularParserService,
-  ) {}
+    @Optional() sourceQualityService?: SourceQualityService,
+  ) {
+    this.sourceQuality = sourceQualityService ?? new SourceQualityService();
+  }
+
+  private readonly sourceQuality: SourceQualityService;
 
   async process(
     job: Job<SourceProcessingJobPayload, SourceProcessingResult>,
@@ -107,6 +113,9 @@ export class SourceProcessingHandler implements JobHandler<
       }
 
       let document: NormalizedDocument;
+      // Tabular data is structured, not prose: the link/boilerplate quality
+      // heuristic does not apply to it.
+      let qualityGateApplies = true;
       if (source.s3Key) {
         const isVideo =
           this.sourceExtractionService.isVideoFile(
@@ -246,6 +255,7 @@ export class SourceProcessingHandler implements JobHandler<
             title: source.title,
           });
         } else if (isTabular) {
+          qualityGateApplies = false;
           await this.versions.markProcessing(sourceId, 'extracting');
           this.tabularInspector.inspect(
             buffer,
@@ -293,11 +303,24 @@ export class SourceProcessingHandler implements JobHandler<
       if (!(await this.queue.isActive(job.id))) {
         throw new SourceProcessingCancelledError();
       }
+      const quality = qualityGateApplies
+        ? this.sourceQuality.assess(document)
+        : null;
       const version = await this.versions.persist(
         sourceId,
         document,
         source.s3Key ?? null,
+        quality,
       );
+      if (quality?.status === 'degraded') {
+        // Unusable extraction: keep the version and segments for inspection,
+        // but never index them as Evidence.
+        return {
+          sourceVersionId: version.id,
+          segmentCount: version.segmentCount,
+          contentHash: version.contentHash,
+        };
+      }
       const indexingJob = await this.queue.enqueueIfActive<
         {
           sourceId: string;

@@ -32,6 +32,11 @@ import {
   SOURCE_FETCH_CONFIG,
   SourcePolicyService,
 } from './source-policy.service';
+import {
+  loadSourceQualityConfig,
+  SOURCE_QUALITY_CONFIG,
+  SourceQualityService,
+} from './source-quality.service';
 import { SourcesController } from './sources.controller';
 import { SourcesService } from './sources.service';
 import { WebScraperService } from './web-scraper.service';
@@ -47,7 +52,12 @@ import { WebSearchService } from './web-search.service';
       provide: SOURCE_FETCH_CONFIG,
       useFactory: loadSourceFetchConfig,
     },
+    {
+      provide: SOURCE_QUALITY_CONFIG,
+      useFactory: loadSourceQualityConfig,
+    },
     SourcePolicyService,
+    SourceQualityService,
     HttpFetcherService,
     SourceExtractionService,
     ImageInspectorService,

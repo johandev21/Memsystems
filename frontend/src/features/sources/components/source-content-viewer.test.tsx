@@ -200,4 +200,37 @@ describe("SourceContentViewer", () => {
     // Verify it was rendered with markdown heading tag
     expect(container.querySelector("h1")).not.toBeNull();
   });
+
+  it("explains a degraded source with its reason and corrective action", () => {
+    const degradedSource: SourceWithContent = {
+      id: "src-degraded-1",
+      notebookId: "nb-1",
+      kind: "url",
+      title: "Beyond Good and Evil Summary",
+      url: "https://example.com/bge",
+      modality: "document",
+      contentType: "text/html",
+      fileSize: null,
+      createdAt: "2026-08-30T12:00:00.000Z",
+      processingStatus: "degraded",
+      processingStage: null,
+      processingErrorCode: "quality_navigation",
+      processingErrorMessage: "errors.sources.quality.navigation",
+      rawText: "Chapter 1 Chapter 2 Chapter 3",
+      s3Key: null,
+      sha256: null,
+    };
+
+    renderWithClient(
+      <SourceContentViewer sourceId="src-degraded-1" onClose={vi.fn()} />,
+      { key: ["source", "src-degraded-1"], data: degradedSource },
+    );
+
+    expect(screen.getByText("This source has no usable content")).toBeTruthy();
+    expect(screen.getByText(/table of contents/i)).toBeTruthy();
+    expect(screen.getByText(/paste the text/i)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /back to sources/i }),
+    ).toBeTruthy();
+  });
 });

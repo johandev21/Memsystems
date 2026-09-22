@@ -5,6 +5,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
   SourceMetadata,
+  SourceQualityAssessment,
   sourceChunks,
   sourceSegments,
   sources,
@@ -33,6 +34,10 @@ import { isTabularFile, MAX_TABULAR_BYTES } from './tabular-inspector.service';
 import { SourceAcquisitionService } from './source-acquisition.service';
 import { SourceExtractionService } from './source-extraction.service';
 import { SourceJobsService } from './source-jobs.service';
+import {
+  qualityFailureOf,
+  SourceQualityService,
+} from './source-quality.service';
 import { WebScrapeError } from './source-errors';
 import { SourceVersionService } from './source-version.service';
 
@@ -141,6 +146,7 @@ export class SourcesService {
     private readonly sourceExtractionService: SourceExtractionService,
     @Optional() private readonly sourceVersionService?: SourceVersionService,
     @Optional() private readonly captionParser?: CaptionParserService,
+    @Optional() private readonly sourceQualityService?: SourceQualityService,
   ) {}
 
   async list(notebookId: string) {
@@ -200,6 +206,7 @@ export class SourcesService {
     }
 
     const document = this.acquisitionService.fromText(rawText, title);
+    const quality = this.assessDocument(document);
     const [row] = await this.db
       .insert(sources)
       .values({
@@ -215,7 +222,10 @@ export class SourcesService {
       })
       .returning();
 
-    await this.persistVersion(row.id, document);
+    await this.persistVersion(row.id, document, quality);
+    if (quality.status === 'degraded') {
+      return this.withQualityFailure(row, quality);
+    }
     await this.sourceJobsService.enqueue(row.id);
     return row;
   }
@@ -246,6 +256,7 @@ export class SourcesService {
     const isYouTube = this.sourceExtractionService.isYouTubeUrl(input.url);
     const modality = isYouTube ? 'video' : 'document';
     const title = resolveSourceTitle(input.title, document.title);
+    const quality = this.assessDocument(document);
     const [row] = await this.db
       .insert(sources)
       .values({
@@ -272,7 +283,10 @@ export class SourcesService {
       })
       .returning();
 
-    await this.persistVersion(row.id, document);
+    await this.persistVersion(row.id, document, quality);
+    if (quality.status === 'degraded') {
+      return this.withQualityFailure(row, quality);
+    }
     await this.sourceJobsService.enqueue(row.id);
     return row;
   }
@@ -545,6 +559,12 @@ export class SourcesService {
       })
       .where(eq(sources.id, id));
 
+    // A degraded source needs a fresh extraction so the quality gate can be
+    // re-evaluated; re-indexing the same unusable text cannot repair it.
+    if (source.processingStatus === 'degraded') {
+      return this.sourceJobsService.enqueueProcessing(id);
+    }
+
     if (source.kind === 'file' && source.s3Key) {
       return this.sourceJobsService.enqueueProcessing(id);
     }
@@ -731,14 +751,42 @@ export class SourcesService {
     return source;
   }
 
+  private assessDocument(
+    document: NormalizedDocument,
+  ): SourceQualityAssessment {
+    const quality = this.sourceQualityService ?? new SourceQualityService();
+    return quality.assess(document);
+  }
+
+  /** Mirrors the persisted degraded lifecycle on the response row. */
+  private withQualityFailure(
+    row: typeof sources.$inferSelect,
+    quality: SourceQualityAssessment,
+  ): typeof sources.$inferSelect {
+    const failure = qualityFailureOf(quality);
+    return {
+      ...row,
+      processingStatus: 'degraded',
+      processingStage: null,
+      processingErrorCode: failure?.code ?? 'content_quality',
+      processingErrorMessage: failure?.messageKey ?? null,
+    };
+  }
+
   private async persistVersion(
     sourceId: string,
     document: NormalizedDocument,
+    quality: SourceQualityAssessment | null = null,
   ): Promise<void> {
     // Optional keeps old unit-test adapters and pre-0A deployments usable;
     // the application module always provides this persistence seam.
     if (this.sourceVersionService) {
-      await this.sourceVersionService.persist(sourceId, document);
+      await this.sourceVersionService.persist(
+        sourceId,
+        document,
+        null,
+        quality,
+      );
     }
   }
 }

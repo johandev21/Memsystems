@@ -46,6 +46,10 @@ _Avoid_: document, artifact, resource
 An immutable interpretation of a source's content. New extractions and transcripts create new versions.
 _Avoid_: revision, snapshot
 
+**Degraded Source**:
+A source whose extracted content was judged unusable, such as navigation-only text or a paywall page. It keeps its version for inspection but is never used as Evidence.
+_Avoid_: failed source, broken source
+
 **Source Segment**:
 An ordered semantic unit of a source version, such as a heading, table, formula, or transcript line.
 _Avoid_: block, section

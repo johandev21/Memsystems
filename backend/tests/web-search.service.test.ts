@@ -5,6 +5,7 @@ import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import { SourceAcquisitionService } from '../src/modules/sources/source-acquisition.service';
 import { SourceExtractionService } from '../src/modules/sources/source-extraction.service';
+import { SourceVersionService } from '../src/modules/sources/source-version.service';
 import { SourcesService } from '../src/modules/sources/sources.service';
 import { WebSearchService } from '../src/modules/sources/web-search.service';
 import { seedNotebook, seedSource } from './fixtures';
@@ -45,6 +46,7 @@ function createSourcesService() {
     acquisitionService,
     sourceJobsService,
     new SourceExtractionService(),
+    new SourceVersionService(db as any),
   );
   return { db, sourcesService, notebooksService, acquisitionService };
 }
@@ -219,5 +221,43 @@ describe('WebSearchService', () => {
     expect(row.metadata?.provider).toBe('firecrawl');
     expect(row.metadata?.modelId).toBeUndefined();
     expect(row.metadata?.searchedAt).toBeDefined();
+  });
+
+  it('applies the content-quality gate to imported pages', async () => {
+    const { db, sourcesService, notebooksService, acquisitionService } =
+      createSourcesService();
+    const notebook = await seedNotebook();
+    const navigationText = Array.from(
+      { length: 80 },
+      (_, i) =>
+        `[Chapter ${i} study guide summary notes](https://example.com/chapter-${i})`,
+    ).join('\n');
+    acquisitionService.acquireUrl.mockResolvedValue({
+      title: 'Beyond Good and Evil Summary',
+      text: navigationText,
+      contentHash: 'nav-hash',
+      extractionMethod: 'readability',
+      status: 200,
+      httpContentType: 'text/html',
+      robotsDecision: 'skipped',
+      sections: [],
+    });
+
+    const { service } = createWebSearchService(
+      sourcesService,
+      notebooksService,
+    );
+    const result = await service.import(notebook.id, {
+      candidates: [{ url: 'https://example.com/nav' }],
+      query: 'beyond good and evil',
+    });
+
+    expect(result.results[0]?.status).toBe('added');
+    const [row] = await db
+      .select()
+      .from(sources)
+      .where(eq(sources.url, 'https://example.com/nav'));
+    expect(row.processingStatus).toBe('degraded');
+    expect(row.processingErrorCode).toBe('quality_navigation');
   });
 });
