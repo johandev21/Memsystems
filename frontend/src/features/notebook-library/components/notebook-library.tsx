@@ -6,7 +6,6 @@ import { CloudOff, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { libraryQueryOptions } from "../api/library";
 import { useLibraryInteractions } from "../hooks/use-library-interactions";
@@ -17,6 +16,7 @@ import { clampTitle } from "../model/title";
 import type { Draft } from "../model/types";
 import { CreateMenu } from "./create-menu";
 import { FolderLibrary } from "./folder-library";
+import { LibraryGridSkeleton } from "./library-skeleton";
 import { FolderPreview, NotebookPreview } from "./library-cards";
 
 export function NotebookLibrary() {
@@ -200,13 +200,7 @@ function LibraryContent({
 }) {
   const { t } = useTranslation("notebooks");
   if (isLoading) {
-    return (
-      <div className="library-grid py-2" aria-hidden="true">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <Skeleton key={index} className="h-42 w-59.75 rounded-artwork" />
-        ))}
-      </div>
-    );
+    return <LibraryGridSkeleton />;
   }
   if (isError) {
     return (
