@@ -19,7 +19,8 @@
       "description": "Runs TypeScript type checking without emitting output files"
     },
     "test": {
-      "description": "Runs the Vitest test suite across all workspace packages"
+      "description": "Runs the Vitest test suite across all workspace packages",
+      "passThroughEnv": ["DATABASE_URL"]
     },
     "format": {
       "description": "Formats source code across all workspace packages",
