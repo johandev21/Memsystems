@@ -17,89 +17,128 @@ vi.mock('ai', async (importOriginal) => {
   return { ...actual, streamText: mocks.streamText };
 });
 
+const retrievalOk = (
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  chunks: [],
+  abstained: false,
+  abstentionReason: null,
+  unhelpfulSources: [],
+  ...overrides,
+});
+
+/**
+ * Builds a ChatService against a scripted db. The `where` chain resolves
+ * degraded-source rows for the no-evidence lookup and stays chainable
+ * (`orderBy`) for history queries.
+ */
+async function createChatServiceHarness() {
+  const insertedValues: Record<string, unknown>[] = [];
+  const degradedRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
+
+  const db = {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => {
+          const rows = Promise.resolve(degradedRowsState.rows);
+          return {
+            orderBy: vi.fn().mockResolvedValue([]),
+            then: rows.then.bind(rows),
+          };
+        }),
+      })),
+    })),
+    insert: vi.fn(() => ({
+      values: vi.fn((values: Record<string, unknown>) => {
+        insertedValues.push(values);
+        return {
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: (values.id as string) || 'user-message-1',
+              role: values.role || 'user',
+              content:
+                typeof values.content === 'string'
+                  ? values.content
+                  : 'Explain Plato',
+              parts: values.parts || null,
+              citedSourceIds: null,
+              createdAt: new Date('2026-08-22T10:00:00.000Z'),
+            },
+          ]),
+        };
+      }),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+    })),
+  };
+  const provider = {
+    createModel: vi.fn(() => ({ provider: 'test', modelId: 'test-model' })),
+  };
+
+  mocks.streamText.mockReturnValue({
+    toUIMessageStreamResponse: vi.fn(() => new Response()),
+  });
+
+  const retrieve = vi.fn().mockResolvedValue(retrievalOk());
+  const requireCapability = vi.fn();
+
+  const module = await Test.createTestingModule({
+    providers: [
+      ChatService,
+      { provide: DRIZZLE, useValue: db },
+      {
+        provide: NotebooksService,
+        useValue: {
+          assertNotebookOwner: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+      {
+        provide: AiService,
+        useValue: {
+          getProviderForModel: vi.fn().mockResolvedValue(provider),
+          getGatewayRequestOptions: vi.fn().mockResolvedValue({}),
+          requireCapability,
+        },
+      },
+      {
+        provide: ConnectionService,
+        useValue: { requireConnected: vi.fn().mockResolvedValue(undefined) },
+      },
+      {
+        provide: RetrievalService,
+        useValue: { retrieve },
+      },
+    ],
+  }).compile();
+
+  return {
+    service: module.get(ChatService),
+    insertedValues,
+    retrieve,
+    requireCapability,
+    get degradedSourceRows() {
+      return degradedRowsState.rows;
+    },
+    set degradedSourceRows(rows: Record<string, unknown>[]) {
+      degradedRowsState.rows = rows;
+    },
+  };
+}
+
 describe('ChatService streaming lifecycle', () => {
   let service: ChatService;
   let insertedValues: Record<string, unknown>[];
-  let retrieveRelevantChunks: ReturnType<typeof vi.fn>;
+  let retrieve: ReturnType<typeof vi.fn>;
   let requireCapability: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    insertedValues = [];
-
-    const db = {
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            orderBy: vi.fn().mockResolvedValue([]),
-          })),
-        })),
-      })),
-      insert: vi.fn(() => ({
-        values: vi.fn((values: Record<string, unknown>) => {
-          insertedValues.push(values);
-          return {
-            returning: vi.fn().mockResolvedValue([
-              {
-                id: (values.id as string) || 'user-message-1',
-                role: values.role || 'user',
-                content:
-                  typeof values.content === 'string'
-                    ? values.content
-                    : 'Explain Plato',
-                parts: values.parts || null,
-                citedSourceIds: null,
-                createdAt: new Date('2026-08-22T10:00:00.000Z'),
-              },
-            ]),
-          };
-        }),
-      })),
-      update: vi.fn(() => ({
-        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
-      })),
-    };
-    const provider = {
-      createModel: vi.fn(() => ({ provider: 'test', modelId: 'test-model' })),
-    };
-
-    mocks.streamText.mockReturnValue({
-      toUIMessageStreamResponse: vi.fn(() => new Response()),
-    });
-
-    retrieveRelevantChunks = vi.fn().mockResolvedValue([]);
-    requireCapability = vi.fn();
-
-    const module = await Test.createTestingModule({
-      providers: [
-        ChatService,
-        { provide: DRIZZLE, useValue: db },
-        {
-          provide: NotebooksService,
-          useValue: {
-            assertNotebookOwner: vi.fn().mockResolvedValue(undefined),
-          },
-        },
-        {
-          provide: AiService,
-          useValue: {
-            getProviderForModel: vi.fn().mockResolvedValue(provider),
-            getGatewayRequestOptions: vi.fn().mockResolvedValue({}),
-            requireCapability,
-          },
-        },
-        {
-          provide: ConnectionService,
-          useValue: { requireConnected: vi.fn().mockResolvedValue(undefined) },
-        },
-        {
-          provide: RetrievalService,
-          useValue: { retrieveRelevantChunks },
-        },
-      ],
-    }).compile();
-
-    service = module.get(ChatService);
+    const harness = await createChatServiceHarness();
+    service = harness.service;
+    insertedValues = harness.insertedValues;
+    retrieve = harness.retrieve;
+    requireCapability = harness.requireCapability;
   });
 
   it('passes request cancellation to the model stream', async () => {
@@ -488,7 +527,7 @@ describe('ChatService streaming lifecycle', () => {
       }),
     ).resolves.toMatchObject({ userMessageId: expect.any(String) });
 
-    expect(retrieveRelevantChunks).not.toHaveBeenCalled();
+    expect(retrieve).not.toHaveBeenCalled();
     expect(
       insertedValues.find((values) => values.role === 'user'),
     ).toMatchObject({ content: '', parts: [{ type: 'file' }] });
@@ -504,5 +543,160 @@ describe('ChatService streaming lifecycle', () => {
         ]),
       }),
     );
+  });
+});
+
+describe('ChatService no-evidence reply', () => {
+  let service: ChatService;
+  let insertedValues: Record<string, unknown>[];
+  let retrieve: ReturnType<typeof vi.fn>;
+  let harness: Awaited<ReturnType<typeof createChatServiceHarness>>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    harness = await createChatServiceHarness();
+    service = harness.service;
+    insertedValues = harness.insertedValues;
+    retrieve = harness.retrieve;
+  });
+
+  it('answers with a no-evidence reply instead of the model when retrieval abstains', async () => {
+    retrieve.mockResolvedValue({
+      chunks: [],
+      abstained: true,
+      abstentionReason: 'below_threshold',
+      unhelpfulSources: [{ id: 'source-9', title: 'Lecture notes', kind: 'text', url: null }],
+    });
+
+    const response = await service.sendMessage('notebook-1', {
+      content: 'Explain Plato',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(mocks.streamText).not.toHaveBeenCalled();
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+    expect(assistantInsert).toMatchObject({
+      citedSourceIds: [],
+      metadata: expect.objectContaining({
+        finishReason: 'no_evidence',
+        noEvidence: expect.objectContaining({
+          abstentionReason: 'below_threshold',
+          unhelpfulSources: [{ id: 'source-9', title: 'Lecture notes' }],
+        }),
+      }),
+    });
+    expect(assistantInsert?.content).toContain('could not find usable material');
+    expect(assistantInsert?.content).toContain('Lecture notes');
+    expect(response.userMessageId).toEqual(expect.any(String));
+  });
+
+  it('names degraded sources with their quality reason in the no-evidence reply', async () => {
+    harness.degradedSourceRows = [
+      {
+        id: 'source-1',
+        title: 'Beyond Good and Evil Summary',
+        kind: 'url',
+        processingErrorCode: 'quality_navigation',
+      },
+    ];
+    retrieve.mockResolvedValue({
+      chunks: [],
+      abstained: true,
+      abstentionReason: 'no_indexed_chunks',
+      unhelpfulSources: [],
+    });
+
+    await service.sendMessage('notebook-1', {
+      content: 'Summarize chapter 3',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const assistantInsert = insertedValues.find(
+      (values) => values.role === 'assistant',
+    );
+    expect(assistantInsert).toMatchObject({
+      metadata: expect.objectContaining({
+        noEvidence: expect.objectContaining({
+          abstentionReason: 'no_indexed_chunks',
+          degradedSources: [
+            {
+              id: 'source-1',
+              title: 'Beyond Good and Evil Summary',
+              reason: 'navigation',
+            },
+          ],
+        }),
+      }),
+    });
+    expect(assistantInsert?.content).toContain('Beyond Good and Evil Summary');
+    expect(assistantInsert?.content).toContain('links or navigation');
+  });
+
+  it('still streams through the model when retrieval returns Evidence', async () => {
+    retrieve.mockResolvedValue({
+      chunks: [
+        {
+          chunkId: 'chunk-1',
+          chunkIndex: 0,
+          sourceId: 'source-1',
+          title: 'Lecture notes',
+          content: 'Justice is harmony.',
+          score: 0.8,
+          url: null,
+          kind: 'text',
+          sourceVersionId: null,
+          locator: null,
+        },
+      ],
+      abstained: false,
+      abstentionReason: null,
+      unhelpfulSources: [],
+    });
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain Plato',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(mocks.streamText).toHaveBeenCalledOnce();
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      instructions: string;
+    };
+    expect(streamOptions.instructions).toContain('Justice is harmony.');
+  });
+
+  it('streams Evidence only, never below-floor candidates, to the model', async () => {
+    retrieve.mockResolvedValue({
+      chunks: [
+        {
+          chunkId: 'chunk-1',
+          chunkIndex: 0,
+          sourceId: 'source-1',
+          title: 'Lecture notes',
+          content: 'Justice is harmony.',
+          score: 0.8,
+          url: null,
+          kind: 'text',
+          sourceVersionId: null,
+          locator: null,
+        },
+      ],
+      abstained: false,
+      abstentionReason: null,
+      unhelpfulSources: [{ id: 'source-2', title: 'Nav page', kind: 'url', url: null }],
+    });
+
+    await service.sendMessage('notebook-1', {
+      content: 'Explain Plato',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamOptions = mocks.streamText.mock.calls[0][0] as {
+      instructions: string;
+    };
+    expect(streamOptions.instructions).toContain('Justice is harmony.');
+    expect(streamOptions.instructions).not.toContain('Nav page');
   });
 });

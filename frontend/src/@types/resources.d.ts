@@ -140,6 +140,17 @@ export default interface Resources {
     "message": {
       "copiedToClipboard": "Copied to clipboard"
     },
+    "noEvidence": {
+      "correctiveAction": "Suggested fix: import the file version or paste the source text, then ask again.",
+      "degradedSection": "Sources that cannot be used as evidence",
+      "description": {
+        "below_threshold": "Retrieved passages did not match the question closely enough to answer from them.",
+        "no_indexed_chunks": "No sources in this Notebook are indexed as evidence yet."
+      },
+      "title": "No usable evidence in this notebook",
+      "unhelpfulReason": "nothing matched the question",
+      "unhelpfulSection": "Sources without matching content"
+    },
     "panel": {
       "gatewayBusy": "AI Gateway is busy — responses may fail. Waiting a bit and retrying usually works.",
       "gatewayKeyDescription": "An AI Gateway key is required to chat with your study assistant.",

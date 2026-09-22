@@ -20,8 +20,10 @@ import {
 } from "@/features/ai";
 import { cn } from "@/shared/utils/cn";
 import type { CitedSourceDTO } from "../api/chat";
+import { noEvidenceMetadataOf } from "../types/no-evidence.types";
 import { getReferenceKeyFromHref, prepareReferenceMessage } from "../types/message-reference.types";
 import { MessageReferences, ReferencePopover } from "./reference-popover";
+import { NoEvidencePanel } from "./no-evidence-message";
 
 export interface AssistantMessageProps {
   message?: UIMessage;
@@ -117,9 +119,17 @@ export function AssistantMessage({
   return (
     <Message from="assistant">
       <MessageContent>
-        <AssistantReasoning content={content} />
-        <AssistantResponses messageId={activeMessage.id} content={content} />
-        {!content.isStreaming && <MessageReferences references={content.remainingReferences} />}
+        {content.noEvidence ? (
+          <NoEvidencePanel metadata={content.noEvidence} />
+        ) : (
+          <>
+            <AssistantReasoning content={content} />
+            <AssistantResponses messageId={activeMessage.id} content={content} />
+            {!content.isStreaming && (
+              <MessageReferences references={content.remainingReferences} />
+            )}
+          </>
+        )}
       </MessageContent>
 
       {!content.isStreaming && (
@@ -260,6 +270,7 @@ function useAssistantMessageContent(
   );
   const inlineCitationKeys = new Set(preparedParts.flatMap((part) => [...part.inlineCitationKeys]));
   const fullPlainText = textParts.map((part) => part.text).join("\n\n");
+  const noEvidence = noEvidenceMetadataOf(message?.metadata);
   return {
     isEmpty: textParts.length === 0 && reasoningText.length === 0,
     isReasoningStreaming,
@@ -268,6 +279,7 @@ function useAssistantMessageContent(
     preparedParts,
     reasoningText,
     fullPlainText,
+    noEvidence,
     remainingReferences: citedSources.filter(
       (source) => !inlineCitationKeys.has(source.citationKey),
     ),

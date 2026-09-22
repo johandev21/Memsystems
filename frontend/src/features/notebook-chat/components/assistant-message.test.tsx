@@ -134,6 +134,102 @@ describe("AssistantMessage references", () => {
   });
 });
 
+describe("AssistantMessage no-evidence state", () => {
+  function noEvidenceMessage(): UIMessage {
+    return {
+      id: "assistant-no-evidence-1",
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: "I could not find usable material in this Notebook to answer that question.",
+          state: "done",
+        },
+      ],
+      metadata: {
+        noEvidence: {
+          abstentionReason: "no_indexed_chunks",
+          degradedSources: [
+            {
+              id: "source-1",
+              title: "Beyond Good and Evil Summary",
+              reason: "navigation",
+            },
+          ],
+          unhelpfulSources: [{ id: "source-2", title: "Lecture notes" }],
+        },
+      },
+    } as UIMessage;
+  }
+
+  it("renders the distinct no-evidence state naming degraded and unhelpful sources", () => {
+    render(
+      <AssistantMessage
+        message={noEvidenceMessage()}
+        citedSources={[citedSource]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showRegenerate
+      />,
+    );
+
+    const panel = screen.getByTestId("no-evidence-panel");
+    expect(panel.textContent).toContain("No usable evidence in this notebook");
+    expect(panel.textContent).toContain("Beyond Good and Evil Summary");
+    expect(panel.textContent).toContain(
+      "Most of this source is links, navigation, or a table of contents.",
+    );
+    expect(panel.textContent).toContain(
+      "Import the file version or paste the text into a new source.",
+    );
+    expect(panel.textContent).toContain("Lecture notes");
+    expect(panel.textContent).toContain(
+      "Suggested fix: import the file version or paste the source text, then ask again.",
+    );
+  });
+
+  it("never presents the no-evidence state as a source-grounded reply with references", () => {
+    render(
+      <AssistantMessage
+        message={noEvidenceMessage()}
+        citedSources={[citedSource]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showRegenerate
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Reference 1: Internet Encyclopedia of Philosophy",
+      }),
+    ).toBeNull();
+    expect(screen.queryByText("The passage connects justice with the structure of the ideal city.")).toBeNull();
+  });
+
+  it("still lets the user copy and regenerate from the no-evidence state", async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+
+    render(
+      <AssistantMessage
+        message={noEvidenceMessage()}
+        citedSources={[]}
+        onCopy={onCopy}
+        onRegenerate={vi.fn()}
+        showRegenerate
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Copy message" }));
+    expect(onCopy).toHaveBeenCalledWith(
+      "I could not find usable material in this Notebook to answer that question.",
+    );
+    await user.click(screen.getByRole("button", { name: "Regenerate response" }));
+    expect(onCopy).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("AssistantMessage reasoning streaming", () => {
   function reasoningMessage(
     text: string,

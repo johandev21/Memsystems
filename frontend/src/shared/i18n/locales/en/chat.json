@@ -43,6 +43,17 @@
     "retry": "Retry",
     "tip": "Tip: cheaper models are throttled less often."
   },
+  "noEvidence": {
+    "title": "No usable evidence in this notebook",
+    "description": {
+      "no_indexed_chunks": "No sources in this Notebook are indexed as evidence yet.",
+      "below_threshold": "Retrieved passages did not match the question closely enough to answer from them."
+    },
+    "degradedSection": "Sources that cannot be used as evidence",
+    "unhelpfulSection": "Sources without matching content",
+    "unhelpfulReason": "nothing matched the question",
+    "correctiveAction": "Suggested fix: import the file version or paste the source text, then ask again."
+  },
   "header": {
     "title": "Chat"
   },

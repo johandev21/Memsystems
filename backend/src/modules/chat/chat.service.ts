@@ -1,6 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { createId } from '@paralleldrive/cuid2';
-import { streamText } from 'ai';
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  streamText,
+} from 'ai';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
@@ -14,7 +18,10 @@ import { ConnectionService } from '../ai/connection.service';
 import { toClientStreamError } from '../ai/stream-error';
 import { resolveModelId } from '../ai/providers/model-catalog';
 import { languageDirective } from '../../common/i18n/language';
-import { RetrievalService } from '../ai/retrieval.service';
+import {
+  RetrievalService,
+  type RetrievalResult,
+} from '../ai/retrieval.service';
 import type { CitationLocator } from '../ai/retrieval.service';
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
@@ -27,6 +34,12 @@ import {
   normalizeStoredCitation,
   sanitizeReferenceUrl,
 } from './chat-citations';
+import {
+  composeNoEvidenceReply,
+  noEvidenceMetadata,
+  qualityReasonFromCode,
+  type NoEvidenceContext,
+} from './chat-no-evidence';
 
 const MAX_HISTORY_MESSAGES = 6;
 const MAX_SOURCE_TEXT = 80000;
@@ -230,13 +243,10 @@ export class ChatService {
     // An image/file-only message has no text to embed. Retrieval is optional
     // for multimodal turns, so let the model inspect the supplied parts
     // directly instead of passing an empty query to the embedding provider.
-    const retrievedChunks = input.content.trim()
-      ? await this.retrievalService.retrieveRelevantChunks(
-          notebookId,
-          input.content,
-          8,
-        )
-      : [];
+    const retrievalOutcome: RetrievalResult | null = input.content.trim()
+      ? await this.retrievalService.retrieve(notebookId, input.content, 8)
+      : null;
+    const retrievedChunks = retrievalOutcome?.chunks ?? [];
     const citationEvidence = createCitationEvidence(retrievedChunks);
 
     const sourceContext = formatCitationContext(citationEvidence).slice(
@@ -325,6 +335,19 @@ export class ChatService {
     ];
 
     input.abortSignal?.throwIfAborted();
+
+    // Retrieval abstained: nothing cleared the relevance floor. Answering
+    // from general knowledge here would present ungrounded content as a
+    // Notebook answer, so the Chat produces the deterministic no-evidence
+    // reply naming the degraded or unhelpful sources instead.
+    if (retrievalOutcome?.abstained) {
+      return this.sendNoEvidenceReply(
+        notebookId,
+        input,
+        userMessage,
+        retrievalOutcome,
+      );
+    }
 
     const modelId = input.model;
     const provider = await this.aiService.getProviderForModel(modelId);
@@ -602,6 +625,98 @@ export class ChatService {
             displayName: selectedModel?.displayName,
           }),
       }),
+      userMessageId: userMessage.id,
+    };
+  }
+
+  /**
+   * The no-evidence outcome: no model call, a deterministic reply that names
+   * the degraded or unhelpful sources and suggests a corrective action,
+   * persisted with metadata so the UI can render the distinct state.
+   */
+  private async sendNoEvidenceReply(
+    notebookId: string,
+    input: SendInput,
+    userMessage: {
+      id: string;
+    },
+    outcome: RetrievalResult,
+  ) {
+    const degradedRows = await this.db
+      .select({
+        id: sources.id,
+        title: sources.title,
+        processingErrorCode: sources.processingErrorCode,
+      })
+      .from(sources)
+      .where(
+        and(
+          eq(sources.notebookId, notebookId),
+          eq(sources.processingStatus, 'degraded'),
+        ),
+      );
+
+    const noEvidenceContext: NoEvidenceContext = {
+      degradedSources: degradedRows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        reason: qualityReasonFromCode(row.processingErrorCode),
+      })),
+      unhelpfulSources: outcome.unhelpfulSources.map((source) => ({
+        id: source.id,
+        title: source.title,
+      })),
+    };
+
+    const text = composeNoEvidenceReply(noEvidenceContext, input.language);
+    const assistantMessageId = createId();
+    const now = new Date().toISOString();
+    const metadata: Record<string, unknown> = {
+      modelId: input.model,
+      createdAt: now,
+      completedAt: now,
+      finishReason: 'no_evidence',
+      noEvidence: noEvidenceMetadata(
+        noEvidenceContext,
+        outcome.abstentionReason ?? 'below_threshold',
+      ),
+    };
+
+    try {
+      await this.db.insert(notebookChatMessages).values({
+        id: assistantMessageId,
+        notebookId,
+        role: 'assistant',
+        content: text,
+        reasoning: null,
+        parts: [{ type: 'text', text }],
+        metadata,
+        citedSourceIds: [],
+      });
+    } catch (dbError) {
+      this.logger.error('failed to persist no-evidence reply', dbError);
+    }
+
+    const textPartId = createId();
+    const stream = createUIMessageStream({
+      execute: ({ writer }) => {
+        writer.write({
+          type: 'start',
+          messageId: assistantMessageId,
+          messageMetadata: metadata,
+        });
+        writer.write({ type: 'text-start', id: textPartId });
+        writer.write({ type: 'text-delta', id: textPartId, delta: text });
+        writer.write({ type: 'text-end', id: textPartId });
+        writer.write({
+          type: 'finish',
+          messageMetadata: metadata,
+        });
+      },
+    });
+
+    return {
+      streamResponse: createUIMessageStreamResponse({ stream }),
       userMessageId: userMessage.id,
     };
   }

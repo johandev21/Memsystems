@@ -7,7 +7,11 @@ import { ConnectionService } from './connection.service';
 import { EmbeddingService } from './embedding.service';
 import { IndexingService } from './indexing.service';
 import { ModelSyncService } from './model-sync.service';
-import { RetrievalService } from './retrieval.service';
+import {
+  RETRIEVAL_RELEVANCE_CONFIG,
+  RetrievalService,
+  loadRetrievalRelevanceConfig,
+} from './retrieval.service';
 import { UserSettingsService } from './user-settings.service';
 
 @Global()
@@ -22,6 +26,10 @@ import { UserSettingsService } from './user-settings.service';
     EmbeddingService,
     ChunkingService,
     IndexingService,
+    {
+      provide: RETRIEVAL_RELEVANCE_CONFIG,
+      useFactory: loadRetrievalRelevanceConfig,
+    },
     RetrievalService,
   ],
   exports: [
