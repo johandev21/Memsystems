@@ -52,6 +52,7 @@ services:
       FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-https://api.firecrawl.dev}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
       FIRECRAWL_TIMEOUT_MS: ${FIRECRAWL_TIMEOUT_MS:-30000}
+      RETRIEVAL_RELEVANCE_FLOOR: ${RETRIEVAL_RELEVANCE_FLOOR:-0.3}
     volumes:
       - storage:/app/dev-storage
     depends_on:

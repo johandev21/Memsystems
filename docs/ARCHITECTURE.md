@@ -43,7 +43,7 @@ browser
 
 The backend has no auth guards, sessions, or tokens. `assertNotebookOwner` only checks that the notebook row exists (`backend/src/modules/notebooks/notebooks.service.ts:127`). Upload intent tokens are bearer secrets. The database is UTC.
 
-Main configuration lives in `backend/.env.example` (native) and `.env.docker.dev.example` / `.env.docker.prod.example` (Docker). Important variables: `DATABASE_URL`, `PORT`, `CLIENT_URL`, `DEV_STORAGE_*`, `S3_*`, `CREDENTIALS_ENCRYPTION_KEY`, `AI_GATEWAY_API_KEY`, `VOYAGE_API_KEY`, `FIRECRAWL_*`, `JOB_QUEUE_*`, `SOURCE_FETCH_TIMEOUT_MS`.
+Main configuration lives in `backend/.env.example` (native) and `.env.docker.dev.example` / `.env.docker.prod.example` (Docker). Important variables: `DATABASE_URL`, `PORT`, `CLIENT_URL`, `DEV_STORAGE_*`, `S3_*`, `CREDENTIALS_ENCRYPTION_KEY`, `AI_GATEWAY_API_KEY`, `VOYAGE_API_KEY`, `FIRECRAWL_*`, `JOB_QUEUE_*`, `SOURCE_FETCH_TIMEOUT_MS`, `RETRIEVAL_RELEVANCE_FLOOR`.
 
 ## 4. Data model
 
@@ -176,7 +176,7 @@ Processing stages are uploading, extracting (or transcribing for audio and video
 
 ### Chat
 
-The composer sends the message list, the selected model, and the base language. The backend retrieves the top 8 chunks, builds evidence keys, and streams the reply with reasoning. The assistant message is persisted with its citations. The UI renders citation markers as popovers with a locator, an excerpt, and an action to open the source. Unused citations appear as a chip row. History is stored per notebook and can be cleared.
+The composer sends the message list, the selected model, and the base language. The backend retrieves the top 8 chunks, builds evidence keys, and streams the reply with reasoning. When nothing clears the relevance floor, it skips the model and streams the no-evidence reply instead. The assistant message is persisted with its citations. The UI renders citation markers as popovers with a locator, an excerpt, and an action to open the source. Unused citations appear as a chip row. History is stored per notebook and can be cleared.
 
 ### Generation
 
