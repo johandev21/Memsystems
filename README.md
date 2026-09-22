@@ -5,18 +5,24 @@ Memsystems es una aplicación para organizar notebooks, consultar fuentes y gene
 El proyecto está organizado como un monorepo con:
 
 - `frontend/`: interfaz web desarrollada con React, Vite y TanStack Router.
-- `backend/`: API desarrollada con NestJS, PostgreSQL y Drizzle ORM.
+- `backend/`: API desarrollada con NestJS, PostgreSQL con `pgvector`, Drizzle ORM y la Vercel AI Gateway.
 
 ## Funcionalidades
 
-### Notebooks
+### Biblioteca y notebooks
 
-Los notebooks son el espacio principal de trabajo. Cada uno puede incluir:
+La biblioteca es la pantalla de inicio. Organiza los notebooks en carpetas y muestra una carpeta a la vez con breadcrumbs. Permite:
+
+- Crear, renombrar, mover y eliminar carpetas y notebooks.
+- Ordenar por nombre, fecha de actualización o fecha de creación, con las carpetas primero.
+- Arrastrar y soltar, bloqueando el movimiento de una carpeta dentro de sí misma.
+- Editar el nombre en línea, confirmando con Enter o Cmd/Ctrl+Enter y cancelando con Escape.
+
+Cada notebook es el espacio principal de trabajo e incluye:
 
 - Título, descripción e icono personalizados.
 - Imagen de banner con configuración del punto focal.
 - Fuentes de información y materiales de estudio relacionados.
-- Búsqueda y listado de notebooks del usuario.
 
 ### Fuentes de información
 
@@ -34,10 +40,11 @@ Las fuentes se mantienen asociadas al notebook para que el usuario pueda estudia
 
 Cada notebook cuenta con un chat persistente para interactuar con sus fuentes y materiales. El chat permite:
 
-- Enviar preguntas y recibir respuestas generadas por IA.
+- Enviar preguntas y recibir respuestas generadas por IA a partir de las fuentes del notebook.
 - Mantener el historial de mensajes por notebook.
 - Recibir respuestas en streaming mientras se generan.
 - Mostrar texto y razonamiento cuando el modelo lo proporciona.
+- Mostrar citas que enlazan a la evidencia de las fuentes utilizadas.
 - Elegir el modelo utilizado para la conversación.
 - Limpiar el historial del chat.
 
@@ -49,20 +56,24 @@ Los materiales pueden crearse manualmente o generarse a partir del contenido del
 - Tarjetas de estudio.
 - Rutas de aprendizaje.
 - Mapas mentales.
+- Presentaciones.
+- Guías de estudio.
+- Problemas de práctica.
+- Casos de estudio.
 
-Estos materiales pueden editarse, moverse entre carpetas, visualizarse y filtrarse por tipo. Los cuestionarios también pueden barajarse para variar el orden de las preguntas.
+Estos materiales pueden editarse, moverse entre carpetas, visualizarse y filtrarse por tipo. Los cuestionarios también pueden barajarse para variar el orden de las preguntas, y las presentaciones pueden exportarse a PPTX.
 
-### Organización y papelera
+### Organización
 
-Los materiales se pueden organizar en carpetas dentro de cada notebook. La aplicación incluye una papelera para:
+Los materiales se pueden organizar en carpetas dentro de cada notebook. El árbol del estudio permite:
 
-- Recuperar materiales y carpetas eliminados.
-- Revisar los elementos enviados a la papelera.
-- Eliminar elementos de forma permanente cuando sea necesario.
+- Crear, renombrar, duplicar, mover y eliminar materiales y carpetas.
+- Arrastrar y soltar, con expansión automática de las carpetas al pasar por encima.
+- Navegar con el teclado mediante flechas, Inicio, Fin, Enter y F2.
 
 ### Proveedores y modelos de IA
 
-La aplicación integra varios proveedores y permite consultar los modelos disponibles desde la interfaz. Los proveedores configurados actualmente son:
+La aplicación integra varios proveedores a través de la Vercel AI Gateway y permite consultar los modelos disponibles desde la interfaz. Los proveedores configurados actualmente son:
 
 - OpenAI.
 - DeepSeek.
@@ -70,12 +81,12 @@ La aplicación integra varios proveedores y permite consultar los modelos dispon
 - Google Gemini.
 - Kimi.
 
-La clave global de AI Gateway puede configurarse mediante una variable de entorno o desde los ajustes de la aplicación. La conexión y disponibilidad se comprueban antes de utilizar los modelos. Algunos modelos también admiten búsqueda web.
+La clave global de AI Gateway puede configurarse mediante una variable de entorno o desde los ajustes de la aplicación. La conexión y disponibilidad se comprueban antes de utilizar los modelos. La indexación y la búsqueda semántica usan Voyage AI para generar los embeddings, con una conexión propia que también se configura desde los ajustes.
 
 ### Modo local y almacenamiento
 
 - Aplicación local de usuario único, sin autenticación ni separación por cuenta.
-- Configuración global de la clave de AI Gateway.
+- Configuración global de las claves de AI Gateway y Voyage AI desde los ajustes.
 - Almacenamiento local para desarrollo.
 - Compatibilidad con almacenamiento S3, R2 o MinIO mediante una interfaz compatible con S3.
 - Persistencia de notebooks, fuentes, chats, materiales y configuraciones en PostgreSQL.
@@ -83,9 +94,9 @@ La clave global de AI Gateway puede configurarse mediante una variable de entorn
 ## Requisitos
 
 - Node.js
-- pnpm `11.17.0` o compatible
-- PostgreSQL
-- Una clave de proveedor de IA para usar las funciones de generación, salvo que se configure una clave desde la aplicación
+- pnpm `12.5.1` o compatible
+- PostgreSQL con la extensión `pgvector`
+- Una clave de AI Gateway para las funciones de IA y una de Voyage AI para la indexación, salvo que se configuren desde la aplicación
 
 ## Instalación
 
@@ -128,11 +139,13 @@ pnpm run dev:backend
 
 ## Base de datos
 
-Memsystems utiliza PostgreSQL con Drizzle ORM. Después de configurar `DATABASE_URL`, aplica el esquema con:
+Memsystems utiliza PostgreSQL con la extensión `pgvector` y Drizzle ORM. Después de configurar `DATABASE_URL`, aplica las migraciones con:
 
 ```bash
-pnpm exec drizzle-kit push
+pnpm --filter backend run db:migrate
 ```
+
+Las migraciones viven en `backend/drizzle/` y la configuración de Drizzle en `backend/drizzle.config.ts`. La migración crea la extensión `pgvector` si falta.
 
 ## Docker
 
@@ -208,11 +221,12 @@ Los comandos Docker cargan explícitamente `.env.docker.dev` o `.env.docker.prod
 Ejecuta estos comandos desde la raíz:
 
 ```bash
-pnpm run build       # compilar frontend y backend
-pnpm run lint        # revisar el código
-pnpm run typecheck   # comprobar los tipos de TypeScript
-pnpm run test        # ejecutar las pruebas del frontend y del backend
-pnpm run format      # formatear el código configurado
+pnpm run build        # compilar frontend y backend
+pnpm run lint         # revisar el código
+pnpm run typecheck    # comprobar los tipos de TypeScript
+pnpm run test         # ejecutar las pruebas del frontend y del backend
+pnpm run format       # formatear el código configurado
+pnpm run format:check # comprobar el formato sin escribir cambios
 ```
 
 Cada paquete también permite ejecutar sus pruebas en modo observación:
@@ -228,12 +242,14 @@ Las pruebas del backend utilizan una base de datos PostgreSQL independiente con 
 
 ```text
 frontend/   Aplicación web y componentes de interfaz
-backend/    API, autenticación, fuentes, IA y persistencia
+backend/    API, fuentes, IA, generación y persistencia
 docs/       Documentación técnica del proyecto
 ```
 
 ## Documentación
 
+- [Arquitectura y comportamiento](docs/ARCHITECTURE.md)
+- [Glosario](CONTEXT.md)
 - [Pruebas](docs/testing.md)
 
 ## Estado del proyecto
