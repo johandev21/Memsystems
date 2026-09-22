@@ -1,12 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as appSchema from '../../database/schema';
-import { sources } from '../../database/schema';
+import { Injectable } from '@nestjs/common';
 import { NotFoundError } from '../../common/errors/domain-error';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ConnectionService } from '../ai/connection.service';
-import { DRIZZLE } from '../database/database.module';
+import { RetrievalService, type RetrievedChunk } from '../ai/retrieval.service';
+import { RetrievalTraceService } from '../ai/retrieval-trace.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {
   GenerationRequestManager,
@@ -14,6 +11,14 @@ import {
 } from './generation-request-manager';
 import { StudyMaterialKind } from './shapes';
 import { StreamHandler } from './stream-handler';
+
+/**
+ * Chunks retrieved per selected source for a Generation. A Generation is
+ * grounded on every selected source, so the pipeline bounds each source
+ * independently; this keeps the prompt within budget until the
+ * retrieval-grounded generation ticket reworks coverage.
+ */
+export const GENERATION_EVIDENCE_CHUNKS_PER_SOURCE = 16;
 
 const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
   quiz: 'openai/gpt-5.6-sol',
@@ -31,12 +36,12 @@ export class GenerationService {
   private readonly activeRequests = new Map<string, AbortController>();
 
   constructor(
-    @Inject(DRIZZLE)
-    private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly notebooksService: NotebooksService,
     private readonly connectionService: ConnectionService,
     private readonly requestManager: GenerationRequestManager,
     private readonly streamHandler: StreamHandler,
+    private readonly retrievalService: RetrievalService,
+    private readonly retrievalTraceService: RetrievalTraceService,
   ) {}
 
   async generate(
@@ -49,10 +54,22 @@ export class GenerationService {
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
     await this.connectionService.requireConnected(modelId);
 
-    const sourceTexts =
+    const retrievalOutcome =
       input.sourceIds.length > 0
-        ? await this.fetchSourceTexts(notebookId, input.sourceIds)
-        : [];
+        ? await this.retrievalService.retrieve({
+            notebookId,
+            query: generationRetrievalQuery(input),
+            sourceIds: input.sourceIds,
+            topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
+            // Selected sources are in scope by definition; the relevance
+            // floor only gates Notebook-wide Evidence for Chat.
+            relevanceFloor: 0,
+          })
+        : null;
+
+    const sourceTexts = retrievalOutcome
+      ? groupChunksBySource(retrievalOutcome.chunks, input.sourceIds)
+      : [];
 
     if (input.kind === 'study_guide') {
       if (
@@ -117,6 +134,15 @@ export class GenerationService {
       model: modelId,
     });
 
+    if (retrievalOutcome) {
+      await this.retrievalTraceService.record({
+        notebookId,
+        kind: 'generation',
+        generationRequestId: requestId,
+        trace: retrievalOutcome.trace,
+      });
+    }
+
     const controller = new AbortController();
     if (externalSignal) {
       if (externalSignal.aborted) controller.abort();
@@ -161,27 +187,52 @@ export class GenerationService {
     this.activeRequests.get(requestId)?.abort();
     return request;
   }
+}
 
-  private async fetchSourceTexts(notebookId: string, sourceIds: string[]) {
-    const rows = await this.db
-      .select({
-        id: sources.id,
-        title: sources.title,
-        rawText: sources.rawText,
-        notebookId: sources.notebookId,
-      })
-      .from(sources)
-      .where(eq(sources.notebookId, notebookId));
+/**
+ * A Generation without a brief still needs a retrieval query; the material
+ * kind is the only topical signal available.
+ */
+function generationRetrievalQuery(input: StartGenerationInput): string {
+  const brief = input.brief.trim();
+  return brief || input.kind.replaceAll('_', ' ');
+}
 
-    if (sourceIds.length === 0) {
-      return [];
-    }
-
-    const sourceIdsSet = new Set(sourceIds);
-    const owned = rows.filter(
-      (r) => sourceIdsSet.has(r.id) && r.notebookId === notebookId,
-    );
-
-    return owned;
+/**
+ * Builds the source texts for the prompt from the retrieved chunks, in the
+ * caller's selection order so multi-source Generations keep every source.
+ */
+function groupChunksBySource(
+  chunks: RetrievedChunk[],
+  sourceIds: string[],
+): { id: string; title: string; rawText: string }[] {
+  const bySource = new Map<string, RetrievedChunk[]>();
+  for (const chunk of chunks) {
+    const list = bySource.get(chunk.sourceId) ?? [];
+    list.push(chunk);
+    bySource.set(chunk.sourceId, list);
   }
+
+  return sourceIds.flatMap((sourceId) => {
+    const list = bySource.get(sourceId);
+    if (!list || list.length === 0) return [];
+    const ordered = [...list].sort((a, b) => a.chunkIndex - b.chunkIndex);
+    return [
+      {
+        id: sourceId,
+        title: ordered[0].title,
+        rawText: ordered
+          .map((chunk) => stripChunkHeader(chunk.content))
+          .join('\n\n'),
+      },
+    ];
+  });
+}
+
+/**
+ * Indexed chunk content starts with a `Source: "<title>"` header; the prompt
+ * adds the title itself, so the header would only be noise.
+ */
+function stripChunkHeader(content: string): string {
+  return content.replace(/^Source: "[^\n]*"\n/, '');
 }

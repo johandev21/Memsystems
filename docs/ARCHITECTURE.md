@@ -22,7 +22,7 @@ pnpm workspace with two packages, orchestrated by Turborepo.
 | --- | --- |
 | `frontend/` | Vite + React 19 + TypeScript. TanStack Router and Query, Zustand, dnd-kit, Tailwind CSS v4, shadcn/ui primitives on Base UI. |
 | `backend/` | NestJS 11 + Express 5. Drizzle ORM on PostgreSQL with pgvector. Vercel AI Gateway through the AI SDK v7, Voyage AI embeddings, Firecrawl web ingestion. |
-| `docs/` | This document and `testing.md`. |
+| `docs/` | This document, `testing.md`, and `retrieval-evaluation.md`. |
 | `scripts/docker.mjs` | Docker stack control. Uses `.env.docker.dev` / `.env.docker.prod`. |
 | `Dockerfile`, `compose.dev.yml`, `compose.prod.yml` | Dev and production-like stacks. |
 
@@ -37,7 +37,7 @@ browser
             ├─ PostgreSQL + pgvector (all state, including the job queue)
             ├─ storage: S3 when S3_ENDPOINT is set, otherwise local disk
             ├─ Vercel AI Gateway (models, chat, generation, vision, transcription)
-            ├─ Voyage AI (embeddings, voyage-4, 1024 dimensions)
+            ├─ Voyage AI (embeddings, voyage-4, 1024 dimensions; query embeddings for Chat and Study Material Generation)
             └─ Firecrawl (web search and URL acquisition, with a local fetch fallback)
 ```
 
@@ -61,6 +61,7 @@ Single Drizzle schema: `backend/src/database/schema.ts`. Migrations live in `bac
 | `study_materials` | Generated artifacts. One kind, JSON content and options, optional folder, soft delete. |
 | `generation_requests` | Persisted generation streams with status, brief, selected source ids, and target folder. |
 | `notebook_chat_messages` | Chat history with role, content, reasoning, parts, metadata, and citations. |
+| `retrieval_traces` | One retrieval trace per Chat turn and Study Material Generation: query, ranked candidates, fused order, chosen chunks, threshold, latency, and estimated token cost. Correlation ids are not foreign keys so a trace survives a turn that failed before its row was written. |
 | `jobs` | Generic Postgres job queue: type, group key, payload, status, attempts, backoff, and schedule. |
 | `app_settings` | Singleton row with encrypted gateway and Voyage keys. |
 
@@ -75,7 +76,7 @@ Dead tables: `source_index_jobs` and `web_search_jobs` still exist in the schema
 - **DatabaseModule** provides the Drizzle client and pg pool.
 - **JobsModule** provides the Postgres-backed queue.
 - **StorageModule** provides S3-or-local storage and signed local downloads.
-- **AiModule** owns the gateway provider, model catalog and sync, embeddings, chunking, indexing, retrieval, and connection state.
+- **AiModule** owns the gateway provider, model catalog and sync, embeddings, chunking, indexing, the retrieval pipeline and its trace persistence, and connection state.
 - **NotebooksModule** owns notebooks, banners, and the library folder tree.
 - **SourcesModule** owns ingestion, uploads, extraction, versioning, processing and indexing handlers, and web search.
 - **ChatModule** owns RAG chat streaming, citations, and message persistence.
@@ -103,11 +104,12 @@ Domain errors carry an HTTP status, a code, and a `messageKey` for frontend tran
 - Chunking uses 1000 characters with 200 overlap and prefixes each chunk with `Source: "<title>"`. Segments win over raw text.
 - Ingestion runs a content-quality gate after normalization. A version whose text is mostly links, repeated boilerplate, or a paywall interstitial is marked degraded with a reason and is not indexed. Retrieval excludes degraded sources, so they are never presented as Evidence.
 - Web extraction retries with a looser main-content heuristic when the first extraction is link-dense or below the length floor, choosing the least link-dense candidate.
-- Retrieval takes the top 8 chunks by cosine distance and applies a configurable relevance floor (`RETRIEVAL_RELEVANCE_FLOOR`, default 0.3). Chunks below the floor are dropped; when nothing clears the floor, retrieval returns an explicit below-threshold or empty abstention result instead of weak Evidence. The Chat then answers with a deterministic no-evidence reply — no model call — that names the degraded or unhelpful sources, suggests a corrective action, and is persisted with metadata that drives a visually distinct, citation-free UI state. General knowledge is never presented as grounded in Sources. Chat sends at most the last 6 history messages and 80,000 characters of evidence.
+- Retrieval is a single pipeline entry point shared by Chat and Study Material Generation. It returns the Evidence together with a structured trace (query, ranked candidates per leg, fused order, chosen chunks, applied floor, latency, estimated embedding tokens), and it never stores provider keys or the query embedding. Each Chat turn and each Generation persists its trace in `retrieval_traces`. Retrieval takes the top 8 chunks by cosine distance and applies a configurable relevance floor (`RETRIEVAL_RELEVANCE_FLOOR`, default 0.3). Chunks below the floor are dropped; when nothing clears the floor, retrieval returns an explicit below-threshold or empty abstention result instead of weak Evidence. The Chat then answers with a deterministic no-evidence reply — no model call — that names the degraded or unhelpful sources, suggests a corrective action, and is persisted with metadata that drives a visually distinct, citation-free UI state. General knowledge is never presented as grounded in Sources. Chat sends at most the last 6 history messages and 80,000 characters of evidence.
+- Study Material Generation grounds on the retrieval pipeline over the selected sources: `topK` bounds each source independently so every selected source contributes, and the relevance floor does not apply because the selection defines the scope. A Generation with no selected sources does not retrieve and generates from the brief alone.
 - Citations only match evidence keys emitted in the same reply. Display numbers follow first appearance. Excerpts are capped at 500 characters and URLs are forced to http(s).
 - Model substitution is forbidden. If the gateway serves a different canonical slug, the request fails with `model_substituted`. There is no fallback-model chain.
 - `structuredOutput` is a hint only. Generation first tries native structured output, then a strict-JSON prompt with staged repair.
-- Generation limits: quiz ≤ 50 questions, practice problems 1–30, case study 1–10 questions, slides ≤ 20, roadmap phases ≤ 50, mind map nodes ≤ 100. Source text is truncated at 100,000 characters.
+- Generation limits: quiz ≤ 50 questions, practice problems 1–30, case study 1–10 questions, slides ≤ 20, roadmap phases ≤ 50, mind map nodes ≤ 100. Retrieved source text is truncated at 100,000 characters.
 - Upload intents expire after 15 minutes. Finalize is exactly-once through a `consuming` claim, and the byte count is mandatory.
 - SSRF protection blocks private, loopback, link-local, CGNAT, and metadata addresses; only ports 80 and 443 are allowed; embedded credentials are rejected; DNS failure is fail-closed.
 
@@ -176,11 +178,11 @@ Processing stages are uploading, extracting (or transcribing for audio and video
 
 ### Chat
 
-The composer sends the message list, the selected model, and the base language. The backend retrieves the top 8 chunks, builds evidence keys, and streams the reply with reasoning. When nothing clears the relevance floor, it skips the model and streams the no-evidence reply instead. The assistant message is persisted with its citations. The UI renders citation markers as popovers with a locator, an excerpt, and an action to open the source. Unused citations appear as a chip row. History is stored per notebook and can be cleared.
+The composer sends the message list, the selected model, and the base language. The backend retrieves the top 8 chunks, builds evidence keys, persists the retrieval trace for the turn, and streams the reply with reasoning. When nothing clears the relevance floor, it skips the model and streams the no-evidence reply instead. The assistant message is persisted with its citations. The UI renders citation markers as popovers with a locator, an excerpt, and an action to open the source. Unused citations appear as a chip row. History is stored per notebook and can be cleared; clearing it also clears the notebook's Chat traces.
 
 ### Generation
 
-The generate dialog asks for options and a brief, then streams NDJSON. Per-kind forms cover counts, styles, difficulty, themes, and structure. Generations continue in the background store if the dialog closes. A 5-minute stall timeout and a cancel action are available. When a generation completes, the tree refreshes and a toast offers to view the material. Disconnecting aborts the server generation.
+The generate dialog asks for options and a brief, then streams NDJSON. Grounding comes from the retrieval pipeline over the selected sources, one bounded set of chunks per source, and the Generation persists a retrieval trace. Per-kind forms cover counts, styles, difficulty, themes, and structure. Generations continue in the background store if the dialog closes. A 5-minute stall timeout and a cancel action are available. When a generation completes, the tree refreshes and a toast offers to view the material. Disconnecting aborts the server generation.
 
 ### Study material tree and studio
 
@@ -216,7 +218,7 @@ These are real gaps, not plans:
 - `AiService.searchWeb` (an LLM web-search tool) is dead code; notebook web search uses Firecrawl.
 - The shared `use-brief-wizard` hook is used by only four of the nine per-kind brief forms; the others manage their own step state.
 - Library folder delete is optimistic in the UI with re-parenting, but the server sets notebooks' folder to null and cascades subfolders. The cache can diverge until the next fetch.
-- The React Doctor workflow lives at `frontend/.github/workflows/react-doctor.yml`. There is no root workflow, so GitHub may not run it.
+- The React Doctor workflow at `frontend/.github/workflows/react-doctor.yml` does not run: GitHub only reads workflows from the root `.github/workflows`, which holds the `Quality` gate.
 - No pre-commit hooks. The quality gate is manual or agent-driven.
 - No React error boundaries.
 
@@ -225,6 +227,7 @@ These are real gaps, not plans:
 - Frontend: Vitest with jsdom. Tests are colocated as `src/**/*.test.ts(x)`. `frontend/src/test/setup.ts` preloads all English namespaces and polyfills browser APIs. Do not remove the preload; components suspend without it.
 - Backend: Vitest with a disposable pgvector database on port 5499 (`.env.test`). On a fresh database, run `db:migrate` with the test `DATABASE_URL`, then `test:db:setup`. Never point `.env.test` at the development database; tests truncate tables.
 - Gate: `pnpm run lint` → `pnpm run typecheck` → `pnpm run test`. Test only what changed.
+- Retrieval evaluation: `backend/tests/retrieval-eval.test.ts` runs the labeled golden set against the test database through the real pipeline and fails when a metric drops beyond the documented tolerance. See [retrieval-evaluation.md](retrieval-evaluation.md).
 
 ## 11. Conventions
 

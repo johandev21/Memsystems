@@ -112,6 +112,24 @@ El contenedor **no forma parte de Compose y no se reinicia solo** al reiniciar l
 docker rm -f memsystems-test-db
 ```
 
+## Evaluación de recuperación
+
+El gate de recuperación se ejecuta como una prueba más del backend:
+
+```bash
+pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts
+```
+
+No necesita claves de proveedor: usa un embedder léxico determinista en lugar de Voyage. Siembra el corpus dorado en la base de pruebas, pasa cada consulta etiquetada por el pipeline real y compara recall, ranking, precisión de contexto, citas, rechazos, fidelidad, latencia y costo contra `backend/tests/eval/baseline.json`.
+
+Tras un cambio intencional en recuperación, actualiza la línea base y revisa el diff antes de confirmarlo:
+
+```bash
+RETRIEVAL_EVAL_UPDATE=1 pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts
+```
+
+Para agregar consultas etiquetadas y entender cada métrica, consulta [retrieval-evaluation.md](retrieval-evaluation.md).
+
 ## Errores comunes
 
 | Síntoma | Causa | Solución |

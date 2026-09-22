@@ -4,6 +4,7 @@ import { AiService } from '../src/modules/ai/ai.service';
 import { CapabilityUnsupportedError } from '../src/common/errors/domain-error';
 import { ConnectionService } from '../src/modules/ai/connection.service';
 import { RetrievalService } from '../src/modules/ai/retrieval.service';
+import { RetrievalTraceService } from '../src/modules/ai/retrieval-trace.service';
 import { ChatService } from '../src/modules/chat/chat.service';
 import { DRIZZLE } from '../src/modules/database/database.module';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
@@ -17,13 +18,31 @@ vi.mock('ai', async (importOriginal) => {
   return { ...actual, streamText: mocks.streamText };
 });
 
+const baseRetrievalTrace = {
+  version: 1,
+  query: 'Explain Plato',
+  topK: 8,
+  scope: { kind: 'notebook', sourceIds: null },
+  relevanceFloor: 0.3,
+  embedding: { model: 'voyage-4', dimensions: 1024 },
+  legs: [{ kind: 'dense', candidates: [] }],
+  fusedOrder: [],
+  chosen: [],
+  abstained: false,
+  abstentionReason: null,
+  latencyMs: 8,
+  cost: { embeddingInputTokens: 3 },
+};
+
 const retrievalOk = (
   overrides: Record<string, unknown> = {},
+  traceOverrides: Record<string, unknown> = {},
 ): Record<string, unknown> => ({
   chunks: [],
   abstained: false,
   abstentionReason: null,
   unhelpfulSources: [],
+  trace: { ...baseRetrievalTrace, ...traceOverrides },
   ...overrides,
 });
 
@@ -71,6 +90,9 @@ async function createChatServiceHarness() {
     update: vi.fn(() => ({
       set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
     })),
+    delete: vi.fn(() => ({
+      where: vi.fn().mockResolvedValue(undefined),
+    })),
   };
   const provider = {
     createModel: vi.fn(() => ({ provider: 'test', modelId: 'test-model' })),
@@ -82,6 +104,8 @@ async function createChatServiceHarness() {
 
   const retrieve = vi.fn().mockResolvedValue(retrievalOk());
   const requireCapability = vi.fn();
+  const recordTrace = vi.fn().mockResolvedValue(undefined);
+  const clearChatTraces = vi.fn().mockResolvedValue(undefined);
 
   const module = await Test.createTestingModule({
     providers: [
@@ -109,6 +133,10 @@ async function createChatServiceHarness() {
         provide: RetrievalService,
         useValue: { retrieve },
       },
+      {
+        provide: RetrievalTraceService,
+        useValue: { record: recordTrace, clearChatTraces },
+      },
     ],
   }).compile();
 
@@ -117,6 +145,8 @@ async function createChatServiceHarness() {
     insertedValues,
     retrieve,
     requireCapability,
+    recordTrace,
+    clearChatTraces,
     get degradedSourceRows() {
       return degradedRowsState.rows;
     },
@@ -131,6 +161,7 @@ describe('ChatService streaming lifecycle', () => {
   let insertedValues: Record<string, unknown>[];
   let retrieve: ReturnType<typeof vi.fn>;
   let requireCapability: ReturnType<typeof vi.fn>;
+  let recordTrace: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -139,6 +170,32 @@ describe('ChatService streaming lifecycle', () => {
     insertedValues = harness.insertedValues;
     retrieve = harness.retrieve;
     requireCapability = harness.requireCapability;
+    recordTrace = harness.recordTrace;
+  });
+
+  it('persists the retrieval trace against the assistant message id', async () => {
+    await service.sendMessage('notebook-1', {
+      content: 'Explain Plato',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    const streamResult = mocks.streamText.mock.results[0].value as {
+      toUIMessageStreamResponse: ReturnType<typeof vi.fn>;
+    };
+    const responseOptions = streamResult.toUIMessageStreamResponse.mock
+      .calls[0][0] as { generateMessageId: () => string };
+
+    expect(retrieve).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
+      query: 'Explain Plato',
+      topK: 8,
+    });
+    expect(recordTrace).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
+      kind: 'chat',
+      chatMessageId: responseOptions.generateMessageId(),
+      trace: expect.objectContaining({ query: 'Explain Plato' }),
+    });
   });
 
   it('passes request cancellation to the model stream', async () => {
@@ -561,12 +618,19 @@ describe('ChatService no-evidence reply', () => {
   });
 
   it('answers with a no-evidence reply instead of the model when retrieval abstains', async () => {
-    retrieve.mockResolvedValue({
-      chunks: [],
-      abstained: true,
-      abstentionReason: 'below_threshold',
-      unhelpfulSources: [{ id: 'source-9', title: 'Lecture notes', kind: 'text', url: null }],
-    });
+    retrieve.mockResolvedValue(
+      retrievalOk(
+        {
+          chunks: [],
+          abstained: true,
+          abstentionReason: 'below_threshold',
+          unhelpfulSources: [
+            { id: 'source-9', title: 'Lecture notes', kind: 'text', url: null },
+          ],
+        },
+        { abstained: true, abstentionReason: 'below_threshold' },
+      ),
+    );
 
     const response = await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
@@ -590,6 +654,19 @@ describe('ChatService no-evidence reply', () => {
     expect(assistantInsert?.content).toContain('could not find usable material');
     expect(assistantInsert?.content).toContain('Lecture notes');
     expect(response.userMessageId).toEqual(expect.any(String));
+    expect(harness.recordTrace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notebookId: 'notebook-1',
+        kind: 'chat',
+        trace: expect.objectContaining({ abstained: true }),
+      }),
+    );
+  });
+
+  it('clears chat retrieval traces together with the chat history', async () => {
+    await service.clearMessages('notebook-1');
+
+    expect(harness.clearChatTraces).toHaveBeenCalledWith('notebook-1');
   });
 
   it('names degraded sources with their quality reason in the no-evidence reply', async () => {
@@ -601,12 +678,17 @@ describe('ChatService no-evidence reply', () => {
         processingErrorCode: 'quality_navigation',
       },
     ];
-    retrieve.mockResolvedValue({
-      chunks: [],
-      abstained: true,
-      abstentionReason: 'no_indexed_chunks',
-      unhelpfulSources: [],
-    });
+    retrieve.mockResolvedValue(
+      retrievalOk(
+        {
+          chunks: [],
+          abstained: true,
+          abstentionReason: 'no_indexed_chunks',
+          unhelpfulSources: [],
+        },
+        { abstained: true, abstentionReason: 'no_indexed_chunks' },
+      ),
+    );
 
     await service.sendMessage('notebook-1', {
       content: 'Summarize chapter 3',
@@ -635,25 +717,27 @@ describe('ChatService no-evidence reply', () => {
   });
 
   it('still streams through the model when retrieval returns Evidence', async () => {
-    retrieve.mockResolvedValue({
-      chunks: [
-        {
-          chunkId: 'chunk-1',
-          chunkIndex: 0,
-          sourceId: 'source-1',
-          title: 'Lecture notes',
-          content: 'Justice is harmony.',
-          score: 0.8,
-          url: null,
-          kind: 'text',
-          sourceVersionId: null,
-          locator: null,
-        },
-      ],
-      abstained: false,
-      abstentionReason: null,
-      unhelpfulSources: [],
-    });
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Lecture notes',
+            content: 'Justice is harmony.',
+            score: 0.8,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [],
+      }),
+    );
 
     await service.sendMessage('notebook-1', {
       content: 'Explain Plato',
@@ -668,25 +752,29 @@ describe('ChatService no-evidence reply', () => {
   });
 
   it('streams Evidence only, never below-floor candidates, to the model', async () => {
-    retrieve.mockResolvedValue({
-      chunks: [
-        {
-          chunkId: 'chunk-1',
-          chunkIndex: 0,
-          sourceId: 'source-1',
-          title: 'Lecture notes',
-          content: 'Justice is harmony.',
-          score: 0.8,
-          url: null,
-          kind: 'text',
-          sourceVersionId: null,
-          locator: null,
-        },
-      ],
-      abstained: false,
-      abstentionReason: null,
-      unhelpfulSources: [{ id: 'source-2', title: 'Nav page', kind: 'url', url: null }],
-    });
+    retrieve.mockResolvedValue(
+      retrievalOk({
+        chunks: [
+          {
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'Lecture notes',
+            content: 'Justice is harmony.',
+            score: 0.8,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+        unhelpfulSources: [
+          { id: 'source-2', title: 'Nav page', kind: 'url', url: null },
+        ],
+      }),
+    );
 
     await service.sendMessage('notebook-1', {
       content: 'Explain Plato',

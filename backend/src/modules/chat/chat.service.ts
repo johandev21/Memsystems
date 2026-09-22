@@ -19,10 +19,12 @@ import { toClientStreamError } from '../ai/stream-error';
 import { resolveModelId } from '../ai/providers/model-catalog';
 import { languageDirective } from '../../common/i18n/language';
 import {
+  DEFAULT_TOP_K,
   RetrievalService,
-  type RetrievalResult,
+  type RetrievalOutcome,
 } from '../ai/retrieval.service';
 import type { CitationLocator } from '../ai/retrieval.service';
+import { RetrievalTraceService } from '../ai/retrieval-trace.service';
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {
@@ -112,6 +114,7 @@ export class ChatService {
     private readonly aiService: AiService,
     private readonly connectionService: ConnectionService,
     private readonly retrievalService: RetrievalService,
+    private readonly retrievalTraceService: RetrievalTraceService,
   ) {}
 
   async listMessages(notebookId: string): Promise<ChatMessage[]> {
@@ -240,12 +243,29 @@ export class ChatService {
     await this.notebooksService.assertNotebookOwner(notebookId);
     await this.connectionService.requireConnected(input.model);
 
+    // The client-facing assistant message id is created before retrieval so
+    // the trace can be correlated even when the turn fails before the
+    // assistant row is persisted.
+    const assistantMessageId = createId();
+
     // An image/file-only message has no text to embed. Retrieval is optional
     // for multimodal turns, so let the model inspect the supplied parts
     // directly instead of passing an empty query to the embedding provider.
-    const retrievalOutcome: RetrievalResult | null = input.content.trim()
-      ? await this.retrievalService.retrieve(notebookId, input.content, 8)
+    const retrievalOutcome: RetrievalOutcome | null = input.content.trim()
+      ? await this.retrievalService.retrieve({
+          notebookId,
+          query: input.content,
+          topK: DEFAULT_TOP_K,
+        })
       : null;
+    if (retrievalOutcome) {
+      await this.retrievalTraceService.record({
+        notebookId,
+        kind: 'chat',
+        chatMessageId: assistantMessageId,
+        trace: retrievalOutcome.trace,
+      });
+    }
     const retrievedChunks = retrievalOutcome?.chunks ?? [];
     const citationEvidence = createCitationEvidence(retrievedChunks);
 
@@ -346,6 +366,7 @@ export class ChatService {
         input,
         userMessage,
         retrievalOutcome,
+        assistantMessageId,
       );
     }
 
@@ -440,7 +461,6 @@ export class ChatService {
       };
     });
 
-    const assistantMessageId = createId();
     const startTime = new Date();
     let streamedText = '';
     let streamedReasoning = '';
@@ -640,7 +660,8 @@ export class ChatService {
     userMessage: {
       id: string;
     },
-    outcome: RetrievalResult,
+    outcome: RetrievalOutcome,
+    assistantMessageId: string,
   ) {
     const degradedRows = await this.db
       .select({
@@ -669,7 +690,6 @@ export class ChatService {
     };
 
     const text = composeNoEvidenceReply(noEvidenceContext, input.language);
-    const assistantMessageId = createId();
     const now = new Date().toISOString();
     const metadata: Record<string, unknown> = {
       modelId: input.model,
@@ -726,6 +746,7 @@ export class ChatService {
     await this.db
       .delete(notebookChatMessages)
       .where(eq(notebookChatMessages.notebookId, notebookId));
+    await this.retrievalTraceService.clearChatTraces(notebookId);
   }
 
   private async getRecentHistory(

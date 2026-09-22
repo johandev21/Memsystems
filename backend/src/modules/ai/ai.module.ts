@@ -12,6 +12,7 @@ import {
   RetrievalService,
   loadRetrievalRelevanceConfig,
 } from './retrieval.service';
+import { RetrievalTraceService } from './retrieval-trace.service';
 import { UserSettingsService } from './user-settings.service';
 
 @Global()
@@ -31,6 +32,7 @@ import { UserSettingsService } from './user-settings.service';
       useFactory: loadRetrievalRelevanceConfig,
     },
     RetrievalService,
+    RetrievalTraceService,
   ],
   exports: [
     UserSettingsService,
@@ -41,6 +43,7 @@ import { UserSettingsService } from './user-settings.service';
     ChunkingService,
     IndexingService,
     RetrievalService,
+    RetrievalTraceService,
   ],
 })
 export class AiModule {}

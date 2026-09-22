@@ -12,6 +12,7 @@ import {
   varchar,
   vector,
 } from 'drizzle-orm/pg-core';
+import type { RetrievalTrace } from '../modules/ai/retrieval-trace';
 
 export const sourceKindEnum = pgEnum('source_kind', ['text', 'url', 'file']);
 
@@ -163,6 +164,11 @@ export const generationStatusEnum = pgEnum('generation_status', [
 ]);
 
 export const chatRoleEnum = pgEnum('chat_role', ['user', 'assistant']);
+
+export const retrievalTraceKindEnum = pgEnum('retrieval_trace_kind', [
+  'chat',
+  'generation',
+]);
 
 export const notebookFolders = pgTable(
   'notebook_folders',
@@ -557,6 +563,41 @@ export const notebookChatMessages = pgTable(
   (table) => [
     index('notebook_chat_messages_notebook_id_idx').on(table.notebookId),
     index('notebook_chat_messages_created_at_idx').on(table.createdAt),
+  ],
+);
+
+/**
+ * One persisted retrieval trace per Chat turn and per Study Material
+ * Generation. The correlation ids have no foreign key on purpose: a trace is
+ * still useful when the turn failed before its message row was written.
+ */
+export const retrievalTraces = pgTable(
+  'retrieval_traces',
+  {
+    id: varchar('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    notebookId: varchar('notebook_id')
+      .notNull()
+      .references(() => notebooks.id, { onDelete: 'cascade' }),
+    kind: retrievalTraceKindEnum('kind').notNull(),
+    chatMessageId: varchar('chat_message_id'),
+    generationRequestId: varchar('generation_request_id'),
+    query: text('query').notNull(),
+    trace: jsonb('trace').$type<RetrievalTrace>().notNull(),
+    latencyMs: integer('latency_ms').notNull(),
+    embeddingInputTokens: integer('embedding_input_tokens').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('retrieval_traces_notebook_id_created_at_idx').on(
+      table.notebookId,
+      table.createdAt,
+    ),
+    index('retrieval_traces_chat_message_id_idx').on(table.chatMessageId),
+    index('retrieval_traces_generation_request_id_idx').on(
+      table.generationRequestId,
+    ),
   ],
 );
 

@@ -3,7 +3,19 @@ import { sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
-import { EmbeddingService } from './embedding.service';
+import {
+  EMBEDDING_DIMENSIONS,
+  EMBEDDING_MODEL,
+  EmbeddingService,
+} from './embedding.service';
+import { estimateVoyageTokens } from './providers/voyage.client';
+import type {
+  RetrievalAbstentionReason,
+  RetrievalTrace,
+  RetrievalTraceCandidate,
+} from './retrieval-trace';
+
+export type { RetrievalAbstentionReason } from './retrieval-trace';
 
 /** Location metadata carried from a source segment into an index chunk. */
 export interface CitationLocator {
@@ -48,19 +60,36 @@ export interface UnhelpfulSource {
   url: string | null;
 }
 
-/** Why retrieval produced no Evidence. */
-export type RetrievalAbstentionReason = 'no_indexed_chunks' | 'below_threshold';
-
 /**
  * The retrieval outcome. A normal result carries the Evidence chunks; an
  * abstention carries no chunks, a reason, and the sources whose candidates
- * failed the floor so the Chat can name them.
+ * failed the floor so the Chat can name them. Every outcome carries the
+ * structured trace that callers persist for diagnosis.
  */
 export interface RetrievalResult {
   chunks: RetrievedChunk[];
   abstained: boolean;
   abstentionReason: RetrievalAbstentionReason | null;
   unhelpfulSources: UnhelpfulSource[];
+}
+
+export interface RetrievalOutcome extends RetrievalResult {
+  trace: RetrievalTrace;
+}
+
+/**
+ * One call through the retrieval pipeline. Chat searches the whole Notebook;
+ * Study Material Generation restricts the search to the selected sources,
+ * where `topK` bounds each source independently so every selected source
+ * contributes its best chunks.
+ */
+export interface RetrievalRequest {
+  notebookId: string;
+  query: string;
+  topK?: number;
+  sourceIds?: string[];
+  /** Overrides the configured floor for this call (grounding may pass 0). */
+  relevanceFloor?: number;
 }
 
 /** Minimum cosine similarity for a chunk to serve as Evidence. */
@@ -92,6 +121,26 @@ export function loadRetrievalRelevanceConfig(
   return { relevanceFloor: Math.min(1, Math.max(0, parsed)) };
 }
 
+interface RetrievalChunkRow {
+  chunk_id: string;
+  chunk_index: number;
+  source_id: string;
+  title: string;
+  url: string | null;
+  kind: string;
+  source_version_id: string | null;
+  locator: CitationLocator | null;
+  content: string;
+  score: number;
+}
+
+/**
+ * The single retrieval pipeline entry point. It composes the retrieval
+ * stages (query embedding, search legs, fusion, relevance threshold) and
+ * returns both the Evidence and the trace that explains how it was chosen.
+ * Chat and Study Material Generation both call this; later retrieval tickets
+ * change the stages behind it rather than adding call sites.
+ */
 @Injectable()
 export class RetrievalService {
   private readonly relevanceFloor: number;
@@ -108,14 +157,130 @@ export class RetrievalService {
       relevanceConfig?.relevanceFloor ?? DEFAULT_RELEVANCE_FLOOR;
   }
 
-  async retrieve(
-    notebookId: string,
-    query: string,
-    topK: number = DEFAULT_TOP_K,
-  ): Promise<RetrievalResult> {
-    const queryEmbedding = await this.embeddingService.embedQuery(query);
+  async retrieve(request: RetrievalRequest): Promise<RetrievalOutcome> {
+    const startedAt = performance.now();
+    const topK = request.topK ?? DEFAULT_TOP_K;
+    const relevanceFloor = request.relevanceFloor ?? this.relevanceFloor;
+    const sourceIds = request.sourceIds ? [...request.sourceIds] : null;
 
-    const vectorLiteral = `[${queryEmbedding.join(',')}]`;
+    // An explicitly empty selection can never match a chunk.
+    if (sourceIds && sourceIds.length === 0) {
+      return emptyOutcome(
+        request,
+        topK,
+        relevanceFloor,
+        performance.now() - startedAt,
+      );
+    }
+
+    const queryEmbedding = await this.embeddingService.embedQuery(
+      request.query,
+    );
+    const rows = await this.search(
+      request.notebookId,
+      queryEmbedding,
+      topK,
+      sourceIds,
+    );
+
+    const ranked = rows.map((row, index) => candidateFromRow(row, index));
+    const chunks: RetrievedChunk[] = [];
+    const chosen: RetrievalTraceCandidate[] = [];
+    const belowFloor: RetrievedChunk[] = [];
+    for (const row of rows) {
+      const chunk = chunkFromRow(row);
+      if (chunk.score >= relevanceFloor) {
+        chunks.push(chunk);
+        chosen.push(candidateFromRow(row, chosen.length));
+      } else {
+        belowFloor.push(chunk);
+      }
+    }
+
+    const abstained = chunks.length === 0;
+    const abstentionReason: RetrievalAbstentionReason | null = abstained
+      ? rows.length === 0
+        ? 'no_indexed_chunks'
+        : 'below_threshold'
+      : null;
+
+    const trace: RetrievalTrace = {
+      version: 1,
+      query: request.query,
+      topK,
+      scope: {
+        kind: sourceIds ? 'selected_sources' : 'notebook',
+        sourceIds,
+      },
+      relevanceFloor,
+      embedding: {
+        model: EMBEDDING_MODEL,
+        dimensions: EMBEDDING_DIMENSIONS,
+      },
+      legs: [{ kind: 'dense', candidates: ranked }],
+      // One dense leg today: fusion is the identity until hybrid retrieval
+      // lands behind this seam.
+      fusedOrder: ranked,
+      chosen,
+      abstained,
+      abstentionReason,
+      latencyMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      cost: { embeddingInputTokens: estimateVoyageTokens(request.query) },
+    };
+
+    return {
+      chunks,
+      abstained,
+      abstentionReason,
+      unhelpfulSources: distinctSources(belowFloor),
+      trace,
+    };
+  }
+
+  private async search(
+    notebookId: string,
+    embedding: number[],
+    topK: number,
+    sourceIds: string[] | null,
+  ): Promise<RetrievalChunkRow[]> {
+    const vectorLiteral = `[${embedding.join(',')}]`;
+
+    if (sourceIds) {
+      const sourceFilter = sql`AND sc.source_id IN (${sql.join(
+        sourceIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`;
+
+      const result = await this.db.execute(
+        sql`
+          SELECT * FROM (
+            SELECT
+              sc.id AS chunk_id,
+              sc.chunk_index,
+              sc.source_id,
+              s.title,
+              s.url,
+              s.kind,
+              sc.source_version_id,
+              sc.locator,
+              sc.content,
+              1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score,
+              row_number() OVER (
+                PARTITION BY sc.source_id
+                ORDER BY sc.embedding <=> ${vectorLiteral}::vector, sc.id
+              ) AS source_rank
+            FROM source_chunks sc
+            JOIN sources s ON s.id = sc.source_id
+            WHERE sc.notebook_id = ${notebookId}
+              AND s.processing_status <> 'degraded'
+              ${sourceFilter}
+          ) ranked
+          WHERE ranked.source_rank <= ${topK}
+          ORDER BY ranked.score DESC, ranked.chunk_id
+        `,
+      );
+      return result.rows as unknown as RetrievalChunkRow[];
+    }
 
     const result = await this.db.execute(
       sql`
@@ -134,63 +299,77 @@ export class RetrievalService {
         JOIN sources s ON s.id = sc.source_id
         WHERE sc.notebook_id = ${notebookId}
           AND s.processing_status <> 'degraded'
-        ORDER BY sc.embedding <=> ${vectorLiteral}::vector
+        ORDER BY sc.embedding <=> ${vectorLiteral}::vector, sc.id
         LIMIT ${topK}
       `,
     );
-
-    const rows = result.rows as {
-      chunk_id: string;
-      chunk_index: number;
-      source_id: string;
-      title: string;
-      url: string | null;
-      kind: string;
-      source_version_id: string | null;
-      locator: CitationLocator | null;
-      content: string;
-      score: number;
-    }[];
-
-    const chunks: RetrievedChunk[] = [];
-    const belowFloor: RetrievedChunk[] = [];
-    for (const row of rows) {
-      const chunk = {
-        chunkId: row.chunk_id,
-        chunkIndex: row.chunk_index,
-        sourceId: row.source_id,
-        title: row.title,
-        url: row.url,
-        kind: row.kind,
-        sourceVersionId: row.source_version_id ?? null,
-        locator: row.locator ?? null,
-        content: row.content,
-        score: Number(row.score),
-      };
-      if (chunk.score >= this.relevanceFloor) {
-        chunks.push(chunk);
-      } else {
-        belowFloor.push(chunk);
-      }
-    }
-
-    if (chunks.length > 0) {
-      return {
-        chunks,
-        abstained: false,
-        abstentionReason: null,
-        unhelpfulSources: distinctSources(belowFloor),
-      };
-    }
-
-    return {
-      chunks: [],
-      abstained: true,
-      abstentionReason:
-        rows.length === 0 ? 'no_indexed_chunks' : 'below_threshold',
-      unhelpfulSources: distinctSources(belowFloor),
-    };
+    return result.rows as unknown as RetrievalChunkRow[];
   }
+}
+
+function candidateFromRow(
+  row: RetrievalChunkRow,
+  index: number,
+): RetrievalTraceCandidate {
+  return {
+    chunkId: row.chunk_id,
+    sourceId: row.source_id,
+    chunkIndex: row.chunk_index,
+    score: Number(row.score),
+    rank: index + 1,
+  };
+}
+
+function chunkFromRow(row: RetrievalChunkRow): RetrievedChunk {
+  return {
+    chunkId: row.chunk_id,
+    chunkIndex: row.chunk_index,
+    sourceId: row.source_id,
+    title: row.title,
+    url: row.url,
+    kind: row.kind,
+    sourceVersionId: row.source_version_id ?? null,
+    locator: row.locator ?? null,
+    content: row.content,
+    score: Number(row.score),
+  };
+}
+
+function emptyOutcome(
+  request: RetrievalRequest,
+  topK: number,
+  relevanceFloor: number,
+  elapsedMs: number,
+): RetrievalOutcome {
+  const trace: RetrievalTrace = {
+    version: 1,
+    query: request.query,
+    topK,
+    scope: {
+      kind: 'selected_sources',
+      sourceIds: [...(request.sourceIds ?? [])],
+    },
+    relevanceFloor,
+    embedding: {
+      model: EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+    },
+    legs: [],
+    fusedOrder: [],
+    chosen: [],
+    abstained: true,
+    abstentionReason: 'no_indexed_chunks',
+    latencyMs: Math.max(0, Math.round(elapsedMs)),
+    cost: { embeddingInputTokens: 0 },
+  };
+
+  return {
+    chunks: [],
+    abstained: true,
+    abstentionReason: 'no_indexed_chunks',
+    unhelpfulSources: [],
+    trace,
+  };
 }
 
 function distinctSources(chunks: RetrievedChunk[]): UnhelpfulSource[] {

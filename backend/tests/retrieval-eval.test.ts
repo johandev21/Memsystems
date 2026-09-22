@@ -1,0 +1,78 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import type { EvalEmbedder } from './eval/deterministic-embedder';
+import {
+  evaluateRetrieval,
+  evaluateRetrievalGate,
+  type RetrievalEvalBaseline,
+} from './eval/retrieval-eval';
+
+const baselinePath = path.resolve(
+  process.cwd(),
+  'tests/eval/baseline.json',
+);
+const baseline = JSON.parse(
+  readFileSync(baselinePath, 'utf8'),
+) as RetrievalEvalBaseline;
+
+/** An embedder that maps everything to the same vector, destroying ranking. */
+const constantEmbedder: EvalEmbedder = {
+  embed: () => Array.from({ length: 1024 }, () => 1),
+};
+
+describe('retrieval evaluation gate', () => {
+  it('meets the checked-in baseline within the documented tolerance', async () => {
+    const report = await evaluateRetrieval();
+
+    if (process.env.RETRIEVAL_EVAL_UPDATE === '1') {
+      writeFileSync(
+        baselinePath,
+        `${JSON.stringify(
+          {
+            version: 1,
+            tolerance: baseline.tolerance,
+            metrics: report.metrics,
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      return;
+    }
+
+    const failures = evaluateRetrievalGate(report, baseline);
+    expect(
+      failures,
+      JSON.stringify(
+        {
+          failures,
+          metrics: report.metrics,
+          queries: report.queries.map((query) => ({
+            queryId: query.queryId,
+            retrievedChunkIds: query.retrievedChunkIds,
+            abstained: query.abstained,
+          })),
+        },
+        null,
+        2,
+      ),
+    ).toEqual([]);
+  });
+
+  it.skipIf(process.env.RETRIEVAL_EVAL_UPDATE === '1')(
+    'detects a deliberately introduced retrieval regression',
+    async () => {
+    const constant = await evaluateRetrieval({ embedder: constantEmbedder });
+    expect(
+      evaluateRetrievalGate(constant, baseline).map((failure) => failure.metric),
+    ).toContain('recallAtK');
+
+    const floorless = await evaluateRetrieval({ relevanceFloor: 0 });
+    expect(
+      evaluateRetrievalGate(floorless, baseline).map(
+        (failure) => failure.metric,
+      ),
+    ).toContain('refusalAccuracy');
+  });
+});

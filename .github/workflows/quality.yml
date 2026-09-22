@@ -1,0 +1,66 @@
+# Quality gate: lint, typecheck, and tests, including the retrieval
+# evaluation gate (`backend/tests/retrieval-eval.test.ts`).
+#
+# The backend tests need their own pgvector database on port 5499. This
+# workflow provides it as a service container and points DATABASE_URL at it;
+# `backend/.env.test` is not committed, and the test suite reads the
+# environment variable when that file is absent.
+
+name: Quality
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+concurrency:
+  group: quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5499:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5499/memsystems_test
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Migrate test database
+        run: pnpm --filter backend run db:migrate
+
+      - name: Prepare test database
+        run: pnpm --filter backend run test:db:setup
+
+      - name: Test
+        run: pnpm run test

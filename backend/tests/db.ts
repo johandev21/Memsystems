@@ -7,6 +7,7 @@ const { db } = createDatabaseConnection(process.env.DATABASE_URL);
 export { db };
 
 const TABLES = [
+  'retrieval_traces',
   'notebook_chat_messages',
   'generation_requests',
   'source_segments',

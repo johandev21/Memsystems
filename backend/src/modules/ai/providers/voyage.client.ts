@@ -21,6 +21,15 @@ const MAX_ESTIMATED_TOKENS_PER_REQUEST = 240_000;
 const CHARS_PER_TOKEN = 4;
 const REQUEST_TIMEOUT_MS = 60_000;
 
+/**
+ * Estimates Voyage input tokens from text length (~4 chars each). Batch
+ * splitting uses it, and retrieval traces record it as the query's token
+ * cost without a second provider call.
+ */
+export function estimateVoyageTokens(text: string): number {
+  return Math.ceil(text.length / CHARS_PER_TOKEN);
+}
+
 export type VoyageInputType = 'query' | 'document';
 
 export interface VoyageEmbedOptions {
@@ -64,7 +73,7 @@ function splitIntoBatches(input: string[]): string[][] {
   let current: string[] = [];
   let estimatedTokens = 0;
   for (const text of input) {
-    const textTokens = Math.ceil(text.length / CHARS_PER_TOKEN);
+    const textTokens = estimateVoyageTokens(text);
     if (
       current.length > 0 &&
       (current.length >= MAX_TEXTS_PER_REQUEST ||

@@ -1,0 +1,378 @@
+/**
+ * The retrieval evaluation runner: seeds the golden corpus into the test
+ * database, runs every labeled query through the real retrieval pipeline, and
+ * reports the retrieval-quality metrics the continuous integration gate
+ * compares against `baseline.json`.
+ *
+ * Run it locally with:
+ *
+ *   pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts
+ *
+ * Refresh the baseline after an intentional retrieval change with:
+ *
+ *   RETRIEVAL_EVAL_UPDATE=1 pnpm --filter backend exec vitest run tests/retrieval-eval.test.ts
+ */
+
+import { createId } from '@paralleldrive/cuid2';
+import { sourceChunks } from '../../src/database/schema';
+import { RetrievalService } from '../../src/modules/ai/retrieval.service';
+import {
+  createCitationEvidence,
+  extractCitationEntries,
+} from '../../src/modules/chat/chat-citations';
+import { db } from '../db';
+import { seedNotebook, seedSource } from '../fixtures';
+import {
+  DeterministicEmbedder,
+  type EvalEmbedder,
+} from './deterministic-embedder';
+import {
+  GOLDEN_QUERIES,
+  GOLDEN_SOURCES,
+  type GoldenQuery,
+} from './golden-set';
+
+/**
+ * Evidence depth and relevance floor used by the harness. The floor is
+ * calibrated for the deterministic lexical embedder, whose score scale is
+ * compressed compared with Voyage, so it exercises the same threshold stage
+ * as the production default without pretending the scales are equal.
+ */
+export const EVAL_TOP_K = 4;
+export const EVAL_RELEVANCE_FLOOR = 0.25;
+
+export interface RetrievalEvalOptions {
+  topK?: number;
+  relevanceFloor?: number;
+  /** Override to inject a deliberately regressed embedder. */
+  embedder?: EvalEmbedder;
+}
+
+export interface RetrievalEvalQueryResult {
+  queryId: string;
+  query: string;
+  answerable: boolean;
+  abstained: boolean;
+  relevantChunkIds: string[];
+  retrievedChunkIds: string[];
+  firstRelevantRank: number | null;
+  recall: number;
+  ndcg: number;
+  contextPrecision: number | null;
+  citationPrecision: number | null;
+  faithfulness: number | null;
+  refusalCorrect: boolean;
+  latencyMs: number;
+  embeddingInputTokens: number;
+}
+
+export interface RetrievalEvalMetrics {
+  recallAtK: number;
+  mrr: number;
+  ndcgAtK: number;
+  contextPrecision: number;
+  citationAccuracy: number;
+  refusalAccuracy: number;
+  faithfulness: number;
+  latencyMsP50: number;
+  latencyMsP95: number;
+  costTokens: number;
+}
+
+export interface RetrievalEvalReport {
+  topK: number;
+  relevanceFloor: number;
+  metrics: RetrievalEvalMetrics;
+  queries: RetrievalEvalQueryResult[];
+}
+
+export interface RetrievalEvalBaseline {
+  version: 1;
+  tolerance: {
+    /** Relative drop a higher-is-better metric may suffer. */
+    metricRatio: number;
+    /** Absolute p95 latency ceiling in milliseconds. */
+    latencyMsP95Ceiling: number;
+    /** Relative increase the query-embedding token cost may suffer. */
+    costTokensRatio: number;
+  };
+  metrics: RetrievalEvalMetrics;
+}
+
+export interface RetrievalEvalGateFailure {
+  metric: string;
+  baseline: number;
+  actual: number;
+  message: string;
+}
+
+const QUALITY_METRICS: (keyof RetrievalEvalMetrics)[] = [
+  'recallAtK',
+  'mrr',
+  'ndcgAtK',
+  'contextPrecision',
+  'citationAccuracy',
+  'refusalAccuracy',
+  'faithfulness',
+];
+
+export async function evaluateRetrieval(
+  options: RetrievalEvalOptions = {},
+): Promise<RetrievalEvalReport> {
+  const topK = options.topK ?? EVAL_TOP_K;
+  const relevanceFloor = options.relevanceFloor ?? EVAL_RELEVANCE_FLOOR;
+  const embedder =
+    options.embedder ??
+    new DeterministicEmbedder(
+      GOLDEN_SOURCES.flatMap((source) =>
+        source.chunks.map((chunk) => chunk.text),
+      ),
+    );
+
+  const { notebookId, chunkIdByGoldenId } = await seedGoldenCorpus(embedder);
+  const service = new RetrievalService(
+    db as never,
+    {
+      embedQuery: async (text: string) => embedder.embed(text),
+    } as never,
+    { relevanceFloor },
+  );
+
+  const queries: RetrievalEvalQueryResult[] = [];
+  for (const query of GOLDEN_QUERIES) {
+    const outcome = await service.retrieve({
+      notebookId,
+      query: query.text,
+      topK,
+      relevanceFloor,
+    });
+    queries.push(buildQueryResult(query, outcome, chunkIdByGoldenId, topK));
+  }
+
+  return {
+    topK,
+    relevanceFloor,
+    metrics: computeMetrics(queries),
+    queries,
+  };
+}
+
+/** Persists the golden corpus and returns the golden-id to chunk-id map. */
+async function seedGoldenCorpus(embedder: EvalEmbedder): Promise<{
+  notebookId: string;
+  chunkIdByGoldenId: Map<string, string>;
+}> {
+  const notebook = await seedNotebook({
+    title: 'Retrieval Evaluation Corpus',
+  });
+  const chunkIdByGoldenId = new Map<string, string>();
+  // Unique per run: the harness may seed the corpus more than once in a test.
+  const runId = createId();
+
+  for (const source of GOLDEN_SOURCES) {
+    const seeded = await seedSource(notebook.id, {
+      id: `eval-${runId}-source-${source.id}`,
+      kind: source.kind,
+      title: source.title,
+      rawText: source.chunks.map((chunk) => chunk.text).join('\n\n'),
+      processingStatus: source.processingStatus,
+      url:
+        source.kind === 'url' ? `https://example.test/${source.id}` : null,
+    });
+
+    await db.insert(sourceChunks).values(
+      source.chunks.map((chunk, index) => {
+        const id = `eval-${runId}-chunk-${chunk.id}`;
+        chunkIdByGoldenId.set(chunk.id, id);
+        return {
+          id,
+          sourceId: seeded.id,
+          notebookId: notebook.id,
+          chunkIndex: index,
+          content: chunk.text,
+          embedding: embedder.embed(chunk.text),
+        };
+      }),
+    );
+  }
+
+  return { notebookId: notebook.id, chunkIdByGoldenId };
+}
+
+function buildQueryResult(
+  query: GoldenQuery,
+  outcome: Awaited<ReturnType<RetrievalService['retrieve']>>,
+  chunkIdByGoldenId: Map<string, string>,
+  topK: number,
+): RetrievalEvalQueryResult {
+  const relevantChunkIds = query.relevantChunkIds.map((goldenId) => {
+    const id = chunkIdByGoldenId.get(goldenId);
+    if (!id) throw new Error(`Golden chunk id not seeded: ${goldenId}`);
+    return id;
+  });
+  const retrievedChunkIds = outcome.chunks.map((chunk) => chunk.chunkId);
+  const relevant = new Set(relevantChunkIds);
+  const relevantRetrieved = retrievedChunkIds.filter((id) => relevant.has(id));
+  const firstRelevantIndex = retrievedChunkIds.findIndex((id) =>
+    relevant.has(id),
+  );
+
+  // Citation accuracy: a grounded answer cites the evidence it used. The
+  // harness emits one citation per Evidence key and counts how many resolve
+  // to a labeled relevant chunk; unresolvable keys are dropped by
+  // `extractCitationEntries`, which is the guarantee under test.
+  const evidence = createCitationEvidence(outcome.chunks);
+  const answer = evidence
+    .map((item) => `A grounded claim [ref:${item.citationKey}].`)
+    .join(' ');
+  const citations = extractCitationEntries(answer, evidence);
+  const citedRelevant = citations.filter(
+    (entry) => entry.chunkId && relevant.has(entry.chunkId),
+  ).length;
+
+  return {
+    queryId: query.id,
+    query: query.text,
+    answerable: query.answerable,
+    abstained: outcome.abstained,
+    relevantChunkIds,
+    retrievedChunkIds,
+    firstRelevantRank: firstRelevantIndex >= 0 ? firstRelevantIndex + 1 : null,
+    recall:
+      relevantChunkIds.length > 0
+        ? relevantRetrieved.length / relevantChunkIds.length
+        : 0,
+    ndcg: ndcgAtK(retrievedChunkIds, relevant, topK),
+    contextPrecision:
+      retrievedChunkIds.length > 0
+        ? relevantRetrieved.length / retrievedChunkIds.length
+        : null,
+    citationPrecision:
+      citations.length > 0 ? citedRelevant / citations.length : null,
+    faithfulness: outcome.abstained
+      ? null
+      : retrievedChunkIds.length > 0 && relevant.has(retrievedChunkIds[0])
+        ? 1
+        : 0,
+    refusalCorrect: query.answerable ? !outcome.abstained : outcome.abstained,
+    latencyMs: outcome.trace.latencyMs,
+    embeddingInputTokens: outcome.trace.cost.embeddingInputTokens,
+  };
+}
+
+function computeMetrics(
+  queries: RetrievalEvalQueryResult[],
+): RetrievalEvalMetrics {
+  const answerable = queries.filter((query) => query.answerable);
+  const withRetrieved = queries.filter(
+    (query) => query.retrievedChunkIds.length > 0,
+  );
+  const answered = queries.filter((query) => query.faithfulness !== null);
+  const withCitations = queries.filter(
+    (query) => query.citationPrecision !== null,
+  );
+  const latencies = queries.map((query) => query.latencyMs);
+
+  return {
+    recallAtK: mean(answerable.map((query) => query.recall)),
+    mrr: mean(
+      answerable.map((query) =>
+        query.firstRelevantRank ? 1 / query.firstRelevantRank : 0,
+      ),
+    ),
+    ndcgAtK: mean(answerable.map((query) => query.ndcg)),
+    contextPrecision: mean(withRetrieved.map((query) => query.contextPrecision ?? 0)),
+    citationAccuracy: mean(
+      withCitations.map((query) => query.citationPrecision ?? 0),
+    ),
+    refusalAccuracy: mean(queries.map((query) => (query.refusalCorrect ? 1 : 0))),
+    faithfulness: mean(answered.map((query) => query.faithfulness ?? 0)),
+    latencyMsP50: percentile(latencies, 50),
+    latencyMsP95: percentile(latencies, 95),
+    costTokens: queries.reduce(
+      (sum, query) => sum + query.embeddingInputTokens,
+      0,
+    ),
+  };
+}
+
+export function evaluateRetrievalGate(
+  report: RetrievalEvalReport,
+  baseline: RetrievalEvalBaseline,
+): RetrievalEvalGateFailure[] {
+  const failures: RetrievalEvalGateFailure[] = [];
+
+  for (const metric of QUALITY_METRICS) {
+    const expected = baseline.metrics[metric];
+    const actual = report.metrics[metric];
+    const floor = expected - Math.abs(expected) * baseline.tolerance.metricRatio;
+    if (actual < floor) {
+      failures.push({
+        metric,
+        baseline: expected,
+        actual,
+        message: `${metric} dropped to ${actual.toFixed(4)}, below the ${floor.toFixed(4)} floor (baseline ${expected.toFixed(4)}, tolerance ${baseline.tolerance.metricRatio * 100}%).`,
+      });
+    }
+  }
+
+  if (report.metrics.latencyMsP95 > baseline.tolerance.latencyMsP95Ceiling) {
+    failures.push({
+      metric: 'latencyMsP95',
+      baseline: baseline.tolerance.latencyMsP95Ceiling,
+      actual: report.metrics.latencyMsP95,
+      message: `retrieval p95 latency ${report.metrics.latencyMsP95}ms exceeds the ${baseline.tolerance.latencyMsP95Ceiling}ms ceiling.`,
+    });
+  }
+
+  const costCeiling =
+    baseline.metrics.costTokens * (1 + baseline.tolerance.costTokensRatio);
+  if (report.metrics.costTokens > costCeiling) {
+    failures.push({
+      metric: 'costTokens',
+      baseline: baseline.metrics.costTokens,
+      actual: report.metrics.costTokens,
+      message: `query embedding cost ${report.metrics.costTokens} tokens exceeds the ${costCeiling.toFixed(1)} token ceiling.`,
+    });
+  }
+
+  return failures;
+}
+
+/** Binary-relevance nDCG at k over the retrieved chunk order. */
+function ndcgAtK(
+  retrievedChunkIds: string[],
+  relevant: Set<string>,
+  k: number,
+): number {
+  const relevantCount = relevant.size;
+  if (relevantCount === 0) return 0;
+  const dcg = retrievedChunkIds
+    .slice(0, k)
+    .reduce(
+      (sum, id, index) =>
+        sum + (relevant.has(id) ? 1 / Math.log2(index + 2) : 0),
+      0,
+    );
+  const idealCount = Math.min(relevantCount, k);
+  let idcg = 0;
+  for (let index = 0; index < idealCount; index++) {
+    idcg += 1 / Math.log2(index + 2);
+  }
+  return idcg > 0 ? dcg / idcg : 0;
+}
+
+function mean(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function percentile(values: number[], percentileValue: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil((percentileValue / 100) * sorted.length) - 1),
+  );
+  return sorted[index];
+}

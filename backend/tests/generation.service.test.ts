@@ -1,15 +1,38 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GenerationService } from '../src/modules/study-materials/generation.service';
+import {
+  GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
+  GenerationService,
+} from '../src/modules/study-materials/generation.service';
 import type { StartGenerationInput } from '../src/modules/study-materials/generation-request-manager';
 
-function setup() {
-  const db = {
-    select: vi.fn(() => ({
-      from: () => ({
-        where: async () => [],
-      }),
-    })),
+function retrievalOutcome(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    chunks: [],
+    abstained: true,
+    abstentionReason: 'no_indexed_chunks',
+    unhelpfulSources: [],
+    trace: {
+      version: 1,
+      query: 'Cell biology',
+      topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
+      scope: { kind: 'selected_sources', sourceIds: ['source-1'] },
+      relevanceFloor: 0,
+      embedding: { model: 'voyage-4', dimensions: 1024 },
+      legs: [{ kind: 'dense', candidates: [] }],
+      fusedOrder: [],
+      chosen: [],
+      abstained: true,
+      abstentionReason: 'no_indexed_chunks',
+      latencyMs: 4,
+      cost: { embeddingInputTokens: 4 },
+    },
+    ...overrides,
   };
+}
+
+function setup() {
   const notebooksService = {
     assertNotebookOwner: vi.fn(async () => undefined),
   };
@@ -26,14 +49,25 @@ function setup() {
       stream: new ReadableStream(),
     })),
   };
+  const retrieve = vi.fn(async () => retrievalOutcome());
+  const retrievalService = { retrieve };
+  const recordTrace = vi.fn(async () => undefined);
+  const retrievalTraceService = { record: recordTrace };
   const service = new GenerationService(
-    db as never,
     notebooksService as never,
     connectionService as never,
     requestManager as never,
     streamHandler as never,
+    retrievalService as never,
+    retrievalTraceService as never,
   );
-  return { service, requestManager, streamHandler };
+  return {
+    service,
+    requestManager,
+    streamHandler,
+    retrieve,
+    recordTrace,
+  };
 }
 
 const baseInput: StartGenerationInput = {
@@ -141,5 +175,138 @@ describe('GenerationService message keys', () => {
     await service.cancel('request-1');
 
     expect(signal.aborted).toBe(true);
+  });
+});
+
+describe('GenerationService retrieval grounding', () => {
+  it('grounds a Generation on retrieved chunks from every selected source and records a trace', async () => {
+    const { service, retrieve, streamHandler, recordTrace } = setup();
+    retrieve.mockResolvedValue(
+      retrievalOutcome({
+        chunks: [
+          {
+            chunkId: 'chunk-b-2',
+            chunkIndex: 2,
+            sourceId: 'source-2',
+            title: 'Second source',
+            content: 'Source: "Second source"\nSecond source body',
+            score: 0.6,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+          {
+            chunkId: 'chunk-b-1',
+            chunkIndex: 1,
+            sourceId: 'source-2',
+            title: 'Second source',
+            content: 'Source: "Second source"\nSecond source intro',
+            score: 0.5,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+          {
+            chunkId: 'chunk-a-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'First source',
+            content: 'Source: "First source"\nFirst source body',
+            score: 0.4,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+      }),
+    );
+
+    await service.generate('notebook-1', {
+      kind: 'quiz',
+      brief: 'Cell biology',
+      sourceIds: ['source-1', 'source-2'],
+    });
+
+    expect(retrieve).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
+      query: 'Cell biology',
+      sourceIds: ['source-1', 'source-2'],
+      topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
+      relevanceFloor: 0,
+    });
+
+    expect(streamHandler.createStream.mock.calls[0][2]).toEqual([
+      {
+        id: 'source-1',
+        title: 'First source',
+        rawText: 'First source body',
+      },
+      {
+        id: 'source-2',
+        title: 'Second source',
+        rawText: 'Second source intro\n\nSecond source body',
+      },
+    ]);
+
+    expect(recordTrace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notebookId: 'notebook-1',
+        kind: 'generation',
+        generationRequestId: 'request-1',
+        trace: expect.objectContaining({ query: 'Cell biology' }),
+      }),
+    );
+  });
+
+  it('retrieves with the material kind when the brief is empty', async () => {
+    const { service, retrieve } = setup();
+    retrieve.mockResolvedValue(
+      retrievalOutcome({
+        chunks: [
+          {
+            chunkId: 'chunk-a-1',
+            chunkIndex: 0,
+            sourceId: 'source-1',
+            title: 'First source',
+            content: 'Source: "First source"\nBody',
+            score: 0.4,
+            url: null,
+            kind: 'text',
+            sourceVersionId: null,
+            locator: null,
+          },
+        ],
+        abstained: false,
+        abstentionReason: null,
+      }),
+    );
+
+    await service.generate('notebook-1', {
+      kind: 'simple_flashcard',
+      brief: '   ',
+      sourceIds: ['source-1'],
+    });
+
+    expect(retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'simple flashcard' }),
+    );
+  });
+
+  it('does not retrieve when no sources are selected', async () => {
+    const { service, retrieve, recordTrace } = setup();
+
+    await service.generate('notebook-1', {
+      kind: 'study_guide',
+      brief: 'Cell biology',
+      sourceIds: [],
+    });
+
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(recordTrace).not.toHaveBeenCalled();
   });
 });
