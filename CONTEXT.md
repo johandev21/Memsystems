@@ -134,6 +134,14 @@ _Avoid_: provider, API
 One AI model from the gateway catalog. The user selects a model per notebook, with a global fallback.
 _Avoid_: LLM, engine
 
+**Model Capability**:
+A documented ability of a Model, such as Structured Output, tool use, vision, or web search. The Gateway reports the Capabilities.
+_Avoid_: feature, flag, permission
+
+**Structured Output**:
+The Model Capability that lets a Model answer in the app's required shape. Study Material Generation and practice evaluation require it; Chat does not.
+_Avoid_: JSON mode, schema mode
+
 **Embeddings Connection**:
 The Voyage AI connection used to embed and retrieve source chunks.
 _Avoid_: vector store, index
