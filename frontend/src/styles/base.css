@@ -26,6 +26,7 @@
       "cv11" 1;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    text-wrap: pretty;
   }
 
   html {

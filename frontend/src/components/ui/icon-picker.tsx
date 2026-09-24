@@ -18,6 +18,10 @@ export interface IconPickerProps {
 }
 
 const BATCH_SIZE = 60;
+// Fallback row pitch: size-9 cell (2.25rem) + gap-1 (0.25rem) at a 16px root.
+const ROW_PITCH_FALLBACK = 40;
+// Wait for the scroll to settle before pulling the viewport back onto a row.
+const SNAP_SETTLE_MS = 140;
 
 export function IconPicker({
   value,
@@ -38,6 +42,7 @@ export function IconPicker({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const snapTimerRef = useRef<number | null>(null);
   const listId = useId();
 
   useEffect(() => {
@@ -105,12 +110,58 @@ export function IconPicker({
     return matchingIcons.slice(0, visibleCount);
   }, [matchingIcons, visibleCount]);
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollTop + clientHeight >= scrollHeight - 120) {
-      setVisibleCount((prev) => prev + BATCH_SIZE);
+  // Rows and category labels sit on whole multiples of the row pitch, and the
+  // viewport is a whole number of rows tall, so pulling the offset onto the
+  // nearest multiple always leaves whole rows at both edges. Doing it here
+  // instead of with `scroll-snap-type` keeps it deterministic when the results
+  // change underneath the scroller (snap-after-layout is not reliable across
+  // browsers, and scroll anchoring can shift the offset on its own).
+  const snapToNearestRow = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const grid = container.querySelector<HTMLElement>('[data-slot="icon-grid"]');
+    const cell = grid?.firstElementChild;
+    let pitch = ROW_PITCH_FALLBACK;
+    if (grid && cell instanceof HTMLElement) {
+      const gap = Number.parseFloat(getComputedStyle(grid).rowGap) || 0;
+      pitch = cell.offsetHeight + gap;
+    }
+    if (!Number.isFinite(pitch) || pitch <= 0) pitch = ROW_PITCH_FALLBACK;
+
+    const target = Math.round(container.scrollTop / pitch) * pitch;
+    if (Math.abs(container.scrollTop - target) > 0.5) {
+      container.scrollTop = target;
     }
   }, []);
+
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+      if (scrollTop + clientHeight >= scrollHeight - 120) {
+        setVisibleCount((prev) => prev + BATCH_SIZE);
+      }
+      if (snapTimerRef.current !== null) window.clearTimeout(snapTimerRef.current);
+      snapTimerRef.current = window.setTimeout(() => {
+        snapTimerRef.current = null;
+        snapToNearestRow();
+      }, SNAP_SETTLE_MS);
+    },
+    [snapToNearestRow],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (snapTimerRef.current !== null) window.clearTimeout(snapTimerRef.current);
+    };
+  }, []);
+
+  // A new query (or reopening the picker) starts at the first row.
+  useEffect(() => {
+    if (!open) return;
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTop = 0;
+  }, [open, debouncedQuery]);
 
   const handleSelect = useCallback(
     (iconName: string) => {
@@ -224,13 +275,17 @@ export function IconPicker({
           )}
         </div>
 
+        {/* The viewport is exactly 7 rows: every cell is size-9 (2.25rem) plus
+            gap-1 (0.25rem) of row pitch. The grid content and category labels
+            are whole multiples of that pitch too, so the JS snap below always
+            lands on a row boundary. */}
         <div
           id={listId}
           ref={scrollContainerRef}
           onScroll={handleScroll}
           role="listbox"
           aria-label={t("iconPicker.ariaLabel")}
-          className="max-h-[280px] overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
+          className="max-h-70 overflow-anchor-none overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
         >
           <IconPickerGrid
             isSearching={isSearching}

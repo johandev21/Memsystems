@@ -18,6 +18,7 @@ export default interface Resources {
         "fileTitle": "File attachments aren't supported",
         "imageTitle": "Image attachments aren't supported",
         "message": "This model doesn't support web search. Switch to a model that supports web search and try again.",
+        "structuredMessage": "This model doesn't support structured output, which Study Material Generation and practice evaluations need. Choose a model that supports structured output and try again.",
         "structuredTitle": "Structured output isn't supported",
         "webSearchTitle": "Web search isn't supported"
       },
@@ -58,6 +59,9 @@ export default interface Resources {
       "previousBranch": "Previous branch"
     },
     "modelSelector": {
+      "filterStructuredOutput": "Structured output",
+      "noModelsFound": "No models found",
+      "noStructuredOutput": "No structured output",
       "providerLogo": "{{provider}} logo",
       "title": "Model Selector"
     },
@@ -165,8 +169,7 @@ export default interface Resources {
       "openSource": "Open source",
       "referencesAria": "References",
       "sourceUnavailable": "Source unavailable",
-      "triggerAria": "Reference {{number}}: {{title}}",
-      "unknownKind": "Source"
+      "triggerAria": "Reference {{number}}: {{title}}"
     },
     "userMessage": {
       "attachedImageAlt": "Attached image"
@@ -206,6 +209,7 @@ export default interface Resources {
         "model": {
           "capabilityUnsupported": "{{model}} doesn't support {{capability}}. Switch to a model that supports {{capability}} and try again.",
           "notSupported": "Model {{model}} is not supported.",
+          "structuredOutputUnsupported": "{{name}} doesn't support structured output, which Study Material Generation needs. Choose a model that supports structured output and try again.",
           "webSearchUnsupported": "Model {{model}} does not support web search."
         },
         "settings": {
@@ -404,6 +408,7 @@ export default interface Resources {
           "capability": "{{modelName}} doesn't support answer evaluation. Switch to another model and try again.",
           "entitlement": "{{modelName}} is not available on your plan. Try another model or add credits.",
           "rateLimited": "The AI service is busy right now. Please retry in a moment.",
+          "structuredOutputUnsupported": "{{name}} doesn't support structured output, which answer evaluation needs. Choose a model that supports structured output and try again.",
           "transient": "The AI service is temporarily unavailable. Please try again shortly."
         },
         "exportDeleted": "Cannot export a deleted study material",
@@ -494,6 +499,15 @@ export default interface Resources {
       "nextStep": "Next Step",
       "view": "View"
     },
+    "capabilityGate": {
+      "chooseModel": "Choose a Model",
+      "description": "{{name}} doesn't support structured output, which study material generation needs. Choose a model that supports it to continue.",
+      "pickerTitle": "Choose a Model",
+      "refreshCatalog": "Refresh the catalog in Settings",
+      "searchPlaceholder": "Search models...",
+      "title": "This model can't generate study materials",
+      "unverifiedDescription": "Model capabilities couldn't be verified with the AI Gateway, so study material generation is blocked. Refresh the catalog in Settings, then choose a model that supports structured output."
+    },
     "caseStudy": {
       "conceptsPlaceholder": "e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives...",
       "conceptsToApplyLabel": "Concepts to Apply",
@@ -532,6 +546,7 @@ export default interface Resources {
       "instructions": "Instructions",
       "knowledgeSources": "Knowledge Sources",
       "knowledgeSourcesStep3": "3. Knowledge Sources",
+      "knowledgeSourcesStep4": "4. Knowledge Sources",
       "sources": "Sources",
       "targetDifficulty": "1. Target Difficulty"
     },
@@ -634,7 +649,13 @@ export default interface Resources {
       "nodeCount_other": "{{count}} nodes",
       "visualGroupingLabel": "3. Visual Grouping"
     },
+    "options": {
+      "auto": {
+        "description": "AI picks the best fit."
+      }
+    },
     "practice": {
+      "customProblemAria": "Custom problem count",
       "difficulty": {
         "easy": {
           "desc": "Foundations & single steps",
@@ -658,6 +679,7 @@ export default interface Resources {
       "problemsLabel": "2. Number of Problems"
     },
     "quiz": {
+      "customQuestionAria": "Custom question count",
       "difficulty": {
         "easy": {
           "desc": "Basic recall & definitions",
@@ -685,6 +707,7 @@ export default interface Resources {
     },
     "roadmap": {
       "autoLabel": "Auto (AI Decides optimal phases)",
+      "customPhaseAria": "Custom phase count",
       "detail": {
         "basic": {
           "desc": "Phase titles & milestones only",
@@ -783,8 +806,9 @@ export default interface Resources {
       "nextHintFocus": "Configure focus areas next",
       "nextHintInstructions": "Configure custom instructions next",
       "nextHintKnowledge": "Configure knowledge sources & brief next",
+      "nextHintOptions": "Continue configuring options next",
       "stepAria": "Step {{step}}",
-      "stepOfTwo": "Step {{step}} of 2",
+      "stepOf": "Step {{step}} of {{total}}",
       "title": "{{kind}} Setup"
     }
   },
@@ -838,6 +862,15 @@ export default interface Resources {
         "notebook": "Notebook",
         "notebookDescription": "Start a blank notebook"
       },
+      "dnd": {
+        "dragCancel": "Moving {{name}} was cancelled.",
+        "dragEnd": "Dropped {{name}} on {{target}}.",
+        "dragEndNone": "{{name}} was returned to its starting position.",
+        "dragOver": "{{name}} is over {{target}}.",
+        "dragOverNone": "{{name}} is no longer over a drop target.",
+        "dragStart": "Picked up {{name}}.",
+        "instructions": "To move a notebook or folder, focus its card and press Space. Use the arrow keys to move it, press Space to drop it, or Escape to cancel."
+      },
       "dropToMove": "Drop here to move to {{target}}",
       "editAria": "Edit {{label}}",
       "emptyFolderDescription": "Drag notebooks here or use the + button to create one.",
@@ -851,9 +884,10 @@ export default interface Resources {
       "library": "Library",
       "loadFailedDescription": "Something went wrong while loading your notebooks. Check your connection and try again.",
       "loadFailedTitle": "Couldn't load your library",
-      "moveTo": "Move To {{target}}",
       "moving": "Moving {{name}}",
       "removeFolder": "Remove Folder",
+      "removeNotebook": "Delete Notebook",
+      "removeNotebookConfirm": "Permanently delete “{{title}}” and all of its contents? This cannot be undone.",
       "rename": "Rename",
       "retry": "Retry",
       "sort": {
@@ -992,6 +1026,8 @@ export default interface Resources {
       "toast": {
         "reembedFailed": "Could not queue re-embedding",
         "reembedQueued": "Re-indexing queued for {{count}} sources",
+        "reembedQueued_one": "embeddings.toast.reembedQueued",
+        "reembedQueued_other": "embeddings.toast.reembedQueued",
         "removeFailed": "Could not remove this key",
         "removed": "Voyage key removed",
         "requestFailed": "The request failed",
@@ -1752,6 +1788,15 @@ export default interface Resources {
       "sources": "Sources:",
       "step": "Step {{number}}: {{title}}",
       "stepSources": "Step Sources:",
+      "structuredOutput": {
+        "chooseModel": "Choose a Model",
+        "description": "{{name}} doesn't support structured output, which AI evaluation needs. Choose a model that supports it to evaluate your answer.",
+        "pickerTitle": "Choose a Model",
+        "refreshCatalog": "Refresh the catalog in Settings",
+        "searchPlaceholder": "Search models...",
+        "title": "This model can't evaluate answers",
+        "unverifiedDescription": "Model capabilities couldn't be verified with the AI Gateway, so evaluation is blocked. Refresh the catalog in Settings, then choose a model that supports structured output."
+      },
       "verificationChecklist": "Verification Checklist",
       "workedSteps": "Worked Steps",
       "yourAttempt": "Your Attempt"

@@ -36,7 +36,7 @@ export function SourceMultiSelect({
     return (
       <div
         className={cn(
-          "rounded-2xl border border-dashed border-border/60 bg-muted/30 px-3 py-4 text-center text-xs text-muted-foreground",
+          "rounded-2xl border border-dashed border-surface-border-subtle bg-surface-2 px-3 py-4 text-center text-xs text-text-faint",
           className,
         )}
       >
@@ -48,7 +48,7 @@ export function SourceMultiSelect({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-card max-h-50 overflow-y-auto overflow-x-hidden p-1",
+        "rounded-2xl border border-surface-border-subtle bg-surface-2 max-h-50 overflow-y-auto overflow-x-hidden p-1",
         className,
       )}
     >
@@ -77,7 +77,7 @@ function SourceRow({
   return (
     <Label
       htmlFor={id}
-      className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-muted/60 cursor-pointer text-sm"
+      className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-surface-3 cursor-pointer text-sm text-text-tertiary"
     >
       <Checkbox
         id={id}
@@ -86,7 +86,7 @@ function SourceRow({
         className="shrink-0"
       />
       <span className="min-w-0 flex-1 truncate">{source.title}</span>
-      <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground/70">
+      <span className="shrink-0 text-xs uppercase tracking-wide text-text-faint">
         {source.kind}
       </span>
     </Label>

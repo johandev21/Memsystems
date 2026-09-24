@@ -72,6 +72,12 @@
   transition-property: width;
 }
 
+@utility overflow-anchor-none {
+  /* The icon grid owns its scroll offset: browser-initiated anchoring
+     adjustments would knock rows out of alignment. */
+  overflow-anchor: none;
+}
+
 @utility pb-safe {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
@@ -295,7 +301,8 @@
   min-width: 0;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--notebook-interaction);
+  /* Inset shadow instead of border-bottom: see library-notebook-title-input. */
+  box-shadow: inset 0 -1px 0 var(--notebook-interaction);
   border-radius: 0;
   background: var(--notebook-folder-front);
   color: inherit;
@@ -326,7 +333,9 @@
   min-width: 0;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid color-mix(in oklab, var(--notebook-label-foreground) 40%, transparent);
+  /* Inset shadow instead of border-bottom: a border would add 1px to the
+     input's auto height and shift the centered notebook icon. */
+  box-shadow: inset 0 -1px 0 color-mix(in oklab, var(--notebook-label-foreground) 40%, transparent);
   border-radius: 0;
   background: transparent;
   color: inherit;

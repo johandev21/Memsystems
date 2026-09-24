@@ -37,11 +37,14 @@
     },
     "title": "Embeddings",
     "toast": {
+      "reembedFailed": "No se pudo poner en cola la regeneración",
+      "reembedQueued": "Reindexado en cola para {{count}} fuentes",
+      "reembedQueued_one": "",
+      "reembedQueued_many": "",
+      "reembedQueued_other": "",
       "removed": "Clave de Voyage eliminada",
       "removeFailed": "No se pudo eliminar esta clave",
       "requestFailed": "La petición falló",
-      "reembedFailed": "No se pudo poner en cola la regeneración",
-      "reembedQueued": "Reindexado en cola para {{count}} fuentes",
       "saved": "Clave de Voyage guardada",
       "saveFailed": "No se pudo guardar esta clave"
     },
