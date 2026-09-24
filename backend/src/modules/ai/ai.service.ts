@@ -167,6 +167,36 @@ export class AiService {
     );
   }
 
+  /**
+   * Gate for Study Material Generation and practice-problem evaluation: the
+   * model must be in the synced catalog and the Gateway public list must have
+   * tagged it `structured-output` during the current, verified sync. Aliases
+   * are resolved before lookup. Capability data that is not Gateway-fresh
+   * fails closed, so seed/offline catalogs and failed public fetches cannot
+   * start a Generation or an evaluation.
+   */
+  requireStructuredOutput(
+    provider: Provider,
+    modelId: string,
+    messageKey: string,
+  ): ProviderModel {
+    const resolved = resolveModelId(modelId);
+    const models = provider.listModels?.() ?? [];
+    const selected = models.find((model) => model.id === resolved);
+    const modelName = selected?.displayName ?? modelId;
+    const verified = this.modelSyncService.getStatus().capabilitiesVerified;
+    if (!verified || selected?.capabilities?.structuredOutput !== true) {
+      throw new CapabilityUnsupportedError(
+        `${modelName} doesn't support structured output. Choose another model and try again.`,
+        {
+          messageKey,
+          params: { name: modelName },
+        },
+      );
+    }
+    return selected;
+  }
+
   async searchWeb(query: string, modelId: string): Promise<WebSearchResult> {
     this.logger.log(`searchWeb start`, { modelId, query });
 

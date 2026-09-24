@@ -62,6 +62,21 @@ describe('toClientStreamError', () => {
     expect(parsed.code).toBe('gateway_capability_unsupported');
     expect(parsed.error).toContain('Claude Fable 5.1');
     expect(parsed.error).not.toContain('tool_choice');
+    expect(parsed.error).not.toContain('structured output');
+  });
+
+  it('maps structured-output rejections to the structured-output message', () => {
+    const parsed = envelopeOf(
+      toClientStreamError(
+        Object.assign(new Error('response did not match schema'), {
+          name: 'AI_NoObjectGeneratedError',
+        }),
+        MODEL,
+      ),
+    );
+    expect(parsed.code).toBe('gateway_capability_unsupported');
+    expect(parsed.error).toContain('Claude Fable 5.1');
+    expect(parsed.error).toContain('structured output');
   });
 
   it('maps retired models with matchable phrasing', () => {

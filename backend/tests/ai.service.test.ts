@@ -246,6 +246,143 @@ describe('AiService.searchWeb', () => {
   });
 });
 
+describe('AiService.requireStructuredOutput', () => {
+  function setup(capabilitiesVerified: boolean) {
+    const aiService = new AiService(
+      {} as any,
+      {} as any,
+      {
+        getStatus: () => ({ capabilitiesVerified }),
+      } as any,
+    );
+    const provider = {
+      listModels: () => [
+        {
+          id: 'openai/gpt-5.6-sol',
+          displayName: 'GPT-5.6 Sol',
+          capabilities: { structuredOutput: true },
+        },
+        {
+          id: 'zai/glm-5-turbo',
+          displayName: 'GLM 5 Turbo',
+          capabilities: { structuredOutput: false },
+        },
+        {
+          id: 'mystery/unlisted',
+          displayName: 'Unlisted Model',
+        },
+      ],
+    } as any;
+    return { aiService, provider };
+  }
+
+  it('passes a capable model on a verified catalog', () => {
+    const { aiService, provider } = setup(true);
+    expect(
+      aiService.requireStructuredOutput(
+        provider,
+        'openai/gpt-5.6-sol',
+        'errors.ai.model.structuredOutputUnsupported',
+      ).id,
+    ).toBe('openai/gpt-5.6-sol');
+  });
+
+  it('resolves aliases before looking the model up', () => {
+    const { aiService, provider } = setup(true);
+    provider.listModels = () => [
+      {
+        id: 'moonshotai/kimi-k3',
+        displayName: 'Kimi K3',
+        capabilities: { structuredOutput: true },
+      },
+    ];
+    expect(
+      aiService.requireStructuredOutput(
+        provider,
+        'kimi/kimi-k3',
+        'errors.ai.model.structuredOutputUnsupported',
+      ).id,
+    ).toBe('moonshotai/kimi-k3');
+  });
+
+  it('rejects a model the Gateway did not tag structured-output', () => {
+    const { aiService, provider } = setup(true);
+    const failure = (() => {
+      try {
+        aiService.requireStructuredOutput(
+          provider,
+          'zai/glm-5-turbo',
+          'errors.ai.model.structuredOutputUnsupported',
+        );
+      } catch (error) {
+        return error as any;
+      }
+    })();
+    expect(failure?.status).toBe(400);
+    expect(failure?.code).toBe('gateway_capability_unsupported');
+    expect(failure?.messageKey).toBe(
+      'errors.ai.model.structuredOutputUnsupported',
+    );
+    expect(failure?.params).toEqual({ name: 'GLM 5 Turbo' });
+    expect(failure?.message).toMatch(/structured output/i);
+  });
+
+  it('fails closed when capabilities are not verified', () => {
+    const { aiService, provider } = setup(false);
+    const failure = (() => {
+      try {
+        aiService.requireStructuredOutput(
+          provider,
+          'openai/gpt-5.6-sol',
+          'errors.studyMaterials.evaluation.structuredOutputUnsupported',
+        );
+      } catch (error) {
+        return error as any;
+      }
+    })();
+    expect(failure?.code).toBe('gateway_capability_unsupported');
+    expect(failure?.messageKey).toBe(
+      'errors.studyMaterials.evaluation.structuredOutputUnsupported',
+    );
+    expect(failure?.params).toEqual({ name: 'GPT-5.6 Sol' });
+    expect(failure?.message).toMatch(/structured output/i);
+  });
+
+  it('fails closed for a model with no capability claims', () => {
+    const { aiService, provider } = setup(true);
+    const failure = (() => {
+      try {
+        aiService.requireStructuredOutput(
+          provider,
+          'mystery/unlisted',
+          'errors.ai.model.structuredOutputUnsupported',
+        );
+      } catch (error) {
+        return error as any;
+      }
+    })();
+    expect(failure?.code).toBe('gateway_capability_unsupported');
+    expect(failure?.params).toEqual({ name: 'Unlisted Model' });
+  });
+
+  it('falls back to the raw model id when the model is absent', () => {
+    const { aiService, provider } = setup(true);
+    provider.listModels = () => [];
+    const failure = (() => {
+      try {
+        aiService.requireStructuredOutput(
+          provider,
+          'missing/model',
+          'errors.ai.model.structuredOutputUnsupported',
+        );
+      } catch (error) {
+        return error as any;
+      }
+    })();
+    expect(failure?.params).toEqual({ name: 'missing/model' });
+  });
+});
+
 describe('reconcileSearchSources', () => {
   const webSearchResult = {
     sources: [

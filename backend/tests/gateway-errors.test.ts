@@ -74,9 +74,30 @@ describe('classifyGatewayError', () => {
   ])('detects capability rejections: %s', (message) => {
     expect(classifyGatewayError(new Error(message))).toMatchObject({
       kind: 'capability',
+      capability: 'tools',
       retryable: false,
     });
   });
+
+  it.each([
+    [
+      'AI_NoObjectGeneratedError',
+      'No object generated: response did not match schema.',
+    ],
+    ['AI_NoObjectGeneratedError', 'No object generated: could not parse the response.'],
+    ['GatewayInvalidRequestError', 'Unsupported response format: response_format is not supported by this model.'],
+    ['GatewayInvalidRequestError', 'json_schema is not supported for this model'],
+    ['ZodError', 'Invalid output'],
+  ])(
+    'detects structured-output rejections as capability: %s',
+    (name, message) => {
+      expect(classifyGatewayError(gatewayError(name, message))).toMatchObject({
+        kind: 'capability',
+        capability: 'structured_output',
+        retryable: false,
+      });
+    },
+  );
 
   it('falls back to unknown without crashing on odd shapes', () => {
     expect(classifyGatewayError(null).kind).toBe('unknown');
