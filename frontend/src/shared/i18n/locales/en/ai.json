@@ -16,6 +16,7 @@
       "fileTitle": "File attachments aren't supported",
       "imageTitle": "Image attachments aren't supported",
       "message": "This model doesn't support web search. Switch to a model that supports web search and try again.",
+      "structuredMessage": "This model doesn't support structured output, which Study Material Generation and practice evaluations need. Choose a model that supports structured output and try again.",
       "structuredTitle": "Structured output isn't supported",
       "webSearchTitle": "Web search isn't supported"
     },
@@ -56,6 +57,9 @@
     "previousBranch": "Previous branch"
   },
   "modelSelector": {
+    "filterStructuredOutput": "Structured output",
+    "noModelsFound": "No models found",
+    "noStructuredOutput": "No structured output",
     "providerLogo": "{{provider}} logo",
     "title": "Model Selector"
   },

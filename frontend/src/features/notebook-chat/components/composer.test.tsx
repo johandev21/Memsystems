@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { ModelOption } from "@/features/ai";
 import { Composer } from "./composer";
 
 const models = [
@@ -9,6 +10,21 @@ const models = [
     id: "openai/gpt-5.6-luna",
     displayName: "GPT-5.6 Luna",
     supportsWebSearch: true,
+    capabilities: { structuredOutput: true },
+  },
+];
+
+const mixedModels: ModelOption[] = [
+  {
+    id: "openai/gpt-5.6-luna",
+    displayName: "GPT-5.6 Luna",
+    supportsWebSearch: true,
+    capabilities: { structuredOutput: true },
+  },
+  {
+    id: "anthropic/claude-opus-5.5",
+    displayName: "Claude Opus 5.5",
+    capabilities: { structuredOutput: false },
   },
 ];
 
@@ -16,10 +32,18 @@ function ComposerHarness({
   isLoading = false,
   onStop = vi.fn(),
   onSubmit = vi.fn(),
+  onModelChange = vi.fn(),
+  models: modelList = models,
+  selectedModel = models[0].id,
+  capabilitiesVerified = true,
 }: {
   isLoading?: boolean;
   onStop?: () => void;
   onSubmit?: (submission: { text: string; files?: unknown[] } | string) => void;
+  onModelChange?: (model: string) => void;
+  models?: ModelOption[];
+  selectedModel?: string;
+  capabilitiesVerified?: boolean;
 }) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -31,9 +55,10 @@ function ComposerHarness({
       onSubmit={onSubmit}
       isLoading={isLoading}
       onStop={onStop}
-      models={models}
-      selectedModel={models[0].id}
-      onModelChange={vi.fn()}
+      models={modelList}
+      selectedModel={selectedModel}
+      onModelChange={onModelChange}
+      capabilitiesVerified={capabilitiesVerified}
       textareaRef={textareaRef}
     />
   );
@@ -47,6 +72,32 @@ describe("Composer", () => {
     expect(await screen.findByRole("option", { name: /GPT-5.6 Luna/ })).toBeTruthy();
     expect(screen.queryByText("Web")).toBeNull();
     expect(screen.queryByText("Free")).toBeNull();
+    expect(screen.queryByText("No structured output")).toBeNull();
+  });
+
+  it("marks models without structured output and keeps them selectable", async () => {
+    const user = userEvent.setup();
+    const onModelChange = vi.fn();
+    render(<ComposerHarness models={mixedModels} onModelChange={onModelChange} />);
+
+    await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
+    expect(await screen.findByText("No structured output")).toBeTruthy();
+
+    await user.click(screen.getByRole("option", { name: /Claude Opus 5.5/ }));
+    expect(onModelChange).toHaveBeenCalledWith("anthropic/claude-opus-5.5");
+  });
+
+  it("hides models without structured output when the filter is on", async () => {
+    const user = userEvent.setup();
+    render(<ComposerHarness models={mixedModels} />);
+
+    await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
+    expect(await screen.findByRole("option", { name: /Claude Opus 5.5/ })).toBeTruthy();
+
+    await user.click(screen.getByRole("checkbox", { name: "Structured output" }));
+
+    expect(screen.queryByRole("option", { name: /Claude Opus 5.5/ })).toBeNull();
+    expect(screen.getByRole("option", { name: /GPT-5.6 Luna/ })).toBeTruthy();
   });
 
   it("fails closed for image attachments when capability metadata is absent", () => {

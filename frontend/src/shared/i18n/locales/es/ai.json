@@ -16,6 +16,7 @@
       "fileTitle": "Los archivos adjuntos no son compatibles",
       "imageTitle": "Los archivos de imagen no son compatibles",
       "message": "Este modelo no admite búsqueda web. Cambia a un modelo que la admita e inténtalo de nuevo.",
+      "structuredMessage": "Este modelo no admite salida estructurada, necesaria para generar materiales de estudio y evaluar prácticas. Elige un modelo que admita salida estructurada e inténtalo de nuevo.",
       "structuredTitle": "La salida estructurada no es compatible",
       "webSearchTitle": "La búsqueda web no es compatible"
     },
@@ -56,6 +57,9 @@
     "previousBranch": "Rama anterior"
   },
   "modelSelector": {
+    "filterStructuredOutput": "Salida estructurada",
+    "noModelsFound": "No se encontraron modelos",
+    "noStructuredOutput": "Sin salida estructurada",
     "providerLogo": "Logotipo de {{provider}}",
     "title": "Selector de modelo"
   },

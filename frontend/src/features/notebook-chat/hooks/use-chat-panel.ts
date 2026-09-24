@@ -15,7 +15,7 @@ import {
   clearChatHistory,
 } from "../api/chat";
 import i18n from "@/shared/i18n";
-import { modelsQueryOptions } from "@/features/ai";
+import { useModelsCatalog } from "@/features/ai";
 import { notebookQueryOptions } from "@/features/notebooks/api";
 
 const DEFAULT_MODEL_ID = "openai/gpt-5.6-sol";
@@ -63,13 +63,13 @@ export function formatChatMessages(history?: ChatMessageDTO[]): UIMessage[] {
 export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTMLElement | null>) {
   const { t } = useTranslation("chat");
   const { data: notebook } = useQuery(notebookQueryOptions(notebookId));
-  const { data: models } = useQuery(modelsQueryOptions);
+  const { models: catalogModels, capabilitiesVerified } = useModelsCatalog();
   const chatHistoryQuery = useQuery(chatMessagesQueryOptions(notebookId));
   const chatHistory = chatHistoryQuery.data;
   const isHistoryPending = chatHistoryQuery.isPending;
   const { data: connection } = useConnectionStatus();
 
-  const modelOptions = useMemo(() => models ?? [], [models]);
+  const modelOptions = catalogModels;
 
   const { model: persistedModel, setModel: setPersistedModel } = useModelPersistence(notebookId);
   const selectedModel = persistedModel ?? DEFAULT_MODEL_ID;
@@ -317,6 +317,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     notebook,
     connection,
     modelOptions,
+    capabilitiesVerified,
     selectedModel,
     handleModelChange,
     messages,

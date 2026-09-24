@@ -1,16 +1,14 @@
 import type { FileUIPart } from "ai";
-import { CheckIcon, ChevronDownIcon, ImageIcon, XIcon } from "lucide-react";
+import { ChevronDownIcon, ImageIcon, XIcon } from "lucide-react";
 import { type RefObject, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ModelSelector,
   ModelSelectorContent,
-  ModelSelectorEmpty,
-  ModelSelectorGroup,
+  ModelSelectorFilter,
   ModelSelectorInput,
-  ModelSelectorItem,
-  ModelSelectorList,
   ModelSelectorLogo,
+  ModelSelectorModels,
   ModelSelectorName,
   ModelSelectorTrigger,
   PromptInput,
@@ -27,7 +25,7 @@ import {
   usePromptInputAttachments,
 } from "@/features/ai";
 import type { ModelOption } from "@/features/ai";
-import { getProviderName, useComposerModels } from "../hooks/use-composer-models";
+import { useComposerModels } from "../hooks/use-composer-models";
 
 export interface ComposerProps {
   input: string;
@@ -38,6 +36,11 @@ export interface ComposerProps {
   models: ModelOption[];
   selectedModel: string;
   onModelChange: (model: string) => void;
+  /**
+   * True only when the Gateway catalog was verified. Non-capable rows stay
+   * selectable; the picker only marks and filters them.
+   */
+  capabilitiesVerified: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -50,11 +53,13 @@ export function Composer({
   models,
   selectedModel,
   onModelChange,
+  capabilitiesVerified,
   textareaRef,
 }: ComposerProps) {
   const { t } = useTranslation("chat");
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [structuredOnly, setStructuredOnly] = useState(false);
 
   const hasInput = input.trim().length > 0;
 
@@ -64,7 +69,10 @@ export function Composer({
     }
   };
 
-  const modelState = useComposerModels(models, selectedModel, search);
+  const modelState = useComposerModels(models, selectedModel, search, {
+    capabilitiesVerified,
+    structuredOnly,
+  });
 
   return (
     <PromptInput
@@ -111,9 +119,12 @@ export function Composer({
                 value={search}
                 onValueChange={setSearch}
               />
-              <ComposerModelList
+              <ModelSelectorFilter checked={structuredOnly} onCheckedChange={setStructuredOnly} />
+              <ModelSelectorModels
                 groups={modelState.groups}
                 selectedModel={selectedModel}
+                capabilitiesVerified={capabilitiesVerified}
+                emptyLabel={t("composer.noModelsFound")}
                 onSelect={(model) => {
                   onModelChange(model);
                   setModelSelectorOpen(false);
@@ -187,79 +198,3 @@ function ComposerAttachmentList() {
   );
 }
 
-function ComposerModelList({
-  groups,
-  selectedModel,
-  onSelect,
-}: {
-  groups: Record<string, ModelOption[]>;
-  selectedModel: string;
-  onSelect: (model: string) => void;
-}) {
-  const { t } = useTranslation("chat");
-
-  return (
-    <ModelSelectorList>
-      <ModelSelectorEmpty>{t("composer.noModelsFound")}</ModelSelectorEmpty>
-      {Object.entries(groups).map(([provider, models]) => (
-        <ModelGroup
-          key={provider}
-          provider={provider}
-          models={models}
-          selectedModel={selectedModel}
-          onSelect={onSelect}
-        />
-      ))}
-    </ModelSelectorList>
-  );
-}
-
-function ModelGroup({
-  provider,
-  models,
-  selectedModel,
-  onSelect,
-}: {
-  provider: string;
-  models: ModelOption[];
-  selectedModel: string;
-  onSelect: (model: string) => void;
-}) {
-  return (
-    <ModelSelectorGroup heading={getProviderName(provider)}>
-      {models.map((model) => (
-        <ModelOption
-          key={model.id}
-          model={model}
-          provider={provider}
-          selected={selectedModel === model.id}
-          onSelect={onSelect}
-        />
-      ))}
-    </ModelSelectorGroup>
-  );
-}
-
-function ModelOption({
-  model,
-  provider,
-  selected,
-  onSelect,
-}: {
-  model: ModelOption;
-  provider: string;
-  selected: boolean;
-  onSelect: (model: string) => void;
-}) {
-  return (
-    <ModelSelectorItem
-      value={model.id}
-      onSelect={() => onSelect(model.id)}
-      className="flex items-center gap-2 cursor-pointer"
-    >
-      <ModelSelectorLogo provider={provider} />
-      <ModelSelectorName>{model.displayName}</ModelSelectorName>
-      {selected ? <CheckIcon className="ml-auto size-4" /> : <div className="ml-auto size-4" />}
-    </ModelSelectorItem>
-  );
-}

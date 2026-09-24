@@ -27,6 +27,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
     notebook,
     connection,
     modelOptions,
+    capabilitiesVerified,
     selectedModel,
     handleModelChange,
     messages,
@@ -145,6 +146,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
           isLoading={isLoading}
           onStop={stop}
           models={modelOptions}
+          capabilitiesVerified={capabilitiesVerified}
           selectedModel={selectedModel}
           onModelChange={handleModelChange}
           composerTextareaRef={composerTextareaRef}
@@ -281,6 +283,7 @@ interface ChatComposerAreaProps {
   isLoading: boolean;
   onStop: () => void;
   models: ReturnType<typeof useChatPanel>["modelOptions"];
+  capabilitiesVerified: boolean;
   selectedModel: string;
   onModelChange: (model: string) => void;
   composerTextareaRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -299,6 +302,7 @@ function ChatComposerArea({
   isLoading,
   onStop,
   models,
+  capabilitiesVerified,
   selectedModel,
   onModelChange,
   composerTextareaRef,
@@ -333,6 +337,7 @@ function ChatComposerArea({
             isLoading={isLoading}
             onStop={onStop}
             models={models}
+            capabilitiesVerified={capabilitiesVerified}
             selectedModel={selectedModel}
             onModelChange={onModelChange}
             textareaRef={composerTextareaRef}

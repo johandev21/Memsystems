@@ -23,4 +23,14 @@ export interface ModelOption {
 
 export interface ModelsResponse {
   models: ModelOption[];
+  source?: string;
+  count?: number;
+  lastSyncAt?: string | null;
+  /**
+   * True only when the Gateway model list was fetched successfully. Anything
+   * else (missing field, legacy array payload, failed sync) counts as
+   * unverified, and unverified Models are treated as incapable of structured
+   * output.
+   */
+  capabilitiesVerified?: boolean;
 }
