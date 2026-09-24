@@ -5,11 +5,13 @@ import { useTranslation } from "react-i18next";
 export function BriefWizardHeader({
   title,
   step,
+  totalSteps,
   onStepChange,
 }: {
   title: string;
-  step: 1 | 2;
-  onStepChange: (step: 1 | 2) => void;
+  step: number;
+  totalSteps: number;
+  onStepChange: (step: number) => void;
 }) {
   const { t } = useTranslation("generation");
 
@@ -19,29 +21,26 @@ export function BriefWizardHeader({
         <div className="flex items-center gap-2 font-medium text-text-primary">
           <span className="text-sm font-semibold">{title}</span>
         </div>
-        <Badge variant="outline" className="text-sm font-normal">
-          {t("wizard.stepOfTwo", { step })}
+        <Badge variant="outline" className="text-xs font-normal">
+          {t("wizard.stepOf", { step, total: totalSteps })}
         </Badge>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          aria-label={t("wizard.stepAria", { step: 1 })}
-          onClick={() => onStepChange(1)}
-          className={cn(
-            "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",
-            step >= 1 ? "bg-primary" : "bg-surface-4",
-          )}
-        />
-        <button
-          type="button"
-          aria-label={t("wizard.stepAria", { step: 2 })}
-          onClick={() => onStepChange(2)}
-          className={cn(
-            "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",
-            step === 2 ? "bg-primary" : "bg-surface-4",
-          )}
-        />
+      <div
+        className="grid gap-2 grid-cols-(--wizard-steps)"
+        style={{ "--wizard-steps": `repeat(${totalSteps}, minmax(0, 1fr))` } as React.CSSProperties}
+      >
+        {Array.from({ length: totalSteps }, (_, index) => (
+          <button
+            key={index + 1}
+            type="button"
+            aria-label={t("wizard.stepAria", { step: index + 1 })}
+            onClick={() => onStepChange(index + 1)}
+            className={cn(
+              "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",
+              index < step ? "bg-primary" : "bg-surface-4",
+            )}
+          />
+        ))}
       </div>
     </div>
   );

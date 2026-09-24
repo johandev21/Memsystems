@@ -1,22 +1,29 @@
-import type {
-  StudyGuideGenerationOptions,
-  CaseStudyGenerationOptions,
-} from "@/features/study-material-viewer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/features/ai";
+import {
+  GatewayKeyPrompt,
+  isConnectionUsable,
+  isStudyMaterialCapable,
+  ModelSelector,
+  ModelSelectorContent,
+  ModelSelectorFilter,
+  ModelSelectorInput,
+  ModelSelectorModels,
+  ModelSelectorTrigger,
+  useConnectionStatus,
+  useModelList,
+  useModelsCatalog,
+} from "@/features/ai";
+import type { ModelOption } from "@/features/ai";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import { useGenerationStore } from "../hooks/use-generation-store";
 import type { StudyMaterialKind } from "@/features/study-material-viewer/types";
 import { useTranslation } from "react-i18next";
 import { kindLabelKey } from "../kind-label";
-import type {
-  RoadmapOptions,
-  MindMapOptions,
-  SlidesOptions,
-  PracticeProblemsOptions,
-} from "./forms/types";
+import type { BriefFormData } from "./forms/types";
 import { DEFAULT_ROADMAP_OPTIONS } from "./forms/roadmap-options";
 import { DEFAULT_SLIDES_OPTIONS } from "./forms/slides-theme-options";
 import { BriefForm } from "./BriefForm";
@@ -58,7 +65,10 @@ export function GenerateBriefDialog({
     practiceProblemsOptions,
     caseStudyOptions,
   } = value;
-  const { model: selectedModel } = useModelPersistence(notebookId);
+  const { model: selectedModel, setModel } = useModelPersistence(notebookId);
+  const { models, capabilitiesVerified } = useModelsCatalog();
+  const activeModel = models.find((model) => model.id === selectedModel);
+  const isCapable = isStudyMaterialCapable(activeModel, capabilitiesVerified);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -107,24 +117,17 @@ export function GenerateBriefDialog({
           "bg-surface-1 border border-surface-border generate-material-dialog",
           "max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden",
           "min-w-0 [&>*]:min-w-0",
-          "sm:max-w-md",
-          (kind === "quiz" ||
-            kind === "simple_flashcard" ||
-            kind === "study_guide" ||
-            kind === "practice_problems" ||
-            kind === "case_study" ||
-            kind === "roadmap" ||
-            kind === "mind_map" ||
-            kind === "slides") &&
-            "sm:max-w-2xl",
+          "sm:max-w-2xl",
         )}
       >
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-text-primary">
+          <DialogTitle className="text-base font-semibold text-text-primary">
             {t("dialog.title", { kind: label })}
           </DialogTitle>
         </DialogHeader>
-        {isConnectionUsable(connection) ? (
+        {!isConnectionUsable(connection) ? (
+          <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
+        ) : isCapable ? (
           <BriefForm
             notebookId={notebookId}
             kind={kind}
@@ -135,51 +138,133 @@ export function GenerateBriefDialog({
             disabled={false}
           />
         ) : (
-          <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
+          <StudyMaterialCapabilityGate
+            modelName={activeModel?.displayName ?? selectedModel}
+            capabilitiesVerified={capabilitiesVerified}
+            models={models}
+            selectedModel={selectedModel}
+            onSelect={setModel}
+          />
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function getInitialBriefState(kind?: StudyMaterialKind | null) {
+interface StudyMaterialCapabilityGateProps {
+  modelName: string;
+  capabilitiesVerified: boolean;
+  models: ModelOption[];
+  selectedModel: string;
+  onSelect: (modelId: string) => void;
+}
+
+/**
+ * Blocks the brief form until the notebook's model can produce structured
+ * output. The picker opens in place; choosing a capable model swaps this gate
+ * for the form without adding a permanent selector to the dialog.
+ */
+function StudyMaterialCapabilityGate({
+  modelName,
+  capabilitiesVerified,
+  models,
+  selectedModel,
+  onSelect,
+}: StudyMaterialCapabilityGateProps) {
+  const { t } = useTranslation("generation");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [structuredOnly, setStructuredOnly] = useState(false);
+  const groups = useModelList(models, { search, structuredOnly, capabilitiesVerified });
+
+  return (
+    <Alert>
+      <AlertTitle>{t("capabilityGate.title")}</AlertTitle>
+      <AlertDescription>
+        {capabilitiesVerified
+          ? t("capabilityGate.description", { name: modelName })
+          : t("capabilityGate.unverifiedDescription")}
+      </AlertDescription>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <ModelSelector open={pickerOpen} onOpenChange={setPickerOpen}>
+          <ModelSelectorTrigger render={<Button size="sm" />}>
+            {t("capabilityGate.chooseModel")}
+          </ModelSelectorTrigger>
+          <ModelSelectorContent title={t("capabilityGate.pickerTitle")}>
+            <ModelSelectorInput
+              placeholder={t("capabilityGate.searchPlaceholder")}
+              value={search}
+              onValueChange={setSearch}
+            />
+            <ModelSelectorFilter checked={structuredOnly} onCheckedChange={setStructuredOnly} />
+            <ModelSelectorModels
+              groups={groups}
+              selectedModel={selectedModel}
+              capabilitiesVerified={capabilitiesVerified}
+              onSelect={(modelId) => {
+                onSelect(modelId);
+                setPickerOpen(false);
+              }}
+            />
+          </ModelSelectorContent>
+        </ModelSelector>
+        {!capabilitiesVerified && (
+          <a
+            href="/settings"
+            className="text-xs font-medium text-muted-foreground underline underline-offset-3 transition-colors hover:text-foreground"
+          >
+            {t("capabilityGate.refreshCatalog")}
+          </a>
+        )}
+      </div>
+    </Alert>
+  );
+}
+
+/**
+ * Every selector starts on "Auto": the model chooses from the selected
+ * sources and the brief. Counts use 0 and enum options use "auto".
+ */
+function getInitialBriefState(kind?: StudyMaterialKind | null): BriefFormData {
   return {
     brief: "",
-    sourceIds: [] as string[],
-    folderId: null as string | null,
-    questionCount: 10,
-    difficulty: "medium" as const,
+    sourceIds: [],
+    folderId: null,
+    questionCount: 0,
+    difficulty: "auto",
+    cardStyle: "auto",
     roadmapOptions: kind === "roadmap" ? { ...DEFAULT_ROADMAP_OPTIONS } : undefined,
+    mindMapOptions:
+      kind === "mind_map"
+        ? {
+            nodeCount: 0,
+            structure: "hierarchical",
+            colorGroups: "auto",
+            crossLinks: false,
+            detailLevel: "auto",
+          }
+        : undefined,
     slidesOptions: kind === "slides" ? { ...DEFAULT_SLIDES_OPTIONS } : undefined,
+    studyGuideOptions: kind === "study_guide" ? { format: "auto", sectionCount: 0 } : undefined,
+    practiceProblemsOptions:
+      kind === "practice_problems" ? { problemCount: 0, difficulty: "auto" } : undefined,
+    caseStudyOptions:
+      kind === "case_study" ? { questionCount: 0, focus: "", comparePerspectives: "auto" } : undefined,
   };
 }
 
 function useGenerationBriefState(kind?: StudyMaterialKind | null) {
   const [prevKind, setPrevKind] = useState(kind);
-  const [value, setValue] = useState<{
-    brief: string;
-    sourceIds: string[];
-    folderId: string | null;
-    questionCount?: number;
-    difficulty?: "easy" | "medium" | "hard";
-    cardStyle?: "qa" | "definition" | "cloze" | "mixed";
-    roadmapOptions?: RoadmapOptions;
-    mindMapOptions?: MindMapOptions;
-    slidesOptions?: SlidesOptions;
-    studyGuideOptions?: StudyGuideGenerationOptions;
-    practiceProblemsOptions?: PracticeProblemsOptions;
-    caseStudyOptions?: CaseStudyGenerationOptions;
-  }>(() => getInitialBriefState(kind));
+  const [value, setValue] = useState<BriefFormData>(() => getInitialBriefState(kind));
 
   if (prevKind !== kind) {
     setPrevKind(kind);
     setValue(getInitialBriefState(kind));
   }
 
-  const updateBriefForm = (next: Partial<typeof value>) =>
+  const updateBriefForm = (next: Partial<BriefFormData>) =>
     setValue((current) => ({ ...current, ...next }));
   const resetAfterSubmit = () => setValue(getInitialBriefState(kind));
 
   return { value, updateBriefForm, resetAfterSubmit };
 }
-

@@ -10,6 +10,15 @@
     "nextStep": "Siguiente paso",
     "view": "Ver"
   },
+  "capabilityGate": {
+    "chooseModel": "Elegir un modelo",
+    "description": "{{name}} no admite salida estructurada, necesaria para generar materiales de estudio. Elige un modelo que la admita para continuar.",
+    "pickerTitle": "Elegir un modelo",
+    "refreshCatalog": "Actualizar el catálogo en Ajustes",
+    "searchPlaceholder": "Buscar modelos...",
+    "title": "Este modelo no puede generar materiales de estudio",
+    "unverifiedDescription": "No se pudieron verificar las capacidades de los modelos con el AI Gateway, así que la generación de materiales de estudio está bloqueada. Actualiza el catálogo en Ajustes y elige un modelo que admita salida estructurada."
+  },
   "caseStudy": {
     "conceptsPlaceholder": "p. ej. Aplica marcos de triaje y compara eficiencia frente a equidad...",
     "conceptsToApplyLabel": "Conceptos para aplicar",
@@ -49,6 +58,7 @@
     "instructions": "Instrucciones",
     "knowledgeSources": "Fuentes de conocimiento",
     "knowledgeSourcesStep3": "3. Fuentes de conocimiento",
+    "knowledgeSourcesStep4": "4. Fuentes de conocimiento",
     "sources": "Fuentes",
     "targetDifficulty": "1. Dificultad objetivo"
   },
@@ -157,7 +167,13 @@
     "nodeCountMax_other": "{{count}} nodos (máx. {{max}})",
     "visualGroupingLabel": "3. Agrupación visual"
   },
+  "options": {
+    "auto": {
+      "description": "La IA elige la mejor opción."
+    }
+  },
   "practice": {
+    "customProblemAria": "Cantidad personalizada de problemas",
     "difficulty": {
       "easy": {
         "desc": "Fundamentos y pasos únicos",
@@ -183,6 +199,7 @@
     "problemsLabel": "2. Cantidad de problemas"
   },
   "quiz": {
+    "customQuestionAria": "Cantidad personalizada de preguntas",
     "difficulty": {
       "easy": {
         "desc": "Recuerdo básico y definiciones",
@@ -213,6 +230,7 @@
   },
   "roadmap": {
     "autoLabel": "Auto (la IA decide las fases óptimas)",
+    "customPhaseAria": "Cantidad personalizada de fases",
     "detail": {
       "basic": {
         "desc": "Solo títulos de fases e hitos",
@@ -316,8 +334,9 @@
     "nextHintFocus": "Configura las áreas de enfoque a continuación",
     "nextHintInstructions": "Configura las instrucciones personalizadas a continuación",
     "nextHintKnowledge": "Configura las fuentes de conocimiento y el resumen a continuación",
+    "nextHintOptions": "Continúa configurando las opciones",
     "stepAria": "Paso {{step}}",
-    "stepOfTwo": "Paso {{step}} de 2",
+    "stepOf": "Paso {{step}} de {{total}}",
     "title": "Configuración de {{kind}}"
   }
 }

@@ -13,7 +13,7 @@ import type {
   SlidesGenerationOptions,
   PracticeProblemsGenerationOptions,
 } from "../api/generation";
-import { classifyChatError } from "@/features/ai";
+import { classifyChatError, isStructuredOutputUnsupportedError } from "@/features/ai";
 import i18n from "@/shared/i18n";
 import { kindLabelKey } from "../kind-label";
 
@@ -43,9 +43,10 @@ interface GenerationState {
       sourceIds: string[];
       folderId: string | null;
       model?: string;
+      /** 0 = auto. */
       questionCount?: number;
-      difficulty?: "easy" | "medium" | "hard";
-      cardStyle?: "qa" | "definition" | "cloze" | "mixed";
+      difficulty?: "easy" | "medium" | "hard" | "auto";
+      cardStyle?: "qa" | "definition" | "cloze" | "mixed" | "auto";
       roadmapOptions?: RoadmapGenerationOptions;
       mindMapOptions?: MindMapGenerationOptions;
       studyGuideOptions?: StudyGuideGenerationOptions;
@@ -218,7 +219,12 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
           throw new Error(i18n.t("errors.noRequestId", { ns: "generation" }));
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const rawMessage = err instanceof Error ? err.message : String(err);
+        // A stale client can still hit the structured-output preflight: surface
+        // it as the capability block instead of a generic start failure.
+        const msg = isStructuredOutputUnsupportedError(rawMessage)
+          ? classifyChatError(rawMessage).message
+          : rawMessage;
         activeAborts.delete(tempId);
         clearStallTimer(tempId);
         set((state) => {

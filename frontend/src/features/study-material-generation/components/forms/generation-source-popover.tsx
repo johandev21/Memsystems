@@ -87,7 +87,7 @@ export function GenerationSourcePopover({
         align="start"
         className="w-80 overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl"
       >
-        <div className="flex items-center justify-between bg-surface-2 px-3.5 py-2.5">
+        <div className="flex items-center justify-between gap-3 bg-surface-2 px-3.5 py-2.5">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Search className="size-4 shrink-0 text-text-faint" />
             <input
@@ -102,14 +102,14 @@ export function GenerationSourcePopover({
           <button
             type="button"
             onClick={toggleAllSources}
-            className="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-sm text-text-tertiary"
+            className="ml-2 flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-text-faint transition-colors hover:text-text-tertiary"
           >
             {t("knowledge.selectAll")}{" "}
             <Checkbox checked={allFilteredSourcesSelected} onCheckedChange={toggleAllSources} />
           </button>
         </div>
         {sources.length === 0 ? (
-          <div className="p-4 text-center text-sm text-text-faint">{emptyMessage}</div>
+          <div className="p-4 text-center text-xs text-text-faint">{emptyMessage}</div>
         ) : (
           <div className="max-h-55 space-y-1 overflow-y-auto p-2">
             {filteredSources.map((source) => {
@@ -141,7 +141,7 @@ export function GenerationSourcePopover({
             })}
           </div>
         )}
-        <div className="bg-surface-2 p-2.5 text-xs text-text-faint">
+        <div className="border-t border-surface-border-subtle bg-surface-2 px-3.5 py-2 text-xs text-text-faint">
           {t("knowledge.selectedCount", { count: selectedIds.length })}
         </div>
       </PopoverContent>

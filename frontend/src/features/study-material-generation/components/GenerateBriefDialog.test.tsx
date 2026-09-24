@@ -24,7 +24,37 @@ vi.mock("@/features/sources", () => ({
   }),
 }));
 
-function createWrapper(notebookId = "nb-1", initialModel = "openai/gpt-5.6-sol") {
+const VERIFIED_CATALOG = {
+  models: [
+    {
+      id: "openai/gpt-5.6-sol",
+      displayName: "GPT-5.6 Sol",
+      capabilities: { structuredOutput: true },
+    },
+    {
+      id: "google/gemini-2.5-flash",
+      displayName: "Gemini 2.5 Flash",
+      capabilities: { structuredOutput: true },
+    },
+    {
+      id: "anthropic/claude-3-7-sonnet",
+      displayName: "Claude 3.7 Sonnet",
+      capabilities: { structuredOutput: true },
+    },
+    {
+      id: "deepseek/deepseek-chat",
+      displayName: "DeepSeek Chat",
+      capabilities: { structuredOutput: true },
+    },
+  ],
+  capabilitiesVerified: true,
+};
+
+function createWrapper(
+  notebookId = "nb-1",
+  initialModel = "openai/gpt-5.6-sol",
+  catalog: unknown = VERIFIED_CATALOG,
+) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -32,6 +62,7 @@ function createWrapper(notebookId = "nb-1", initialModel = "openai/gpt-5.6-sol")
       },
     },
   });
+  queryClient.setQueryData(["models"], catalog);
 
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -117,6 +148,7 @@ describe("GenerateBriefDialog", () => {
     expect(screen.queryByText("AI Intelligence Model")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /Next Step/i }));
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
 
     const instructions = screen.getByPlaceholderText("What topics should these flashcards cover?");
     await user.type(instructions, "Key definitions in biology");
@@ -134,6 +166,7 @@ describe("GenerateBriefDialog", () => {
         kind: "simple_flashcard",
         brief: "Key definitions in biology",
         model: "google/gemini-2.5-flash",
+        cardStyle: "auto",
       }),
       expect.anything(),
       expect.anything(),
@@ -184,6 +217,46 @@ describe("GenerateBriefDialog", () => {
         kind: "quiz",
         brief: "Cellular respiration",
         model: "anthropic/claude-3-7-sonnet",
+      }),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("submits the Auto defaults for quiz when only instructions are provided", async () => {
+    const user = userEvent.setup();
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="quiz"
+        open
+        onOpenChange={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+    await user.type(
+      screen.getByPlaceholderText(
+        "Provide specific focus areas, topics, or instructions for this quiz...",
+      ),
+      "Auto defaults",
+    );
+
+    const generateBtn = screen.getByRole("button", { name: "Generate" });
+    await waitFor(() => {
+      expect((generateBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+    await user.click(generateBtn);
+
+    expect(mockStartBackgroundGeneration).toHaveBeenCalledWith(
+      "nb-1",
+      expect.objectContaining({
+        kind: "quiz",
+        brief: "Auto defaults",
+        questionCount: 0,
+        difficulty: "auto",
       }),
       expect.anything(),
       expect.anything(),
@@ -260,8 +333,12 @@ describe("GenerateBriefDialog", () => {
     expect(screen.queryByText("Select model")).toBeNull();
     expect(screen.queryByText("AI model")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: /Basic/ }));
-    await user.click(screen.getByRole("button", { name: /Grouped colors/ }));
+    await user.click(screen.getByRole("button", { name: "20" }));
+    await user.click(screen.getByRole("button", { name: /^Basic/ }));
+
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+
+    await user.click(screen.getByRole("button", { name: /^Grouped colors/ }));
 
     await user.click(screen.getByRole("button", { name: /Next Step/i }));
 
@@ -283,20 +360,20 @@ describe("GenerateBriefDialog", () => {
         kind: "mind_map",
         brief: "Operating systems concepts",
         model: "google/gemini-2.5-flash",
-        mindMapOptions: expect.objectContaining({
+        mindMapOptions: {
           nodeCount: 20,
           structure: "hierarchical",
           colorGroups: true,
           crossLinks: false,
           detailLevel: "basic",
-        }),
+        },
       }),
       expect.anything(),
       expect.anything(),
     );
   });
 
-  it("walks the slides wizard across two steps and submits with design options", async () => {
+  it("walks the slides wizard across three steps and submits with design options", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     const onComplete = vi.fn();
@@ -316,13 +393,22 @@ describe("GenerateBriefDialog", () => {
 
     expect(screen.getByText("Generate Slides")).toBeTruthy();
     expect(screen.getByText("Slides Setup")).toBeTruthy();
-    expect(screen.getByText("Step 1 of 2")).toBeTruthy();
-    // Design step is visible first; the submit action lives on step two.
+    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
+    // Design step is visible first; the submit action lives on the last step.
     expect(screen.getByRole("button", { name: "Dark" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Generate" })).toBeNull();
 
+    // Auto is the default for every selector, so make explicit choices.
+    await user.click(screen.getByRole("button", { name: "8" }));
+    await user.click(screen.getByRole("button", { name: "Dark" }));
+
     await user.click(screen.getByRole("button", { name: /Next Step/i }));
-    expect(screen.getByText("Step 2 of 2")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /^Detailed/ }));
+
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
 
     const instructions = screen.getByPlaceholderText(
       "What should this deck explain? Describe the topic, audience, or narrative arc...",
@@ -342,11 +428,188 @@ describe("GenerateBriefDialog", () => {
         kind: "slides",
         brief: "Photosynthesis basics",
         model: "openai/gpt-5.6-sol",
-        slidesOptions: expect.objectContaining({
+        slidesOptions: {
           slideCount: 8,
           theme: "dark",
           detailLevel: "detailed",
-        }),
+        },
+      }),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("blocks the brief form when the selected model cannot produce structured output", () => {
+    const catalog = {
+      models: [
+        {
+          id: "anthropic/claude-opus-5.5",
+          displayName: "Claude Opus 5.5",
+          capabilities: { structuredOutput: false },
+        },
+      ],
+      capabilitiesVerified: true,
+    };
+
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="quiz"
+        open
+        onOpenChange={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+      { wrapper: createWrapper("nb-1", "anthropic/claude-opus-5.5", catalog) },
+    );
+
+    expect(screen.getByText("Generate Quiz")).toBeTruthy();
+    expect(screen.getByText("This model can't generate study materials")).toBeTruthy();
+    expect(
+      screen.getByText(/Claude Opus 5\.5 doesn't support structured output/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Next Step/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Refresh the catalog in Settings" })).toBeNull();
+  });
+
+  it("opens the picker from the gate and reveals the form after choosing a capable model", async () => {
+    const user = userEvent.setup();
+    const catalog = {
+      models: [
+        {
+          id: "anthropic/claude-opus-5.5",
+          displayName: "Claude Opus 5.5",
+          capabilities: { structuredOutput: false },
+        },
+        {
+          id: "openai/gpt-5.6-sol",
+          displayName: "GPT-5.6 Sol",
+          capabilities: { structuredOutput: true },
+        },
+      ],
+      capabilitiesVerified: true,
+    };
+
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="quiz"
+        open
+        onOpenChange={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+      { wrapper: createWrapper("nb-1", "anthropic/claude-opus-5.5", catalog) },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Choose a Model" }));
+    await user.click(await screen.findByRole("option", { name: /GPT-5.6 Sol/ }));
+
+    expect(screen.getByRole("button", { name: /Next Step/i })).toBeTruthy();
+    expect(screen.queryByText("This model can't generate study materials")).toBeNull();
+
+    // The chosen model persists through the existing notebook model context.
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+    await user.type(
+      screen.getByPlaceholderText(
+        "Provide specific focus areas, topics, or instructions for this quiz...",
+      ),
+      "Cellular respiration",
+    );
+    const generateBtn = screen.getByRole("button", { name: "Generate" });
+    await waitFor(() => {
+      expect((generateBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+    await user.click(generateBtn);
+
+    expect(mockStartBackgroundGeneration).toHaveBeenCalledWith(
+      "nb-1",
+      expect.objectContaining({ model: "openai/gpt-5.6-sol" }),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("explains an unverified catalog and links to Settings", () => {
+    const catalog = {
+      models: [
+        {
+          id: "openai/gpt-5.6-sol",
+          displayName: "GPT-5.6 Sol",
+          capabilities: { structuredOutput: true },
+        },
+      ],
+      capabilitiesVerified: false,
+    };
+
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="quiz"
+        open
+        onOpenChange={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+      { wrapper: createWrapper("nb-1", "openai/gpt-5.6-sol", catalog) },
+    );
+
+    expect(
+      screen.getByText(/couldn't be verified with the AI Gateway/),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Refresh the catalog in Settings" }).getAttribute("href"),
+    ).toBe("/settings");
+    expect(screen.queryByRole("button", { name: /Next Step/i })).toBeNull();
+  });
+
+  it("walks the case study wizard across three steps and submits concepts with auto options", async () => {
+    const user = userEvent.setup();
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="case_study"
+        open={true}
+        onOpenChange={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.getByText("Generate Case Study")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    await user.type(
+      screen.getByPlaceholderText(
+        "e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives...",
+      ),
+      "Triage under scarcity",
+    );
+    await user.click(screen.getByRole("button", { name: /Next Step/i }));
+
+    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
+    await user.type(
+      screen.getByPlaceholderText(
+        "Describe what topics or focus areas to include in this case study...",
+      ),
+      "Emergency department",
+    );
+
+    const generateBtn = screen.getByRole("button", { name: "Generate" });
+    await waitFor(() => {
+      expect((generateBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+    await user.click(generateBtn);
+
+    expect(mockStartBackgroundGeneration).toHaveBeenCalledWith(
+      "nb-1",
+      expect.objectContaining({
+        kind: "case_study",
+        brief: "Emergency department",
+        caseStudyOptions: {
+          questionCount: 0,
+          focus: "Triage under scarcity",
+          comparePerspectives: "auto",
+        },
       }),
       expect.anything(),
       expect.anything(),

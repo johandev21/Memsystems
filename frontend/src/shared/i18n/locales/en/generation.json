@@ -10,6 +10,15 @@
     "nextStep": "Next Step",
     "view": "View"
   },
+  "capabilityGate": {
+    "chooseModel": "Choose a Model",
+    "description": "{{name}} doesn't support structured output, which study material generation needs. Choose a model that supports it to continue.",
+    "pickerTitle": "Choose a Model",
+    "refreshCatalog": "Refresh the catalog in Settings",
+    "searchPlaceholder": "Search models...",
+    "title": "This model can't generate study materials",
+    "unverifiedDescription": "Model capabilities couldn't be verified with the AI Gateway, so study material generation is blocked. Refresh the catalog in Settings, then choose a model that supports structured output."
+  },
   "caseStudy": {
     "conceptsPlaceholder": "e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives...",
     "conceptsToApplyLabel": "Concepts to Apply",
@@ -48,6 +57,7 @@
     "instructions": "Instructions",
     "knowledgeSources": "Knowledge Sources",
     "knowledgeSourcesStep3": "3. Knowledge Sources",
+    "knowledgeSourcesStep4": "4. Knowledge Sources",
     "sources": "Sources",
     "targetDifficulty": "1. Target Difficulty"
   },
@@ -150,7 +160,13 @@
     "nodeCountMax_other": "{{count}} nodes (max {{max}})",
     "visualGroupingLabel": "3. Visual Grouping"
   },
+  "options": {
+    "auto": {
+      "description": "AI picks the best fit."
+    }
+  },
   "practice": {
+    "customProblemAria": "Custom problem count",
     "difficulty": {
       "easy": {
         "desc": "Foundations & single steps",
@@ -174,6 +190,7 @@
     "problemsLabel": "2. Number of Problems"
   },
   "quiz": {
+    "customQuestionAria": "Custom question count",
     "difficulty": {
       "easy": {
         "desc": "Basic recall & definitions",
@@ -201,6 +218,7 @@
   },
   "roadmap": {
     "autoLabel": "Auto (AI Decides optimal phases)",
+    "customPhaseAria": "Custom phase count",
     "detail": {
       "basic": {
         "desc": "Phase titles & milestones only",
@@ -299,8 +317,9 @@
     "nextHintFocus": "Configure focus areas next",
     "nextHintInstructions": "Configure custom instructions next",
     "nextHintKnowledge": "Configure knowledge sources & brief next",
+    "nextHintOptions": "Continue configuring options next",
     "stepAria": "Step {{step}}",
-    "stepOfTwo": "Step {{step}} of 2",
+    "stepOf": "Step {{step}} of {{total}}",
     "title": "{{kind}} Setup"
   }
 }

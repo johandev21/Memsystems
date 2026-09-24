@@ -1,23 +1,24 @@
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/shared/utils/cn";
 import { ArrowRight } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { BriefChoiceField } from "./brief-choice-field";
+import { BriefInstructionsStep } from "./brief-instructions-step";
+import {
+  BriefNextButton,
+  BriefStep,
+  BriefStepFields,
+  BriefStepFooter,
+  BriefStepHint,
+} from "./brief-step";
 import { BriefWizardHeader } from "./brief-wizard-header";
+import { CountSelector } from "./count-selector";
 import { GenerationSourcePopover } from "./generation-source-popover";
-import {
-  RoadmapDetailLevelSection,
-  RoadmapPhasesSection,
-  RoadmapStepTwo,
-} from "./roadmap-form-sections";
-import {
-  DEFAULT_ROADMAP_OPTIONS,
-  PHASE_PRESETS,
-  type DetailLevel,
-} from "./roadmap-options";
-import type { BaseMaterialFormProps } from "./types";
+import { DEFAULT_ROADMAP_OPTIONS, DETAIL_OPTIONS, PHASE_PRESETS } from "./roadmap-options";
+import type { BaseMaterialFormProps, RoadmapOptions } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
+
+const MAX_PHASE_COUNT = 50;
+const CUSTOM_PHASE_DEFAULT = 12;
 
 export function RoadmapBriefForm({
   notebookId,
@@ -34,94 +35,67 @@ export function RoadmapBriefForm({
   const currentOptions = value.roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS;
   const phaseCount = currentOptions.phaseCount;
   const detailLevel = currentOptions.detailLevel;
-  const isAutoMode = phaseCount === 0;
 
-  const isPreset = phaseCount > 0 && PHASE_PRESETS.includes(phaseCount);
-  const [isCustomMode, setIsCustomMode] = useState<boolean>(!isAutoMode && !isPreset);
-  const [customVal, setCustomVal] = useState<string>(() =>
-    !isAutoMode && !isPreset ? String(phaseCount) : "12",
-  );
-
-  const updateRoadmapOptions = (patch: {
-    phaseCount?: number;
-    detailLevel?: DetailLevel;
-  }) => {
+  const updateRoadmapOptions = (patch: Partial<RoadmapOptions>) => {
     onChange({
       roadmapOptions: {
-        phaseCount: patch.phaseCount !== undefined ? patch.phaseCount : phaseCount,
+        phaseCount: patch.phaseCount ?? phaseCount,
         detailLevel: patch.detailLevel ?? detailLevel,
       },
     });
   };
 
-  const handleCustomChange = (raw: string) => {
-    setCustomVal(raw);
-    const parsed = Number.parseInt(raw, 10);
-    if (!Number.isNaN(parsed) && parsed > 0) {
-      const clamped = Math.min(50, Math.max(1, parsed));
-      updateRoadmapOptions({ phaseCount: clamped });
-    }
-  };
+  const detailOptions = [
+    { id: "auto" as const, title: t("actions.auto"), desc: t("options.auto.description") },
+    ...DETAIL_OPTIONS.map((opt) => ({
+      id: opt.id,
+      title: t(opt.titleKey),
+      desc: t(opt.descKey),
+    })),
+  ];
 
-  const handleCustomBlur = () => {
-    let parsed = Number.parseInt(customVal, 10);
-    if (Number.isNaN(parsed) || parsed < 1) parsed = 5;
-    if (parsed > 50) parsed = 50;
-    setCustomVal(String(parsed));
-    updateRoadmapOptions({ phaseCount: parsed });
-  };
-
-  const phaseLabel = isAutoMode
-    ? t("roadmap.autoLabel")
-    : phaseCount >= 50
-      ? t("roadmap.phaseCountMax", { count: phaseCount, max: 50 })
-      : t("roadmap.phaseCount", { count: phaseCount });
+  const phaseLabel =
+    phaseCount === 0
+      ? t("actions.autoDecides")
+      : phaseCount >= MAX_PHASE_COUNT
+        ? t("roadmap.phaseCountMax", { count: phaseCount, max: MAX_PHASE_COUNT })
+        : t("roadmap.phaseCount", { count: phaseCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
       <BriefWizardHeader
         title={t("wizard.title", { kind: t("kinds.roadmap") })}
         step={step}
+        totalSteps={2}
         onStepChange={setStep}
       />
       {step === 1 ? (
-        <div className="flex min-h-95 flex-col justify-between gap-5 animate-in fade-in slide-in-from-right-2 duration-150">
-          <div className="flex flex-col gap-5">
-            <RoadmapPhasesSection
-              phaseLabel={phaseLabel}
-              isAutoMode={isAutoMode}
-              isCustomMode={isCustomMode}
-              phaseCount={phaseCount}
-              customVal={customVal}
-              onSelectAuto={() => {
-                setIsCustomMode(false);
-                updateRoadmapOptions({ phaseCount: 0 });
-              }}
-              onSelectPreset={(cnt) => {
-                setIsCustomMode(false);
-                updateRoadmapOptions({ phaseCount: cnt });
-              }}
-              onEnableCustom={() => {
-                setIsCustomMode(true);
-                const parsed = Number.parseInt(customVal, 10) || 12;
-                const clamped = Math.min(50, Math.max(1, parsed));
-                updateRoadmapOptions({ phaseCount: clamped });
-              }}
-              onCustomChange={handleCustomChange}
-              onCustomBlur={handleCustomBlur}
+        <BriefStep>
+          <BriefStepFields>
+            <CountSelector
+              label={t("roadmap.phasesLabel")}
+              summary={phaseLabel}
+              value={phaseCount}
+              presets={PHASE_PRESETS}
+              min={1}
+              max={MAX_PHASE_COUNT}
+              customDefault={CUSTOM_PHASE_DEFAULT}
+              customAriaLabel={t("roadmap.customPhaseAria")}
+              onValueChange={(next) => updateRoadmapOptions({ phaseCount: next })}
             />
 
-            <RoadmapDetailLevelSection
-              detailLevel={detailLevel}
-              onSelectDetailLevel={(nextDetail) => {
-                updateRoadmapOptions({ detailLevel: nextDetail });
-              }}
+            <BriefChoiceField
+              columns={3}
+              label={t("fields.detailLevelStep2")}
+              options={detailOptions}
+              value={detailLevel}
+              onChange={(next) => updateRoadmapOptions({ detailLevel: next })}
             />
 
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-text-primary">
                 {t("fields.knowledgeSourcesStep3")}
-                {!hasInstructions && <span className="ml-0.5 text-destructive">*</span>}
+                {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <GenerationSourcePopover
                 sources={sources}
@@ -130,49 +104,33 @@ export function RoadmapBriefForm({
                 emptyMessage={t("knowledge.emptySources", { kind: t("kinds.roadmap") })}
               />
             </div>
-          </div>
+          </BriefStepFields>
 
-          <div className="flex items-center justify-between border-t border-transparent pt-2">
-            <span className="text-xs text-text-faint">{t("wizard.nextHintInstructions")}</span>
-            <Button
-              variant="surface"
-              type="button"
-              onClick={() => {
-                if (!value.roadmapOptions) {
-                  updateRoadmapOptions({});
-                }
-                setStep(2);
-              }}
-              className={cn(
-                "h-9 cursor-pointer gap-1.5 rounded-full px-5 text-sm font-medium transition-colors",
-              )}
-            >
+          <BriefStepFooter>
+            <BriefStepHint>{t("wizard.nextHintInstructions")}</BriefStepHint>
+            <BriefNextButton onClick={() => setStep(2)}>
               {t("actions.nextStep")}
               <ArrowRight className="size-4" />
-            </Button>
-          </div>
-        </div>
+            </BriefNextButton>
+          </BriefStepFooter>
+        </BriefStep>
       ) : (
-        <RoadmapStepTwo
+        <BriefInstructionsStep
           notebookId={notebookId}
           brief={value.brief}
           folderId={value.folderId}
           hasSources={hasSources}
-          disabled={disabled}
           canSubmit={canSubmit}
           submitLabel={submitLabel ?? t("actions.generateKind", { kind: t("kinds.roadmap") })}
+          placeholder={t("roadmap.instructionsPlaceholder")}
+          textareaId="brief-roadmap"
+          disabled={disabled}
           onBriefChange={(brief) => patchFormData({ brief })}
           onFolderIdChange={(folderId) => patchFormData({ folderId })}
           onBack={() => setStep(1)}
-          onSubmit={() => {
-            if (!value.roadmapOptions) {
-              updateRoadmapOptions({});
-            }
-            onSubmit();
-          }}
+          onSubmit={onSubmit}
         />
       )}
     </div>
   );
 }
-
