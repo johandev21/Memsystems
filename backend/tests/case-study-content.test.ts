@@ -126,12 +126,22 @@ describe('case study sources', () => {
 });
 
 describe('case study generation options', () => {
-  it('accepts questionCount 1-10 and focus/compare options', () => {
+  it('accepts questionCount 0-10 and focus/compare options', () => {
     const base = {
       kind: 'case_study' as const,
       brief: 'clinic',
       sourceIds: [] as string[],
     };
+    const auto = generateRequestSchema.safeParse({
+      ...base,
+      caseStudyOptions: {
+        questionCount: 0,
+        focus: '',
+        comparePerspectives: 'auto',
+      },
+    });
+    expect(auto.success).toBe(true);
+    expect(auto.success && auto.data.caseStudyOptions?.questionCount).toBe(0);
     expect(
       generateRequestSchema.safeParse({
         ...base,
@@ -141,24 +151,34 @@ describe('case study generation options', () => {
           comparePerspectives: true,
         },
       }).success,
+    ).toBe(false);
+    expect(
+      generateRequestSchema.safeParse({
+        ...base,
+        caseStudyOptions: {
+          questionCount: 4,
+          focus: 'triage',
+          comparePerspectives: 'compare',
+        },
+      }).success,
     ).toBe(true);
     expect(
       generateRequestSchema.safeParse({
         ...base,
         caseStudyOptions: {
-          questionCount: 0,
-          focus: '',
-          comparePerspectives: false,
+          questionCount: 4,
+          focus: 'triage',
+          comparePerspectives: 'single',
         },
       }).success,
-    ).toBe(false);
+    ).toBe(true);
     expect(
       generateRequestSchema.safeParse({
         ...base,
         caseStudyOptions: {
           questionCount: 11,
           focus: '',
-          comparePerspectives: false,
+          comparePerspectives: 'auto',
         },
       }).success,
     ).toBe(false);
@@ -171,6 +191,10 @@ describe('case study generation options', () => {
     expect(() =>
       prepareGeneratedCaseStudy(validCase, ['src-1'], { questionCount: 3 }),
     ).toThrow();
+    // Auto (0) accepts whatever the model produced.
+    expect(() =>
+      prepareGeneratedCaseStudy(validCase, ['src-1'], { questionCount: 0 }),
+    ).not.toThrow();
     expect(() =>
       prepareGeneratedCaseStudy(
         {

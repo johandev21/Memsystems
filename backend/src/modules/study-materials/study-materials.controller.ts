@@ -76,22 +76,23 @@ export const generateRequestSchema = z.object({
   sourceIds: z.array(z.string()).default([]),
   folderId: z.string().nullable().optional(),
   model: z.string().optional(),
-  questionCount: z.number().min(1).max(50).optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
-  cardStyle: z.enum(['qa', 'definition', 'cloze', 'mixed']).optional(),
+  // 0 means auto: the model chooses the count from the sources and the brief.
+  questionCount: z.number().min(0).max(50).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'auto']).optional(),
+  cardStyle: z.enum(['qa', 'definition', 'cloze', 'mixed', 'auto']).optional(),
   roadmapOptions: z
     .object({
       phaseCount: z.number().min(0).max(50),
-      detailLevel: z.enum(['basic', 'detailed']),
+      detailLevel: z.enum(['basic', 'detailed', 'auto']),
     })
     .optional(),
   mindMapOptions: z
     .object({
       nodeCount: z.number().min(0).max(100),
       structure: z.enum(['radial', 'hierarchical', 'organic']),
-      colorGroups: z.boolean(),
+      colorGroups: z.union([z.boolean(), z.literal('auto')]),
       crossLinks: z.boolean(),
-      detailLevel: z.enum(['basic', 'detailed']),
+      detailLevel: z.enum(['basic', 'detailed', 'auto']),
     })
     .optional(),
   studyGuideOptions: StudyGuideOptions.optional(),
@@ -109,8 +110,9 @@ export const generateRequestSchema = z.object({
         'academic',
         'technical',
         'warm',
+        'auto',
       ]),
-      detailLevel: z.enum(['basic', 'detailed']),
+      detailLevel: z.enum(['basic', 'detailed', 'auto']),
     })
     .optional(),
 });
@@ -298,6 +300,9 @@ export class StudyMaterialsController {
     res.setHeader('Content-Type', 'application/x-ndjson');
     res.setHeader('X-Request-Id', requestId);
     res.setHeader('X-Generation-Request-Id', requestId);
+    // Resolve the client's fetch before the first NDJSON frame; otherwise the
+    // client sits in "connecting" until the model produces output.
+    res.flushHeaders();
 
     const reader = stream.getReader();
     // Terminal-frame contract: the client hangs until it sees a `{done: true}`

@@ -3,8 +3,9 @@ import { GenerationCitationsSchema } from './generation-citations';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const StudyGuideOptions = z.object({
-  format: z.enum(['detailed', 'revision']).default('detailed'),
-  sectionCount: z.number().int().min(1).max(12).default(6),
+  format: z.enum(['detailed', 'revision', 'auto']).default('auto'),
+  // 0 means auto: the model chooses the number of sections.
+  sectionCount: z.number().int().min(0).max(12).default(0),
 });
 export type StudyGuideGenerationOptions = z.infer<typeof StudyGuideOptions>;
 
@@ -73,6 +74,7 @@ export function prepareGeneratedStudyGuide(
 ) {
   const guide = validateStudyGuideSources(content, sourceIds);
   const settings = StudyGuideOptions.parse(options ?? {});
+  // 'auto' means the model decided, so the detailed-extras gate does not apply.
   if (
     settings.format === 'detailed' &&
     guide.sections.some(
@@ -87,11 +89,17 @@ export function prepareGeneratedStudyGuide(
       { messageKey: 'errors.studyMaterials.studyGuide.detailedRequiresExtras' },
     );
   }
-  if (guide.sections.length !== settings.sectionCount) {
+  if (
+    settings.sectionCount > 0 &&
+    guide.sections.length !== settings.sectionCount
+  ) {
     throw new BadRequestError(
       'Study guide section count does not match the request',
       { messageKey: 'errors.studyMaterials.studyGuide.countMismatch' },
     );
   }
-  return { ...guide, format: settings.format };
+  return {
+    ...guide,
+    format: settings.format === 'auto' ? guide.format : settings.format,
+  };
 }

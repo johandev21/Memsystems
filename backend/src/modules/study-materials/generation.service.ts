@@ -4,6 +4,7 @@ import {
   NotFoundError,
 } from '../../common/errors/domain-error';
 import { ConnectionService } from '../ai/connection.service';
+import { AiService } from '../ai/ai.service';
 import { RetrievalTraceService } from '../ai/retrieval-trace.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {
@@ -37,6 +38,7 @@ export class GenerationService {
     private readonly streamHandler: StreamHandler,
     private readonly groundingService: GenerationGroundingService,
     private readonly retrievalTraceService: RetrievalTraceService,
+    private readonly aiService: AiService,
   ) {}
 
   async generate(
@@ -48,6 +50,17 @@ export class GenerationService {
 
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
     await this.connectionService.requireConnected(modelId);
+
+    // Preflight capability gate: a Generation may only start on a model the
+    // Gateway tagged `structured-output` in the current, verified catalog.
+    // Checked before any retrieval/request work so a non-capable model costs
+    // nothing and fails with a model-switchable domain error.
+    const provider = await this.aiService.getProviderForModel(modelId);
+    this.aiService.requireStructuredOutput(
+      provider,
+      modelId,
+      'errors.ai.model.structuredOutputUnsupported',
+    );
 
     // Grounding retrieves the material per section of every selected source,
     // so a long source is represented beyond a single bounded set and a
@@ -112,7 +125,13 @@ export class GenerationService {
     if (input.kind === 'practice_problems') {
       const problemCount =
         input.practiceProblemsOptions?.problemCount ?? input.questionCount;
-      if (problemCount != null && (problemCount < 1 || problemCount > 30)) {
+      // 0 is auto: the model chooses the count, so only explicit values are
+      // bounded. Negative values can only arrive programmatically.
+      if (
+        problemCount != null &&
+        problemCount !== 0 &&
+        (problemCount < 0 || problemCount > 30)
+      ) {
         throw new BadRequestError(
           'Problem count must be between {{min}} and {{max}}.',
           {
@@ -132,7 +151,13 @@ export class GenerationService {
     if (input.kind === 'case_study') {
       const questionCount =
         input.caseStudyOptions?.questionCount ?? input.questionCount;
-      if (questionCount != null && (questionCount < 1 || questionCount > 10)) {
+      // 0 is auto: the model chooses the count, so only explicit values are
+      // bounded. Negative values can only arrive programmatically.
+      if (
+        questionCount != null &&
+        questionCount !== 0 &&
+        (questionCount < 0 || questionCount > 10)
+      ) {
         throw new BadRequestError(
           'Question count must be between {{min}} and {{max}}.',
           {

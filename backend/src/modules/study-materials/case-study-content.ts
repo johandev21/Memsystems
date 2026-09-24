@@ -3,9 +3,10 @@ import { GenerationCitationsSchema } from './generation-citations';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const CaseStudyOptions = z.object({
-  questionCount: z.number().int().min(1).max(10).default(4),
+  // 0 means auto: the model chooses the number of questions.
+  questionCount: z.number().int().min(0).max(10).default(0),
   focus: z.string().max(2000).default(''),
-  comparePerspectives: z.boolean().default(false),
+  comparePerspectives: z.enum(['auto', 'single', 'compare']).default('auto'),
 });
 export type CaseStudyGenerationOptions = z.infer<typeof CaseStudyOptions>;
 
@@ -138,9 +139,14 @@ export function prepareGeneratedCaseStudy(
   const settings = CaseStudyOptions.parse({
     questionCount: options?.questionCount ?? study.questions.length,
     focus: options?.focus ?? study.conceptsFocus ?? '',
-    comparePerspectives: options?.comparePerspectives ?? false,
+    comparePerspectives: options?.comparePerspectives ?? 'auto',
   });
-  if (study.questions.length !== settings.questionCount) {
+  // Auto (0) accepts whatever the model produced; only an explicit request is
+  // checked against the output.
+  if (
+    settings.questionCount > 0 &&
+    study.questions.length !== settings.questionCount
+  ) {
     throw new BadRequestError(
       'Case study question count does not match the request',
       { messageKey: 'errors.studyMaterials.caseStudy.questionCountMismatch' },

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { CapabilityUnsupportedError } from '../src/common/errors/domain-error';
 import { GenerationService } from '../src/modules/study-materials/generation.service';
 import type { StartGenerationInput } from '../src/modules/study-materials/generation-request-manager';
 import type { GenerationGrounding } from '../src/modules/study-materials/generation-grounding';
@@ -105,6 +106,20 @@ function setup() {
   const groundingService = { ground };
   const recordTrace = vi.fn(async () => undefined);
   const retrievalTraceService = { record: recordTrace };
+  const provider = {
+    listModels: () => [
+      {
+        id: 'openai/gpt-5.6-sol',
+        displayName: 'GPT-5.6 Sol',
+        capabilities: { structuredOutput: true },
+      },
+    ],
+    createModel: vi.fn(() => ({})),
+  };
+  const aiService = {
+    getProviderForModel: vi.fn(async () => provider),
+    requireStructuredOutput: vi.fn(),
+  };
   const service = new GenerationService(
     notebooksService as never,
     connectionService as never,
@@ -112,6 +127,7 @@ function setup() {
     streamHandler as never,
     groundingService as never,
     retrievalTraceService as never,
+    aiService as never,
   );
   return {
     service,
@@ -119,6 +135,7 @@ function setup() {
     streamHandler,
     ground,
     recordTrace,
+    aiService,
   };
 }
 
@@ -260,6 +277,48 @@ describe('GenerationService message keys', () => {
     });
   });
 
+  it('treats a count of 0 as auto and still rejects negative counts', async () => {
+    const { service, requestManager } = setup();
+
+    await service.generate('notebook-1', {
+      ...baseInput,
+      kind: 'practice_problems',
+      brief: 'Cell biology',
+      questionCount: 0,
+    });
+    await service.generate('notebook-1', {
+      ...baseInput,
+      kind: 'case_study',
+      brief: 'A case',
+      questionCount: 0,
+    });
+    expect(requestManager.create).toHaveBeenCalledTimes(2);
+
+    await expect(
+      service.generate('notebook-1', {
+        ...baseInput,
+        kind: 'practice_problems',
+        brief: 'Cell biology',
+        questionCount: -1,
+      }),
+    ).rejects.toMatchObject({
+      messageKey: 'errors.generation.problemCount',
+      code: 'bad_request',
+    });
+
+    await expect(
+      service.generate('notebook-1', {
+        ...baseInput,
+        kind: 'case_study',
+        brief: 'A case',
+        questionCount: -1,
+      }),
+    ).rejects.toMatchObject({
+      messageKey: 'errors.generation.questionCount',
+      code: 'bad_request',
+    });
+  });
+
   it('keys a missing generation request', async () => {
     const { service } = setup();
 
@@ -288,6 +347,91 @@ describe('GenerationService message keys', () => {
     await service.cancel('request-1');
 
     expect(signal.aborted).toBe(true);
+  });
+});
+
+describe('GenerationService structured-output gate', () => {
+  it('rejects a non-capable model before creating the request or stream', async () => {
+    const { service, aiService, requestManager, ground, streamHandler } =
+      setup();
+    aiService.requireStructuredOutput.mockImplementationOnce(() => {
+      throw new CapabilityUnsupportedError(
+        "GLM 5 Turbo doesn't support structured output. Choose another model and try again.",
+        {
+          messageKey: 'errors.ai.model.structuredOutputUnsupported',
+          params: { name: 'GLM 5 Turbo' },
+        },
+      );
+    });
+
+    await expect(
+      service.generate('notebook-1', {
+        kind: 'study_guide',
+        brief: 'Cell biology',
+        sourceIds: [],
+        model: 'zai/glm-5-turbo',
+      }),
+    ).rejects.toMatchObject({
+      messageKey: 'errors.ai.model.structuredOutputUnsupported',
+      code: 'gateway_capability_unsupported',
+      status: 400,
+      params: { name: 'GLM 5 Turbo' },
+    });
+
+    expect(aiService.requireStructuredOutput).toHaveBeenCalledWith(
+      expect.anything(),
+      'zai/glm-5-turbo',
+      'errors.ai.model.structuredOutputUnsupported',
+    );
+    expect(ground).not.toHaveBeenCalled();
+    expect(requestManager.create).not.toHaveBeenCalled();
+    expect(streamHandler.createStream).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when capabilities are not verified', async () => {
+    const { service, aiService, requestManager } = setup();
+    aiService.requireStructuredOutput.mockImplementationOnce(() => {
+      throw new CapabilityUnsupportedError(
+        "GPT-5.6 Sol doesn't support structured output. Choose another model and try again.",
+        {
+          messageKey: 'errors.ai.model.structuredOutputUnsupported',
+          params: { name: 'GPT-5.6 Sol' },
+        },
+      );
+    });
+
+    await expect(
+      service.generate('notebook-1', {
+        kind: 'quiz',
+        brief: 'Cell biology',
+        sourceIds: [],
+        model: 'openai/gpt-5.6-sol',
+      }),
+    ).rejects.toMatchObject({
+      messageKey: 'errors.ai.model.structuredOutputUnsupported',
+      code: 'gateway_capability_unsupported',
+    });
+    expect(requestManager.create).not.toHaveBeenCalled();
+  });
+
+  it('proceeds when the gate accepts the model', async () => {
+    const { service, aiService, requestManager, streamHandler } = setup();
+
+    const { requestId } = await service.generate('notebook-1', {
+      kind: 'study_guide',
+      brief: 'Cell biology',
+      sourceIds: [],
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(aiService.requireStructuredOutput).toHaveBeenCalledWith(
+      expect.anything(),
+      'openai/gpt-5.6-sol',
+      'errors.ai.model.structuredOutputUnsupported',
+    );
+    expect(requestManager.create).toHaveBeenCalledTimes(1);
+    expect(streamHandler.createStream).toHaveBeenCalledTimes(1);
+    expect(requestId).toBe('request-1');
   });
 });
 

@@ -21,18 +21,18 @@ export interface StartGenerationInput {
   model?: string;
   language?: string;
   questionCount?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed';
+  difficulty?: 'easy' | 'medium' | 'hard' | 'auto';
+  cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed' | 'auto';
   roadmapOptions?: {
     phaseCount: number;
-    detailLevel: 'basic' | 'detailed';
+    detailLevel: 'basic' | 'detailed' | 'auto';
   };
   mindMapOptions?: {
     nodeCount: number;
     structure: 'radial' | 'hierarchical' | 'organic';
-    colorGroups: boolean;
+    colorGroups: boolean | 'auto';
     crossLinks: boolean;
-    detailLevel: 'basic' | 'detailed';
+    detailLevel: 'basic' | 'detailed' | 'auto';
   };
   slidesOptions?: {
     slideCount: number;
@@ -43,8 +43,9 @@ export interface StartGenerationInput {
       | 'editorial'
       | 'academic'
       | 'technical'
-      | 'warm';
-    detailLevel: 'basic' | 'detailed';
+      | 'warm'
+      | 'auto';
+    detailLevel: 'basic' | 'detailed' | 'auto';
   };
 }
 

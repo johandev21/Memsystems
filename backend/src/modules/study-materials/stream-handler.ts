@@ -55,6 +55,15 @@ export interface StreamResult {
 /** The Generation request fields the stream handler needs. */
 export type StreamInput = Omit<StartGenerationInput, 'sourceIds'>;
 
+/**
+ * Bounded no-output guard: if the model call has not produced a single
+ * parsable NDJSON frame within this window, abort it and surface a
+ * structured-output capability error instead of dead-airing until the
+ * 5-minute stall watchdog. Covers both the native and the JSON fallback
+ * attempt.
+ */
+const NO_OUTPUT_GUARD_MS = 90_000;
+
 @Injectable()
 export class StreamHandler {
   private readonly logger = new Logger(StreamHandler.name);
@@ -117,41 +126,82 @@ export class StreamHandler {
         let requestOptions: GatewayRequestOptions = {
           providerOptions: { gateway: {} },
         };
+        // Abort controller for the model calls: combines the caller's cancel
+        // signal with the no-output guard's abort.
+        const modelAbort = new AbortController();
+        const abortModel = () => modelAbort.abort();
+        if (abortSignal) {
+          if (abortSignal.aborted) modelAbort.abort();
+          else
+            abortSignal.addEventListener('abort', abortModel, {
+              once: true,
+            });
+        }
+        let guardTimer: ReturnType<typeof setTimeout> | undefined;
+        let guardFired = false;
+        let firstFrameEmitted = false;
+        const cleanup = () => {
+          if (guardTimer !== undefined) {
+            clearTimeout(guardTimer);
+            guardTimer = undefined;
+          }
+          abortSignal?.removeEventListener('abort', abortModel);
+        };
+        // A parsable NDJSON frame resets the no-output guard for the rest of
+        // the Generation (both attempts share the same window).
+        const emitFrame = (payload: unknown) => {
+          firstFrameEmitted = true;
+          if (guardTimer !== undefined) {
+            clearTimeout(guardTimer);
+            guardTimer = undefined;
+          }
+          controller.enqueue(
+            new TextEncoder().encode(`${JSON.stringify(payload)}\n`),
+          );
+        };
+        const startNoOutputGuard = () => {
+          if (firstFrameEmitted || guardTimer !== undefined) return;
+          guardTimer = setTimeout(() => {
+            guardTimer = undefined;
+            guardFired = true;
+            abortModel();
+            this.logger.warn(
+              `Generation ${requestId} produced no structured output frame within ${NO_OUTPUT_GUARD_MS} ms; aborting the model call.`,
+            );
+            const guardError = new Error(
+              `No structured output frame was produced within ${NO_OUTPUT_GUARD_MS} ms.`,
+            );
+            guardError.name = 'NoStructuredOutputError';
+            const standardError = new Error(
+              toClientStreamError(guardError, {
+                id: input.model ?? 'unknown model',
+              }),
+            );
+            controller.error(standardError);
+            onError(standardError.message);
+          }, NO_OUTPUT_GUARD_MS);
+        };
         try {
           const modelId = input.model!;
           const provider = await this.aiService.getProviderForModel(modelId);
-          // Capability flag is a UI/logging hint only — never a gate. Every
-          // model attempts native Output.object({ schema }) first
-          // (optimistic-try); on native failure we fall back to strict JSON
-          // prompting below. This keeps unlisted families (e.g. zai/glm-*)
-          // working instead of pre-throwing before trying.
-          const advertisedStructuredOutput =
-            provider
-              .listModels?.()
-              .find((candidate) => candidate.id === modelId)?.capabilities
-              ?.structuredOutput === true;
+          // The Generation preflight gated this model on Gateway-verified
+          // structured output; native Output.object is the first attempt and
+          // the strict-JSON prompt below is the safety net.
           model = provider.createModel(modelId);
           requestOptions = this.aiService.getGatewayRequestOptions();
 
-          if (!advertisedStructuredOutput) {
-            this.logger.log(
-              `Model ${modelId} does not advertise native structured output; attempting native Output.object first with JSON fallback on failure.`,
-            );
-          }
-
+          startNoOutputGuard();
           const result = streamText({
             model,
             output: Output.object({ schema }),
             instructions: systemPrompt,
             prompt: userPrompt,
             ...requestOptions,
-            abortSignal,
+            abortSignal: modelAbort.signal,
           });
 
           for await (const partial of result.partialOutputStream) {
-            controller.enqueue(
-              new TextEncoder().encode(`${JSON.stringify(partial)}\n`),
-            );
+            emitFrame(partial);
           }
 
           const finalContent: unknown = await result.output;
@@ -160,6 +210,7 @@ export class StreamHandler {
           const storable = this.prepareStorable(input, validated, grounding);
 
           if (abortSignal?.aborted) {
+            cleanup();
             controller.close();
             return;
           }
@@ -176,6 +227,7 @@ export class StreamHandler {
             })
             .returning();
 
+          cleanup();
           controller.enqueue(
             new TextEncoder().encode(
               `${JSON.stringify({
@@ -192,7 +244,13 @@ export class StreamHandler {
           controller.close();
           onDone({ materialId: inserted.id });
         } catch (nativeError) {
+          if (guardFired) {
+            // The guard already errored the stream and reported the failure.
+            cleanup();
+            return;
+          }
           if (abortSignal?.aborted || isAbortError(nativeError)) {
+            cleanup();
             controller.close();
             return;
           }
@@ -214,7 +272,7 @@ export class StreamHandler {
               ...requestOptions,
               temperature: 0,
               maxOutputTokens: 16000,
-              abortSignal,
+              abortSignal: modelAbort.signal,
             });
 
             let accumulatedText = '';
@@ -229,11 +287,7 @@ export class StreamHandler {
                   parsed.state === 'successful-parse' ||
                   parsed.state === 'repaired-parse'
                 ) {
-                  controller.enqueue(
-                    new TextEncoder().encode(
-                      `${JSON.stringify(parsed.value)}\n`,
-                    ),
-                  );
+                  emitFrame(parsed.value);
                 }
               } catch {
                 // Ignore partial parse errors
@@ -295,6 +349,7 @@ export class StreamHandler {
             const storable = this.prepareStorable(input, validated, grounding);
 
             if (abortSignal?.aborted) {
+              cleanup();
               controller.close();
               return;
             }
@@ -311,6 +366,7 @@ export class StreamHandler {
               })
               .returning();
 
+            cleanup();
             controller.enqueue(
               new TextEncoder().encode(
                 `${JSON.stringify({
@@ -327,7 +383,13 @@ export class StreamHandler {
             controller.close();
             onDone({ materialId: inserted.id });
           } catch (fallbackError) {
+            if (guardFired) {
+              // The guard already errored the stream and reported the failure.
+              cleanup();
+              return;
+            }
             if (abortSignal?.aborted || isAbortError(fallbackError)) {
+              cleanup();
               controller.close();
               return;
             }
@@ -336,6 +398,7 @@ export class StreamHandler {
               fallbackError,
             );
 
+            cleanup();
             const standardError = new Error(
               toClientStreamError(fallbackError, {
                 id: input.model ?? 'unknown model',
@@ -480,8 +543,8 @@ function buildOptions(input: StreamInput): Record<string, unknown> | null {
     case 'quiz': {
       if (input.questionCount == null && input.difficulty == null) return null;
       const opts: QuizGenerationOptions = {
-        questionCount: input.questionCount ?? 10,
-        difficulty: input.difficulty ?? 'medium',
+        questionCount: input.questionCount ?? 0,
+        difficulty: input.difficulty ?? 'auto',
       };
       return opts as unknown as Record<string, unknown>;
     }
@@ -493,9 +556,9 @@ function buildOptions(input: StreamInput): Record<string, unknown> | null {
       )
         return null;
       const opts: FlashcardGenerationOptions = {
-        questionCount: input.questionCount ?? 10,
-        difficulty: input.difficulty ?? 'medium',
-        cardStyle: input.cardStyle ?? 'qa',
+        questionCount: input.questionCount ?? 0,
+        difficulty: input.difficulty ?? 'auto',
+        cardStyle: input.cardStyle ?? 'auto',
       };
       return opts as unknown as Record<string, unknown>;
     }
@@ -508,26 +571,25 @@ function buildOptions(input: StreamInput): Record<string, unknown> | null {
       return input.mindMapOptions;
     }
     case 'study_guide':
+      // 0 / 'auto' are stored as-is so the saved options mirror the request.
       return {
-        format: input.studyGuideOptions?.format ?? 'detailed',
-        sectionCount: input.studyGuideOptions?.sectionCount ?? 6,
+        format: input.studyGuideOptions?.format ?? 'auto',
+        sectionCount: input.studyGuideOptions?.sectionCount ?? 0,
       };
     case 'practice_problems': {
       const problemCount =
-        input.practiceProblemsOptions?.problemCount ?? input.questionCount ?? 8;
+        input.practiceProblemsOptions?.problemCount ?? input.questionCount ?? 0;
       const difficulty =
-        input.practiceProblemsOptions?.difficulty ??
-        input.difficulty ??
-        'medium';
+        input.practiceProblemsOptions?.difficulty ?? input.difficulty ?? 'auto';
       return { problemCount, difficulty };
     }
     case 'case_study': {
       return {
         questionCount:
-          input.caseStudyOptions?.questionCount ?? input.questionCount ?? 4,
+          input.caseStudyOptions?.questionCount ?? input.questionCount ?? 0,
         focus: input.caseStudyOptions?.focus ?? '',
         comparePerspectives:
-          input.caseStudyOptions?.comparePerspectives ?? false,
+          input.caseStudyOptions?.comparePerspectives ?? 'auto',
       };
     }
     case 'slides': {

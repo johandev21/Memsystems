@@ -150,6 +150,27 @@ describe('study guide formats and section limits', () => {
     ).toBe('revision');
   });
 
+  it('keeps the model format and skips gates when auto is requested', () => {
+    const revisionGuide = makeGuide({
+      format: 'revision',
+      sections: [
+        makeSection('s1', {
+          examples: [],
+          misconceptions: [],
+          takeaways: [],
+        }),
+      ],
+    });
+    const prepared = prepareGeneratedStudyGuide(revisionGuide, [], {
+      format: 'auto',
+      sectionCount: 0,
+    });
+    // Auto means the model chose, so neither the detailed-extras gate nor the
+    // count check applies, and the model's own format is kept.
+    expect(prepared.format).toBe('revision');
+    expect(prepared.sections).toHaveLength(1);
+  });
+
   it('rejects output whose section count does not match the request', () => {
     const twoSections = makeGuide();
     expect(() =>
@@ -162,9 +183,8 @@ describe('study guide formats and section limits', () => {
 
   it('enforces section-count limits on generation options', () => {
     expect(
-      StudyGuideOptions.safeParse({ format: 'detailed', sectionCount: 0 })
-        .success,
-    ).toBe(false);
+      StudyGuideOptions.safeParse({ format: 'auto', sectionCount: 0 }).success,
+    ).toBe(true);
     expect(
       StudyGuideOptions.safeParse({ format: 'revision', sectionCount: 13 })
         .success,
@@ -204,6 +224,25 @@ describe('study guide generation prompt', () => {
     expect(revision).not.toBe(detailed);
   });
 
+  it('asks the model to choose the format and count on auto', () => {
+    const auto = getPromptTemplate('study_guide').user(
+      'Cell biology',
+      'Source text',
+      {
+        studyGuideOptions: { format: 'auto', sectionCount: 0 },
+      },
+    );
+    expect(auto).toContain('Choose the format');
+    expect(auto).toContain('"detailed"');
+    expect(auto).toContain('"revision"');
+    expect(auto).toContain('top-level "format"');
+    expect(auto).toContain('source material and instructions');
+    expect(auto).toContain('Decide how many sections');
+    expect(auto).not.toMatch(/EXACTLY\s+0/i);
+    // Auto must not silently assume the detailed shape.
+    expect(auto).not.toMatch(/create a detailed guide/i);
+  });
+
   it('forbids invented quotations, page numbers, and source ids', () => {
     const instructions = getPromptTemplate('study_guide').instructions;
     expect(instructions).toMatch(/do not invent/i);
@@ -219,8 +258,8 @@ describe('study guide generate request schema', () => {
     sourceIds: [] as string[],
   };
 
-  it('accepts detailed and revision options', () => {
-    for (const format of ['detailed', 'revision'] as const) {
+  it('accepts detailed, revision, and auto options', () => {
+    for (const format of ['detailed', 'revision', 'auto'] as const) {
       const parsed = generateRequestSchema.safeParse({
         ...base,
         studyGuideOptions: { format, sectionCount: 6 },
@@ -234,11 +273,18 @@ describe('study guide generate request schema', () => {
     }
   });
 
-  it('rejects out-of-range section counts instead of failing mid-generation', () => {
-    const parsed = generateRequestSchema.safeParse({
+  it('accepts auto section counts and rejects out-of-range ones', () => {
+    const auto = generateRequestSchema.safeParse({
       ...base,
-      studyGuideOptions: { format: 'detailed', sectionCount: 0 },
+      studyGuideOptions: { format: 'auto', sectionCount: 0 },
     });
-    expect(parsed.success).toBe(false);
+    expect(auto.success).toBe(true);
+    expect(auto.success && auto.data.studyGuideOptions?.sectionCount).toBe(0);
+
+    const tooMany = generateRequestSchema.safeParse({
+      ...base,
+      studyGuideOptions: { format: 'detailed', sectionCount: 13 },
+    });
+    expect(tooMany.success).toBe(false);
   });
 });

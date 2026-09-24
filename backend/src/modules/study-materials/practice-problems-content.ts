@@ -3,8 +3,9 @@ import { GenerationCitationsSchema } from './generation-citations';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const PracticeProblemsOptions = z.object({
-  problemCount: z.number().int().min(1).max(30).default(8),
-  difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
+  // 0 means auto: the model chooses the number of problems.
+  problemCount: z.number().int().min(0).max(30).default(0),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'auto']).default('auto'),
 });
 export type PracticeProblemsGenerationOptions = z.infer<
   typeof PracticeProblemsOptions
@@ -116,20 +117,30 @@ export function prepareGeneratedPracticeProblems(
   options?: {
     problemCount?: number;
     questionCount?: number;
-    difficulty?: 'easy' | 'medium' | 'hard';
+    difficulty?: 'easy' | 'medium' | 'hard' | 'auto';
   },
 ) {
   const set = validatePracticeProblemSources(content, sourceIds);
+  const requested = options?.problemCount ?? options?.questionCount;
   const settings = PracticeProblemsOptions.parse({
-    problemCount:
-      options?.problemCount ?? options?.questionCount ?? set.problems.length,
-    difficulty: options?.difficulty ?? 'medium',
+    problemCount: requested ?? set.problems.length,
+    difficulty: options?.difficulty ?? 'auto',
   });
-  if (set.problems.length !== settings.problemCount) {
+  // Auto (0) accepts whatever the model produced; only an explicit request is
+  // checked against the output.
+  if (
+    settings.problemCount > 0 &&
+    set.problems.length !== settings.problemCount
+  ) {
     throw new BadRequestError(
       'Practice problem count does not match the request',
       { messageKey: 'errors.studyMaterials.practiceProblems.countMismatch' },
     );
   }
-  return { ...set, difficulty: settings.difficulty };
+  return {
+    ...set,
+    // Auto keeps the difficulty the model chose for the set.
+    difficulty:
+      settings.difficulty === 'auto' ? set.difficulty : settings.difficulty,
+  };
 }
