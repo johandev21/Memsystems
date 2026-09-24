@@ -30,8 +30,8 @@
     "yourResponse": "Your Response"
   },
   "citations": {
-    "title": "Citations",
-    "aria": "Source citations"
+    "aria": "Source citations",
+    "title": "Citations"
   },
   "cloze": {
     "blankAnswer": "Blank {{number}}:",
@@ -205,6 +205,15 @@
     "sources": "Sources:",
     "step": "Step {{number}}: {{title}}",
     "stepSources": "Step Sources:",
+    "structuredOutput": {
+      "chooseModel": "Choose a Model",
+      "description": "{{name}} doesn't support structured output, which AI evaluation needs. Choose a model that supports it to evaluate your answer.",
+      "pickerTitle": "Choose a Model",
+      "refreshCatalog": "Refresh the catalog in Settings",
+      "searchPlaceholder": "Search models...",
+      "title": "This model can't evaluate answers",
+      "unverifiedDescription": "Model capabilities couldn't be verified with the AI Gateway, so evaluation is blocked. Refresh the catalog in Settings, then choose a model that supports structured output."
+    },
     "verificationChecklist": "Verification Checklist",
     "workedSteps": "Worked Steps",
     "yourAttempt": "Your Attempt"

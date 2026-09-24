@@ -34,6 +34,7 @@ describe("CitationPopover", () => {
     expect(
       screen.getByText("Plato develops the account through the structure of the ideal city."),
     ).toBeTruthy();
+    expect(screen.queryByText("Url")).toBeNull();
     expect(screen.getByRole("button", { name: /open source/i }).getAttribute("href")).toBe(
       "https://example.com/republic",
     );

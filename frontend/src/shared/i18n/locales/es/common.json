@@ -32,6 +32,7 @@
       "model": {
         "capabilityUnsupported": "{{model}} no admite {{capability}}. Cambia a un modelo que admita {{capability}} y vuelve a intentarlo.",
         "notSupported": "El modelo {{model}} no es compatible.",
+        "structuredOutputUnsupported": "{{name}} no admite salida estructurada, necesaria para generar materiales de estudio. Elige un modelo que admita salida estructurada e inténtalo de nuevo.",
         "webSearchUnsupported": "El modelo {{model}} no admite la búsqueda web."
       },
       "settings": {
@@ -230,6 +231,7 @@
         "capability": "{{modelName}} no admite la evaluación de respuestas. Cambia a otro modelo e inténtalo de nuevo.",
         "entitlement": "{{modelName}} no está disponible en tu plan. Prueba con otro modelo o añade créditos.",
         "rateLimited": "El servicio de IA está ocupado en este momento. Vuelve a intentarlo en un momento.",
+        "structuredOutputUnsupported": "{{name}} no admite salida estructurada, necesaria para evaluar respuestas. Elige un modelo que admita salida estructurada e inténtalo de nuevo.",
         "transient": "El servicio de IA no está disponible temporalmente. Inténtalo de nuevo en breve."
       },
       "exportDeleted": "No se puede exportar un material de estudio eliminado",

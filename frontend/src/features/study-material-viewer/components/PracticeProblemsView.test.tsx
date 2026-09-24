@@ -48,14 +48,32 @@ function set(overrides: Partial<PracticeProblemsContentType> = {}): PracticeProb
   };
 }
 
+const CAPABLE_CATALOG = {
+  models: [
+    {
+      id: "openai/gpt-5.6-sol",
+      displayName: "GPT-5.6 Sol",
+      capabilities: { structuredOutput: true },
+    },
+    {
+      id: "google/gemini-2.5-flash",
+      displayName: "Gemini 2.5 Flash",
+      capabilities: { structuredOutput: false },
+    },
+  ],
+  capabilitiesVerified: true,
+};
+
 function renderProblems(
   content: unknown,
   options?: {
     onClose?: () => void;
     registerBeforeClose?: (fn: () => boolean) => void;
+    catalog?: unknown;
   },
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(["models"], options?.catalog ?? CAPABLE_CATALOG);
   return render(
     <QueryClientProvider client={client}>
       <PracticeProblemsView
@@ -163,6 +181,58 @@ describe("PracticeProblemsView", () => {
       expect(screen.getByText("Excellent reasoning and correct final value.")).toBeTruthy();
       expect(screen.getByText("Proper use of F=ma")).toBeTruthy();
       expect(screen.getByText("Correct SI units")).toBeTruthy();
+    });
+  });
+
+  it("blocks evaluation with the capability callout instead of calling the API", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const catalog = {
+      models: [
+        {
+          id: "openai/gpt-5.6-sol",
+          displayName: "GPT-5.6 Sol",
+          capabilities: { structuredOutput: false },
+        },
+      ],
+      capabilitiesVerified: true,
+    };
+
+    const user = userEvent.setup();
+    renderProblems(set(), { catalog });
+
+    await user.type(screen.getByLabelText("Your attempt"), "F = m * a = 20 N");
+    await user.click(screen.getByRole("button", { name: "Evaluate answer" }));
+
+    expect(screen.getByText("This model can't evaluate answers")).toBeTruthy();
+    expect(
+      screen.getByText(/GPT-5\.6 Sol doesn't support structured output/),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Choose a Model" })).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the structured-output capability error when the backend rejects the evaluation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: "errors.studyMaterials.evaluation.structuredOutputUnsupported",
+          code: "gateway_capability_unsupported",
+          params: { name: "GPT-5.6 Sol" },
+        }),
+        { status: 400 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    renderProblems(set());
+
+    await user.type(screen.getByLabelText("Your attempt"), "F = m * a = 20 N");
+    await user.click(screen.getByRole("button", { name: "Evaluate answer" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/doesn't support structured output/)).toBeTruthy();
     });
   });
 

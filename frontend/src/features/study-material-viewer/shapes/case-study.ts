@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 export const CaseStudyOptions = z.object({
-  questionCount: z.number().int().min(1).max(10).default(4),
+  // 0 = auto.
+  questionCount: z.number().int().min(0).max(10).default(0),
   focus: z.string().max(2000).default(""),
-  comparePerspectives: z.boolean().default(false),
+  comparePerspectives: z.enum(["auto", "single", "compare"]).default("auto"),
 });
 export type CaseStudyGenerationOptions = z.infer<typeof CaseStudyOptions>;
 

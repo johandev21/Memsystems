@@ -3,6 +3,7 @@ import type { ParseKeys } from "i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { sourcesQueryOptions, type Source } from "@/features/sources/api/sources";
+import { isStudyMaterialCapable, useModelsCatalog } from "@/features/ai";
 import {
   PracticeProblemsContent,
   type PracticeProblemsContentType,
@@ -87,7 +88,17 @@ function PracticeProblemsReader({
   registerBeforeClose?: (fn: () => boolean) => void;
 }) {
   const { t } = useTranslation("viewer");
-  const { model: selectedModel } = useModelPersistence(notebookId);
+  const { model: selectedModel, setModel } = useModelPersistence(notebookId);
+  const { models, capabilitiesVerified } = useModelsCatalog();
+  const activeModel = models.find((model) => model.id === selectedModel);
+  const evaluationCapability = {
+    canEvaluate: isStudyMaterialCapable(activeModel, capabilitiesVerified),
+    capabilitiesVerified,
+    modelName: activeModel?.displayName ?? selectedModel,
+    models,
+    selectedModel,
+    onModelChange: setModel,
+  };
   const {
     activeIdx,
     totalProblems,
@@ -187,6 +198,7 @@ function PracticeProblemsReader({
             evaluationError={currentState.evaluationError}
             difficulty={difficulty}
             isSolutionRevealed={currentState.isSolutionRevealed}
+            capability={evaluationCapability}
             onAnswerChange={(v) => setAnswer(currentProblem.id, v)}
             onEvaluate={() => evaluateAnswer(currentProblem.id)}
             onGiveUp={() => giveUpAndReveal(currentProblem.id)}

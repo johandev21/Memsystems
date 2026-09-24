@@ -9,6 +9,8 @@ export interface ApiErrorResponse {
   message?: string;
   statusCode?: number;
   code?: string;
+  /** Alias some endpoints use for the i18n key carried by `error`. */
+  messageKey?: string;
   params?: Record<string, string | number>;
 }
 
@@ -30,7 +32,7 @@ export function createApiErrorMessage(res: Response, fallback?: string): string 
 }
 
 export function resolveApiErrorMessage(data: ApiErrorResponse, fallback: string): string {
-  const key = data.error;
+  const key = data.error ?? data.messageKey;
   if (!key) return fallback;
   if (!i18n.exists(key)) return key;
   return translateDynamic(key, data.params);
