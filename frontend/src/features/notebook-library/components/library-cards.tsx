@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useQueryClient } from "@tanstack/react-query";
-import { FolderInput, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   ContextMenu,
@@ -41,8 +41,6 @@ export type FolderCardProps = {
   autoEdit?: boolean;
   onSelect?: () => void;
   onOpen: () => void;
-  onMove?: (folderId: string | null) => void;
-  moveDestinations?: { id: string | null; label: string; disabled?: boolean }[];
   onRename: (name: string) => void;
   onCancelEdit?: () => void;
   onDismissEdit?: (name: string) => void;
@@ -57,16 +55,14 @@ export type NotebookCardProps = {
     coverVariants?: CoverVariants | null;
     folderId: string | null;
   };
-  folders: FolderRef[];
-  folderPaths?: Map<string, string>;
   selected?: boolean;
   autoEdit?: boolean;
   onSelect?: () => void;
-  onMove: (folderId: string | null) => void;
   onOpen: () => void;
   onRename: (name: string) => void;
   onCancelEdit?: () => void;
   onDismissEdit?: (name: string) => void;
+  onRemove: () => void;
 };
 export type NotebookPreviewProps = {
   notebook: { title: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
@@ -80,8 +76,6 @@ export function FolderCard({
   autoEdit,
   onSelect,
   onOpen,
-  onMove,
-  moveDestinations = [],
   onRename,
   onCancelEdit,
   onDismissEdit,
@@ -124,10 +118,7 @@ export function FolderCard({
             {...attributes}
             role={attributes.role}
             {...listeners}
-            className={cn(
-              "library-folder-card",
-              isDragging && "library-notebook-card--dragging",
-            )}
+            className={cn("library-folder-card", isDragging && "library-notebook-card--dragging")}
             data-selected={selected ? "true" : undefined}
             onClick={() => {
               if (!editingTitleRef.current) onSelect?.();
@@ -140,11 +131,13 @@ export function FolderCard({
               count: notebooks.length,
             })}
             onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
               if (event.key === "Enter" && !editingTitleRef.current) onOpen();
               if (event.key === "F2") {
                 editingTitleRef.current = true;
                 requestEdit((value) => value + 1);
               }
+              listeners?.onKeyDown?.(event);
             }}
           />
         }
@@ -168,17 +161,6 @@ export function FolderCard({
         >
           {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
         </ContextMenuItem>
-        {onMove &&
-          moveDestinations.map((destination) => (
-            <ContextMenuItem
-              key={destination.id ?? "root"}
-              disabled={destination.disabled}
-              onClick={() => onMove(destination.id)}
-            >
-              <FolderInput />
-              {t("library.moveTo", { target: destination.label })}
-            </ContextMenuItem>
-          ))}
         <ContextMenuItem variant="destructive" onClick={onRemove}>
           <Trash2 />
           {t("library.removeFolder")}
@@ -264,16 +246,14 @@ function NotebookArtwork({
 
 export function NotebookCard({
   notebook,
-  folders,
-  folderPaths,
   selected,
   autoEdit,
   onSelect,
-  onMove,
   onOpen,
   onRename,
   onCancelEdit,
   onDismissEdit,
+  onRemove,
 }: NotebookCardProps) {
   const { t } = useTranslation("notebooks");
   const queryClient = useQueryClient();
@@ -331,10 +311,7 @@ export function NotebookCard({
             {...attributes}
             role={attributes.role}
             {...listeners}
-            className={cn(
-              "library-notebook-card",
-              isDragging && "library-notebook-card--dragging",
-            )}
+            className={cn("library-notebook-card", isDragging && "library-notebook-card--dragging")}
             data-selected={selected ? "true" : undefined}
             onMouseEnter={prefetch}
             onFocus={prefetch}
@@ -346,11 +323,13 @@ export function NotebookCard({
             tabIndex={0}
             aria-label={notebook.title}
             onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
               if (event.key === "Enter" && !editingTitleRef.current) onOpen();
               if (event.key === "F2") {
                 editingTitleRef.current = true;
                 requestEdit((value) => value + 1);
               }
+              listeners?.onKeyDown?.(event);
             }}
           />
         }
@@ -366,20 +345,10 @@ export function NotebookCard({
         >
           {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
         </ContextMenuItem>
-        <ContextMenuItem disabled={notebook.folderId === null} onClick={() => onMove(null)}>
-          <FolderInput />
-          {t("library.moveTo", { target: t("library.library") })}
+        <ContextMenuItem variant="destructive" onClick={onRemove}>
+          <Trash2 />
+          {t("library.removeNotebook")}
         </ContextMenuItem>
-        {folders.map((folder) => (
-          <ContextMenuItem
-            key={folder.id}
-            disabled={folder.id === notebook.folderId}
-            onClick={() => onMove(folder.id)}
-          >
-            <FolderInput />
-            {t("library.moveTo", { target: folderPaths?.get(folder.id) ?? folder.name })}
-          </ContextMenuItem>
-        ))}
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -388,7 +357,10 @@ export function NotebookCard({
 export function NotebookPreview({ notebook }: NotebookPreviewProps) {
   const { t } = useTranslation("notebooks");
   return (
-    <div className="library-notebook-preview" aria-label={t("library.moving", { name: notebook.title })}>
+    <div
+      className="library-notebook-preview"
+      aria-label={t("library.moving", { name: notebook.title })}
+    >
       <NotebookArtwork notebook={notebook} />
     </div>
   );

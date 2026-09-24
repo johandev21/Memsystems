@@ -1,6 +1,7 @@
 import { DndContext } from "@dnd-kit/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
@@ -27,12 +28,12 @@ beforeAll(() => {
 const handlers = {
   onSortChange: () => {},
   selectedKey: null,
+  draftClientId: null,
   onSelectItem: () => {},
   onOpenFolder: () => {},
-  onMoveNotebook: () => {},
-  onMoveFolder: () => {},
   onRenameFolder: () => {},
   onRemoveFolder: () => {},
+  onRemoveNotebook: () => {},
   onOpenNotebook: () => {},
   onUpdateNotebook: () => {},
 };
@@ -48,7 +49,8 @@ const folder = {
 describe("FolderLibrary draft wiring", () => {
   it("commits a draft folder when its editor blurs unchanged", () => {
     const onCommitDraft = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={[{ ...folder, name: "Untitled folder" }]}
           notebooks={[]}
@@ -58,6 +60,7 @@ describe("FolderLibrary draft wiring", () => {
           onCommitDraft={onCommitDraft}
           onCancelDraft={() => {}}
           {...handlers}
+          draftClientId="folder-1"
         />
       </DndContext>,
     );
@@ -67,7 +70,8 @@ describe("FolderLibrary draft wiring", () => {
 
   it("cancels a draft folder on Escape", () => {
     const onCancelDraft = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={[{ ...folder, name: "Untitled folder" }]}
           notebooks={[]}
@@ -77,6 +81,7 @@ describe("FolderLibrary draft wiring", () => {
           onCommitDraft={() => {}}
           onCancelDraft={onCancelDraft}
           {...handlers}
+          draftClientId="folder-1"
         />
       </DndContext>,
     );
@@ -87,7 +92,8 @@ describe("FolderLibrary draft wiring", () => {
   it("does not treat an existing folder as a draft", () => {
     const onCommitDraft = vi.fn();
     const onRenameFolder = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={[folder]}
           notebooks={[]}
@@ -113,7 +119,8 @@ describe("FolderLibrary draft wiring", () => {
 describe("FolderLibrary selection", () => {
   it("reports the selected item key on card click", () => {
     const onSelectItem = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={[folder]}
           notebooks={[]}
@@ -133,7 +140,8 @@ describe("FolderLibrary selection", () => {
 
   it("marks the selected card and clears the selection on background click", () => {
     const onSelectItem = vi.fn();
-    const { container } = renderWithProviders(<DndContext>
+    const { container } = renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={[folder]}
           notebooks={[]}
@@ -159,7 +167,8 @@ describe("FolderLibrary selection", () => {
 
   it("clears the selection on Escape from a card", () => {
     const onSelectItem = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={[folder]}
           notebooks={[]}
@@ -200,7 +209,8 @@ describe("FolderLibrary nesting", () => {
   };
 
   it("shows only immediate children and counts descendant notebooks", () => {
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={nestedFolders}
           notebooks={[nestedNotebook]}
@@ -221,7 +231,8 @@ describe("FolderLibrary nesting", () => {
 
   it("renders and navigates the full ancestor breadcrumb", () => {
     const onOpenFolder = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderLibrary
           folders={nestedFolders}
           notebooks={[nestedNotebook]}
@@ -243,5 +254,195 @@ describe("FolderLibrary nesting", () => {
         .getByText("Grandchild", { selector: '[aria-current="page"]' })
         .getAttribute("aria-current"),
     ).toBe("page");
+  });
+});
+
+describe("FolderLibrary notebook deletion", () => {
+  it("asks to remove the notebook from its card menu", async () => {
+    const user = userEvent.setup();
+    const onRemoveNotebook = vi.fn();
+    renderWithProviders(
+      <DndContext>
+        <FolderLibrary
+          folders={[]}
+          notebooks={[
+            {
+              id: "notebook-1",
+              title: "Notebook",
+              description: "",
+              icon: "Notebook",
+              coverUrl: null,
+              coverVariants: null,
+              folderId: null,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ]}
+          activeFolderId={null}
+          sortKey="name"
+          draftId={null}
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+          onRemoveNotebook={onRemoveNotebook}
+        />
+      </DndContext>,
+    );
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Notebook" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete Notebook" }));
+    expect(onRemoveNotebook).toHaveBeenCalledWith("notebook-1");
+  });
+});
+
+describe("FolderLibrary draft focus", () => {
+  const draftFolder = (id: string) => ({ ...folder, id, name: "Untitled folder" });
+  const draftNotebook = (id: string) => ({
+    id,
+    title: "Untitled notebook",
+    description: "",
+    icon: "Notebook",
+    coverUrl: null,
+    coverVariants: null,
+    folderId: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  function renderLibrary(ui: ReactElement) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return { client, ...render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>) };
+  }
+
+  it("focuses a draft folder and keeps it focused when its id becomes the server id", () => {
+    const { client, rerender } = renderLibrary(
+      <DndContext>
+        <FolderLibrary
+          folders={[draftFolder("tmp-folder")]}
+          notebooks={[]}
+          activeFolderId={null}
+          sortKey="name"
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+          draftId="tmp-folder"
+          draftClientId="tmp-folder"
+        />
+      </DndContext>,
+    );
+    const input = screen.getByRole("textbox") as HTMLInputElement;
+    expect(document.activeElement).toBe(input);
+    fireEvent.change(input, { target: { value: "Ideas" } });
+
+    // The draft id becomes the server id before the cached row is swapped.
+    rerender(
+      <QueryClientProvider client={client}>
+        <DndContext>
+          <FolderLibrary
+            folders={[draftFolder("tmp-folder")]}
+            notebooks={[]}
+            activeFolderId={null}
+            sortKey="name"
+            onCommitDraft={() => {}}
+            onCancelDraft={() => {}}
+            {...handlers}
+            draftId="server-folder"
+            draftClientId="tmp-folder"
+          />
+        </DndContext>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("textbox")).toBe(input);
+    expect(document.activeElement).toBe(input);
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <DndContext>
+          <FolderLibrary
+            folders={[draftFolder("server-folder")]}
+            notebooks={[]}
+            activeFolderId={null}
+            sortKey="name"
+            onCommitDraft={() => {}}
+            onCancelDraft={() => {}}
+            {...handlers}
+            draftId="server-folder"
+            draftClientId="tmp-folder"
+          />
+        </DndContext>
+      </QueryClientProvider>,
+    );
+
+    const swappedInput = screen.getByRole("textbox") as HTMLInputElement;
+    expect(swappedInput).toBe(input);
+    expect(document.activeElement).toBe(swappedInput);
+    expect(swappedInput.value).toBe("Ideas");
+  });
+
+  it("keeps a draft notebook focused when its id becomes the server id", () => {
+    const { client, rerender } = renderLibrary(
+      <DndContext>
+        <FolderLibrary
+          folders={[]}
+          notebooks={[draftNotebook("tmp-notebook")]}
+          activeFolderId={null}
+          sortKey="name"
+          onCommitDraft={() => {}}
+          onCancelDraft={() => {}}
+          {...handlers}
+          draftId="tmp-notebook"
+          draftClientId="tmp-notebook"
+        />
+      </DndContext>,
+    );
+    const input = document.querySelector("input.library-notebook-title-input") as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(document.activeElement).toBe(input);
+    fireEvent.change(input, { target: { value: "Ideas" } });
+
+    // The draft id becomes the server id before the cached row is swapped.
+    rerender(
+      <QueryClientProvider client={client}>
+        <DndContext>
+          <FolderLibrary
+            folders={[]}
+            notebooks={[draftNotebook("tmp-notebook")]}
+            activeFolderId={null}
+            sortKey="name"
+            onCommitDraft={() => {}}
+            onCancelDraft={() => {}}
+            {...handlers}
+            draftId="server-notebook"
+            draftClientId="tmp-notebook"
+          />
+        </DndContext>
+      </QueryClientProvider>,
+    );
+    expect(document.querySelector("input.library-notebook-title-input")).toBe(input);
+    expect(document.activeElement).toBe(input);
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <DndContext>
+          <FolderLibrary
+            folders={[]}
+            notebooks={[draftNotebook("server-notebook")]}
+            activeFolderId={null}
+            sortKey="name"
+            onCommitDraft={() => {}}
+            onCancelDraft={() => {}}
+            {...handlers}
+            draftId="server-notebook"
+            draftClientId="tmp-notebook"
+          />
+        </DndContext>
+      </QueryClientProvider>,
+    );
+
+    const swappedInput = document.querySelector(
+      "input.library-notebook-title-input",
+    ) as HTMLInputElement;
+    expect(swappedInput).toBe(input);
+    expect(document.activeElement).toBe(swappedInput);
+    expect(swappedInput.value).toBe("Ideas");
   });
 });

@@ -1,23 +1,39 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  pointerWithin,
+  type Announcements,
+  type CollisionDetection,
+} from "@dnd-kit/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CloudOff, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { libraryQueryOptions } from "../api/library";
+import { folderPath } from "../model/folder-hierarchy";
 import { useLibraryInteractions } from "../hooks/use-library-interactions";
 import { useLibraryMutations } from "../hooks/use-library-mutations";
 import { toLibraryNotebook } from "../model/adapters";
 import type { LibrarySortKey } from "../model/library-sort";
 import { clampTitle } from "../model/title";
-import type { Draft } from "../model/types";
+import type { Draft, LibraryNotebook } from "../model/types";
 import { CreateMenu } from "./create-menu";
 import { FolderLibrary } from "./folder-library";
 import { LibraryGridSkeleton } from "./library-skeleton";
 import { FolderPreview, NotebookPreview } from "./library-cards";
+
+// Keyboard drags have no pointer coordinates, so `pointerWithin` never matches
+// them. Fall back to the nearest droppable center for keyboard moves.
+const libraryCollisionDetection: CollisionDetection = (args) =>
+  args.pointerCoordinates ? pointerWithin(args) : closestCenter(args);
+
+type LibraryDragData = { kind?: string; folderId?: string | null; notebookId?: string };
 
 export function NotebookLibrary() {
   const { t } = useTranslation("notebooks");
@@ -28,12 +44,53 @@ export function NotebookLibrary() {
   const [sortKey, setSortKey] = useState<LibrarySortKey>("name");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<LibraryNotebook | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const folders = data?.folders ?? [];
-  const notebooks = useMemo(
-    () => (data?.notebooks ?? []).map(toLibraryNotebook),
-    [data],
-  );
+  const folders = useMemo(() => data?.folders ?? [], [data]);
+  const notebooks = useMemo(() => (data?.notebooks ?? []).map(toLibraryNotebook), [data]);
+
+  const announcements = useMemo<Announcements>(() => {
+    const activeName = (dragData: LibraryDragData | undefined) => {
+      if (dragData?.kind === "folder") {
+        return (
+          folders.find((folder) => folder.id === dragData.folderId)?.name ??
+          t("library.untitledFolder")
+        );
+      }
+      if (dragData?.kind === "notebook") {
+        return (
+          notebooks.find((notebook) => notebook.id === dragData.notebookId)?.title ??
+          t("library.untitledNotebook")
+        );
+      }
+      return "";
+    };
+    const targetName = (dropData: LibraryDragData | undefined) => {
+      if (!dropData || !("folderId" in dropData)) return null;
+      return typeof dropData.folderId === "string"
+        ? folderPath(folders, dropData.folderId)
+        : t("library.library");
+    };
+    return {
+      onDragStart: ({ active }) =>
+        t("library.dnd.dragStart", { name: activeName(active.data.current) }),
+      onDragOver: ({ active, over }) => {
+        const target = targetName(over?.data.current);
+        return target
+          ? t("library.dnd.dragOver", { name: activeName(active.data.current), target })
+          : t("library.dnd.dragOverNone", { name: activeName(active.data.current) });
+      },
+      onDragEnd: ({ active, over }) => {
+        const target = targetName(over?.data.current);
+        return target
+          ? t("library.dnd.dragEnd", { name: activeName(active.data.current), target })
+          : t("library.dnd.dragEndNone", { name: activeName(active.data.current) });
+      },
+      onDragCancel: ({ active }) =>
+        t("library.dnd.dragCancel", { name: activeName(active.data.current) }),
+    };
+  }, [folders, notebooks, t]);
 
   const interaction = useLibraryInteractions({
     folders,
@@ -50,30 +107,50 @@ export function NotebookLibrary() {
 
   // Creates are optimistic: the card appears with a client id right away and
   // the inline rename is queued against the real id once the POST resolves.
+  // The draft keeps the client id as its stable key across the temp-to-server
+  // id swap, so the open rename editor survives the row being replaced. The
+  // mutation reports the server id before it swaps the cached row, which keeps
+  // that key stable on every intermediate render.
   const beginCreateFolder = () => {
     setSelectedKey(null);
-    const { tempId } = mutations.createFolder({
-      name: t("library.untitledFolder"),
-      parentId: activeFolderId,
+    const { tempId, promise } = mutations.createFolder(
+      { name: t("library.untitledFolder"), parentId: activeFolderId },
+      (createdTempId, serverId) => {
+        setDraft((current) =>
+          current?.clientId === createdTempId ? { ...current, id: serverId } : current,
+        );
+      },
+    );
+    setDraft({ kind: "folder", id: tempId, clientId: tempId });
+    void promise.then((serverId) => {
+      if (!serverId) {
+        setDraft((current) => (current?.clientId === tempId ? null : current));
+      }
     });
-    setDraft({ kind: "folder", id: tempId });
   };
 
   const beginCreateNotebook = () => {
     setSelectedKey(null);
-    const { tempId } = mutations.createNotebook({
-      title: t("library.untitledNotebook"),
-      folderId: activeFolderId,
+    const { tempId, promise } = mutations.createNotebook(
+      { title: t("library.untitledNotebook"), folderId: activeFolderId },
+      (createdTempId, serverId) => {
+        setDraft((current) =>
+          current?.clientId === createdTempId ? { ...current, id: serverId } : current,
+        );
+      },
+    );
+    setDraft({ kind: "notebook", id: tempId, clientId: tempId });
+    void promise.then((serverId) => {
+      if (!serverId) {
+        setDraft((current) => (current?.clientId === tempId ? null : current));
+      }
     });
-    setDraft({ kind: "notebook", id: tempId });
   };
 
   const commitDraft = (name: string) => {
     if (!draft) return;
     const fallback =
-      draft.kind === "folder"
-        ? t("library.untitledFolder")
-        : t("library.untitledNotebook");
+      draft.kind === "folder" ? t("library.untitledFolder") : t("library.untitledNotebook");
     const nextName = clampTitle(name.trim()) || fallback;
     if (draft.kind === "folder") {
       void mutations.updateFolder(draft.id, { name: nextName });
@@ -104,19 +181,36 @@ export function NotebookLibrary() {
     void mutations.deleteFolder(id);
   };
 
+  const requestRemoveNotebook = (id: string) => {
+    const notebook = notebooks.find((item) => item.id === id);
+    if (notebook) setPendingDelete(notebook);
+  };
+
+  const confirmRemoveNotebook = async () => {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
+    setIsDeleting(true);
+    if (draft?.id === id) setDraft(null);
+    setSelectedKey((current) => (current === `notebook:${id}` ? null : current));
+    await mutations.deleteNotebook(id);
+    setIsDeleting(false);
+    setPendingDelete(null);
+  };
+
   const openNotebook = (id: string) => {
     void navigate({ to: "/notebooks/$notebookId", params: { notebookId: id } });
   };
 
   return (
     <div className="notebook-library flex flex-col">
-      <LibraryHero
-        onCreateNotebook={beginCreateNotebook}
-        onCreateFolder={beginCreateFolder}
-      />
+      <LibraryHero onCreateNotebook={beginCreateNotebook} onCreateFolder={beginCreateFolder} />
       <DndContext
         sensors={interaction.sensors}
-        collisionDetection={pointerWithin}
+        collisionDetection={libraryCollisionDetection}
+        accessibility={{
+          announcements,
+          screenReaderInstructions: { draggable: t("library.dnd.instructions") },
+        }}
         onDragStart={interaction.handleDragStart}
         onDragEnd={interaction.handleDragEnd}
         onDragCancel={interaction.cancelDrag}
@@ -134,15 +228,15 @@ export function NotebookLibrary() {
             sortKey={sortKey}
             onSortChange={setSortKey}
             draftId={draft?.id ?? null}
+            draftClientId={draft?.clientId ?? null}
             selectedKey={selectedKey ?? draftKey}
             onCommitDraft={commitDraft}
             onCancelDraft={cancelDraft}
             onSelectItem={setSelectedKey}
             onOpenFolder={openFolder}
-            onMoveNotebook={(id, folderId) => void mutations.updateNotebook(id, { folderId })}
-            onMoveFolder={(id, parentId) => void mutations.updateFolder(id, { parentId })}
             onRenameFolder={(id, name) => void mutations.updateFolder(id, { name })}
             onRemoveFolder={removeFolder}
+            onRemoveNotebook={requestRemoveNotebook}
             onOpenNotebook={openNotebook}
             onUpdateNotebook={(id, patch) => void mutations.updateNotebook(id, patch)}
           />
@@ -160,6 +254,16 @@ export function NotebookLibrary() {
           ) : null}
         </DragOverlay>
       </DndContext>
+      <ConfirmDeleteDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setPendingDelete(null);
+        }}
+        title={t("library.removeNotebook")}
+        description={t("library.removeNotebookConfirm", { title: pendingDelete?.title ?? "" })}
+        isLoading={isDeleting}
+        onConfirm={() => void confirmRemoveNotebook()}
+      />
     </div>
   );
 }

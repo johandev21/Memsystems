@@ -1,6 +1,7 @@
 import { DndContext } from "@dnd-kit/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
@@ -27,7 +28,8 @@ beforeAll(() => {
 describe("draft card editing", () => {
   it("auto-edits a new folder and dismisses with its placeholder name", () => {
     const onDismissEdit = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderCard
           folder={{ id: "folder-1", name: "Untitled folder" }}
           notebooks={[]}
@@ -48,7 +50,8 @@ describe("draft card editing", () => {
 
   it("cancels a new folder edit on Escape", () => {
     const onCancelEdit = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderCard
           folder={{ id: "folder-1", name: "Untitled folder" }}
           notebooks={[]}
@@ -67,7 +70,8 @@ describe("draft card editing", () => {
   it("auto-edits a new notebook and commits a typed title", () => {
     const onRename = vi.fn();
     const onOpen = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <NotebookCard
           notebook={{
             id: "notebook-1",
@@ -76,9 +80,8 @@ describe("draft card editing", () => {
             coverUrl: null,
             folderId: null,
           }}
-          folders={[]}
           autoEdit
-          onMove={() => {}}
+          onRemove={() => {}}
           onOpen={onOpen}
           onRename={onRename}
           onCancelEdit={() => {}}
@@ -100,7 +103,8 @@ describe("draft card editing", () => {
 describe("card open guard", () => {
   it("does not open a folder while its title is being edited", () => {
     const onOpen = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderCard
           folder={{ id: "folder-1", name: "Philosophy" }}
           notebooks={[]}
@@ -118,7 +122,8 @@ describe("card open guard", () => {
 
   it("does not open a notebook while its title is being edited", () => {
     const onOpen = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <NotebookCard
           notebook={{
             id: "notebook-1",
@@ -127,8 +132,7 @@ describe("card open guard", () => {
             coverUrl: null,
             folderId: null,
           }}
-          folders={[]}
-          onMove={() => {}}
+          onRemove={() => {}}
           onOpen={onOpen}
           onRename={() => {}}
         />
@@ -144,7 +148,8 @@ describe("card open guard", () => {
     vi.useFakeTimers();
     try {
       const onOpen = vi.fn();
-      renderWithProviders(<DndContext>
+      renderWithProviders(
+        <DndContext>
           <FolderCard
             folder={{ id: "folder-1", name: "Philosophy" }}
             notebooks={[]}
@@ -171,7 +176,8 @@ describe("card open guard", () => {
 
   it("still opens on double-click when not editing", () => {
     const onOpen = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderCard
           folder={{ id: "folder-1", name: "Philosophy" }}
           notebooks={[]}
@@ -190,7 +196,8 @@ describe("selection", () => {
   it("selects a folder on click without opening it", () => {
     const onSelect = vi.fn();
     const onOpen = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderCard
           folder={{ id: "folder-1", name: "Philosophy" }}
           notebooks={[]}
@@ -207,7 +214,8 @@ describe("selection", () => {
   });
 
   it("marks the selected folder card", () => {
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <FolderCard
           folder={{ id: "folder-1", name: "Philosophy" }}
           notebooks={[]}
@@ -226,7 +234,8 @@ describe("selection", () => {
   it("selects a notebook on click without opening it", () => {
     const onSelect = vi.fn();
     const onOpen = vi.fn();
-    renderWithProviders(<DndContext>
+    renderWithProviders(
+      <DndContext>
         <NotebookCard
           notebook={{
             id: "notebook-1",
@@ -235,9 +244,8 @@ describe("selection", () => {
             coverUrl: null,
             folderId: null,
           }}
-          folders={[]}
           onSelect={onSelect}
-          onMove={() => {}}
+          onRemove={() => {}}
           onOpen={onOpen}
           onRename={() => {}}
         />
@@ -246,5 +254,50 @@ describe("selection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Notebook" }));
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe("card context menu", () => {
+  it("deletes a notebook and no longer offers move options", async () => {
+    const user = userEvent.setup();
+    const onRemove = vi.fn();
+    renderWithProviders(
+      <DndContext>
+        <NotebookCard
+          notebook={{
+            id: "notebook-1",
+            title: "Notebook",
+            description: "",
+            coverUrl: null,
+            folderId: null,
+          }}
+          onRemove={onRemove}
+          onOpen={() => {}}
+          onRename={() => {}}
+        />
+      </DndContext>,
+    );
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Notebook" }));
+    expect(await screen.findByRole("menuitem", { name: "Delete Notebook" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /Move To/ })).toBeNull();
+    await user.click(screen.getByRole("menuitem", { name: "Delete Notebook" }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it("no longer offers move options on a folder", async () => {
+    renderWithProviders(
+      <DndContext>
+        <FolderCard
+          folder={{ id: "folder-1", name: "Philosophy" }}
+          notebooks={[]}
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
+      </DndContext>,
+    );
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }));
+    expect(await screen.findByRole("menuitem", { name: "Remove Folder" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /Move To/ })).toBeNull();
   });
 });

@@ -48,6 +48,15 @@
       "notebook": "Cuaderno",
       "notebookDescription": "Empezar un cuaderno en blanco"
     },
+    "dnd": {
+      "dragCancel": "Se canceló el movimiento de {{name}}.",
+      "dragEnd": "Se soltó {{name}} en {{target}}.",
+      "dragEndNone": "{{name}} volvió a su posición inicial.",
+      "dragOver": "{{name}} está sobre {{target}}.",
+      "dragOverNone": "{{name}} ya no está sobre un destino.",
+      "dragStart": "Se recogió {{name}}.",
+      "instructions": "Para mover un cuaderno o una carpeta, enfoca su tarjeta y pulsa Espacio. Usa las teclas de flecha para moverlo, pulsa Espacio para soltarlo o Escape para cancelar."
+    },
     "dropToMove": "Suelta aquí para mover a {{target}}",
     "editAria": "Editar {{label}}",
     "emptyFolderDescription": "Arrastra cuadernos aquí o usa el botón + para crear uno.",
@@ -62,9 +71,10 @@
     "library": "Biblioteca",
     "loadFailedDescription": "Algo salió mal al cargar tus cuadernos. Comprueba tu conexión e inténtalo de nuevo.",
     "loadFailedTitle": "No se pudo cargar tu biblioteca",
-    "moveTo": "Mover a {{target}}",
     "moving": "Moviendo {{name}}",
     "removeFolder": "Eliminar carpeta",
+    "removeNotebook": "Eliminar cuaderno",
+    "removeNotebookConfirm": "¿Eliminar permanentemente “{{title}}” y todo su contenido? Esta acción no se puede deshacer.",
     "rename": "Renombrar",
     "retry": "Reintentar",
     "sort": {

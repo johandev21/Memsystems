@@ -19,13 +19,7 @@ import {
   type LibrarySortKey,
 } from "../model/library-sort";
 import { FolderCard, NotebookCard } from "./library-cards";
-import {
-  canMoveFolder,
-  childFolders,
-  descendantNotebooks,
-  folderAncestors,
-  folderPath,
-} from "../model/folder-hierarchy";
+import { childFolders, descendantNotebooks, folderAncestors } from "../model/folder-hierarchy";
 
 export interface FolderLibraryProps {
   folders: LibraryFolder[];
@@ -33,16 +27,16 @@ export interface FolderLibraryProps {
   activeFolderId: string | null;
   sortKey: LibrarySortKey;
   draftId: string | null;
+  draftClientId: string | null;
   selectedKey: string | null;
   onSortChange: (sortKey: LibrarySortKey) => void;
   onCommitDraft: (name: string) => void;
   onCancelDraft: () => void;
   onSelectItem: (key: string | null) => void;
   onOpenFolder: (id: string | null) => void;
-  onMoveNotebook: (id: string, folderId: string | null) => void;
-  onMoveFolder: (id: string, folderId: string | null) => void;
   onRenameFolder: (id: string, name: string) => void;
   onRemoveFolder: (id: string) => void;
+  onRemoveNotebook: (id: string) => void;
   onOpenNotebook: (id: string) => void;
   onUpdateNotebook: (id: string, patch: { title?: string; description?: string }) => void;
 }
@@ -53,16 +47,16 @@ export function FolderLibrary({
   activeFolderId,
   sortKey,
   draftId,
+  draftClientId,
   selectedKey,
   onSortChange,
   onCommitDraft,
   onCancelDraft,
   onSelectItem,
   onOpenFolder,
-  onMoveNotebook,
-  onMoveFolder,
   onRenameFolder,
   onRemoveFolder,
+  onRemoveNotebook,
   onOpenNotebook,
   onUpdateNotebook,
 }: FolderLibraryProps) {
@@ -87,19 +81,6 @@ export function FolderLibrary({
   ];
   const activeFolder = folders.find((folder) => folder.id === activeFolderId);
   const breadcrumbs = folderAncestors(folders, activeFolderId);
-  const folderPaths = new Map(folders.map((folder) => [folder.id, folderPath(folders, folder.id)]));
-  const moveDestinations = (folderId: string) => [
-    {
-      id: null,
-      label: t("library.library"),
-      disabled: !canMoveFolder(folders, folderId, null),
-    },
-    ...folders.map((folder) => ({
-      id: folder.id,
-      label: folderPaths.get(folder.id) ?? folder.name,
-      disabled: !canMoveFolder(folders, folderId, folder.id),
-    })),
-  ];
   const items = useMemo(() => {
     const visible =
       activeFolderId === null
@@ -155,10 +136,9 @@ export function FolderLibrary({
       <LibraryGrid
         items={items}
         folderNotebooks={folderNotebooks}
-        folders={folders}
-        folderPaths={folderPaths}
         destinationFolderId={activeFolderId}
         draftId={draftId}
+        draftClientId={draftClientId}
         selectedKey={selectedKey}
         onCommitDraft={onCommitDraft}
         onCancelDraft={onCancelDraft}
@@ -175,11 +155,9 @@ export function FolderLibrary({
               }
         }
         onOpenFolder={onOpenFolder}
-        onMoveNotebook={onMoveNotebook}
-        onMoveFolder={onMoveFolder}
-        moveDestinations={moveDestinations}
         onRenameFolder={onRenameFolder}
         onRemoveFolder={onRemoveFolder}
+        onRemoveNotebook={onRemoveNotebook}
         onOpenNotebook={onOpenNotebook}
         onUpdateNotebook={onUpdateNotebook}
       />
@@ -190,43 +168,35 @@ export function FolderLibrary({
 function LibraryGrid({
   items,
   folderNotebooks,
-  folders,
-  folderPaths,
   destinationFolderId,
   draftId,
+  draftClientId,
   selectedKey,
   onCommitDraft,
   onCancelDraft,
   onSelectItem,
   emptyState,
   onOpenFolder,
-  onMoveNotebook,
-  onMoveFolder,
-  moveDestinations,
   onRenameFolder,
   onRemoveFolder,
+  onRemoveNotebook,
   onOpenNotebook,
   onUpdateNotebook,
 }: {
   items: LibraryItem[];
   folderNotebooks: Map<string, LibraryNotebook[]>;
-  folders: LibraryFolder[];
-  folderPaths: Map<string, string>;
   destinationFolderId: string | null;
   draftId: string | null;
+  draftClientId: string | null;
   selectedKey: string | null;
   onCommitDraft: (name: string) => void;
   onCancelDraft: () => void;
   onSelectItem: FolderLibraryProps["onSelectItem"];
   emptyState: { title: string; description: string };
   onOpenFolder: FolderLibraryProps["onOpenFolder"];
-  onMoveNotebook: FolderLibraryProps["onMoveNotebook"];
-  onMoveFolder: FolderLibraryProps["onMoveFolder"];
-  moveDestinations: (
-    folderId: string,
-  ) => { id: string | null; label: string; disabled?: boolean }[];
   onRenameFolder: FolderLibraryProps["onRenameFolder"];
   onRemoveFolder: FolderLibraryProps["onRemoveFolder"];
+  onRemoveNotebook: FolderLibraryProps["onRemoveNotebook"];
   onOpenNotebook: FolderLibraryProps["onOpenNotebook"];
   onUpdateNotebook: FolderLibraryProps["onUpdateNotebook"];
 }) {
@@ -279,15 +249,13 @@ function LibraryGrid({
       {items.map((item) =>
         item.kind === "folder" ? (
           <FolderCard
-            key={`folder:${item.folder.id}`}
+            key={`folder:${item.folder.id === draftId && draftClientId ? draftClientId : item.folder.id}`}
             folder={item.folder}
             notebooks={folderNotebooks.get(item.folder.id) ?? []}
             selected={selectedKey === `folder:${item.folder.id}`}
             autoEdit={item.folder.id === draftId}
             onSelect={() => onSelectItem(`folder:${item.folder.id}`)}
             onOpen={() => onOpenFolder(item.folder.id)}
-            onMove={(folderId) => onMoveFolder(item.folder.id, folderId)}
-            moveDestinations={moveDestinations(item.folder.id)}
             onRename={
               item.folder.id === draftId
                 ? onCommitDraft
@@ -299,14 +267,11 @@ function LibraryGrid({
           />
         ) : (
           <NotebookCard
-            key={`notebook:${item.notebook.id}`}
+            key={`notebook:${item.notebook.id === draftId && draftClientId ? draftClientId : item.notebook.id}`}
             notebook={item.notebook}
-            folders={folders}
-            folderPaths={folderPaths}
             selected={selectedKey === `notebook:${item.notebook.id}`}
             autoEdit={item.notebook.id === draftId}
             onSelect={() => onSelectItem(`notebook:${item.notebook.id}`)}
-            onMove={(folderId) => onMoveNotebook(item.notebook.id, folderId)}
             onOpen={() => onOpenNotebook(item.notebook.id)}
             onRename={
               item.notebook.id === draftId
@@ -315,6 +280,7 @@ function LibraryGrid({
             }
             onCancelEdit={item.notebook.id === draftId ? onCancelDraft : undefined}
             onDismissEdit={item.notebook.id === draftId ? onCommitDraft : undefined}
+            onRemove={() => onRemoveNotebook(item.notebook.id)}
           />
         ),
       )}

@@ -48,6 +48,15 @@
       "notebook": "Notebook",
       "notebookDescription": "Start a blank notebook"
     },
+    "dnd": {
+      "dragCancel": "Moving {{name}} was cancelled.",
+      "dragEnd": "Dropped {{name}} on {{target}}.",
+      "dragEndNone": "{{name}} was returned to its starting position.",
+      "dragOver": "{{name}} is over {{target}}.",
+      "dragOverNone": "{{name}} is no longer over a drop target.",
+      "dragStart": "Picked up {{name}}.",
+      "instructions": "To move a notebook or folder, focus its card and press Space. Use the arrow keys to move it, press Space to drop it, or Escape to cancel."
+    },
     "dropToMove": "Drop here to move to {{target}}",
     "editAria": "Edit {{label}}",
     "emptyFolderDescription": "Drag notebooks here or use the + button to create one.",
@@ -61,9 +70,10 @@
     "library": "Library",
     "loadFailedDescription": "Something went wrong while loading your notebooks. Check your connection and try again.",
     "loadFailedTitle": "Couldn't load your library",
-    "moveTo": "Move To {{target}}",
     "moving": "Moving {{name}}",
     "removeFolder": "Remove Folder",
+    "removeNotebook": "Delete Notebook",
+    "removeNotebookConfirm": "Permanently delete “{{title}}” and all of its contents? This cannot be undone.",
     "rename": "Rename",
     "retry": "Retry",
     "sort": {
