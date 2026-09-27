@@ -212,6 +212,35 @@ describe("PracticeProblemsView", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("opens the model picker from evaluation capability gate showing only capable models", async () => {
+    const catalog = {
+      models: [
+        {
+          id: "openai/gpt-5.6-sol",
+          displayName: "GPT-5.6 Sol",
+          capabilities: { structuredOutput: false },
+        },
+        {
+          id: "google/gemini-2.5-flash",
+          displayName: "Gemini 2.5 Flash",
+          capabilities: { structuredOutput: true },
+        },
+      ],
+      capabilitiesVerified: true,
+    };
+
+    const user = userEvent.setup();
+    renderProblems(set(), { catalog });
+
+    await user.type(screen.getByLabelText("Your attempt"), "F = m * a = 20 N");
+    await user.click(screen.getByRole("button", { name: "Evaluate answer" }));
+
+    await user.click(screen.getByRole("button", { name: "Choose a Model" }));
+    expect(screen.queryByRole("checkbox", { name: "Structured output" })).toBeNull();
+    expect(screen.queryByRole("option", { name: /GPT-5\.6 Sol/ })).toBeNull();
+    expect(await screen.findByRole("option", { name: /Gemini 2\.5 Flash/ })).toBeTruthy();
+  });
+
   it("surfaces the structured-output capability error when the backend rejects the evaluation", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

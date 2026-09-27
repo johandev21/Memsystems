@@ -501,6 +501,9 @@ describe("GenerateBriefDialog", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Choose a Model" }));
+    expect(screen.queryByRole("checkbox", { name: "Structured output" })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Claude Opus 5.5/ })).toBeNull();
+    expect(screen.queryByText("No structured output")).toBeNull();
     await user.click(await screen.findByRole("option", { name: /GPT-5.6 Sol/ }));
 
     expect(screen.getByRole("button", { name: /Next Step/i })).toBeTruthy();

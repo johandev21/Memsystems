@@ -7,7 +7,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   ModelSelector,
   ModelSelectorContent,
-  ModelSelectorFilter,
   ModelSelectorInput,
   ModelSelectorModels,
   ModelSelectorTrigger,
@@ -141,8 +140,7 @@ function EvaluationCapabilityGate({
   const { t } = useTranslation("viewer");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [structuredOnly, setStructuredOnly] = useState(false);
-  const groups = useModelList(models, { search, structuredOnly, capabilitiesVerified });
+  const groups = useModelList(models, { search, structuredOnly: true, capabilitiesVerified });
 
   return (
     <Alert>
@@ -163,7 +161,6 @@ function EvaluationCapabilityGate({
               value={search}
               onValueChange={setSearch}
             />
-            <ModelSelectorFilter checked={structuredOnly} onCheckedChange={setStructuredOnly} />
             <ModelSelectorModels
               groups={groups}
               selectedModel={selectedModel}

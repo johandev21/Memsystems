@@ -6,7 +6,6 @@ import {
   isStudyMaterialCapable,
   ModelSelector,
   ModelSelectorContent,
-  ModelSelectorFilter,
   ModelSelectorInput,
   ModelSelectorModels,
   ModelSelectorTrigger,
@@ -16,7 +15,6 @@ import {
 } from "@/features/ai";
 import type { ModelOption } from "@/features/ai";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import { useGenerationStore } from "../hooks/use-generation-store";
@@ -174,18 +172,21 @@ function StudyMaterialCapabilityGate({
   const { t } = useTranslation("generation");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [structuredOnly, setStructuredOnly] = useState(false);
-  const groups = useModelList(models, { search, structuredOnly, capabilitiesVerified });
+  const groups = useModelList(models, { search, structuredOnly: true, capabilitiesVerified });
 
   return (
-    <Alert>
-      <AlertTitle>{t("capabilityGate.title")}</AlertTitle>
-      <AlertDescription>
-        {capabilitiesVerified
-          ? t("capabilityGate.description", { name: modelName })
-          : t("capabilityGate.unverifiedDescription")}
-      </AlertDescription>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+    <div className="py-4 space-y-4">
+      <div className="space-y-1.5">
+        <h3 className="text-sm font-semibold text-text-primary">
+          {t("capabilityGate.title")}
+        </h3>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          {capabilitiesVerified
+            ? t("capabilityGate.description", { name: modelName })
+            : t("capabilityGate.unverifiedDescription")}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
         <ModelSelector open={pickerOpen} onOpenChange={setPickerOpen}>
           <ModelSelectorTrigger render={<Button size="sm" />}>
             {t("capabilityGate.chooseModel")}
@@ -196,7 +197,6 @@ function StudyMaterialCapabilityGate({
               value={search}
               onValueChange={setSearch}
             />
-            <ModelSelectorFilter checked={structuredOnly} onCheckedChange={setStructuredOnly} />
             <ModelSelectorModels
               groups={groups}
               selectedModel={selectedModel}
@@ -211,13 +211,13 @@ function StudyMaterialCapabilityGate({
         {!capabilitiesVerified && (
           <a
             href="/settings"
-            className="text-xs font-medium text-muted-foreground underline underline-offset-3 transition-colors hover:text-foreground"
+            className="text-xs font-medium text-text-tertiary underline underline-offset-4 transition-colors hover:text-text-primary"
           >
             {t("capabilityGate.refreshCatalog")}
           </a>
         )}
       </div>
-    </Alert>
+    </div>
   );
 }
 
