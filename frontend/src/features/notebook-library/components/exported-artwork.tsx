@@ -352,26 +352,36 @@ export function CoveredNotebookArtwork({
   coverUrl,
   coverVariants,
   titleSlot,
+  hideLabel,
 }: {
   title: string;
   coverUrl: string;
   coverVariants?: CoverVariants | null;
   titleSlot?: ReactNode;
+  hideLabel?: boolean;
 }) {
   return (
     <span
       className="box-border w-59.75 h-34.25 relative block shrink-0 library-notebook-surface rounded-xl overflow-hidden z-0"
     >
       <CoverFill url={coverUrl} sizes="239px" srcSet={NotebookCoverSrcSet({ coverVariants })} />
-      <NotebookCoverLabel title={title} titleSlot={titleSlot} />
+      {hideLabel ? null : <NotebookCoverLabel title={title} titleSlot={titleSlot} />}
     </span>
   );
 }
 
-export function EmptyNotebookArtwork({ title, titleSlot }: { title: string; titleSlot?: ReactNode }) {
+export function EmptyNotebookArtwork({
+  title,
+  titleSlot,
+  hideLabel,
+}: {
+  title: string;
+  titleSlot?: ReactNode;
+  hideLabel?: boolean;
+}) {
   return (
     <span className="box-border w-59.75 h-34.25 relative block shrink-0 bg-(--notebook-empty-cover) library-notebook-surface rounded-xl overflow-hidden z-1">
-      <NotebookCoverLabel title={title} titleSlot={titleSlot} />
+      {hideLabel ? null : <NotebookCoverLabel title={title} titleSlot={titleSlot} />}
     </span>
   );
 }

@@ -3,6 +3,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { ArrowUpDown, ChevronRight, NotebookText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/shared/utils/cn";
 import {
   Select,
   SelectContent,
@@ -329,16 +330,31 @@ function BreadcrumbTarget({
   onOpenFolder: (id: string | null) => void;
 }) {
   const { t } = useTranslation("notebooks");
-  const { setNodeRef } = useDroppable({ id: `breadcrumb:${id ?? "root"}`, data: { folderId: id } });
+  const { isOver, setNodeRef } = useDroppable({
+    id: `breadcrumb:${id ?? "root"}`,
+    data: { folderId: id },
+  });
+  // Highlight the hovered crumb while dragging so the drop target stays
+  // visible next to the shrunken preview.
+  const highlightClass = isOver ? "bg-accent/60 text-accent-foreground" : undefined;
   return current ? (
-    <span ref={setNodeRef} aria-current="page" className="min-w-0 truncate text-foreground">
+    <span
+      ref={setNodeRef}
+      aria-current="page"
+      data-drop-target={isOver ? "valid" : undefined}
+      className={cn("min-w-0 truncate rounded-md text-foreground", highlightClass)}
+    >
       {label}
     </span>
   ) : (
     <button
       ref={setNodeRef}
       type="button"
-      className="rounded-md px-2 py-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      data-drop-target={isOver ? "valid" : undefined}
+      className={cn(
+        "rounded-md px-2 py-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring",
+        highlightClass,
+      )}
       onClick={() => onOpenFolder(id)}
       title={t("library.dropToMove", { target: label })}
     >

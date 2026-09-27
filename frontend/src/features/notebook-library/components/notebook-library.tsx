@@ -212,6 +212,7 @@ export function NotebookLibrary() {
           screenReaderInstructions: { draggable: t("library.dnd.instructions") },
         }}
         onDragStart={interaction.handleDragStart}
+        onDragOver={interaction.handleDragOver}
         onDragEnd={interaction.handleDragEnd}
         onDragCancel={interaction.cancelDrag}
       >
@@ -245,11 +246,15 @@ export function NotebookLibrary() {
             of dnd-kit's default release animation, so a drop lands instantly. */}
         <DragOverlay dropAnimation={null}>
           {interaction.draggedNotebook ? (
-            <NotebookPreview notebook={interaction.draggedNotebook} />
+            <NotebookPreview
+              notebook={interaction.draggedNotebook}
+              compact={interaction.isPreviewCompact}
+            />
           ) : interaction.draggedFolder ? (
             <FolderPreview
               folder={interaction.draggedFolder}
               notebooks={interaction.draggedFolderNotebooks}
+              compact={interaction.isPreviewCompact}
             />
           ) : null}
         </DragOverlay>

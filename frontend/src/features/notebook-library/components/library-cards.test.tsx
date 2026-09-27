@@ -6,7 +6,7 @@ import type { ReactElement } from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import notebooksEn from "@/shared/i18n/locales/en/notebooks.json";
-import { FolderCard, NotebookCard } from "./library-cards";
+import { FolderCard, FolderPreview, NotebookCard, NotebookPreview } from "./library-cards";
 
 vi.mock("../hooks/use-fitted-folder-title", () => ({
   useFittedFolderTitle: () => 29.4,
@@ -299,5 +299,45 @@ describe("card context menu", () => {
     fireEvent.contextMenu(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }));
     expect(await screen.findByRole("menuitem", { name: "Remove Folder" })).toBeTruthy();
     expect(screen.queryByRole("menuitem", { name: /Move To/ })).toBeNull();
+  });
+});
+
+describe("compact drag preview", () => {
+  it("shrinks the notebook preview and hides the whole label outside the main area", () => {
+    const { container } = renderWithProviders(
+      <NotebookPreview notebook={{ title: "Ethics", coverUrl: null }} compact />,
+    );
+    const preview = screen.getByLabelText("Moving Ethics");
+    expect(preview.className).toContain("library-drag-preview--compact");
+    expect(preview.textContent).not.toContain("Ethics");
+    expect(container.querySelector(".library-artwork")).toBeTruthy();
+  });
+
+  it("hides the label but keeps the cover in the compact notebook preview", () => {
+    const { container } = renderWithProviders(
+      <NotebookPreview
+        notebook={{ title: "Ethics", coverUrl: "https://example.com/cover.jpg" }}
+        compact
+      />,
+    );
+    const preview = screen.getByLabelText("Moving Ethics");
+    expect(preview.textContent).not.toContain("Ethics");
+    expect(container.querySelector("img")).toBeTruthy();
+  });
+
+  it("keeps the full-size notebook preview with title in the main area", () => {
+    renderWithProviders(<NotebookPreview notebook={{ title: "Ethics", coverUrl: null }} />);
+    const preview = screen.getByLabelText("Moving Ethics");
+    expect(preview.className).not.toContain("library-drag-preview--compact");
+    expect(preview.textContent).toContain("Ethics");
+  });
+
+  it("shrinks the folder preview and hides the title outside the main area", () => {
+    renderWithProviders(
+      <FolderPreview folder={{ id: "folder-1", name: "Philosophy" }} notebooks={[]} compact />,
+    );
+    const preview = screen.getByLabelText("Moving Philosophy");
+    expect(preview.className).toContain("library-drag-preview--compact");
+    expect(preview.textContent).not.toContain("Philosophy");
   });
 });

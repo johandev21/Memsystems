@@ -5,6 +5,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { canMoveFolder, descendantNotebooks } from "../model/folder-hierarchy";
@@ -27,6 +28,12 @@ export function useLibraryInteractions({
     kind: "folder" | "notebook";
     id: string;
   } | null>(null);
+  // Tracks the current drop target so the drag preview can shrink outside
+  // the main grid/folder area. `hasOverEvent` distinguishes "drag just
+  // started in the main area" (full-size preview) from "pointer over no
+  // droppable", e.g. the chevron gaps between breadcrumb crumbs (compact).
+  const [overId, setOverId] = useState<string | null>(null);
+  const [hasOverEvent, setHasOverEvent] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     // Moves are drag-and-drop only, so keyboard users need to be able to pick
@@ -49,6 +56,10 @@ export function useLibraryInteractions({
 
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current;
+    // Drags start in the main area, so the preview begins full-size and only
+    // shrinks once the pointer leaves for the first time.
+    setHasOverEvent(false);
+    setOverId(null);
     setDraggedItem(
       data?.kind === "folder" || data?.kind === "notebook"
         ? { kind: data.kind, id: String(data.folderId ?? data.notebookId) }
@@ -56,8 +67,15 @@ export function useLibraryInteractions({
     );
   }
 
+  function handleDragOver(event: DragOverEvent) {
+    setHasOverEvent(true);
+    setOverId(event.over ? String(event.over.id) : null);
+  }
+
   function handleDragEnd({ active, over }: DragEndEvent) {
     setDraggedItem(null);
+    setHasOverEvent(false);
+    setOverId(null);
     if (!over || !("folderId" in (over.data.current ?? {}))) return;
     const folderId = over.data.current?.folderId;
     if (folderId !== null && typeof folderId !== "string") return;
@@ -74,13 +92,27 @@ export function useLibraryInteractions({
     }
   }
 
+  // Compact everywhere outside the main grid/folder-card area
+  // (`library:*`, `folder:*` droppables): breadcrumbs, chevron gaps, and any
+  // other non-droppable space. Staying compact across gaps avoids a
+  // resize flicker on every crumb boundary.
+  const isOverMainArea =
+    overId?.startsWith("library:") === true || overId?.startsWith("folder:") === true;
+
   return {
     sensors,
     draggedNotebook,
     draggedFolder,
     draggedFolderNotebooks,
+    overId,
+    isPreviewCompact: hasOverEvent && !isOverMainArea,
     handleDragStart,
+    handleDragOver,
     handleDragEnd,
-    cancelDrag: () => setDraggedItem(null),
+    cancelDrag: () => {
+      setDraggedItem(null);
+      setHasOverEvent(false);
+      setOverId(null);
+    },
   };
 }

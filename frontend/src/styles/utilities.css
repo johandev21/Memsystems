@@ -235,6 +235,16 @@
   box-shadow: var(--shadow-lg);
 }
 
+@utility library-drag-preview--compact {
+  /* Compact drag preview outside the main area: same artwork design,
+     scaled to ~0.45 so the crumbs underneath stay visible. The title text
+     is hidden separately via the `compact` prop. Scale around the center
+     (not top-left) so the shrunken preview stays under/near the cursor
+     instead of collapsing away from it. */
+  transform: scale(0.45);
+  transform-origin: center;
+}
+
 @utility library-artwork {
   position: relative;
   display: block;

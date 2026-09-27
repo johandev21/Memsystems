@@ -66,8 +66,13 @@ export type NotebookCardProps = {
 };
 export type NotebookPreviewProps = {
   notebook: { title: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
+  compact?: boolean;
 };
-export type FolderPreviewProps = { folder: FolderRef; notebooks: NotebookCover[] };
+export type FolderPreviewProps = {
+  folder: FolderRef;
+  notebooks: NotebookCover[];
+  compact?: boolean;
+};
 
 export function FolderCard({
   folder,
@@ -178,6 +183,7 @@ function FolderArtwork({
   onDismissEdit,
   onEditingChange,
   editRequest,
+  hideTitle,
 }: {
   title: string;
   notebooks: NotebookCover[];
@@ -186,10 +192,16 @@ function FolderArtwork({
   onDismissEdit?: (name: string) => void;
   onEditingChange?: (editing: boolean) => void;
   editRequest: number;
+  hideTitle?: boolean;
 }) {
   const covers = getFolderCovers(notebooks);
-  const titleFontSize = useFittedFolderTitle(title);
-  const titleSlot = (
+  const titleFontSize = useFittedFolderTitle(hideTitle ? "" : title);
+  // Compact drag preview over breadcrumbs: keep the positioned title slot
+  // (so the artwork shape is unchanged) but render it empty — the name
+  // would be unreadable at ~0.45 scale and the user already knows the item.
+  const titleSlot = hideTitle ? (
+    <span aria-hidden="true" />
+  ) : (
     <InlineEditableText
       value={title}
       onSave={onRename}
@@ -225,9 +237,13 @@ function FolderArtwork({
 function NotebookArtwork({
   notebook,
   titleSlot,
-}: NotebookPreviewProps & { titleSlot?: ReactNode }) {
+  hideTitle,
+}: NotebookPreviewProps & { titleSlot?: ReactNode; hideTitle?: boolean }) {
   // Not aria-hidden: the title slot contains the inline-edit control, and an
   // aria-hidden element must not contain focusable content.
+  // Compact drag preview outside the main area hides the whole label
+  // (icon pill + name): unreadable at ~0.45 scale, and the cover art alone
+  // identifies the notebook.
   return (
     <span className="library-artwork">
       {notebook.coverUrl ? (
@@ -236,9 +252,14 @@ function NotebookArtwork({
           coverUrl={notebook.coverUrl}
           coverVariants={notebook.coverVariants}
           titleSlot={titleSlot}
+          hideLabel={hideTitle}
         />
       ) : (
-        <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} />
+        <EmptyNotebookArtwork
+          title={notebook.title}
+          titleSlot={titleSlot}
+          hideLabel={hideTitle}
+        />
       )}
     </span>
   );
@@ -354,27 +375,31 @@ export function NotebookCard({
   );
 }
 
-export function NotebookPreview({ notebook }: NotebookPreviewProps) {
+export function NotebookPreview({ notebook, compact }: NotebookPreviewProps) {
   const { t } = useTranslation("notebooks");
   return (
     <div
-      className="library-notebook-preview"
+      className={cn("library-notebook-preview", compact && "library-drag-preview--compact")}
       aria-label={t("library.moving", { name: notebook.title })}
     >
-      <NotebookArtwork notebook={notebook} />
+      <NotebookArtwork notebook={notebook} hideTitle={compact} />
     </div>
   );
 }
 
-export function FolderPreview({ folder, notebooks }: FolderPreviewProps) {
+export function FolderPreview({ folder, notebooks, compact }: FolderPreviewProps) {
   const { t } = useTranslation("notebooks");
   return (
-    <div className="library-folder-card" aria-label={t("library.moving", { name: folder.name })}>
+    <div
+      className={cn("library-folder-card", compact && "library-drag-preview--compact")}
+      aria-label={t("library.moving", { name: folder.name })}
+    >
       <FolderArtwork
         title={folder.name}
         notebooks={notebooks}
         onRename={() => {}}
         editRequest={0}
+        hideTitle={compact}
       />
     </div>
   );
