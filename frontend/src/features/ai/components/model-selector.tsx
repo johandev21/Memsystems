@@ -15,7 +15,6 @@ import { CheckIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "../types/model.types";
-import { isStudyMaterialCapable } from "../utils/model-capabilities";
 import { getProviderName } from "../utils/model-providers";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;
@@ -144,6 +143,7 @@ export interface ModelSelectorFilterProps {
 }
 
 /**
+ * @deprecated Model selector now automatically filters for structured output when needed.
  * Quiet capability filter for the picker dialog. Sits under the search input
  * and composes with search; the caller owns the state.
  */
@@ -179,7 +179,7 @@ export const ModelSelectorNote = ({ className, ...props }: ModelSelectorNoteProp
 export interface ModelSelectorModelsProps {
   groups: Record<string, ModelOption[]>;
   selectedModel?: string;
-  capabilitiesVerified: boolean;
+  capabilitiesVerified?: boolean;
   onSelect: (modelId: string) => void;
   emptyLabel?: string;
   className?: string;
@@ -187,13 +187,12 @@ export interface ModelSelectorModelsProps {
 
 /**
  * Grouped model rows shared by every picker: composer, generation gate, and
- * practice gate. Non-capable rows stay selectable; they only carry a quiet
- * note so Chat remains unrestricted.
+ * practice gate. Non-capable rows stay selectable; chat remains unrestricted.
  */
 export const ModelSelectorModels = ({
   groups,
   selectedModel,
-  capabilitiesVerified,
+  capabilitiesVerified: _capabilitiesVerified,
   onSelect,
   emptyLabel,
   className,
@@ -216,9 +215,6 @@ export const ModelSelectorModels = ({
               >
                 <ModelSelectorLogo provider={provider} />
                 <ModelSelectorName>{model.displayName}</ModelSelectorName>
-                {!isStudyMaterialCapable(model, capabilitiesVerified) && (
-                  <ModelSelectorNote>{t("modelSelector.noStructuredOutput")}</ModelSelectorNote>
-                )}
                 {selected ? (
                   <CheckIcon className="ml-auto size-4" />
                 ) : (

@@ -15,12 +15,10 @@ export interface UseComposerModelsResult {
   activeModel: ModelOption | undefined;
   activeProvider: string;
   groups: Record<string, ModelOption[]>;
-  supportsImages: boolean;
 }
 
 export interface ComposerModelFilters {
   capabilitiesVerified?: boolean;
-  structuredOnly?: boolean;
 }
 
 export function useComposerModels(
@@ -32,15 +30,12 @@ export function useComposerModels(
   const safeModels = useMemo(() => normalizeModels(models), [models]);
   const groups = useModelList(safeModels, {
     search,
-    structuredOnly: filters.structuredOnly === true,
     capabilitiesVerified: filters.capabilitiesVerified === true,
   });
   const activeModel = safeModels.find((model) => model.id === selectedModel);
-  const supportsImages = activeModel?.capabilities?.imageInput === true;
   return {
     activeModel,
     activeProvider: selectedModel.split("/")[0] || "openai",
     groups,
-    supportsImages,
   };
 }

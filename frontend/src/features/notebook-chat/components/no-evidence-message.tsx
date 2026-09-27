@@ -17,9 +17,7 @@ export function NoEvidencePanel({ metadata }: { metadata: NoEvidenceMetadata }) 
       className="rounded-xl border border-warning/30 bg-warning/10 p-3"
     >
       <div className="flex items-start gap-2.5">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
-          <SearchX className="size-4" />
-        </div>
+        <SearchX aria-hidden="true" className="size-5 shrink-0 text-warning" />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">{t("noEvidence.title")}</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">

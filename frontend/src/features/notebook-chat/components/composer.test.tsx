@@ -81,28 +81,11 @@ describe("Composer", () => {
     render(<ComposerHarness models={mixedModels} onModelChange={onModelChange} />);
 
     await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
-    expect(await screen.findByText("No structured output")).toBeTruthy();
+    expect(await screen.findByRole("option", { name: /Claude Opus 5.5/ })).toBeTruthy();
+    expect(screen.queryByText("No structured output")).toBeNull();
 
     await user.click(screen.getByRole("option", { name: /Claude Opus 5.5/ }));
     expect(onModelChange).toHaveBeenCalledWith("anthropic/claude-opus-5.5");
-  });
-
-  it("hides models without structured output when the filter is on", async () => {
-    const user = userEvent.setup();
-    render(<ComposerHarness models={mixedModels} />);
-
-    await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
-    expect(await screen.findByRole("option", { name: /Claude Opus 5.5/ })).toBeTruthy();
-
-    await user.click(screen.getByRole("checkbox", { name: "Structured output" }));
-
-    expect(screen.queryByRole("option", { name: /Claude Opus 5.5/ })).toBeNull();
-    expect(screen.getByRole("option", { name: /GPT-5.6 Luna/ })).toBeTruthy();
-  });
-
-  it("fails closed for image attachments when capability metadata is absent", () => {
-    render(<ComposerHarness />);
-    expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
   });
 
   it("moves from an empty disabled state to a ready submit state", async () => {
