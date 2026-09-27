@@ -1,11 +1,17 @@
 {
   "descriptions": {
     "default": "Neutro — lo que ves hoy",
-    "dune": "Arena cálida, suave y acogedora",
-    "ember": "Terracota bruñida, con carácter",
-    "grove": "Musgo salvia, cálido y terroso",
-    "plum": "Violeta empolvado, para concentrarse de noche",
-    "tide": "Pizarra fría, tranquilo y enfocado"
+    "kanagawa": "Aqua olas y tinta sumi, equilibrado y sereno",
+    "gruvbox": "Estilo retro cálido, crema y terracota tostada",
+    "tokyo-night": "Noche neón índigo, cian eléctrico y medianoche",
+    "catppuccin": "Pastel reconfortante, latte cálido y malva suave",
+    "nord": "Hielo ártico, noche polar y azul glaciar",
+    "everforest": "Musgo natural reconfortante, pino y tierra cálida",
+    "rose-pine": "Atardecer aterciopelado, rosa empolvado y pino verde",
+    "matte-black": "Monocromo sobrio y sigiloso, pizarra arquitectónica",
+    "matrix": "Lluvia digital ciber, verde fósforo y profundidad de terminal CRT",
+    "dracula": "Atardecer gótico vampírico, morado icónico, rosa neón y cian",
+    "monokai": "Carbón cálido oscuro, lima intenso, magenta eléctrico y oro ámbar"
   },
   "grid": {
     "ariaLabel": "Tema",

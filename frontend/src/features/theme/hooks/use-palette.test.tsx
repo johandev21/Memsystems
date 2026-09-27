@@ -29,12 +29,12 @@ describe("usePalette and PaletteProvider", () => {
   });
 
   it("initializes from localStorage if valid theme name is present", () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, "grove");
+    window.localStorage.setItem(THEME_STORAGE_KEY, "kanagawa");
 
     const { result } = renderHook(() => usePalette(), { wrapper });
 
-    expect(result.current.theme).toBe("grove");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("grove");
+    expect(result.current.theme).toBe("kanagawa");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("kanagawa");
   });
 
   it("falls back to default if localStorage contains an invalid theme name", () => {
@@ -50,20 +50,20 @@ describe("usePalette and PaletteProvider", () => {
     const { result } = renderHook(() => usePalette(), { wrapper });
 
     act(() => {
-      result.current.setTheme("tide");
+      result.current.setTheme("tokyo-night");
     });
 
-    expect(result.current.theme).toBe("tide");
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("tide");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("tide");
+    expect(result.current.theme).toBe("tokyo-night");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("tokyo-night");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("tokyo-night");
 
     act(() => {
-      result.current.setTheme("plum");
+      result.current.setTheme("nord");
     });
 
-    expect(result.current.theme).toBe("plum");
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("plum");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("plum");
+    expect(result.current.theme).toBe("nord");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("nord");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("nord");
 
     act(() => {
       result.current.setTheme("default");

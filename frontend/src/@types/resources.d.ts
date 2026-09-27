@@ -1485,12 +1485,18 @@ export default interface Resources {
   },
   "theme": {
     "descriptions": {
+      "catppuccin": "Cozy pastel, warm latte and soft mauve",
       "default": "Neutral — what you see today",
-      "dune": "Warm sand, soft and inviting",
-      "ember": "Burnished terracotta, confident",
-      "grove": "Sage moss, warm and grounded",
-      "plum": "Dusted violet, focused evening",
-      "tide": "Cool slate, calm and focused"
+      "dracula": "Gothic vampire dusk, iconic purple, neon pink and cyan",
+      "everforest": "Comforting natural moss, pine and warm earth",
+      "gruvbox": "Warm retro groove, rich cream and burnt terracotta",
+      "kanagawa": "Wave aqua and sumi ink, balanced and serene",
+      "matrix": "Cyber digital rain, phosphor green and CRT terminal depth",
+      "matte-black": "Disciplined stealth monochrome, architectural slate",
+      "monokai": "Warm dark charcoal, vivid lime, electric magenta and amber gold",
+      "nord": "Arctic frost, polar night and glacial blue",
+      "rose-pine": "Velvet dusk, dusty rose and pine teal",
+      "tokyo-night": "Neon indigo dusk, electric cyan and midnight"
     },
     "grid": {
       "ariaLabel": "Theme",
