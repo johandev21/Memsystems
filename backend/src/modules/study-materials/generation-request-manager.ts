@@ -3,6 +3,8 @@ import { and, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { generationRequests } from '../../database/schema';
+import type { GroundingMode } from '../../database/schema';
+import { DEFAULT_GROUNDING_MODE } from '../notebooks/grounding-mode';
 import { NotFoundError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { StudyMaterialKind } from './shapes';
@@ -20,6 +22,7 @@ export interface StartGenerationInput {
   folderId?: string | null;
   model?: string;
   language?: string;
+  groundingMode?: GroundingMode;
   questionCount?: number;
   difficulty?: 'easy' | 'medium' | 'hard' | 'auto';
   cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed' | 'auto';
@@ -68,6 +71,7 @@ export class GenerationRequestManager {
         brief: input.brief,
         sourceIds: input.sourceIds,
         targetFolderId: input.folderId ?? null,
+        groundingMode: input.groundingMode ?? DEFAULT_GROUNDING_MODE,
         status: 'streaming',
       })
       .returning();

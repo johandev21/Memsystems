@@ -5,12 +5,15 @@ import * as appSchema from '../../database/schema';
 import { retrievalTraces } from '../../database/schema';
 import { DRIZZLE } from '../database/database.module';
 import type { RetrievalTrace, RetrievalTraceKind } from './retrieval-trace';
+import type { GroundingMode } from '../../database/schema';
+import { DEFAULT_GROUNDING_MODE } from '../notebooks/grounding-mode';
 
 export interface RecordRetrievalTraceInput {
   notebookId: string;
   kind: RetrievalTraceKind;
   chatMessageId?: string;
   generationRequestId?: string;
+  groundingMode?: GroundingMode;
   trace: RetrievalTrace;
 }
 
@@ -35,6 +38,7 @@ export class RetrievalTraceService {
         kind: input.kind,
         chatMessageId: input.chatMessageId ?? null,
         generationRequestId: input.generationRequestId ?? null,
+        groundingMode: input.groundingMode ?? DEFAULT_GROUNDING_MODE,
         query: input.trace.query,
         trace: input.trace,
         latencyMs: input.trace.latencyMs,

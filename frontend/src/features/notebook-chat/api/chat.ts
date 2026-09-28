@@ -48,11 +48,12 @@ export interface ChatRequest {
   message: ChatRequestMessage | null;
   messages: ChatRequestMessage[];
   language?: string;
+  groundingMode?: 'strict' | 'moderate' | 'free';
 }
 
 export interface ChatMessageDTO {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   reasoning?: string | null;
   parts?: Array<
@@ -62,6 +63,7 @@ export interface ChatMessageDTO {
     | { type: string; [key: string]: unknown }
   > | null;
   metadata?: Record<string, unknown> | null;
+  groundingMode?: 'strict' | 'moderate' | 'free';
   citedSourceIds: CitedSourceEntry[] | null;
   citedSources: CitedSourceDTO[];
   createdAt: string;

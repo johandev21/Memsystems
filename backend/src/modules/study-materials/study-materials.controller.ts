@@ -76,6 +76,7 @@ export const generateRequestSchema = z.object({
   sourceIds: z.array(z.string()).default([]),
   folderId: z.string().nullable().optional(),
   model: z.string().optional(),
+  groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
   // 0 means auto: the model chooses the count from the sources and the brief.
   questionCount: z.number().min(0).max(50).optional(),
   difficulty: z.enum(['easy', 'medium', 'hard', 'auto']).optional(),

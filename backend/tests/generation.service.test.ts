@@ -214,6 +214,7 @@ describe('GenerationService message keys', () => {
       notebookId: 'notebook-1',
       kind: 'generation',
       generationRequestId: undefined,
+      groundingMode: 'strict',
       trace: expect.objectContaining({ query: 'Cell biology Part 1' }),
     });
   });
@@ -501,6 +502,7 @@ describe('GenerationService retrieval grounding', () => {
       notebookId: 'notebook-1',
       kind: 'generation',
       generationRequestId: 'request-1',
+      groundingMode: 'strict',
       trace: expect.objectContaining({ query: 'Cell biology Part 1' }),
     });
   });

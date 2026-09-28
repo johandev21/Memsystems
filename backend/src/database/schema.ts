@@ -183,6 +183,15 @@ export const retrievalTraceKindEnum = pgEnum('retrieval_trace_kind', [
   'generation',
 ]);
 
+export const groundingModeEnum = pgEnum('grounding_mode', [
+  'strict',
+  'moderate',
+  'free',
+]);
+
+/** The grounding strictness a Notebook, turn, or request answered with. */
+export type GroundingMode = (typeof groundingModeEnum.enumValues)[number];
+
 export const notebookFolders = pgTable(
   'notebook_folders',
   {
@@ -229,6 +238,9 @@ export const notebooks = pgTable(
       x: number;
       y: number;
     } | null>(),
+    groundingMode: groundingModeEnum('grounding_mode')
+      .default('strict')
+      .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -530,6 +542,9 @@ export const generationRequests = pgTable(
       { onDelete: 'set null' },
     ),
     status: generationStatusEnum('status').notNull().default('streaming'),
+    groundingMode: groundingModeEnum('grounding_mode')
+      .default('strict')
+      .notNull(),
     startedAt: timestamp('started_at').defaultNow().notNull(),
     completedAt: timestamp('completed_at'),
   },
@@ -553,6 +568,9 @@ export const notebookChatMessages = pgTable(
     reasoning: text('reasoning'),
     parts: jsonb('parts').$type<Record<string, unknown>[] | null>(),
     metadata: jsonb('metadata').$type<Record<string, unknown> | null>(),
+    groundingMode: groundingModeEnum('grounding_mode')
+      .default('strict')
+      .notNull(),
     citedSourceIds: jsonb('cited_source_ids').$type<
       (
         | string
@@ -596,6 +614,9 @@ export const retrievalTraces = pgTable(
     kind: retrievalTraceKindEnum('kind').notNull(),
     chatMessageId: varchar('chat_message_id'),
     generationRequestId: varchar('generation_request_id'),
+    groundingMode: groundingModeEnum('grounding_mode')
+      .default('strict')
+      .notNull(),
     query: text('query').notNull(),
     trace: jsonb('trace').$type<RetrievalTrace>().notNull(),
     latencyMs: integer('latency_ms').notNull(),

@@ -54,6 +54,7 @@ export interface StartGenerationInput {
   sourceIds: string[];
   folderId?: string | null;
   model?: string;
+  groundingMode?: 'strict' | 'moderate' | 'free';
   /** 0 = auto. */
   questionCount?: number;
   difficulty?: "easy" | "medium" | "hard" | "auto";

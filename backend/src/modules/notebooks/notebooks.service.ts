@@ -4,6 +4,8 @@ import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { notebookFolders, notebooks } from '../../database/schema';
+import type { GroundingMode } from '../../database/schema';
+import { DEFAULT_GROUNDING_MODE, isGroundingMode } from './grounding-mode';
 import {
   BadRequestError,
   NotFoundError,
@@ -43,6 +45,7 @@ export interface CreateNotebookInput {
   description?: string;
   icon?: string;
   folderId?: string | null;
+  groundingMode?: GroundingMode;
 }
 
 export interface UpdateNotebookInput {
@@ -51,6 +54,7 @@ export interface UpdateNotebookInput {
   icon?: string | null;
   folderId?: string | null;
   bannerFocalPoint?: { x: number; y: number } | null;
+  groundingMode?: GroundingMode;
 }
 
 export interface NotebookResponse {
@@ -63,6 +67,7 @@ export interface NotebookResponse {
   bannerUrl: string | null;
   bannerVariants: BannerVariantUrls | null;
   bannerFocalPoint: { x: number; y: number } | null;
+  groundingMode: GroundingMode;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,6 +89,9 @@ function toResponse(nb: typeof notebooks.$inferSelect): NotebookResponse {
     bannerUrl: null,
     bannerVariants: null,
     bannerFocalPoint: nb.bannerFocalPoint ?? null,
+    groundingMode: isGroundingMode(nb.groundingMode)
+      ? nb.groundingMode
+      : DEFAULT_GROUNDING_MODE,
     createdAt: nb.createdAt,
     updatedAt: nb.updatedAt,
   };
@@ -135,6 +143,22 @@ export class NotebooksService {
         messageKey: 'errors.notebooks.notebook.notFound',
       });
     }
+  }
+
+  async getGroundingMode(notebookId: string): Promise<GroundingMode> {
+    const [notebook] = await this.db
+      .select({ groundingMode: notebooks.groundingMode })
+      .from(notebooks)
+      .where(eq(notebooks.id, notebookId))
+      .limit(1);
+    if (!notebook) {
+      throw new NotFoundError('Notebook', {
+        messageKey: 'errors.notebooks.notebook.notFound',
+      });
+    }
+    return isGroundingMode(notebook.groundingMode)
+      ? notebook.groundingMode
+      : DEFAULT_GROUNDING_MODE;
   }
 
   async formatNotebook(nb: typeof notebooks.$inferSelect) {
@@ -216,6 +240,7 @@ export class NotebooksService {
         description: input.description?.trim().slice(0, 500) ?? '',
         icon: input.icon?.trim().slice(0, 50) ?? 'notebook',
         folderId,
+        groundingMode: input.groundingMode ?? DEFAULT_GROUNDING_MODE,
       })
       .returning();
     return toResponse(row);
@@ -242,6 +267,9 @@ export class NotebooksService {
     }
     if (input.bannerFocalPoint !== undefined) {
       updates.bannerFocalPoint = input.bannerFocalPoint;
+    }
+    if (input.groundingMode !== undefined) {
+      updates.groundingMode = input.groundingMode;
     }
     if (Object.keys(updates).length === 0) {
       return this.get(id);

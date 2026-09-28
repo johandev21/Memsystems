@@ -13,6 +13,11 @@ import {
   notebooks,
   sources,
 } from '../../database/schema';
+import type { GroundingMode } from '../../database/schema';
+import {
+  DEFAULT_GROUNDING_MODE,
+  resolveGroundingMode,
+} from '../notebooks/grounding-mode';
 import { AiService } from '../ai/ai.service';
 import { ConnectionService } from '../ai/connection.service';
 import { toClientStreamError } from '../ai/stream-error';
@@ -69,6 +74,7 @@ export interface ChatMessage {
   reasoning?: string | null;
   parts?: Record<string, unknown>[] | null;
   metadata?: Record<string, unknown> | null;
+  groundingMode: GroundingMode;
   citedSourceIds: CitedSourceEntry[] | null;
   citedSources: CitedSourceMeta[];
   createdAt: Date;
@@ -99,6 +105,7 @@ export interface SendInput {
   model: string;
   abortSignal?: AbortSignal;
   language?: string;
+  groundingMode?: GroundingMode;
 }
 
 @Injectable()
@@ -211,6 +218,10 @@ export class ChatService {
         reasoning: r.reasoning,
         parts,
         metadata: r.metadata,
+        groundingMode: resolveGroundingMode(
+          r.groundingMode,
+          r.metadata?.groundingMode,
+        ),
         citedSourceIds: entries,
         citedSources,
         createdAt: r.createdAt,
@@ -240,6 +251,15 @@ export class ChatService {
   async sendMessage(notebookId: string, input: SendInput) {
     await this.notebooksService.assertNotebookOwner(notebookId);
     await this.connectionService.requireConnected(input.model);
+
+    const notebookGroundingMode =
+      typeof this.notebooksService.getGroundingMode === 'function'
+        ? await this.notebooksService.getGroundingMode(notebookId)
+        : DEFAULT_GROUNDING_MODE;
+    const groundingMode = resolveGroundingMode(
+      input.groundingMode,
+      notebookGroundingMode,
+    );
 
     // The client-facing assistant message id is created before retrieval so
     // the trace can be correlated even when the turn fails before the
@@ -289,6 +309,7 @@ export class ChatService {
           content: input.content,
           parts: userParts,
           metadata: { modelId: input.model },
+          groundingMode,
         })
         .returning();
 
@@ -333,6 +354,7 @@ export class ChatService {
         notebookId,
         kind: 'chat',
         chatMessageId: assistantMessageId,
+        groundingMode,
         trace: retrievalOutcome.trace,
       });
     }
@@ -373,6 +395,7 @@ export class ChatService {
         userMessage,
         retrievalOutcome,
         assistantMessageId,
+        groundingMode,
       );
     }
 
@@ -506,6 +529,7 @@ export class ChatService {
 
       const metadata: Record<string, unknown> = {
         modelId,
+        groundingMode,
         createdAt: startTime.toISOString(),
         completedAt: new Date().toISOString(),
         citationCheck: {
@@ -525,6 +549,7 @@ export class ChatService {
           reasoning,
           parts,
           metadata,
+          groundingMode,
           citedSourceIds: citedEntries,
         });
       } catch (dbError) {
@@ -685,6 +710,7 @@ export class ChatService {
     },
     outcome: RetrievalOutcome,
     assistantMessageId: string,
+    groundingMode: GroundingMode,
   ) {
     const degradedRows = await this.db
       .select({
@@ -716,6 +742,7 @@ export class ChatService {
     const now = new Date().toISOString();
     const metadata: Record<string, unknown> = {
       modelId: input.model,
+      groundingMode,
       createdAt: now,
       completedAt: now,
       finishReason: 'no_evidence',
@@ -734,6 +761,7 @@ export class ChatService {
         reasoning: null,
         parts: [{ type: 'text', text }],
         metadata,
+        groundingMode,
         citedSourceIds: [],
       });
     } catch (dbError) {
