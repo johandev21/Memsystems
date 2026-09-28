@@ -10,13 +10,15 @@ vi.mock("../hooks/use-fitted-folder-title", () => ({
   useFittedFolderTitle: () => 29.4,
 }));
 
+let mockLibraryData = { folders: [] as LibraryFolder[], notebooks: [] as any[] };
+
 vi.mock("../api/library", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/library")>();
   return {
     ...actual,
     libraryQueryOptions: {
       queryKey: ["library"],
-      queryFn: async () => ({ folders: [], notebooks: [] }),
+      queryFn: async () => mockLibraryData,
     },
     createLibraryFolder: vi.fn(),
     updateLibraryFolder: vi.fn(),
@@ -34,13 +36,22 @@ vi.mock("@/features/notebooks/api/notebooks", async (importOriginal) => {
   };
 });
 
+const mockNavigate = vi.fn();
+let mockSearch: Record<string, unknown> = {};
+
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
-  return { ...actual, useNavigate: () => vi.fn() };
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useSearch: () => mockSearch,
+  };
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockSearch = {};
+  mockLibraryData = { folders: [], notebooks: [] };
 });
 
 function deferred<T>() {
@@ -103,3 +114,173 @@ describe("NotebookLibrary create flow", () => {
     });
   });
 });
+
+describe("NotebookLibrary URL navigation and history", () => {
+  it("navigates into a folder with replace: false (history push)", async () => {
+    const user = userEvent.setup();
+    mockLibraryData = {
+      folders: [
+        {
+          id: "folder-1",
+          name: "Algorithms",
+          parentId: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      notebooks: [],
+    };
+    const client = createQueryClient();
+
+    render(
+      <QueryClientProvider client={client}>
+        <NotebookLibrary />
+      </QueryClientProvider>,
+    );
+
+    const folderCard = await screen.findByRole("button", {
+      name: "Algorithms, 0 notebooks",
+    });
+
+    await user.dblClick(folderCard);
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/",
+      search: expect.any(Function),
+      replace: false,
+    });
+
+    const searchFn = mockNavigate.mock.calls[0][0].search;
+    expect(searchFn({})).toEqual({ folderId: "folder-1" });
+  });
+
+  it("cleans up invalid folderId in URL search params once data loads", async () => {
+    mockSearch = { folderId: "nonexistent-folder" };
+    mockLibraryData = {
+      folders: [
+        {
+          id: "folder-1",
+          name: "Algorithms",
+          parentId: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      notebooks: [],
+    };
+    const client = createQueryClient();
+
+    render(
+      <QueryClientProvider client={client}>
+        <NotebookLibrary />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/",
+        search: expect.any(Function),
+        replace: true,
+      });
+    });
+
+    const matchingCall = mockNavigate.mock.calls.find(
+      (call) => call[0].replace === true,
+    );
+    expect(matchingCall).toBeDefined();
+    const searchFn = matchingCall![0].search;
+    expect(searchFn({ folderId: "nonexistent-folder" })).toEqual({
+      folderId: undefined,
+    });
+  });
+
+  it("updates sort order in place with replace: true", async () => {
+    const user = userEvent.setup();
+    mockLibraryData = {
+      folders: [
+        {
+          id: "folder-1",
+          name: "Algorithms",
+          parentId: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      notebooks: [],
+    };
+    const client = createQueryClient();
+
+    render(
+      <QueryClientProvider client={client}>
+        <NotebookLibrary />
+      </QueryClientProvider>,
+    );
+
+    const sortTrigger = await screen.findByRole("combobox", {
+      name: "Sort library",
+    });
+    await user.click(sortTrigger);
+
+    const updatedAtOption = await screen.findByRole("option", {
+      name: /Last modified/,
+    });
+    await user.click(updatedAtOption);
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/",
+      search: expect.any(Function),
+      replace: true,
+    });
+
+    const searchFn = mockNavigate.mock.calls[0][0].search;
+    expect(searchFn({})).toEqual({ sort: "updatedAt" });
+  });
+
+  it("navigates to ancestor folders via breadcrumbs with history push", async () => {
+    const user = userEvent.setup();
+    mockSearch = { folderId: "subfolder-1" };
+    mockLibraryData = {
+      folders: [
+        {
+          id: "parent-1",
+          name: "Parent",
+          parentId: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "subfolder-1",
+          name: "Child",
+          parentId: "parent-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      notebooks: [],
+    };
+    const client = createQueryClient();
+
+    render(
+      <QueryClientProvider client={client}>
+        <NotebookLibrary />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "Child" });
+
+    const parentCrumb = screen.getByRole("button", { name: "Parent" });
+    await user.click(parentCrumb);
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/",
+      search: expect.any(Function),
+      replace: false,
+    });
+
+    const searchFn = mockNavigate.mock.calls[0][0].search;
+    expect(searchFn({ folderId: "subfolder-1" })).toEqual({
+      folderId: "parent-1",
+    });
+  });
+});
+

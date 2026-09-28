@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   closestCenter,
   DndContext,
@@ -8,7 +8,7 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { CloudOff, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { useLibraryInteractions } from "../hooks/use-library-interactions";
 import { useLibraryMutations } from "../hooks/use-library-mutations";
 import { toLibraryNotebook } from "../model/adapters";
 import type { LibrarySortKey } from "../model/library-sort";
+import type { LibrarySearch } from "../model/search-params";
 import { clampTitle } from "../model/title";
 import type { Draft, LibraryNotebook } from "../model/types";
 import { CreateMenu } from "./create-menu";
@@ -38,10 +39,12 @@ type LibraryDragData = { kind?: string; folderId?: string | null; notebookId?: s
 export function NotebookLibrary() {
   const { t } = useTranslation("notebooks");
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as LibrarySearch | undefined;
+  const rawFolderId = search?.folderId ?? null;
+  const sortKey: LibrarySortKey = search?.sort ?? "name";
+
   const { data, isLoading, isError, refetch, isRefetching } = useQuery(libraryQueryOptions);
   const mutations = useLibraryMutations();
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<LibrarySortKey>("name");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [pendingDelete, setPendingDelete] = useState<LibraryNotebook | null>(null);
@@ -49,6 +52,24 @@ export function NotebookLibrary() {
 
   const folders = useMemo(() => data?.folders ?? [], [data]);
   const notebooks = useMemo(() => (data?.notebooks ?? []).map(toLibraryNotebook), [data]);
+
+  const activeFolderExists = !rawFolderId || folders.some((folder) => folder.id === rawFolderId);
+  const activeFolderId = activeFolderExists ? rawFolderId : null;
+
+  useEffect(() => {
+    if (isLoading || isError || !data || !rawFolderId) return;
+    const exists = folders.some((folder) => folder.id === rawFolderId);
+    if (!exists) {
+      void navigate({
+        to: "/",
+        search: (prev: Record<string, unknown>) => ({
+          ...prev,
+          folderId: undefined,
+        }),
+        replace: true,
+      });
+    }
+  }, [isLoading, isError, data, rawFolderId, folders, navigate]);
 
   const announcements = useMemo<Announcements>(() => {
     const activeName = (dragData: LibraryDragData | undefined) => {
@@ -172,12 +193,39 @@ export function NotebookLibrary() {
 
   const openFolder = (id: string | null) => {
     setSelectedKey(null);
-    setActiveFolderId(id);
+    void navigate({
+      to: "/",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        folderId: id ?? undefined,
+      }),
+      replace: false,
+    });
+  };
+
+  const handleSortChange = (nextSort: LibrarySortKey) => {
+    void navigate({
+      to: "/",
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        sort: nextSort === "name" ? undefined : nextSort,
+      }),
+      replace: true,
+    });
   };
 
   const removeFolder = (id: string) => {
     const parentId = folders.find((folder) => folder.id === id)?.parentId ?? null;
-    if (activeFolderId === id) setActiveFolderId(parentId);
+    if (activeFolderId === id) {
+      void navigate({
+        to: "/",
+        search: (prev: Record<string, unknown>) => ({
+          ...prev,
+          folderId: parentId ?? undefined,
+        }),
+        replace: true,
+      });
+    }
     void mutations.deleteFolder(id);
   };
 
@@ -227,7 +275,7 @@ export function NotebookLibrary() {
             notebooks={notebooks}
             activeFolderId={activeFolderId}
             sortKey={sortKey}
-            onSortChange={setSortKey}
+            onSortChange={handleSortChange}
             draftId={draft?.id ?? null}
             draftClientId={draft?.clientId ?? null}
             selectedKey={selectedKey ?? draftKey}
