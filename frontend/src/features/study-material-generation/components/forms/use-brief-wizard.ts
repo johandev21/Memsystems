@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { sourcesQueryOptions } from "@/features/sources/api/sources";
+import {
+  canSubmitBrief,
+  useNotebookGroundingMode,
+} from "@/features/notebooks/model/grounding-mode";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 export interface UseBriefWizardOptions
@@ -17,10 +21,12 @@ export function useBriefWizard({
 }: UseBriefWizardOptions) {
   const [step, setStep] = useState<1 | 2>(initialStep);
   const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
+  const groundingMode = useNotebookGroundingMode(notebookId);
 
   const hasSources = value.sourceIds.length > 0;
   const hasInstructions = value.brief.trim().length > 0;
-  const canSubmit = !disabled && (hasSources || hasInstructions);
+  const canSubmit = canSubmitBrief(groundingMode, hasSources, hasInstructions, disabled);
+  const showFreeHint = groundingMode === "free" && !hasSources;
 
   const patchFormData = (patch: Partial<BriefFormData>) => {
     onChange(patch);
@@ -33,6 +39,8 @@ export function useBriefWizard({
     hasSources,
     hasInstructions,
     canSubmit,
+    groundingMode,
+    showFreeHint,
     patchFormData,
   };
 }

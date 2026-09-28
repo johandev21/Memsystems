@@ -5,6 +5,7 @@ import { FolderPicker } from "@/features/notebooks/components/studio/folder-pick
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { GenerationSourcePopover, type GenerationSource } from "./generation-source-popover";
+import { useNotebookGroundingMode } from "@/features/notebooks/model/grounding-mode";
 import { cn } from "@/shared/utils/cn";
 import type { BriefFormData } from "./types";
 
@@ -42,6 +43,8 @@ export function BriefKnowledgeStep({
   onSubmit,
 }: BriefKnowledgeStepProps) {
   const { t } = useTranslation("generation");
+  const groundingMode = useNotebookGroundingMode(notebookId);
+  const showFreeHint = groundingMode === "free" && !hasSources;
   const resolvedPlaceholder = placeholder ?? t("knowledge.defaultPlaceholder");
   const resolvedEmptySourcesMessage =
     emptySourcesMessage ?? t("knowledge.defaultEmptySources");
@@ -52,7 +55,9 @@ export function BriefKnowledgeStep({
         <div className="flex flex-col gap-1.5">
           <Label className="text-sm font-medium text-text-primary">
             {t("fields.knowledgeSources")}
-            {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
+            {!hasInstructions && !showFreeHint && (
+              <span className="text-destructive ml-0.5">*</span>
+            )}
           </Label>
           <GenerationSourcePopover
             sources={sources}
@@ -65,7 +70,9 @@ export function BriefKnowledgeStep({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={textareaId} className="text-sm font-medium text-text-primary">
             {t("fields.customInstructions")}
-            {!hasSources && <span className="text-destructive ml-0.5">*</span>}
+            {!hasSources && !showFreeHint && (
+              <span className="text-destructive ml-0.5">*</span>
+            )}
           </Label>
           <Textarea
             id={textareaId}
@@ -113,6 +120,9 @@ export function BriefKnowledgeStep({
           {submitLabel}
         </Button>
       </div>
+      {showFreeHint && (
+        <p className="text-xs text-text-secondary">{t("fields.freeHint")}</p>
+      )}
     </div>
   );
 }

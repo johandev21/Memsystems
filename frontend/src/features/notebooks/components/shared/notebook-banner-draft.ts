@@ -1,6 +1,10 @@
 import type { useQueryClient } from "@tanstack/react-query";
 import { updateNotebook, uploadNotebookBanner, deleteNotebookBanner } from "../../api/notebooks";
 import type { BannerUploadPayload } from "../../utils/banner-variants";
+import {
+  resolveGroundingMode,
+  type GroundingMode,
+} from "../../model/grounding-mode";
 
 export const DEFAULT_FOCAL_POINT = { x: 0.5, y: 0.5 };
 
@@ -8,6 +12,7 @@ export interface BannerDraftState {
   title: string;
   description: string;
   icon: string;
+  groundingMode: GroundingMode;
   focalPoint: { x: number; y: number };
   previewUrl: string | null;
   bannerRemoved: boolean;
@@ -19,6 +24,7 @@ export type BannerDraftAction =
   | { type: "SET_TITLE"; title: string }
   | { type: "SET_DESCRIPTION"; description: string }
   | { type: "SET_ICON"; icon: string }
+  | { type: "SET_GROUNDING_MODE"; groundingMode: GroundingMode }
   | { type: "SET_FOCAL_POINT"; focalPoint: { x: number; y: number } }
   | { type: "SET_PREVIEW"; previewUrl: string }
   | { type: "REMOVE_BANNER" }
@@ -37,6 +43,8 @@ export function bannerDraftReducer(
       return { ...state, description: action.description };
     case "SET_ICON":
       return { ...state, icon: action.icon };
+    case "SET_GROUNDING_MODE":
+      return { ...state, groundingMode: action.groundingMode };
     case "SET_FOCAL_POINT":
       return { ...state, focalPoint: action.focalPoint };
     case "SET_PREVIEW":
@@ -61,6 +69,7 @@ export async function saveNotebookBannerChanges({
   title,
   description,
   icon,
+  groundingMode,
   bannerUrl,
   bannerFocalPoint,
   draft,
@@ -71,6 +80,7 @@ export async function saveNotebookBannerChanges({
   title: string;
   description?: string | null;
   icon?: string;
+  groundingMode?: GroundingMode | null;
   bannerUrl?: string | null;
   bannerFocalPoint?: { x: number; y: number } | null;
   draft: BannerDraftState;
@@ -82,6 +92,7 @@ export async function saveNotebookBannerChanges({
     draft.title !== title ||
     draft.description !== (description ?? "") ||
     draft.icon !== (icon ?? "notebook") ||
+    draft.groundingMode !== resolveGroundingMode(undefined, groundingMode) ||
     draft.focalPoint.x !== (bannerFocalPoint?.x ?? 0.5) ||
     draft.focalPoint.y !== (bannerFocalPoint?.y ?? 0.5);
 
@@ -91,6 +102,7 @@ export async function saveNotebookBannerChanges({
         title: draft.title,
         description: draft.description,
         icon: draft.icon,
+        groundingMode: draft.groundingMode,
         bannerFocalPoint: draft.focalPoint,
       }),
     );
@@ -100,6 +112,7 @@ export async function saveNotebookBannerChanges({
         title: draft.title,
         description: draft.description,
         icon: draft.icon,
+        groundingMode: draft.groundingMode,
       }),
     );
   }

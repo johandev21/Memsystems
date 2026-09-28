@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteNotebook, notebookQueryOptions } from "../../api/notebooks";
+import { deleteNotebook, notebookQueryOptions, updateNotebook } from "../../api/notebooks";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -24,6 +24,8 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { GroundingModePicker } from "../shared/grounding-mode-picker";
+import { resolveGroundingMode, type GroundingMode } from "../../model/grounding-mode";
 
 export const EDIT_NOTEBOOK_EVENT = "edit-notebook";
 export const CLEAR_NOTEBOOK_CHAT_EVENT = "clear-notebook-chat";
@@ -38,8 +40,28 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
   const [open, setOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingMode, setIsSavingMode] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  const groundingMode = resolveGroundingMode(undefined, notebook?.groundingMode);
+
+  const handleGroundingModeChange = async (mode: GroundingMode) => {
+    if (mode === groundingMode || isSavingMode) return;
+    setIsSavingMode(true);
+    try {
+      await updateNotebook(notebookId, { groundingMode: mode });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["notebooks", notebookId] }),
+        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
+      ]);
+      toast.success(t("settings.groundingModeUpdated"));
+    } catch {
+      toast.error(t("settings.groundingModeFailed"));
+    } finally {
+      setIsSavingMode(false);
+    }
+  };
 
   const dispatchNotebookAction = (name: string) => {
     window.dispatchEvent(new CustomEvent(name, { detail: { notebookId } }));
@@ -90,6 +112,16 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
             </PopoverDescription>
           </PopoverHeader>
           <div className="flex flex-col gap-1">
+            <div className="px-2 py-1.5">
+              <p className="mb-1.5 text-xs font-medium text-text-secondary">
+                {t("groundingMode.label")}
+              </p>
+              <GroundingModePicker
+                value={groundingMode}
+                onChange={handleGroundingModeChange}
+                disabled={isSavingMode}
+              />
+            </div>
             <Button
               variant="ghost"
               className="justify-start hover:!bg-popover-hover focus-visible:!bg-popover-hover"

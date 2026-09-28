@@ -38,6 +38,17 @@
     "newFolderPlaceholder": "Nombre de la nueva carpeta...",
     "notebookRoot": "Raíz del cuaderno"
   },
+  "groundingMode": {
+    "descriptions": {
+      "free": "Responde libremente, usando las fuentes solo cuando son relevantes",
+      "moderate": "Fuentes primero, luego conocimiento general etiquetado",
+      "strict": "Responde solo desde las fuentes"
+    },
+    "free": "Libre",
+    "label": "Modo de fundamentación",
+    "moderate": "Moderado",
+    "strict": "Estricto"
+  },
   "library": {
     "breadcrumbAria": "Ruta de navegación",
     "create": {
@@ -122,6 +133,8 @@
     "deleting": "Eliminando…",
     "description": "Edita o gestiona este cuaderno.",
     "edit": "Editar cuaderno",
+    "groundingModeFailed": "No se pudo actualizar el modo de fundamentación",
+    "groundingModeUpdated": "Modo de fundamentación actualizado",
     "thisNotebook": "este cuaderno",
     "title": "Cuaderno"
   },
