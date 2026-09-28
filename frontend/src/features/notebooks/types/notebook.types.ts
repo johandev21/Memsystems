@@ -5,6 +5,10 @@ export interface NotebookBannerVariants {
   w1920: string | null;
 }
 
+export type GroundingMode = 'strict' | 'moderate' | 'free';
+
+export const DEFAULT_GROUNDING_MODE: GroundingMode = 'strict';
+
 export interface Notebook {
   id: string;
   title: string;
@@ -15,6 +19,7 @@ export interface Notebook {
   bannerUrl: string | null;
   bannerVariants: NotebookBannerVariants | null;
   bannerFocalPoint: { x: number; y: number } | null;
+  groundingMode?: GroundingMode;
   createdAt: string;
   updatedAt: string;
 }

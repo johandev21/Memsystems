@@ -7,6 +7,10 @@ import { ConnectionService } from '../ai/connection.service';
 import { RetrievalTraceService } from '../ai/retrieval-trace.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {
+  DEFAULT_GROUNDING_MODE,
+  resolveGroundingMode,
+} from '../notebooks/grounding-mode';
+import {
   GenerationRequestManager,
   StartGenerationInput,
 } from './generation-request-manager';
@@ -45,6 +49,14 @@ export class GenerationService {
     externalSignal?: AbortSignal,
   ) {
     await this.notebooksService.assertNotebookOwner(notebookId);
+    const notebookGroundingMode =
+      typeof this.notebooksService.getGroundingMode === 'function'
+        ? await this.notebooksService.getGroundingMode(notebookId)
+        : DEFAULT_GROUNDING_MODE;
+    const groundingMode = resolveGroundingMode(
+      input.groundingMode,
+      notebookGroundingMode,
+    );
 
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
     await this.connectionService.requireConnected(modelId);
@@ -69,6 +81,7 @@ export class GenerationService {
           notebookId,
           kind: 'generation',
           generationRequestId,
+          groundingMode,
           trace,
         });
       }
@@ -152,6 +165,7 @@ export class GenerationService {
     const requestId = await this.requestManager.create(notebookId, {
       ...input,
       model: modelId,
+      groundingMode,
     });
 
     await recordTraces(requestId);
@@ -171,6 +185,7 @@ export class GenerationService {
       {
         ...input,
         model: modelId,
+        groundingMode,
       },
       { sources: grounding.sources, evidence: grounding.evidence },
       requestId,

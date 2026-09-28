@@ -43,6 +43,7 @@ export interface StartGenerationInput {
   sourceIds: string[];
   folderId?: string | null;
   model?: string;
+  groundingMode?: 'strict' | 'moderate' | 'free';
   questionCount?: number;
   difficulty?: "easy" | "medium" | "hard";
   cardStyle?: "qa" | "definition" | "cloze" | "mixed";

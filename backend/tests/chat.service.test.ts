@@ -232,6 +232,7 @@ describe('ChatService streaming lifecycle', () => {
       notebookId: 'notebook-1',
       kind: 'chat',
       chatMessageId: responseOptions.generateMessageId(),
+      groundingMode: 'strict',
       trace: expect.objectContaining({ query: 'Explain Plato' }),
     });
   });
