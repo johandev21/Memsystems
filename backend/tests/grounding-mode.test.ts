@@ -357,20 +357,6 @@ describe('Generation grounding mode override', () => {
       traces: [],
     }));
     const recordTrace = vi.fn(async () => undefined);
-    const provider = {
-      listModels: () => [
-        {
-          id: 'openai/gpt-5.6-sol',
-          displayName: 'GPT',
-          capabilities: { structuredOutput: true },
-        },
-      ],
-      createModel: vi.fn(() => ({})),
-    };
-    const aiService = {
-      getProviderForModel: vi.fn(async () => provider),
-      requireStructuredOutput: vi.fn(),
-    };
     const service = new GenerationService(
       notebooksServiceMock as never,
       connectionService as never,
@@ -378,7 +364,6 @@ describe('Generation grounding mode override', () => {
       streamHandler as never,
       { ground } as never,
       { record: recordTrace } as never,
-      aiService as never,
     );
     return { service, requestManager, recordTrace, ground };
   }
