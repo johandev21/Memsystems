@@ -1,4 +1,5 @@
 import { StudyMaterialKind } from './shapes';
+import { sanitizeGeneralKnowledgeSupplement } from './generation-supplement';
 import { resolveSlideDeckPreservingPreviews } from './slides-design-resolver';
 import type { SlideDeck } from './slides-design.types';
 
@@ -680,24 +681,51 @@ export function normalizeContent(
     return content;
   }
 
+  // The per-kind normalizers rebuild their objects field by field; carry a
+  // moderate-mode supplement across so it survives normalization (and the
+  // quiz read paths that re-normalize stored content). Sanitized here so the
+  // JSON fallback path, which has no schema cap, cannot break validation.
+  const supplement = sanitizeGeneralKnowledgeSupplement(content);
+
+  let normalized: unknown;
   switch (kind) {
     case 'simple_flashcard':
-      return normalizeFlashcardContent(content);
+      normalized = normalizeFlashcardContent(content);
+      break;
     case 'quiz':
-      return normalizeQuizContent(content);
+      normalized = normalizeQuizContent(content);
+      break;
     case 'roadmap':
-      return normalizeRoadmapContent(content);
+      normalized = normalizeRoadmapContent(content);
+      break;
     case 'mind_map':
-      return normalizeMindMapContent(content);
+      normalized = normalizeMindMapContent(content);
+      break;
     case 'slides':
-      return normalizeSlidesContent(content);
+      normalized = normalizeSlidesContent(content);
+      break;
     case 'practice_problems':
-      return normalizePracticeProblemsContent(content);
+      normalized = normalizePracticeProblemsContent(content);
+      break;
     case 'case_study':
-      return normalizeCaseStudyContent(content);
+      normalized = normalizeCaseStudyContent(content);
+      break;
     default:
-      return content;
+      normalized = content;
+      break;
   }
+
+  if (
+    supplement !== undefined &&
+    normalized !== null &&
+    typeof normalized === 'object'
+  ) {
+    return {
+      ...(normalized as Record<string, unknown>),
+      generalKnowledgeSupplement: supplement,
+    };
+  }
+  return normalized;
 }
 
 export function extractJson(text: string): string {

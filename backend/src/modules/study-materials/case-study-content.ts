@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GenerationCitationsSchema } from './generation-citations';
+import { GeneralKnowledgeSupplementSchema } from './generation-supplement';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const CaseStudyOptions = z.object({
@@ -58,6 +59,7 @@ export const CaseStudyContent = z.object({
   analyses: z.array(CaseStudyAnalysis).max(10).default([]),
   conceptsFocus: z.string().max(2000).default(''),
   sourceIds: z.array(z.string().min(1).max(100)).max(100).default([]),
+  generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
 

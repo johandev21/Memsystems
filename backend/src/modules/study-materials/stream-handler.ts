@@ -47,6 +47,13 @@ import {
 } from './study-guide-content';
 import { prepareGeneratedPracticeProblems } from './practice-problems-content';
 import { prepareGeneratedCaseStudy } from './case-study-content';
+import {
+  GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD,
+  GENERAL_KNOWLEDGE_SUPPLEMENT_LABEL,
+  freeUngroundedDirective,
+  moderateSupplementDirective,
+  stripGeneralKnowledgeSupplement,
+} from './generation-supplement';
 
 export interface StreamResult {
   materialId: string;
@@ -79,7 +86,8 @@ export class StreamHandler {
     const systemPrompt =
       promptTemplate.instructions +
       languageDirective(input.language) +
-      citationDirective(hasEvidence);
+      citationDirective(hasEvidence) +
+      groundingDirective(input.groundingMode, hasEvidence);
     const formatted = formatGroundedSourceText(grounding, {
       // Only the kinds whose content references sourceIds need the ID line in
       // the prompt; the rest would spend budget on an unused identifier.
@@ -205,7 +213,7 @@ export class StreamHandler {
             const fallbackSystemPrompt =
               `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested structure. ` +
               `Use strict JSON: double quotes around all keys and strings (never single quotes), no trailing commas, no comments, ` +
-              `no explanations, no markdown formatting, no backticks.\nSchema hint for "${input.kind}": ${fallbackSchemaHint(input.kind)}`;
+              `no explanations, no markdown formatting, no backticks.\nSchema hint for "${input.kind}": ${fallbackSchemaHint(input.kind, input.groundingMode)}`;
 
             const fallbackResult = streamText({
               model,
@@ -356,6 +364,12 @@ export class StreamHandler {
    * citations the model actually emitted. Extraction runs against the final
    * content and only accepts evidence keys retrieved for this Generation, so
    * an invented or stale key is dropped rather than stored.
+   *
+   * The validated content already carries a moderate-mode supplement when the
+   * model emitted one (the schemas accept it, the normalizer preserves it);
+   * citations are extracted before it is attached below, so supplement text
+   * can never mint a citation. Strict and free generations strip the field
+   * defensively so only moderate output ever persists it.
    */
   private prepareStorable(
     input: StreamInput,
@@ -386,10 +400,12 @@ export class StreamHandler {
             : input.kind === 'slides'
               ? withSlidePreviews(validated as Record<string, unknown>)
               : (validated as Record<string, unknown>);
-    return attachGenerationCitations(
+    const withCitations = attachGenerationCitations(
       storable,
       extractGenerationCitations(storable, grounding.evidence),
     );
+    if (input.groundingMode === 'moderate') return withCitations;
+    return stripGeneralKnowledgeSupplement(withCitations);
   }
 
   private getContentSchema(kind: StudyMaterialKind): z.ZodTypeAny {
@@ -448,11 +464,40 @@ CITATIONS:
 }
 
 /**
+ * The grounding-mode contract appended after the citation directive.
+ * Strict (and an unset mode) adds nothing: the prompt is byte-identical to
+ * before. Moderate asks for the labeled supplement field; free without
+ * evidence answers from general knowledge with no citations.
+ */
+function groundingDirective(
+  groundingMode: StreamInput['groundingMode'],
+  hasEvidence: boolean,
+): string {
+  if (groundingMode === 'moderate') return moderateSupplementDirective();
+  if (groundingMode === 'free' && !hasEvidence)
+    return freeUngroundedDirective();
+  return '';
+}
+
+/**
  * Concise per-kind schema hint for the JSON fallback prompt: required shape
  * plus one tiny valid example. Hand-written (no zod-to-json-schema dep) and
  * deliberately minimal to keep the prompt short.
  */
-function fallbackSchemaHint(kind: StudyMaterialKind): string {
+function fallbackSchemaHint(
+  kind: StudyMaterialKind,
+  groundingMode?: StreamInput['groundingMode'],
+): string {
+  const base = baseFallbackSchemaHint(kind);
+  if (groundingMode !== 'moderate') return base;
+  return (
+    `${base} You may also include an optional ` +
+    `"${GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD}" string with general-knowledge context that goes beyond the sources, ` +
+    `starting with the label "${GENERAL_KNOWLEDGE_SUPPLEMENT_LABEL}: ".`
+  );
+}
+
+function baseFallbackSchemaHint(kind: StudyMaterialKind): string {
   switch (kind) {
     case 'quiz':
       return `{"title": string, "questions": [{"id", "prompt", "options": [{"id", "text", "explanation"}], "correctOptionId", "hint", "topic"}]}. Example: {"title": "Sample Quiz", "questions": [{"id": "q1", "prompt": "What is 2+2?", "options": [{"id": "q1-a", "text": "3", "explanation": "Too low."}, {"id": "q1-b", "text": "4", "explanation": "Correct."}], "correctOptionId": "q1-b", "hint": "", "topic": ""}]}`;

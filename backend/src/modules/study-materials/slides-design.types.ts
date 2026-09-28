@@ -161,6 +161,8 @@ export type SlideDeck = {
   design: SlideDesign;
   slides: SlideScene[];
   previews?: { slideId: string; svg: string }[];
+  /** Moderate-mode general-knowledge supplement; never source-grounded. */
+  generalKnowledgeSupplement?: string;
   /** Evidence citations attached after generation; never model-authored. */
   citations?: GenerationCitation[];
 };
