@@ -30,6 +30,9 @@
     "deleteDescription": "Are you sure you want to delete \"{{title}}\"?",
     "deleteTitle": "Delete Source"
   },
+  "panels": {
+    "sources": "Sources"
+  },
   "pendingUpload": {
     "cancelled": "Cancelled",
     "cancelProcessing": "Cancel source processing",

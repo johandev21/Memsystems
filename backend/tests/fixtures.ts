@@ -3,6 +3,7 @@ import {
   chatRoleEnum,
   notebookChatMessages,
   notebooks,
+  sourceFolders,
   sources,
   studyMaterials,
 } from '../src/database/schema';
@@ -78,9 +79,10 @@ export async function seedSource(
       | 'indexing'
       | null;
     currentVersionId?: string | null;
+    folderId?: string | null;
     createdAt?: Date;
   },
-): Promise<{ id: string; notebookId: string; kind: string; title: string }> {
+): Promise<{ id: string; notebookId: string; kind: string; title: string; folderId: string | null }> {
   const [row] = await db
     .insert(sources)
     .values({
@@ -98,6 +100,7 @@ export async function seedSource(
       processingStatus: input.processingStatus ?? 'pending',
       processingStage: input.processingStage ?? null,
       currentVersionId: input.currentVersionId ?? null,
+      folderId: input.folderId ?? null,
       createdAt: input.createdAt ?? new Date(),
     })
     .returning();
@@ -106,7 +109,30 @@ export async function seedSource(
     notebookId: row.notebookId,
     kind: row.kind,
     title: row.title,
+    folderId: row.folderId,
   };
+}
+
+export async function seedSourceFolder(
+  notebookId: string,
+  input: {
+    id?: string;
+    name: string;
+    parentId?: string | null;
+    createdAt?: Date;
+  },
+) {
+  const [row] = await db
+    .insert(sourceFolders)
+    .values({
+      id: input.id ?? createId(),
+      notebookId,
+      name: input.name,
+      parentId: input.parentId ?? null,
+      createdAt: input.createdAt ?? new Date(),
+    })
+    .returning();
+  return row;
 }
 
 export async function seedStudyMaterial(

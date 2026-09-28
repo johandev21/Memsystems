@@ -74,6 +74,7 @@ export interface Source {
   url: string | null;
   contentType: string | null;
   fileSize: number | null;
+  folderId?: string | null;
   createdAt: string;
   modality?: SourceModality | null;
   processingStatus?: SourceProcessingStatus | null;

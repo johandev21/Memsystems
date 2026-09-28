@@ -1,12 +1,22 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
+import type { SourceFolder } from "../../types/source-folder.types";
+import { buildSourcesTree } from "../../model/sources-tree";
+import { SourcesTreeBranch } from "../sources-tree-branch";
 import { SourceRow } from "./source-row";
 import { cn } from "@/shared/utils/cn";
 
 export interface SourcesListProps {
   sources?: Source[];
+  folders?: SourceFolder[];
+  openFolderIds?: Set<string>;
+  onToggleFolder?: (folderId: string) => void;
+  onCreateFolder?: (parentId: string | null) => void;
+  onExpandAll?: () => void;
+  onCollapseAll?: () => void;
   isPending: boolean;
   isError: boolean;
   hasNoSources: boolean;
@@ -22,6 +32,12 @@ export interface SourcesListProps {
 
 export function SourcesList({
   sources,
+  folders,
+  openFolderIds = new Set(),
+  onToggleFolder = () => {},
+  onCreateFolder = () => {},
+  onExpandAll,
+  onCollapseAll,
   isPending,
   isError,
   hasNoSources,
@@ -35,7 +51,18 @@ export function SourcesList({
   cancellingId,
 }: SourcesListProps) {
   const { t } = useTranslation("sources");
-  const isVirtualized = (sources?.length ?? 0) > 25 && scrollElement !== undefined;
+  const hasFolders = Boolean(folders && folders.length > 0);
+  const isVirtualized =
+    !hasFolders && (sources?.length ?? 0) > 25 && scrollElement !== undefined;
+
+  const tree = useMemo(
+    () =>
+      buildSourcesTree({
+        folders: folders ?? [],
+        sources: sources ?? [],
+      }),
+    [folders, sources],
+  );
 
   // TanStack Virtual returns functions that React Compiler cannot memoize; the
   // compiler already skips this component, which is the intended behavior.
@@ -65,13 +92,39 @@ export function SourcesList({
     );
   }
 
-  if (hasNoSources) {
+  if (hasNoSources && (!folders || folders.length === 0)) {
     return (
       <div className="px-4 py-10 text-center">
         <p className="text-sm font-medium text-foreground">{t("sourcesList.emptyTitle")}</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
           {t("sourcesList.emptyDescription")}
         </p>
+      </div>
+    );
+  }
+
+  if (hasFolders) {
+    return (
+      <div role="tree" aria-label={t("panels.sources", "Sources")} className="flex flex-col gap-0.5">
+        {tree.map((node) => (
+          <SourcesTreeBranch
+            key={node.id}
+            node={node}
+            depth={0}
+            openFolderIds={openFolderIds}
+            onToggleFolder={onToggleFolder}
+            onCreateFolder={onCreateFolder}
+            onExpandAll={onExpandAll}
+            onCollapseAll={onCollapseAll}
+            onSelectSource={onSelectSource}
+            onDeleteSource={onDelete}
+            onRetrySource={onRetry}
+            onCancelSource={onCancel}
+            deletingId={deletingId}
+            retryingId={retryingId}
+            cancellingId={cancellingId}
+          />
+        ))}
       </div>
     );
   }

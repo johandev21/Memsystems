@@ -105,10 +105,13 @@
     "addSource": "Add source",
     "backToMaterial": "Back to Material",
     "chat": "Chat",
+    "collapseAll": "Collapse all folders",
     "collapseSources": "Collapse sources",
     "collapseStudio": "Collapse studio",
+    "expandAll": "Expand all folders",
     "expandSources": "Expand sources",
     "expandStudio": "Expand studio",
+    "newFolder": "New folder",
     "sections": "Notebook sections",
     "sources": "Sources",
     "studio": "Studio"

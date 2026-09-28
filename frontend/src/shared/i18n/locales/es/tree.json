@@ -1,8 +1,10 @@
 {
   "actions": {
+    "collapse": "Contraer",
     "collapseAll": "Contraer todo",
     "delete": "Eliminar",
     "duplicate": "Duplicar",
+    "expand": "Expandir",
     "expandAll": "Expandir todo",
     "moveToRoot": "Mover a Materiales de estudio",
     "newFolder": "Nueva carpeta",

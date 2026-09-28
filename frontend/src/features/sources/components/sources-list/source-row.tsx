@@ -23,6 +23,7 @@ import { getSourceIcon } from "./source-icon";
 
 export interface SourceRowProps {
   source: Source;
+  depth?: number;
   onClick: () => void;
   onDelete: () => void;
   onRetry: () => void;
@@ -34,6 +35,7 @@ export interface SourceRowProps {
 
 export function SourceRow({
   source,
+  depth = 0,
   onClick,
   onDelete,
   onRetry,
@@ -61,8 +63,16 @@ export function SourceRow({
       <button
         type="button"
         onClick={onClick}
+        style={
+          depth > 0
+            ? ({
+                "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))`,
+              } as React.CSSProperties)
+            : undefined
+        }
         className={cn(
-          "group/row relative flex w-max min-w-full cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl py-2 pl-2 pr-16 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground",
+          "group/row relative flex w-max min-w-full cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl py-2 pr-16 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground",
+          depth > 0 ? "pl-(--tree-row-pad)" : "pl-2",
           failed
             ? "text-destructive hover:bg-destructive/5"
             : degraded

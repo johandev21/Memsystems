@@ -43,6 +43,8 @@ import {
   SOURCE_QUALITY_CONFIG,
   SourceQualityService,
 } from './source-quality.service';
+import { SourceFolderService } from './source-folder.service';
+import { SourceFoldersController } from './source-folders.controller';
 import { SourcesController } from './sources.controller';
 import { SourcesService } from './sources.service';
 import { WebScraperService } from './web-scraper.service';
@@ -52,7 +54,11 @@ import { WebSearchService } from './web-search.service';
 
 @Module({
   imports: [NotebooksModule, AiModule, CrawlerModule],
-  controllers: [SourcesController, SourceUploadsController],
+  controllers: [
+    SourcesController,
+    SourceFoldersController,
+    SourceUploadsController,
+  ],
   providers: [
     {
       provide: SOURCE_FETCH_CONFIG,
@@ -64,6 +70,7 @@ import { WebSearchService } from './web-search.service';
     },
     SourcePolicyService,
     SourceQualityService,
+    SourceFolderService,
     HttpFetcherService,
     SourceExtractionService,
     ImageInspectorService,
@@ -96,6 +103,7 @@ import { WebSearchService } from './web-search.service';
   ],
   exports: [
     SourcesService,
+    SourceFolderService,
     WebSearchService,
     SourceJobsService,
     WebSearchJobsService,

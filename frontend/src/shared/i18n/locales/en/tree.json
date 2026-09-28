@@ -1,8 +1,10 @@
 {
   "actions": {
+    "collapse": "Collapse",
     "collapseAll": "Collapse all",
     "delete": "Delete",
     "duplicate": "Duplicate",
+    "expand": "Expand",
     "expandAll": "Expand all",
     "moveToRoot": "Move to Study Materials",
     "newFolder": "New folder",

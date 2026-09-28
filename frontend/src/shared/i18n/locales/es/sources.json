@@ -30,6 +30,9 @@
     "deleteDescription": "¿Seguro que quieres eliminar “{{title}}”?",
     "deleteTitle": "Eliminar fuente"
   },
+  "panels": {
+    "sources": "Fuentes"
+  },
   "pendingUpload": {
     "cancelled": "Cancelada",
     "cancelProcessing": "Cancelar el procesamiento de la fuente",

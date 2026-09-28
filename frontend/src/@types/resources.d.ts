@@ -919,10 +919,13 @@ export default interface Resources {
       "addSource": "Add source",
       "backToMaterial": "Back to Material",
       "chat": "Chat",
+      "collapseAll": "Collapse all folders",
       "collapseSources": "Collapse sources",
       "collapseStudio": "Collapse studio",
+      "expandAll": "Expand all folders",
       "expandSources": "Expand sources",
       "expandStudio": "Expand studio",
+      "newFolder": "New folder",
       "sections": "Notebook sections",
       "sources": "Sources",
       "studio": "Studio"
@@ -1270,6 +1273,9 @@ export default interface Resources {
       "deleteDescription": "Are you sure you want to delete \"{{title}}\"?",
       "deleteTitle": "Delete Source"
     },
+    "panels": {
+      "sources": "Sources"
+    },
     "pendingUpload": {
       "cancelProcessing": "Cancel source processing",
       "cancelled": "Cancelled",
@@ -1515,9 +1521,11 @@ export default interface Resources {
   },
   "tree": {
     "actions": {
+      "collapse": "Collapse",
       "collapseAll": "Collapse all",
       "delete": "Delete",
       "duplicate": "Duplicate",
+      "expand": "Expand",
       "expandAll": "Expand all",
       "moveToRoot": "Move to Study Materials",
       "newFolder": "New folder",
