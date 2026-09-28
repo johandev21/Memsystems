@@ -1,15 +1,18 @@
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { cn } from "@/shared/utils/cn";
-import { useDraggable, useDroppable } from "@dnd-kit/core";
+import {
+  getTreeRowClassName,
+  useIsCoarsePointer,
+  useTreeRowDragDrop,
+} from "@/components/ui/tree";
 import { GripVertical } from "lucide-react";
-import { createElement, useCallback, useEffect, useState } from "react";
+import { createElement } from "react";
 import { useTranslation } from "react-i18next";
 import { getCommandPendingKey } from "../../model/commands";
 import type { TreeNode } from "../../model/tree";
 import {
   DRAG_ID_PREFIX,
   FOLDER_DROP_ID_PREFIX,
-  getTreeDragData,
   useTreeControllerContext,
 } from "../controller-state";
 import { InlineRename } from "./inline-rename";
@@ -21,91 +24,6 @@ type RowProps = {
   node: TreeNode;
   depth: number;
 };
-
-function useIsCoarsePointer() {
-  const [isCoarse, setIsCoarse] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-    const mql = window.matchMedia("(pointer: coarse)");
-    const handler = () => setIsCoarse(mql.matches);
-    handler();
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, []);
-  return isCoarse;
-}
-
-function useTreeRowDragDrop({
-  node,
-  controller,
-  isFolder,
-  isRenaming,
-  isOpen,
-  isCoarse,
-}: {
-  node: TreeNode;
-  controller: ReturnType<typeof useTreeControllerContext>;
-  isFolder: boolean;
-  isRenaming: boolean;
-  isOpen: boolean;
-  isCoarse: boolean;
-}) {
-  const pendingMoveForDrag = controller.pendingKeys.has(
-    getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }),
-  );
-  const {
-    attributes,
-    isDragging,
-    listeners,
-    setNodeRef: setDraggableNodeRef,
-  } = useDraggable({
-    id: `${DRAG_ID_PREFIX}${node.id}`,
-    data: { type: "study-material-tree-item", itemId: node.id } as const,
-    disabled: isRenaming || pendingMoveForDrag,
-  });
-  const {
-    active,
-    isOver,
-    setNodeRef: setDroppableNodeRef,
-  } = useDroppable({
-    id: `${FOLDER_DROP_ID_PREFIX}${node.id}`,
-    data: { type: "study-materials-folder", folderId: node.id } as const,
-    disabled: !isFolder,
-  });
-  const activeData = getTreeDragData(active?.data.current);
-  const canAcceptDrop = Boolean(
-    isFolder && activeData && controller.canMove(activeData.itemId, node.id),
-  );
-
-  useEffect(() => {
-    if (!isFolder || !isOver || !canAcceptDrop || isOpen) return;
-    const timer = window.setTimeout(() => controller.setFolderOpen(node.id, true), 550);
-    return () => window.clearTimeout(timer);
-  }, [canAcceptDrop, controller, isFolder, isOpen, isOver, node.id]);
-
-  const setNodeRefs = useCallback(
-    (element: HTMLDivElement | null) => {
-      setDraggableNodeRef(element);
-      if (isFolder) setDroppableNodeRef(element);
-      controller.registerNode(node.id, element);
-    },
-    [controller, isFolder, node.id, setDraggableNodeRef, setDroppableNodeRef],
-  );
-
-  const rowDragProps = isCoarse ? {} : { ...attributes, ...listeners };
-  const handleDragProps = isCoarse && !isRenaming ? { ...attributes, ...listeners } : {};
-
-  return {
-    isDragging,
-    isOver,
-    canAcceptDrop,
-    pendingMoveForDrag,
-    setNodeRefs,
-    rowDragProps,
-    handleDragProps,
-    listeners,
-  };
-}
 
 function useTreeRowPendingCommands(nodeId: string, pendingKeys: Set<string>) {
   const pendingRename = pendingKeys.has(
@@ -129,38 +47,6 @@ function useTreeRowPendingCommands(nodeId: string, pendingKeys: Set<string>) {
   };
 }
 
-function getRowClassName({
-  isSelected,
-  treeHasFocus,
-  isOver,
-  canAcceptDrop,
-  isDragging,
-  isActiveItem,
-  isRenaming,
-  isCoarse,
-}: {
-  isSelected: boolean;
-  treeHasFocus: boolean;
-  isOver: boolean;
-  canAcceptDrop: boolean;
-  isDragging: boolean;
-  isActiveItem: boolean;
-  isRenaming: boolean;
-  isCoarse: boolean;
-}): string {
-  const isDragActive = isDragging || isActiveItem;
-  return cn(
-    "group/tree-row relative flex h-(--tree-row-height) w-full min-w-0 items-center gap-1.5 pr-1 text-left font-sans text-sm outline-none select-none",
-    "text-muted-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring",
-    "hover:bg-muted/70 hover:text-foreground",
-    isSelected && treeHasFocus && "bg-accent/35 text-foreground ring-1 ring-inset ring-ring",
-    isOver && canAcceptDrop && "bg-accent/60 text-accent-foreground",
-    isDragActive && "opacity-35 cursor-grabbing",
-    isRenaming && "cursor-text",
-    !isRenaming && !isDragActive && (isCoarse ? "cursor-default" : "cursor-pointer"),
-  );
-}
-
 export function Row({ node, depth }: RowProps) {
   const controller = useTreeControllerContext();
   const isFolder = node.type === "folder";
@@ -170,23 +56,32 @@ export function Row({ node, depth }: RowProps) {
   const isOpen = isFolder ? controller.isFolderOpen(node.id) : false;
   const isFocused = controller.isFocused(node.id);
   const isCoarse = useIsCoarsePointer();
+  const pendingMoveForDrag = controller.pendingKeys.has(
+    getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }),
+  );
 
   const {
     isDragging,
     isOver,
     canAcceptDrop,
-    pendingMoveForDrag,
     setNodeRefs,
     rowDragProps,
     handleDragProps,
     listeners,
   } = useTreeRowDragDrop({
-    node,
-    controller,
+    nodeId: node.id,
     isFolder,
     isRenaming,
     isOpen,
     isCoarse,
+    isPendingMove: pendingMoveForDrag,
+    canMove: controller.canMove,
+    setFolderOpen: controller.setFolderOpen,
+    registerNode: controller.registerNode,
+    dragIdPrefix: DRAG_ID_PREFIX,
+    folderDropIdPrefix: FOLDER_DROP_ID_PREFIX,
+    dragType: "study-material-tree-item",
+    folderDropType: "study-materials-folder",
   });
 
   const pending = useTreeRowPendingCommands(node.id, controller.pendingKeys);
@@ -210,7 +105,7 @@ export function Row({ node, depth }: RowProps) {
       role="treeitem"
       tabIndex={isFocused ? 0 : -1}
       style={{ "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` } as React.CSSProperties}
-      className={getRowClassName({
+      className={getTreeRowClassName({
         isSelected,
         treeHasFocus: controller.treeHasFocus,
         isOver,
