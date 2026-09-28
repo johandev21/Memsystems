@@ -22,7 +22,10 @@ import { AiService } from '../ai/ai.service';
 import { ConnectionService } from '../ai/connection.service';
 import { toClientStreamError } from '../ai/stream-error';
 import { resolveModelId } from '../ai/providers/model-catalog';
-import { languageDirective } from '../../common/i18n/language';
+import {
+  MESSAGE_LANGUAGE_INSTRUCTION,
+  groundingDirective,
+} from './grounding-directives';
 import {
   RetrievalService,
   type RetrievalOutcome,
@@ -384,11 +387,13 @@ export class ChatService {
 
     input.abortSignal?.throwIfAborted();
 
-    // Retrieval abstained: nothing cleared the relevance floor. Answering
-    // from general knowledge here would present ungrounded content as a
-    // Notebook answer, so the Chat produces the deterministic no-evidence
-    // reply naming the degraded or unhelpful sources instead.
-    if (retrievalOutcome?.abstained) {
+    // Retrieval abstained: nothing cleared the relevance floor. In strict
+    // mode the Chat produces the deterministic no-evidence reply naming the
+    // degraded or unhelpful sources instead of answering from general
+    // knowledge. In moderate/free the turn proceeds to the model with empty
+    // Evidence so it can answer from general knowledge per its grounding
+    // directive; those modes never show the no-evidence state.
+    if (retrievalOutcome?.abstained && groundingMode === 'strict') {
       return this.sendNoEvidenceReply(
         notebookId,
         input,
@@ -446,7 +451,9 @@ export class ChatService {
     const systemMessage =
       (retrievedChunks.length > 0
         ? `${SYSTEM_PROMPT}\n\n---\n\nRELEVANT SOURCE PASSAGES:\n\n${sourceContext}`
-        : SYSTEM_PROMPT) + languageDirective(input.language);
+        : SYSTEM_PROMPT) +
+      groundingDirective(groundingMode) +
+      MESSAGE_LANGUAGE_INSTRUCTION;
 
     const messagesForLlm = history.map((m) => {
       const parts =
