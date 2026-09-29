@@ -1,3 +1,4 @@
+import type React from "react";
 import type { SourcesTreeNode } from "../model/sources-tree";
 import type { Source } from "../api/sources";
 import type { SourceFolder } from "../types/source-folder.types";
@@ -28,6 +29,11 @@ export interface SourcesTreeBranchProps {
   onRenameCommit?: (id: string, nextName: string) => void;
   onRenameCancel?: () => void;
   onDeleteFolder?: (folderId: string) => void;
+  focusedItemId?: string | null;
+  treeHasFocus?: boolean;
+  registerNode?: (id: string, el: HTMLElement | null) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLElement>, node: SourcesTreeNode) => void;
+  onFocusItem?: (id: string) => void;
 }
 
 export function SourcesTreeBranch({
@@ -54,8 +60,14 @@ export function SourcesTreeBranch({
   onRenameCommit,
   onRenameCancel,
   onDeleteFolder,
+  focusedItemId = null,
+  treeHasFocus,
+  registerNode,
+  onKeyDown,
+  onFocusItem,
 }: SourcesTreeBranchProps) {
   if (node.type === "source" && node.source) {
+    const sourceId = node.source.id;
     return (
       <SourceRow
         source={node.source}
@@ -74,6 +86,11 @@ export function SourcesTreeBranch({
         onBeginRename={onBeginRename}
         onRenameCommit={onRenameCommit}
         onRenameCancel={onRenameCancel}
+        isFocused={focusedItemId === sourceId}
+        tabIndex={focusedItemId === sourceId ? 0 : -1}
+        registerNode={registerNode}
+        onFocusRow={onFocusItem ? () => onFocusItem(sourceId) : undefined}
+        onKeyDown={(e) => onKeyDown?.(e, node)}
       />
     );
   }
@@ -107,6 +124,13 @@ export function SourcesTreeBranch({
         onRenameCommit={onRenameCommit}
         onRenameCancel={onRenameCancel}
         onDelete={onDeleteFolder}
+        level={depth + 1}
+        tabIndex={focusedItemId === folder.id ? 0 : -1}
+        isFocused={focusedItemId === folder.id}
+        treeHasFocus={treeHasFocus}
+        registerNode={registerNode}
+        onFocus={onFocusItem ? () => onFocusItem(folder.id) : undefined}
+        onKeyDown={(e) => onKeyDown?.(e, node)}
       />
       {isOpen && node.children.length > 0 && (
         <div data-slot="sources-tree-branch-children" className="flex flex-col">
@@ -136,6 +160,11 @@ export function SourcesTreeBranch({
               onRenameCommit={onRenameCommit}
               onRenameCancel={onRenameCancel}
               onDeleteFolder={onDeleteFolder}
+              focusedItemId={focusedItemId}
+              treeHasFocus={treeHasFocus}
+              registerNode={registerNode}
+              onKeyDown={onKeyDown}
+              onFocusItem={onFocusItem}
             />
           ))}
         </div>

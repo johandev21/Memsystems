@@ -1,10 +1,11 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useMemo } from "react";
+import type React from "react";
 import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
 import type { SourceFolder } from "../../types/source-folder.types";
-import { buildSourcesTree } from "../../model/sources-tree";
+import { buildSourcesTree, type SourcesTreeNode } from "../../model/sources-tree";
 import { SourcesTreeBranch } from "../sources-tree-branch";
 import { SourceRow } from "./source-row";
 import { cn } from "@/shared/utils/cn";
@@ -36,6 +37,12 @@ export interface SourcesListProps {
   onRenameCommit?: (id: string, nextName: string) => void;
   onRenameCancel?: () => void;
   onDeleteFolder?: (id: string) => void;
+  focusedItemId?: string | null;
+  treeHasFocus?: boolean;
+  registerNode?: (id: string, el: HTMLElement | null) => void;
+  registerTreeSurface?: (el: HTMLDivElement | null) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLElement>, node: SourcesTreeNode) => void;
+  onFocusItem?: (id: string) => void;
 }
 
 export function SourcesList({
@@ -65,6 +72,12 @@ export function SourcesList({
   onRenameCommit,
   onRenameCancel,
   onDeleteFolder,
+  focusedItemId = null,
+  treeHasFocus,
+  registerNode,
+  registerTreeSurface,
+  onKeyDown,
+  onFocusItem,
 }: SourcesListProps) {
   const { t } = useTranslation("sources");
   const hasFolders = Boolean(folders && folders.length > 0);
@@ -121,7 +134,12 @@ export function SourcesList({
 
   if (hasFolders) {
     return (
-      <div role="tree" aria-label={t("panels.sources", "Sources")} className="flex flex-col gap-0.5">
+      <div
+        role="tree"
+        ref={registerTreeSurface}
+        aria-label={t("panels.sources", "Sources")}
+        className="flex flex-col gap-0.5"
+      >
         {tree.map((node) => (
           <SourcesTreeBranch
             key={node.id}
@@ -148,6 +166,11 @@ export function SourcesList({
             onRenameCommit={onRenameCommit}
             onRenameCancel={onRenameCancel}
             onDeleteFolder={onDeleteFolder}
+            focusedItemId={focusedItemId}
+            treeHasFocus={treeHasFocus}
+            registerNode={registerNode}
+            onKeyDown={onKeyDown}
+            onFocusItem={onFocusItem}
           />
         ))}
       </div>

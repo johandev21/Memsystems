@@ -810,6 +810,115 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       expect(screen.getByRole("menuitem", { name: /Delete/i })).not.toBeNull();
     });
   });
+
+  describe("Keyboard navigation and ARIA semantics (#107)", () => {
+    function mockTreeFetch(folders: SourceFolder[], sources: Source[]) {
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify(folders), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify(sources), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+    }
+
+    function treeFixture() {
+      const folders: SourceFolder[] = [makeFolder({ id: "f-parent", name: "Parent Folder" })];
+      const sources: Source[] = [
+        makeSource({ id: "s-in-parent", title: "Nested Doc", folderId: "f-parent" }),
+        makeSource({ id: "s-root", title: "Root Doc" }),
+      ];
+      return { folders, sources };
+    }
+
+    function renderTreePanel() {
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+    }
+
+    function treeitemFor(text: string): HTMLElement {
+      const el = screen.getByText(text).closest('[role="treeitem"]');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    }
+
+    async function renderTree() {
+      const { folders, sources } = treeFixture();
+      mockTreeFetch(folders, sources);
+      renderTreePanel();
+
+      await waitFor(() => {
+        expect(screen.getByText("Parent Folder")).not.toBeNull();
+        expect(screen.getByText("Nested Doc")).not.toBeNull();
+        expect(screen.getByText("Root Doc")).not.toBeNull();
+      });
+    }
+
+    it("exposes role=tree/treeitem with correct aria-level and aria-expanded", async () => {
+      await renderTree();
+
+      expect(screen.getByRole("tree")).not.toBeNull();
+      expect(screen.getAllByRole("treeitem")).toHaveLength(3);
+
+      expect(treeitemFor("Parent Folder").getAttribute("aria-level")).toBe("1");
+      expect(treeitemFor("Nested Doc").getAttribute("aria-level")).toBe("2");
+      expect(treeitemFor("Root Doc").getAttribute("aria-level")).toBe("1");
+      expect(treeitemFor("Parent Folder").getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("moves focus with ArrowDown and ArrowUp", async () => {
+      await renderTree();
+
+      fireEvent.keyDown(treeitemFor("Parent Folder"), { key: "ArrowDown" });
+      expect(document.activeElement).toBe(treeitemFor("Nested Doc"));
+
+      fireEvent.keyDown(treeitemFor("Nested Doc"), { key: "ArrowUp" });
+      expect(document.activeElement).toBe(treeitemFor("Parent Folder"));
+    });
+
+    it("toggles a folder open/closed with Enter", async () => {
+      await renderTree();
+
+      fireEvent.keyDown(treeitemFor("Parent Folder"), { key: "Enter" });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Nested Doc")).toBeNull();
+      });
+      expect(treeitemFor("Parent Folder").getAttribute("aria-expanded")).toBe("false");
+
+      fireEvent.keyDown(treeitemFor("Parent Folder"), { key: "Enter" });
+
+      await waitFor(() => {
+        expect(screen.getByText("Nested Doc")).not.toBeNull();
+      });
+      expect(treeitemFor("Parent Folder").getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("marks the focused row with aria-selected", async () => {
+      await renderTree();
+
+      fireEvent.keyDown(treeitemFor("Parent Folder"), { key: "ArrowDown" });
+
+      await waitFor(() => {
+        expect(treeitemFor("Nested Doc").getAttribute("aria-selected")).toBe("true");
+      });
+      expect(treeitemFor("Parent Folder").getAttribute("aria-selected")).toBe("false");
+    });
+
+    it("begins rename with F2", async () => {
+      await renderTree();
+
+      fireEvent.keyDown(treeitemFor("Parent Folder"), { key: "F2" });
+
+      expect(await screen.findByDisplayValue("Parent Folder")).not.toBeNull();
+    });
+  });
 });
 
 

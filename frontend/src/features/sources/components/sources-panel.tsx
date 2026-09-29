@@ -24,9 +24,12 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
+  flattenVisibleTree,
   getTreeDragData,
   getTreeDropData,
   usePersistentExpandedFolders,
+  useTreeFocusRegistry,
+  useTreeKeyboardNav,
 } from "@/components/ui/tree";
 import {
   type Source,
@@ -41,7 +44,7 @@ import {
   updateSourceFolder,
 } from "../api/source-folders";
 import type { SourceFolder } from "../types/source-folder.types";
-import { canMoveSourcesItem, getDescendantFolderIds } from "../model/sources-tree";
+import { buildSourcesTree, canMoveSourcesItem, getDescendantFolderIds } from "../model/sources-tree";
 import { useUploadStore } from "../hooks/use-upload-store";
 import { AddSourceDialog } from "./add-source-dialog";
 import { PendingUploadRow } from "./pending-upload-row";
@@ -153,6 +156,7 @@ export function SourcesPanel({
   );
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
 
   const createFolderMutation = useMutation({
     mutationFn: (input: { name: string; parentId?: string | null }) =>
@@ -444,6 +448,50 @@ export function SourcesPanel({
     cancelMutation,
   } = useSourceMutations(notebookId);
 
+  // ── Keyboard navigation ──────────────────────────────────────────────────
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+  const { treeHasFocus, registerTreeSurface, registerNode, focus } =
+    useTreeFocusRegistry(setFocusedItemId);
+
+  const visibleItems = useMemo(() => {
+    const tree = buildSourcesTree({ folders: folders ?? [], sources: sources ?? [] });
+    return flattenVisibleTree(tree, expandedIds);
+  }, [folders, sources, expandedIds]);
+
+  const activate = useCallback(
+    (node: (typeof visibleItems)[number]) => {
+      if (node.type === "folder") {
+        toggleFolder(node.id);
+      } else {
+        onSelectSource(node.id);
+      }
+    },
+    [toggleFolder, onSelectSource],
+  );
+
+  const requestDeleteKbd = useCallback(
+    (node: (typeof visibleItems)[number]) => {
+      if (node.type === "folder") {
+        handleDeleteFolder(node.id);
+      } else if (node.source) {
+        setSourceToDelete({ id: node.source.id, title: node.source.title });
+      }
+    },
+    [handleDeleteFolder, setSourceToDelete],
+  );
+
+  const { handleKeyDown } = useTreeKeyboardNav({
+    activeDragItemId: activeDragId,
+    visibleItems,
+    openFolderIds: expandedIds,
+    setFolderOpen,
+    focus,
+    activate,
+    beginRename: handleBeginRename,
+    requestDelete: requestDeleteKbd,
+  });
+  // ────────────────────────────────────────────────────────────────────────
+
   if (collapsed) {
     return (
       <div className="flex flex-col bg-panel-bg">
@@ -523,6 +571,12 @@ export function SourcesPanel({
               onRenameCommit={handleRenameCommit}
               onRenameCancel={handleRenameCancel}
               onDeleteFolder={handleDeleteFolder}
+              focusedItemId={focusedItemId}
+              treeHasFocus={treeHasFocus}
+              registerNode={registerNode}
+              registerTreeSurface={registerTreeSurface}
+              onKeyDown={handleKeyDown}
+              onFocusItem={setFocusedItemId}
             />
           </ContextMenuTrigger>
           <ContextMenuContent className="min-w-48">

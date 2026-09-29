@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import type React from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -54,6 +55,11 @@ export interface SourceRowProps {
   onBeginRename?: (id: string) => void;
   onRenameCommit?: (id: string, nextName: string) => void;
   onRenameCancel?: () => void;
+  isFocused?: boolean;
+  tabIndex?: number;
+  registerNode?: (id: string, el: HTMLElement | null) => void;
+  onFocusRow?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => void;
 }
 
 export function SourceRow({
@@ -73,6 +79,11 @@ export function SourceRow({
   onBeginRename,
   onRenameCommit,
   onRenameCancel,
+  isFocused = false,
+  tabIndex = -1,
+  registerNode,
+  onFocusRow,
+  onKeyDown,
 }: SourceRowProps) {
   const { t } = useTranslation(["sources", "tree"]);
   const status = sourceProcessingStatus(source);
@@ -100,7 +111,7 @@ export function SourceRow({
     canMove: (draggedItemId, targetFolderId) =>
       canMove ? canMove(draggedItemId, targetFolderId) : true,
     setFolderOpen: () => {},
-    registerNode: () => {},
+    registerNode: registerNode ?? (() => {}),
     dragIdPrefix: "tree-drag:",
     folderDropIdPrefix: "tree-folder:",
     dragType: "sources-tree-item",
@@ -115,13 +126,37 @@ export function SourceRow({
     <div
       ref={setNodeRefs}
       {...rowDragProps}
+      role="treeitem"
+      aria-level={depth + 1}
+      aria-selected={isFocused}
       data-slot="sources-tree-source-row"
       data-dragging={isDragging ? "true" : undefined}
-      className={cn("group relative w-max min-w-full", isDragging && "opacity-50")}
+      tabIndex={tabIndex}
+      className={cn(
+        "group relative w-max min-w-full rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        isDragging && "opacity-50",
+      )}
+      onFocus={(e) => {
+        if (e.target === e.currentTarget) {
+          onFocusRow?.();
+        }
+      }}
+      onClick={
+        isEditing
+          ? undefined
+          : (e) => {
+              (e.currentTarget as HTMLElement).focus();
+              onClick();
+            }
+      }
+      onKeyDown={(e) => {
+        if (isEditing) return;
+        onKeyDown?.(e);
+      }}
     >
       <button
         type="button"
-        onClick={isEditing ? undefined : onClick}
+        tabIndex={-1}
         style={
           depth > 0
             ? ({

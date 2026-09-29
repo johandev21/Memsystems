@@ -42,6 +42,13 @@ export interface SourceFolderRowProps {
   onRenameCommit?: (id: string, nextName: string) => void;
   onRenameCancel?: () => void;
   onDelete?: (id: string) => void;
+  level?: number;
+  tabIndex?: number;
+  isFocused?: boolean;
+  treeHasFocus?: boolean;
+  registerNode?: (id: string, el: HTMLElement | null) => void;
+  onFocus?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => void;
 }
 
 export function SourceFolderRow({
@@ -61,6 +68,13 @@ export function SourceFolderRow({
   onRenameCommit,
   onRenameCancel,
   onDelete,
+  level,
+  tabIndex = 0,
+  isFocused = false,
+  treeHasFocus = true,
+  registerNode,
+  onFocus,
+  onKeyDown,
 }: SourceFolderRowProps) {
   const { t } = useTranslation(["tree", "sources"]);
 
@@ -80,7 +94,7 @@ export function SourceFolderRow({
     setFolderOpen: (folderId, open) => {
       setFolderOpen?.(folderId, open);
     },
-    registerNode: () => {},
+    registerNode: registerNode ?? (() => {}),
     dragIdPrefix: "tree-drag:",
     folderDropIdPrefix: "tree-folder:",
     dragType: "sources-tree-item",
@@ -98,25 +112,45 @@ export function SourceFolderRow({
       {...rowDragProps}
       role="treeitem"
       aria-expanded={isOpen}
+      aria-level={level ?? depth + 1}
+      aria-selected={isFocused}
       aria-label={folder.name}
       data-slot="sources-tree-folder-row"
       data-dragging={isDragging ? "true" : undefined}
       data-drop-target={isOver && canAcceptDrop ? "valid" : undefined}
-      tabIndex={0}
+      tabIndex={tabIndex}
       style={
         {
           "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))`,
         } as React.CSSProperties
       }
       className={cn(
-        getTreeRowClassName({}),
+        getTreeRowClassName({
+          isSelected: isFocused,
+          treeHasFocus,
+        }),
         "cursor-pointer select-none",
         isDragging && "opacity-50",
         isOver && canAcceptDrop && "bg-accent/80 ring-2 ring-primary/40",
       )}
-      onClick={isEditing ? undefined : onToggleOpen}
+      onFocus={(e) => {
+        if (e.target === e.currentTarget) {
+          onFocus?.();
+        }
+      }}
+      onClick={
+        isEditing
+          ? undefined
+          : (e) => {
+              (e.currentTarget as HTMLElement).focus();
+              onToggleOpen();
+            }
+      }
       onKeyDown={(e) => {
-        if (!isEditing && (e.key === "Enter" || e.key === " ")) {
+        if (isEditing) return;
+        if (onKeyDown) {
+          onKeyDown(e);
+        } else if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onToggleOpen();
         }
@@ -124,6 +158,7 @@ export function SourceFolderRow({
     >
       <button
         type="button"
+        tabIndex={-1}
         className="flex size-4 shrink-0 items-center justify-center p-0 text-muted-foreground hover:text-foreground"
         aria-label={isOpen ? t("tree:actions.collapse", "Collapse") : t("tree:actions.expand", "Expand")}
         onClick={(e) => {

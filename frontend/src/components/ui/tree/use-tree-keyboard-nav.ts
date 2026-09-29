@@ -71,7 +71,7 @@ export function useTreeKeyboardNav<TNode extends BaseTreeNode = BaseTreeNode>({
         if (node.parentId) focus(node.parentId);
         return;
       }
-      if (event.key === "Enter") {
+      if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         activate(node);
         return;
