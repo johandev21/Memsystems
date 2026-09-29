@@ -12,6 +12,10 @@ import {
   type SupportedFont,
 } from './slides-design.types';
 import { isStructuredSlidesContent } from './slides-design.schema';
+import {
+  GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD,
+  sanitizeGeneralKnowledgeSupplement,
+} from './generation-supplement';
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 
@@ -838,8 +842,20 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
   });
 
   const citations = asCitations(record.citations);
+  // A moderate-mode supplement is deck-level metadata, not a scene: carry it
+  // through the rebuild so reads, exports, and copies keep it.
+  const supplement = sanitizeGeneralKnowledgeSupplement(record);
 
-  return { schemaVersion: 2, title, design, slides: scenes, citations };
+  return {
+    schemaVersion: 2,
+    title,
+    design,
+    slides: scenes,
+    ...(supplement !== undefined
+      ? { [GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD]: supplement }
+      : {}),
+    citations,
+  };
 }
 
 /** Normalizes an optional citations array the way the other deck fields are. */

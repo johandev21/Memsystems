@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GenerationCitationsSchema } from './generation-citations';
+import { GeneralKnowledgeSupplementSchema } from './generation-supplement';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const StudyGuideOptions = z.object({
@@ -27,6 +28,7 @@ export const StudyGuideContent = z.object({
   format: z.enum(['detailed', 'revision']).default('detailed'),
   sourceIds: z.array(z.string().min(1).max(100)).max(100).default([]),
   sections: z.array(StudyGuideSection).min(1).max(12),
+  generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
 

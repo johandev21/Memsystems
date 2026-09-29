@@ -1,3 +1,7 @@
+export type { GroundingMode } from "../model/grounding-mode";
+export { DEFAULT_GROUNDING_MODE } from "../model/grounding-mode";
+import type { GroundingMode } from "../model/grounding-mode";
+
 export interface NotebookBannerVariants {
   w240: string | null;
   w480: string | null;

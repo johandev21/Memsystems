@@ -543,6 +543,7 @@ export default interface Resources {
       "detailLevelStep2": "2. Detail Level",
       "detailLevelStep3": "3. Detail Level",
       "folder": "Folder",
+      "freeHint": "No sources selected — this will be generated from general knowledge.",
       "instructions": "Instructions",
       "knowledgeSources": "Knowledge Sources",
       "knowledgeSourcesStep3": "3. Knowledge Sources",
@@ -852,6 +853,17 @@ export default interface Resources {
       "newFolderPlaceholder": "New folder name...",
       "notebookRoot": "Notebook Root"
     },
+    "groundingMode": {
+      "descriptions": {
+        "free": "Answers freely, using sources only when relevant",
+        "moderate": "Sources first, then labeled general knowledge",
+        "strict": "Answers only from sources"
+      },
+      "free": "Free",
+      "label": "Grounding Mode",
+      "moderate": "Moderate",
+      "strict": "Strict"
+    },
     "library": {
       "breadcrumbAria": "Breadcrumb",
       "create": {
@@ -944,6 +956,8 @@ export default interface Resources {
       "deleting": "Deleting…",
       "description": "Edit or manage this notebook.",
       "edit": "Edit notebook",
+      "groundingModeFailed": "Failed to update grounding mode",
+      "groundingModeUpdated": "Grounding mode updated",
       "thisNotebook": "this notebook",
       "title": "Notebook"
     },

@@ -3,49 +3,38 @@ import type {
   CaseStudyGenerationOptions,
 } from "@/features/study-material-viewer";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
-import {
-  type ApiErrorResponse,
-  createApiErrorMessage,
-  getApiUrl,
-  resolveApiErrorMessage,
-} from "@/shared/api";
-import { isStructuredOutputMessageKey } from "@/features/ai";
+import { getApiUrl } from "@/shared/api";
 
 export type { StudyMaterialKind };
 
 export interface RoadmapGenerationOptions {
-  /** 0 = auto. */
   phaseCount: number;
-  detailLevel: "basic" | "detailed" | "auto";
+  detailLevel: "basic" | "detailed";
 }
 
 export interface MindMapGenerationOptions {
-  /** 0 = auto. */
   nodeCount: number;
   structure: "radial" | "hierarchical" | "organic";
-  colorGroups: boolean | "auto";
+  colorGroups: boolean;
   crossLinks: boolean;
-  detailLevel: "basic" | "detailed" | "auto";
+  detailLevel: "basic" | "detailed";
 }
 
 export interface SlidesGenerationOptions {
-  /** 0 = auto. */
   slideCount: number;
-  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm" | "auto";
-  detailLevel: "basic" | "detailed" | "auto";
+  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm";
+  detailLevel: "basic" | "detailed";
 }
 
 export interface PracticeProblemsGenerationOptions {
-  /** 0 = auto. */
   problemCount: number;
-  difficulty: "easy" | "medium" | "hard" | "auto";
+  difficulty: "easy" | "medium" | "hard";
 }
 
 export interface CaseStudyGenerationOptionsInput {
-  /** 0 = auto. */
   questionCount: number;
   focus: string;
-  comparePerspectives: "auto" | "single" | "compare";
+  comparePerspectives: boolean;
 }
 
 export interface StartGenerationInput {
@@ -55,10 +44,9 @@ export interface StartGenerationInput {
   folderId?: string | null;
   model?: string;
   groundingMode?: 'strict' | 'moderate' | 'free';
-  /** 0 = auto. */
   questionCount?: number;
-  difficulty?: "easy" | "medium" | "hard" | "auto";
-  cardStyle?: "qa" | "definition" | "cloze" | "mixed" | "auto";
+  difficulty?: "easy" | "medium" | "hard";
+  cardStyle?: "qa" | "definition" | "cloze" | "mixed";
   roadmapOptions?: RoadmapGenerationOptions;
   mindMapOptions?: MindMapGenerationOptions;
   studyGuideOptions?: StudyGuideGenerationOptions;
@@ -91,18 +79,16 @@ export function startGeneration(
     signal: controller.signal,
   }).then(async (response) => {
     if (!response.ok) {
-      const data = (await response.json().catch(() => ({}))) as ApiErrorResponse;
-      // Keep the structured-output preflight key intact so classification can
-      // surface the capability block; resolve every other backend message.
-      const messageKey = isStructuredOutputMessageKey(data.error)
-        ? data.error
-        : isStructuredOutputMessageKey(data.messageKey)
-          ? data.messageKey
-          : null;
-      if (messageKey) throw new Error(messageKey);
-      throw new Error(
-        resolveApiErrorMessage(data, createApiErrorMessage(response, `Generation failed (${response.status})`)),
-      );
+      let message = `Generation failed (${response.status})`;
+      try {
+        const data: unknown = await response.json();
+        if (data && typeof data === "object" && "error" in data && typeof data.error === "string") {
+          message = data.error;
+        }
+      } catch {
+        // Keep the HTTP status when the server returns a non-JSON error.
+      }
+      throw new Error(message);
     }
     return response;
   });

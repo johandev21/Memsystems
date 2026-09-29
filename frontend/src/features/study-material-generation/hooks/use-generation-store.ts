@@ -54,6 +54,7 @@ interface GenerationState {
       caseStudyOptions?: CaseStudyGenerationOptions;
       slidesOptions?: SlidesGenerationOptions;
       language?: string;
+      groundingMode?: "strict" | "moderate" | "free";
     },
     queryClient: QueryClient,
     onComplete?: (materialId: string) => void,

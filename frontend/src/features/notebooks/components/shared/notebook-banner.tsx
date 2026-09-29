@@ -12,14 +12,18 @@ import {
   bannerDraftReducer,
   saveNotebookBannerChanges,
 } from "./notebook-banner-draft";
+import { GroundingModePicker } from "./grounding-mode-picker";
+import { resolveGroundingMode } from "../../model/grounding-mode";
 import { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
 import type { BannerUploadPayload } from "../../utils/banner-variants";
+import type { GroundingMode } from "../../model/grounding-mode";
 
 export interface NotebookBannerProps {
   notebookId: string;
   title: string;
   description?: string | null;
   icon?: string;
+  groundingMode?: GroundingMode | null;
   bannerUrl?: string | null;
   bannerVariants?: { w480: string | null; w960: string | null; w1920: string | null } | null;
   bannerFocalPoint?: { x: number; y: number } | null;
@@ -32,6 +36,7 @@ export function NotebookBanner({
   title,
   description,
   icon,
+  groundingMode,
   bannerUrl,
   bannerVariants,
   bannerFocalPoint,
@@ -50,12 +55,13 @@ export function NotebookBanner({
       title,
       description: description ?? "",
       icon: icon ?? "notebook",
+      groundingMode: resolveGroundingMode(undefined, groundingMode),
       focalPoint: bannerFocalPoint ?? DEFAULT_FOCAL_POINT,
       previewUrl: null,
       bannerRemoved: false,
       imageError: false,
     }),
-    [bannerFocalPoint, description, icon, title],
+    [bannerFocalPoint, description, groundingMode, icon, title],
   );
 
   const [draft, dispatch] = useReducer(bannerDraftReducer, undefined, createInitialDraft);
@@ -170,6 +176,7 @@ export function NotebookBanner({
         title,
         description,
         icon,
+        groundingMode,
         bannerUrl,
         bannerFocalPoint,
         draft: { ...draft, title: trimmedTitle },
@@ -224,6 +231,19 @@ export function NotebookBanner({
         onChange={(nextDescription) => dispatch({ type: "SET_DESCRIPTION", description: nextDescription })}
         onCancel={handleCancel}
       />
+
+      {isEditing && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium text-text-primary">{t("groundingMode.label")}</p>
+          <GroundingModePicker
+            variant="full"
+            value={draft.groundingMode}
+            onChange={(nextMode) =>
+              dispatch({ type: "SET_GROUNDING_MODE", groundingMode: nextMode })
+            }
+          />
+        </div>
+      )}
 
       <ImageUploadDialog
         open={imageDialogOpen}

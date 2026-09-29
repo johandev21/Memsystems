@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GenerationCitationsSchema } from './generation-citations';
+import { GeneralKnowledgeSupplementSchema } from './generation-supplement';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const PracticeProblemsOptions = z.object({
@@ -40,6 +41,7 @@ export const PracticeProblemsContent = z.object({
   difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
   sourceIds: z.array(z.string().min(1).max(100)).max(100).default([]),
   problems: z.array(PracticeProblem).min(1).max(30),
+  generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
 

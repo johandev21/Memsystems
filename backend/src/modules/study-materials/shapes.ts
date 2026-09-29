@@ -6,6 +6,7 @@ import {
 } from './practice-problems-content';
 import { CaseStudyContent, validateCaseStudy } from './case-study-content';
 import { GenerationCitationsSchema } from './generation-citations';
+import { GeneralKnowledgeSupplementSchema } from './generation-supplement';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export type StudyMaterialKind =
@@ -36,14 +37,23 @@ export const QuizQuestion = z.object({
 export const QuizContent = z.object({
   title: z.string().max(200),
   questions: z.array(QuizQuestion).min(1).max(50),
+  generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
 
 export const SimpleFlashcardContent = z.preprocess(
   (val) => {
     if (val && typeof val === 'object' && 'front' in val && 'back' in val) {
+      const record = val as Record<string, unknown>;
+      // Thread a moderate-mode supplement through the single-card shorthand;
+      // every other key follows the historical path (cards only) so strict
+      // validation behavior is unchanged.
+      const supplement = record.generalKnowledgeSupplement;
       return {
-        cards: [{ front: val.front, back: val.back }],
+        cards: [{ front: record.front, back: record.back }],
+        ...(typeof supplement === 'string'
+          ? { generalKnowledgeSupplement: supplement }
+          : {}),
       };
     }
     return val;
@@ -59,6 +69,7 @@ export const SimpleFlashcardContent = z.preprocess(
       )
       .min(1)
       .max(100),
+    generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
     citations: GenerationCitationsSchema,
   }),
 );
@@ -87,6 +98,7 @@ export const RoadmapContent = z.object({
   title: z.string().max(200),
   description: z.string().max(5000).default(''),
   phases: z.array(RoadmapPhase).min(1).max(20),
+  generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
 
@@ -113,6 +125,7 @@ export const MindMapContent = z.object({
   rootId: z.string(),
   nodes: z.array(MindMapNode).min(1).max(500),
   edges: z.array(MindMapEdge).max(2000),
+  generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
 
