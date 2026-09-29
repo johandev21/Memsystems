@@ -5,6 +5,7 @@ import {
   Folder,
   FolderInput,
   Loader2,
+  Pencil,
   RotateCcw,
   Trash2,
   X,
@@ -21,7 +22,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { useTreeRowDragDrop } from "@/components/ui/tree";
+import { InlineRename, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import type { Source } from "../../api/sources";
 import type { SourceFolder } from "../../types/source-folder.types";
@@ -49,6 +50,10 @@ export interface SourceRowProps {
   deleting: boolean;
   retrying: boolean;
   cancelling: boolean;
+  isEditing?: boolean;
+  onBeginRename?: (id: string) => void;
+  onRenameCommit?: (id: string, nextName: string) => void;
+  onRenameCancel?: () => void;
 }
 
 export function SourceRow({
@@ -64,6 +69,10 @@ export function SourceRow({
   deleting,
   retrying,
   cancelling,
+  isEditing = false,
+  onBeginRename,
+  onRenameCommit,
+  onRenameCancel,
 }: SourceRowProps) {
   const { t } = useTranslation(["sources", "tree"]);
   const status = sourceProcessingStatus(source);
@@ -86,7 +95,7 @@ export function SourceRow({
   } = useTreeRowDragDrop({
     nodeId: source.id,
     isFolder: false,
-    isRenaming: false,
+    isRenaming: isEditing,
     isOpen: false,
     canMove: (draggedItemId, targetFolderId) =>
       canMove ? canMove(draggedItemId, targetFolderId) : true,
@@ -112,7 +121,7 @@ export function SourceRow({
     >
       <button
         type="button"
-        onClick={onClick}
+        onClick={isEditing ? undefined : onClick}
         style={
           depth > 0
             ? ({
@@ -144,7 +153,17 @@ export function SourceRow({
           createElement(getSourceIcon(source), { className: "size-4 shrink-0" })
         )}
         <span className="flex min-w-0 flex-col">
-          <span className="truncate">{source.title}</span>
+          {isEditing ? (
+            <InlineRename
+              initialValue={source.title}
+              onCommit={(val) => onRenameCommit?.(source.id, val)}
+              onCancel={() => onRenameCancel?.()}
+              ariaLabel={source.title}
+              size="sm"
+            />
+          ) : (
+            <span className="truncate">{source.title}</span>
+          )}
           {degraded && (
             <span className="max-w-80 truncate text-xs text-warning">
               {sourceQualityReasonLabel(source) ?? statusLabel} ·{" "}
@@ -218,6 +237,19 @@ export function SourceRow({
     <ContextMenu>
       <ContextMenuTrigger data-slot="source-row-trigger" render={rowContainer} />
       <ContextMenuContent className="min-w-48">
+        <ContextMenuGroup>
+          <ContextMenuItem
+            data-slot="source-menu-rename"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBeginRename?.(source.id);
+            }}
+          >
+            <Pencil className="size-4 mr-2" />
+            {t("tree:actions.rename", "Rename")}
+          </ContextMenuItem>
+        </ContextMenuGroup>
+        <ContextMenuSeparator />
         {(source.folderId !== null || validTargetFolders.length > 0) && (
           <ContextMenuGroup>
             {source.folderId !== null && (

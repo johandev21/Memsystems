@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { SourcesPanel } from "./sources-panel";
@@ -480,5 +481,335 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       expect(screen.queryByText("Move to folder")).toBeNull();
     });
   });
+
+  describe("Rename, delete, menus, header actions (#106)", () => {
+    it("renames a folder inline with Enter, commits via PATCH, and updates UI", async () => {
+      const folders: SourceFolder[] = [
+        makeFolder({ id: "f-1", name: "Original Folder" }),
+      ];
+
+      const patchSpy = vi.fn(async (body: string) => {
+        const parsed = JSON.parse(body);
+        return { ...folders[0], name: parsed.name };
+      });
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/source-folders/f-1`)) {
+          if (init?.method === "PATCH") {
+            const updated = await patchSpy(init.body as string);
+            return new Response(JSON.stringify(updated), { status: 200 });
+          }
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify(folders), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      const user = userEvent.setup();
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Original Folder")).not.toBeNull();
+      });
+
+      // Right-click folder to open ContextMenu
+      fireEvent.contextMenu(screen.getByText("Original Folder"));
+
+      const renameMenuItem = await screen.findByRole("menuitem", { name: /Rename/i });
+      await user.click(renameMenuItem);
+
+      // Inline rename input should appear
+      const renameInput = await screen.findByDisplayValue("Original Folder");
+      expect(renameInput).not.toBeNull();
+
+      // Change input value and press Enter
+      fireEvent.change(renameInput, { target: { value: "Updated Folder" } });
+      fireEvent.keyDown(renameInput, { key: "Enter" });
+
+      await waitFor(() => {
+        expect(patchSpy).toHaveBeenCalledTimes(1);
+      });
+
+      const parsedBody = JSON.parse(patchSpy.mock.calls[0][0]);
+      expect(parsedBody.name).toBe("Updated Folder");
+    });
+
+    it("cancels folder rename on Escape without making a PATCH request", async () => {
+      const folders: SourceFolder[] = [
+        makeFolder({ id: "f-esc", name: "Folder Escape" }),
+      ];
+
+      const patchSpy = vi.fn();
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/source-folders/f-esc`)) {
+          if (init?.method === "PATCH") {
+            patchSpy();
+            return new Response("{}", { status: 200 });
+          }
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify(folders), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      const user = userEvent.setup();
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Folder Escape")).not.toBeNull();
+      });
+
+      fireEvent.contextMenu(screen.getByText("Folder Escape"));
+      const renameMenuItem = await screen.findByRole("menuitem", { name: /Rename/i });
+      await user.click(renameMenuItem);
+
+      const renameInput = await screen.findByDisplayValue("Folder Escape");
+      fireEvent.change(renameInput, { target: { value: "Should Not Commit" } });
+      fireEvent.keyDown(renameInput, { key: "Escape" });
+
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(screen.getByText("Folder Escape")).not.toBeNull();
+    });
+
+    it("no-ops folder rename when value is empty or unchanged", async () => {
+      const folders: SourceFolder[] = [
+        makeFolder({ id: "f-noop", name: "Unchanged Name" }),
+      ];
+
+      const patchSpy = vi.fn();
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/source-folders/f-noop`) && init?.method === "PATCH") {
+          patchSpy();
+          return new Response("{}", { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify(folders), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      const user = userEvent.setup();
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Unchanged Name")).not.toBeNull();
+      });
+
+      // 1. Commit same value
+      fireEvent.contextMenu(screen.getByText("Unchanged Name"));
+      let renameMenuItem = await screen.findByRole("menuitem", { name: /Rename/i });
+      await user.click(renameMenuItem);
+
+      let renameInput = await screen.findByDisplayValue("Unchanged Name");
+      fireEvent.keyDown(renameInput, { key: "Enter" });
+      expect(patchSpy).not.toHaveBeenCalled();
+
+      // 2. Commit all-whitespace value
+      fireEvent.contextMenu(screen.getByText("Unchanged Name"));
+      renameMenuItem = await screen.findByRole("menuitem", { name: /Rename/i });
+      await user.click(renameMenuItem);
+
+      renameInput = await screen.findByDisplayValue("Unchanged Name");
+      fireEvent.change(renameInput, { target: { value: "   " } });
+      fireEvent.keyDown(renameInput, { key: "Enter" });
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it("renames a source inline with Enter, commits via PATCH, and updates UI", async () => {
+      const sources: Source[] = [
+        makeSource({ id: "s-rename", title: "Original Source Title" }),
+      ];
+
+      const patchSpy = vi.fn(async (body: string) => {
+        const parsed = JSON.parse(body);
+        return { ...sources[0], title: parsed.title };
+      });
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/sources/s-rename`) && init?.method === "PATCH") {
+          const updated = await patchSpy(init.body as string);
+          return new Response(JSON.stringify(updated), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify(sources), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      const user = userEvent.setup();
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Original Source Title")).not.toBeNull();
+      });
+
+      // Right-click source row
+      fireEvent.contextMenu(screen.getByText("Original Source Title"));
+
+      const renameMenuItem = await screen.findByRole("menuitem", { name: /Rename/i });
+      await user.click(renameMenuItem);
+
+      const renameInput = await screen.findByDisplayValue("Original Source Title");
+      fireEvent.change(renameInput, { target: { value: "Updated Source Title" } });
+      fireEvent.keyDown(renameInput, { key: "Enter" });
+
+      await waitFor(() => {
+        expect(patchSpy).toHaveBeenCalledTimes(1);
+      });
+
+      const parsedBody = JSON.parse(patchSpy.mock.calls[0][0]);
+      expect(parsedBody.title).toBe("Updated Source Title");
+    });
+
+    it("deletes a folder and reparents direct sources to root", async () => {
+      const folders: SourceFolder[] = [
+        makeFolder({ id: "f-del", name: "Folder To Delete" }),
+      ];
+      const sources: Source[] = [
+        makeSource({ id: "s-in-del", title: "Nested Source Doc", folderId: "f-del" }),
+      ];
+
+      const deleteSpy = vi.fn();
+
+      let currentFolders = [...folders];
+      let currentSources = [...sources];
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/source-folders/f-del`)) {
+          if (init?.method === "DELETE") {
+            deleteSpy();
+            currentFolders = [];
+            currentSources = currentSources.map((s) => ({ ...s, folderId: null }));
+            return new Response("{}", { status: 200 });
+          }
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify(currentFolders), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify(currentSources), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      const user = userEvent.setup();
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Folder To Delete")).not.toBeNull();
+        expect(screen.getByText("Nested Source Doc")).not.toBeNull();
+      });
+
+      // Right-click folder to delete it
+      fireEvent.contextMenu(screen.getByText("Folder To Delete"));
+
+      const deleteMenuItem = await screen.findByRole("menuitem", { name: /Delete/i });
+      await user.click(deleteMenuItem);
+
+      await waitFor(() => {
+        expect(deleteSpy).toHaveBeenCalledTimes(1);
+      });
+
+      // Optimistic update: folder is removed from DOM, source persists and remains visible!
+      await waitFor(() => {
+        expect(screen.queryByText("Folder To Delete")).toBeNull();
+        expect(screen.getByText("Nested Source Doc")).not.toBeNull();
+      });
+    });
+
+    it("renders per-row context menu items for folder and source", async () => {
+      const folders: SourceFolder[] = [
+        makeFolder({ id: "f-row", name: "My Folder" }),
+      ];
+      const sources: Source[] = [
+        makeSource({ id: "s-row", title: "My Document", folderId: "f-row" }),
+      ];
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify(folders), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify(sources), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("My Folder")).not.toBeNull();
+        expect(screen.getByText("My Document")).not.toBeNull();
+      });
+
+      // Check folder context menu
+      fireEvent.contextMenu(screen.getByText("My Folder"));
+      expect(await screen.findByRole("menuitem", { name: /Rename/i })).not.toBeNull();
+      expect(screen.getByRole("menuitem", { name: /^Collapse$/i })).not.toBeNull();
+      expect(screen.getByRole("menuitem", { name: /New subfolder/i })).not.toBeNull();
+      expect(screen.getByRole("menuitem", { name: /Delete/i })).not.toBeNull();
+
+      // Close context menu by clicking outside / pressing Escape
+      fireEvent.keyDown(document.body, { key: "Escape" });
+
+      // Check source context menu
+      fireEvent.contextMenu(screen.getByText("My Document"));
+      expect(await screen.findByRole("menuitem", { name: /Rename/i })).not.toBeNull();
+      expect(screen.getByRole("menuitem", { name: /Move to Sources root/i })).not.toBeNull();
+      expect(screen.getByRole("menuitem", { name: /Delete/i })).not.toBeNull();
+    });
+  });
 });
+
 

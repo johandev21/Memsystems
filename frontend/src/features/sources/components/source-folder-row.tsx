@@ -56,6 +56,11 @@ export function SourceFolderRow({
   setFolderOpen,
   onExpandAll,
   onCollapseAll,
+  isEditing = false,
+  onBeginRename,
+  onRenameCommit,
+  onRenameCancel,
+  onDelete,
 }: SourceFolderRowProps) {
   const { t } = useTranslation(["tree", "sources"]);
 
@@ -68,7 +73,7 @@ export function SourceFolderRow({
   } = useTreeRowDragDrop({
     nodeId: folder.id,
     isFolder: true,
-    isRenaming: false,
+    isRenaming: isEditing,
     isOpen,
     canMove: (draggedItemId, targetFolderId) =>
       canMove ? canMove(draggedItemId, targetFolderId) : true,
@@ -109,9 +114,9 @@ export function SourceFolderRow({
         isDragging && "opacity-50",
         isOver && canAcceptDrop && "bg-accent/80 ring-2 ring-primary/40",
       )}
-      onClick={onToggleOpen}
+      onClick={isEditing ? undefined : onToggleOpen}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (!isEditing && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           onToggleOpen();
         }
@@ -135,7 +140,17 @@ export function SourceFolderRow({
       ) : (
         <Folder className="size-4 shrink-0 text-muted-foreground" />
       )}
-      <span className="truncate text-xs font-medium text-foreground">{folder.name}</span>
+      {isEditing ? (
+        <InlineRename
+          initialValue={folder.name}
+          onCommit={(val) => onRenameCommit?.(folder.id, val)}
+          onCancel={() => onRenameCancel?.()}
+          ariaLabel={folder.name}
+          size="sm"
+        />
+      ) : (
+        <span className="truncate text-xs font-medium text-foreground">{folder.name}</span>
+      )}
     </div>
   );
 
@@ -145,13 +160,43 @@ export function SourceFolderRow({
       <ContextMenuContent className="min-w-48">
         <ContextMenuGroup>
           <ContextMenuItem
+            data-slot="source-folder-menu-rename"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBeginRename?.(folder.id);
+            }}
+          >
+            <Pencil className="size-4 mr-2" />
+            {t("tree:actions.rename", "Rename")}
+          </ContextMenuItem>
+          <ContextMenuItem
+            data-slot="source-folder-menu-toggle"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleOpen();
+            }}
+          >
+            {isOpen ? (
+              <>
+                <ChevronsUpDown className="size-4 mr-2" />
+                {t("tree:actions.collapse", "Collapse")}
+              </>
+            ) : (
+              <>
+                <FolderOpen className="size-4 mr-2" />
+                {t("tree:actions.expand", "Expand")}
+              </>
+            )}
+          </ContextMenuItem>
+          <ContextMenuItem
+            data-slot="source-folder-menu-new-subfolder"
             onClick={(e) => {
               e.stopPropagation();
               onCreateChildFolder();
             }}
           >
             <FolderPlus className="size-4 mr-2" />
-            {t("tree:actions.newFolder", "New folder")}
+            {t("tree:actions.newSubfolder", "New subfolder")}
           </ContextMenuItem>
         </ContextMenuGroup>
         {(folder.parentId !== null || validTargetFolders.length > 0) && <ContextMenuSeparator />}
@@ -196,6 +241,7 @@ export function SourceFolderRow({
         <ContextMenuGroup>
           {onExpandAll && (
             <ContextMenuItem
+              data-slot="source-folder-menu-expand-all"
               onClick={(e) => {
                 e.stopPropagation();
                 onExpandAll();
@@ -207,6 +253,7 @@ export function SourceFolderRow({
           )}
           {onCollapseAll && (
             <ContextMenuItem
+              data-slot="source-folder-menu-collapse-all"
               onClick={(e) => {
                 e.stopPropagation();
                 onCollapseAll();
@@ -216,6 +263,20 @@ export function SourceFolderRow({
               {t("tree:actions.collapseAll", "Collapse all")}
             </ContextMenuItem>
           )}
+        </ContextMenuGroup>
+        <ContextMenuSeparator />
+        <ContextMenuGroup>
+          <ContextMenuItem
+            data-slot="source-folder-menu-delete"
+            variant="destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.(folder.id);
+            }}
+          >
+            <Trash2 className="size-4 mr-2" />
+            {t("tree:actions.delete", "Delete")}
+          </ContextMenuItem>
         </ContextMenuGroup>
       </ContextMenuContent>
     </ContextMenu>

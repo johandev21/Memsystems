@@ -31,6 +31,11 @@ export interface SourcesListProps {
   deletingId?: string;
   retryingId?: string;
   cancellingId?: string;
+  editingItemId?: string | null;
+  onBeginRename?: (id: string) => void;
+  onRenameCommit?: (id: string, nextName: string) => void;
+  onRenameCancel?: () => void;
+  onDeleteFolder?: (id: string) => void;
 }
 
 export function SourcesList({
@@ -55,6 +60,11 @@ export function SourcesList({
   deletingId,
   retryingId,
   cancellingId,
+  editingItemId,
+  onBeginRename,
+  onRenameCommit,
+  onRenameCancel,
+  onDeleteFolder,
 }: SourcesListProps) {
   const { t } = useTranslation("sources");
   const hasFolders = Boolean(folders && folders.length > 0);
@@ -133,6 +143,11 @@ export function SourcesList({
             deletingId={deletingId}
             retryingId={retryingId}
             cancellingId={cancellingId}
+            editingItemId={editingItemId}
+            onBeginRename={onBeginRename}
+            onRenameCommit={onRenameCommit}
+            onRenameCancel={onRenameCancel}
+            onDeleteFolder={onDeleteFolder}
           />
         ))}
       </div>
@@ -169,6 +184,10 @@ export function SourcesList({
                 deleting={deletingId === source.id}
                 retrying={retryingId === source.id}
                 cancelling={cancellingId === source.id}
+                isEditing={editingItemId === source.id}
+                onBeginRename={onBeginRename}
+                onRenameCommit={onRenameCommit}
+                onRenameCancel={onRenameCancel}
               />
             </div>
           );
@@ -191,6 +210,10 @@ export function SourcesList({
       deleting={deletingId === source.id}
       retrying={retryingId === source.id}
       cancelling={cancellingId === source.id}
+      isEditing={editingItemId === source.id}
+      onBeginRename={onBeginRename}
+      onRenameCommit={onRenameCommit}
+      onRenameCancel={onRenameCancel}
     />
   ));
 }

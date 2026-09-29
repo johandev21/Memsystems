@@ -23,6 +23,11 @@ export interface SourcesTreeBranchProps {
   deletingId?: string;
   retryingId?: string;
   cancellingId?: string;
+  editingItemId?: string | null;
+  onBeginRename?: (id: string) => void;
+  onRenameCommit?: (id: string, nextName: string) => void;
+  onRenameCancel?: () => void;
+  onDeleteFolder?: (folderId: string) => void;
 }
 
 export function SourcesTreeBranch({
@@ -44,6 +49,11 @@ export function SourcesTreeBranch({
   deletingId,
   retryingId,
   cancellingId,
+  editingItemId,
+  onBeginRename,
+  onRenameCommit,
+  onRenameCancel,
+  onDeleteFolder,
 }: SourcesTreeBranchProps) {
   if (node.type === "source" && node.source) {
     return (
@@ -60,6 +70,10 @@ export function SourcesTreeBranch({
         deleting={deletingId === node.source.id}
         retrying={retryingId === node.source.id}
         cancelling={cancellingId === node.source.id}
+        isEditing={editingItemId === node.source.id}
+        onBeginRename={onBeginRename}
+        onRenameCommit={onRenameCommit}
+        onRenameCancel={onRenameCancel}
       />
     );
   }
@@ -88,6 +102,11 @@ export function SourcesTreeBranch({
         setFolderOpen={setFolderOpen}
         onExpandAll={onExpandAll}
         onCollapseAll={onCollapseAll}
+        isEditing={editingItemId === folder.id}
+        onBeginRename={onBeginRename}
+        onRenameCommit={onRenameCommit}
+        onRenameCancel={onRenameCancel}
+        onDelete={onDeleteFolder}
       />
       {isOpen && node.children.length > 0 && (
         <div data-slot="sources-tree-branch-children" className="flex flex-col">
@@ -112,6 +131,11 @@ export function SourcesTreeBranch({
               deletingId={deletingId}
               retryingId={retryingId}
               cancellingId={cancellingId}
+              editingItemId={editingItemId}
+              onBeginRename={onBeginRename}
+              onRenameCommit={onRenameCommit}
+              onRenameCancel={onRenameCancel}
+              onDeleteFolder={onDeleteFolder}
             />
           ))}
         </div>
