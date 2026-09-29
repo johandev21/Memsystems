@@ -919,6 +919,176 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       expect(await screen.findByDisplayValue("Parent Folder")).not.toBeNull();
     });
   });
+
+  describe("Cutover with status parity and flat-list removal (#108)", () => {
+    function mockSourcesFetch(folders: SourceFolder[], sources: Source[]) {
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify(folders), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify(sources), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+    }
+
+    it("renders folder-less notebooks as a tree (flat list removed)", async () => {
+      const sources: Source[] = [
+        makeSource({ id: "s-1", title: "First Doc" }),
+        makeSource({ id: "s-2", title: "Second Doc" }),
+      ];
+      mockSourcesFetch([], sources);
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("First Doc")).not.toBeNull();
+        expect(screen.getByText("Second Doc")).not.toBeNull();
+      });
+
+      expect(screen.getByRole("tree")).not.toBeNull();
+      const items = screen.getAllByRole("treeitem");
+      expect(items).toHaveLength(2);
+      for (const item of items) {
+        expect(item.getAttribute("aria-level")).toBe("1");
+      }
+    });
+
+    it("keeps processing, degraded, and failed status actions inside the tree", async () => {
+      const folders: SourceFolder[] = [makeFolder({ id: "f-1", name: "Folder" })];
+      const sources: Source[] = [
+        makeSource({
+          id: "s-processing",
+          title: "Indexing Doc",
+          folderId: "f-1",
+          processingStatus: "processing",
+          processingStage: "indexing",
+        }),
+        makeSource({
+          id: "s-degraded",
+          title: "Paywalled Doc",
+          folderId: "f-1",
+          processingStatus: "degraded",
+          processingErrorCode: "quality_paywall",
+        }),
+        makeSource({
+          id: "s-failed",
+          title: "Broken Doc",
+          folderId: "f-1",
+          processingStatus: "failed",
+          processingErrorMessage: "Extraction crashed",
+        }),
+      ];
+      mockSourcesFetch(folders, sources);
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Indexing Doc")).not.toBeNull();
+        expect(screen.getByText("Paywalled Doc")).not.toBeNull();
+        expect(screen.getByText("Broken Doc")).not.toBeNull();
+      });
+
+      // All rows are treeitems even with statuses attached
+      expect(screen.getAllByRole("treeitem")).toHaveLength(4);
+      // Processing stage label, degraded reason, and failed error stay visible
+      expect(screen.getByText("Indexing source…")).not.toBeNull();
+      expect(
+        screen.getByText(
+          "This source is mostly a paywall or sign-in message. · Paste the text you can access or import the file version.",
+        ),
+      ).not.toBeNull();
+      expect(screen.getByText("Processing failed")).not.toBeNull();
+      expect(screen.getByTitle("Extraction crashed")).not.toBeNull();
+      // Retry/cancel row actions stay intact
+      expect(
+        screen.getByRole("button", { name: "Cancel source processing" }),
+      ).not.toBeNull();
+      expect(screen.getByRole("button", { name: "Retry source processing" })).not.toBeNull();
+    });
+
+    it("retries failed loads from the error state", async () => {
+      const sources: Source[] = [makeSource({ id: "s-1", title: "Recovered Doc" })];
+      let failuresRemaining = 1;
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (failuresRemaining > 0) {
+          failuresRemaining -= 1;
+          return new Response(JSON.stringify({ error: "boom" }), { status: 500 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/source-folders`)) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
+          return new Response(JSON.stringify(sources), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      });
+      globalThis.fetch = fetchSpy;
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).not.toBeNull();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Recovered Doc")).not.toBeNull();
+      });
+      expect(fetchSpy).toHaveBeenCalled();
+    });
+
+    it("virtualizes notebooks with 25+ sources over the visible tree", async () => {
+      // jsdom reports zero layout size, which collapses TanStack Virtual's
+      // window; stub element geometry so rows measure like in a browser.
+      vi.spyOn(window.HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(40);
+      vi.spyOn(window.HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(800);
+
+      const sources: Source[] = Array.from({ length: 30 }, (_, i) =>
+        makeSource({ id: `s-${i}`, title: `Doc ${i}` }),
+      );
+      mockSourcesFetch([], sources);
+
+      render(
+        <QueryClientProvider client={createTestClient()}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
+        </QueryClientProvider>,
+      );
+
+      // The tree renders a virtual window, not the flat full list: a subset
+      // of rows is mounted as treeitems inside the estimated total spacer.
+      await waitFor(() => {
+        expect(screen.getAllByRole("treeitem").length).toBeGreaterThan(0);
+      });
+      const items = screen.getAllByRole("treeitem");
+      expect(items.length).toBeLessThan(30);
+      for (const item of items) {
+        expect(item.getAttribute("aria-level")).toBe("1");
+      }
+      const virtualWindow = document.querySelector(
+        '[data-slot="sources-tree-virtual-window"]',
+      ) as HTMLElement;
+      expect(screen.getByRole("tree").contains(virtualWindow)).toBe(true);
+      // 30 visible rows × 40px measured rows
+      expect(virtualWindow.style.getPropertyValue("--virtual-total")).toBe("1200px");
+    });
+  });
 });
 
 

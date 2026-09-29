@@ -77,6 +77,7 @@ export function SourcesPanel({
     data: sources,
     isPending: isSourcesPending,
     isError: isSourcesError,
+    refetch: refetchSources,
   } = useQuery({
     ...sourcesQueryOptions(notebookId),
     staleTime: 0,
@@ -90,10 +91,16 @@ export function SourcesPanel({
     data: folders,
     isPending: isFoldersPending,
     isError: isFoldersError,
+    refetch: refetchFolders,
   } = useQuery({
     ...sourceFoldersQueryOptions(notebookId),
     enabled: Boolean(notebookId),
   });
+
+  const handleRetryLoad = useCallback(() => {
+    refetchSources();
+    refetchFolders();
+  }, [refetchSources, refetchFolders]);
 
   const isPending = isSourcesPending || isFoldersPending;
   const isError = isSourcesError || isFoldersError;
@@ -571,6 +578,7 @@ export function SourcesPanel({
               onRenameCommit={handleRenameCommit}
               onRenameCancel={handleRenameCancel}
               onDeleteFolder={handleDeleteFolder}
+              onRetryLoad={handleRetryLoad}
               focusedItemId={focusedItemId}
               treeHasFocus={treeHasFocus}
               registerNode={registerNode}

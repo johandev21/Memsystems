@@ -1344,7 +1344,8 @@ export default interface Resources {
     "sourcesList": {
       "emptyDescription": "Add material to ground your chats and study materials.",
       "emptyTitle": "No sources yet",
-      "failedToLoad": "Failed to load sources"
+      "failedToLoad": "Failed to load sources",
+      "retry": "Retry"
     },
     "states": {
       "backToSources": "Back to Sources"

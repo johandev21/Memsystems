@@ -36,7 +36,12 @@ export interface SourcesTreeBranchProps {
   onFocusItem?: (id: string) => void;
 }
 
-export function SourcesTreeBranch({
+/**
+ * Renders a single tree node (folder or source) with no children.
+ * Used by `SourcesTreeBranch` and by the virtualized tree list, which
+ * flattens visible rows and renders them one by one.
+ */
+export function SourcesTreeNodeRow({
   node,
   allFolders,
   depth,
@@ -106,66 +111,45 @@ export function SourcesTreeBranch({
   };
 
   return (
+    <SourceFolderRow
+      folder={folder}
+      allFolders={allFolders}
+      depth={depth}
+      isOpen={isOpen}
+      onToggleOpen={() => onToggleFolder(node.id)}
+      onCreateChildFolder={() => onCreateFolder(node.id)}
+      onMove={onMove}
+      canMove={canMove}
+      setFolderOpen={setFolderOpen}
+      onExpandAll={onExpandAll}
+      onCollapseAll={onCollapseAll}
+      isEditing={editingItemId === folder.id}
+      onBeginRename={onBeginRename}
+      onRenameCommit={onRenameCommit}
+      onRenameCancel={onRenameCancel}
+      onDelete={onDeleteFolder}
+      level={depth + 1}
+      tabIndex={focusedItemId === folder.id ? 0 : -1}
+      isFocused={focusedItemId === folder.id}
+      treeHasFocus={treeHasFocus}
+      registerNode={registerNode}
+      onFocus={onFocusItem ? () => onFocusItem(folder.id) : undefined}
+      onKeyDown={(e) => onKeyDown?.(e, node)}
+    />
+  );
+}
+
+export function SourcesTreeBranch(props: SourcesTreeBranchProps) {
+  const { node, depth } = props;
+  const isOpen = node.type === "folder" ? props.openFolderIds.has(node.id) : false;
+
+  return (
     <div data-slot="sources-tree-branch" className="flex flex-col">
-      <SourceFolderRow
-        folder={folder}
-        allFolders={allFolders}
-        depth={depth}
-        isOpen={isOpen}
-        onToggleOpen={() => onToggleFolder(node.id)}
-        onCreateChildFolder={() => onCreateFolder(node.id)}
-        onMove={onMove}
-        canMove={canMove}
-        setFolderOpen={setFolderOpen}
-        onExpandAll={onExpandAll}
-        onCollapseAll={onCollapseAll}
-        isEditing={editingItemId === folder.id}
-        onBeginRename={onBeginRename}
-        onRenameCommit={onRenameCommit}
-        onRenameCancel={onRenameCancel}
-        onDelete={onDeleteFolder}
-        level={depth + 1}
-        tabIndex={focusedItemId === folder.id ? 0 : -1}
-        isFocused={focusedItemId === folder.id}
-        treeHasFocus={treeHasFocus}
-        registerNode={registerNode}
-        onFocus={onFocusItem ? () => onFocusItem(folder.id) : undefined}
-        onKeyDown={(e) => onKeyDown?.(e, node)}
-      />
+      <SourcesTreeNodeRow {...props} />
       {isOpen && node.children.length > 0 && (
         <div data-slot="sources-tree-branch-children" className="flex flex-col">
           {node.children.map((child) => (
-            <SourcesTreeBranch
-              key={child.id}
-              node={child}
-              allFolders={allFolders}
-              depth={depth + 1}
-              openFolderIds={openFolderIds}
-              onToggleFolder={onToggleFolder}
-              onCreateFolder={onCreateFolder}
-              onMove={onMove}
-              canMove={canMove}
-              setFolderOpen={setFolderOpen}
-              onExpandAll={onExpandAll}
-              onCollapseAll={onCollapseAll}
-              onSelectSource={onSelectSource}
-              onDeleteSource={onDeleteSource}
-              onRetrySource={onRetrySource}
-              onCancelSource={onCancelSource}
-              deletingId={deletingId}
-              retryingId={retryingId}
-              cancellingId={cancellingId}
-              editingItemId={editingItemId}
-              onBeginRename={onBeginRename}
-              onRenameCommit={onRenameCommit}
-              onRenameCancel={onRenameCancel}
-              onDeleteFolder={onDeleteFolder}
-              focusedItemId={focusedItemId}
-              treeHasFocus={treeHasFocus}
-              registerNode={registerNode}
-              onKeyDown={onKeyDown}
-              onFocusItem={onFocusItem}
-            />
+            <SourcesTreeBranch key={child.id} {...props} node={child} depth={depth + 1} />
           ))}
         </div>
       )}

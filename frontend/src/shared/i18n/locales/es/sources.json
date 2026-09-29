@@ -101,7 +101,8 @@
   "sourcesList": {
     "emptyDescription": "Añade material para fundamentar tus chats y materiales de estudio.",
     "emptyTitle": "Aún no hay fuentes",
-    "failedToLoad": "No se pudieron cargar las fuentes"
+    "failedToLoad": "No se pudieron cargar las fuentes",
+    "retry": "Reintentar"
   },
   "states": {
     "backToSources": "Volver a las fuentes"

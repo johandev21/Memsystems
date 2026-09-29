@@ -70,6 +70,33 @@ export function buildSourcesTree(state: SourcesTreeState): SourcesTreeNode[] {
   return visit(null);
 }
 
+export type SourcesTreeFlatRow = {
+  readonly node: SourcesTreeNode;
+  readonly depth: number;
+};
+
+/**
+ * Flattens the visible tree into (node, depth) rows in display order.
+ * Traversal matches `flattenVisibleTree`, so indices line up with the
+ * keyboard-navigation `visibleItems` built from the same inputs.
+ */
+export function flattenVisibleTreeWithDepth(
+  nodes: readonly SourcesTreeNode[],
+  openFolderIds: ReadonlySet<string>,
+): SourcesTreeFlatRow[] {
+  const rows: SourcesTreeFlatRow[] = [];
+  const visit = (items: readonly SourcesTreeNode[], depth: number) => {
+    for (const item of items) {
+      rows.push({ node: item, depth });
+      if (item.type === "folder" && openFolderIds.has(item.id)) {
+        visit(item.children, depth + 1);
+      }
+    }
+  };
+  visit(nodes, 0);
+  return rows;
+}
+
 function byCreatedAtThenId<T extends { createdAt: string; id: string }>(first: T, second: T) {
   const timeCompare = first.createdAt.localeCompare(second.createdAt);
   if (timeCompare !== 0) return timeCompare;

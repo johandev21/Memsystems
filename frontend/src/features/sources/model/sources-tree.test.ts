@@ -3,6 +3,7 @@ import {
   buildSourcesTree,
   canMoveSourcesItem,
   deleteSourcesFolder,
+  flattenVisibleTreeWithDepth,
   getDescendantFolderIds,
   moveSourcesItem,
   renameSourcesItem,
@@ -126,6 +127,38 @@ describe("Sources Tree builder (pure unit)", () => {
     // When both f1 and f2 are expanded
     const allOpenVisible = flattenVisibleTree(tree, new Set(["f1", "f2"]));
     expect(allOpenVisible.map((n) => n.id)).toEqual(["f1", "f2", "s-f2", "s-root"]);
+  });
+
+  it("flattens visible rows with depth matching display order", () => {
+    const folders = [
+      createFolder({ id: "f1", name: "Folder 1" }),
+      createFolder({ id: "f2", name: "Folder 2", parentId: "f1" }),
+    ];
+    const sources = [
+      createSource({ id: "s-f2", title: "In F2", folderId: "f2" }),
+      createSource({ id: "s-root", title: "Root", folderId: null }),
+    ];
+
+    const tree = buildSourcesTree({ folders, sources });
+
+    // Collapsed: children hidden, root depths
+    const collapsed = flattenVisibleTreeWithDepth(tree, new Set());
+    expect(collapsed.map((r) => [r.node.id, r.depth])).toEqual([
+      ["f1", 0],
+      ["s-root", 0],
+    ]);
+
+    // Expanded: matching order to flattenVisibleTree, with depth
+    const expanded = flattenVisibleTreeWithDepth(tree, new Set(["f1", "f2"]));
+    expect(expanded.map((r) => [r.node.id, r.depth])).toEqual([
+      ["f1", 0],
+      ["f2", 1],
+      ["s-f2", 2],
+      ["s-root", 0],
+    ]);
+    expect(expanded.map((r) => r.node.id)).toEqual(
+      flattenVisibleTree(tree, new Set(["f1", "f2"])).map((n) => n.id),
+    );
   });
 });
 

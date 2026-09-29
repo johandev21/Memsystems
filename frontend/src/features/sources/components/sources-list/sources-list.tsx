@@ -5,10 +5,16 @@ import type React from "react";
 import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
 import type { SourceFolder } from "../../types/source-folder.types";
-import { buildSourcesTree, type SourcesTreeNode } from "../../model/sources-tree";
-import { SourcesTreeBranch } from "../sources-tree-branch";
-import { SourceRow } from "./source-row";
+import {
+  buildSourcesTree,
+  flattenVisibleTreeWithDepth,
+  type SourcesTreeNode,
+} from "../../model/sources-tree";
+import { SourcesTreeBranch, SourcesTreeNodeRow } from "../sources-tree-branch";
 import { cn } from "@/shared/utils/cn";
+
+// Past this many visible rows the tree switches to virtualized rendering.
+const TREE_VIRTUALIZATION_THRESHOLD = 25;
 
 export interface SourcesListProps {
   sources?: Source[];
@@ -37,6 +43,7 @@ export interface SourcesListProps {
   onRenameCommit?: (id: string, nextName: string) => void;
   onRenameCancel?: () => void;
   onDeleteFolder?: (id: string) => void;
+  onRetryLoad?: () => void;
   focusedItemId?: string | null;
   treeHasFocus?: boolean;
   registerNode?: (id: string, el: HTMLElement | null) => void;
@@ -72,6 +79,7 @@ export function SourcesList({
   onRenameCommit,
   onRenameCancel,
   onDeleteFolder,
+  onRetryLoad,
   focusedItemId = null,
   treeHasFocus,
   registerNode,
@@ -80,9 +88,6 @@ export function SourcesList({
   onFocusItem,
 }: SourcesListProps) {
   const { t } = useTranslation("sources");
-  const hasFolders = Boolean(folders && folders.length > 0);
-  const isVirtualized =
-    !hasFolders && (sources?.length ?? 0) > 25 && scrollElement !== undefined;
 
   const tree = useMemo(
     () =>
@@ -93,15 +98,23 @@ export function SourcesList({
     [folders, sources],
   );
 
+  const flatRows = useMemo(
+    () => flattenVisibleTreeWithDepth(tree, openFolderIds),
+    [tree, openFolderIds],
+  );
+
+  const isVirtualized =
+    flatRows.length > TREE_VIRTUALIZATION_THRESHOLD && scrollElement !== undefined;
+
   // TanStack Virtual returns functions that React Compiler cannot memoize; the
   // compiler already skips this component, which is the intended behavior.
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
-    count: sources?.length ?? 0,
+    count: flatRows.length,
     getScrollElement: () => scrollElement ?? null,
     estimateSize: () => 40,
     overscan: 5,
-    getItemKey: (idx) => sources?.[idx]?.id ?? idx,
+    getItemKey: (idx) => flatRows[idx]?.node.id ?? idx,
     enabled: isVirtualized,
     initialRect: { width: 800, height: 600 },
   });
@@ -116,7 +129,16 @@ export function SourcesList({
         className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive"
       >
         <AlertTriangle className="size-3.5 shrink-0" />
-        <span>{t("sourcesList.failedToLoad")}</span>
+        <span className="min-w-0 flex-1">{t("sourcesList.failedToLoad")}</span>
+        {onRetryLoad && (
+          <button
+            type="button"
+            onClick={onRetryLoad}
+            className="shrink-0 cursor-pointer rounded-md px-2 py-1 font-medium text-destructive underline-offset-2 hover:underline"
+          >
+            {t("sourcesList.retry", "Retry")}
+          </button>
+        )}
       </div>
     );
   }
@@ -132,7 +154,36 @@ export function SourcesList({
     );
   }
 
-  if (hasFolders) {
+  const branchProps = {
+    allFolders: folders,
+    openFolderIds,
+    onToggleFolder,
+    onCreateFolder,
+    onMove,
+    canMove,
+    setFolderOpen,
+    onExpandAll,
+    onCollapseAll,
+    onSelectSource,
+    onDeleteSource: onDelete,
+    onRetrySource: onRetry,
+    onCancelSource: onCancel,
+    deletingId,
+    retryingId,
+    cancellingId,
+    editingItemId,
+    onBeginRename,
+    onRenameCommit,
+    onRenameCancel,
+    onDeleteFolder,
+    focusedItemId,
+    treeHasFocus,
+    registerNode,
+    onKeyDown,
+    onFocusItem,
+  };
+
+  if (isVirtualized) {
     return (
       <div
         role="tree"
@@ -140,103 +191,42 @@ export function SourcesList({
         aria-label={t("panels.sources", "Sources")}
         className="flex flex-col gap-0.5"
       >
-        {tree.map((node) => (
-          <SourcesTreeBranch
-            key={node.id}
-            node={node}
-            allFolders={folders}
-            depth={0}
-            openFolderIds={openFolderIds}
-            onToggleFolder={onToggleFolder}
-            onCreateFolder={onCreateFolder}
-            onMove={onMove}
-            canMove={canMove}
-            setFolderOpen={setFolderOpen}
-            onExpandAll={onExpandAll}
-            onCollapseAll={onCollapseAll}
-            onSelectSource={onSelectSource}
-            onDeleteSource={onDelete}
-            onRetrySource={onRetry}
-            onCancelSource={onCancel}
-            deletingId={deletingId}
-            retryingId={retryingId}
-            cancellingId={cancellingId}
-            editingItemId={editingItemId}
-            onBeginRename={onBeginRename}
-            onRenameCommit={onRenameCommit}
-            onRenameCancel={onRenameCancel}
-            onDeleteFolder={onDeleteFolder}
-            focusedItemId={focusedItemId}
-            treeHasFocus={treeHasFocus}
-            registerNode={registerNode}
-            onKeyDown={onKeyDown}
-            onFocusItem={onFocusItem}
-          />
-        ))}
+        <div
+          data-slot="sources-tree-virtual-window"
+          className={cn("w-full relative min-w-full", "h-(--virtual-total)")}
+          style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const row = flatRows[virtualRow.index];
+            if (!row) return null;
+
+            return (
+              <div
+                key={row.node.id}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
+                className="absolute top-0 left-0 w-full translate-y-(--virtual-start)"
+                style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
+              >
+                <SourcesTreeNodeRow node={row.node} depth={row.depth} {...branchProps} />
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  if (isVirtualized && sources) {
-    return (
-      <div
-        className={cn("w-full relative min-w-full", "h-(--virtual-total)")}
-        style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
-      >
-        {virtualizer.getVirtualItems().map((virtualRow) => {
-          const source = sources[virtualRow.index];
-          if (!source) return null;
-
-          return (
-            <div
-              key={source.id}
-              data-index={virtualRow.index}
-              ref={virtualizer.measureElement}
-              className="absolute top-0 left-0 w-full translate-y-(--virtual-start)"
-              style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
-            >
-              <SourceRow
-                source={source}
-                allFolders={folders}
-                onClick={() => onSelectSource(source.id)}
-                onDelete={() => onDelete(source)}
-                onRetry={() => onRetry(source)}
-                onCancel={() => onCancel(source)}
-                onMove={onMove}
-                canMove={canMove}
-                deleting={deletingId === source.id}
-                retrying={retryingId === source.id}
-                cancelling={cancellingId === source.id}
-                isEditing={editingItemId === source.id}
-                onBeginRename={onBeginRename}
-                onRenameCommit={onRenameCommit}
-                onRenameCancel={onRenameCancel}
-              />
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  return sources?.map((source) => (
-    <SourceRow
-      key={source.id}
-      source={source}
-      allFolders={folders}
-      onClick={() => onSelectSource(source.id)}
-      onDelete={() => onDelete(source)}
-      onRetry={() => onRetry(source)}
-      onCancel={() => onCancel(source)}
-      onMove={onMove}
-      canMove={canMove}
-      deleting={deletingId === source.id}
-      retrying={retryingId === source.id}
-      cancelling={cancellingId === source.id}
-      isEditing={editingItemId === source.id}
-      onBeginRename={onBeginRename}
-      onRenameCommit={onRenameCommit}
-      onRenameCancel={onRenameCancel}
-    />
-  ));
+  return (
+    <div
+      role="tree"
+      ref={registerTreeSurface}
+      aria-label={t("panels.sources", "Sources")}
+      className="flex flex-col gap-0.5"
+    >
+      {tree.map((node) => (
+        <SourcesTreeBranch key={node.id} node={node} depth={0} {...branchProps} />
+      ))}
+    </div>
+  );
 }
