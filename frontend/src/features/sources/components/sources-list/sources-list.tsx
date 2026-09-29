@@ -11,6 +11,7 @@ import {
   type SourcesTreeNode,
 } from "../../model/sources-tree";
 import { SourcesTreeBranch, SourcesTreeNodeRow } from "../sources-tree-branch";
+import { treeVariants } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 
 // Past this many visible rows the tree switches to virtualized rendering.
@@ -112,7 +113,7 @@ export function SourcesList({
   const virtualizer = useVirtualizer({
     count: flatRows.length,
     getScrollElement: () => scrollElement ?? null,
-    estimateSize: () => 40,
+    estimateSize: () => 24,
     overscan: 5,
     getItemKey: (idx) => flatRows[idx]?.node.id ?? idx,
     enabled: isVirtualized,
@@ -189,7 +190,8 @@ export function SourcesList({
         role="tree"
         ref={registerTreeSurface}
         aria-label={t("panels.sources", "Sources")}
-        className="flex flex-col gap-0.5"
+        data-size="sm"
+        className={cn(treeVariants({ size: "sm" }), "flex flex-col gap-0.5")}
       >
         <div
           data-slot="sources-tree-virtual-window"
@@ -222,7 +224,8 @@ export function SourcesList({
       role="tree"
       ref={registerTreeSurface}
       aria-label={t("panels.sources", "Sources")}
-      className="flex flex-col gap-0.5"
+      data-size="sm"
+      className={cn(treeVariants({ size: "sm" }), "flex flex-col gap-0.5")}
     >
       {tree.map((node) => (
         <SourcesTreeBranch key={node.id} node={node} depth={0} {...branchProps} />

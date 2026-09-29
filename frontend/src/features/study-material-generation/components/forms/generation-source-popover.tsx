@@ -102,10 +102,16 @@ export function GenerationSourcePopover({
           <button
             type="button"
             onClick={toggleAllSources}
-            className="ml-2 flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-text-faint transition-colors hover:text-text-tertiary"
+            disabled={filteredSources.length === 0}
+            className="ml-2 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-text-faint transition-colors hover:bg-surface-3 hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
             {t("knowledge.selectAll")}{" "}
-            <Checkbox checked={allFilteredSourcesSelected} onCheckedChange={toggleAllSources} />
+            <Checkbox
+              checked={allFilteredSourcesSelected}
+              tabIndex={-1}
+              aria-hidden
+              className="pointer-events-none"
+            />
           </button>
         </div>
         {sources.length === 0 ? (

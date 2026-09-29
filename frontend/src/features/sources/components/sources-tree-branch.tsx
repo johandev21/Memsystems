@@ -92,6 +92,7 @@ export function SourcesTreeNodeRow({
         onRenameCommit={onRenameCommit}
         onRenameCancel={onRenameCancel}
         isFocused={focusedItemId === sourceId}
+        treeHasFocus={treeHasFocus}
         tabIndex={focusedItemId === sourceId ? 0 : -1}
         registerNode={registerNode}
         onFocusRow={onFocusItem ? () => onFocusItem(sourceId) : undefined}
@@ -144,10 +145,14 @@ export function SourcesTreeBranch(props: SourcesTreeBranchProps) {
   const isOpen = node.type === "folder" ? props.openFolderIds.has(node.id) : false;
 
   return (
-    <div data-slot="sources-tree-branch" className="flex flex-col">
+    <div data-slot="sources-tree-branch" data-size="sm" className="flex flex-col">
       <SourcesTreeNodeRow {...props} />
       {isOpen && node.children.length > 0 && (
-        <div data-slot="sources-tree-branch-children" className="flex flex-col">
+        <div
+          data-slot="sources-tree-branch-children"
+          data-size="sm"
+          className="flex flex-col"
+        >
           {node.children.map((child) => (
             <SourcesTreeBranch key={child.id} {...props} node={child} depth={depth + 1} />
           ))}

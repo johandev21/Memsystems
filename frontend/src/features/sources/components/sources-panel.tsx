@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { ChevronsUpDown, FileText, Folder, FolderOpen, FolderPlus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -424,22 +424,6 @@ export function SourcesPanel({
     setActiveDragId(null);
   }, []);
 
-  useEffect(() => {
-    const onCreate = () => handleCreateFolder(null);
-    const onExpand = () => expandAll();
-    const onCollapse = () => collapseAll();
-
-    window.addEventListener("sources:create-folder", onCreate);
-    window.addEventListener("sources:expand-all", onExpand);
-    window.addEventListener("sources:collapse-all", onCollapse);
-
-    return () => {
-      window.removeEventListener("sources:create-folder", onCreate);
-      window.removeEventListener("sources:expand-all", onExpand);
-      window.removeEventListener("sources:collapse-all", onCollapse);
-    };
-  }, [handleCreateFolder, expandAll, collapseAll]);
-
   const allPendingUploads = useUploadStore((state) => state.pendingUploads);
   const pendingUploads = useMemo(
     () => allPendingUploads.filter((upload) => upload.notebookId === notebookId),
@@ -534,9 +518,6 @@ export function SourcesPanel({
             collapsed={false}
             notebookId={notebookId}
             onToggleCollapse={onToggleCollapse}
-            onCreateFolder={() => handleCreateFolder(null)}
-            onExpandAll={expandAll}
-            onCollapseAll={collapseAll}
             canMove={canMove}
           />
         )}

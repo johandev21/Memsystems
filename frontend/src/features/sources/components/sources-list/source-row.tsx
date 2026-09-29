@@ -23,7 +23,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { InlineRename, useTreeRowDragDrop } from "@/components/ui/tree";
+import { InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import type { Source } from "../../api/sources";
 import type { SourceFolder } from "../../types/source-folder.types";
@@ -56,6 +56,7 @@ export interface SourceRowProps {
   onRenameCommit?: (id: string, nextName: string) => void;
   onRenameCancel?: () => void;
   isFocused?: boolean;
+  treeHasFocus?: boolean;
   tabIndex?: number;
   registerNode?: (id: string, el: HTMLElement | null) => void;
   onFocusRow?: () => void;
@@ -80,6 +81,7 @@ export function SourceRow({
   onRenameCommit,
   onRenameCancel,
   isFocused = false,
+  treeHasFocus = true,
   tabIndex = -1,
   registerNode,
   onFocusRow,
@@ -122,6 +124,14 @@ export function SourceRow({
     canMove ? canMove(source.id, f.id) : f.id !== source.folderId,
   );
 
+  const statusText = degraded
+    ? [sourceQualityReasonLabel(source) ?? statusLabel, sourceQualityCorrectiveAction(source)]
+        .filter(Boolean)
+        .join(" · ")
+    : status !== "ready"
+      ? statusLabel
+      : undefined;
+
   const rowContainer = (
     <div
       ref={setNodeRefs}
@@ -129,12 +139,25 @@ export function SourceRow({
       role="treeitem"
       aria-level={depth + 1}
       aria-selected={isFocused}
+      aria-label={source.title}
       data-slot="sources-tree-source-row"
+      data-size="sm"
+      data-selected={isFocused ? "true" : undefined}
+      data-focused={isFocused ? "true" : undefined}
+      data-renaming={isEditing ? "true" : undefined}
       data-dragging={isDragging ? "true" : undefined}
       tabIndex={tabIndex}
+      style={{ "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` } as React.CSSProperties}
+      title={tooltip}
       className={cn(
-        "group relative w-max min-w-full rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isDragging && "opacity-50",
+        getTreeRowClassName({
+          isSelected: isFocused,
+          treeHasFocus,
+          isDragging,
+          isRenaming: isEditing,
+        }),
+        // Reserve room for the hover action cluster so labels never slide under it.
+        "pr-14",
       )}
       onFocus={(e) => {
         if (e.target === e.currentTarget) {
@@ -154,64 +177,36 @@ export function SourceRow({
         onKeyDown?.(e);
       }}
     >
-      <button
-        type="button"
-        tabIndex={-1}
-        style={
-          depth > 0
-            ? ({
-                "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))`,
-              } as React.CSSProperties)
-            : undefined
-        }
-        className={cn(
-          "group/row relative flex w-max min-w-full cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl py-2 pr-16 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground",
-          depth > 0 ? "pl-(--tree-row-pad)" : "pl-2",
-          failed
-            ? "text-destructive hover:bg-destructive/5"
-            : degraded
-              ? "text-warning hover:bg-warning/5"
-              : active
-                ? "text-primary hover:bg-primary/5"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        )}
-        title={tooltip}
-      >
-        <span className="w-3.5 shrink-0" />
-        {active ? (
-          <Loader2 className="size-4 shrink-0 animate-spin" />
-        ) : failed ? (
-          <AlertCircle className="size-4 shrink-0" />
-        ) : degraded ? (
-          <AlertTriangle className="size-4 shrink-0" />
-        ) : (
-          createElement(getSourceIcon(source), { className: "size-4 shrink-0" })
-        )}
-        <span className="flex min-w-0 flex-col">
-          {isEditing ? (
-            <InlineRename
-              initialValue={source.title}
-              onCommit={(val) => onRenameCommit?.(source.id, val)}
-              onCancel={() => onRenameCancel?.()}
-              ariaLabel={source.title}
-              size="sm"
-            />
-          ) : (
-            <span className="truncate">{source.title}</span>
-          )}
-          {degraded && (
-            <span className="max-w-80 truncate text-xs text-warning">
-              {sourceQualityReasonLabel(source) ?? statusLabel} ·{" "}
-              {sourceQualityCorrectiveAction(source)}
-            </span>
-          )}
+      {active ? (
+        <Loader2 className="size-(--tree-icon-size) shrink-0 animate-spin text-primary" />
+      ) : failed ? (
+        <AlertCircle className="size-(--tree-icon-size) shrink-0 text-destructive" strokeWidth={1.7} />
+      ) : degraded ? (
+        <AlertTriangle className="size-(--tree-icon-size) shrink-0 text-warning" strokeWidth={1.7} />
+      ) : (
+        createElement(getSourceIcon(source), {
+          className: "size-(--tree-icon-size) shrink-0",
+          strokeWidth: 1.7,
+        })
+      )}
+      {isEditing ? (
+        <InlineRename
+          initialValue={source.title}
+          onCommit={(val) => onRenameCommit?.(source.id, val)}
+          onCancel={() => onRenameCancel?.()}
+          ariaLabel={source.title}
+          size="sm"
+        />
+      ) : (
+        <span className="min-w-0 flex-1 truncate leading-none" title={source.title}>
+          {source.title}
         </span>
-        {status !== "ready" && !degraded && (
-          <span className="max-w-36 truncate text-xs opacity-75">{statusLabel}</span>
-        )}
-      </button>
+      )}
+      {statusText && (
+        <span className="max-w-36 shrink-0 truncate text-xs opacity-75">{statusText}</span>
+      )}
 
-      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover/tree-row:opacity-100 group-focus-within/tree-row:opacity-100">
         {failed && (
           <button
             type="button"

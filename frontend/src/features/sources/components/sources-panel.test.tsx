@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
@@ -145,7 +145,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
     });
   });
 
-  it("handles expand-all and collapse-all events", async () => {
+  it("handles expand-all and collapse-all via context menu", async () => {
     const folders: SourceFolder[] = [
       makeFolder({ id: "f1", name: "Folder 1" }),
       makeFolder({ id: "f2", name: "Folder 2", parentId: "f1" }),
@@ -162,6 +162,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       return new Response("{}", { status: 200 });
     });
 
+    const user = userEvent.setup();
     render(
       <QueryClientProvider client={createTestClient()}>
         <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
@@ -173,26 +174,24 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       expect(screen.getByText("Folder 2")).not.toBeNull();
     });
 
-    // Trigger collapse-all event
-    act(() => {
-      window.dispatchEvent(new CustomEvent("sources:collapse-all"));
-    });
+    // Trigger collapse-all via right-click menu
+    fireEvent.contextMenu(screen.getByText("Folder 1"));
+    await user.click(await screen.findByRole("menuitem", { name: /Collapse all/i }));
 
     await waitFor(() => {
       expect(screen.queryByText("Folder 2")).toBeNull();
     });
 
-    // Trigger expand-all event
-    act(() => {
-      window.dispatchEvent(new CustomEvent("sources:expand-all"));
-    });
+    // Trigger expand-all via right-click menu
+    fireEvent.contextMenu(screen.getByText("Folder 1"));
+    await user.click(await screen.findByRole("menuitem", { name: /Expand all/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Folder 2")).not.toBeNull();
     });
   });
 
-  it("creates a source folder at root when create-folder event is received", async () => {
+  it("creates a source folder at root via context menu", async () => {
     let foldersList: SourceFolder[] = [];
     const postSpy = vi.fn(async (body: string) => {
       const parsed = JSON.parse(body);
@@ -216,16 +215,20 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       return new Response("{}", { status: 200 });
     });
 
+    const user = userEvent.setup();
     render(
       <QueryClientProvider client={createTestClient()}>
         <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} />
       </QueryClientProvider>,
     );
 
-    // Dispatch create-folder event
-    act(() => {
-      window.dispatchEvent(new CustomEvent("sources:create-folder"));
+    // Create folder via right-click menu on panel content
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="sources-panel-content"]')).not.toBeNull();
     });
+    const panelContent = document.querySelector('[data-slot="sources-panel-content"]') as HTMLElement;
+    fireEvent.contextMenu(panelContent);
+    await user.click(await screen.findByRole("menuitem", { name: /New folder/i }));
 
     await waitFor(() => {
       expect(postSpy).toHaveBeenCalledTimes(1);

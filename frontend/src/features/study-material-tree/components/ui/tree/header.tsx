@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { CardHeader } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/shared/utils/cn";
 import { useDroppable } from "@dnd-kit/core";
-import { ChevronDown, ChevronsUpDown, ChevronUp, FolderOpen, FolderPlus } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getTreeDragData, ROOT_DROP_ID, useTreeControllerContext } from "../controller-state";
 
@@ -49,51 +48,6 @@ export function TreeHeader({ isPanelExpanded, onPanelToggle }: TreeHeaderProps) 
           )}
         </div>
         <div className="flex items-center gap-0.5">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={t("header.newFolder")}
-                  onClick={() => controller.createFolder(null)}
-                >
-                  <FolderPlus />
-                </Button>
-              }
-            />
-            <TooltipContent>{t("header.newFolder")}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={t("header.expandAllFolders")}
-                  onClick={controller.expandAll}
-                >
-                  <FolderOpen />
-                </Button>
-              }
-            />
-            <TooltipContent>{t("header.expandAllFolders")}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={t("header.collapseAllFolders")}
-                  onClick={controller.collapseAll}
-                >
-                  <ChevronsUpDown />
-                </Button>
-              }
-            />
-            <TooltipContent>{t("header.collapseAllFolders")}</TooltipContent>
-          </Tooltip>
           {onPanelToggle && (
             <Button
               variant="ghost"

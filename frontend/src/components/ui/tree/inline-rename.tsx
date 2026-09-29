@@ -21,21 +21,34 @@ export function InlineRename({
 }: InlineRenameProps) {
   const [value, setValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Enter commits, then unmount fires blur with the same value. Skip the
+  // duplicate so a single rename never issues two writes. Cleared on edit
+  // so a retry after a failed commit still goes through.
+  const lastCommittedRef = useRef<string | null>(null);
 
-  const handleBlur = useCallback(() => onCommit(value), [onCommit, value]);
+  const commit = useCallback(
+    (next: string) => {
+      if (lastCommittedRef.current === next) return;
+      lastCommittedRef.current = next;
+      onCommit(next);
+    },
+    [onCommit],
+  );
+
+  const handleBlur = useCallback(() => commit(value), [commit, value]);
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       event.stopPropagation();
       if (event.key === "Enter") {
         event.preventDefault();
-        onCommit(value);
+        commit(value);
       }
       if (event.key === "Escape") {
         event.preventDefault();
         onCancel();
       }
     },
-    [onCancel, onCommit, value],
+    [onCancel, commit, value],
   );
 
   useEffect(() => {
@@ -55,7 +68,10 @@ export function InlineRename({
       }
       value={value}
       onBlur={handleBlur}
-      onChange={(event) => setValue(event.target.value)}
+      onChange={(event) => {
+        lastCommittedRef.current = null;
+        setValue(event.target.value);
+      }}
       onClick={(event) => event.stopPropagation()}
       onFocus={(event) => event.currentTarget.select()}
       onKeyDown={handleKeyDown}

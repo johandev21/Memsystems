@@ -1,6 +1,5 @@
 import type React from "react";
 import {
-  ChevronRight,
   ChevronsUpDown,
   Folder,
   FolderInput,
@@ -22,7 +21,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
-import { cn } from "@/shared/utils/cn";
 import type { SourceFolder } from "../types/source-folder.types";
 
 export interface SourceFolderRowProps {
@@ -116,23 +114,22 @@ export function SourceFolderRow({
       aria-selected={isFocused}
       aria-label={folder.name}
       data-slot="sources-tree-folder-row"
+      data-size="sm"
+      data-selected={isFocused ? "true" : undefined}
+      data-focused={isFocused ? "true" : undefined}
+      data-renaming={isEditing ? "true" : undefined}
       data-dragging={isDragging ? "true" : undefined}
       data-drop-target={isOver && canAcceptDrop ? "valid" : undefined}
       tabIndex={tabIndex}
-      style={
-        {
-          "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))`,
-        } as React.CSSProperties
-      }
-      className={cn(
-        getTreeRowClassName({
-          isSelected: isFocused,
-          treeHasFocus,
-        }),
-        "cursor-pointer select-none",
-        isDragging && "opacity-50",
-        isOver && canAcceptDrop && "bg-accent/80 ring-2 ring-primary/40",
-      )}
+      style={{ "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` } as React.CSSProperties}
+      className={getTreeRowClassName({
+        isSelected: isFocused,
+        treeHasFocus,
+        isOver,
+        canAcceptDrop,
+        isDragging,
+        isRenaming: isEditing,
+      })}
       onFocus={(e) => {
         if (e.target === e.currentTarget) {
           onFocus?.();
@@ -156,24 +153,10 @@ export function SourceFolderRow({
         }
       }}
     >
-      <button
-        type="button"
-        tabIndex={-1}
-        className="flex size-4 shrink-0 items-center justify-center p-0 text-muted-foreground hover:text-foreground"
-        aria-label={isOpen ? t("tree:actions.collapse", "Collapse") : t("tree:actions.expand", "Expand")}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleOpen();
-        }}
-      >
-        <ChevronRight
-          className={cn("size-3.5 shrink-0 transition-transform duration-150", isOpen && "rotate-90")}
-        />
-      </button>
       {isOpen ? (
-        <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+        <FolderOpen className="size-(--tree-icon-size) shrink-0" strokeWidth={1.7} />
       ) : (
-        <Folder className="size-4 shrink-0 text-muted-foreground" />
+        <Folder className="size-(--tree-icon-size) shrink-0" strokeWidth={1.7} />
       )}
       {isEditing ? (
         <InlineRename
@@ -184,7 +167,9 @@ export function SourceFolderRow({
           size="sm"
         />
       ) : (
-        <span className="truncate text-xs font-medium text-foreground">{folder.name}</span>
+        <span className="min-w-0 flex-1 truncate leading-none" title={folder.name}>
+          {folder.name}
+        </span>
       )}
     </div>
   );
