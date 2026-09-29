@@ -44,6 +44,10 @@ const addTranscriptSchema = z.object({
   transcriptText: z.string().min(1, 'Transcript text is required'),
 });
 
+const moveSourceSchema = z.object({
+  folderId: z.string().nullable(),
+});
+
 const webSearchSchema = z.object({
   query: z.string().min(1, 'Query is required').max(500),
 });
@@ -141,6 +145,15 @@ export class SourcesController {
   @Delete('sources/:id')
   async deleteSource(@Param('id') id: string) {
     return this.sourcesService.delete(id);
+  }
+
+  @Patch('sources/:id/move')
+  @UsePipes(new ZodValidationPipe(moveSourceSchema))
+  async moveSource(
+    @Param('id') id: string,
+    @Body() body: z.infer<typeof moveSourceSchema>,
+  ) {
+    return this.sourcesService.move(id, body.folderId);
   }
 
   @Get('sources/:id/download')

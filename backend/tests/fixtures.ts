@@ -51,9 +51,9 @@ export async function seedSource(
   notebookId: string,
   input: {
     id?: string;
-    kind: 'text' | 'url' | 'file';
+    kind?: 'text' | 'url' | 'file';
     title: string;
-    rawText: string;
+    rawText?: string;
     contentHash?: string | null;
     url?: string | null;
     s3Key?: string | null;
@@ -88,9 +88,9 @@ export async function seedSource(
     .values({
       id: input.id ?? createId(),
       notebookId,
-      kind: input.kind,
+      kind: input.kind ?? 'text',
       title: input.title,
-      rawText: input.rawText,
+      rawText: input.rawText ?? 'sample text content',
       contentHash: input.contentHash ?? null,
       url: input.url ?? null,
       s3Key: input.s3Key ?? null,

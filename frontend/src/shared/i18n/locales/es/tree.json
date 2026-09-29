@@ -6,7 +6,9 @@
     "duplicate": "Duplicar",
     "expand": "Expandir",
     "expandAll": "Expandir todo",
+    "moveToFolder": "Mover a carpeta",
     "moveToRoot": "Mover a Materiales de estudio",
+    "moveToSourcesRoot": "Mover a la raíz de Fuentes",
     "newFolder": "Nueva carpeta",
     "rename": "Cambiar nombre"
   },

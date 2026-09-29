@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SourceFolderService } from '../src/modules/sources/source-folder.service';
+import { SourcesService } from '../src/modules/sources/sources.service';
+import { SourceExtractionService } from '../src/modules/sources/source-extraction.service';
 import { NotebooksService } from '../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import { seedNotebook, seedSource, seedSourceFolder } from './fixtures';
@@ -17,6 +19,25 @@ describe('Source Folders (backend)', () => {
   const storageService = new StorageService(mockConfig);
   const notebooksService = new NotebooksService(db as any, storageService);
   const folderService = new SourceFolderService(db as any, notebooksService);
+  const jobs = {
+    enqueue: vi.fn().mockResolvedValue({ id: 'job-1' }),
+    cancelForSource: vi.fn().mockResolvedValue(undefined),
+    latestForSource: vi.fn().mockResolvedValue(null),
+    reindexNotebook: vi.fn().mockResolvedValue(0),
+  };
+  const acquisition = {
+    acquireUrl: vi.fn(),
+    acquireFile: vi.fn(),
+    fromText: vi.fn(),
+  } as any;
+  const sourcesService = new SourcesService(
+    db as any,
+    notebooksService,
+    storageService,
+    acquisition,
+    jobs as any,
+    new SourceExtractionService(),
+  );
 
   beforeEach(async () => {
     await resetDatabase();
@@ -267,6 +288,70 @@ describe('Source Folders (backend)', () => {
         .where(eq(sources.id, sourceAtRoot.id));
       expect(rootSource).toBeDefined();
       expect(rootSource.folderId).toBeNull();
+    });
+  });
+
+  describe('source filing & moving', () => {
+    it('moves a source into a source folder and lists it with folderId', async () => {
+      const notebook = await seedNotebook();
+      const folder = await folderService.create(notebook.id, { name: 'Readings' });
+      const source = await seedSource(notebook.id, { title: 'Chapter 1', folderId: null });
+
+      const moved = await sourcesService.move(source.id, folder.id);
+      expect(moved.folderId).toBe(folder.id);
+
+      const list = await sourcesService.list(notebook.id);
+      const listedSource = list.find((s) => s.id === source.id);
+      expect(listedSource).toBeDefined();
+      expect(listedSource?.folderId).toBe(folder.id);
+    });
+
+    it('moves a source back to notebook root (folderId: null)', async () => {
+      const notebook = await seedNotebook();
+      const folder = await folderService.create(notebook.id, { name: 'Readings' });
+      const source = await seedSource(notebook.id, { title: 'Chapter 1', folderId: folder.id });
+
+      const moved = await sourcesService.move(source.id, null);
+      expect(moved.folderId).toBeNull();
+
+      const list = await sourcesService.list(notebook.id);
+      const listedSource = list.find((s) => s.id === source.id);
+      expect(listedSource?.folderId).toBeNull();
+    });
+
+    it('refuses to move a source into its current folder or current location', async () => {
+      const notebook = await seedNotebook();
+      const folder = await folderService.create(notebook.id, { name: 'Readings' });
+      const source = await seedSource(notebook.id, { title: 'Chapter 1', folderId: folder.id });
+
+      // Already in folder
+      await expect(sourcesService.move(source.id, folder.id)).rejects.toThrow();
+
+      // Move to root
+      await sourcesService.move(source.id, null);
+
+      // Already at root
+      await expect(sourcesService.move(source.id, null)).rejects.toThrow();
+    });
+
+    it('refuses to move a source to a non-existent folder', async () => {
+      const notebook = await seedNotebook();
+      const source = await seedSource(notebook.id, { title: 'Chapter 1', folderId: null });
+
+      await expect(
+        sourcesService.move(source.id, '00000000-0000-0000-0000-000000000000'),
+      ).rejects.toThrow();
+    });
+
+    it('refuses to move a source to a folder belonging to another notebook', async () => {
+      const notebook1 = await seedNotebook();
+      const notebook2 = await seedNotebook();
+      const folderInNb2 = await folderService.create(notebook2.id, { name: 'Other Folder' });
+      const sourceInNb1 = await seedSource(notebook1.id, { title: 'Chapter 1', folderId: null });
+
+      await expect(
+        sourcesService.move(sourceInNb1.id, folderInNb2.id),
+      ).rejects.toThrow();
     });
   });
 });

@@ -17,6 +17,9 @@ export interface SourcesListProps {
   onCreateFolder?: (parentId: string | null) => void;
   onExpandAll?: () => void;
   onCollapseAll?: () => void;
+  onMove?: (itemId: string, targetFolderId: string | null) => void;
+  canMove?: (draggedItemId: string, targetFolderId: string | null) => boolean;
+  setFolderOpen?: (folderId: string, open: boolean) => void;
   isPending: boolean;
   isError: boolean;
   hasNoSources: boolean;
@@ -38,6 +41,9 @@ export function SourcesList({
   onCreateFolder = () => {},
   onExpandAll,
   onCollapseAll,
+  onMove,
+  canMove,
+  setFolderOpen,
   isPending,
   isError,
   hasNoSources,
@@ -110,10 +116,14 @@ export function SourcesList({
           <SourcesTreeBranch
             key={node.id}
             node={node}
+            allFolders={folders}
             depth={0}
             openFolderIds={openFolderIds}
             onToggleFolder={onToggleFolder}
             onCreateFolder={onCreateFolder}
+            onMove={onMove}
+            canMove={canMove}
+            setFolderOpen={setFolderOpen}
             onExpandAll={onExpandAll}
             onCollapseAll={onCollapseAll}
             onSelectSource={onSelectSource}
@@ -149,10 +159,13 @@ export function SourcesList({
             >
               <SourceRow
                 source={source}
+                allFolders={folders}
                 onClick={() => onSelectSource(source.id)}
                 onDelete={() => onDelete(source)}
                 onRetry={() => onRetry(source)}
                 onCancel={() => onCancel(source)}
+                onMove={onMove}
+                canMove={canMove}
                 deleting={deletingId === source.id}
                 retrying={retryingId === source.id}
                 cancelling={cancellingId === source.id}
@@ -168,10 +181,13 @@ export function SourcesList({
     <SourceRow
       key={source.id}
       source={source}
+      allFolders={folders}
       onClick={() => onSelectSource(source.id)}
       onDelete={() => onDelete(source)}
       onRetry={() => onRetry(source)}
       onCancel={() => onCancel(source)}
+      onMove={onMove}
+      canMove={canMove}
       deleting={deletingId === source.id}
       retrying={retryingId === source.id}
       cancelling={cancellingId === source.id}

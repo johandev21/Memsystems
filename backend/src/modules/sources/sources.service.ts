@@ -7,6 +7,7 @@ import {
   SourceMetadata,
   SourceQualityAssessment,
   sourceChunks,
+  sourceFolders,
   sourceSegments,
   sources,
 } from '../../database/schema';
@@ -160,6 +161,7 @@ export class SourcesService {
       .select({
         id: sources.id,
         notebookId: sources.notebookId,
+        folderId: sources.folderId,
         kind: sources.kind,
         title: sources.title,
         url: sources.url,
@@ -532,6 +534,39 @@ export class SourcesService {
       .where(eq(sources.id, id))
       .returning();
     return deleted;
+  }
+
+  async move(id: string, folderId: string | null) {
+    const source = await this.fetchOwned(id);
+
+    if ((source.folderId ?? null) === (folderId ?? null)) {
+      throw new BadRequestError('Source is already in this location', {
+        messageKey: 'errors.sources.alreadyInLocation',
+      });
+    }
+
+    if (folderId !== null) {
+      const [folder] = await this.db
+        .select({ id: sourceFolders.id, notebookId: sourceFolders.notebookId })
+        .from(sourceFolders)
+        .where(eq(sourceFolders.id, folderId));
+
+      if (!folder || folder.notebookId !== source.notebookId) {
+        throw new NotFoundError('SourceFolder', {
+          messageKey: 'errors.sources.folder.notFound',
+        });
+      }
+    }
+
+    const [updated] = await this.db
+      .update(sources)
+      .set({
+        folderId,
+      })
+      .where(eq(sources.id, id))
+      .returning();
+
+    return updated;
   }
 
   /** Explicit operator re-run: enqueues a fresh indexing job for a source. */

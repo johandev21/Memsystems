@@ -1527,7 +1527,9 @@ export default interface Resources {
       "duplicate": "Duplicate",
       "expand": "Expand",
       "expandAll": "Expand all",
+      "moveToFolder": "Move to folder",
       "moveToRoot": "Move to Study Materials",
+      "moveToSourcesRoot": "Move to Sources root",
       "newFolder": "New folder",
       "rename": "Rename"
     },

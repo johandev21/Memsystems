@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildSourcesTree } from "./sources-tree";
+import {
+  buildSourcesTree,
+  canMoveSourcesItem,
+  getDescendantFolderIds,
+  moveSourcesItem,
+} from "./sources-tree";
 import { flattenVisibleTree } from "@/components/ui/tree";
 import type { Source } from "../types/source.types";
 import type { SourceFolder } from "../types/source-folder.types";
@@ -119,5 +124,109 @@ describe("Sources Tree builder (pure unit)", () => {
     // When both f1 and f2 are expanded
     const allOpenVisible = flattenVisibleTree(tree, new Set(["f1", "f2"]));
     expect(allOpenVisible.map((n) => n.id)).toEqual(["f1", "f2", "s-f2", "s-root"]);
+  });
+});
+
+describe("Sources Tree move operations (pure unit)", () => {
+  const folders: SourceFolder[] = [
+    createFolder({ id: "f-root1", name: "Root 1", parentId: null }),
+    createFolder({ id: "f-root2", name: "Root 2", parentId: null }),
+    createFolder({ id: "f-child1", name: "Child 1", parentId: "f-root1" }),
+    createFolder({ id: "f-grandchild1", name: "Grandchild 1", parentId: "f-child1" }),
+  ];
+
+  const sources: Source[] = [
+    createSource({ id: "s-root", title: "Source at root", folderId: null }),
+    createSource({ id: "s-child", title: "Source in child", folderId: "f-child1" }),
+  ];
+
+  const state = { folders, sources };
+
+  it("identifies descendant folder IDs accurately", () => {
+    const rootDescendants = getDescendantFolderIds(folders, "f-root1");
+    expect(rootDescendants).toEqual(new Set(["f-child1", "f-grandchild1"]));
+
+    const childDescendants = getDescendantFolderIds(folders, "f-child1");
+    expect(childDescendants).toEqual(new Set(["f-grandchild1"]));
+
+    const leafDescendants = getDescendantFolderIds(folders, "f-grandchild1");
+    expect(leafDescendants).toEqual(new Set());
+  });
+
+  describe("canMoveSourcesItem guards", () => {
+    it("refuses moving a folder onto itself", () => {
+      expect(canMoveSourcesItem(state, "f-root1", "f-root1")).toBe(false);
+      expect(canMoveSourcesItem(state, "f-child1", "f-child1")).toBe(false);
+    });
+
+    it("refuses moving a folder onto its current parent", () => {
+      expect(canMoveSourcesItem(state, "f-root1", null)).toBe(false); // already at root
+      expect(canMoveSourcesItem(state, "f-child1", "f-root1")).toBe(false); // already in f-root1
+    });
+
+    it("refuses moving a folder into its descendant (direct or indirect)", () => {
+      expect(canMoveSourcesItem(state, "f-root1", "f-child1")).toBe(false);
+      expect(canMoveSourcesItem(state, "f-root1", "f-grandchild1")).toBe(false);
+      expect(canMoveSourcesItem(state, "f-child1", "f-grandchild1")).toBe(false);
+    });
+
+    it("refuses moving a folder into a non-existent folder", () => {
+      expect(canMoveSourcesItem(state, "f-root1", "f-does-not-exist")).toBe(false);
+    });
+
+    it("allows moving a folder to root or another valid folder branch", () => {
+      expect(canMoveSourcesItem(state, "f-child1", null)).toBe(true);
+      expect(canMoveSourcesItem(state, "f-child1", "f-root2")).toBe(true);
+      expect(canMoveSourcesItem(state, "f-root1", "f-root2")).toBe(true);
+    });
+
+    it("refuses moving a source to its current location", () => {
+      expect(canMoveSourcesItem(state, "s-root", null)).toBe(false);
+      expect(canMoveSourcesItem(state, "s-child", "f-child1")).toBe(false);
+    });
+
+    it("refuses moving a source to a non-existent folder", () => {
+      expect(canMoveSourcesItem(state, "s-root", "f-ghost")).toBe(false);
+    });
+
+    it("allows moving a source into a folder or back to root", () => {
+      expect(canMoveSourcesItem(state, "s-root", "f-root1")).toBe(true);
+      expect(canMoveSourcesItem(state, "s-root", "f-grandchild1")).toBe(true);
+      expect(canMoveSourcesItem(state, "s-child", null)).toBe(true);
+      expect(canMoveSourcesItem(state, "s-child", "f-root2")).toBe(true);
+    });
+
+    it("returns false for unknown item ID", () => {
+      expect(canMoveSourcesItem(state, "unknown-id", "f-root1")).toBe(false);
+    });
+  });
+
+  describe("moveSourcesItem immutability and state update", () => {
+    it("moves source to a folder and updates folderId", () => {
+      const next = moveSourcesItem(state, "s-root", "f-root2");
+      expect(next.sources.find((s) => s.id === "s-root")?.folderId).toBe("f-root2");
+      // Other sources unchanged
+      expect(next.sources.find((s) => s.id === "s-child")?.folderId).toBe("f-child1");
+      // Original state untouched
+      expect(state.sources.find((s) => s.id === "s-root")?.folderId).toBeNull();
+    });
+
+    it("moves source from folder back to root", () => {
+      const next = moveSourcesItem(state, "s-child", null);
+      expect(next.sources.find((s) => s.id === "s-child")?.folderId).toBeNull();
+    });
+
+    it("moves folder to new parent and updates parentId and updatedAt", () => {
+      const now = "2026-03-01T12:00:00.000Z";
+      const next = moveSourcesItem(state, "f-child1", "f-root2", now);
+      const movedFolder = next.folders.find((f) => f.id === "f-child1");
+      expect(movedFolder?.parentId).toBe("f-root2");
+      expect(movedFolder?.updatedAt).toBe(now);
+    });
+
+    it("no-ops and returns original state if move is forbidden", () => {
+      const next = moveSourcesItem(state, "f-root1", "f-child1");
+      expect(next).toBe(state);
+    });
   });
 });

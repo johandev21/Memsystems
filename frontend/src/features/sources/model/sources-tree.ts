@@ -75,3 +75,77 @@ function byCreatedAtThenId<T extends { createdAt: string; id: string }>(first: T
   if (timeCompare !== 0) return timeCompare;
   return first.id.localeCompare(second.id);
 }
+
+export function getDescendantFolderIds(
+  folders: readonly SourcesTreeFolder[],
+  rootFolderId: string,
+): Set<string> {
+  const childrenByParent = new Map<string, string[]>();
+  for (const folder of folders) {
+    if (folder.parentId) {
+      const list = childrenByParent.get(folder.parentId) ?? [];
+      list.push(folder.id);
+      childrenByParent.set(folder.parentId, list);
+    }
+  }
+
+  const result = new Set<string>();
+  const queue = [...(childrenByParent.get(rootFolderId) ?? [])];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (!result.has(current)) {
+      result.add(current);
+      const nextChildren = childrenByParent.get(current) ?? [];
+      queue.push(...nextChildren);
+    }
+  }
+
+  return result;
+}
+
+export function canMoveSourcesItem(
+  state: SourcesTreeState,
+  itemId: string,
+  targetFolderId: string | null,
+): boolean {
+  const folder = state.folders.find((f) => f.id === itemId);
+  if (folder) {
+    if (folder.id === targetFolderId) return false;
+    if ((folder.parentId ?? null) === targetFolderId) return false;
+    if (targetFolderId === null) return true;
+    const descendants = getDescendantFolderIds(state.folders, folder.id);
+    if (descendants.has(targetFolderId)) return false;
+    return state.folders.some((f) => f.id === targetFolderId);
+  }
+
+  const source = state.sources.find((s) => s.id === itemId);
+  if (source) {
+    if ((source.folderId ?? null) === targetFolderId) return false;
+    if (targetFolderId === null) return true;
+    return state.folders.some((f) => f.id === targetFolderId);
+  }
+
+  return false;
+}
+
+export function moveSourcesItem(
+  state: SourcesTreeState,
+  itemId: string,
+  targetFolderId: string | null,
+  now: string = new Date().toISOString(),
+): SourcesTreeState {
+  if (!canMoveSourcesItem(state, itemId, targetFolderId)) return state;
+
+  return {
+    folders: state.folders.map((folder) =>
+      folder.id === itemId
+        ? { ...folder, parentId: targetFolderId, updatedAt: now }
+        : folder,
+    ),
+    sources: state.sources.map((source) =>
+      source.id === itemId
+        ? { ...source, folderId: targetFolderId }
+        : source,
+    ),
+  };
+}

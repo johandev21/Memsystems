@@ -6,13 +6,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AddSourceDialog } from "@/features/sources/components/add-source-dialog";
 import { cn } from "@/shared/utils/cn";
 
+import { useDroppable } from "@dnd-kit/core";
+import { getTreeDragData } from "@/components/ui/tree";
+
 export interface SourcesPanelHeaderProps {
   collapsed: boolean;
   notebookId: string;
-  onToggleCollapse: () => void;
+  onToggleCollapse?: () => void;
   onCreateFolder?: () => void;
   onExpandAll?: () => void;
   onCollapseAll?: () => void;
+  canMove?: (draggedItemId: string, targetFolderId: string | null) => boolean;
 }
 
 export function SourcesPanelHeader({
@@ -22,6 +26,7 @@ export function SourcesPanelHeader({
   onCreateFolder,
   onExpandAll,
   onCollapseAll,
+  canMove,
 }: SourcesPanelHeaderProps) {
   const { t } = useTranslation("notebooks");
 
@@ -49,8 +54,23 @@ export function SourcesPanelHeader({
     }
   };
 
+  const { active, isOver, setNodeRef } = useDroppable({
+    id: "sources-root",
+    data: { type: "tree-root", folderId: null } as const,
+  });
+  const activeData = getTreeDragData(active?.data.current);
+  const isValidRootTarget = Boolean(activeData && (canMove ? canMove(activeData.itemId, null) : true));
+
   return (
-    <header className="flex items-center justify-between p-1.5 bg-panel-header-bg min-h-11">
+    <header
+      ref={setNodeRef}
+      data-slot="sources-panel-header"
+      data-valid-drop-target={isOver && isValidRootTarget ? "true" : undefined}
+      className={cn(
+        "flex items-center justify-between p-1.5 bg-panel-header-bg min-h-11 transition-colors",
+        isOver && isValidRootTarget && "bg-accent/80 ring-2 ring-primary/40",
+      )}
+    >
       <h2 className={`text-sm font-semibold pl-1.5 ${collapsed ? "hidden" : ""}`}>
         {t("panels.sources")}
       </h2>

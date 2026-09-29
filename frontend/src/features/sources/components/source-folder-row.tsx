@@ -1,5 +1,5 @@
 import type React from "react";
-import { ChevronRight, ChevronsUpDown, Folder, FolderOpen, FolderPlus } from "lucide-react";
+import { ChevronRight, ChevronsUpDown, Folder, FolderInput, FolderOpen, FolderPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   ContextMenu,
@@ -7,45 +7,94 @@ import {
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { getTreeRowClassName } from "@/components/ui/tree";
+import { getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import type { SourceFolder } from "../types/source-folder.types";
 
 export interface SourceFolderRowProps {
   folder: SourceFolder;
+  allFolders?: readonly SourceFolder[];
   depth: number;
   isOpen: boolean;
   onToggleOpen: () => void;
   onCreateChildFolder: () => void;
+  onMove?: (itemId: string, targetFolderId: string | null) => void;
+  canMove?: (draggedItemId: string, targetFolderId: string | null) => boolean;
+  setFolderOpen?: (folderId: string, open: boolean) => void;
   onExpandAll?: () => void;
   onCollapseAll?: () => void;
 }
 
 export function SourceFolderRow({
   folder,
+  allFolders,
   depth,
   isOpen,
   onToggleOpen,
   onCreateChildFolder,
+  onMove,
+  canMove,
+  setFolderOpen,
   onExpandAll,
   onCollapseAll,
 }: SourceFolderRowProps) {
   const { t } = useTranslation(["tree", "sources"]);
 
+  const {
+    isDragging,
+    isOver,
+    canAcceptDrop,
+    setNodeRefs,
+    rowDragProps,
+  } = useTreeRowDragDrop({
+    nodeId: folder.id,
+    isFolder: true,
+    isRenaming: false,
+    isOpen,
+    canMove: (draggedItemId, targetFolderId) =>
+      canMove ? canMove(draggedItemId, targetFolderId) : true,
+    setFolderOpen: (folderId, open) => {
+      setFolderOpen?.(folderId, open);
+    },
+    registerNode: () => {},
+    dragIdPrefix: "tree-drag:",
+    folderDropIdPrefix: "tree-folder:",
+    dragType: "sources-tree-item",
+    folderDropType: "sources-tree-folder",
+    hoverOpenDelayMs: 550,
+  });
+
+  const validTargetFolders = (allFolders ?? []).filter((f) =>
+    canMove ? canMove(folder.id, f.id) : f.id !== folder.id,
+  );
+
   const row = (
     <div
+      ref={setNodeRefs}
+      {...rowDragProps}
       role="treeitem"
       aria-expanded={isOpen}
       aria-label={folder.name}
+      data-slot="sources-tree-folder-row"
+      data-dragging={isDragging ? "true" : undefined}
+      data-drop-target={isOver && canAcceptDrop ? "valid" : undefined}
       tabIndex={0}
       style={
         {
           "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))`,
         } as React.CSSProperties
       }
-      className={cn(getTreeRowClassName({}), "cursor-pointer select-none")}
+      className={cn(
+        getTreeRowClassName({}),
+        "cursor-pointer select-none",
+        isDragging && "opacity-50",
+        isOver && canAcceptDrop && "bg-accent/80 ring-2 ring-primary/40",
+      )}
       onClick={onToggleOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -90,6 +139,44 @@ export function SourceFolderRow({
             <FolderPlus className="size-4 mr-2" />
             {t("tree:actions.newFolder", "New folder")}
           </ContextMenuItem>
+        </ContextMenuGroup>
+        {(folder.parentId !== null || validTargetFolders.length > 0) && <ContextMenuSeparator />}
+        <ContextMenuGroup>
+          {folder.parentId !== null && (
+            <ContextMenuItem
+              data-slot="source-folder-menu-move-root"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMove?.(folder.id, null);
+              }}
+            >
+              <FolderInput className="size-4 mr-2" />
+              {t("tree:actions.moveToSourcesRoot", "Move to Sources root")}
+            </ContextMenuItem>
+          )}
+          {validTargetFolders.length > 0 && (
+            <ContextMenuSub>
+              <ContextMenuSubTrigger data-slot="source-folder-menu-move-folder">
+                <FolderInput className="size-4 mr-2" />
+                {t("tree:actions.moveToFolder", "Move to folder")}
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="min-w-44">
+                {validTargetFolders.map((f) => (
+                  <ContextMenuItem
+                    key={f.id}
+                    data-slot={`move-folder-target-${f.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMove?.(folder.id, f.id);
+                    }}
+                  >
+                    <Folder className="size-4 mr-2 text-muted-foreground" />
+                    <span className="truncate">{f.name}</span>
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          )}
         </ContextMenuGroup>
         {(onExpandAll || onCollapseAll) && <ContextMenuSeparator />}
         <ContextMenuGroup>

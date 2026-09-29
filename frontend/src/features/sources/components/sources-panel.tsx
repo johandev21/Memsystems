@@ -1,7 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronsUpDown, FolderOpen, FolderPlus } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { ChevronsUpDown, FileText, Folder, FolderOpen, FolderPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   ContextMenu,
@@ -11,15 +23,23 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { usePersistentExpandedFolders } from "@/components/ui/tree";
+import {
+  getTreeDragData,
+  getTreeDropData,
+  usePersistentExpandedFolders,
+} from "@/components/ui/tree";
 import {
   type Source,
+  moveSource,
   sourcesQueryOptions,
 } from "../api/sources";
 import {
   createSourceFolder,
   sourceFoldersQueryOptions,
+  updateSourceFolder,
 } from "../api/source-folders";
+import type { SourceFolder } from "../types/source-folder.types";
+import { canMoveSourcesItem } from "../model/sources-tree";
 import { useUploadStore } from "../hooks/use-upload-store";
 import { AddSourceDialog } from "./add-source-dialog";
 import { PendingUploadRow } from "./pending-upload-row";
@@ -29,15 +49,20 @@ import {
 } from "../utils/source-processing";
 import { SourcesList } from "./sources-list/sources-list";
 import { useSourceMutations } from "./sources-list/use-source-mutations";
+import { SourcesPanelHeader } from "@/features/notebooks/components/notebook-workspace/sources-panel-header";
 
 export function SourcesPanel({
   notebookId,
   collapsed,
   onSelectSource,
+  onToggleCollapse,
+  showHeader = true,
 }: {
   notebookId: string;
   collapsed?: boolean;
   onSelectSource: (id: string) => void;
+  onToggleCollapse?: () => void;
+  showHeader?: boolean;
 }) {
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const { t } = useTranslation(["sources", "tree"]);
@@ -99,6 +124,32 @@ export function SourcesPanel({
     [setExpandedIds],
   );
 
+  const setFolderOpen = useCallback(
+    (folderId: string, open: boolean) => {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        if (open) {
+          next.add(folderId);
+        } else {
+          next.delete(folderId);
+        }
+        return next;
+      });
+    },
+    [setExpandedIds],
+  );
+
+  const canMove = useCallback(
+    (itemId: string, targetFolderId: string | null) => {
+      return canMoveSourcesItem(
+        { folders: folders ?? [], sources: sources ?? [] },
+        itemId,
+        targetFolderId,
+      );
+    },
+    [folders, sources],
+  );
+
   const createFolderMutation = useMutation({
     mutationFn: (input: { name: string; parentId?: string | null }) =>
       createSourceFolder(notebookId, input),
@@ -119,6 +170,105 @@ export function SourcesPanel({
     },
     [createFolderMutation, t],
   );
+
+  const moveItemMutation = useMutation({
+    mutationFn: async ({
+      itemId,
+      targetFolderId,
+    }: {
+      itemId: string;
+      targetFolderId: string | null;
+    }) => {
+      const isFolder = folders?.some((f) => f.id === itemId);
+      if (isFolder) {
+        return updateSourceFolder(itemId, { parentId: targetFolderId });
+      }
+      return moveSource(itemId, targetFolderId);
+    },
+    onMutate: async ({ itemId, targetFolderId }) => {
+      await queryClient.cancelQueries({ queryKey: ["sources", notebookId] });
+      await queryClient.cancelQueries({ queryKey: ["source-folders", notebookId] });
+
+      const previousSources = queryClient.getQueryData<Source[]>(["sources", notebookId]);
+      const previousFolders = queryClient.getQueryData<SourceFolder[]>(["source-folders", notebookId]);
+
+      const isFolder = previousFolders?.some((f) => f.id === itemId);
+
+      if (isFolder) {
+        queryClient.setQueryData<SourceFolder[]>(["source-folders", notebookId], (old) => {
+          if (!old) return old;
+          return old.map((f) => (f.id === itemId ? { ...f, parentId: targetFolderId } : f));
+        });
+      } else {
+        queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
+          if (!old) return old;
+          return old.map((s) => (s.id === itemId ? { ...s, folderId: targetFolderId } : s));
+        });
+      }
+
+      if (targetFolderId !== null) {
+        setExpandedIds((prev) => new Set([...prev, targetFolderId]));
+      }
+
+      return { previousSources, previousFolders };
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previousSources) {
+        queryClient.setQueryData(["sources", notebookId], context.previousSources);
+      }
+      if (context?.previousFolders) {
+        queryClient.setQueryData(["source-folders", notebookId], context.previousFolders);
+      }
+      const message =
+        err instanceof Error ? err.message : t("tree:errors.moveFailed", "Failed to move item");
+      toast.error(message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
+      queryClient.invalidateQueries({ queryKey: ["source-folders", notebookId] });
+    },
+  });
+
+  const handleMove = useCallback(
+    (itemId: string, targetFolderId: string | null) => {
+      if (!canMove(itemId, targetFolderId)) return;
+      moveItemMutation.mutate({ itemId, targetFolderId });
+    },
+    [canMove, moveItemMutation],
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const dragData = getTreeDragData(event.active.data.current);
+    if (dragData) {
+      setActiveDragId(dragData.itemId);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const dragData = getTreeDragData(event.active.data.current);
+      const dropData = getTreeDropData(event.over?.data.current);
+      setActiveDragId(null);
+      if (!dragData || !dropData) return;
+
+      const itemId = dragData.itemId;
+      const targetFolderId = dropData.folderId;
+
+      handleMove(itemId, targetFolderId);
+    },
+    [handleMove],
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDragId(null);
+  }, []);
 
   useEffect(() => {
     const onCreate = () => handleCreateFolder(null);
@@ -151,7 +301,19 @@ export function SourcesPanel({
     cancelMutation,
   } = useSourceMutations(notebookId);
 
-  if (collapsed) return null;
+  if (collapsed) {
+    return (
+      <div className="flex flex-col bg-panel-bg">
+        {showHeader && (
+          <SourcesPanelHeader
+            collapsed={true}
+            notebookId={notebookId}
+            onToggleCollapse={onToggleCollapse}
+          />
+        )}
+      </div>
+    );
+  }
 
   const hasNoSources =
     !isPending &&
@@ -161,79 +323,138 @@ export function SourcesPanel({
     pendingUploads.length === 0;
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
-      <ContextMenu>
-        <ContextMenuTrigger
-          ref={setScrollElement}
-          data-slot="sources-panel-content"
-          className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
-        >
-          {pendingUploads.map((upload) => (
-            <PendingUploadRow key={upload.id} upload={upload} onCancel={cancelPendingUpload} />
-          ))}
-
-          <SourcesList
-            sources={sources}
-            folders={folders}
-            openFolderIds={expandedIds}
-            onToggleFolder={toggleFolder}
-            onCreateFolder={handleCreateFolder}
+    <DndContext
+      collisionDetection={pointerWithin}
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="flex h-full min-w-0 flex-col bg-panel-bg">
+        {showHeader && (
+          <SourcesPanelHeader
+            collapsed={false}
+            notebookId={notebookId}
+            onToggleCollapse={onToggleCollapse}
+            onCreateFolder={() => handleCreateFolder(null)}
             onExpandAll={expandAll}
             onCollapseAll={collapseAll}
-            isPending={isPending}
-            isError={isError}
-            hasNoSources={hasNoSources}
-            scrollElement={scrollElement}
-            onSelectSource={onSelectSource}
-            onDelete={(source) => setSourceToDelete({ id: source.id, title: source.title })}
-            onRetry={(source) => retryMutation.mutate(source.id)}
-            onCancel={(source) => cancelMutation.mutate(source.id)}
-            deletingId={deleteMutation.isPending ? deleteMutation.variables : undefined}
-            retryingId={retryMutation.isPending ? retryMutation.variables : undefined}
-            cancellingId={cancelMutation.isPending ? cancelMutation.variables : undefined}
+            canMove={canMove}
           />
-        </ContextMenuTrigger>
-        <ContextMenuContent className="min-w-48">
-          <ContextMenuGroup>
-            <ContextMenuItem onClick={() => handleCreateFolder(null)}>
-              <FolderPlus className="size-4 mr-2" />
-              {t("tree:actions.newFolder", "New folder")}
-            </ContextMenuItem>
-          </ContextMenuGroup>
-          <ContextMenuSeparator />
-          <ContextMenuGroup>
-            <ContextMenuItem onClick={expandAll}>
-              <FolderOpen className="size-4 mr-2" />
-              {t("tree:actions.expandAll", "Expand all")}
-            </ContextMenuItem>
-            <ContextMenuItem onClick={collapseAll}>
-              <ChevronsUpDown className="size-4 mr-2" />
-              {t("tree:actions.collapseAll", "Collapse all")}
-            </ContextMenuItem>
-          </ContextMenuGroup>
-        </ContextMenuContent>
-      </ContextMenu>
+        )}
 
-      <div className="p-2">
-        <AddSourceDialog notebookId={notebookId}>
-          <div className="cursor-pointer rounded-2xl border-2 border-dashed border-border p-4 text-center text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5">
-            {t("sources:panel.addSourcesPrompt")}
-          </div>
-        </AddSourceDialog>
+        <ContextMenu>
+          <ContextMenuTrigger
+            ref={setScrollElement}
+            data-slot="sources-panel-content"
+            className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
+          >
+            {pendingUploads.map((upload) => (
+              <PendingUploadRow key={upload.id} upload={upload} onCancel={cancelPendingUpload} />
+            ))}
+
+            <SourcesList
+              sources={sources}
+              folders={folders}
+              openFolderIds={expandedIds}
+              onToggleFolder={toggleFolder}
+              onCreateFolder={handleCreateFolder}
+              onExpandAll={expandAll}
+              onCollapseAll={collapseAll}
+              onMove={handleMove}
+              canMove={canMove}
+              setFolderOpen={setFolderOpen}
+              isPending={isPending}
+              isError={isError}
+              hasNoSources={hasNoSources}
+              scrollElement={scrollElement}
+              onSelectSource={onSelectSource}
+              onDelete={(source) => setSourceToDelete({ id: source.id, title: source.title })}
+              onRetry={(source) => retryMutation.mutate(source.id)}
+              onCancel={(source) => cancelMutation.mutate(source.id)}
+              deletingId={deleteMutation.isPending ? deleteMutation.variables : undefined}
+              retryingId={retryMutation.isPending ? retryMutation.variables : undefined}
+              cancellingId={cancelMutation.isPending ? cancelMutation.variables : undefined}
+            />
+          </ContextMenuTrigger>
+          <ContextMenuContent className="min-w-48">
+            <ContextMenuGroup>
+              <ContextMenuItem onClick={() => handleCreateFolder(null)}>
+                <FolderPlus className="size-4 mr-2" />
+                {t("tree:actions.newFolder", "New folder")}
+              </ContextMenuItem>
+            </ContextMenuGroup>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+              <ContextMenuItem onClick={expandAll}>
+                <FolderOpen className="size-4 mr-2" />
+                {t("tree:actions.expandAll", "Expand all")}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={collapseAll}>
+                <ChevronsUpDown className="size-4 mr-2" />
+                {t("tree:actions.collapseAll", "Collapse all")}
+              </ContextMenuItem>
+            </ContextMenuGroup>
+          </ContextMenuContent>
+        </ContextMenu>
+
+        <div className="p-2">
+          <AddSourceDialog notebookId={notebookId}>
+            <div className="cursor-pointer rounded-2xl border-2 border-dashed border-border p-4 text-center text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5">
+              {t("sources:panel.addSourcesPrompt")}
+            </div>
+          </AddSourceDialog>
+        </div>
+
+        <ConfirmDeleteDialog
+          open={sourceToDelete !== null}
+          onOpenChange={(open) => !open && setSourceToDelete(null)}
+          title={t("sources:panel.deleteTitle")}
+          description={t("sources:panel.deleteDescription", { title: sourceToDelete?.title ?? "" })}
+          onConfirm={() => {
+            if (!sourceToDelete) return;
+            deleteMutation.mutate(sourceToDelete.id);
+            setSourceToDelete(null);
+          }}
+          isLoading={deleteMutation.isPending}
+        />
       </div>
 
-      <ConfirmDeleteDialog
-        open={sourceToDelete !== null}
-        onOpenChange={(open) => !open && setSourceToDelete(null)}
-        title={t("sources:panel.deleteTitle")}
-        description={t("sources:panel.deleteDescription", { title: sourceToDelete?.title ?? "" })}
-        onConfirm={() => {
-          if (!sourceToDelete) return;
-          deleteMutation.mutate(sourceToDelete.id);
-          setSourceToDelete(null);
-        }}
-        isLoading={deleteMutation.isPending}
-      />
+      <DragOverlay dropAnimation={null}>
+        {activeDragId ? (
+          <SourcesDragPreview
+            itemId={activeDragId}
+            sources={sources ?? []}
+            folders={folders ?? []}
+          />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+function SourcesDragPreview({
+  itemId,
+  sources,
+  folders,
+}: {
+  itemId: string;
+  sources: readonly Source[];
+  folders: readonly SourceFolder[];
+}) {
+  const folder = folders.find((f) => f.id === itemId);
+  const source = sources.find((s) => s.id === itemId);
+  const name = folder?.name ?? source?.title ?? "Item";
+  const isFolder = Boolean(folder);
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground shadow-lg">
+      {isFolder ? (
+        <Folder className="size-4 shrink-0 text-muted-foreground" />
+      ) : (
+        <FileText className="size-4 shrink-0 text-muted-foreground" />
+      )}
+      <span className="max-w-48 truncate">{name}</span>
     </div>
   );
 }
