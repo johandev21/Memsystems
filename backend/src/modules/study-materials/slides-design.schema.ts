@@ -6,6 +6,7 @@ import {
   SUPPORTED_FONTS,
 } from './slides-design.types';
 import { GenerationCitationsSchema } from './generation-citations';
+import { GeneralKnowledgeSupplementSchema } from './generation-supplement';
 
 const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
@@ -178,6 +179,7 @@ export const SlideDeckSchema = z.object({
     )
     .max(20)
     .optional(),
+  generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
 

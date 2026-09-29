@@ -7,6 +7,10 @@ import { ConnectionService } from '../ai/connection.service';
 import { RetrievalTraceService } from '../ai/retrieval-trace.service';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {
+  DEFAULT_GROUNDING_MODE,
+  resolveGroundingMode,
+} from '../notebooks/grounding-mode';
+import {
   GenerationRequestManager,
   StartGenerationInput,
 } from './generation-request-manager';
@@ -45,6 +49,14 @@ export class GenerationService {
     externalSignal?: AbortSignal,
   ) {
     await this.notebooksService.assertNotebookOwner(notebookId);
+    const notebookGroundingMode =
+      typeof this.notebooksService.getGroundingMode === 'function'
+        ? await this.notebooksService.getGroundingMode(notebookId)
+        : DEFAULT_GROUNDING_MODE;
+    const groundingMode = resolveGroundingMode(
+      input.groundingMode,
+      notebookGroundingMode,
+    );
 
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
     await this.connectionService.requireConnected(modelId);
@@ -69,6 +81,7 @@ export class GenerationService {
           notebookId,
           kind: 'generation',
           generationRequestId,
+          groundingMode,
           trace,
         });
       }
@@ -77,8 +90,14 @@ export class GenerationService {
     // A selected source with no Evidence is unavailable, whatever the reason
     // (deleted, failed, degraded, or not indexed yet). Every kind reports it
     // with the same error the study guide flow has always used, instead of
-    // silently generating from a smaller selection.
-    if (grounding.unavailableSources.length > 0) {
+    // silently generating from a smaller selection. This holds in every
+    // grounding mode: free only skips the rejection vacuously, when no
+    // sources were selected at all (there is then nothing unavailable).
+    const hasSelectedSources = input.sourceIds.length > 0;
+    if (
+      grounding.unavailableSources.length > 0 &&
+      (groundingMode !== 'free' || hasSelectedSources)
+    ) {
       const degraded = new Set(
         grounding.degradedSources.map((source) => source.id),
       );
@@ -100,8 +119,14 @@ export class GenerationService {
 
     const sourceCount = grounding.sources.length;
 
+    // Free answers from the brief and general knowledge with no sources, so
+    // the source-or-brief requirements below do not apply to it. Strict and
+    // moderate share the same gates. The count bounds stay unconditional:
+    // they gate the request shape, not the grounding.
+    const requiresSourceOrBrief = groundingMode !== 'free';
+
     if (input.kind === 'study_guide') {
-      if (sourceCount === 0 && !input.brief.trim()) {
+      if (sourceCount === 0 && !input.brief.trim() && requiresSourceOrBrief) {
         throw new BadRequestError(
           'Select a source or enter a brief for your study guide.',
           { messageKey: 'errors.generation.sourceOrBrief.studyGuide' },
@@ -121,7 +146,7 @@ export class GenerationService {
           },
         );
       }
-      if (sourceCount === 0 && !input.brief.trim()) {
+      if (sourceCount === 0 && !input.brief.trim() && requiresSourceOrBrief) {
         throw new BadRequestError(
           'Select a source or enter a brief for your practice problems.',
           { messageKey: 'errors.generation.sourceOrBrief.practiceProblems' },
@@ -141,7 +166,7 @@ export class GenerationService {
           },
         );
       }
-      if (sourceCount === 0 && !input.brief.trim()) {
+      if (sourceCount === 0 && !input.brief.trim() && requiresSourceOrBrief) {
         throw new BadRequestError(
           'Select a source or enter a brief for your case study.',
           { messageKey: 'errors.generation.sourceOrBrief.caseStudy' },
@@ -152,6 +177,7 @@ export class GenerationService {
     const requestId = await this.requestManager.create(notebookId, {
       ...input,
       model: modelId,
+      groundingMode,
     });
 
     await recordTraces(requestId);
@@ -171,6 +197,7 @@ export class GenerationService {
       {
         ...input,
         model: modelId,
+        groundingMode,
       },
       { sources: grounding.sources, evidence: grounding.evidence },
       requestId,

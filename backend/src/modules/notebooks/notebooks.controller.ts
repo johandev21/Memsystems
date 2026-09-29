@@ -28,6 +28,7 @@ const createNotebookSchema = z.object({
     .optional(),
   icon: z.string().max(50, 'Icon must be at most 50 characters').optional(),
   folderId: z.string().nullable().optional(),
+  groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
 });
 
 const updateNotebookSchema = z.object({
@@ -35,6 +36,7 @@ const updateNotebookSchema = z.object({
   description: z.string().max(500).nullable().optional(),
   icon: z.string().max(50).nullable().optional(),
   folderId: z.string().nullable().optional(),
+  groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
   bannerFocalPoint: z
     .object({
       x: z.number().min(0).max(1),

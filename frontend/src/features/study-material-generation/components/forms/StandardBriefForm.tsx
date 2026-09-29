@@ -5,6 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
 import { SourceMultiSelect } from "@/features/notebooks/components/studio/source-multi-select";
+import {
+  canSubmitBrief,
+  useNotebookGroundingMode,
+} from "@/features/notebooks/model/grounding-mode";
 import { kindLabelKey } from "../../kind-label";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
@@ -24,8 +28,17 @@ export function StandardBriefForm({
     onChange(patch);
   };
 
+  const groundingMode = useNotebookGroundingMode(notebookId);
+  const hasSources = value.sourceIds.length > 0;
+  const showFreeHint = groundingMode === "free" && !hasSources;
+
   const label = t(kindLabelKey(kind));
-  const canSubmit = !disabled && (value.sourceIds.length > 0 || value.brief.trim().length > 0);
+  const canSubmit = canSubmitBrief(
+    groundingMode,
+    hasSources,
+    value.brief.trim().length > 0,
+    disabled,
+  );
 
   return (
     <div className="min-w-0 space-y-4">
@@ -76,6 +89,9 @@ export function StandardBriefForm({
       >
         {submitLabel ?? t("actions.generate")}
       </Button>
+      {showFreeHint && (
+        <p className="text-xs text-text-secondary">{t("fields.freeHint")}</p>
+      )}
     </div>
   );
 }

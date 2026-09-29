@@ -2,6 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
+import {
+  canSubmitBrief,
+  useNotebookGroundingMode,
+} from "@/features/notebooks/model/grounding-mode";
 import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import { cn } from "@/shared/utils/cn";
 import { useQuery } from "@tanstack/react-query";
@@ -51,7 +55,9 @@ export function PracticeProblemsBriefForm({
 
   const hasSources = value.sourceIds.length > 0;
   const hasInstructions = value.brief.trim().length > 0;
-  const canSubmit = !disabled && (hasSources || hasInstructions);
+  const groundingMode = useNotebookGroundingMode(notebookId);
+  const canSubmit = canSubmitBrief(groundingMode, hasSources, hasInstructions, disabled);
+  const showFreeHint = groundingMode === "free" && !hasSources;
 
   const problemLabel =
     problemCount >= MAX_PROBLEMS
@@ -217,7 +223,7 @@ export function PracticeProblemsBriefForm({
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-text-primary">
                 {t("fields.knowledgeSourcesStep3")}
-                {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
+                {!hasInstructions && !showFreeHint && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <GenerationSourcePopover
                 sources={sources}
@@ -254,7 +260,7 @@ export function PracticeProblemsBriefForm({
                 className="text-sm font-medium text-text-primary"
               >
                 {t("fields.customInstructions")}
-                {!hasSources && <span className="text-destructive ml-0.5">*</span>}
+                {!hasSources && !showFreeHint && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <Textarea
                 id="brief-practice-problems"
@@ -299,6 +305,9 @@ export function PracticeProblemsBriefForm({
               {submitLabel ?? t("actions.generateNow", { kind: t("kinds.practice_problems") })}
             </Button>
           </div>
+          {showFreeHint && (
+            <p className="text-xs text-text-secondary">{t("fields.freeHint")}</p>
+          )}
         </div>
       )}
     </div>

@@ -215,6 +215,7 @@ function ChatContent({
               title={notebook.title}
               description={notebook.description}
               icon={notebook.icon ?? undefined}
+              groundingMode={notebook.groundingMode}
               bannerUrl={notebook.bannerUrl}
               bannerVariants={notebook.bannerVariants}
               bannerFocalPoint={notebook.bannerFocalPoint}

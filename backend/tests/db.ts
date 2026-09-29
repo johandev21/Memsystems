@@ -178,6 +178,23 @@ export async function ensureTestDatabase(): Promise<void> {
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "source_upload_intents_status_expires_at_idx" ON "source_upload_intents" ("status", "expires_at")',
     );
+    await pgClient.query(`DO $$ BEGIN
+      CREATE TYPE "grounding_mode" AS ENUM('strict', 'moderate', 'free');
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;`);
+    await pgClient.query(
+      `ALTER TABLE "notebooks" ADD COLUMN IF NOT EXISTS "grounding_mode" "grounding_mode" DEFAULT 'strict' NOT NULL`,
+    );
+    await pgClient.query(
+      `ALTER TABLE "notebook_chat_messages" ADD COLUMN IF NOT EXISTS "grounding_mode" "grounding_mode" DEFAULT 'strict' NOT NULL`,
+    );
+    await pgClient.query(
+      `ALTER TABLE "generation_requests" ADD COLUMN IF NOT EXISTS "grounding_mode" "grounding_mode" DEFAULT 'strict' NOT NULL`,
+    );
+    await pgClient.query(
+      `ALTER TABLE "retrieval_traces" ADD COLUMN IF NOT EXISTS "grounding_mode" "grounding_mode" DEFAULT 'strict' NOT NULL`,
+    );
   } finally {
     await pgClient.end();
   }

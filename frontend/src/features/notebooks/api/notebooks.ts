@@ -30,7 +30,15 @@ export async function createNotebook(
 export async function updateNotebook(
   id: string,
   updates: Partial<
-    Pick<Notebook, "title" | "description" | "icon" | "folderId" | "bannerFocalPoint">
+    Pick<
+      Notebook,
+      | 'title'
+      | 'description'
+      | 'icon'
+      | 'folderId'
+      | 'bannerFocalPoint'
+      | 'groundingMode'
+    >
   >,
 ): Promise<Notebook> {
   const res = await fetchApi(`/api/notebooks/${id}`, {

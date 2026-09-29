@@ -7,6 +7,7 @@ import { useState } from "react";
 import { GatewayKeyPrompt, isConnectionUsable, useConnectionStatus } from "@/features/ai";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
+import { useNotebookGroundingMode } from "@/features/notebooks/model/grounding-mode";
 import { useGenerationStore } from "../hooks/use-generation-store";
 import type { StudyMaterialKind } from "@/features/study-material-viewer/types";
 import { useTranslation } from "react-i18next";
@@ -59,6 +60,7 @@ export function GenerateBriefDialog({
     caseStudyOptions,
   } = value;
   const { model: selectedModel } = useModelPersistence(notebookId);
+  const groundingMode = useNotebookGroundingMode(notebookId);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -75,6 +77,7 @@ export function GenerateBriefDialog({
         sourceIds,
         folderId,
         model: selectedModel,
+        groundingMode,
         questionCount,
         difficulty,
         cardStyle,
