@@ -8,33 +8,38 @@ import { getApiUrl } from "@/shared/api";
 export type { StudyMaterialKind };
 
 export interface RoadmapGenerationOptions {
+  /** 0 = auto. */
   phaseCount: number;
-  detailLevel: "basic" | "detailed";
+  detailLevel: "basic" | "detailed" | "auto";
 }
 
 export interface MindMapGenerationOptions {
+  /** 0 = auto. */
   nodeCount: number;
   structure: "radial" | "hierarchical" | "organic";
-  colorGroups: boolean;
+  colorGroups: boolean | "auto";
   crossLinks: boolean;
-  detailLevel: "basic" | "detailed";
+  detailLevel: "basic" | "detailed" | "auto";
 }
 
 export interface SlidesGenerationOptions {
+  /** 0 = auto. */
   slideCount: number;
-  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm";
-  detailLevel: "basic" | "detailed";
+  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm" | "auto";
+  detailLevel: "basic" | "detailed" | "auto";
 }
 
 export interface PracticeProblemsGenerationOptions {
+  /** 0 = auto. */
   problemCount: number;
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: "easy" | "medium" | "hard" | "auto";
 }
 
 export interface CaseStudyGenerationOptionsInput {
+  /** 0 = auto. */
   questionCount: number;
   focus: string;
-  comparePerspectives: boolean;
+  comparePerspectives: "auto" | "single" | "compare";
 }
 
 export interface StartGenerationInput {
@@ -44,9 +49,10 @@ export interface StartGenerationInput {
   folderId?: string | null;
   model?: string;
   groundingMode?: 'strict' | 'moderate' | 'free';
+  /** 0 = auto. */
   questionCount?: number;
-  difficulty?: "easy" | "medium" | "hard";
-  cardStyle?: "qa" | "definition" | "cloze" | "mixed";
+  difficulty?: "easy" | "medium" | "hard" | "auto";
+  cardStyle?: "qa" | "definition" | "cloze" | "mixed" | "auto";
   roadmapOptions?: RoadmapGenerationOptions;
   mindMapOptions?: MindMapGenerationOptions;
   studyGuideOptions?: StudyGuideGenerationOptions;

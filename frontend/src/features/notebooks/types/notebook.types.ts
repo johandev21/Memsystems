@@ -9,10 +9,6 @@ export interface NotebookBannerVariants {
   w1920: string | null;
 }
 
-export type GroundingMode = 'strict' | 'moderate' | 'free';
-
-export const DEFAULT_GROUNDING_MODE: GroundingMode = 'strict';
-
 export interface Notebook {
   id: string;
   title: string;
