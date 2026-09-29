@@ -162,3 +162,33 @@ export const reindexAllSources = (notebookId: string) =>
 
 export const reindexSource = (sourceId: string) =>
   fetchApi(`/api/sources/${sourceId}/reindex`, { method: "POST" });
+
+export async function moveSource(sourceId: string, folderId: string | null): Promise<Source> {
+  const response = await fetchApi(`/api/sources/${sourceId}/move`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folderId }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      data.error ?? i18n.t("errors.moveFailed", { ns: "tree" }),
+    );
+  }
+  return data as Source;
+}
+
+export async function updateSource(sourceId: string, input: { title?: string }): Promise<Source> {
+  const response = await fetchApi(`/api/sources/${sourceId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      data.error ?? i18n.t("errors.renameFailed", { ns: "tree" }),
+    );
+  }
+  return data as Source;
+}

@@ -931,10 +931,13 @@ export default interface Resources {
       "addSource": "Add source",
       "backToMaterial": "Back to Material",
       "chat": "Chat",
+      "collapseAll": "Collapse all folders",
       "collapseSources": "Collapse sources",
       "collapseStudio": "Collapse studio",
+      "expandAll": "Expand all folders",
       "expandSources": "Expand sources",
       "expandStudio": "Expand studio",
+      "newFolder": "New folder",
       "sections": "Notebook sections",
       "sources": "Sources",
       "studio": "Studio"
@@ -1284,6 +1287,9 @@ export default interface Resources {
       "deleteDescription": "Are you sure you want to delete \"{{title}}\"?",
       "deleteTitle": "Delete Source"
     },
+    "panels": {
+      "sources": "Sources"
+    },
     "pendingUpload": {
       "cancelProcessing": "Cancel source processing",
       "cancelled": "Cancelled",
@@ -1352,7 +1358,8 @@ export default interface Resources {
     "sourcesList": {
       "emptyDescription": "Add material to ground your chats and study materials.",
       "emptyTitle": "No sources yet",
-      "failedToLoad": "Failed to load sources"
+      "failedToLoad": "Failed to load sources",
+      "retry": "Retry"
     },
     "states": {
       "backToSources": "Back to Sources"
@@ -1529,12 +1536,17 @@ export default interface Resources {
   },
   "tree": {
     "actions": {
+      "collapse": "Collapse",
       "collapseAll": "Collapse all",
       "delete": "Delete",
       "duplicate": "Duplicate",
+      "expand": "Expand",
       "expandAll": "Expand all",
+      "moveToFolder": "Move to folder",
       "moveToRoot": "Move to Study Materials",
+      "moveToSourcesRoot": "Move to Sources root",
       "newFolder": "New folder",
+      "newSubfolder": "New subfolder",
       "rename": "Rename"
     },
     "defaults": {

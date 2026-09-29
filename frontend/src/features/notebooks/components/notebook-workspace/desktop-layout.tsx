@@ -19,7 +19,6 @@ const SourceContentViewer = lazy(() =>
     (m) => ({ default: m.SourceContentViewer }),
   ),
 );
-import { SourcesPanelHeader } from "./sources-panel-header";
 import { StudioPanelHeader } from "./studio-panel-header";
 
 const COLLAPSED_PANEL_SIZE = "48px";
@@ -144,20 +143,12 @@ export function DesktopLayout({
                 />
               </Suspense>
             ) : (
-              <>
-                <SourcesPanelHeader
-                  collapsed={sourcesCollapsed}
-                  notebookId={notebookId}
-                  onToggleCollapse={toggleSourcesCollapse}
-                />
-                <div className="flex-1 min-h-0">
-                  <SourcesPanel
-                    notebookId={notebookId}
-                    collapsed={sourcesCollapsed}
-                    onSelectSource={onSelectSource}
-                  />
-                </div>
-              </>
+              <SourcesPanel
+                notebookId={notebookId}
+                collapsed={sourcesCollapsed}
+                onSelectSource={onSelectSource}
+                onToggleCollapse={toggleSourcesCollapse}
+              />
             )}
           </div>
         </ResizablePanel>

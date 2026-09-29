@@ -20,6 +20,7 @@ const TABLES = [
   'study_materials',
   'study_material_folders',
   'sources',
+  'source_folders',
   'notebooks',
   'notebook_folders',
   // Renamed to app_settings by migration 0007 (user_settings was dropped).
@@ -194,6 +195,33 @@ export async function ensureTestDatabase(): Promise<void> {
     );
     await pgClient.query(
       `ALTER TABLE "retrieval_traces" ADD COLUMN IF NOT EXISTS "grounding_mode" "grounding_mode" DEFAULT 'strict' NOT NULL`,
+    );
+    await pgClient.query(`CREATE TABLE IF NOT EXISTS "source_folders" (
+      "id" varchar PRIMARY KEY,
+      "notebook_id" varchar NOT NULL,
+      "parent_id" varchar,
+      "name" varchar(200) NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      "updated_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "source_folders_notebook_id_notebooks_id_fk" FOREIGN KEY ("notebook_id") REFERENCES "notebooks"("id") ON DELETE CASCADE,
+      CONSTRAINT "source_folders_parent_id_source_folders_id_fk" FOREIGN KEY ("parent_id") REFERENCES "source_folders"("id") ON DELETE CASCADE
+    )`);
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "source_folders_notebook_id_idx" ON "source_folders" ("notebook_id")',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "source_folders_parent_id_idx" ON "source_folders" ("parent_id")',
+    );
+    await pgClient.query(
+      `ALTER TABLE "sources" ADD COLUMN IF NOT EXISTS "folder_id" varchar`,
+    );
+    await pgClient.query(`DO $$ BEGIN
+      ALTER TABLE "sources" ADD CONSTRAINT "sources_folder_id_source_folders_id_fk" FOREIGN KEY ("folder_id") REFERENCES "source_folders"("id") ON DELETE SET NULL;
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;`);
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "sources_folder_id_idx" ON "sources" ("folder_id")',
     );
   } finally {
     await pgClient.end();

@@ -17,6 +17,7 @@ export function useTreeFocusRegistry(onFocusItem?: (id: string) => void) {
   const focus = useCallback(
     (id: string) => {
       onFocusItem?.(id);
+      nodeElements.current.get(id)?.focus();
       requestAnimationFrame(() => nodeElements.current.get(id)?.focus());
     },
     [onFocusItem],

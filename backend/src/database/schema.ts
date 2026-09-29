@@ -250,6 +250,31 @@ export const notebooks = pgTable(
   (table) => [index('notebooks_folder_id_idx').on(table.folderId)],
 );
 
+export const sourceFolders = pgTable(
+  'source_folders',
+  {
+    id: varchar('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    notebookId: varchar('notebook_id')
+      .notNull()
+      .references(() => notebooks.id, { onDelete: 'cascade' }),
+    parentId: varchar('parent_id').references((): any => sourceFolders.id, {
+      onDelete: 'cascade',
+    }),
+    name: varchar('name', { length: 200 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('source_folders_notebook_id_idx').on(table.notebookId),
+    index('source_folders_parent_id_idx').on(table.parentId),
+  ],
+);
+
 export const sources = pgTable(
   'sources',
   {
@@ -291,10 +316,15 @@ export const sources = pgTable(
     extractorVersion: varchar('extractor_version', { length: 20 }),
     normalizationVersion: integer('normalization_version'),
     robotsDecision: varchar('robots_decision', { length: 20 }),
+    folderId: varchar('folder_id').references(
+      (): AnyPgColumn => sourceFolders.id,
+      { onDelete: 'set null' },
+    ),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
     index('sources_notebook_id_idx').on(table.notebookId),
+    index('sources_folder_id_idx').on(table.folderId),
     index('sources_kind_idx').on(table.kind),
     index('sources_modality_idx').on(table.modality),
     index('sources_processing_status_idx').on(table.processingStatus),
@@ -724,6 +754,7 @@ export const notebooksRelations = relations(notebooks, ({ one, many }) => ({
     references: [notebookFolders.id],
   }),
   sources: many(sources),
+  sourceFolders: many(sourceFolders),
   sourceChunks: many(sourceChunks),
   sourceIndexJobs: many(sourceIndexJobs),
   webSearchJobs: many(webSearchJobs),
@@ -734,10 +765,31 @@ export const notebooksRelations = relations(notebooks, ({ one, many }) => ({
   sourceUploadIntents: many(sourceUploadIntents),
 }));
 
+export const sourceFoldersRelations = relations(
+  sourceFolders,
+  ({ one, many }) => ({
+    notebook: one(notebooks, {
+      fields: [sourceFolders.notebookId],
+      references: [notebooks.id],
+    }),
+    parent: one(sourceFolders, {
+      fields: [sourceFolders.parentId],
+      references: [sourceFolders.id],
+      relationName: 'sourceFolderHierarchy',
+    }),
+    children: many(sourceFolders, { relationName: 'sourceFolderHierarchy' }),
+    sources: many(sources),
+  }),
+);
+
 export const sourcesRelations = relations(sources, ({ one, many }) => ({
   notebook: one(notebooks, {
     fields: [sources.notebookId],
     references: [notebooks.id],
+  }),
+  folder: one(sourceFolders, {
+    fields: [sources.folderId],
+    references: [sourceFolders.id],
   }),
   chunks: many(sourceChunks),
   indexJobs: many(sourceIndexJobs),

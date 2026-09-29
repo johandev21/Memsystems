@@ -1,15 +1,32 @@
 import { createElement } from "react";
+import type React from "react";
 import {
   AlertCircle,
   AlertTriangle,
+  Folder,
+  FolderInput,
   Loader2,
+  Pencil,
   RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { InlineRename, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import type { Source } from "../../api/sources";
+import type { SourceFolder } from "../../types/source-folder.types";
 import {
   isSourceDegraded,
   isSourceProcessing,
@@ -23,26 +40,52 @@ import { getSourceIcon } from "./source-icon";
 
 export interface SourceRowProps {
   source: Source;
+  allFolders?: readonly SourceFolder[];
+  depth?: number;
   onClick: () => void;
   onDelete: () => void;
   onRetry: () => void;
   onCancel: () => void;
+  onMove?: (itemId: string, targetFolderId: string | null) => void;
+  canMove?: (draggedItemId: string, targetFolderId: string | null) => boolean;
   deleting: boolean;
   retrying: boolean;
   cancelling: boolean;
+  isEditing?: boolean;
+  onBeginRename?: (id: string) => void;
+  onRenameCommit?: (id: string, nextName: string) => void;
+  onRenameCancel?: () => void;
+  isFocused?: boolean;
+  tabIndex?: number;
+  registerNode?: (id: string, el: HTMLElement | null) => void;
+  onFocusRow?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => void;
 }
 
 export function SourceRow({
   source,
+  allFolders,
+  depth = 0,
   onClick,
   onDelete,
   onRetry,
   onCancel,
+  onMove,
+  canMove,
   deleting,
   retrying,
   cancelling,
+  isEditing = false,
+  onBeginRename,
+  onRenameCommit,
+  onRenameCancel,
+  isFocused = false,
+  tabIndex = -1,
+  registerNode,
+  onFocusRow,
+  onKeyDown,
 }: SourceRowProps) {
-  const { t } = useTranslation("sources");
+  const { t } = useTranslation(["sources", "tree"]);
   const status = sourceProcessingStatus(source);
   const active = isSourceProcessing(source);
   const failed = status === "failed";
@@ -56,13 +99,74 @@ export function SourceRow({
     : undefined;
   const tooltip = degraded ? (degradedDetail ?? statusLabel) : (error ?? statusLabel);
 
-  return (
-    <div className="group relative w-max min-w-full">
+  const {
+    isDragging,
+    setNodeRefs,
+    rowDragProps,
+  } = useTreeRowDragDrop({
+    nodeId: source.id,
+    isFolder: false,
+    isRenaming: isEditing,
+    isOpen: false,
+    canMove: (draggedItemId, targetFolderId) =>
+      canMove ? canMove(draggedItemId, targetFolderId) : true,
+    setFolderOpen: () => {},
+    registerNode: registerNode ?? (() => {}),
+    dragIdPrefix: "tree-drag:",
+    folderDropIdPrefix: "tree-folder:",
+    dragType: "sources-tree-item",
+    folderDropType: "sources-tree-folder",
+  });
+
+  const validTargetFolders = (allFolders ?? []).filter((f) =>
+    canMove ? canMove(source.id, f.id) : f.id !== source.folderId,
+  );
+
+  const rowContainer = (
+    <div
+      ref={setNodeRefs}
+      {...rowDragProps}
+      role="treeitem"
+      aria-level={depth + 1}
+      aria-selected={isFocused}
+      data-slot="sources-tree-source-row"
+      data-dragging={isDragging ? "true" : undefined}
+      tabIndex={tabIndex}
+      className={cn(
+        "group relative w-max min-w-full rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        isDragging && "opacity-50",
+      )}
+      onFocus={(e) => {
+        if (e.target === e.currentTarget) {
+          onFocusRow?.();
+        }
+      }}
+      onClick={
+        isEditing
+          ? undefined
+          : (e) => {
+              (e.currentTarget as HTMLElement).focus();
+              onClick();
+            }
+      }
+      onKeyDown={(e) => {
+        if (isEditing) return;
+        onKeyDown?.(e);
+      }}
+    >
       <button
         type="button"
-        onClick={onClick}
+        tabIndex={-1}
+        style={
+          depth > 0
+            ? ({
+                "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))`,
+              } as React.CSSProperties)
+            : undefined
+        }
         className={cn(
-          "group/row relative flex w-max min-w-full cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl py-2 pl-2 pr-16 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground",
+          "group/row relative flex w-max min-w-full cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl py-2 pr-16 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground",
+          depth > 0 ? "pl-(--tree-row-pad)" : "pl-2",
           failed
             ? "text-destructive hover:bg-destructive/5"
             : degraded
@@ -84,7 +188,17 @@ export function SourceRow({
           createElement(getSourceIcon(source), { className: "size-4 shrink-0" })
         )}
         <span className="flex min-w-0 flex-col">
-          <span className="truncate">{source.title}</span>
+          {isEditing ? (
+            <InlineRename
+              initialValue={source.title}
+              onCommit={(val) => onRenameCommit?.(source.id, val)}
+              onCancel={() => onRenameCancel?.()}
+              ariaLabel={source.title}
+              size="sm"
+            />
+          ) : (
+            <span className="truncate">{source.title}</span>
+          )}
           {degraded && (
             <span className="max-w-80 truncate text-xs text-warning">
               {sourceQualityReasonLabel(source) ?? statusLabel} ·{" "}
@@ -101,8 +215,8 @@ export function SourceRow({
         {failed && (
           <button
             type="button"
-            aria-label={t("sourceRow.retryProcessing")}
-            title={t("sourceRow.retryProcessing")}
+            aria-label={t("sources:sourceRow.retryProcessing")}
+            title={t("sources:sourceRow.retryProcessing")}
             onClick={(event) => {
               event.stopPropagation();
               onRetry();
@@ -119,8 +233,8 @@ export function SourceRow({
         {active && (
           <button
             type="button"
-            aria-label={t("pendingUpload.cancelProcessing")}
-            title={t("pendingUpload.cancelProcessing")}
+            aria-label={t("sources:pendingUpload.cancelProcessing")}
+            title={t("sources:pendingUpload.cancelProcessing")}
             onClick={(event) => {
               event.stopPropagation();
               onCancel();
@@ -136,8 +250,8 @@ export function SourceRow({
         )}
         <button
           type="button"
-          aria-label={t("sourceRow.delete")}
-          title={t("sourceRow.delete")}
+          aria-label={t("sources:sourceRow.delete")}
+          title={t("sources:sourceRow.delete")}
           onClick={(event) => {
             event.stopPropagation();
             onDelete();
@@ -152,5 +266,107 @@ export function SourceRow({
         </button>
       </div>
     </div>
+  );
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger data-slot="source-row-trigger" render={rowContainer} />
+      <ContextMenuContent className="min-w-48">
+        <ContextMenuGroup>
+          <ContextMenuItem
+            data-slot="source-menu-rename"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBeginRename?.(source.id);
+            }}
+          >
+            <Pencil className="size-4 mr-2" />
+            {t("tree:actions.rename", "Rename")}
+          </ContextMenuItem>
+        </ContextMenuGroup>
+        <ContextMenuSeparator />
+        {(source.folderId !== null || validTargetFolders.length > 0) && (
+          <ContextMenuGroup>
+            {source.folderId !== null && (
+              <ContextMenuItem
+                data-slot="source-menu-move-root"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMove?.(source.id, null);
+                }}
+              >
+                <FolderInput className="size-4 mr-2" />
+                {t("tree:actions.moveToSourcesRoot", "Move to Sources root")}
+              </ContextMenuItem>
+            )}
+            {validTargetFolders.length > 0 && (
+              <ContextMenuSub>
+                <ContextMenuSubTrigger data-slot="source-menu-move-folder">
+                  <FolderInput className="size-4 mr-2" />
+                  {t("tree:actions.moveToFolder", "Move to folder")}
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent className="min-w-44">
+                  {validTargetFolders.map((f) => (
+                    <ContextMenuItem
+                      key={f.id}
+                      data-slot={`move-source-target-${f.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMove?.(source.id, f.id);
+                      }}
+                    >
+                      <Folder className="size-4 mr-2 text-muted-foreground" />
+                      <span className="truncate">{f.name}</span>
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+            )}
+          </ContextMenuGroup>
+        )}
+        {(source.folderId !== null || validTargetFolders.length > 0) && <ContextMenuSeparator />}
+        {(failed || active) && (
+          <>
+            <ContextMenuGroup>
+              {failed && (
+                <ContextMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRetry();
+                  }}
+                >
+                  <RotateCcw className="size-4 mr-2" />
+                  {t("sources:sourceRow.retryProcessing", "Retry processing")}
+                </ContextMenuItem>
+              )}
+              {active && (
+                <ContextMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCancel();
+                  }}
+                >
+                  <X className="size-4 mr-2" />
+                  {t("sources:pendingUpload.cancelProcessing", "Cancel")}
+                </ContextMenuItem>
+              )}
+            </ContextMenuGroup>
+            <ContextMenuSeparator />
+          </>
+        )}
+        <ContextMenuGroup>
+          <ContextMenuItem
+            variant="destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+          >
+            <Trash2 className="size-4 mr-2" />
+            {t("sources:sourceRow.delete", "Delete")}
+          </ContextMenuItem>
+        </ContextMenuGroup>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

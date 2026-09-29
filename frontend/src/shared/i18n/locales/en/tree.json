@@ -1,11 +1,16 @@
 {
   "actions": {
+    "collapse": "Collapse",
     "collapseAll": "Collapse all",
     "delete": "Delete",
     "duplicate": "Duplicate",
+    "expand": "Expand",
     "expandAll": "Expand all",
+    "moveToFolder": "Move to folder",
     "moveToRoot": "Move to Study Materials",
+    "moveToSourcesRoot": "Move to Sources root",
     "newFolder": "New folder",
+    "newSubfolder": "New subfolder",
     "rename": "Rename"
   },
   "defaults": {

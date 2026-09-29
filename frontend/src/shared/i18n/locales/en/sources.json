@@ -30,6 +30,9 @@
     "deleteDescription": "Are you sure you want to delete \"{{title}}\"?",
     "deleteTitle": "Delete Source"
   },
+  "panels": {
+    "sources": "Sources"
+  },
   "pendingUpload": {
     "cancelled": "Cancelled",
     "cancelProcessing": "Cancel source processing",
@@ -98,7 +101,8 @@
   "sourcesList": {
     "emptyDescription": "Add material to ground your chats and study materials.",
     "emptyTitle": "No sources yet",
-    "failedToLoad": "Failed to load sources"
+    "failedToLoad": "Failed to load sources",
+    "retry": "Retry"
   },
   "states": {
     "backToSources": "Back to Sources"

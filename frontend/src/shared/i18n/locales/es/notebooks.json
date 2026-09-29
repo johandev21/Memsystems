@@ -117,10 +117,13 @@
     "addSource": "Añadir fuente",
     "backToMaterial": "Volver al material",
     "chat": "Chat",
+    "collapseAll": "Contraer todas las carpetas",
     "collapseSources": "Contraer fuentes",
     "collapseStudio": "Contraer estudio",
+    "expandAll": "Expandir todas las carpetas",
     "expandSources": "Expandir fuentes",
     "expandStudio": "Expandir estudio",
+    "newFolder": "Nueva carpeta",
     "sections": "Secciones del cuaderno",
     "sources": "Fuentes",
     "studio": "Estudio"
