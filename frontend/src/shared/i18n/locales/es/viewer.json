@@ -31,8 +31,8 @@
     "yourResponse": "Tu respuesta"
   },
   "citations": {
-    "title": "Citas",
-    "aria": "Citas de fuentes"
+    "aria": "Citas de fuentes",
+    "title": "Citas"
   },
   "cloze": {
     "blankAnswer": "Espacio {{number}}:",
@@ -208,6 +208,15 @@
     "sources": "Fuentes:",
     "step": "Paso {{number}}: {{title}}",
     "stepSources": "Fuentes del paso:",
+    "structuredOutput": {
+      "chooseModel": "Elegir un modelo",
+      "description": "{{name}} no admite salida estructurada, necesaria para la evaluación con IA. Elige un modelo que la admita para evaluar tu respuesta.",
+      "pickerTitle": "Elegir un modelo",
+      "refreshCatalog": "Actualizar el catálogo en Ajustes",
+      "searchPlaceholder": "Buscar modelos...",
+      "title": "Este modelo no puede evaluar respuestas",
+      "unverifiedDescription": "No se pudieron verificar las capacidades de los modelos con el AI Gateway, así que la evaluación está bloqueada. Actualiza el catálogo en Ajustes y elige un modelo que admita salida estructurada."
+    },
     "verificationChecklist": "Lista de verificación",
     "workedSteps": "Pasos desarrollados",
     "yourAttempt": "Tu intento"

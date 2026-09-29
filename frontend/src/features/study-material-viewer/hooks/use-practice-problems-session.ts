@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import i18n from "@/shared/i18n";
+import { classifyAiError, isStructuredOutputUnsupportedError } from "@/features/ai";
 import type {
   ProblemEvaluationResult,
   PracticeProblemsContentType,
@@ -152,9 +153,14 @@ export function usePracticeProblemsSession(
           modelId,
           message,
         });
+        // The structured-output preflight rejection is a capability block, not
+        // a transport failure: surface it with its friendly capability copy.
+        const friendlyMessage = isStructuredOutputUnsupportedError(message)
+          ? classifyAiError(message).message
+          : message;
         updateProblemState(problemId, {
           isEvaluating: false,
-          evaluationError: message,
+          evaluationError: friendlyMessage,
         });
       }
     },

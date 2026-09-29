@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { GATEWAY_TOP_UP_URL, classifyChatError } from "./chat-error";
+import {
+  GATEWAY_TOP_UP_URL,
+  classifyChatError,
+  isStructuredOutputUnsupportedError,
+} from "./chat-error";
 
 describe("classifyChatError", () => {
   it("maps gateway rate-limit envelopes", () => {
@@ -79,6 +83,48 @@ describe("classifyChatError", () => {
     expect(result.title).toBe("Web search isn't supported");
     expect(result.message).toContain("DeepSeek R1");
     expect(result.message).not.toContain("GPT-4o Mini");
+  });
+
+  it.each([
+    "errors.ai.model.structuredOutputUnsupported",
+    "errors.studyMaterials.evaluation.structuredOutputUnsupported",
+  ])("maps the structured-output preflight key %s", (messageKey) => {
+    const result = classifyChatError(messageKey);
+    expect(result.title).toBe("Structured output isn't supported");
+    expect(result.message).toContain("structured output");
+    expect(result.showTopUp).toBe(false);
+    expect(result.showSettings).toBe(false);
+  });
+
+  it("maps structured-output preflight envelopes and the messageKey alias", () => {
+    const fromErrorField = classifyChatError(
+      JSON.stringify({
+        error: "errors.ai.model.structuredOutputUnsupported",
+        code: "gateway_capability_unsupported",
+        params: { name: "GPT-5.6 Sol" },
+      }),
+    );
+    expect(fromErrorField.title).toBe("Structured output isn't supported");
+
+    const fromAlias = classifyChatError(
+      JSON.stringify({
+        messageKey: "errors.studyMaterials.evaluation.structuredOutputUnsupported",
+        code: "bad_request",
+      }),
+    );
+    expect(fromAlias.title).toBe("Structured output isn't supported");
+  });
+
+  it("detects structured-output preflight messages without matching other capability text", () => {
+    expect(
+      isStructuredOutputUnsupportedError("errors.ai.model.structuredOutputUnsupported"),
+    ).toBe(true);
+    expect(
+      isStructuredOutputUnsupportedError(
+        JSON.stringify({ messageKey: "errors.studyMaterials.evaluation.structuredOutputUnsupported" }),
+      ),
+    ).toBe(true);
+    expect(isStructuredOutputUnsupportedError("This model does not support tools")).toBe(false);
   });
 
   it("keeps our validation messages readable", () => {

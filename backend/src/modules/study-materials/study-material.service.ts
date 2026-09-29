@@ -506,6 +506,11 @@ export class StudyMaterialService {
 
     const modelId = input.modelId;
     const provider = await this.aiService.getProviderForModel(modelId);
+    this.aiService.requireStructuredOutput(
+      provider,
+      modelId,
+      'errors.studyMaterials.evaluation.structuredOutputUnsupported',
+    );
     this.logger.debug(
       `[EVAL-DEBUG] provider resolved modelId=${modelId} provider=${provider.id}`,
     );

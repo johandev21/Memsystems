@@ -22,6 +22,48 @@ const AUTH_PATTERNS = /invalid api key|incorrect api key|unauthorized|authentica
 const CAPABILITY_PATTERNS =
   /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool|tools? (?:are|is) not supported/i;
 
+/**
+ * Backend preflight keys for the structured-output gate. They are matched as
+ * keys (not substrings) so the classifier cannot drift with copy changes.
+ */
+export const STRUCTURED_OUTPUT_MESSAGE_KEYS = [
+  "errors.ai.model.structuredOutputUnsupported",
+  "errors.studyMaterials.evaluation.structuredOutputUnsupported",
+] as const;
+
+const STRUCTURED_OUTPUT_MESSAGE_KEY_SET = new Set<string>(STRUCTURED_OUTPUT_MESSAGE_KEYS);
+
+export function isStructuredOutputMessageKey(value: unknown): boolean {
+  return typeof value === "string" && STRUCTURED_OUTPUT_MESSAGE_KEY_SET.has(value.trim());
+}
+
+/**
+ * True when a raw transport message is, or carries, one of the structured
+ * output preflight keys. Handles the bare key and the `{error, code, params}`
+ * envelope, including the `messageKey` alias.
+ */
+export function isStructuredOutputUnsupportedError(
+  rawMessage: string | undefined | null,
+): boolean {
+  const message = (rawMessage ?? "").trim();
+  if (isStructuredOutputMessageKey(message)) return true;
+  if (!message.startsWith("{")) return false;
+  try {
+    const parsed = JSON.parse(message) as {
+      error?: unknown;
+      messageKey?: unknown;
+      code?: unknown;
+    };
+    return (
+      isStructuredOutputMessageKey(parsed.error) ||
+      isStructuredOutputMessageKey(parsed.messageKey) ||
+      isStructuredOutputMessageKey(parsed.code)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function rateLimited(model?: string): ClassifiedAiError {
   return {
     title: i18n.t("errors.rateLimited.title", { ns: "ai" }),
@@ -76,7 +118,18 @@ function needsSettings(): ClassifiedAiError {
   };
 }
 
+function structuredCapability(): ClassifiedAiError {
+  return {
+    title: i18n.t("errors.capability.structuredTitle", { ns: "ai" }),
+    message: i18n.t("errors.capability.structuredMessage", { ns: "ai" }),
+    showTopUp: false,
+    showSettings: false,
+    showModelHint: false,
+  };
+}
+
 function capability(message?: string): ClassifiedAiError {
+  if (isStructuredOutputMessageKey(message)) return structuredCapability();
   const safeMessage = message ?? i18n.t("errors.capability.message", { ns: "ai" });
   const lowerMessage = message?.toLowerCase() ?? "";
   const title = lowerMessage.includes("image attachment")
@@ -122,6 +175,7 @@ function classifyText(text: string, model?: string): ClassifiedAiError | null {
  */
 export function classifyAiError(rawMessage: string | undefined | null): ClassifiedAiError {
   const message = (rawMessage ?? "").trim();
+  if (isStructuredOutputUnsupportedError(message)) return structuredCapability();
   if (message.startsWith("{")) {
     try {
       const parsed = JSON.parse(message) as {

@@ -13,7 +13,17 @@ export interface ModelCapabilities {
 export interface ProviderModel {
   id: string;
   displayName: string;
-  supportsWebSearch: boolean;
+  /**
+   * Advertised web-search support. Only present when the Gateway public model
+   * list provided capabilities for this model; absent means "no claims"
+   * (fail closed), not "unsupported".
+   */
+  supportsWebSearch?: boolean;
+  /**
+   * Gateway-reported Model Capabilities. Only populated for models found in
+   * the Gateway public model list during a successful catalog sync; omitted
+   * otherwise so stale/seed catalogs cannot be mistaken for verified data.
+   */
   capabilities?: ModelCapabilities;
   /** Per-token USD pricing from the gateway catalog, when reported. */
   pricing?: { input: number; output: number } | null;

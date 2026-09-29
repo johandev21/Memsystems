@@ -5,18 +5,20 @@ export type SlidesThemeOption =
   | "editorial"
   | "academic"
   | "technical"
-  | "warm";
+  | "warm"
+  | "auto";
 
 export type DetailLevel = "basic" | "detailed";
+export type SlidesDetailLevel = DetailLevel | "auto";
 
-export const SLIDE_PRESETS = [5, 8, 10, 12];
+export const SLIDE_PRESETS = [5, 8, 10];
 export const MAX_SLIDE_COUNT = 20;
 
 export function normalizeTheme(
   theme: SlidesThemeOption | undefined,
 ): Exclude<SlidesThemeOption, "accent"> {
   if (theme === "accent") return "warm";
-  return theme ?? "dark";
+  return theme ?? "auto";
 }
 
 export const THEME_OPTIONS = [
@@ -74,9 +76,9 @@ export const DETAIL_OPTIONS = [
 export const DEFAULT_SLIDES_OPTIONS: {
   slideCount: number;
   theme: Exclude<SlidesThemeOption, "accent">;
-  detailLevel: DetailLevel;
+  detailLevel: SlidesDetailLevel;
 } = {
-  slideCount: 8,
-  theme: "dark",
-  detailLevel: "detailed",
+  slideCount: 0,
+  theme: "auto",
+  detailLevel: "auto",
 };

@@ -314,6 +314,48 @@ describe('study guide generation boundary', () => {
     expect(instructions).not.toContain('[ref:R1]');
   });
 
+  it('aborts and reports a structured-output capability error when no frame is emitted', async () => {
+    const { handler } = setup();
+    vi.useFakeTimers();
+    try {
+      const never = new Promise<never>(() => {});
+      vi.mocked(streamText).mockReturnValue({
+        partialOutputStream: (async function* () {
+          await never;
+          yield content;
+        })(),
+        output: never,
+      } as never);
+      const onDone = vi.fn();
+      const onError = vi.fn();
+      const { stream } = handler.createStream(
+        'notebook-1',
+        { kind: 'study_guide', brief: 'Virtue', model: 'test-model' },
+        { sources: [], evidence: [] },
+        'request-guard',
+        onDone,
+        onError,
+      );
+      const outcome = drain(stream).then(
+        () => 'resolved',
+        (error: Error) => error,
+      );
+
+      await vi.advanceTimersByTimeAsync(90_000);
+      const error = await outcome;
+
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain(
+        'gateway_capability_unsupported',
+      );
+      expect((error as Error).message).toContain('structured output');
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onDone).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('fails recoverably without saving invalid native or fallback output', async () => {
     const { handler, database } = setup();
     vi.mocked(streamText)

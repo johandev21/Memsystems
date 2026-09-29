@@ -76,23 +76,23 @@ export const generateRequestSchema = z.object({
   sourceIds: z.array(z.string()).default([]),
   folderId: z.string().nullable().optional(),
   model: z.string().optional(),
-  questionCount: z.number().min(1).max(50).optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
-  cardStyle: z.enum(['qa', 'definition', 'cloze', 'mixed']).optional(),
+  questionCount: z.number().min(0).max(50).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'auto']).optional(),
+  cardStyle: z.enum(['qa', 'definition', 'cloze', 'mixed', 'auto']).optional(),
   groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
   roadmapOptions: z
     .object({
       phaseCount: z.number().min(0).max(50),
-      detailLevel: z.enum(['basic', 'detailed']),
+      detailLevel: z.enum(['basic', 'detailed', 'auto']),
     })
     .optional(),
   mindMapOptions: z
     .object({
       nodeCount: z.number().min(0).max(100),
       structure: z.enum(['radial', 'hierarchical', 'organic']),
-      colorGroups: z.boolean(),
+      colorGroups: z.union([z.boolean(), z.enum(['auto'])]),
       crossLinks: z.boolean(),
-      detailLevel: z.enum(['basic', 'detailed']),
+      detailLevel: z.enum(['basic', 'detailed', 'auto']),
     })
     .optional(),
   studyGuideOptions: StudyGuideOptions.optional(),
@@ -110,8 +110,9 @@ export const generateRequestSchema = z.object({
         'academic',
         'technical',
         'warm',
+        'auto',
       ]),
-      detailLevel: z.enum(['basic', 'detailed']),
+      detailLevel: z.enum(['basic', 'detailed', 'auto']),
     })
     .optional(),
 });

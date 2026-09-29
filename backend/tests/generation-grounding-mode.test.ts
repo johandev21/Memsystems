@@ -120,6 +120,20 @@ function setupGeneration() {
   const groundingService = { ground };
   const recordTrace = vi.fn(async () => undefined);
   const retrievalTraceService = { record: recordTrace };
+  const provider = {
+    listModels: () => [
+      {
+        id: 'openai/gpt-5.6-sol',
+        displayName: 'GPT-5.6 Sol',
+        capabilities: { structuredOutput: true },
+      },
+    ],
+    createModel: vi.fn(() => ({})),
+  };
+  const aiService = {
+    getProviderForModel: vi.fn(async () => provider),
+    requireStructuredOutput: vi.fn(),
+  };
   const service = new GenerationService(
     notebooksService as never,
     connectionService as never,
@@ -127,6 +141,7 @@ function setupGeneration() {
     streamHandler as never,
     groundingService as never,
     retrievalTraceService as never,
+    aiService as never,
   );
   return {
     service,

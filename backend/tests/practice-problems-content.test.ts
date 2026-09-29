@@ -123,12 +123,20 @@ describe('practice problems sources', () => {
 });
 
 describe('practice problems generation options', () => {
-  it('accepts problemCount 1-30 and rejects out-of-range counts', () => {
+  it('accepts problemCount 0-30 and rejects out-of-range counts', () => {
     const base = {
       kind: 'practice_problems' as const,
       brief: 'physics',
       sourceIds: [] as string[],
     };
+    const zero = generateRequestSchema.safeParse({
+      ...base,
+      practiceProblemsOptions: { problemCount: 0, difficulty: 'auto' },
+    });
+    expect(zero.success).toBe(true);
+    expect(
+      zero.success && zero.data.practiceProblemsOptions?.problemCount,
+    ).toBe(0);
     expect(
       generateRequestSchema.safeParse({
         ...base,
@@ -138,18 +146,12 @@ describe('practice problems generation options', () => {
     expect(
       generateRequestSchema.safeParse({
         ...base,
-        practiceProblemsOptions: { problemCount: 0, difficulty: 'medium' },
-      }).success,
-    ).toBe(false);
-    expect(
-      generateRequestSchema.safeParse({
-        ...base,
         practiceProblemsOptions: { problemCount: 31, difficulty: 'medium' },
       }).success,
     ).toBe(false);
   });
 
-  it('enforces problem count match on prepare', () => {
+  it('enforces problem count match on prepare and skips it on auto', () => {
     expect(() =>
       prepareGeneratedPracticeProblems(validSet, ['src-1'], {
         problemCount: 1,
@@ -160,6 +162,12 @@ describe('practice problems generation options', () => {
         problemCount: 2,
       }),
     ).toThrow();
+    // Auto (0) accepts whatever the model produced.
+    expect(() =>
+      prepareGeneratedPracticeProblems(validSet, ['src-1'], {
+        problemCount: 0,
+      }),
+    ).not.toThrow();
   });
 
   it('supports questionCount alias for problem count', () => {
@@ -170,7 +178,7 @@ describe('practice problems generation options', () => {
     ).not.toThrow();
   });
 
-  it('preserves difficulty option or defaults to medium', () => {
+  it('preserves the requested difficulty and keeps the model difficulty on auto', () => {
     const prepared = prepareGeneratedPracticeProblems(validSet, ['src-1'], {
       problemCount: 1,
       difficulty: 'hard',
@@ -185,6 +193,17 @@ describe('practice problems generation options', () => {
       },
     );
     expect(defaultPrepared.difficulty).toBe('medium');
+
+    const modelHard = { ...validSet, difficulty: 'hard' };
+    const autoPrepared = prepareGeneratedPracticeProblems(
+      modelHard,
+      ['src-1'],
+      {
+        problemCount: 1,
+        difficulty: 'auto',
+      },
+    );
+    expect(autoPrepared.difficulty).toBe('hard');
   });
 });
 

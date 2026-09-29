@@ -1,6 +1,8 @@
+import type { RoadmapOptions } from "./types";
+
 export type DetailLevel = "basic" | "detailed";
 
-export const PHASE_PRESETS = [3, 5, 7, 10];
+export const PHASE_PRESETS = [3, 5, 7];
 
 export const DETAIL_OPTIONS = [
   {
@@ -15,10 +17,7 @@ export const DETAIL_OPTIONS = [
   },
 ] as const;
 
-export const DEFAULT_ROADMAP_OPTIONS: {
-  phaseCount: number;
-  detailLevel: DetailLevel;
-} = {
-  phaseCount: 5,
-  detailLevel: "detailed",
+export const DEFAULT_ROADMAP_OPTIONS: RoadmapOptions = {
+  phaseCount: 0,
+  detailLevel: "auto",
 };

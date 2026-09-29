@@ -36,14 +36,16 @@ describe("shared brief controls", () => {
 
   it("lets the parent control step changes in both directions", () => {
     function Wizard() {
-      const [step, setStep] = useState<1 | 2>(1);
-      return <BriefWizardHeader title="Quiz Setup" step={step} onStepChange={setStep} />;
+      const [step, setStep] = useState<number>(1);
+      return (
+        <BriefWizardHeader title="Quiz Setup" step={step} totalSteps={3} onStepChange={setStep} />
+      );
     }
     const { container } = render(<Wizard />);
     const bars = container.querySelectorAll(".grid > button, .grid > div");
+    fireEvent.click(bars[2]);
+    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
     fireEvent.click(bars[1]);
-    expect(screen.getByText("Step 2 of 2")).toBeTruthy();
-    fireEvent.click(bars[0]);
-    expect(screen.getByText("Step 1 of 2")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
   });
 });

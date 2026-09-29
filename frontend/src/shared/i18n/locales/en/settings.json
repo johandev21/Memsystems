@@ -37,11 +37,13 @@
     },
     "title": "Embeddings",
     "toast": {
+      "reembedFailed": "Could not queue re-embedding",
+      "reembedQueued": "Re-indexing queued for {{count}} sources",
+      "reembedQueued_one": "embeddings.toast.reembedQueued",
+      "reembedQueued_other": "embeddings.toast.reembedQueued",
       "removed": "Voyage key removed",
       "removeFailed": "Could not remove this key",
       "requestFailed": "The request failed",
-      "reembedFailed": "Could not queue re-embedding",
-      "reembedQueued": "Re-indexing queued for {{count}} sources",
       "saved": "Voyage key saved",
       "saveFailed": "Could not save this key"
     },

@@ -17,6 +17,12 @@ export interface ClassifiedGatewayError {
   kind: GatewayFailureKind;
   retryable: boolean;
   statusCode?: number;
+  /**
+   * Which capability the provider rejected, when `kind` is `capability`.
+   * `structured_output` covers response-format/schema failures; `tools`
+   * covers the existing tool-call classification.
+   */
+  capability?: 'tools' | 'structured_output';
   detail: string;
 }
 
@@ -109,11 +115,30 @@ export function classifyGatewayError(error: unknown): ClassifiedGatewayError {
     return { kind: 'retired', retryable: false, statusCode, detail };
   }
   if (
+    /no[_ ]?object[_ ]?generated|no[_ ]?structured[_ ]?output|structured[_ ]?outputs?|response[_ ]?format|json[_ ]?schema|response did not match schema|zod[_ ]?error/i.test(
+      `${name} ${message}`,
+    )
+  ) {
+    return {
+      kind: 'capability',
+      retryable: false,
+      statusCode,
+      capability: 'structured_output',
+      detail,
+    };
+  }
+  if (
     /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool|tools? (?:are|is) not supported/i.test(
       message,
     )
   ) {
-    return { kind: 'capability', retryable: false, statusCode, detail };
+    return {
+      kind: 'capability',
+      retryable: false,
+      statusCode,
+      capability: 'tools',
+      detail,
+    };
   }
   if (
     retryableFlag === true ||

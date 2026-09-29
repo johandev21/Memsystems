@@ -1,4 +1,4 @@
-﻿import { useTheme } from "next-themes";
+import { useTheme } from "next-themes";
 import { useEffect } from "react";
 
 export function useThemeKeyboardShortcut(): void {
@@ -7,15 +7,19 @@ export function useThemeKeyboardShortcut(): void {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
       if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === "j" &&
+        event.key.toLowerCase() === "d" &&
+        !event.metaKey &&
+        !event.ctrlKey &&
         !event.shiftKey &&
         !event.altKey
       ) {
         const target = event.target as HTMLElement | null;
         if (
           target &&
-          (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable ||
+            target.closest?.("input, textarea, select, [contenteditable='true']"))
         ) {
           return;
         }

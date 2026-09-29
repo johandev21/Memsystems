@@ -32,6 +32,7 @@
       "model": {
         "capabilityUnsupported": "{{model}} doesn't support {{capability}}. Switch to a model that supports {{capability}} and try again.",
         "notSupported": "Model {{model}} is not supported.",
+        "structuredOutputUnsupported": "{{name}} doesn't support structured output, which Study Material Generation needs. Choose a model that supports structured output and try again.",
         "webSearchUnsupported": "Model {{model}} does not support web search."
       },
       "settings": {
@@ -230,6 +231,7 @@
         "capability": "{{modelName}} doesn't support answer evaluation. Switch to another model and try again.",
         "entitlement": "{{modelName}} is not available on your plan. Try another model or add credits.",
         "rateLimited": "The AI service is busy right now. Please retry in a moment.",
+        "structuredOutputUnsupported": "{{name}} doesn't support structured output, which answer evaluation needs. Choose a model that supports structured output and try again.",
         "transient": "The AI service is temporarily unavailable. Please try again shortly."
       },
       "exportDeleted": "Cannot export a deleted study material",

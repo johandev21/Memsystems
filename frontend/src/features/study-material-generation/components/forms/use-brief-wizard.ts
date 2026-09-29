@@ -9,7 +9,8 @@ import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 export interface UseBriefWizardOptions
   extends Pick<BaseMaterialFormProps, "notebookId" | "value" | "onChange" | "disabled"> {
-  initialStep?: 1 | 2;
+  initialStep?: number;
+  totalSteps?: number;
 }
 
 export function useBriefWizard({
@@ -18,8 +19,9 @@ export function useBriefWizard({
   onChange,
   disabled = false,
   initialStep = 1,
+  totalSteps = 2,
 }: UseBriefWizardOptions) {
-  const [step, setStep] = useState<1 | 2>(initialStep);
+  const [step, setStepState] = useState<number>(initialStep);
   const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
   const groundingMode = useNotebookGroundingMode(notebookId);
 
@@ -27,6 +29,8 @@ export function useBriefWizard({
   const hasInstructions = value.brief.trim().length > 0;
   const canSubmit = canSubmitBrief(groundingMode, hasSources, hasInstructions, disabled);
   const showFreeHint = groundingMode === "free" && !hasSources;
+
+  const setStep = (n: number) => setStepState(Math.min(totalSteps, Math.max(1, Math.round(n))));
 
   const patchFormData = (patch: Partial<BriefFormData>) => {
     onChange(patch);

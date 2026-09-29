@@ -55,6 +55,13 @@ export function toClientStreamError(
   const classified = classifyGatewayError(error);
   switch (classified.kind) {
     case 'capability':
+      if (classified.capability === 'structured_output') {
+        return envelope(
+          `${name} doesn't support structured output. Choose another model and try again.`,
+          CODE_BY_KIND.capability,
+          name,
+        );
+      }
       return envelope(
         `${name} doesn't support tools. Switch to a model that supports web search and try again.`,
         CODE_BY_KIND.capability,

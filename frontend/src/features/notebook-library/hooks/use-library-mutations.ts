@@ -1,9 +1,5 @@
 import { useRef } from "react";
-import {
-  useMutation,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -34,10 +30,7 @@ export interface UpdateNotebookLibraryInput {
   folderId?: string | null;
 }
 
-function patchLibrary(
-  queryClient: QueryClient,
-  updater: (current: LibraryData) => LibraryData,
-) {
+function patchLibrary(queryClient: QueryClient, updater: (current: LibraryData) => LibraryData) {
   queryClient.setQueryData<LibraryData>(libraryQueryOptions.queryKey, (current) =>
     current ? updater(current) : current,
   );
@@ -81,8 +74,15 @@ export function useLibraryMutations() {
   };
 
   const createFolderMutation = useMutation({
-    mutationFn: ({ name, parentId }: { tempId: string; name: string; parentId: string | null }) =>
-      createLibraryFolder({ name, parentId }),
+    mutationFn: ({
+      name,
+      parentId,
+    }: {
+      tempId: string;
+      name: string;
+      parentId: string | null;
+      onCreated?: (tempId: string, serverId: string) => void;
+    }) => createLibraryFolder({ name, parentId }),
     onMutate: ({ tempId, name, parentId }) => {
       void queryClient.cancelQueries({ queryKey: libraryQueryOptions.queryKey });
       const now = new Date().toISOString();
@@ -94,7 +94,11 @@ export function useLibraryMutations() {
         ],
       }));
     },
-    onSuccess: (folder, { tempId }) => {
+    onSuccess: (folder, { tempId, onCreated }) => {
+      // Report the server id before the cache swap. Callers that keep the draft
+      // keyed by its stable id must update first, otherwise the card remounts
+      // between the two updates and the open rename editor is lost.
+      onCreated?.(tempId, folder.id);
       const pendingName = pendingNames.current.get(tempId);
       pendingNames.current.delete(tempId);
       const row = pendingName ? { ...folder, name: pendingName } : folder;
@@ -170,8 +174,15 @@ export function useLibraryMutations() {
   });
 
   const createNotebookMutation = useMutation({
-    mutationFn: ({ title, folderId }: { tempId: string; title: string; folderId: string | null }) =>
-      createNotebookApi({ title, folderId }),
+    mutationFn: ({
+      title,
+      folderId,
+    }: {
+      tempId: string;
+      title: string;
+      folderId: string | null;
+      onCreated?: (tempId: string, serverId: string) => void;
+    }) => createNotebookApi({ title, folderId }),
     onMutate: ({ tempId, title, folderId }) => {
       void queryClient.cancelQueries({ queryKey: libraryQueryOptions.queryKey });
       const now = new Date().toISOString();
@@ -195,7 +206,11 @@ export function useLibraryMutations() {
         ],
       }));
     },
-    onSuccess: (notebook, { tempId }) => {
+    onSuccess: (notebook, { tempId, onCreated }) => {
+      // Report the server id before the cache swap. Callers that keep the draft
+      // keyed by its stable id must update first, otherwise the card remounts
+      // between the two updates and the open rename editor is lost.
+      onCreated?.(tempId, notebook.id);
       const pendingTitle = pendingNames.current.get(tempId);
       pendingNames.current.delete(tempId);
       const row = pendingTitle ? { ...notebook, title: pendingTitle } : notebook;
@@ -232,9 +247,7 @@ export function useLibraryMutations() {
     onSuccess: (notebook) => {
       patchLibrary(queryClient, (current) => ({
         ...current,
-        notebooks: current.notebooks.map((item) =>
-          item.id === notebook.id ? notebook : item,
-        ),
+        notebooks: current.notebooks.map((item) => (item.id === notebook.id ? notebook : item)),
       }));
       patchNotebookDetail(queryClient, notebook.id, () => notebook);
     },
@@ -271,10 +284,13 @@ export function useLibraryMutations() {
     },
   });
 
-  const createFolder = (input: { name: string; parentId: string | null }) => {
+  const createFolder = (
+    input: { name: string; parentId: string | null },
+    onCreated?: (tempId: string, serverId: string) => void,
+  ) => {
     const tempId = createTempId();
     const promise = createFolderMutation
-      .mutateAsync({ tempId, ...input })
+      .mutateAsync({ tempId, ...input, onCreated })
       .then((folder) => {
         serverIdByTempId.current.set(tempId, folder.id);
         return folder.id;
@@ -347,10 +363,13 @@ export function useLibraryMutations() {
     }
   };
 
-  const createNotebook = (input: { title: string; folderId: string | null }) => {
+  const createNotebook = (
+    input: { title: string; folderId: string | null },
+    onCreated?: (tempId: string, serverId: string) => void,
+  ) => {
     const tempId = createTempId();
     const promise = createNotebookMutation
-      .mutateAsync({ tempId, ...input })
+      .mutateAsync({ tempId, ...input, onCreated })
       .then((notebook) => {
         serverIdByTempId.current.set(tempId, notebook.id);
         return notebook.id;

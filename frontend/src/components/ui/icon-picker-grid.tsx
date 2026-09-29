@@ -83,11 +83,11 @@ export function IconPickerGrid({
     }
 
     return (
-      <div className="grid gap-2">
-        <div className="px-0.5 text-xs font-medium text-muted-foreground">
+      <>
+        <div className="mb-1 flex h-9 items-center px-0.5 text-xs font-medium text-muted-foreground">
           {t("iconPicker.results")}
         </div>
-        <div className="grid grid-cols-6 gap-1">
+        <div data-slot="icon-grid" className="grid grid-cols-6 gap-1 pb-1">
           {displayedMatchingIcons.map((iconName, index) => (
             <IconItem
               key={iconName}
@@ -100,22 +100,22 @@ export function IconPickerGrid({
           ))}
         </div>
         {displayedMatchingIcons.length < matchingIcons.length && (
-          <div className="py-1 text-center text-xs text-muted-foreground">
+          <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
             {t("iconPicker.scrollForMore")}
           </div>
         )}
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col">
       {categories.map((category) => (
-        <div key={category.labelKey} className="flex flex-col gap-1">
-          <div className="px-0.5 text-xs font-medium text-muted-foreground">
+        <div key={category.labelKey} className="flex flex-col">
+          <div className="mb-1 flex h-9 items-center px-0.5 text-xs font-medium text-muted-foreground">
             {t(category.labelKey)}
           </div>
-          <div className="grid grid-cols-6 gap-1">
+          <div data-slot="icon-grid" className="grid grid-cols-6 gap-1 pb-1">
             {category.icons.map((iconName) => {
               const globalIdx = currentIcons.indexOf(iconName);
               return (

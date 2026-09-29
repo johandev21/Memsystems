@@ -77,11 +77,15 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
 
   const handleDelete = async () => {
     setIsDeleting(true);
+    const returnFolderId = notebook?.folderId;
     try {
       await deleteNotebook(notebookId);
       await queryClient.invalidateQueries({ queryKey: ["notebooks"] });
       toast.success(t("settings.deleted"));
-      navigate({ to: "/" });
+      navigate({
+        to: "/",
+        search: returnFolderId ? { folderId: returnFolderId } : undefined,
+      });
     } catch {
       toast.error(t("settings.deleteFailed"));
     } finally {

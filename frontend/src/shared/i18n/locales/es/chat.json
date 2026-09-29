@@ -43,17 +43,6 @@
     "retry": "Reintentar",
     "tip": "Consejo: los modelos más económicos tienen límites de frecuencia menos estrictos."
   },
-  "noEvidence": {
-    "title": "No hay evidencia utilizable en este Notebook",
-    "description": {
-      "no_indexed_chunks": "Todavía no hay fuentes en este Notebook indexadas como evidencia.",
-      "below_threshold": "Los pasajes recuperados no coinciden lo suficiente con la pregunta para responder con ellos."
-    },
-    "degradedSection": "Fuentes que no pueden usarse como evidencia",
-    "unhelpfulSection": "Fuentes sin contenido coincidente",
-    "unhelpfulReason": "nada coincide con la pregunta",
-    "correctiveAction": "Corrección sugerida: importa la versión en archivo o pega el texto de la fuente, y vuelve a preguntar."
-  },
   "header": {
     "title": "Chat"
   },
@@ -69,6 +58,17 @@
   "message": {
     "copiedToClipboard": "Copiado al portapapeles"
   },
+  "noEvidence": {
+    "correctiveAction": "Corrección sugerida: importa la versión en archivo o pega el texto de la fuente, y vuelve a preguntar.",
+    "degradedSection": "Fuentes que no pueden usarse como evidencia",
+    "description": {
+      "below_threshold": "Los pasajes recuperados no coinciden lo suficiente con la pregunta para responder con ellos.",
+      "no_indexed_chunks": "Todavía no hay fuentes en este Notebook indexadas como evidencia."
+    },
+    "title": "No hay evidencia utilizable en este Notebook",
+    "unhelpfulReason": "nada coincide con la pregunta",
+    "unhelpfulSection": "Fuentes sin contenido coincidente"
+  },
   "panel": {
     "gatewayBusy": "El Gateway de IA está ocupado: es posible que las respuestas fallen. Esperar un poco y volver a intentarlo suele funcionar.",
     "gatewayKeyDescription": "Se necesita una clave del Gateway de IA para chatear con tu asistente de estudio.",
@@ -83,8 +83,7 @@
     "openSource": "Abrir fuente",
     "referencesAria": "Referencias",
     "sourceUnavailable": "Fuente no disponible",
-    "triggerAria": "Referencia {{number}}: {{title}}",
-    "unknownKind": "Fuente"
+    "triggerAria": "Referencia {{number}}: {{title}}"
   },
   "userMessage": {
     "attachedImageAlt": "Imagen adjunta"

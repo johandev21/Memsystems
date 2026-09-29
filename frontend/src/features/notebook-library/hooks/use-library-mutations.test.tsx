@@ -131,6 +131,42 @@ describe("optimistic folder creates", () => {
     });
   });
 
+  it("reports the created folder before swapping the temp row", async () => {
+    const client = createQueryClient();
+    seedLibrary(client);
+    const create = deferred<LibraryFolder>();
+    (createLibraryFolder as Mock).mockReturnValue(create.promise);
+
+    const { result } = renderHook(() => useLibraryMutations(), {
+      wrapper: wrapperFor(client),
+    });
+
+    const observed: { tempId: string; serverId: string; ids: string[] }[] = [];
+    let tempId = "";
+    act(() => {
+      const created = result.current.createFolder(
+        { name: "Untitled folder", parentId: null },
+        (createdTempId, serverId) => {
+          observed.push({
+            tempId: createdTempId,
+            serverId,
+            ids: readLibrary(client).folders.map((item) => item.id),
+          });
+        },
+      );
+      tempId = created.tempId;
+    });
+
+    await act(async () => {
+      create.resolve(folder("real-1", "Untitled folder"));
+      await create.promise;
+    });
+
+    await waitFor(() => {
+      expect(observed).toEqual([{ tempId, serverId: "real-1", ids: [tempId] }]);
+    });
+  });
+
   it("removes the optimistic folder when the create fails", async () => {
     const client = createQueryClient();
     seedLibrary(client);
@@ -288,7 +324,11 @@ describe("optimistic updates and rollbacks", () => {
   it("re-parents folder children and notebooks when deleting optimistically", async () => {
     const client = createQueryClient();
     seedLibrary(client, {
-      folders: [folder("parent", "Parent"), folder("target", "Target", "parent"), folder("child", "Child", "target")],
+      folders: [
+        folder("parent", "Parent"),
+        folder("target", "Target", "parent"),
+        folder("child", "Child", "target"),
+      ],
       notebooks: [notebook("n1", "Filed", "target")],
     });
     (deleteLibraryFolder as Mock).mockResolvedValue(undefined);

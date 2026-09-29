@@ -20,8 +20,8 @@ import {
 
 /**
  * The shared citation surface: a numbered pill that opens a popover with the
- * source kind, title, locator, and supporting excerpt, plus an action to open
- * the source. Chat replies and generated Study Materials both use it.
+ * source title, locator, and supporting excerpt, plus an action to open the
+ * source. Chat replies and generated Study Materials both use it.
  *
  * The popover labels live in the `chat` namespace, where the citation copy was
  * first written; keeping them there avoids duplicating the locator strings.
@@ -35,8 +35,6 @@ interface CitationPopoverProps {
 export function CitationPopover({ reference, children }: CitationPopoverProps) {
   const { t } = useTranslation("chat");
   const safeUrl = getSafeCitationUrl(reference.url);
-  const kindLabel =
-    reference.kind === "unknown" ? t("referencePopover.unknownKind") : capitalize(reference.kind);
   const locatorLabel = getCitationLocatorLabel(reference);
 
   return (
@@ -64,11 +62,7 @@ export function CitationPopover({ reference, children }: CitationPopoverProps) {
         sideOffset={8}
         className="w-[min(22rem,calc(100vw-2rem))]"
       >
-        <CitationPopoverHeader
-          reference={reference}
-          kindLabel={kindLabel}
-          locatorLabel={locatorLabel}
-        />
+        <CitationPopoverHeader reference={reference} locatorLabel={locatorLabel} />
         <CitationOpenSourceButton reference={reference} safeUrl={safeUrl} />
       </PopoverContent>
     </Popover>
@@ -77,23 +71,20 @@ export function CitationPopover({ reference, children }: CitationPopoverProps) {
 
 function CitationPopoverHeader({
   reference,
-  kindLabel,
   locatorLabel,
 }: {
   reference: CitationReference;
-  kindLabel: string;
   locatorLabel: string | null;
 }) {
   const { t } = useTranslation("chat");
 
   return (
     <PopoverHeader>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Badge variant="secondary">{kindLabel}</Badge>
-        {!reference.isAvailable && (
+      {!reference.isAvailable && (
+        <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="outline">{t("referencePopover.sourceUnavailable")}</Badge>
-        )}
-      </div>
+        </div>
+      )}
       <PopoverTitle>{reference.title}</PopoverTitle>
       {locatorLabel && (
         <div className="text-xs font-medium text-muted-foreground">{locatorLabel}</div>
@@ -215,8 +206,4 @@ export function CitationChipRow({ references, ariaLabel }: CitationChipRowProps)
       ))}
     </div>
   );
-}
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

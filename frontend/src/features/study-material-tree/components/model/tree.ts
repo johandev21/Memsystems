@@ -1,6 +1,9 @@
 import type { FolderDTO } from "../../types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import i18n from "@/shared/i18n";
+import { flattenVisibleTree, getDescendantFolderIds } from "@/components/ui/tree";
+
+export { flattenVisibleTree, getDescendantFolderIds };
 
 export type StudyMaterialTreeFolder = FolderDTO;
 export type StudyMaterialTreeMaterial = StudyMaterialDTO;
@@ -67,48 +70,7 @@ export function buildStudyMaterialTree(state: TreeState): TreeNode[] {
   return visit(null);
 }
 
-export function flattenVisibleTree(
-  nodes: readonly TreeNode[],
-  openFolderIds: ReadonlySet<string>,
-): TreeNode[] {
-  const visibleNodes: TreeNode[] = [];
 
-  const visit = (items: readonly TreeNode[]) => {
-    for (const item of items) {
-      visibleNodes.push(item);
-      if (item.type === "folder" && openFolderIds.has(item.id)) {
-        visit(item.children);
-      }
-    }
-  };
-
-  visit(nodes);
-  return visibleNodes;
-}
-
-export function getDescendantFolderIds(
-  folders: readonly StudyMaterialTreeFolder[],
-  folderId: string,
-): Set<string> {
-  const descendants = new Set<string>();
-  const childFolderIds = new Map<string, string[]>();
-
-  for (const folder of folders) {
-    if (!folder.deletedAt && folder.parentId) {
-      addToMap(childFolderIds, folder.parentId, folder.id);
-    }
-  }
-
-  const visit = (id: string) => {
-    for (const childId of childFolderIds.get(id) ?? []) {
-      descendants.add(childId);
-      visit(childId);
-    }
-  };
-
-  visit(folderId);
-  return descendants;
-}
 
 export function canMoveItem(
   state: TreeState,

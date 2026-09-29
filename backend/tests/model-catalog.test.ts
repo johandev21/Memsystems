@@ -4,8 +4,9 @@ import {
   GATEWAY_DEFAULT_MODEL,
   MODEL_ID_ALIASES,
   SEED_GATEWAY_MODELS,
+  buildCapabilityOverlay,
   buildChatCatalog,
-  capabilitiesForModelId,
+  capabilitiesFromPublicModel,
   creatorFromModel,
   resolveModelId,
   toProviderModel,
@@ -29,6 +30,16 @@ function entry(
   };
 }
 
+const NO_CAPABILITIES = {
+  imageInput: false,
+  fileInput: false,
+  audioInput: false,
+  tools: false,
+  structuredOutput: false,
+  reasoning: false,
+  webSearch: false,
+};
+
 describe('gateway model catalog', () => {
   it('resolves stale model IDs to gateway slugs', () => {
     expect(resolveModelId('kimi/kimi-k3')).toBe('moonshotai/kimi-k3');
@@ -46,6 +57,66 @@ describe('gateway model catalog', () => {
   it('exposes the gateway creator prefix for spend attribution', () => {
     expect(creatorFromModel('openai/gpt-5.6-sol')).toBe('openai');
     expect(creatorFromModel('not-a-model-id')).toBeNull();
+  });
+
+  it('maps gateway public tags to model capabilities', () => {
+    expect(
+      capabilitiesFromPublicModel({
+        id: 'openai/gpt-5.6-sol',
+        tags: [
+          'vision',
+          'file-input',
+          'audio-input',
+          'tool-use',
+          'structured-output',
+          'reasoning',
+          'web-search',
+        ],
+      }),
+    ).toEqual({
+      imageInput: true,
+      fileInput: true,
+      audioInput: true,
+      tools: true,
+      structuredOutput: true,
+      reasoning: true,
+      webSearch: true,
+    });
+    // Absent or empty tags claim nothing (fail closed).
+    expect(
+      capabilitiesFromPublicModel({ id: 'mystery/no-tags' }),
+    ).toEqual(NO_CAPABILITIES);
+    expect(
+      capabilitiesFromPublicModel({ id: 'mystery/plain', tags: [] }),
+    ).toEqual(NO_CAPABILITIES);
+    expect(
+      capabilitiesFromPublicModel({
+        id: 'mystery/vision-only',
+        tags: ['vision'],
+      }),
+    ).toEqual({ ...NO_CAPABILITIES, imageInput: true });
+  });
+
+  it('corroborates tools and structured output with supported_parameters', () => {
+    expect(
+      capabilitiesFromPublicModel({
+        id: 'mystery/params',
+        supported_parameters: ['tools', 'response_format'],
+      }),
+    ).toMatchObject({ tools: true, structuredOutput: true });
+    expect(
+      capabilitiesFromPublicModel({
+        id: 'mystery/params',
+        supported_parameters: ['structured_outputs'],
+      }),
+    ).toMatchObject({ structuredOutput: true });
+    // A parameter-only claim never leaks into the other capabilities.
+    expect(
+      capabilitiesFromPublicModel({
+        id: 'mystery/params',
+        supported_parameters: ['tools'],
+      }),
+    ).toEqual({ ...NO_CAPABILITIES, tools: true });
   });
 
   it('keeps only chat models from gateway metadata', () => {
@@ -75,127 +146,66 @@ describe('gateway model catalog', () => {
     expect(ids).toEqual([...ids].sort());
   });
 
-  it('fails closed for unknown and tool-less models', () => {
+  it('applies the gateway public overlay keyed by resolved model id', () => {
+    const overlay = buildCapabilityOverlay([
+      {
+        id: 'kimi/kimi-k3',
+        tags: ['structured-output', 'tool-use', 'web-search', 'vision'],
+      },
+      { id: 'openai/gpt-5.6-sol', tags: ['structured-output', 'reasoning'] },
+    ]);
+    const models = buildChatCatalog(
+      [
+        entry('moonshotai/kimi-k3', 'language'),
+        entry('openai/gpt-5.6-sol', 'language'),
+        entry('acme/unlisted-model', 'language'),
+      ],
+      overlay,
+    );
+    const byId = new Map(models.map((m) => [m.id, m]));
+    expect(byId.get('moonshotai/kimi-k3')?.capabilities).toMatchObject({
+      structuredOutput: true,
+      tools: true,
+      webSearch: true,
+      imageInput: true,
+    });
+    expect(byId.get('moonshotai/kimi-k3')?.supportsWebSearch).toBe(true);
+    expect(byId.get('openai/gpt-5.6-sol')?.capabilities).toMatchObject({
+      structuredOutput: true,
+      reasoning: true,
+      webSearch: false,
+    });
+    expect(byId.get('openai/gpt-5.6-sol')?.supportsWebSearch).toBe(false);
+    // Models absent from the public list get no claims at all.
+    expect(byId.get('acme/unlisted-model')?.capabilities).toBeUndefined();
+    expect(byId.get('acme/unlisted-model')?.supportsWebSearch).toBeUndefined();
+  });
+
+  it('omits capabilities entirely when no overlay is available', () => {
     const models = buildChatCatalog([
-      entry('deepseek/deepseek-r1', 'language'),
       entry('mystery/chat-model-x', 'language'),
+      entry('openai/gpt-4o-mini', 'language'),
     ]);
     for (const model of models) {
-      expect(model.supportsWebSearch).toBe(false);
-      expect(model.capabilities?.tools).toBe(false);
-      expect(model.capabilities?.webSearch).toBe(false);
+      expect(model.capabilities).toBeUndefined();
+      expect(model.supportsWebSearch).toBeUndefined();
       expect(model.displayName).toBeTruthy();
     }
   });
 
-  it.each([
-    ['openai/gpt-4o-mini', true, true],
-    ['anthropic/claude-sonnet-4', true, true],
-    ['google/gemini-2.5-flash', true, true],
-    ['deepseek/deepseek-v3.2', true, true],
-    ['moonshotai/kimi-k2.6', true, true],
-    ['meta/llama-3.3-70b-instruct', true, true],
-    ['xai/grok-4', true, true],
-    ['zhipu/glm-4.5', true, true],
-    ['alibaba/qwen3-235b-a22b', true, true],
-    ['bytedance/seed-1.6', true, true],
-  ])('curates tool and web-search support for %s', (id, tools, webSearch) => {
-    expect(capabilitiesForModelId(id)).toMatchObject({ tools, webSearch });
-  });
-
-  it('applies the capability overlay', () => {
-    expect(capabilitiesForModelId('openai/gpt-5.6-sol')).toMatchObject({
-      imageInput: true,
-      reasoning: true,
-    });
-    expect(capabilitiesForModelId('anthropic/claude-sonnet-5')).toMatchObject({
-      imageInput: true,
-      reasoning: true,
-    });
-    expect(capabilitiesForModelId('google/gemini-3.6-flash')).toMatchObject({
-      imageInput: true,
-    });
-    expect(capabilitiesForModelId('moonshotai/kimi-k3')).toMatchObject({
-      imageInput: true,
-    });
-    expect(capabilitiesForModelId('deepseek/deepseek-v4-flash')).toMatchObject({
-      imageInput: false,
-      fileInput: false,
-    });
+  it('accepts an explicit capability overlay in toProviderModel', () => {
     expect(
-      capabilitiesForModelId('deepseek/deepseek-v3.2-thinking'),
+      toProviderModel(entry('mystery/chat-model-x', 'language'), {
+        structuredOutput: true,
+        webSearch: false,
+      }),
     ).toMatchObject({
-      reasoning: true,
+      supportsWebSearch: false,
+      capabilities: { structuredOutput: true },
     });
     expect(toProviderModel(entry('openai/gpt-image-1', 'image'))).toBeNull();
   });
 
-  it('covers zai GLM, kimi-k3, and unknown-family hint behavior', () => {
-    // Previously zai/* missed the (zhipu|zhipuai) rule and always fell back.
-    expect(capabilitiesForModelId('zai/glm-5.3-flash')).toMatchObject({
-      tools: true,
-      structuredOutput: true,
-      webSearch: true,
-    });
-    expect(capabilitiesForModelId('zai/glm-4.5-air')).toMatchObject({
-      tools: true,
-      structuredOutput: true,
-    });
-    expect(capabilitiesForModelId('moonshotai/kimi-k3')).toMatchObject({
-      tools: true,
-      structuredOutput: true,
-      webSearch: true,
-    });
-    expect(capabilitiesForModelId('moonshotai/kimi-k2.6')).toMatchObject({
-      structuredOutput: true,
-    });
-    // Unknown families stay fail-closed (all false) as a UI/logging hint
-    // only — stream-handler.ts still attempts native Output.object first
-    // for these models and falls back to JSON prompting on native failure.
-    expect(capabilitiesForModelId('mystery/chat-model-x')).toMatchObject({
-      tools: false,
-      structuredOutput: false,
-      webSearch: false,
-    });
-    expect(
-      toProviderModel(entry('mystery/chat-model-x', 'language')),
-    ).toMatchObject({
-      supportsWebSearch: false,
-      capabilities: { structuredOutput: false },
-    });
-  });
-
-  it('covers hyphenated qwen and newer seed slugs', () => {
-    expect(capabilitiesForModelId('alibaba/qwen-3-14b')).toMatchObject({
-      tools: true,
-      structuredOutput: true,
-      webSearch: true,
-    });
-    expect(capabilitiesForModelId('bytedance/seed-1.8')).toMatchObject({
-      tools: true,
-      structuredOutput: true,
-    });
-  });
-
-  it('prefers gateway metadata capabilities over curated rules when present', () => {
-    const withMetadata = {
-      ...entry('mystery/chat-model-x', 'language'),
-      capabilities: { structuredOutput: true, tools: true },
-    } as unknown as GatewayLanguageModelEntry;
-    expect(toProviderModel(withMetadata)?.capabilities).toMatchObject({
-      structuredOutput: true,
-      tools: true,
-    });
-    // Gateway truth wins even when it downgrades a curated rule.
-    const downgrade = {
-      ...entry('openai/gpt-4o-mini', 'language'),
-      capabilities: { tools: false },
-    } as unknown as GatewayLanguageModelEntry;
-    expect(toProviderModel(downgrade)?.capabilities).toMatchObject({
-      tools: false,
-      structuredOutput: true,
-    });
-  });
   it('flags free-tier models from slugs and zero pricing', () => {
     const models = buildChatCatalog([
       entry('poolside/laguna-s-2.1-free', 'language'),
@@ -215,21 +225,14 @@ describe('gateway model catalog', () => {
     });
   });
 
-  it('ships a valid gateway seed catalog', () => {
+  it('ships a seed catalog with ids and names but no capability claims', () => {
     expect(SEED_GATEWAY_MODELS.length).toBeGreaterThan(0);
     for (const model of SEED_GATEWAY_MODELS) {
       expect(model.id).toMatch(/^[^/]+\/[^/]+$/);
       expect(resolveModelId(model.id)).toBe(model.id);
       expect(model.displayName).toBeTruthy();
-      expect(model.supportsWebSearch).toBe(
-        model.capabilities?.webSearch === true,
-      );
-      expect(Object.values(model.capabilities ?? {})).toHaveLength(7);
-      expect(
-        Object.values(model.capabilities ?? {}).every(
-          (capability) => typeof capability === 'boolean',
-        ),
-      ).toBe(true);
+      expect(model.capabilities).toBeUndefined();
+      expect(model.supportsWebSearch).toBeUndefined();
     }
     expect(
       SEED_GATEWAY_MODELS.some((m) => m.id === GATEWAY_DEFAULT_MODEL),
