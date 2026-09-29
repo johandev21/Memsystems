@@ -10,6 +10,7 @@
     "moveToRoot": "Mover a Materiales de estudio",
     "moveToSourcesRoot": "Mover a la raíz de Fuentes",
     "newFolder": "Nueva carpeta",
+    "newSubfolder": "Nueva subcarpeta",
     "rename": "Cambiar nombre"
   },
   "defaults": {

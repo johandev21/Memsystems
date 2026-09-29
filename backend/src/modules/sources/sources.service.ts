@@ -569,6 +569,33 @@ export class SourcesService {
     return updated;
   }
 
+  async update(id: string, input: { title?: string }) {
+    await this.fetchOwned(id);
+
+    const updates: Partial<typeof sources.$inferInsert> = {};
+    if (input.title !== undefined) {
+      const trimmed = input.title.trim();
+      if (!trimmed) {
+        throw new BadRequestError('Source title cannot be blank', {
+          messageKey: 'errors.sources.blankTitle',
+        });
+      }
+      updates.title = trimmed;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return this.fetchOwned(id);
+    }
+
+    const [updated] = await this.db
+      .update(sources)
+      .set(updates)
+      .where(eq(sources.id, id))
+      .returning();
+
+    return updated;
+  }
+
   /** Explicit operator re-run: enqueues a fresh indexing job for a source. */
   async reindex(id: string) {
     await this.fetchOwned(id);

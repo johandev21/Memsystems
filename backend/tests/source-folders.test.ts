@@ -354,4 +354,30 @@ describe('Source Folders (backend)', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('source renaming (#106)', () => {
+    it('renames a source with a trimmed title', async () => {
+      const notebook = await seedNotebook();
+      const source = await seedSource(notebook.id, { title: 'Old Title' });
+
+      const updated = await sourcesService.update(source.id, { title: '  New Title  ' });
+      expect(updated.title).toBe('New Title');
+
+      const fetched = await sourcesService.get(source.id);
+      expect(fetched.title).toBe('New Title');
+    });
+
+    it('rejects blank source title', async () => {
+      const notebook = await seedNotebook();
+      const source = await seedSource(notebook.id, { title: 'Valid Title' });
+
+      await expect(sourcesService.update(source.id, { title: '   ' })).rejects.toThrow();
+    });
+
+    it('rejects update for non-existent source', async () => {
+      await expect(
+        sourcesService.update('non-existent-source-id', { title: 'New Title' }),
+      ).rejects.toThrow();
+    });
+  });
 });

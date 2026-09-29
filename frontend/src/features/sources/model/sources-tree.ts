@@ -149,3 +149,57 @@ export function moveSourcesItem(
     ),
   };
 }
+
+export function renameSourcesItem(
+  state: SourcesTreeState,
+  itemId: string,
+  nextName: string,
+  now: string = new Date().toISOString(),
+): SourcesTreeState {
+  const trimmed = nextName.trim();
+  if (!trimmed) return state;
+
+  const folder = state.folders.find((f) => f.id === itemId);
+  if (folder) {
+    if (folder.name === trimmed) return state;
+    return {
+      ...state,
+      folders: state.folders.map((f) =>
+        f.id === itemId ? { ...f, name: trimmed, updatedAt: now } : f,
+      ),
+    };
+  }
+
+  const source = state.sources.find((s) => s.id === itemId);
+  if (source) {
+    if (source.title === trimmed) return state;
+    return {
+      ...state,
+      sources: state.sources.map((s) =>
+        s.id === itemId ? { ...s, title: trimmed } : s,
+      ),
+    };
+  }
+
+  return state;
+}
+
+export function deleteSourcesFolder(
+  state: SourcesTreeState,
+  folderId: string,
+): SourcesTreeState {
+  const target = state.folders.find((f) => f.id === folderId);
+  if (!target) return state;
+
+  const descendantFolderIds = getDescendantFolderIds(state.folders, folderId);
+  const deletedFolderIds = new Set([folderId, ...descendantFolderIds]);
+
+  return {
+    folders: state.folders.filter((f) => !deletedFolderIds.has(f.id)),
+    sources: state.sources.map((source) =>
+      source.folderId && deletedFolderIds.has(source.folderId)
+        ? { ...source, folderId: null }
+        : source,
+    ),
+  };
+}

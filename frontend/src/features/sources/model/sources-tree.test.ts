@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildSourcesTree,
   canMoveSourcesItem,
+  deleteSourcesFolder,
   getDescendantFolderIds,
   moveSourcesItem,
+  renameSourcesItem,
 } from "./sources-tree";
 import { flattenVisibleTree } from "@/components/ui/tree";
 import type { Source } from "../types/source.types";
@@ -227,6 +229,79 @@ describe("Sources Tree move operations (pure unit)", () => {
     it("no-ops and returns original state if move is forbidden", () => {
       const next = moveSourcesItem(state, "f-root1", "f-child1");
       expect(next).toBe(state);
+    });
+  });
+
+  describe("renameSourcesItem (#106)", () => {
+    it("renames a folder with a trimmed name", () => {
+      const now = "2026-03-01T12:00:00.000Z";
+      const next = renameSourcesItem(state, "f-root1", "  Renamed Root  ", now);
+      expect(next.folders.find((f) => f.id === "f-root1")?.name).toBe("Renamed Root");
+      expect(next.folders.find((f) => f.id === "f-root1")?.updatedAt).toBe(now);
+      // Other folders unaffected
+      expect(next.folders.find((f) => f.id === "f-root2")?.name).toBe("Root 2");
+    });
+
+    it("renames a source with a trimmed title", () => {
+      const next = renameSourcesItem(state, "s-root", "  Renamed Source  ");
+      expect(next.sources.find((s) => s.id === "s-root")?.title).toBe("Renamed Source");
+      // Other sources unaffected
+      expect(next.sources.find((s) => s.id === "s-child")?.title).toBe("Source in child");
+    });
+
+    it("no-ops if new name is empty or all whitespace", () => {
+      expect(renameSourcesItem(state, "f-root1", "")).toBe(state);
+      expect(renameSourcesItem(state, "f-root1", "   \t\n  ")).toBe(state);
+      expect(renameSourcesItem(state, "s-root", "")).toBe(state);
+      expect(renameSourcesItem(state, "s-root", "   ")).toBe(state);
+    });
+
+    it("no-ops if new name is identical to current name", () => {
+      expect(renameSourcesItem(state, "f-root1", "Root 1")).toBe(state);
+      expect(renameSourcesItem(state, "f-root1", "  Root 1  ")).toBe(state);
+      expect(renameSourcesItem(state, "s-root", "Source at root")).toBe(state);
+    });
+
+    it("no-ops if item id does not exist", () => {
+      expect(renameSourcesItem(state, "unknown-id", "New Name")).toBe(state);
+    });
+  });
+
+  describe("deleteSourcesFolder (#106)", () => {
+    it("deletes folder, cascades to descendants, and reparents all nested sources to root", () => {
+      const complexFolders: SourceFolder[] = [
+        createFolder({ id: "parent", name: "Parent" }),
+        createFolder({ id: "child", name: "Child", parentId: "parent" }),
+        createFolder({ id: "grandchild", name: "Grandchild", parentId: "child" }),
+        createFolder({ id: "other", name: "Other Root" }),
+      ];
+
+      const complexSources: Source[] = [
+        createSource({ id: "s-parent", title: "In Parent", folderId: "parent" }),
+        createSource({ id: "s-child", title: "In Child", folderId: "child" }),
+        createSource({ id: "s-grandchild", title: "In Grandchild", folderId: "grandchild" }),
+        createSource({ id: "s-other", title: "In Other", folderId: "other" }),
+        createSource({ id: "s-root", title: "At Root", folderId: null }),
+      ];
+
+      const treeState = { folders: complexFolders, sources: complexSources };
+      const next = deleteSourcesFolder(treeState, "parent");
+
+      // Parent, child, grandchild folders deleted; only 'other' remains
+      expect(next.folders.map((f) => f.id)).toEqual(["other"]);
+
+      // Sources in parent, child, grandchild are all reparented to null (root)
+      expect(next.sources.find((s) => s.id === "s-parent")?.folderId).toBeNull();
+      expect(next.sources.find((s) => s.id === "s-child")?.folderId).toBeNull();
+      expect(next.sources.find((s) => s.id === "s-grandchild")?.folderId).toBeNull();
+
+      // Other source and root source unchanged
+      expect(next.sources.find((s) => s.id === "s-other")?.folderId).toBe("other");
+      expect(next.sources.find((s) => s.id === "s-root")?.folderId).toBeNull();
+    });
+
+    it("no-ops if folder id does not exist", () => {
+      expect(deleteSourcesFolder(state, "unknown-folder")).toBe(state);
     });
   });
 });

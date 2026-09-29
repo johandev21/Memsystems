@@ -1,5 +1,14 @@
 import type React from "react";
-import { ChevronRight, ChevronsUpDown, Folder, FolderInput, FolderOpen, FolderPlus } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronsUpDown,
+  Folder,
+  FolderInput,
+  FolderOpen,
+  FolderPlus,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   ContextMenu,
@@ -12,7 +21,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
+import { InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import type { SourceFolder } from "../types/source-folder.types";
 
@@ -28,6 +37,11 @@ export interface SourceFolderRowProps {
   setFolderOpen?: (folderId: string, open: boolean) => void;
   onExpandAll?: () => void;
   onCollapseAll?: () => void;
+  isEditing?: boolean;
+  onBeginRename?: (id: string) => void;
+  onRenameCommit?: (id: string, nextName: string) => void;
+  onRenameCancel?: () => void;
+  onDelete?: (id: string) => void;
 }
 
 export function SourceFolderRow({

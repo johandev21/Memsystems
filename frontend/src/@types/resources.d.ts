@@ -1531,6 +1531,7 @@ export default interface Resources {
       "moveToRoot": "Move to Study Materials",
       "moveToSourcesRoot": "Move to Sources root",
       "newFolder": "New folder",
+      "newSubfolder": "New subfolder",
       "rename": "Rename"
     },
     "defaults": {
