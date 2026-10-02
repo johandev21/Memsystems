@@ -1,5 +1,5 @@
 import type { UIMessage } from "@ai-sdk/react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { CitedSourceDTO } from "../api/chat";
@@ -46,10 +46,12 @@ describe("AssistantMessage references", () => {
     });
     expect(trigger.textContent).toBe("1");
 
-    await user.click(trigger);
-    expect(
-      screen.getByText("The passage connects justice with the structure of the ideal city."),
-    ).toBeTruthy();
+    await user.hover(trigger);
+    await waitFor(() => {
+      expect(
+        screen.getByText("The passage connects justice with the structure of the ideal city."),
+      ).toBeTruthy();
+    });
   });
 
   it("does not expose incomplete citation syntax while streaming", () => {

@@ -79,8 +79,11 @@
     "waiting": "Esperando respuesta…"
   },
   "referencePopover": {
+    "copyQuote": "Copiar cita",
     "noExcerpt": "No hay ningún extracto disponible para esta referencia.",
+    "openExternal": "Abrir fuente externa",
     "openSource": "Abrir fuente",
+    "quoteCopied": "¡Cita copiada!",
     "referencesAria": "Referencias",
     "sourceUnavailable": "Fuente no disponible",
     "triggerAria": "Referencia {{number}}: {{title}}"

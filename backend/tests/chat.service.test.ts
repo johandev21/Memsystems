@@ -491,11 +491,11 @@ describe('ChatService streaming lifecycle', () => {
       }),
     ]);
     expect(assistantInsert?.metadata).toMatchObject({
-      citationCheck: { resolved: 1, attributed: 1, dropped: 1 },
+      citationCheck: { resolved: 1, attributed: 0, dropped: 1 },
     });
   });
 
-  it('attributes an unmarked claim to the nearest Evidence on persist', async () => {
+  it('does not attribute an unmarked claim to evidence on persist (suppresses phantom citations)', async () => {
     retrieve.mockResolvedValue(
       retrievalOk({
         chunks: [
@@ -536,15 +536,9 @@ describe('ChatService streaming lifecycle', () => {
     const assistantInsert = insertedValues.find(
       (values) => values.role === 'assistant',
     );
-    expect(assistantInsert?.citedSourceIds).toEqual([
-      expect.objectContaining({
-        citationKey: 'R1',
-        chunkId: 'chunk-1',
-        attribution: 'nearest',
-      }),
-    ]);
+    expect(assistantInsert?.citedSourceIds).toEqual([]);
     expect(assistantInsert?.metadata).toMatchObject({
-      citationCheck: { resolved: 1, attributed: 1, dropped: 0 },
+      citationCheck: { resolved: 0, attributed: 0, dropped: 0 },
     });
   });
 

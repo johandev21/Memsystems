@@ -18,6 +18,8 @@ export interface CitedSourceDTO {
   description: string | null;
   quote: string | null;
   isAvailable: boolean;
+  sectionPath?: string[] | null;
+  context?: string | null;
 }
 
 export interface CitedSourceEntry {
@@ -34,6 +36,8 @@ export interface CitedSourceEntry {
   url: string | null;
   description: string | null;
   quote: string | null;
+  sectionPath?: string[] | null;
+  context?: string | null;
 }
 
 export interface ChatRequestMessage {

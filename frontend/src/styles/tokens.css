@@ -32,6 +32,7 @@
   --font-mono: var(--font-code);
 
   --type-size-body: 0.9375rem;
+  --type-size-prose-compact: 0.875rem;
   --type-size-caption: 0.75rem;
   --type-size-label: 0.8125rem;
   --type-size-title: 1.5rem;

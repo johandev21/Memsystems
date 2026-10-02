@@ -62,6 +62,8 @@ export const GenerationCitationSchema: z.ZodType<CitedSourceEntry> = z.object({
   description: z.string().max(4000).nullable().default(null),
   quote: z.string().max(4000).nullable().default(null),
   attribution: z.enum(['explicit', 'nearest']).default('explicit'),
+  sectionPath: z.array(z.string().max(500)).nullable().optional().default(null),
+  context: z.string().max(4000).nullable().optional().default(null),
 });
 
 export const GenerationCitationsSchema = z

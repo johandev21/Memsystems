@@ -42,9 +42,10 @@ describe('extractGenerationCitations', () => {
       sourceVersionId: 'version-1',
       number: 1,
       title: 'Lecture Notes',
-      url: 'https://example.test/notes',
+      url: expect.stringContaining('https://example.test/notes'),
       locator: { pageNumber: 3 },
     });
+    expect(citations[0].url).toContain('#:~:text=');
     expect(citations[0].quote).toContain('Mitochondria');
   });
 

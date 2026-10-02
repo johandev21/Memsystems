@@ -106,4 +106,88 @@ describe("MaterialCitations", () => {
       bullets: ["Osmosis moves water."],
     });
   });
+
+  it("displays section breadcrumbs and highlighted focal quote for Study Material citations", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([source("src-1", "Biology Textbook")]), {
+          status: 200,
+        }),
+      ),
+    );
+    renderCitations({
+      title: "guide",
+      citations: [
+        citation({
+          sectionPath: ["Unit 2", "Cell Biology", "Mitochondria"],
+          context:
+            "Cellular respiration occurs in organelles. Mitochondria generate most of the chemical energy needed by the cell.",
+          quote: "Mitochondria generate most of the chemical energy.",
+        }),
+      ],
+    });
+
+    const pill = await screen.findByRole("button", {
+      name: "Reference 1: Biology Textbook",
+    });
+    await userEvent.hover(pill);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("citation-breadcrumbs")).toBeTruthy();
+    });
+    expect(screen.getByText("Unit 2 > Cell Biology > Mitochondria")).toBeTruthy();
+    expect(
+      screen.getByText(/Mitochondria generate most of the chemical energy/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Cellular respiration occurs in organelles/),
+    ).toBeTruthy();
+  });
+
+  it("opens an accessible Bottom Sheet on mobile touch devices for Study Material citations", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([source("src-1", "Biology Textbook")]), {
+          status: 200,
+        }),
+      ),
+    );
+    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+      matches: query.includes("pointer: coarse"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    renderCitations({
+      title: "guide",
+      citations: [
+        citation({
+          sectionPath: ["Unit 2", "Cell Biology"],
+          quote: "Mitochondria generate most of the chemical energy.",
+        }),
+      ],
+    });
+
+    const pill = await screen.findByRole("button", {
+      name: "Reference 1: Biology Textbook",
+    });
+    await userEvent.click(pill);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("citation-breadcrumbs")).toBeTruthy();
+    });
+    const bottomSheet = screen
+      .getByTestId("citation-breadcrumbs")
+      .closest("[data-slot='citation-bottom-sheet']");
+    expect(bottomSheet).toBeTruthy();
+    expect(screen.getByText("Unit 2 > Cell Biology")).toBeTruthy();
+  });
 });
+

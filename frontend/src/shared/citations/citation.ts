@@ -1,4 +1,27 @@
+import {
+  BookOpen,
+  File,
+  FileText,
+  Globe,
+  Headphones,
+  ImageIcon,
+  Presentation,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
 import i18n from "@/shared/i18n";
+
+export function getCitationKindIcon(kind?: string | null, url?: string | null): LucideIcon {
+  const normalized = (kind ?? "").toLowerCase();
+  if (normalized === "video" || (url && /youtube\.com|youtu\.be/i.test(url))) return Video;
+  if (normalized === "audio") return Headphones;
+  if (normalized === "image") return ImageIcon;
+  if (normalized === "slides" || normalized === "presentation") return Presentation;
+  if (normalized === "ebook" || normalized === "epub") return BookOpen;
+  if (normalized === "url" || normalized === "web") return Globe;
+  if (normalized === "pdf" || normalized === "file" || normalized === "document") return FileText;
+  return File;
+}
 
 /**
  * Shared citation vocabulary for the surfaces that show source evidence:
@@ -37,6 +60,8 @@ export interface CitationReference {
   description: string | null;
   locator?: CitationLocator | null;
   isAvailable: boolean;
+  sectionPath?: string[] | null;
+  context?: string | null;
 }
 
 export function getCitationExcerpt(reference: CitationReference): string {
@@ -159,6 +184,10 @@ export function readMaterialCitations(content: unknown): CitationReference[] {
       // Stored citations keep working even when the source row is gone; the
       // viewer upgrades this to false when the notebook's source list loads.
       isAvailable: true,
+      sectionPath: Array.isArray(record.sectionPath)
+        ? record.sectionPath.filter((p): p is string => typeof p === "string")
+        : null,
+      context: typeof record.context === "string" ? record.context : null,
     });
   }
   return citations;
@@ -210,3 +239,76 @@ function formatTimestamp(offsetMs: number): string {
   }
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+
+/**
+ * Normalizes prose text for citation card preview:
+ * - Unescapes markdown escape sequences (e.g. "5\." -> "5.", "\*" -> "*")
+ * - Cleans stray backslashes and extra whitespace
+ * - Collapses hard line breaks into continuous, natural flowing prose
+ */
+export function cleanProseText(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/\\([!#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1")
+    .replace(/(^|\n)\\\s*/g, "$1")
+    .replace(/\\\s+/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Cleans individual breadcrumb heading segments from markdown escape artifacts.
+ */
+export function cleanBreadcrumbSegment(segment: string): string {
+  return segment
+    .replace(/\\([!#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1")
+    .replace(/(^|\n)\\\s*/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Detects whether a citation reference is authored in markdown or contains markdown syntax.
+ */
+export function isMarkdownCitation(reference: CitationReference, text?: string): boolean {
+  const kind = (reference.kind ?? "").toLowerCase();
+  if (kind === "video" || kind === "audio" || kind === "transcript" || kind === "plaintext") {
+    return false;
+  }
+  if (kind === "markdown" || kind === "md" || kind === "url" || kind === "web" || kind === "article") {
+    return true;
+  }
+  if (/\.(md|markdown|mdx)$/i.test(reference.title || reference.url || "")) {
+    return true;
+  }
+  if (/\.txt$/i.test(reference.title || reference.url || "")) {
+    return false;
+  }
+  if (!text) return false;
+  return /(_[^\s_].*?_|[*][^\s*].*?[*]|`[^`]+`|\[[^\]]+\]\([^)]+\))/s.test(text);
+}
+
+/**
+ * Prepares raw citation text for preview:
+ * - Collapses single newlines within paragraphs into single spaces so prose flows naturally
+ * - Preserves double newlines (\n\n) as paragraph breaks
+ * - Strips stray leading backslashes (e.g. "\ In all")
+ */
+export function prepareCitationText(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/(^|\n)\\\s*/g, "$1")
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) =>
+      paragraph
+        .replace(/\n+/g, " ")
+        .replace(/[ \t]+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+

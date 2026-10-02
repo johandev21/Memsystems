@@ -315,7 +315,7 @@ const MarkdownChunk = memo(function MarkdownChunk({
 
 function MarkdownDocumentShell({ children }: { children: ReactNode }) {
   return (
-    <div className="typeset typeset-chat max-w-none">
+    <div className="typeset typeset-chat typeset-compact max-w-none">
       {children}
     </div>
   );

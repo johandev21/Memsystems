@@ -116,16 +116,6 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
   const initialMessages = useMemo(() => formatChatMessages(chatHistory), [chatHistory]);
 
-  const citedSourcesMap = useMemo(() => {
-    const map = new Map<string, CitedSourceDTO[]>();
-    for (const msg of chatHistory ?? []) {
-      if (msg.citedSources?.length) {
-        map.set(msg.id, msg.citedSources);
-      }
-    }
-    return map;
-  }, [chatHistory]);
-
   const queryClient = useQueryClient();
   const abortedMessagesRef = useRef<UIMessage[] | null>(null);
 
@@ -169,6 +159,22 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   });
 
   const formattedMessages = useMemo(() => formatChatMessages(chatHistory), [chatHistory]);
+
+  const citedSourcesMap = useMemo(() => {
+    const map = new Map<string, CitedSourceDTO[]>();
+    for (const msg of chatHistory ?? []) {
+      if (msg.citedSources?.length) {
+        map.set(msg.id, msg.citedSources);
+      }
+    }
+    for (const msg of messages ?? []) {
+      const meta = (msg.metadata ?? {}) as { citedSources?: CitedSourceDTO[] };
+      if (meta.citedSources?.length) {
+        map.set(msg.id, meta.citedSources);
+      }
+    }
+    return map;
+  }, [chatHistory, messages]);
 
   useEffect(() => {
     if (!chatHistory) return;

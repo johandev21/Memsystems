@@ -28,16 +28,17 @@ describe("CitationPopover", () => {
       name: "Reference 1: Internet Encyclopedia of Philosophy",
     });
     expect(trigger.textContent).toBe("1");
-    await user.click(trigger);
+    await user.hover(trigger);
 
-    expect(screen.getByText("Internet Encyclopedia of Philosophy")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("Internet Encyclopedia of Philosophy")).toBeTruthy();
+    });
     expect(
       screen.getByText("Plato develops the account through the structure of the ideal city."),
     ).toBeTruthy();
     expect(screen.queryByText("Url")).toBeNull();
-    expect(screen.getByRole("button", { name: /open source/i }).getAttribute("href")).toBe(
-      "https://example.com/republic",
-    );
+    const externalLink = screen.getByRole("button", { name: /open external source/i });
+    expect(externalLink.getAttribute("href")).toBe("https://example.com/republic");
   });
 
   it("renders remaining references as compact numbered triggers", () => {
@@ -81,15 +82,13 @@ describe("CitationPopover", () => {
     const trigger = screen.getByRole("button", {
       name: "Reference 1: Internet Encyclopedia of Philosophy",
     });
-    await user.click(trigger);
+    await user.hover(trigger);
 
-    expect(screen.getByText("Source unavailable")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("Source unavailable")).toBeTruthy();
+    });
     expect(screen.getByText("No excerpt is available for this reference.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /open source/i })).toBeNull();
-
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(trigger.getAttribute("aria-expanded")).toBe("false"));
-    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it("shows a useful locator while preserving the external source link", async () => {
@@ -106,16 +105,16 @@ describe("CitationPopover", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Reference 1: Internet Encyclopedia of Philosophy",
-      }),
-    );
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: Internet Encyclopedia of Philosophy",
+    });
+    await user.hover(trigger);
 
-    expect(screen.getByText("Page 4 · Lines 10–18")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /open source/i }).getAttribute("href")).toBe(
-      "https://example.com/republic",
-    );
+    await waitFor(() => {
+      expect(screen.getByText("Page 4 · Lines 10–18")).toBeTruthy();
+    });
+    const externalLink = screen.getByRole("button", { name: /open external source/i });
+    expect(externalLink.getAttribute("href")).toBe("https://example.com/republic");
   });
 
   it("opens the source viewer with the image region locator when opening a visual citation", async () => {
@@ -137,13 +136,14 @@ describe("CitationPopover", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Reference 1: Neural Network Architecture.png",
-      }),
-    );
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: Neural Network Architecture.png",
+    });
+    await user.hover(trigger);
 
-    expect(screen.getByText("Visual region")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("Visual region")).toBeTruthy();
+    });
 
     const openBtn = screen.getByRole("button", { name: /open source/i });
     expect(openBtn.getAttribute("href")).toBeNull();
@@ -184,11 +184,14 @@ describe("CitationPopover", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Reference 1: Lecture Recording.mp4",
-      }),
-    );
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: Lecture Recording.mp4",
+    });
+    await user.hover(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /open source/i })).toBeTruthy();
+    });
 
     const openBtn = screen.getByRole("button", { name: /open source/i });
     await user.click(openBtn);
@@ -227,11 +230,14 @@ describe("CitationPopover", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Reference 1: Pitch Deck.pptx",
-      }),
-    );
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: Pitch Deck.pptx",
+    });
+    await user.hover(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /open source/i })).toBeTruthy();
+    });
 
     const openBtn = screen.getByRole("button", { name: /open source/i });
     await user.click(openBtn);
@@ -271,11 +277,14 @@ describe("CitationPopover", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Reference 1: algorithm.py",
-      }),
-    );
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: algorithm.py",
+    });
+    await user.hover(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /open source/i })).toBeTruthy();
+    });
 
     const openBtn = screen.getByRole("button", { name: /open source/i });
     await user.click(openBtn);

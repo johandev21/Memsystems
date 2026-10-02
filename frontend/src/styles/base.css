@@ -9,6 +9,15 @@
   --typeset-flow: 1.25em;
 }
 
+/*
+ * Document viewers (sources panel). Same type ramp as chat, one step down:
+ * the panel is a side surface, so prose should sit below the chat's reading
+ * size while keeping chat's own --type-size-body untouched.
+ */
+.typeset-compact {
+  --typeset-size: var(--type-size-prose-compact);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

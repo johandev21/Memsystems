@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { RetrievedChunk } from '../src/modules/ai/retrieval.service';
 import {
   MAX_CITATION_EXCERPT_LENGTH,
+  MIN_CITATION_SPAN_LENGTH,
+  MIN_CITATION_SPAN_WORDS,
+  MAX_PASSAGE_CONTEXT_LENGTH,
+  attachScrollToTextFragment,
   createCitationEvidence,
   extractCitationEntries,
+  extractPassageContext,
   formatCitationContext,
   normalizeStoredCitation,
   sanitizeReferenceUrl,
@@ -193,6 +198,8 @@ describe('chat citation mapping', () => {
       description: null,
       quote: null,
       attribution: 'explicit',
+      sectionPath: null,
+      context: null,
     });
   });
 
@@ -330,7 +337,7 @@ describe('citation verification', () => {
     expect(verification.droppedKeys).toEqual(['R9']);
   });
 
-  it('attributes an unmarked claim to the nearest evidence', () => {
+  it('attributes an unmarked claim to the nearest evidence when attribution is enabled', () => {
     const evidence = createCitationEvidence([
       chunk(),
       chunk({
@@ -346,6 +353,7 @@ describe('citation verification', () => {
     const verification = verifyCitations(
       'Osmosis moves water molecules across a selectively permeable membrane.',
       evidence,
+      { attribution: true },
     );
 
     expect(verification.entries).toHaveLength(1);
@@ -359,7 +367,7 @@ describe('citation verification', () => {
     );
   });
 
-  it('attributes each evidence key once, in first-appearance order', () => {
+  it('attributes each evidence key once, in first-appearance order when attribution is enabled', () => {
     const evidence = createCitationEvidence([
       chunk(),
       chunk({
@@ -373,6 +381,7 @@ describe('citation verification', () => {
     const verification = verifyCitations(
       'Mitochondria generate most of the chemical energy in a cell. Justice is examined through a conversation in the city. [ref:R1]',
       evidence,
+      { attribution: true },
     );
 
     expect(verification.entries.map((entry) => entry.chunkId)).toEqual([
@@ -386,12 +395,13 @@ describe('citation verification', () => {
     const evidence = createCitationEvidence([chunk()]);
 
     expect(
-      verifyCitations('Why does justice matter?', evidence).entries,
+      verifyCitations('Why does justice matter?', evidence, { attribution: true }).entries,
     ).toEqual([]);
-    expect(verifyCitations('Yes.', evidence).entries).toEqual([]);
+    expect(verifyCitations('Yes.', evidence, { attribution: true }).entries).toEqual([]);
     const ambiguous = verifyCitations(
       'The city and the conversation and justice are examined.',
       evidence,
+      { attribution: true },
     );
     expect(ambiguous.entries).toHaveLength(1);
     // A claim the evidence barely covers is left unattributed.
@@ -399,6 +409,7 @@ describe('citation verification', () => {
       verifyCitations(
         'Quantum chromodynamics binds the atomic nucleus.',
         evidence,
+        { attribution: true },
       ).entries,
     ).toEqual([]);
   });
@@ -408,12 +419,13 @@ describe('citation verification', () => {
     const verification = verifyCitations(
       '```\nJustice is examined through a conversation in the city.\n```',
       evidence,
+      { attribution: true },
     );
 
     expect(verification.entries).toEqual([]);
   });
 
-  it('attributes a claim even when its marker is unresolvable', () => {
+  it('attributes a claim even when its marker is unresolvable when attribution is enabled', () => {
     const evidence = createCitationEvidence([
       chunk({
         content:
@@ -424,6 +436,7 @@ describe('citation verification', () => {
     const verification = verifyCitations(
       '[ref:R9] Osmosis is the net movement of water molecules across a selectively permeable membrane.',
       evidence,
+      { attribution: true },
     );
 
     expect(verification.droppedKeys).toEqual(['R9']);
@@ -434,21 +447,91 @@ describe('citation verification', () => {
     });
   });
 
-  it('can be measured without nearest-evidence attribution', () => {
+  it('disables nearest-evidence auto-attribution by default to prevent phantom citations', () => {
     const evidence = createCitationEvidence([
       chunk({
         content:
-          'Osmosis is the net movement of water molecules across a membrane.',
+          'Osmosis is the net movement of water molecules across a selectively permeable membrane.',
       }),
     ]);
 
     const verification = verifyCitations(
-      'Osmosis is the net movement of water molecules across a membrane.',
+      'Osmosis moves water molecules across a selectively permeable membrane.',
       evidence,
-      { attribution: false },
     );
 
-    expect(verification.entries).toEqual([]);
+    expect(verification.entries).toHaveLength(0);
     expect(verification.attributedClaims).toBe(0);
+  });
+
+  it('preserves sectionPath and passage context on verified entries', () => {
+    const evidence = createCitationEvidence([
+      chunk({
+        sectionPath: ['Aristotle', 'Logic', 'Demonstrations'],
+        content:
+          'Demonstrations depend on necessary premises. If the premises are true, primary, immediate, and better known than the conclusion, a scientific syllogism is produced.',
+      }),
+    ]);
+
+    const verification = verifyCitations(
+      'Scientific syllogisms require premises that are true and primary. [ref:R1]',
+      evidence,
+    );
+
+    expect(verification.entries).toHaveLength(1);
+    const entry = verification.entries[0];
+    expect(entry.sectionPath).toEqual(['Aristotle', 'Logic', 'Demonstrations']);
+    expect(entry.context).toContain('Demonstrations depend on necessary premises');
+    expect(entry.context).toContain('scientific syllogism is produced');
+    expect(entry.quote).toContain('premises are true, primary, immediate');
+  });
+
+  it('enforces minimum span length threshold (min 35 chars / 5 words) and falls back safely on cross-lingual queries', () => {
+    const evidence = createCitationEvidence([
+      chunk({
+        content:
+          'In. Conditions on Premises are strict. If premises are true and better known, a demonstration proceeds.',
+      }),
+    ]);
+
+    // Cross-lingual query: Spanish claim against English text
+    const span = selectSupportingSpan(
+      evidence[0].content,
+      '¿Cuáles son las condiciones de las premisas?',
+    );
+
+    // Must NOT select the 3-character sentence "In."
+    expect(span.text).not.toBe('In.');
+    expect(span.text.length).toBeGreaterThanOrEqual(MIN_CITATION_SPAN_LENGTH);
+    expect(span.text).toContain('Conditions on Premises are strict');
+  });
+
+  it('attaches W3C scroll-to-text fragments to web URLs and skips PDFs', () => {
+    const webEvidence = createCitationEvidence([
+      chunk({
+        url: 'https://example.com/logic/aristotle',
+        kind: 'url',
+        content:
+          'Demonstrations depend on necessary premises. If the premises are true, primary, immediate, and better known than the conclusion, a scientific syllogism is produced.',
+      }),
+      chunk({
+        chunkId: 'chunk-pdf',
+        url: 'https://example.com/logic/paper.pdf',
+        kind: 'pdf',
+        content:
+          'Demonstrations depend on necessary premises. If the premises are true, primary, immediate, and better known than the conclusion, a scientific syllogism is produced.',
+      }),
+    ]);
+
+    const verification = verifyCitations(
+      'Web claim. [ref:R1] PDF claim. [ref:R2]',
+      webEvidence,
+    );
+
+    expect(verification.entries).toHaveLength(2);
+    expect(verification.entries[0].url).toContain('https://example.com/logic/aristotle#:~:text=');
+    // PDF URLs must NOT have text fragments
+    expect(verification.entries[1].url).toBe('https://example.com/logic/paper.pdf');
+    expect(verification.entries[1].url).not.toContain(':~:text=');
   });
 });
