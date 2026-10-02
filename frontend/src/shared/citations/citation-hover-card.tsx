@@ -14,11 +14,16 @@ import {
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  cleanBreadcrumbSegment,
+  cleanProseText,
   getCitationExcerpt,
   getCitationLocatorLabel,
   getSafeCitationUrl,
+  isMarkdownCitation,
+  prepareCitationText,
   type CitationReference,
 } from "@/shared/citations/citation";
+import { MarkdownRenderer, type MarkdownComponents } from "@/components/ui/markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,58 +68,54 @@ function CitationKindIcon({
   return <File className={className} aria-hidden="true" />;
 }
 
+const compactMarkdownComponents: MarkdownComponents = {
+  p: ({ children }) => (
+    <p className="my-1.5 leading-relaxed text-foreground/90 select-text font-normal">{children}</p>
+  ),
+  h1: ({ children }) => <div className="font-semibold my-1 text-foreground">{children}</div>,
+  h2: ({ children }) => <div className="font-semibold my-1 text-foreground">{children}</div>,
+  h3: ({ children }) => <div className="font-semibold my-1 text-foreground">{children}</div>,
+  h4: ({ children }) => <div className="font-semibold my-1 text-foreground">{children}</div>,
+  h5: ({ children }) => <div className="font-medium my-1 text-foreground">{children}</div>,
+  h6: ({ children }) => <div className="font-medium my-1 text-foreground">{children}</div>,
+  ul: ({ children }) => <ul className="list-disc pl-4 my-1 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-4 my-1 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="pl-0.5 leading-relaxed">{children}</li>,
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-primary/40 pl-2 my-1 italic text-foreground/80">
+      {children}
+    </blockquote>
+  ),
+  a: ({ children }) => <span className="underline underline-offset-2">{children}</span>,
+  code: ({ children }) => (
+    <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{children}</code>
+  ),
+  em: ({ children }) => <em className="italic">{children}</em>,
+  strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+};
+
 export function CitationEvidenceBody({ reference }: { reference: CitationReference }) {
-  const context = reference.context?.trim();
-  const quote = reference.quote?.trim();
+  const rawText =
+    reference.context?.trim() ||
+    reference.quote?.trim() ||
+    getCitationExcerpt(reference);
 
-  if (context && quote) {
-    const quoteIndex = context.indexOf(quote);
-    if (quoteIndex !== -1) {
-      const before = context.slice(0, quoteIndex);
-      const matched = context.slice(quoteIndex, quoteIndex + quote.length);
-      const after = context.slice(quoteIndex + quote.length);
+  const text = prepareCitationText(rawText);
+  const isMarkdown = isMarkdownCitation(reference, text);
 
-      return (
-        <div
-          data-slot="citation-evidence"
-          className="max-h-56 overflow-y-auto text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap select-text pr-1"
-        >
-          {before}
-          <mark className="rounded-xs bg-primary/15 px-0.5 font-medium text-foreground dark:bg-primary/25">
-            {matched}
-          </mark>
-          {after}
-        </div>
-      );
-    }
-
-    return (
-      <div
-        data-slot="citation-evidence"
-        className="max-h-56 overflow-y-auto space-y-1.5 text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap select-text pr-1"
-      >
-        <p>
-          <mark className="rounded-xs bg-primary/15 px-0.5 font-medium text-foreground dark:bg-primary/25">
-            {quote}
-          </mark>
-        </p>
-        <p className="text-xs opacity-80">{context}</p>
-      </div>
-    );
-  }
-
-  const excerpt = getCitationExcerpt(reference);
   return (
     <div
       data-slot="citation-evidence"
-      className="max-h-56 overflow-y-auto text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap select-text pr-1"
+      className="max-h-56 overflow-y-auto text-xs leading-relaxed text-foreground/90 select-text pr-1 pb-1"
     >
-      {quote ? (
-        <mark className="rounded-xs bg-primary/15 px-0.5 font-medium text-foreground dark:bg-primary/25">
-          {excerpt}
-        </mark>
+      {isMarkdown ? (
+        <MarkdownRenderer components={compactMarkdownComponents}>
+          {text}
+        </MarkdownRenderer>
       ) : (
-        excerpt
+        <p className="my-1.5 leading-relaxed text-foreground/90 select-text font-normal">
+          {cleanProseText(text)}
+        </p>
       )}
     </div>
   );
@@ -151,9 +152,9 @@ export function CitationCardHeader({
         <div
           data-slot="citation-breadcrumbs"
           data-testid="citation-breadcrumbs"
-          className="flex items-center gap-1 text-xs text-muted-foreground/80 truncate font-mono"
+          className="flex items-center gap-1 text-xs text-muted-foreground truncate"
         >
-          {reference.sectionPath.join(" > ")}
+          {reference.sectionPath.map(cleanBreadcrumbSegment).join(" > ")}
         </div>
       )}
 
@@ -176,7 +177,8 @@ export function CitationActions({
   const { t } = useTranslation("chat");
   const [copied, setCopied] = useState(false);
 
-  const quoteToCopy = reference.quote?.trim() || reference.description?.trim();
+  const rawQuote = reference.quote?.trim() || reference.description?.trim();
+  const quoteToCopy = cleanProseText(rawQuote);
 
   const handleCopy = async () => {
     if (!quoteToCopy) return;

@@ -239,3 +239,76 @@ function formatTimestamp(offsetMs: number): string {
   }
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+
+/**
+ * Normalizes prose text for citation card preview:
+ * - Unescapes markdown escape sequences (e.g. "5\." -> "5.", "\*" -> "*")
+ * - Cleans stray backslashes and extra whitespace
+ * - Collapses hard line breaks into continuous, natural flowing prose
+ */
+export function cleanProseText(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/\\([!#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1")
+    .replace(/(^|\n)\\\s*/g, "$1")
+    .replace(/\\\s+/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Cleans individual breadcrumb heading segments from markdown escape artifacts.
+ */
+export function cleanBreadcrumbSegment(segment: string): string {
+  return segment
+    .replace(/\\([!#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1")
+    .replace(/(^|\n)\\\s*/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Detects whether a citation reference is authored in markdown or contains markdown syntax.
+ */
+export function isMarkdownCitation(reference: CitationReference, text?: string): boolean {
+  const kind = (reference.kind ?? "").toLowerCase();
+  if (kind === "video" || kind === "audio" || kind === "transcript" || kind === "plaintext") {
+    return false;
+  }
+  if (kind === "markdown" || kind === "md" || kind === "url" || kind === "web" || kind === "article") {
+    return true;
+  }
+  if (/\.(md|markdown|mdx)$/i.test(reference.title || reference.url || "")) {
+    return true;
+  }
+  if (/\.txt$/i.test(reference.title || reference.url || "")) {
+    return false;
+  }
+  if (!text) return false;
+  return /(_[^\s_].*?_|[*][^\s*].*?[*]|`[^`]+`|\[[^\]]+\]\([^)]+\))/s.test(text);
+}
+
+/**
+ * Prepares raw citation text for preview:
+ * - Collapses single newlines within paragraphs into single spaces so prose flows naturally
+ * - Preserves double newlines (\n\n) as paragraph breaks
+ * - Strips stray leading backslashes (e.g. "\ In all")
+ */
+export function prepareCitationText(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/(^|\n)\\\s*/g, "$1")
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) =>
+      paragraph
+        .replace(/\n+/g, " ")
+        .replace(/[ \t]+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+

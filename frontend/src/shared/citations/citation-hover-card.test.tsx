@@ -60,9 +60,9 @@ describe("CitationHoverCard", () => {
     // Asserts locator badge
     expect(screen.getByText("Page 42")).toBeTruthy();
 
-    // Asserts highlighted focal quote inside mark
-    const mark = screen.getByText("Demonstrations depend on necessary premises.");
-    expect(mark.tagName.toLowerCase()).toBe("mark");
+    // Asserts passage text is present uniformly without mark tag / highlight background
+    expect(screen.getByText(/Demonstrations depend on necessary premises\./)).toBeTruthy();
+    expect(document.querySelector("mark")).toBeNull();
 
     // Asserts surrounding context is present
     expect(screen.getByText(/Logic begins with primary principles/)).toBeTruthy();
@@ -237,5 +237,91 @@ describe("CitationHoverCard", () => {
     expect(screen.getAllByText("Demonstrations depend on necessary premises.").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: /copy quote/i })).toBeTruthy();
   });
+
+  it("smooths broken newlines, strips backslash escapes, and cleans breadcrumbs", async () => {
+    const user = userEvent.setup();
+    render(
+      <CitationHoverCard
+        reference={sampleReference({
+          sectionPath: ["Plato", "5\\. Plato's indirectness"],
+          quote: "above, the authenticity of\nPlato's letters is a matter of great controversy; and in any",
+          context:
+            "above, the authenticity of\nPlato's letters is a matter of great controversy; and in any\ncase, the author of the seventh letter declares his opposition to\nthe\nwriting of philosophical books.\n\nWhether Plato wrote it or not, it\ncannot be regarded as a philosophical treatise.\n\n\\ In all of his writings",
+        })}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: Stanford Encyclopedia of Philosophy",
+    });
+    await user.hover(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("citation-breadcrumbs")).toBeTruthy();
+    });
+
+    // Unescapes backslash in breadcrumb
+    expect(screen.getByTestId("citation-breadcrumbs").textContent).toBe(
+      "Plato > 5. Plato's indirectness",
+    );
+
+    // Text is smoothed into continuous prose without mark tag / highlight background
+    expect(
+      screen.getByText(/above, the authenticity of Plato's letters is a matter of great controversy; and in any/),
+    ).toBeTruthy();
+    expect(document.querySelector("mark")).toBeNull();
+
+    // Context is smoothed into continuous prose without hard newlines
+    const evidence = screen.getByTestId("citation-breadcrumbs")
+      .closest("[data-slot='hover-card-content']")
+      ?.querySelector("[data-slot='citation-evidence']");
+    expect(evidence).toBeTruthy();
+    expect(evidence?.textContent).toContain(
+      "opposition to the writing of philosophical books.",
+    );
+    expect(evidence?.textContent).toContain(
+      "Whether Plato wrote it or not, it cannot be regarded as a philosophical treatise.",
+    );
+    expect(evidence?.textContent).toContain("In all of his writings");
+    expect(evidence?.textContent).not.toContain("\\");
+  });
+
+  it("renders markdown formatting like italics for markdown sources and cleans breadcrumbs", async () => {
+    const user = userEvent.setup();
+    render(
+      <CitationHoverCard
+        reference={sampleReference({
+          kind: "url",
+          sectionPath: ["Plato", "5\\. Plato's indirectness"],
+          context:
+            "Why, after all, did Plato write so many works (for example: _Phaedo_, _Symposium_, _Republic_) in which one character dominates?",
+        })}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: Stanford Encyclopedia of Philosophy",
+    });
+    await user.hover(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("citation-breadcrumbs")).toBeTruthy();
+    });
+
+    // Asserts unescaped breadcrumbs
+    expect(screen.getByTestId("citation-breadcrumbs").textContent).toBe(
+      "Plato > 5. Plato's indirectness",
+    );
+
+    // Asserts italics for _Phaedo_ (rendered as <em>Phaedo</em>)
+    const emPhaedo = screen.getByText("Phaedo");
+    expect(emPhaedo.tagName.toLowerCase()).toBe("em");
+    const emSymposium = screen.getByText("Symposium");
+    expect(emSymposium.tagName.toLowerCase()).toBe("em");
+
+    // Asserts no highlight background or mark tag
+    expect(document.querySelector("mark")).toBeNull();
+  });
 });
+
 
