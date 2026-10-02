@@ -26,6 +26,20 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
+  notifyCitationClosed,
+  notifyCitationOpened,
+  useIsAnyOtherCitationActive,
+} from "@/shared/citations/citation-hover-group";
+import { useIsTouchDevice } from "@/shared/citations/use-touch-device";
 
 function CitationKindIcon({
   kind,
@@ -263,17 +277,73 @@ export function CitationActions({
 export interface CitationHoverCardProps {
   reference: CitationReference;
   children?: ReactNode;
+  forceDrawer?: boolean;
 }
 
-export function CitationHoverCard({ reference, children }: CitationHoverCardProps) {
+export function CitationHoverCard({
+  reference,
+  children,
+  forceDrawer,
+}: CitationHoverCardProps) {
   const { t } = useTranslation("chat");
+  const isTouchDevice = useIsTouchDevice();
+  const isTouch = forceDrawer ?? isTouchDevice;
   const safeUrl = getSafeCitationUrl(reference.url);
   const locatorLabel = getCitationLocatorLabel(reference);
 
+  const referenceKey = reference.id || reference.citationKey || String(reference.number);
+  const isGroupActive = useIsAnyOtherCitationActive(referenceKey);
+  const delay = isGroupActive ? 0 : 250;
+
+  if (isTouch) {
+    return (
+      <Drawer>
+        <DrawerTrigger
+          render={
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="secondary"
+              aria-label={t("referencePopover.triggerAria", {
+                number: reference.number,
+                title: reference.title,
+              })}
+              className="relative -top-px mx-0.5 inline-flex h-5 w-auto min-w-5 rounded-full px-1 align-baseline text-xs leading-none text-muted-foreground hover:text-foreground"
+            />
+          }
+        >
+          {children ?? reference.number}
+        </DrawerTrigger>
+
+        <DrawerContent
+          data-slot="citation-bottom-sheet"
+          className="space-y-3"
+        >
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>{reference.title}</DrawerTitle>
+            <DrawerDescription>{reference.quote ?? reference.title}</DrawerDescription>
+          </DrawerHeader>
+
+          <CitationCardHeader reference={reference} locatorLabel={locatorLabel} />
+          <CitationEvidenceBody reference={reference} />
+          <CitationActions reference={reference} safeUrl={safeUrl} />
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
-    <HoverCard>
+    <HoverCard
+      onOpenChange={(open) => {
+        if (open) {
+          notifyCitationOpened(referenceKey);
+        } else {
+          notifyCitationClosed(referenceKey);
+        }
+      }}
+    >
       <HoverCardTrigger
-        delay={250}
+        delay={delay}
         closeDelay={200}
         render={
           <Button

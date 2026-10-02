@@ -189,4 +189,53 @@ describe("CitationHoverCard", () => {
     expect(screen.getByRole("button", { name: /Reference 1:/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Reference 2:/i })).toBeTruthy();
   });
+
+  it("handles smooth clustered hover transitions between adjacent citation badges", async () => {
+    const user = userEvent.setup();
+    render(
+      <div>
+        <CitationHoverCard reference={sampleReference({ id: "source-1", number: 1, title: "Source One" })} />
+        <CitationHoverCard reference={sampleReference({ id: "source-2", number: 2, title: "Source Two" })} />
+      </div>,
+    );
+
+    const trigger1 = screen.getByRole("button", { name: "Reference 1: Source One" });
+    const trigger2 = screen.getByRole("button", { name: "Reference 2: Source Two" });
+
+    // Hover first citation badge
+    await user.hover(trigger1);
+    await waitFor(() => {
+      expect(screen.getByText("Source One")).toBeTruthy();
+    });
+
+    // Hover second citation badge in cluster
+    await user.hover(trigger2);
+    await waitFor(() => {
+      expect(screen.getByText("Source Two")).toBeTruthy();
+    });
+  });
+
+  it("opens an accessible Bottom Sheet / Drawer on mobile touch devices (pointer: coarse)", async () => {
+    const user = userEvent.setup();
+    render(<CitationHoverCard reference={sampleReference()} forceDrawer />);
+
+    const trigger = screen.getByRole("button", {
+      name: "Reference 1: Stanford Encyclopedia of Philosophy",
+    });
+
+    // On touch device, tapping trigger opens Drawer
+    await user.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("citation-breadcrumbs")).toBeTruthy();
+    });
+
+    const bottomSheet = screen.getByTestId("citation-breadcrumbs").closest("[data-slot='citation-bottom-sheet']");
+    expect(bottomSheet).toBeTruthy();
+    expect(screen.getAllByText("Stanford Encyclopedia of Philosophy").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Aristotle > Logic > Demonstrations")).toBeTruthy();
+    expect(screen.getAllByText("Demonstrations depend on necessary premises.").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: /copy quote/i })).toBeTruthy();
+  });
 });
+
