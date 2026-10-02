@@ -1,4 +1,27 @@
+import {
+  BookOpen,
+  File,
+  FileText,
+  Globe,
+  Headphones,
+  ImageIcon,
+  Presentation,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
 import i18n from "@/shared/i18n";
+
+export function getCitationKindIcon(kind?: string | null, url?: string | null): LucideIcon {
+  const normalized = (kind ?? "").toLowerCase();
+  if (normalized === "video" || (url && /youtube\.com|youtu\.be/i.test(url))) return Video;
+  if (normalized === "audio") return Headphones;
+  if (normalized === "image") return ImageIcon;
+  if (normalized === "slides" || normalized === "presentation") return Presentation;
+  if (normalized === "ebook" || normalized === "epub") return BookOpen;
+  if (normalized === "url" || normalized === "web") return Globe;
+  if (normalized === "pdf" || normalized === "file" || normalized === "document") return FileText;
+  return File;
+}
 
 /**
  * Shared citation vocabulary for the surfaces that show source evidence:
@@ -37,6 +60,8 @@ export interface CitationReference {
   description: string | null;
   locator?: CitationLocator | null;
   isAvailable: boolean;
+  sectionPath?: string[] | null;
+  context?: string | null;
 }
 
 export function getCitationExcerpt(reference: CitationReference): string {
@@ -159,6 +184,10 @@ export function readMaterialCitations(content: unknown): CitationReference[] {
       // Stored citations keep working even when the source row is gone; the
       // viewer upgrades this to false when the notebook's source list loads.
       isAvailable: true,
+      sectionPath: Array.isArray(record.sectionPath)
+        ? record.sectionPath.filter((p): p is string => typeof p === "string")
+        : null,
+      context: typeof record.context === "string" ? record.context : null,
     });
   }
   return citations;
