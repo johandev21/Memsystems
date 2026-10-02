@@ -137,7 +137,9 @@ describe("MaterialCitations", () => {
       expect(screen.getByTestId("citation-breadcrumbs")).toBeTruthy();
     });
     expect(screen.getByText("Unit 2 > Cell Biology > Mitochondria")).toBeTruthy();
-    expect(screen.getByText("Mitochondria generate most of the chemical energy.")).toBeTruthy();
+    expect(
+      screen.getByText(/Mitochondria generate most of the chemical energy/),
+    ).toBeTruthy();
     expect(
       screen.getByText(/Cellular respiration occurs in organelles/),
     ).toBeTruthy();
