@@ -44,7 +44,7 @@ Cada notebook cuenta con un chat persistente para interactuar con sus fuentes y 
 - Mantener el historial de mensajes por notebook.
 - Recibir respuestas en streaming mientras se generan.
 - Mostrar texto y razonamiento cuando el modelo lo proporciona.
-- Mostrar citas que enlazan a la evidencia de las fuentes utilizadas.
+- Mostrar citas interactivas (hover cards) con la jerarquía de secciones, pasajes formateados y enlaces directos a las fuentes.
 - Elegir el modelo utilizado para la conversación.
 - Limpiar el historial del chat.
 
@@ -61,25 +61,19 @@ Los materiales pueden crearse manualmente o generarse a partir del contenido del
 - Problemas de práctica.
 - Casos de estudio.
 
-Estos materiales pueden editarse, moverse entre carpetas, visualizarse y filtrarse por tipo. Los cuestionarios también pueden barajarse para variar el orden de las preguntas, y las presentaciones pueden exportarse a PPTX.
+Estos materiales pueden editarse, moverse entre carpetas, visualizarse y filtrarse por tipo. Los cuestionarios también pueden barajarse para variar el orden de las preguntas, y las presentaciones pueden exportarse a PPTX. Además, incluyen citas interactivas vinculadas a las fuentes utilizadas.
 
 ### Organización
 
-Los materiales se pueden organizar en carpetas dentro de cada notebook. El árbol del estudio permite:
+Los materiales y fuentes se pueden organizar en carpetas dentro de cada notebook mediante estructuras en árbol. Permiten:
 
-- Crear, renombrar, duplicar, mover y eliminar materiales y carpetas.
+- Crear, renombrar, duplicar, mover y eliminar elementos y carpetas mediante menús contextuales.
 - Arrastrar y soltar, con expansión automática de las carpetas al pasar por encima.
 - Navegar con el teclado mediante flechas, Inicio, Fin, Enter y F2.
 
 ### Proveedores y modelos de IA
 
-La aplicación integra varios proveedores a través de la Vercel AI Gateway y permite consultar los modelos disponibles desde la interfaz. Los proveedores configurados actualmente son:
-
-- OpenAI.
-- DeepSeek.
-- Anthropic.
-- Google Gemini.
-- Kimi.
+La aplicación utiliza la Vercel AI Gateway para gestionar y consultar los modelos de lenguaje disponibles directamente desde la interfaz.
 
 La clave global de AI Gateway puede configurarse mediante una variable de entorno o desde los ajustes de la aplicación. La conexión y disponibilidad se comprueban antes de utilizar los modelos. La indexación y la búsqueda semántica usan Voyage AI para generar los embeddings, con una conexión propia que también se configura desde los ajustes.
 
