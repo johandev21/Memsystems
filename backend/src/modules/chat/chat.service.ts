@@ -98,6 +98,8 @@ interface CitedSourceMeta {
   description: string | null;
   quote: string | null;
   isAvailable: boolean;
+  sectionPath?: string[] | null;
+  context?: string | null;
 }
 
 export interface SendInput {
@@ -200,6 +202,8 @@ export class ChatService {
           description: e.description,
           quote: e.quote,
           isAvailable: !!meta,
+          sectionPath: e.sectionPath ?? null,
+          context: e.context ?? null,
         };
       });
 
@@ -516,7 +520,9 @@ export class ChatService {
       // a retrieved chunk, entries store their supporting span, and unmarked
       // claims are attributed to the nearest Evidence. Unresolvable
       // references are dropped from the stored citations.
-      const verification = verifyCitations(text, citationEvidence);
+      const verification = verifyCitations(text, citationEvidence, {
+        attribution: false,
+      });
       if (verification.droppedKeys.length > 0) {
         this.logger.warn(
           `Dropped ${verification.droppedKeys.length} unresolvable citation key(s): ${verification.droppedKeys
@@ -684,10 +690,21 @@ export class ChatService {
         sendReasoning: true,
         messageMetadata: ({ part }) => {
           if (part.type === 'finish') {
+            const verification = verifyCitations(
+              streamedText,
+              citationEvidence,
+              { attribution: false },
+            );
             return {
               modelId,
               finishReason: part.finishReason,
               totalUsage: part.totalUsage,
+              citedSources: verification.entries,
+              citationCheck: {
+                resolved: verification.entries.length,
+                attributed: verification.attributedClaims,
+                dropped: verification.droppedKeys.length,
+              },
             };
           }
         },

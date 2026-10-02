@@ -616,6 +616,9 @@ export const notebookChatMessages = pgTable(
             url?: string | null;
             description?: string | null;
             quote: string | null;
+            attribution?: string;
+            sectionPath?: string[] | null;
+            context?: string | null;
           }
       )[]
     >(),

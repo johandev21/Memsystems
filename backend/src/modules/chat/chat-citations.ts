@@ -5,6 +5,9 @@ export { type CitationLocator } from '../ai/retrieval.service';
 
 export const CITATION_SCHEMA_VERSION = 3;
 export const MAX_CITATION_EXCERPT_LENGTH = 500;
+export const MIN_CITATION_SPAN_LENGTH = 35;
+export const MIN_CITATION_SPAN_WORDS = 5;
+export const MAX_PASSAGE_CONTEXT_LENGTH = 1000;
 
 /** Content words a reply segment needs before it can be a claim. */
 const MIN_CLAIM_WORDS = 4;
@@ -44,6 +47,10 @@ export interface CitedSourceEntry {
   quote: string | null;
   /** Explicit marker or nearest-Evidence attribution. */
   attribution: CitationAttribution;
+  /** Heading hierarchy / breadcrumb path. */
+  sectionPath?: string[] | null;
+  /** Surrounding paragraph context window (~600–1000 characters). */
+  context?: string | null;
 }
 
 export type StoredCitedSourceEntry =
@@ -118,7 +125,7 @@ export function verifyCitations(
   evidence: CitationEvidence[],
   options: { attribution?: boolean } = {},
 ): CitationVerification {
-  const attribution = options.attribution ?? true;
+  const attribution = options.attribution ?? false;
   const evidenceByKey = new Map(
     evidence.map((item) => [item.citationKey.toUpperCase(), item]),
   );
@@ -236,11 +243,46 @@ export interface SupportingSpan {
   coverage: number;
 }
 
+function countWords(text: string): number {
+  return (text.match(/[\p{L}\p{N}]+/gu) ?? []).length;
+}
+
+export function isAdequateSpan(text: string): boolean {
+  return (
+    text.trim().length >= MIN_CITATION_SPAN_LENGTH &&
+    countWords(text) >= MIN_CITATION_SPAN_WORDS
+  );
+}
+
+export function findFallbackSpan(
+  body: string,
+  sentences: SentenceSegment[],
+): string {
+  if (sentences.length === 0) return capSpan(body);
+
+  const firstSentence = body.slice(sentences[0].start, sentences[0].end).trim();
+  if (isAdequateSpan(firstSentence)) {
+    return capSpan(firstSentence);
+  }
+
+  let end = sentences[0].end;
+  for (let i = 1; i < sentences.length; i++) {
+    end = sentences[i].end;
+    const combined = body.slice(sentences[0].start, end).trim();
+    if (isAdequateSpan(combined)) {
+      return capSpan(combined);
+    }
+  }
+
+  return capSpan(body.slice(sentences[0].start, end));
+}
+
 /**
  * Selects the span of `content` that best supports `claim`. Spans are one
  * sentence or two adjacent ones; the best coverage wins, ties go to the
- * shorter and then the earlier span, so the result is deterministic. A claim
- * with no content words falls back to the start of the chunk.
+ * shorter and then the earlier span, so the result is deterministic.
+ * Zero-coverage matches or unconstrained claims safely fall back to the lead
+ * passage rather than picking the shortest snippet.
  */
 export function selectSupportingSpan(
   content: string,
@@ -256,7 +298,7 @@ export function selectSupportingSpan(
 
   if (claimTerms.size === 0) {
     return {
-      text: capSpan(body.slice(sentences[0].start, sentences[0].end)),
+      text: findFallbackSpan(body, sentences),
       coverage: 0,
     };
   }
@@ -271,32 +313,83 @@ export function selectSupportingSpan(
     });
   }
 
-  let best: { start: number; end: number; coverage: number } | null = null;
+  let best: {
+    start: number;
+    end: number;
+    coverage: number;
+    adequate: boolean;
+  } | null = null;
+
   for (const window of windows) {
+    const spanText = body.slice(window.start, window.end);
     const tokens = new Set(
-      body
-        .slice(window.start, window.end)
-        .toLowerCase()
-        .match(/[\p{L}\p{N}]+/gu) ?? [],
+      spanText.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [],
     );
     const coverage = coverageOf(claimTerms, tokens);
-    if (
-      !best ||
-      coverage > best.coverage ||
-      (coverage === best.coverage &&
-        window.end - window.start < best.end - best.start) ||
-      (coverage === best.coverage &&
-        window.end - window.start === best.end - best.start &&
-        window.start < best.start)
-    ) {
-      best = { ...window, coverage };
+    if (coverage === 0) continue;
+
+    const adequate = isAdequateSpan(spanText);
+
+    if (!best) {
+      best = { ...window, coverage, adequate };
+      continue;
+    }
+
+    if (coverage > best.coverage) {
+      best = { ...window, coverage, adequate };
+      continue;
+    }
+
+    if (coverage === best.coverage) {
+      if (adequate && !best.adequate) {
+        best = { ...window, coverage, adequate };
+        continue;
+      }
+      if (!adequate && best.adequate) {
+        continue;
+      }
+      const currentLen = window.end - window.start;
+      const bestLen = best.end - best.start;
+      if (currentLen < bestLen) {
+        best = { ...window, coverage, adequate };
+        continue;
+      }
+      if (currentLen === bestLen && window.start < best.start) {
+        best = { ...window, coverage, adequate };
+      }
     }
   }
 
-  const chosen = best ?? { start: 0, end: body.length, coverage: 0 };
+  if (!best || best.coverage === 0) {
+    return {
+      text: findFallbackSpan(body, sentences),
+      coverage: 0,
+    };
+  }
+
+  let chosenStart = best.start;
+  let chosenEnd = best.end;
+
+  if (!best.adequate) {
+    const candidate2Sentence = windows.find(
+      (w) =>
+        w.start <= best.start &&
+        w.end >= best.end &&
+        w.end - w.start > best.end - best.start &&
+        isAdequateSpan(body.slice(w.start, w.end)),
+    );
+    if (candidate2Sentence) {
+      chosenStart = candidate2Sentence.start;
+      chosenEnd = candidate2Sentence.end;
+    } else {
+      const fallback = findFallbackSpan(body, sentences);
+      return { text: fallback, coverage: best.coverage };
+    }
+  }
+
   return {
-    text: capSpan(body.slice(chosen.start, chosen.end)),
-    coverage: chosen.coverage,
+    text: capSpan(body.slice(chosenStart, chosenEnd)),
+    coverage: best.coverage,
   };
 }
 
@@ -426,6 +519,107 @@ function nearestEvidence(
   return best;
 }
 
+export function extractPassageContext(
+  content: string,
+  spanText: string | null,
+): string {
+  const body = chunkBody(content).trim();
+  if (body.length <= MAX_PASSAGE_CONTEXT_LENGTH) {
+    return body;
+  }
+
+  if (!spanText || !spanText.trim()) {
+    return capSpanToLength(body, MAX_PASSAGE_CONTEXT_LENGTH);
+  }
+
+  const cleanSpan = spanText.trim();
+  const spanIndex = body.indexOf(cleanSpan);
+  if (spanIndex === -1) {
+    return capSpanToLength(body, MAX_PASSAGE_CONTEXT_LENGTH);
+  }
+
+  const spanLength = cleanSpan.length;
+  if (spanLength >= MAX_PASSAGE_CONTEXT_LENGTH) {
+    return cleanSpan.slice(0, MAX_PASSAGE_CONTEXT_LENGTH);
+  }
+
+  const remainingBudget = MAX_PASSAGE_CONTEXT_LENGTH - spanLength;
+  const targetBefore = Math.floor(remainingBudget / 2);
+  let start = Math.max(0, spanIndex - targetBefore);
+  let end = Math.min(body.length, start + MAX_PASSAGE_CONTEXT_LENGTH);
+
+  if (end === body.length) {
+    start = Math.max(0, end - MAX_PASSAGE_CONTEXT_LENGTH);
+  }
+
+  if (start > 0) {
+    const nextSpace = body.indexOf(' ', start);
+    if (nextSpace !== -1 && nextSpace < spanIndex) {
+      start = nextSpace + 1;
+    }
+  }
+  if (end < body.length) {
+    const prevSpace = body.lastIndexOf(' ', end);
+    if (prevSpace > spanIndex + spanLength) {
+      end = prevSpace;
+    }
+  }
+
+  return body.slice(start, end).trim();
+}
+
+function capSpanToLength(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  const shortened = text.slice(0, maxLength);
+  const boundary = Math.max(
+    shortened.lastIndexOf(' '),
+    shortened.lastIndexOf('\n'),
+  );
+  return boundary > 0 ? shortened.slice(0, boundary).trim() : shortened.trim();
+}
+
+export function attachScrollToTextFragment(
+  url: string | null,
+  quote: string | null,
+  kind: string | null,
+): string | null {
+  if (!url || !quote || !quote.trim()) return url;
+
+  if (kind === 'pdf' || url.toLowerCase().split('?')[0].endsWith('.pdf')) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return url;
+    }
+  } catch {
+    return url;
+  }
+
+  if (url.includes(':~:text=')) {
+    return url;
+  }
+
+  const cleanQuote = quote.trim().replace(/\s+/g, ' ');
+  const words = cleanQuote.split(' ');
+  let directive: string;
+
+  if (words.length > 8) {
+    const startWords = words.slice(0, 4).join(' ');
+    const endWords = words.slice(-4).join(' ');
+    directive = `text=${encodeURIComponent(startWords)},${encodeURIComponent(endWords)}`;
+  } else {
+    directive = `text=${encodeURIComponent(cleanQuote)}`;
+  }
+
+  if (url.includes('#')) {
+    return `${url}:~:${directive}`;
+  }
+  return `${url}#:~:${directive}`;
+}
+
 function entryFromEvidence(
   item: CitationEvidence,
   claim: string,
@@ -433,6 +627,13 @@ function entryFromEvidence(
   attribution: CitationAttribution,
 ): CitedSourceEntry {
   const span = selectSupportingSpan(item.content, claim);
+  const quote = span.text || null;
+  const context = extractPassageContext(item.content, quote);
+  const sectionPath =
+    item.sectionPath && item.sectionPath.length > 0 ? item.sectionPath : null;
+  const rawUrl = sanitizeReferenceUrl(item.url);
+  const url = attachScrollToTextFragment(rawUrl, quote, item.kind);
+
   return {
     schemaVersion: CITATION_SCHEMA_VERSION,
     citationKey: item.citationKey,
@@ -444,10 +645,12 @@ function entryFromEvidence(
     number,
     title: item.title,
     kind: item.kind,
-    url: sanitizeReferenceUrl(item.url),
+    url,
     description: null,
-    quote: span.text || null,
+    quote,
     attribution,
+    sectionPath,
+    context,
   };
 }
 
@@ -544,6 +747,8 @@ export function normalizeStoredCitation(
       description: null,
       quote: null,
       attribution: 'explicit',
+      sectionPath: null,
+      context: null,
     };
   }
 
@@ -562,6 +767,10 @@ export function normalizeStoredCitation(
     description: entry.description ?? null,
     quote: entry.quote ?? null,
     attribution: entry.attribution ?? 'explicit',
+    sectionPath: Array.isArray(entry.sectionPath)
+      ? entry.sectionPath.filter((p): p is string => typeof p === 'string')
+      : null,
+    context: typeof entry.context === 'string' ? entry.context : null,
   };
 }
 
