@@ -303,5 +303,51 @@ export function getLanguageFromTitle(title: string): string {
 
 export function splitTextIntoChunks(rawText: string): string[] {
   if (!rawText) return [];
-  return rawText.split(/\n\n+/).filter((chunk) => chunk.trim().length > 0);
+  const lines = rawText.split(/\r?\n/);
+  const chunks: string[] = [];
+  let currentChunk: string[] = [];
+  let inCodeBlock = false;
+  let fenceChar = "";
+  let fenceLength = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Track fenced code blocks (``` or ~~~) so internal empty lines do not break chunks
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const matchFence = fenceMatch[1];
+      if (!inCodeBlock) {
+        inCodeBlock = true;
+        fenceChar = matchFence[0];
+        fenceLength = matchFence.length;
+      } else if (matchFence[0] === fenceChar && matchFence.length >= fenceLength) {
+        inCodeBlock = false;
+        fenceChar = "";
+        fenceLength = 0;
+      }
+    }
+
+    if (!inCodeBlock && trimmed === "") {
+      if (currentChunk.length > 0) {
+        const chunkText = currentChunk.join("\n").trim();
+        if (chunkText.length > 0) {
+          chunks.push(chunkText);
+        }
+        currentChunk = [];
+      }
+    } else {
+      currentChunk.push(line);
+    }
+  }
+
+  if (currentChunk.length > 0) {
+    const chunkText = currentChunk.join("\n").trim();
+    if (chunkText.length > 0) {
+      chunks.push(chunkText);
+    }
+  }
+
+  return chunks.filter((c) => c.length > 0);
 }

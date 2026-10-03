@@ -7,6 +7,7 @@ import {
   isArXivUrl,
   isDoi,
   isYouTubeUrl,
+  splitTextIntoChunks,
 } from "./detect-document-type";
 import type { SourceWithContent } from "../types";
 
@@ -229,6 +230,55 @@ describe("detect-document-type utilities", () => {
         fileSize: 300,
       };
       expect(detectDocumentType(sourceMd)).toBe("markdown");
+    });
+  });
+
+  describe("splitTextIntoChunks", () => {
+    it("returns empty array for empty or whitespace-only text", () => {
+      expect(splitTextIntoChunks("")).toEqual([]);
+      expect(splitTextIntoChunks("   \n\n  \n  ")).toEqual([]);
+    });
+
+    it("splits standard paragraphs separated by newlines", () => {
+      const text = "Paragraph 1\n\nParagraph 2\n\n\nParagraph 3";
+      expect(splitTextIntoChunks(text)).toEqual([
+        "Paragraph 1",
+        "Paragraph 2",
+        "Paragraph 3",
+      ]);
+    });
+
+    it("keeps fenced code blocks with internal blank lines in a single chunk", () => {
+      const text = [
+        "# Code Title",
+        "```typescript\nfunction test() {\n\n  const a = 1;\n\n  return a;\n}\n```",
+        "Paragraph after code",
+      ].join("\n\n");
+
+      const chunks = splitTextIntoChunks(text);
+      expect(chunks).toHaveLength(3);
+      expect(chunks[0]).toBe("# Code Title");
+      expect(chunks[1]).toBe(
+        "```typescript\nfunction test() {\n\n  const a = 1;\n\n  return a;\n}\n```",
+      );
+      expect(chunks[2]).toBe("Paragraph after code");
+    });
+
+    it("keeps tilde-fenced code blocks with internal blank lines intact", () => {
+      const text = [
+        "~~~python\ndef hello():\n\n    print('world')\n~~~",
+        "Next paragraph",
+      ].join("\n\n");
+
+      const chunks = splitTextIntoChunks(text);
+      expect(chunks).toHaveLength(2);
+      expect(chunks[0]).toBe("~~~python\ndef hello():\n\n    print('world')\n~~~");
+      expect(chunks[1]).toBe("Next paragraph");
+    });
+
+    it("handles multiple divider chunks correctly without merging or omitting", () => {
+      const text = "---\n\n---\n\n---";
+      expect(splitTextIntoChunks(text)).toEqual(["---", "---", "---"]);
     });
   });
 });

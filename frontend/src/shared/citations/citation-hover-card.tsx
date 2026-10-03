@@ -11,7 +11,7 @@ import {
   Presentation,
   Video,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   cleanBreadcrumbSegment,
@@ -176,6 +176,14 @@ export function CitationActions({
 }) {
   const { t } = useTranslation("chat");
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    },
+    [],
+  );
 
   const rawQuote = reference.quote?.trim() || reference.description?.trim();
   const quoteToCopy = cleanProseText(rawQuote);
@@ -185,7 +193,8 @@ export function CitationActions({
     try {
       await navigator.clipboard.writeText(quoteToCopy);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // ignore
     }
@@ -214,61 +223,61 @@ export function CitationActions({
         reference.id),
   );
 
+  const canOpenInApp = hasInAppViewer && Boolean(reference.id);
+  // Without an in-app viewer the external URL is the only way to reach the source.
+  const canOpenExternal = Boolean(safeUrl) && !canOpenInApp;
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-1 pt-2 border-t border-border/40">
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-2 border-t border-border/40">
       {quoteToCopy && (
         <Button
           type="button"
           size="xs"
           variant="ghost"
-          className="cursor-pointer gap-1 text-xs h-7"
+          className="cursor-pointer gap-1.5 text-xs h-7 min-w-0"
           onClick={handleCopy}
-          aria-label={copied ? t("referencePopover.quoteCopied") : t("referencePopover.copyQuote")}
+          aria-label={
+            copied ? t("referencePopover.quoteCopiedAria") : t("referencePopover.copyQuoteAria")
+          }
         >
           {copied ? (
-            <>
-              <Check className="size-3 text-primary" data-icon="inline-start" />
-              <span>{t("referencePopover.quoteCopied")}</span>
-            </>
+            <Check className="size-3 text-primary" data-icon="inline-start" />
           ) : (
-            <>
-              <Copy className="size-3" data-icon="inline-start" />
-              <span>{t("referencePopover.copyQuote")}</span>
-            </>
+            <Copy className="size-3" data-icon="inline-start" />
           )}
+          {/* min-w keeps the button width stable when the label swaps, so the
+              footer never reflows on click. */}
+          <span className="min-w-12 text-left">
+            {copied ? t("referencePopover.quoteCopied") : t("referencePopover.copyQuote")}
+          </span>
         </Button>
       )}
 
-      <div className="flex items-center gap-1 ml-auto">
-        {hasInAppViewer && reference.id && (
+      <div className="flex flex-wrap items-center justify-end gap-1 ml-auto min-w-0">
+        {canOpenInApp && (
           <Button
             type="button"
             size="xs"
             variant="ghost"
-            className="cursor-pointer gap-1 text-xs h-7"
+            className="cursor-pointer gap-1.5 text-xs h-7"
             onClick={handleOpenSourceViewer}
           >
             {t("referencePopover.openSource")}
           </Button>
         )}
 
-        {safeUrl && (
+        {canOpenExternal && (
           <Button
             render={
-              <a
-                href={safeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t("referencePopover.openExternal")}
-              >
-                {t("referencePopover.openExternal")}
+              <a href={safeUrl ?? undefined} target="_blank" rel="noopener noreferrer">
+                {t("referencePopover.openSource")}
                 <ExternalLinkIcon className="size-3" data-icon="inline-end" />
               </a>
             }
             nativeButton={false}
             size="xs"
             variant="ghost"
-            className="cursor-pointer gap-1 text-xs h-7"
+            className="cursor-pointer gap-1.5 text-xs h-7"
           />
         )}
       </div>

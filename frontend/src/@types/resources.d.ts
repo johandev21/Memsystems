@@ -165,11 +165,12 @@ export default interface Resources {
       "waiting": "Waiting for response…"
     },
     "referencePopover": {
-      "copyQuote": "Copy quote",
+      "copyQuote": "Copy",
+      "copyQuoteAria": "Copy citation quote to clipboard",
       "noExcerpt": "No excerpt is available for this reference.",
-      "openExternal": "Open external source",
       "openSource": "Open source",
-      "quoteCopied": "Quote copied!",
+      "quoteCopied": "Copied",
+      "quoteCopiedAria": "Citation quote copied to clipboard",
       "referencesAria": "References",
       "sourceUnavailable": "Source unavailable",
       "triggerAria": "Reference {{number}}: {{title}}"

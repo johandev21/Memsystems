@@ -12,7 +12,6 @@ import {
   bannerDraftReducer,
   saveNotebookBannerChanges,
 } from "./notebook-banner-draft";
-import { GroundingModePicker } from "./grounding-mode-picker";
 import { resolveGroundingMode } from "../../model/grounding-mode";
 import { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
 import type { BannerUploadPayload } from "../../utils/banner-variants";
@@ -231,19 +230,6 @@ export function NotebookBanner({
         onChange={(nextDescription) => dispatch({ type: "SET_DESCRIPTION", description: nextDescription })}
         onCancel={handleCancel}
       />
-
-      {isEditing && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-sm font-medium text-text-primary">{t("groundingMode.label")}</p>
-          <GroundingModePicker
-            variant="full"
-            value={draft.groundingMode}
-            onChange={(nextMode) =>
-              dispatch({ type: "SET_GROUNDING_MODE", groundingMode: nextMode })
-            }
-          />
-        </div>
-      )}
 
       <ImageUploadDialog
         open={imageDialogOpen}

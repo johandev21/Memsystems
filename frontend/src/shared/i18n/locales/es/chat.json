@@ -79,11 +79,12 @@
     "waiting": "Esperando respuesta…"
   },
   "referencePopover": {
-    "copyQuote": "Copiar cita",
+    "copyQuote": "Copiar",
+    "copyQuoteAria": "Copiar la cita de la referencia al portapapeles",
     "noExcerpt": "No hay ningún extracto disponible para esta referencia.",
-    "openExternal": "Abrir fuente externa",
     "openSource": "Abrir fuente",
-    "quoteCopied": "¡Cita copiada!",
+    "quoteCopied": "Copiado",
+    "quoteCopiedAria": "Cita de la referencia copiada al portapapeles",
     "referencesAria": "Referencias",
     "sourceUnavailable": "Fuente no disponible",
     "triggerAria": "Referencia {{number}}: {{title}}"

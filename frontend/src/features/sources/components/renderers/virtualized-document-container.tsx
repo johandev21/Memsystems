@@ -1,8 +1,8 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { type VirtualItem, type Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import { type ReactNode, useEffect } from "react";
 import { cn } from "@/shared/utils/cn";
 
-interface VirtualizedDocumentContainerProps<T> {
+export interface VirtualizedDocumentContainerProps<T> {
   items: T[];
   scrollElement: HTMLDivElement | null;
   estimateSize?: (index: number) => number;
@@ -12,6 +12,11 @@ interface VirtualizedDocumentContainerProps<T> {
   className?: string;
   targetIndex?: number | null;
   highlightedIndex?: number | null;
+  shouldAdjustScrollPositionOnItemSizeChange?: (
+    item: VirtualItem,
+    delta: number,
+    instance: Virtualizer<HTMLDivElement, Element>,
+  ) => boolean;
 }
 
 export function VirtualizedDocumentContainer<T>({
@@ -24,6 +29,7 @@ export function VirtualizedDocumentContainer<T>({
   className,
   targetIndex,
   highlightedIndex,
+  shouldAdjustScrollPositionOnItemSizeChange,
 }: VirtualizedDocumentContainerProps<T>) {
   // TanStack Virtual exposes non-memoizable functions; the compiler skipping
   // this component is the intended behavior.
@@ -33,8 +39,30 @@ export function VirtualizedDocumentContainer<T>({
     getScrollElement: () => scrollElement,
     estimateSize,
     overscan,
+    getItemKey: (index: number) => {
+      if (getItemKey && items[index] !== undefined) {
+        return getItemKey(items[index], index);
+      }
+      return index;
+    },
     initialRect: { width: 800, height: 600 },
   });
+
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, delta, instance) => {
+    if (shouldAdjustScrollPositionOnItemSizeChange) {
+      return shouldAdjustScrollPositionOnItemSizeChange(item, delta, instance);
+    }
+    // During forward (downward) scroll, suppress negative scroll adjustment (which pulls
+    // the viewport upwards) to prevent the infinite scroll jump loop caused by height fluctuations.
+    if (instance.scrollDirection === "forward" && delta < 0) {
+      return false;
+    }
+    // During backward (upward) scroll, suppress positive scroll adjustment.
+    if (instance.scrollDirection === "backward" && delta > 0) {
+      return false;
+    }
+    return item.start < (instance.scrollOffset ?? 0);
+  };
 
   useEffect(() => {
     if (typeof targetIndex === "number" && targetIndex >= 0 && targetIndex < items.length) {
@@ -55,11 +83,10 @@ export function VirtualizedDocumentContainer<T>({
         const index = virtualRow.index;
         const item = items[index];
         const isHighlighted = highlightedIndex === index;
-        const key = getItemKey ? getItemKey(item, index) : virtualRow.key;
 
         return (
           <div
-            key={key}
+            key={virtualRow.key}
             data-index={index}
             ref={virtualizer.measureElement}
             className="absolute top-0 left-0 w-full translate-y-(--virtual-start)"

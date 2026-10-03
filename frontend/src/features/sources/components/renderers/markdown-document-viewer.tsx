@@ -257,6 +257,18 @@ function EmptyMarkdownState() {
   );
 }
 
+function estimateChunkSize(chunk: string): number {
+  if (!chunk) return 40;
+  const trimmed = chunk.trim();
+  if (/^[-*_]{3,}$/.test(trimmed)) return 24;
+  if (/^#{1,6}\s/.test(trimmed)) return 44;
+  const lineCount = chunk.split("\n").length;
+  if (trimmed.startsWith("```") || trimmed.startsWith("~~~") || trimmed.includes("|")) {
+    return Math.max(60, lineCount * 22 + 30);
+  }
+  return Math.max(36, Math.min(600, lineCount * 20 + Math.ceil(trimmed.length / 80) * 16));
+}
+
 function VirtualizedMarkdownDocument({
   chunks,
   scrollElement,
@@ -273,13 +285,13 @@ function VirtualizedMarkdownDocument({
       <VirtualizedDocumentContainer
         items={chunks}
         scrollElement={scrollElement}
-        estimateSize={() => 80}
-        overscan={5}
+        estimateSize={(index) => estimateChunkSize(chunks[index] || "")}
+        overscan={8}
         targetIndex={targetIndex}
         highlightedIndex={highlightedIndex}
-        getItemKey={(chunk) => `md-chunk-${chunk}`}
-        renderItem={(chunk, _index, isHighlighted) => (
-          <MarkdownChunk key={`md-chunk-${chunk}`} chunk={chunk} isHighlighted={isHighlighted} />
+        getItemKey={(_chunk, index) => `md-chunk-${index}`}
+        renderItem={(chunk, index, isHighlighted) => (
+          <MarkdownChunk key={`md-chunk-${index}`} chunk={chunk} isHighlighted={isHighlighted} />
         )}
       />
     </MarkdownDocumentShell>
