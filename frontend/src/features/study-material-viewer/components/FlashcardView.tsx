@@ -1,11 +1,10 @@
-import { useRef, type KeyboardEvent } from "react";
-import type { TFunction } from "i18next";
-import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useFlashcardSession } from "../hooks/use-flashcard-session";
-import { detectCardFormat, type FlashcardItem } from "../utils/card-type-detector";
-import { ClozeInteractive } from "./ClozeInteractive";
+import type { FlashcardItem } from "../shapes/simple-flashcard";
+import { QaCard } from "./flashcard/qa-card";
 
 export type { FlashcardItem };
 
@@ -28,52 +27,6 @@ export function FlashcardView({ materialId, content }: FlashcardViewProps) {
       : []);
 
   return <FlashcardSession key={`${materialId}-${JSON.stringify(cards)}`} cards={cards} />;
-}
-
-function getCardTypeLabel(
-  isCloze: boolean,
-  isFlipped: boolean,
-  format: string,
-  t: TFunction<"viewer", undefined>,
-): string {
-  if (isCloze) return t("flashcard.types.fillInTheBlank");
-  if (isFlipped) return t("flashcard.types.answer");
-  if (format === "definition") return t("flashcard.types.definition");
-  return t("flashcard.types.question");
-}
-
-function StandardCardContent({
-  isFlipped,
-  front,
-  back,
-}: {
-  isFlipped: boolean;
-  front: string;
-  back: string;
-}) {
-  const { t } = useTranslation("viewer");
-  return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 text-center">
-      <div className="flex min-h-24 w-full items-start justify-center">
-        <p
-          className={
-            isFlipped
-              ? "w-full text-sm leading-relaxed text-text-primary whitespace-pre-wrap break-words"
-              : "w-full text-lg font-semibold leading-relaxed text-text-primary whitespace-pre-wrap break-words sm:text-xl"
-          }
-        >
-          {isFlipped ? back : front}
-        </p>
-      </div>
-      <p
-        aria-hidden="true"
-        className="flex min-h-4 items-center gap-1.5 text-xs text-muted-foreground"
-      >
-        <RotateCw aria-hidden="true" className="size-3.5" />
-        {isFlipped ? t("flashcard.clickToFlipBack") : t("flashcard.clickToFlip")}
-      </p>
-    </div>
-  );
 }
 
 function FlashcardControls({
@@ -128,90 +81,56 @@ function FlashcardControls({
 
 function FlashcardStage({
   stageRef,
-  isCloze,
-  isFlipped,
+  isRevealed,
   currentCardIndex,
-  visit,
   activeCard,
-  onFlip,
-  onFlipKeyDown,
+  onToggleReveal,
+  onRevealKeyDown,
 }: {
   stageRef: React.RefObject<HTMLDivElement | null>;
-  isCloze: boolean;
-  isFlipped: boolean;
+  isRevealed: boolean;
   currentCardIndex: number;
-  visit: number;
   activeCard: FlashcardItem;
-  onFlip: () => void;
-  onFlipKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
+  onToggleReveal: () => void;
+  onRevealKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
 }) {
   const { t } = useTranslation("viewer");
   return (
     <div
       ref={stageRef}
-      role={isCloze ? undefined : "button"}
-      tabIndex={isCloze ? -1 : 0}
+      role="button"
+      tabIndex={0}
       aria-label={t("flashcard.cardAria", {
         number: currentCardIndex + 1,
-        type: t(isFlipped ? "flashcard.types.answer" : "flashcard.types.question"),
+        type: t(isRevealed ? "flashcard.types.answer" : "flashcard.types.question"),
       })}
-      onClick={isCloze ? undefined : onFlip}
-      onKeyDown={isCloze ? undefined : onFlipKeyDown}
-      className={`flex min-h-64 flex-col justify-center gap-6 rounded-2xl bg-surface-2 p-6 select-none sm:min-h-72 sm:p-8 focus-visible:outline-2 focus-visible:outline-ring ${isCloze ? "" : "cursor-pointer transition-colors duration-200 hover:bg-surface-3 hover:ring-1 hover:ring-foreground/10 hover:shadow-sm"}`}
+      onClick={onToggleReveal}
+      onKeyDown={onRevealKeyDown}
+      className="cursor-pointer rounded-flashcard transition-shadow duration-200 focus-visible:outline-2 focus-visible:outline-ring"
     >
-      {isCloze ? (
-        <ClozeInteractive key={visit} front={activeCard.front} back={activeCard.back} />
-      ) : (
-        <StandardCardContent
-          isFlipped={isFlipped}
-          front={activeCard.front}
-          back={activeCard.back}
-        />
-      )}
+      <QaCard question={activeCard.front} answer={activeCard.back} isRevealed={isRevealed} />
     </div>
   );
 }
 
 function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
   const { t } = useTranslation("viewer");
-  const { currentCardIndex, isFlipped, visit, setIsFlipped, handleNext, handlePrev } =
+  const { currentCardIndex, isRevealed, setIsRevealed, handleNext, handlePrev } =
     useFlashcardSession(cards.length);
   const stageRef = useRef<HTMLDivElement>(null);
   const activeCard = cards[currentCardIndex];
-  const format = activeCard ? detectCardFormat(activeCard) : "qa";
-  const isCloze = format === "cloze";
 
   function navigate(action: () => void) {
     action();
     stageRef.current?.focus();
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.nativeEvent.isComposing) return;
-    if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey)
-      return;
-    if (
-      (event.target as HTMLElement).closest(
-        "button, input, textarea, select, a, [contenteditable], [role='button']",
-      )
-    )
-      return;
-
-    if (event.key === "ArrowRight" && cards.length > 1) {
-      event.preventDefault();
-      navigate(handleNext);
-    } else if (event.key === "ArrowLeft" && cards.length > 1) {
-      event.preventDefault();
-      navigate(handlePrev);
-    }
-  }
-
-  function handleFlipKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+  function handleRevealKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.nativeEvent.isComposing || event.defaultPrevented || event.repeat) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    if (event.key === "Enter" || event.key === " ") {
+    if (event.key === " " || event.key === "Spacebar") {
       event.preventDefault();
-      setIsFlipped(!isFlipped);
+      setIsRevealed(!isRevealed);
     } else if (event.key === "ArrowRight" && cards.length > 1) {
       event.preventDefault();
       navigate(handleNext);
@@ -220,6 +139,37 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
       navigate(handlePrev);
     }
   }
+
+  useEffect(() => {
+    function handleGlobalKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.defaultPrevented || event.isComposing || event.repeat) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "input, textarea, select, [contenteditable='true'], [role='textbox']",
+        )
+      ) {
+        return;
+      }
+
+      if (event.key === " " || event.key === "Spacebar") {
+        if (target?.closest("button, a")) return;
+        event.preventDefault();
+        setIsRevealed(!isRevealed);
+      } else if (event.key === "ArrowRight" && cards.length > 1) {
+        event.preventDefault();
+        navigate(handleNext);
+      } else if (event.key === "ArrowLeft" && cards.length > 1) {
+        event.preventDefault();
+        navigate(handlePrev);
+      }
+    }
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [cards.length, isRevealed, setIsRevealed, handleNext, handlePrev]);
 
   function handleExplainInChat() {
     if (!activeCard) return;
@@ -241,23 +191,20 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6" onKeyDown={handleKeyDown}>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-text-secondary">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="text-sm text-text-secondary">
         <span aria-live="polite">
           {t("flashcard.cardOf", { current: currentCardIndex + 1, total: cards.length })}
         </span>
-        <span>{getCardTypeLabel(isCloze, isFlipped, format, t)}</span>
       </div>
 
       <FlashcardStage
         stageRef={stageRef}
-        isCloze={isCloze}
-        isFlipped={isFlipped}
+        isRevealed={isRevealed}
         currentCardIndex={currentCardIndex}
-        visit={visit}
         activeCard={activeCard}
-        onFlip={() => setIsFlipped(!isFlipped)}
-        onFlipKeyDown={handleFlipKeyDown}
+        onToggleReveal={() => setIsRevealed(!isRevealed)}
+        onRevealKeyDown={handleRevealKeyDown}
       />
 
       <FlashcardControls

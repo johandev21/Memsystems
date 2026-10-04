@@ -556,26 +556,7 @@ export default interface Resources {
       "targetDifficulty": "1. Target Difficulty"
     },
     "flashcards": {
-      "cardFormatLabel": "1. Card Format",
-      "cardStyle": {
-        "cloze": {
-          "desc": "Sentence with missing word(s)",
-          "title": "Fill-in-the-Blank"
-        },
-        "definition": {
-          "desc": "Term → definition pairs",
-          "title": "Definition"
-        },
-        "mixed": {
-          "desc": "Combination of Q&A, Definitions, and Fill-in-the-Blank",
-          "title": "Mixed"
-        },
-        "qa": {
-          "desc": "Classic question → answer format",
-          "title": "Q & A"
-        }
-      },
-      "cardsLabel": "3. Cards",
+      "cardsLabel": "2. Cards",
       "countMax": "{{count}} Cards (Max {{max}})",
       "countMax_one": "{{count}} Card (Max {{max}})",
       "countMax_other": "{{count}} Cards (Max {{max}})",
@@ -596,8 +577,9 @@ export default interface Resources {
           "title": "Standard"
         }
       },
-      "difficultyLabel": "2. Difficulty",
-      "instructionsPlaceholder": "What topics should these flashcards cover?"
+      "difficultyLabel": "1. Difficulty",
+      "instructionsPlaceholder": "What topics should these flashcards cover?",
+      "sourcesLabel": "3. Knowledge Sources"
     },
     "kinds": {
       "case_study": "Case Study",
@@ -1652,17 +1634,6 @@ export default interface Resources {
       "aria": "Source citations",
       "title": "Citations"
     },
-    "cloze": {
-      "blankAnswer": "Blank {{number}}:",
-      "blankAria": "Answer for blank {{number}}",
-      "blankPlaceholder": "Blank {{number}}",
-      "checkAnswer": "Check Answer",
-      "correctAnswer": "Correct Answer",
-      "correctAnswerLabel": "Correct Answer:",
-      "incorrectAnswer": "Incorrect Answer",
-      "missingWordPlaceholder": "Type the missing word…",
-      "yourAnswer": "Your Answer"
-    },
     "common": {
       "cancel": "Cancel",
       "close": "Close",
@@ -1679,46 +1650,18 @@ export default interface Resources {
       "supportingSources": "Supporting Sources"
     },
     "flashcard": {
-      "activeCard": "ACTIVE CARD",
-      "bad": "Bad",
-      "badContent": "Bad content",
       "cardAria": "Card {{number}}: {{type}}",
       "cardOf": "Card {{current}} of {{total}}",
-      "clickToFlip": "Click to Flip",
-      "clickToFlipBack": "Click to Flip Back",
-      "defaultDeckTitle": "Flashcards Study Deck",
       "empty": "No flashcards available.",
-      "explainBack": "The answer on the back reads:",
-      "explainFront": "On the front it reads:",
-      "explainInline": "\"On the front: '{{front}}'. On the back: '{{back}}'. Explain this topic in more detail.\"",
-      "explainIntro": "\"I'm reviewing flashcards based on the source material and I'd like to expand my understanding of one of them.",
-      "explainOutro": "Explain this topic in more detail.\"",
       "explainPrompt": "I'm reviewing flashcards based on the source material and I'd like to expand my understanding of one of them.\n\nOn the front it reads: \"{{front}}\"\n\nThe answer on the back reads: \"{{back}}\"\n\nExplain this topic in more detail.",
-      "fullSentence": "Full sentence:",
-      "good": "Good",
-      "goodContent": "Good content",
       "nextCard": "Next Card",
-      "position": "{{current}} / {{total}}",
       "previousCard": "Previous Card",
-      "revealAnswer": "Click or press <kbd>{{key}}</kbd> to reveal answer",
-      "searchCards": "Search cards...",
-      "seeAnswer": "See answer",
-      "showQuestion": "Show question",
-      "sideBySide": "Side-by-Side",
-      "singleFocus": "Single Focus",
-      "sourceCount_one": "{{count}} source",
-      "sourceCount_other": "{{count}} sources",
-      "spaceToToggle": "Space to toggle",
-      "staticExplainPreview": "Static Explain Prompt Preview",
-      "staticExplainPrompt": "Static Explain Prompt",
+      "questionBadge": "Question",
+      "solution": "Solution",
       "types": {
         "answer": "Answer",
-        "definition": "Definition",
-        "fillInTheBlank": "Fill in the Blank",
         "question": "Question"
-      },
-      "viewSources_one": "View {{count}} source",
-      "viewSources_other": "View {{count}} sources"
+      }
     },
     "header": {
       "exitFullscreen": "Exit Fullscreen",

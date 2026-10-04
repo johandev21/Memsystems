@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FlashcardView } from "./FlashcardView";
@@ -18,28 +18,58 @@ function cardSurface() {
 }
 
 describe("FlashcardView", () => {
-  it("flips in both directions when the card surface is clicked", async () => {
+  it("shows only the question until the card is revealed", () => {
+    render(deck());
+    expect(screen.getByText("Question")).toBeTruthy();
+    expect(screen.getByText(cards[0].front)).toBeTruthy();
+    expect(screen.queryByText("Solution")).toBeNull();
+    expect(screen.queryByText(cards[0].back)).toBeNull();
+  });
+
+  it("reveals the question above a solution divider with the answer", async () => {
     const user = userEvent.setup();
     render(deck());
     await user.click(cardSurface());
-    expect(screen.getByText(cards[0].back)).toBeTruthy();
-    expect(screen.queryByText(cards[0].front)).toBeNull();
-    await user.click(screen.getByRole("button", { name: /Card 1: Answer/ }));
+    expect(screen.getByText("Question")).toBeTruthy();
     expect(screen.getByText(cards[0].front)).toBeTruthy();
-    expect(screen.queryByText(cards[0].back)).toBeNull();
-    expect(screen.queryByRole("button", { name: /Show Answer|Show Question/ })).toBeNull();
-    expect(screen.queryByText("Need Practice")).toBeNull();
-    expect(screen.queryByText("Know It")).toBeNull();
+    expect(screen.getByText("Solution")).toBeTruthy();
+    expect(screen.getByText(cards[0].back)).toBeTruthy();
   });
 
-  it("supports Enter and Space on the card surface without nested controls", async () => {
+  it("hides the answer again when hidden", async () => {
+    const user = userEvent.setup();
+    render(deck());
+    await user.click(cardSurface());
+    await user.click(screen.getByRole("button", { name: /Card 1: Answer/ }));
+    expect(screen.getByText(cards[0].front)).toBeTruthy();
+    expect(screen.queryByText("Solution")).toBeNull();
+    expect(screen.queryByText(cards[0].back)).toBeNull();
+  });
+
+  it("supports Spacebar to reveal and hide, and ignores Enter", async () => {
     const user = userEvent.setup();
     render(deck());
     const surface = cardSurface();
     surface.focus();
     await user.keyboard("{Enter}");
+    expect(screen.queryByText(cards[0].back)).toBeNull();
+    await user.keyboard(" ");
     expect(screen.getByText(cards[0].back)).toBeTruthy();
     await user.keyboard(" ");
+    expect(screen.queryByText(cards[0].back)).toBeNull();
+  });
+
+  it("navigates between cards with left and right arrow keys", async () => {
+    const user = userEvent.setup();
+    render(deck());
+    const surface = cardSurface();
+    surface.focus();
+    await user.keyboard(" ");
+    expect(screen.getByText(cards[0].back)).toBeTruthy();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByText(cards[1].front)).toBeTruthy();
+    expect(screen.queryByText(cards[1].back)).toBeNull();
+    await user.keyboard("{ArrowLeft}");
     expect(screen.getByText(cards[0].front)).toBeTruthy();
   });
 
@@ -94,27 +124,17 @@ describe("FlashcardView", () => {
     }
   });
 
-  it("keeps cloze inputs independent from card flipping and resets on navigation", async () => {
-    vi.useFakeTimers();
-    try {
-      render(
-        <FlashcardView
-          materialId="cloze-test"
-          content={{ cards: [{ front: "The capital is ___.", back: "Paris" }, cards[1]] }}
-        />,
-      );
-      fireEvent.change(screen.getByRole("textbox"), { target: { value: "Paris" } });
-      fireEvent.click(screen.getByRole("button", { name: "Check Answer" }));
-      expect(screen.getByRole("status").textContent).toMatch(/correct/i);
-      await act(async () => {
-        vi.advanceTimersByTime(2000);
-      });
-      expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("Paris");
-      fireEvent.click(screen.getByRole("button", { name: "Next Card" }));
-      fireEvent.click(screen.getByRole("button", { name: "Previous Card" }));
-      expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("");
-    } finally {
-      vi.useRealTimers();
-    }
+  it("renders a legacy fill-in-the-blank front as plain question text", async () => {
+    const user = userEvent.setup();
+    render(
+      <FlashcardView
+        materialId="legacy-cloze"
+        content={{ cards: [{ front: "The capital is ___.", back: "Paris" }] }}
+      />,
+    );
+    expect(screen.getByText("The capital is ___.")).toBeTruthy();
+    await user.click(cardSurface());
+    expect(screen.getByText("Paris")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

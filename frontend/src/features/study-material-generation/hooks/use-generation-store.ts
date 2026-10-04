@@ -46,7 +46,6 @@ interface GenerationState {
       /** 0 = auto. */
       questionCount?: number;
       difficulty?: "easy" | "medium" | "hard" | "auto";
-      cardStyle?: "qa" | "definition" | "cloze" | "mixed" | "auto";
       roadmapOptions?: RoadmapGenerationOptions;
       mindMapOptions?: MindMapGenerationOptions;
       studyGuideOptions?: StudyGuideGenerationOptions;

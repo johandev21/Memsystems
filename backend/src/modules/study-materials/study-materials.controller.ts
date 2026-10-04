@@ -78,7 +78,6 @@ export const generateRequestSchema = z.object({
   model: z.string().optional(),
   questionCount: z.number().min(0).max(50).optional(),
   difficulty: z.enum(['easy', 'medium', 'hard', 'auto']).optional(),
-  cardStyle: z.enum(['qa', 'definition', 'cloze', 'mixed', 'auto']).optional(),
   groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
   roadmapOptions: z
     .object({

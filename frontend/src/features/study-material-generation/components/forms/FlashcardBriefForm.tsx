@@ -1,10 +1,9 @@
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefInstructionsStep } from "./brief-instructions-step";
 import {
-  BriefBackButton,
   BriefNextButton,
   BriefStep,
   BriefStepFields,
@@ -21,6 +20,7 @@ import { useBriefWizard } from "./use-brief-wizard";
 // Module Constants
 // ============================================================================
 
+const TOTAL_STEPS = 2;
 const CARD_PRESETS = [10, 15, 20] as const;
 
 // ============================================================================
@@ -37,31 +37,10 @@ export function FlashcardBriefForm({
 }: BaseMaterialFormProps) {
   const { t } = useTranslation("generation");
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
-    useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: 3 });
+    useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: TOTAL_STEPS });
 
-  const cardStyle = value.cardStyle ?? "auto";
   const difficulty = value.difficulty ?? "auto";
   const cardCount = value.questionCount ?? 0;
-
-  const formatOptions = [
-    { id: "auto", title: t("actions.auto"), desc: t("options.auto.description") },
-    { id: "qa", title: t("flashcards.cardStyle.qa.title"), desc: t("flashcards.cardStyle.qa.desc") },
-    {
-      id: "definition",
-      title: t("flashcards.cardStyle.definition.title"),
-      desc: t("flashcards.cardStyle.definition.desc"),
-    },
-    {
-      id: "cloze",
-      title: t("flashcards.cardStyle.cloze.title"),
-      desc: t("flashcards.cardStyle.cloze.desc"),
-    },
-    {
-      id: "mixed",
-      title: t("flashcards.cardStyle.mixed.title"),
-      desc: t("flashcards.cardStyle.mixed.desc"),
-    },
-  ] as const;
 
   const difficultyOptions = [
     { id: "auto", title: t("actions.auto"), desc: t("options.auto.description") },
@@ -94,30 +73,10 @@ export function FlashcardBriefForm({
       <BriefWizardHeader
         title={t("wizard.title", { kind: t("kinds.simple_flashcard") })}
         step={step}
-        totalSteps={3}
+        totalSteps={TOTAL_STEPS}
         onStepChange={setStep}
       />
       {step === 1 ? (
-        <BriefStep>
-          <BriefStepFields>
-            <BriefChoiceField
-              label={t("flashcards.cardFormatLabel")}
-              options={formatOptions}
-              value={cardStyle}
-              onChange={(next) => patchFormData({ cardStyle: next })}
-              columns={3}
-            />
-          </BriefStepFields>
-
-          <BriefStepFooter>
-            <BriefStepHint>{t("wizard.nextHintOptions")}</BriefStepHint>
-            <BriefNextButton onClick={() => setStep(2)}>
-              {t("actions.nextStep")}
-              <ArrowRight className="size-4" />
-            </BriefNextButton>
-          </BriefStepFooter>
-        </BriefStep>
-      ) : step === 2 ? (
         <BriefStep>
           <BriefStepFields>
             <BriefChoiceField
@@ -142,7 +101,7 @@ export function FlashcardBriefForm({
 
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-text-primary">
-                {t("fields.knowledgeSourcesStep4")}
+                {t("flashcards.sourcesLabel")}
                 {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
               </Label>
               <GenerationSourcePopover
@@ -155,12 +114,8 @@ export function FlashcardBriefForm({
           </BriefStepFields>
 
           <BriefStepFooter>
-            <BriefBackButton onClick={() => setStep(1)}>
-              <ArrowLeft className="size-4" />
-              {t("actions.back")}
-            </BriefBackButton>
             <BriefStepHint>{t("wizard.nextHintInstructions")}</BriefStepHint>
-            <BriefNextButton onClick={() => setStep(3)}>
+            <BriefNextButton onClick={() => setStep(2)}>
               {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </BriefNextButton>
@@ -179,7 +134,7 @@ export function FlashcardBriefForm({
           disabled={disabled}
           onBriefChange={(brief) => patchFormData({ brief })}
           onFolderIdChange={(folderId) => patchFormData({ folderId })}
-          onBack={() => setStep(2)}
+          onBack={() => setStep(1)}
           onSubmit={onSubmit}
         />
       )}

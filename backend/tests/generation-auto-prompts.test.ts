@@ -17,7 +17,7 @@ const autoCases: Array<{ kind: StudyMaterialKind; options: PromptOptions }> = [
   { kind: 'quiz', options: { questionCount: 0, difficulty: 'auto' } },
   {
     kind: 'simple_flashcard',
-    options: { questionCount: 0, difficulty: 'auto', cardStyle: 'auto' },
+    options: { questionCount: 0, difficulty: 'auto' },
   },
   {
     kind: 'roadmap',
@@ -92,16 +92,15 @@ describe('auto generation prompts', () => {
     expect(prompt).toContain('Choose the difficulty level');
   });
 
-  it('flashcards: auto count suggests 5-25, auto difficulty and card style ask the model to choose', () => {
+  it('flashcards: auto count suggests 5-25 and auto difficulty asks the model to choose', () => {
     const prompt = promptFor('simple_flashcard', {
       questionCount: 0,
       difficulty: 'auto',
-      cardStyle: 'auto',
     });
     expect(prompt).toContain('Decide how many flashcards');
     expect(prompt).toContain('5-25');
     expect(prompt).toContain('Choose the difficulty level');
-    expect(prompt).toContain('Choose the card format');
+    expect(prompt).toContain('no blanks or placeholders');
   });
 
   it('roadmap: auto phase count and detail level ask the model to choose', () => {

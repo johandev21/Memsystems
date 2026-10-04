@@ -123,10 +123,16 @@ export function MaterialContentRenderer({
       view = <div className="p-8 text-center text-text-tertiary">{t("unsupportedMaterial")}</div>;
   }
 
+  // Flashcards are reviewed one at a time; a citation list under the deck is
+  // noise there, so the deck is the only kind rendered without one.
+  const showCitations = material.kind !== "simple_flashcard";
+
   return (
     <>
       {view}
-      <MaterialCitations content={material.content} notebookId={material.notebookId} />
+      {showCitations && (
+        <MaterialCitations content={material.content} notebookId={material.notebookId} />
+      )}
     </>
   );
 }

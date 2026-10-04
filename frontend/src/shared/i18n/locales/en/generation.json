@@ -63,31 +63,12 @@
     "targetDifficulty": "1. Target Difficulty"
   },
   "flashcards": {
-    "cardFormatLabel": "1. Card Format",
-    "cardsLabel": "3. Cards",
-    "cardStyle": {
-      "cloze": {
-        "desc": "Sentence with missing word(s)",
-        "title": "Fill-in-the-Blank"
-      },
-      "definition": {
-        "desc": "Term → definition pairs",
-        "title": "Definition"
-      },
-      "mixed": {
-        "desc": "Combination of Q&A, Definitions, and Fill-in-the-Blank",
-        "title": "Mixed"
-      },
-      "qa": {
-        "desc": "Classic question → answer format",
-        "title": "Q & A"
-      }
-    },
-    "count_one": "{{count}} Card",
-    "count_other": "{{count}} Cards",
+    "cardsLabel": "2. Cards",
     "countMax": "{{count}} Cards (Max {{max}})",
     "countMax_one": "{{count}} Card (Max {{max}})",
     "countMax_other": "{{count}} Cards (Max {{max}})",
+    "count_one": "{{count}} Card",
+    "count_other": "{{count}} Cards",
     "customCountAria": "Custom card count",
     "difficulty": {
       "easy": {
@@ -103,8 +84,9 @@
         "title": "Standard"
       }
     },
-    "difficultyLabel": "2. Difficulty",
-    "instructionsPlaceholder": "What topics should these flashcards cover?"
+    "difficultyLabel": "1. Difficulty",
+    "instructionsPlaceholder": "What topics should these flashcards cover?",
+    "sourcesLabel": "3. Knowledge Sources"
   },
   "kinds": {
     "case_study": "Case Study",

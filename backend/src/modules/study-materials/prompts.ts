@@ -11,7 +11,6 @@ export interface QuizGenerationOptions {
 export interface FlashcardGenerationOptions {
   questionCount: number;
   difficulty: 'easy' | 'medium' | 'hard' | 'auto';
-  cardStyle: 'qa' | 'definition' | 'cloze' | 'mixed' | 'auto';
 }
 
 export interface SlidesGenerationOptions {
@@ -49,7 +48,6 @@ interface PromptTemplate {
       caseStudyOptions?: CaseStudyGenerationOptions;
       questionCount?: number;
       difficulty?: 'easy' | 'medium' | 'hard' | 'auto';
-      cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed' | 'auto';
       roadmapOptions?: {
         phaseCount: number;
         detailLevel: 'basic' | 'detailed' | 'auto';
@@ -114,7 +112,8 @@ const simpleFlashcardTemplate: PromptTemplate = {
   instructions: `You are an expert at creating study flashcards.
 Generate a set of clear, concise flashcards based on the topic, instructions, or source material provided. Generate a descriptive, unique title reflecting the core topic or overview of the material and place it in the top-level 'title' field. Only the top-level 'title' field must be concise and formatted in kebab-case (lowercase, alphanumeric characters and hyphens only, e.g. 'concepcion-de-socrates-platon-y-aristoteles-flashcards') ending with '-flashcards'.
 All flashcard fronts and backs MUST use natural language with proper capitalization and spaces.
-Each flashcard must have a 'front' (a clear question or prompt) and a 'back' (a complete but concise answer).
+Each flashcard must have a 'front' (a clear, self-contained question) and a 'back' (a complete but concise answer).
+The front is shown on its own before the answer is revealed, so it must be fully understandable without the back and must NEVER contain a blank to fill in. Do not use "___", "[...]" or any other placeholder for a missing word.
 Use markdown formatting where appropriate.`,
   user: (brief, sourceTexts, options) => {
     const sourceBlock = sourceTexts
@@ -136,19 +135,7 @@ Use markdown formatting where appropriate.`,
                 : 'Conceptual understanding and application'
           }).`
         : 'Choose the difficulty level (easy, medium, or hard) that best fits the source material and instructions.';
-    const styleText =
-      options?.cardStyle && options.cardStyle !== 'auto'
-        ? `Card format: ${
-            options.cardStyle === 'qa'
-              ? 'Question → Answer pairs'
-              : options.cardStyle === 'definition'
-                ? 'Term → Definition pairs'
-                : options.cardStyle === 'cloze'
-                  ? 'Fill-in-the-blank sentences with a missing word or phrase indicated by "___"'
-                  : 'Mixed format: generate a diverse combination of Question → Answer pairs, Term → Definition pairs, and Fill-in-the-blank sentences (with missing word indicated by "___").'
-          }.`
-        : 'Choose the card format (Question → Answer pairs, Term → Definition pairs, Fill-in-the-blank sentences, or a mix) that best fits the source material and instructions.';
-    return `${sourceBlock}${instructionsBlock}\n\n${countText} ${diffText} ${styleText}\n\nGenerate a set of flashcards, each containing a front (question) and back (answer).`;
+    return `${sourceBlock}${instructionsBlock}\n\n${countText} ${diffText}\n\nGenerate a set of flashcards, each containing a front (a clear question) and back (the answer). Every front must be a complete, self-contained question with no blanks or placeholders.`;
   },
 };
 

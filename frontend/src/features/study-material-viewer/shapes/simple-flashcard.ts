@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export interface FlashcardItem {
+  front: string;
+  back: string;
+}
+
 export const SimpleFlashcardContent = z.preprocess(
   (val) => {
     if (val && typeof val === "object" && "front" in val && "back" in val) {

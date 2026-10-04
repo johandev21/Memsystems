@@ -101,7 +101,7 @@ describe('generate request schema (auto options)', () => {
     );
   });
 
-  it('accepts auto difficulty and card style for quiz and flashcards', () => {
+  it('accepts auto difficulty for quiz and flashcards', () => {
     expect(
       generateRequestSchema.safeParse({
         ...base,
@@ -116,8 +116,19 @@ describe('generate request schema (auto options)', () => {
         kind: 'simple_flashcard',
         questionCount: 0,
         difficulty: 'auto',
-        cardStyle: 'auto',
       }).success,
     ).toBe(true);
+  });
+
+  it('no longer accepts a card style', () => {
+    const result = generateRequestSchema.safeParse({
+      ...base,
+      kind: 'simple_flashcard',
+      cardStyle: 'cloze',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).not.toHaveProperty('cardStyle');
+    }
   });
 });

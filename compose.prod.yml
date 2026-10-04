@@ -1,4 +1,4 @@
-name: memsystems-prod
+name: ${COMPOSE_PROJECT_NAME:-memsystems-prod}
 
 services:
   db:

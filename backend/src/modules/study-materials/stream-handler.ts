@@ -113,7 +113,6 @@ export class StreamHandler {
     const userPrompt = promptTemplate.user(input.brief, formatted.text, {
       questionCount: input.questionCount,
       difficulty: input.difficulty,
-      cardStyle: input.cardStyle,
       roadmapOptions: input.roadmapOptions,
       mindMapOptions: input.mindMapOptions,
       slidesOptions: input.slidesOptions,
@@ -594,16 +593,10 @@ function buildOptions(input: StreamInput): Record<string, unknown> | null {
       return opts as unknown as Record<string, unknown>;
     }
     case 'simple_flashcard': {
-      if (
-        input.questionCount == null &&
-        input.difficulty == null &&
-        input.cardStyle == null
-      )
-        return null;
+      if (input.questionCount == null && input.difficulty == null) return null;
       const opts: FlashcardGenerationOptions = {
         questionCount: input.questionCount ?? 0,
         difficulty: input.difficulty ?? 'auto',
-        cardStyle: input.cardStyle ?? 'auto',
       };
       return opts as unknown as Record<string, unknown>;
     }

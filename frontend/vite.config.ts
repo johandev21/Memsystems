@@ -63,7 +63,7 @@ export default defineConfig({
   },
   server: {
     host: process.env.VITE_HOST || '127.0.0.1',
-    port: 3000,
+    port: Number(process.env.VITE_PORT) || 3000,
     strictPort: true,
     watch:
       process.env.VITE_USE_POLLING === 'true'

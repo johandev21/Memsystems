@@ -23,7 +23,8 @@
     "docker:prod:logs": "node scripts/docker.mjs prod logs",
     "docker:prod:ps": "node scripts/docker.mjs prod ps",
     "docker:prod:migrate": "node scripts/docker.mjs prod migrate",
-    "docker:prod:reset": "node scripts/docker.mjs prod reset"
+    "docker:prod:reset": "node scripts/docker.mjs prod reset",
+    "worktree:setup": "node scripts/worktree-setup.mjs"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",

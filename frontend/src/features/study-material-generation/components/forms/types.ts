@@ -45,7 +45,6 @@ export interface BriefFormData {
   /** 0 = auto. */
   questionCount?: number;
   difficulty?: "easy" | "medium" | "hard" | "auto";
-  cardStyle?: "qa" | "definition" | "cloze" | "mixed" | "auto";
   roadmapOptions?: RoadmapOptions;
   mindMapOptions?: MindMapOptions;
   studyGuideOptions?: StudyGuideGenerationOptions;

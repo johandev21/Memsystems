@@ -148,7 +148,6 @@ describe("GenerateBriefDialog", () => {
     expect(screen.queryByText("AI Intelligence Model")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /Next Step/i }));
-    await user.click(screen.getByRole("button", { name: /Next Step/i }));
 
     const instructions = screen.getByPlaceholderText("What topics should these flashcards cover?");
     await user.type(instructions, "Key definitions in biology");
@@ -166,7 +165,6 @@ describe("GenerateBriefDialog", () => {
         kind: "simple_flashcard",
         brief: "Key definitions in biology",
         model: "google/gemini-2.5-flash",
-        cardStyle: "auto",
       }),
       expect.anything(),
       expect.anything(),

@@ -7,7 +7,6 @@ export * from "./components/RoadmapView";
 export * from "./components/SlidesView";
 export * from "./components/StudyGuideView";
 export * from "./components/CaseStudyView";
-export * from "./components/ClozeInteractive";
 export * from "./shapes/kind-labels";
 export * from "./shapes/mind-map";
 export * from "./shapes/simple-flashcard";

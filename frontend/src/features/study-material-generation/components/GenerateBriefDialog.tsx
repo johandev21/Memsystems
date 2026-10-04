@@ -56,7 +56,6 @@ export function GenerateBriefDialog({
     folderId,
     questionCount,
     difficulty,
-    cardStyle,
     roadmapOptions,
     mindMapOptions,
     slidesOptions,
@@ -88,7 +87,6 @@ export function GenerateBriefDialog({
         groundingMode,
         questionCount,
         difficulty,
-        cardStyle,
         roadmapOptions:
           kind === "roadmap" ? (roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS) : roadmapOptions,
         mindMapOptions,
@@ -235,7 +233,6 @@ function getInitialBriefState(kind?: StudyMaterialKind | null): BriefFormData {
     folderId: null,
     questionCount: 0,
     difficulty: "auto",
-    cardStyle: "auto",
     roadmapOptions: kind === "roadmap" ? { ...DEFAULT_ROADMAP_OPTIONS } : undefined,
     mindMapOptions:
       kind === "mind_map"

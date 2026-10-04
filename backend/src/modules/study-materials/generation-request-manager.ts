@@ -25,7 +25,6 @@ export interface StartGenerationInput {
   groundingMode?: GroundingMode;
   questionCount?: number;
   difficulty?: 'easy' | 'medium' | 'hard' | 'auto';
-  cardStyle?: 'qa' | 'definition' | 'cloze' | 'mixed' | 'auto';
   roadmapOptions?: {
     phaseCount: number;
     detailLevel: 'basic' | 'detailed' | 'auto';

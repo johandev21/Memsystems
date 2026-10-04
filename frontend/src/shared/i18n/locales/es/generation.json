@@ -64,33 +64,14 @@
     "targetDifficulty": "1. Dificultad objetivo"
   },
   "flashcards": {
-    "cardFormatLabel": "1. Formato de tarjeta",
-    "cardsLabel": "3. Tarjetas",
-    "cardStyle": {
-      "cloze": {
-        "desc": "Frase con palabras faltantes",
-        "title": "Rellenar espacios en blanco"
-      },
-      "definition": {
-        "desc": "Pares de término → definición",
-        "title": "Definición"
-      },
-      "mixed": {
-        "desc": "Combinación de preguntas y respuestas, definiciones y espacios en blanco",
-        "title": "Mixto"
-      },
-      "qa": {
-        "desc": "Formato clásico de pregunta → respuesta",
-        "title": "Preguntas y respuestas"
-      }
-    },
-    "count_one": "{{count}} tarjeta",
-    "count_many": "{{count}} tarjetas",
-    "count_other": "{{count}} tarjetas",
+    "cardsLabel": "2. Tarjetas",
     "countMax": "{{count}} tarjetas (máx. {{max}})",
-    "countMax_one": "{{count}} tarjeta (máx. {{max}})",
     "countMax_many": "{{count}} tarjetas (máx. {{max}})",
+    "countMax_one": "{{count}} tarjeta (máx. {{max}})",
     "countMax_other": "{{count}} tarjetas (máx. {{max}})",
+    "count_many": "{{count}} tarjetas",
+    "count_one": "{{count}} tarjeta",
+    "count_other": "{{count}} tarjetas",
     "customCountAria": "Cantidad personalizada de tarjetas",
     "difficulty": {
       "easy": {
@@ -106,8 +87,9 @@
         "title": "Estándar"
       }
     },
-    "difficultyLabel": "2. Dificultad",
-    "instructionsPlaceholder": "¿Qué temas deben cubrir estas tarjetas?"
+    "difficultyLabel": "1. Dificultad",
+    "instructionsPlaceholder": "¿Qué temas deben cubrir estas tarjetas?",
+    "sourcesLabel": "3. Fuentes de conocimiento"
   },
   "kinds": {
     "case_study": "Caso práctico",
