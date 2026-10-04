@@ -34,6 +34,50 @@ type NotebookCover = {
   coverUrl: string | null;
   coverVariants?: CoverVariants | null;
 };
+
+/**
+ * Shared title-editing plumbing for the folder and notebook cards. Renaming is
+ * explicit (F2 or the card context menu); this hook owns the `editRequest`
+ * counter the title field watches, the "an edit is in flight" flag that keeps a
+ * click from selecting the card, and the post-edit click/double-click guard.
+ */
+function useCardTitleEditing({ autoEdit, onOpen }: { autoEdit?: boolean; onOpen: () => void }) {
+  const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
+  const editingTitleRef = useRef(Boolean(autoEdit));
+  const openSuppressedUntilRef = useRef(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleTitleEditingChange = useCallback((editing: boolean) => {
+    const wasEditing = editingTitleRef.current;
+    editingTitleRef.current = editing;
+    if (!wasEditing || editing) return;
+    // The blur that ends an edit is immediately followed by the click or
+    // double-click that caused it, so swallow that open. Focus then goes back
+    // to the card, unless the pointer already moved focus somewhere else.
+    openSuppressedUntilRef.current = Date.now() + 500;
+    if (document.activeElement === document.body) cardRef.current?.focus();
+  }, []);
+
+  const beginRename = useCallback(() => {
+    editingTitleRef.current = true;
+    requestEdit((value) => value + 1);
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    if (editingTitleRef.current || Date.now() < openSuppressedUntilRef.current) return;
+    onOpen();
+  }, [onOpen]);
+
+  return {
+    beginRename,
+    cardRef,
+    editRequest,
+    handleOpen,
+    handleTitleEditingChange,
+    titleEditingRef: editingTitleRef,
+  };
+}
+
 export type FolderCardProps = {
   folder: FolderRef;
   notebooks: NotebookCover[];
@@ -97,19 +141,14 @@ export function FolderCard({
     setNodeRef: setDragRef,
     isDragging,
   } = useDraggable({ id: `folder:${folder.id}`, data: { kind: "folder", folderId: folder.id } });
-  const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
-  const editingTitleRef = useRef(Boolean(autoEdit));
-  const openSuppressedUntilRef = useRef(0);
-
-  const handleTitleEditingChange = useCallback((editing: boolean) => {
-    if (editingTitleRef.current && !editing) openSuppressedUntilRef.current = Date.now() + 500;
-    editingTitleRef.current = editing;
-  }, []);
-
-  const handleOpen = () => {
-    if (editingTitleRef.current || Date.now() < openSuppressedUntilRef.current) return;
-    onOpen();
-  };
+  const {
+    beginRename,
+    cardRef,
+    editRequest,
+    handleOpen,
+    handleTitleEditingChange,
+    titleEditingRef,
+  } = useCardTitleEditing({ autoEdit, onOpen });
 
   return (
     <ContextMenu>
@@ -119,6 +158,7 @@ export function FolderCard({
             ref={(node) => {
               setDropRef(node);
               setDragRef(node);
+              cardRef.current = node;
             }}
             {...attributes}
             role={attributes.role}
@@ -126,7 +166,7 @@ export function FolderCard({
             className={cn("library-folder-card", isDragging && "library-notebook-card--dragging")}
             data-selected={selected ? "true" : undefined}
             onClick={() => {
-              if (!editingTitleRef.current) onSelect?.();
+              if (!titleEditingRef.current) onSelect?.();
             }}
             onContextMenu={() => onSelect?.()}
             onDoubleClick={handleOpen}
@@ -137,11 +177,8 @@ export function FolderCard({
             })}
             onKeyDown={(event) => {
               if (event.target !== event.currentTarget) return;
-              if (event.key === "Enter" && !editingTitleRef.current) onOpen();
-              if (event.key === "F2") {
-                editingTitleRef.current = true;
-                requestEdit((value) => value + 1);
-              }
+              if (event.key === "Enter" && !titleEditingRef.current) onOpen();
+              if (event.key === "F2") beginRename();
               listeners?.onKeyDown?.(event);
             }}
           />
@@ -155,15 +192,11 @@ export function FolderCard({
           onDismissEdit={onDismissEdit}
           onEditingChange={handleTitleEditingChange}
           editRequest={editRequest}
+          ariaLabel={t("library.folder")}
         />
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem
-          onClick={() => {
-            editingTitleRef.current = true;
-            requestEdit((value) => value + 1);
-          }}
-        >
+        <ContextMenuItem onClick={beginRename}>
           {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
         </ContextMenuItem>
         <ContextMenuItem variant="destructive" onClick={onRemove}>
@@ -183,6 +216,7 @@ function FolderArtwork({
   onDismissEdit,
   onEditingChange,
   editRequest,
+  ariaLabel,
   hideTitle,
 }: {
   title: string;
@@ -192,6 +226,7 @@ function FolderArtwork({
   onDismissEdit?: (name: string) => void;
   onEditingChange?: (editing: boolean) => void;
   editRequest: number;
+  ariaLabel: string;
   hideTitle?: boolean;
 }) {
   const covers = getFolderCovers(notebooks);
@@ -208,7 +243,7 @@ function FolderArtwork({
       onCancel={onCancelEdit}
       onDismiss={onDismissEdit}
       onEditingChange={onEditingChange}
-      ariaLabel={`folder ${title}`}
+      ariaLabel={ariaLabel}
       editRequest={editRequest}
       maxLength={MAX_TITLE_LENGTH}
       tooltip={title}
@@ -289,19 +324,14 @@ export function NotebookCard({
     void queryClient.prefetchQuery(notebookQueryOptions(notebook.id));
     void queryClient.prefetchQuery(chatMessagesQueryOptions(notebook.id));
   }, [notebook.id, queryClient]);
-  const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
-  const editingTitleRef = useRef(Boolean(autoEdit));
-  const openSuppressedUntilRef = useRef(0);
-
-  const handleTitleEditingChange = useCallback((editing: boolean) => {
-    if (editingTitleRef.current && !editing) openSuppressedUntilRef.current = Date.now() + 500;
-    editingTitleRef.current = editing;
-  }, []);
-
-  const handleOpen = () => {
-    if (editingTitleRef.current || Date.now() < openSuppressedUntilRef.current) return;
-    onOpen();
-  };
+  const {
+    beginRename,
+    cardRef,
+    editRequest,
+    handleOpen,
+    handleTitleEditingChange,
+    titleEditingRef,
+  } = useCardTitleEditing({ autoEdit, onOpen });
 
   const titleSlot = (
     <InlineEditableText
@@ -310,7 +340,7 @@ export function NotebookCard({
       onCancel={onCancelEdit}
       onDismiss={onDismissEdit}
       onEditingChange={handleTitleEditingChange}
-      ariaLabel={`notebook ${notebook.title}`}
+      ariaLabel={t("library.notebook")}
       editRequest={editRequest}
       autoSize
       maxLength={MAX_TITLE_LENGTH}
@@ -328,7 +358,10 @@ export function NotebookCard({
       <ContextMenuTrigger
         render={
           <div
-            ref={setNodeRef}
+            ref={(node) => {
+              setNodeRef(node);
+              cardRef.current = node;
+            }}
             {...attributes}
             role={attributes.role}
             {...listeners}
@@ -337,7 +370,7 @@ export function NotebookCard({
             onMouseEnter={prefetch}
             onFocus={prefetch}
             onClick={() => {
-              if (!editingTitleRef.current) onSelect?.();
+              if (!titleEditingRef.current) onSelect?.();
             }}
             onContextMenu={() => onSelect?.()}
             onDoubleClick={handleOpen}
@@ -345,11 +378,8 @@ export function NotebookCard({
             aria-label={notebook.title}
             onKeyDown={(event) => {
               if (event.target !== event.currentTarget) return;
-              if (event.key === "Enter" && !editingTitleRef.current) onOpen();
-              if (event.key === "F2") {
-                editingTitleRef.current = true;
-                requestEdit((value) => value + 1);
-              }
+              if (event.key === "Enter" && !titleEditingRef.current) onOpen();
+              if (event.key === "F2") beginRename();
               listeners?.onKeyDown?.(event);
             }}
           />
@@ -358,12 +388,7 @@ export function NotebookCard({
         <NotebookArtwork notebook={notebook} titleSlot={titleSlot} />
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem
-          onClick={() => {
-            editingTitleRef.current = true;
-            requestEdit((value) => value + 1);
-          }}
-        >
+        <ContextMenuItem onClick={beginRename}>
           {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
         </ContextMenuItem>
         <ContextMenuItem variant="destructive" onClick={onRemove}>
@@ -399,6 +424,7 @@ export function FolderPreview({ folder, notebooks, compact }: FolderPreviewProps
         notebooks={notebooks}
         onRename={() => {}}
         editRequest={0}
+        ariaLabel={t("library.folder")}
         hideTitle={compact}
       />
     </div>

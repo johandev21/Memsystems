@@ -257,6 +257,124 @@ describe("selection", () => {
   });
 });
 
+describe("card rename entry points", () => {
+  const folder = { id: "folder-1", name: "Philosophy" };
+  const notebook = {
+    id: "notebook-1",
+    title: "Notebook",
+    description: "",
+    coverUrl: null,
+    folderId: null,
+  };
+
+  function titleDisplay(): HTMLElement {
+    const title = document.querySelector<HTMLElement>("[data-library-title]");
+    if (!title) throw new Error("title display not found");
+    return title;
+  }
+
+  it("does not start editing when a folder title is clicked", () => {
+    const onSelect = vi.fn();
+    renderWithProviders(
+      <DndContext>
+        <FolderCard
+          folder={folder}
+          notebooks={[]}
+          onSelect={onSelect}
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
+      </DndContext>,
+    );
+    fireEvent.click(titleDisplay());
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not start editing when a notebook title is clicked", () => {
+    renderWithProviders(
+      <DndContext>
+        <NotebookCard
+          notebook={notebook}
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
+      </DndContext>,
+    );
+    fireEvent.click(titleDisplay());
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("starts editing a folder title with F2", () => {
+    renderWithProviders(
+      <DndContext>
+        <FolderCard
+          folder={folder}
+          notebooks={[]}
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
+      </DndContext>,
+    );
+    fireEvent.keyDown(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }), {
+      key: "F2",
+    });
+    expect(screen.getByRole("textbox").getAttribute("aria-label")).toBe("Edit folder");
+  });
+
+  it("starts editing a notebook title with F2", () => {
+    renderWithProviders(
+      <DndContext>
+        <NotebookCard
+          notebook={notebook}
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
+      </DndContext>,
+    );
+    fireEvent.keyDown(screen.getByRole("button", { name: "Notebook" }), { key: "F2" });
+    expect(screen.getByRole("textbox").getAttribute("aria-label")).toBe("Edit notebook");
+  });
+
+  it("starts editing from the context menu", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DndContext>
+        <NotebookCard
+          notebook={notebook}
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
+      </DndContext>,
+    );
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Notebook" }));
+    await user.click(await screen.findByRole("menuitem", { name: /Rename/ }));
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
+  it("returns focus to the card when an edit ends", () => {
+    renderWithProviders(
+      <DndContext>
+        <NotebookCard
+          notebook={notebook}
+          onOpen={() => {}}
+          onRename={() => {}}
+          onRemove={() => {}}
+        />
+      </DndContext>,
+    );
+    const card = screen.getByRole("button", { name: "Notebook" });
+    fireEvent.keyDown(card, { key: "F2" });
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });
+    expect(document.activeElement).toBe(card);
+  });
+});
+
 describe("card context menu", () => {
   it("deletes a notebook and no longer offers move options", async () => {
     const user = userEvent.setup();

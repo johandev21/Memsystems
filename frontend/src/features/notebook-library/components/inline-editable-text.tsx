@@ -91,27 +91,25 @@ function InlineEditableInput({
 interface InlineEditableDisplayProps {
   value: string;
   className?: string;
-  ariaLabel: string;
   tooltip?: string;
-  onStartEditing: () => void;
   children?: ReactNode;
 }
 
+// Plain text, not a control: editing is entered explicitly (F2 or the card's
+// context menu), so the title must not look or behave like a text field.
+// Clicks land on the card around it and select it like any other card area.
 function InlineEditableDisplay({
   value,
   className,
-  ariaLabel,
   tooltip,
-  onStartEditing,
   children,
 }: InlineEditableDisplayProps) {
-  const { t } = useTranslation("notebooks");
   const [truncated, setTruncated] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
     if (!tooltip) return;
-    const element = buttonRef.current;
+    const element = titleRef.current;
     if (!element) return;
     const measure = () => setTruncated(element.scrollWidth > element.clientWidth + 1);
     measure();
@@ -120,27 +118,25 @@ function InlineEditableDisplay({
     return () => observer.disconnect();
   }, [tooltip, value]);
 
-  const button = (
-    <button
-      ref={buttonRef}
-      type="button"
+  const title = (
+    <span
+      ref={titleRef}
+      // Not `data-slot`: base-ui's `render` prop lets the rendered element's
+      // own props win, which would shadow the tooltip trigger's data-slot.
+      data-library-title=""
       className={cn("library-inline-editable", className)}
-      onClick={(event) => {
-        event.stopPropagation();
-        onStartEditing();
-      }}
-      onDoubleClick={(event) => event.stopPropagation()}
-      aria-label={t("library.editAria", { label: ariaLabel })}
     >
       {children ?? value}
-    </button>
+    </span>
   );
 
-  if (!tooltip || !truncated) return button;
+  if (!tooltip || !truncated) return title;
 
+  // Pointer-only from here on: the title is no longer focusable, and the
+  // owning card already exposes the full name through its aria-label.
   return (
     <Tooltip>
-      <TooltipTrigger render={button} />
+      <TooltipTrigger render={title} />
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   );
@@ -152,6 +148,7 @@ export interface InlineEditableTextProps {
   onCancel?: () => void;
   onDismiss?: (value: string) => void;
   onEditingChange?: (editing: boolean) => void;
+  /** Item label for the editing field, e.g. "notebook" -> "Edit notebook". */
   ariaLabel: string;
   className?: string;
   inputClassName?: string;
@@ -179,9 +176,12 @@ export function InlineEditableText({
   editRequest = 0,
   children,
 }: InlineEditableTextProps) {
+  const { t } = useTranslation("notebooks");
   const [editing, setEditing] = useState(editRequest > 0);
   const [prevEditRequest, setPrevEditRequest] = useState(editRequest);
 
+  // Editing is only ever entered explicitly, by bumping `editRequest` from the
+  // owning card (F2, the context menu, or a freshly created draft card).
   if (editRequest !== prevEditRequest) {
     setPrevEditRequest(editRequest);
     if (editRequest > 0 && !editing) {
@@ -189,14 +189,8 @@ export function InlineEditableText({
     }
   }
 
-  const handleStartEditing = () => {
-    setEditing(true);
-    onEditingChange?.(true);
-  };
-
   const handleCommit = (next: string) => {
     setEditing(false);
-    onEditingChange?.(false);
     if (next && next !== value) {
       onSave(next);
     } else {
@@ -206,9 +200,12 @@ export function InlineEditableText({
 
   const handleCancel = () => {
     setEditing(false);
-    onEditingChange?.(false);
     onCancel?.();
   };
+
+  useEffect(() => {
+    onEditingChange?.(editing);
+  }, [editing, onEditingChange]);
 
   if (editing) {
     return (
@@ -218,7 +215,7 @@ export function InlineEditableText({
         autoSize={autoSize}
         maxLength={maxLength}
         className={inputClassName}
-        ariaLabel={ariaLabel}
+        ariaLabel={t("library.editAria", { label: ariaLabel })}
         onCommit={handleCommit}
         onCancel={handleCancel}
       />
@@ -226,15 +223,8 @@ export function InlineEditableText({
   }
 
   return (
-    <InlineEditableDisplay
-      value={value}
-      className={className}
-      ariaLabel={ariaLabel}
-      tooltip={tooltip}
-      onStartEditing={handleStartEditing}
-    >
+    <InlineEditableDisplay value={value} className={className} tooltip={tooltip}>
       {children}
     </InlineEditableDisplay>
   );
 }
-

@@ -107,7 +107,9 @@ describe("FolderLibrary draft wiring", () => {
         />
       </DndContext>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit folder Philosophy" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Philosophy, 0 notebooks" }), {
+      key: "F2",
+    });
     const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "Ideas" } });
     fireEvent.blur(input);

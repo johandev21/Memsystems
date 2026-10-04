@@ -259,6 +259,9 @@
   box-shadow: inset 0 0 0 1px var(--notebook-art-border);
 }
 
+/* Display-only title: the name is inert text (editing is entered with F2 or the
+   card context menu), so it must not read as a field. The editable look lives
+   on library-inline-editable__input / library-artwork__title-input. */
 @utility library-inline-editable {
   margin: 0;
   border: 0;
@@ -266,11 +269,6 @@
   color: inherit;
   font: inherit;
   text-align: inherit;
-  cursor: text;
-  &:focus-visible {
-    outline: 2px solid var(--notebook-focus-ring);
-    outline-offset: 3px;
-  }
 }
 
 @utility library-inline-editable__input {
@@ -295,6 +293,7 @@
 
 @utility library-artwork__title-editor {
   display: inline-block;
+  vertical-align: bottom;
   max-width: 100%;
   padding: 0;
   color: inherit;
