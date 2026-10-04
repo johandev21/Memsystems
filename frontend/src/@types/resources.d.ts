@@ -1632,10 +1632,6 @@ export default interface Resources {
       "tradeoffs": "Tradeoffs",
       "yourResponse": "Your Response"
     },
-    "citations": {
-      "aria": "Source citations",
-      "title": "Citations"
-    },
     "common": {
       "cancel": "Cancel",
       "close": "Close",
