@@ -1,10 +1,38 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { getCorrectOptionIndex, type QuizQuestion } from "./quiz-helpers";
+import {
+  getCorrectOptionIndex,
+  shuffleQuestionsOptions,
+  type QuizQuestion,
+} from "./quiz-helpers";
 
 export type ViewMode = "active" | "summary" | "review";
 
-export function useQuizSession(questions: QuizQuestion[], quizRef: RefObject<HTMLDivElement | null>) {
-  const totalQuestions = questions.length;
+export interface UseQuizSessionOptions {
+  shuffle?: boolean;
+}
+
+export function useQuizSession(
+  questions: QuizQuestion[],
+  quizRef: RefObject<HTMLDivElement | null>,
+  options?: UseQuizSessionOptions,
+) {
+  const shuffle = options?.shuffle ?? true;
+  const [sessionQuestions, setSessionQuestions] = useState<QuizQuestion[]>(() =>
+    shuffle ? shuffleQuestionsOptions(questions) : questions,
+  );
+
+  const prevQuestionsRef = useRef(questions);
+  useEffect(() => {
+    if (prevQuestionsRef.current !== questions) {
+      prevQuestionsRef.current = questions;
+      setSessionQuestions(shuffle ? shuffleQuestionsOptions(questions) : questions);
+      setSelectedOptions({});
+      setCurrentIdx(0);
+      setViewMode("active");
+    }
+  }, [questions, shuffle]);
+
+  const totalQuestions = sessionQuestions.length;
 
   const [viewMode, setViewMode] = useState<ViewMode>("active");
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -16,14 +44,14 @@ export function useQuizSession(questions: QuizQuestion[], quizRef: RefObject<HTM
 
   const correctCount = useMemo(() => {
     let count = 0;
-    questions.forEach((q) => {
+    sessionQuestions.forEach((q) => {
       const correctIdx = getCorrectOptionIndex(q);
       if (selectedOptions[q.id] === correctIdx) {
         count++;
       }
     });
     return count;
-  }, [questions, selectedOptions]);
+  }, [sessionQuestions, selectedOptions]);
 
   const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
@@ -62,11 +90,11 @@ export function useQuizSession(questions: QuizQuestion[], quizRef: RefObject<HTM
 
   const handleReviewUnanswered = useCallback(() => {
     setShowUnansweredModal(false);
-    const firstUnansweredIndex = questions.findIndex((q) => selectedOptions[q.id] === undefined);
+    const firstUnansweredIndex = sessionQuestions.findIndex((q) => selectedOptions[q.id] === undefined);
     if (firstUnansweredIndex !== -1) {
       setCurrentIdx(firstUnansweredIndex);
     }
-  }, [questions, selectedOptions]);
+  }, [sessionQuestions, selectedOptions]);
 
   const handleSubmitAnyway = useCallback(() => {
     setShowUnansweredModal(false);
@@ -74,10 +102,13 @@ export function useQuizSession(questions: QuizQuestion[], quizRef: RefObject<HTM
   }, []);
 
   const handleRetakeQuiz = useCallback(() => {
+    if (shuffle) {
+      setSessionQuestions(shuffleQuestionsOptions(questions));
+    }
     setSelectedOptions({});
     setCurrentIdx(0);
     setViewMode("active");
-  }, []);
+  }, [questions, shuffle]);
 
   const handleReviewQuiz = useCallback(() => {
     setCurrentIdx(0);
@@ -121,7 +152,7 @@ export function useQuizSession(questions: QuizQuestion[], quizRef: RefObject<HTM
           handleNext();
         }
       } else if (["a", "b", "c", "d", "1", "2", "3", "4"].includes(e.key.toLowerCase())) {
-        if (viewMode === "active" && questions[currentIdx]) {
+        if (viewMode === "active" && sessionQuestions[currentIdx]) {
           const key = e.key.toLowerCase();
           let optIdx = -1;
           if (["a", "b", "c", "d"].includes(key)) {
@@ -129,10 +160,10 @@ export function useQuizSession(questions: QuizQuestion[], quizRef: RefObject<HTM
           } else {
             optIdx = Number.parseInt(key, 10) - 1;
           }
-          if (optIdx >= 0 && optIdx < questions[currentIdx].options.length) {
+          if (optIdx >= 0 && optIdx < sessionQuestions[currentIdx].options.length) {
             e.preventDefault();
             e.stopPropagation();
-            handleSelectOption(questions[currentIdx].id, optIdx);
+            handleSelectOption(sessionQuestions[currentIdx].id, optIdx);
           }
         }
       }
@@ -149,6 +180,7 @@ export function useQuizSession(questions: QuizQuestion[], quizRef: RefObject<HTM
   }, []);
 
   return {
+    questions: sessionQuestions,
     viewMode,
     setViewMode,
     currentIdx,

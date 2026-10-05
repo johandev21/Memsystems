@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { QuizView, type QuizQuestion } from "./QuizView";
+import { formatExplanationText, shuffleQuestionsOptions } from "./quiz/quiz-helpers";
 
 function question(id: string): QuizQuestion {
   return {
@@ -16,9 +17,10 @@ function question(id: string): QuizQuestion {
   };
 }
 
-function renderQuiz(count = 2) {
+function renderQuiz(count = 2, shuffle = false) {
   return render(
     <QuizView
+      shuffle={shuffle}
       content={{ questions: Array.from({ length: count }, (_, i) => question(String(i + 1))) }}
     />,
   );
@@ -107,5 +109,25 @@ describe("QuizView", () => {
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("0");
     fireEvent.keyDown(screen.getByRole("heading"), { key: "b" });
     expect(screen.getByRole("status").textContent).toBe("Your answer is correct.");
+  });
+
+  it("sanitizes English, Spanish, and legacy 'o:' explanation prefixes cleanly without leaving residual 'o'", () => {
+    expect(formatExplanationText("Correcto: Esta opción es adecuada.")).toBe("Esta opción es adecuada.");
+    expect(formatExplanationText("Incorrecto: No es la respuesta.")).toBe("No es la respuesta.");
+    expect(formatExplanationText("Correcto. Explicación.")).toBe("Explicación.");
+    expect(formatExplanationText("Incorrecto - Explicación.")).toBe("Explicación.");
+    expect(formatExplanationText("o: esa limitación describe IA reactiva")).toBe("esa limitación describe IA reactiva");
+    expect(formatExplanationText("o. esa limitación describe IA reactiva")).toBe("esa limitación describe IA reactiva");
+    expect(formatExplanationText("Correct: Valid.")).toBe("Valid.");
+    expect(formatExplanationText("Incorrect: Invalid.")).toBe("Invalid.");
+  });
+
+  it("shuffles question options while preserving option properties and correctOptionId reference", () => {
+    const originalQuestions = [question("1")];
+    const shuffled = shuffleQuestionsOptions(originalQuestions);
+    expect(shuffled[0].options).toHaveLength(3);
+    expect(shuffled[0].correctOptionId).toBe("b");
+    const correctOpt = shuffled[0].options.find((opt) => opt.id === shuffled[0].correctOptionId);
+    expect(correctOpt?.text).toBe("Second option");
   });
 });

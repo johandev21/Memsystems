@@ -7,9 +7,13 @@ if (!process.env.CREDENTIALS_ENCRYPTION_KEY) {
 }
 
 beforeAll(async () => {
-  await ensureTestDatabase();
+  if (process.env.SKIP_TEST_DB !== 'true') {
+    await ensureTestDatabase();
+  }
 }, 30_000);
 
 beforeEach(async () => {
-  await resetDatabase();
+  if (process.env.SKIP_TEST_DB !== 'true') {
+    await resetDatabase();
+  }
 });

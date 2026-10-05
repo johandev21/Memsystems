@@ -30,6 +30,7 @@ import {
   SimpleFlashcardContent,
   SlidesContent,
   StudyMaterialKind,
+  shuffleQuizOptions,
   validateContent,
 } from './shapes';
 import { PracticeProblemsContent } from './practice-problems-content';
@@ -214,7 +215,11 @@ export class StreamHandler {
           const finalContent: unknown = await result.output;
           const normalized = normalizeContent(input.kind, finalContent);
           const validated = validateContent(input.kind, normalized);
-          const storable = this.prepareStorable(input, validated, grounding);
+          const contentToStore =
+            input.kind === 'quiz'
+              ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)
+              : validated;
+          const storable = this.prepareStorable(input, contentToStore, grounding);
 
           if (abortSignal?.aborted) {
             cleanup();
@@ -353,7 +358,11 @@ export class StreamHandler {
             );
 
             const validated = validateContent(input.kind, normalizedContent);
-            const storable = this.prepareStorable(input, validated, grounding);
+            const contentToStore =
+              input.kind === 'quiz'
+                ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)
+                : validated;
+            const storable = this.prepareStorable(input, contentToStore, grounding);
 
             if (abortSignal?.aborted) {
               cleanup();

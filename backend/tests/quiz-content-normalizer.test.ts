@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeQuizContent } from '../src/modules/study-materials/content-normalizer';
+import {
+  normalizeQuizContent,
+  sanitizeExplanation,
+} from '../src/modules/study-materials/content-normalizer';
 import { shuffleQuizOptions } from '../src/modules/study-materials/shapes';
 
 describe('quiz answer identity', () => {
@@ -53,6 +56,43 @@ describe('quiz answer identity', () => {
     expect(question.correctOptionId).toBe('right');
     expect(question.options.find((option) => option.id === 'right')?.text).toBe(
       'Right',
+    );
+  });
+
+  it('sanitizes Spanish explanation prefixes without leaving residual "o"', () => {
+    expect(sanitizeExplanation('Correcto: Esta opción es correcta.')).toBe(
+      'Esta opción es correcta.',
+    );
+    expect(
+      sanitizeExplanation('Incorrecto: Esa limitación describe IA reactiva.'),
+    ).toBe('Esa limitación describe IA reactiva.');
+    expect(
+      sanitizeExplanation('o: esa limitación describe IA reactiva'),
+    ).toBe('esa limitación describe IA reactiva');
+    expect(
+      sanitizeExplanation('o. esa limitación describe IA reactiva'),
+    ).toBe('esa limitación describe IA reactiva');
+  });
+
+  it('recognizes Spanish explanation indicators during normalization and cleans explanations', () => {
+    const content = normalizeQuizContent({
+      title: 'Quiz en Español',
+      questions: [
+        {
+          id: 'q1',
+          prompt: '¿Cuál es correcta?',
+          options: [
+            { text: 'Primera', explanation: 'Incorrecto: no es verdad.' },
+            { text: 'Segunda', explanation: 'Correcto: es la definición exacta.' },
+          ],
+        },
+      ],
+    });
+
+    expect(content.questions[0].correctOptionId).toBe('q-0-o-1');
+    expect(content.questions[0].options[0].explanation).toBe('no es verdad.');
+    expect(content.questions[0].options[1].explanation).toBe(
+      'es la definición exacta.',
     );
   });
 });

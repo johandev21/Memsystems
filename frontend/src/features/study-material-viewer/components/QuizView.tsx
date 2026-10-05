@@ -15,13 +15,15 @@ export interface QuizViewProps {
     title?: string;
     questions: QuizQuestion[];
   };
+  shuffle?: boolean;
 }
 
-export function QuizView({ content }: QuizViewProps) {
-  const questions = useMemo(() => content?.questions || [], [content?.questions]);
+export function QuizView({ content, shuffle = true }: QuizViewProps) {
+  const initialQuestions = useMemo(() => content?.questions || [], [content?.questions]);
   const quizRef = useRef<HTMLDivElement>(null);
 
   const {
+    questions,
     viewMode,
     setViewMode,
     currentIdx,
@@ -39,7 +41,7 @@ export function QuizView({ content }: QuizViewProps) {
     handleSubmitAnyway,
     handleRetakeQuiz,
     handleReviewQuiz,
-  } = useQuizSession(questions, quizRef);
+  } = useQuizSession(initialQuestions, quizRef, { shuffle });
 
   if (questions.length === 0) {
     return <EmptyQuizState />;

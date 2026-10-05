@@ -19,10 +19,33 @@ export function getCorrectOptionIndex(q: QuizQuestion): number {
   return q.options.findIndex((option) => option.id === q.correctOptionId);
 }
 
+export function shuffleQuestionsOptions(questions: QuizQuestion[]): QuizQuestion[] {
+  return questions.map((q) => {
+    const pairs = [...q.options];
+    for (let i = pairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+    }
+    return {
+      ...q,
+      options: pairs,
+    };
+  });
+}
+
 export function formatExplanationText(explanation: string): string {
   if (!explanation) return "";
-  const cleaned = explanation
-    .replace(/^(correct|incorrect|not quite|right answer)[.:!\s]*/i, "")
+  let cleaned = explanation
+    .replace(
+      /^(correct[oa]?s?|incorrect[oa]?s?|verdad(?:er[oa])?|fals[oa]|not quite|right answer|wrong answer|o)\s*([.:!\s-])\s*/i,
+      "",
+    )
+    .trim();
+  cleaned = cleaned
+    .replace(
+      /^(correct[oa]?s?|incorrect[oa]?s?|verdad(?:er[oa])?|fals[oa]|not quite|right answer|wrong answer)[.:!\s-]*/i,
+      "",
+    )
     .trim();
   return cleaned || explanation;
 }

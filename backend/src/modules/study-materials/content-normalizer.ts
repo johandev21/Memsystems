@@ -139,6 +139,23 @@ export function normalizeFlashcardContent(
   };
 }
 
+export function sanitizeExplanation(explanation: string): string {
+  if (!explanation) return '';
+  let cleaned = explanation
+    .replace(
+      /^(correct[oa]?s?|incorrect[oa]?s?|verdad(?:er[oa])?|fals[oa]|not quite|right answer|wrong answer|o)\s*([.:!\s-])\s*/i,
+      '',
+    )
+    .trim();
+  cleaned = cleaned
+    .replace(
+      /^(correct[oa]?s?|incorrect[oa]?s?|verdad(?:er[oa])?|fals[oa]|not quite|right answer|wrong answer)[.:!\s-]*/i,
+      '',
+    )
+    .trim();
+  return cleaned || explanation;
+}
+
 export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
   let questions: unknown[];
   if (Array.isArray(content)) {
@@ -255,8 +272,7 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
       ) {
         const explicitCorrectIdx = normalizedOptions.findIndex(
           (opt) =>
-            /^correct/i.test(opt.explanation.trim()) ||
-            /^right/i.test(opt.explanation.trim()),
+            /^(correct[oa]?s?|verdad(?:er[oa])?|right)/i.test(opt.explanation.trim()),
         );
         if (explicitCorrectIdx >= 0) {
           correctOptionIndex = explicitCorrectIdx;
@@ -270,13 +286,11 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
       ) {
         const currentOpt = normalizedOptions[correctOptionIndex];
         if (
-          /^incorrect/i.test(currentOpt.explanation.trim()) ||
-          /^not quite/i.test(currentOpt.explanation.trim())
+          /^(incorrect[oa]?s?|fals[oa]|not quite)/i.test(currentOpt.explanation.trim())
         ) {
           const realCorrectIdx = normalizedOptions.findIndex(
             (opt) =>
-              /^correct/i.test(opt.explanation.trim()) ||
-              /^right/i.test(opt.explanation.trim()),
+              /^(correct[oa]?s?|verdad(?:er[oa])?|right)/i.test(opt.explanation.trim()),
           );
           if (realCorrectIdx >= 0) {
             correctOptionIndex = realCorrectIdx;
@@ -289,17 +303,22 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
         (correctOptionIndex < 0 ||
           correctOptionIndex >= normalizedOptions.length)
       ) {
-        correctOptionIndex = 0;
+        correctOptionIndex = Math.floor(Math.random() * normalizedOptions.length);
       }
 
       if (!correctOptionId) {
         correctOptionId = normalizedOptions[correctOptionIndex].id;
       }
 
+      const sanitizedOptions = normalizedOptions.map((opt) => ({
+        ...opt,
+        explanation: sanitizeExplanation(opt.explanation),
+      }));
+
       return {
         id: typeof q.id === 'string' ? q.id : `q-${index}`,
         prompt: stringify(prompt),
-        options: normalizedOptions,
+        options: sanitizedOptions,
         correctOptionId,
       };
     },
