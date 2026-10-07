@@ -3,13 +3,9 @@ export const THEME_STORAGE_KEY = "memsystems-theme";
 export const THEME_NAMES = [
   "default",
   "kanagawa",
-  "gruvbox",
   "tokyo-night",
-  "catppuccin",
   "nord",
-  "everforest",
   "rose-pine",
-  "matte-black",
   "matrix",
   "dracula",
   "monokai",
@@ -60,18 +56,6 @@ export const THEMES: readonly ThemeMeta[] = [
     },
   },
   {
-    id: "gruvbox",
-    label: "Gruvbox",
-    descriptionKey: "descriptions.gruvbox",
-    hue: 55,
-    preview: {
-      light: "oklch(0.975 0.018 80)",
-      dark: "oklch(0.22 0.015 65)",
-      accentLight: "oklch(0.48 0.15 48)",
-      accentDark: "oklch(0.74 0.15 55)",
-    },
-  },
-  {
     id: "tokyo-night",
     label: "Tokyo Night",
     descriptionKey: "descriptions.tokyo-night",
@@ -81,18 +65,6 @@ export const THEMES: readonly ThemeMeta[] = [
       dark: "oklch(0.18 0.03 268)",
       accentLight: "oklch(0.44 0.16 260)",
       accentDark: "oklch(0.76 0.12 255)",
-    },
-  },
-  {
-    id: "catppuccin",
-    label: "Catppuccin",
-    descriptionKey: "descriptions.catppuccin",
-    hue: 305,
-    preview: {
-      light: "oklch(0.975 0.01 285)",
-      dark: "oklch(0.20 0.022 280)",
-      accentLight: "oklch(0.46 0.16 300)",
-      accentDark: "oklch(0.76 0.12 305)",
     },
   },
   {
@@ -108,18 +80,6 @@ export const THEMES: readonly ThemeMeta[] = [
     },
   },
   {
-    id: "everforest",
-    label: "Everforest",
-    descriptionKey: "descriptions.everforest",
-    hue: 138,
-    preview: {
-      light: "oklch(0.975 0.012 110)",
-      dark: "oklch(0.22 0.016 145)",
-      accentLight: "oklch(0.44 0.11 138)",
-      accentDark: "oklch(0.75 0.10 135)",
-    },
-  },
-  {
     id: "rose-pine",
     label: "Rosé Pine",
     descriptionKey: "descriptions.rose-pine",
@@ -129,18 +89,6 @@ export const THEMES: readonly ThemeMeta[] = [
       dark: "oklch(0.18 0.02 315)",
       accentLight: "oklch(0.48 0.15 15)",
       accentDark: "oklch(0.74 0.13 15)",
-    },
-  },
-  {
-    id: "matte-black",
-    label: "Matte Black",
-    descriptionKey: "descriptions.matte-black",
-    hue: 0,
-    preview: {
-      light: "oklch(0.985 0 0)",
-      dark: "oklch(0.14 0 0)",
-      accentLight: "oklch(0.22 0 0)",
-      accentDark: "oklch(0.88 0 0)",
     },
   },
   {

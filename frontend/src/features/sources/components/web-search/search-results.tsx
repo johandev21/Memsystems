@@ -51,7 +51,7 @@ export function SearchResults({
         />
       )}
 
-      <div className="max-h-72 overflow-y-auto p-1.5">
+      <div className="flex flex-col max-h-72 overflow-y-auto p-1.5 gap-2">
         {webSearch.candidates.map((candidate) => {
           const result = webSearch.importResults.get(candidate.url);
           const selected = webSearch.selectedUrls.has(candidate.url);

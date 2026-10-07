@@ -833,11 +833,15 @@ export default interface Resources {
       "placeholder": "Describe what this notebook is for…"
     },
     "folders": {
+      "collapseFolder": "Collapse folder",
       "create": "Create",
       "createFailed": "Failed to create folder",
       "created": "Folder \"{{name}}\" created",
+      "expandFolder": "Expand folder",
       "newFolderPlaceholder": "New folder name...",
-      "notebookRoot": "Notebook Root"
+      "noFoldersFound": "No folders found",
+      "notebookRoot": "Notebook Root",
+      "searchPlaceholder": "Search folders..."
     },
     "groundingMode": {
       "descriptions": {
@@ -1498,14 +1502,10 @@ export default interface Resources {
   },
   "theme": {
     "descriptions": {
-      "catppuccin": "Cozy pastel, warm latte and soft mauve",
       "default": "Neutral — what you see today",
       "dracula": "Gothic vampire dusk, iconic purple, neon pink and cyan",
-      "everforest": "Comforting natural moss, pine and warm earth",
-      "gruvbox": "Warm retro groove, rich cream and burnt terracotta",
       "kanagawa": "Wave aqua and sumi ink, balanced and serene",
       "matrix": "Cyber digital rain, phosphor green and CRT terminal depth",
-      "matte-black": "Disciplined stealth monochrome, architectural slate",
       "monokai": "Warm dark charcoal, vivid lime, electric magenta and amber gold",
       "nord": "Arctic frost, polar night and glacial blue",
       "rose-pine": "Velvet dusk, dusty rose and pine teal",
