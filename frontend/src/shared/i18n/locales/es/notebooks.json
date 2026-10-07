@@ -32,11 +32,15 @@
     "placeholder": "Describe para qué sirve este cuaderno…"
   },
   "folders": {
+    "collapseFolder": "Contraer carpeta",
     "create": "Crear",
     "created": "Carpeta \"{{name}}\" creada",
     "createFailed": "No se pudo crear la carpeta",
+    "expandFolder": "Expandir carpeta",
     "newFolderPlaceholder": "Nombre de la nueva carpeta...",
-    "notebookRoot": "Raíz del cuaderno"
+    "noFoldersFound": "No se encontraron carpetas",
+    "notebookRoot": "Raíz del cuaderno",
+    "searchPlaceholder": "Buscar carpetas..."
   },
   "groundingMode": {
     "descriptions": {

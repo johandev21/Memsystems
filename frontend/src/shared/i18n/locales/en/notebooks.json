@@ -32,11 +32,15 @@
     "placeholder": "Describe what this notebook is for…"
   },
   "folders": {
+    "collapseFolder": "Collapse folder",
     "create": "Create",
     "created": "Folder \"{{name}}\" created",
     "createFailed": "Failed to create folder",
+    "expandFolder": "Expand folder",
     "newFolderPlaceholder": "New folder name...",
-    "notebookRoot": "Notebook Root"
+    "noFoldersFound": "No folders found",
+    "notebookRoot": "Notebook Root",
+    "searchPlaceholder": "Search folders..."
   },
   "groundingMode": {
     "descriptions": {
