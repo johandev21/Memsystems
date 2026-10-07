@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -73,12 +75,32 @@ export function AddSourceDialog({
         motion={false}
         className="flex max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-panel border-border/60 bg-card p-0 shadow-2xl sm:max-h-[90vh] sm:max-w-170"
       >
-        <DialogHeader className="shrink-0 px-5 pb-2 pt-6 sm:px-6">
+        <DialogHeader className="relative shrink-0 px-5 pb-2 pt-6 sm:px-6">
+          {mode !== "menu" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setMode("menu")}
+              className="absolute left-4 top-4 z-10 bg-secondary cursor-pointer"
+              aria-label={t("urlMode.back")}
+            >
+              <ArrowLeft className="size-4" />
+            </Button>
+          )}
           <DialogTitle className="text-center text-xl font-semibold text-foreground">
-            {t("addSourceDialog.title")}
+            {mode === "url"
+              ? t("addSourceDialog.urlTitle")
+              : mode === "text"
+                ? t("addSourceDialog.textTitle")
+                : t("addSourceDialog.title")}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {t("addSourceDialog.description")}
+            {mode === "url"
+              ? t("addSourceDialog.urlDescription")
+              : mode === "text"
+                ? t("addSourceDialog.textDescription")
+                : t("addSourceDialog.description")}
           </DialogDescription>
         </DialogHeader>
 

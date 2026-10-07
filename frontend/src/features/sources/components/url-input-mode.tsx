@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   BookOpen,
   ChevronDown,
   ChevronUp,
@@ -279,17 +278,7 @@ export function UrlInputMode({
   };
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={busy}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit cursor-pointer"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("urlMode.back")}
-      </button>
-
+    <form className="mx-auto flex w-full max-w-xl flex-col gap-5" onSubmit={handleSubmit}>
       <UrlAddressField
         urlValue={urlValue}
         meta={meta}
@@ -300,14 +289,17 @@ export function UrlInputMode({
         doiInfo={t("urlMode.doiInfo")}
       />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="source-url-title">{t("urlMode.titleLabel")}</Label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="source-url-title" className="text-xs font-medium text-foreground">
+          {t("urlMode.titleLabel")}
+        </Label>
         <Input
           id="source-url-title"
           placeholder={meta.titlePlaceholder}
           value={urlTitle}
           onChange={(e) => onUrlTitleChange(e.target.value)}
           disabled={busy}
+          className="h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
         />
       </div>
 
@@ -321,13 +313,24 @@ export function UrlInputMode({
         />
       )}
 
-      <UrlSubmitButton
-        busy={busy}
-        isPending={isPending}
-        hasValue={Boolean(urlValue.trim())}
-        submitLabel={meta.submitLabel}
-        pendingLabel={meta.pendingLabel}
-      />
+      <div className="flex items-center justify-end gap-2.5 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={busy}
+          className="cursor-pointer"
+        >
+          {t("urlMode.back")}
+        </Button>
+        <UrlSubmitButton
+          busy={busy}
+          isPending={isPending}
+          hasValue={Boolean(urlValue.trim())}
+          submitLabel={meta.submitLabel}
+          pendingLabel={meta.pendingLabel}
+        />
+      </div>
     </form>
   );
 }
@@ -350,9 +353,11 @@ function UrlAddressField({
   doiInfo: string;
 }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <Label htmlFor="source-url">{urlLabel}</Label>
+        <Label htmlFor="source-url" className="text-xs font-medium text-foreground">
+          {urlLabel}
+        </Label>
         <UrlTypeBadge
           isYouTube={meta.isYouTube}
           isArXiv={meta.isArXiv}
@@ -368,6 +373,7 @@ function UrlAddressField({
         autoFocus
         required
         disabled={busy}
+        className="h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
       />
       {meta.isArXiv && (
         <p className="text-xs text-muted-foreground">{arxivInfo}</p>
@@ -396,7 +402,7 @@ function UrlSubmitButton({
     <Button type="submit" disabled={busy || !hasValue} className="cursor-pointer">
       {isPending ? (
         <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           {pendingLabel}
         </>
       ) : (

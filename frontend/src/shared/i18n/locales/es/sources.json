@@ -1,7 +1,11 @@
 {
   "addSourceDialog": {
     "description": "Busca en la web o incorpora tu propio material.",
-    "title": "Añadir fuentes de conocimiento"
+    "textDescription": "Añade notas o texto copiado directamente.",
+    "textTitle": "Pegar texto",
+    "title": "Añadir fuentes de conocimiento",
+    "urlDescription": "Importa un artículo, página web o vídeo.",
+    "urlTitle": "Añadir enlace web"
   },
   "api": {
     "addSourceFailed": "No se pudo añadir la fuente ({{status}})",
@@ -113,14 +117,14 @@
     "linesAndChars_other": "{{count}} líneas · {{chars}} caracteres"
   },
   "textMode": {
-    "add": "Añadir fuente de texto",
+    "add": "Añadir texto",
     "adding": "Añadiendo texto...",
     "back": "Atrás",
     "clear": "Limpiar",
-    "content": "Contenido",
-    "contentPlaceholder": "Pega aquí el texto que copiaste...",
+    "content": "Contenido del texto",
+    "contentPlaceholder": "Pega texto, notas o extractos aquí...",
     "title": "Título",
-    "titlePlaceholder": "Mis apuntes de estudio"
+    "titlePlaceholder": "p. ej., Apuntes de Biología"
   },
   "toasts": {
     "audioAdded": "Fuente de audio añadida",
@@ -171,14 +175,14 @@
   },
   "urlMode": {
     "addArxiv": "Añadir artículo de arXiv",
-    "addDoi": "Añadir fuente académica DOI",
+    "addDoi": "Añadir publicación DOI",
     "addingArxiv": "Adquiriendo artículo de arXiv...",
     "addingDoi": "Resolviendo DOI...",
     "addingWebsite": "Extrayendo sitio web...",
     "addingYouTube": "Añadiendo vídeo de YouTube...",
-    "addWebsite": "Añadir sitio web",
+    "addWebsite": "Añadir enlace web",
     "addYouTube": "Añadir vídeo de YouTube",
-    "advancedOptions": "Subtítulos personalizados y opciones de OAuth",
+    "advancedOptions": "Subtítulos y opciones de vídeo",
     "arxivBadge": "Artículo de arXiv",
     "arxivInfo": "Importa los metadatos del artículo y el texto completo en PDF desde arXiv.",
     "back": "Atrás",
@@ -189,16 +193,16 @@
     "doiBadge": "Identificador DOI",
     "doiInfo": "Resuelve los metadatos de la cita, el BibTeX y los artículos de acceso abierto disponibles.",
     "oauthLabel": "Token de acceso OAuth de Google (opcional, para vídeos privados)",
-    "placeholderArxiv": "p. ej. 2301.12345 o https://arxiv.org/abs/2301.12345",
-    "placeholderDoi": "p. ej. 10.1000/182 o https://doi.org/10.1000/182",
-    "placeholderGeneric": "https://example.com/article, URL de YouTube, ID de arXiv o DOI...",
+    "placeholderArxiv": "p. ej., 2301.12345 o https://arxiv.org/abs/2301.12345",
+    "placeholderDoi": "p. ej., 10.1000/182 o https://doi.org/10.1000/182",
+    "placeholderGeneric": "https://ejemplo.com/articulo o enlace a vídeo...",
     "placeholderYouTube": "https://youtube.com/watch?v=... o https://youtu.be/...",
     "titleLabel": "Título (opcional)",
-    "titlePlaceholderArxiv": "Por defecto, el título del artículo",
-    "titlePlaceholderDoi": "Por defecto, el título de la publicación",
-    "titlePlaceholderGeneric": "Por defecto, el título de la página web",
-    "titlePlaceholderYouTube": "Por defecto, el título del vídeo",
-    "urlLabel": "URL o identificador académico",
+    "titlePlaceholderArxiv": "Dejar en blanco para usar el título del artículo",
+    "titlePlaceholderDoi": "Dejar en blanco para usar el título de la publicación",
+    "titlePlaceholderGeneric": "Dejar en blanco para usar el título de la página",
+    "titlePlaceholderYouTube": "Dejar en blanco para usar el título del vídeo",
+    "urlLabel": "Enlace web o URL",
     "youtubeBadge": "Vídeo de YouTube"
   },
   "webSearch": {

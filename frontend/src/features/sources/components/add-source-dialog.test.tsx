@@ -67,7 +67,7 @@ describe("AddSourceDialog & Source Modes Layout & Transcript Handling", () => {
 
       // Open advanced options
       const advancedToggle = screen.getByRole("button", {
-        name: /Custom Captions & OAuth Options/i,
+        name: /Captions & video options/i,
       });
       fireEvent.click(advancedToggle);
 
@@ -124,7 +124,7 @@ describe("AddSourceDialog & Source Modes Layout & Transcript Handling", () => {
         />,
       );
 
-      const textarea = screen.getByPlaceholderText(/Paste your copied text here.../i);
+      const textarea = screen.getByPlaceholderText(/Paste text, notes, or excerpts here.../i);
       expect(textarea.className).toContain("max-h-64");
       expect(textarea.className).toContain("overflow-y-auto");
       expect(textarea.className).toContain("resize-y");
@@ -149,5 +149,56 @@ describe("AddSourceDialog & Source Modes Layout & Transcript Handling", () => {
       fireEvent.click(clearButton);
       expect(handleBodyChange).toHaveBeenCalledWith("");
     });
+
+    it("triggers onBack when Back button is clicked", () => {
+      const handleBack = vi.fn();
+      render(
+        <TextInputMode
+          textTitle=""
+          onTextTitleChange={vi.fn()}
+          textBody=""
+          onTextBodyChange={vi.fn()}
+          onSubmit={vi.fn()}
+          onBack={handleBack}
+          isPending={false}
+          busy={false}
+        />,
+      );
+
+      const backButton = screen.getByRole("button", { name: "Back" });
+      fireEvent.click(backButton);
+      expect(handleBack).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("updates header title and provides header back navigation when switching to url or text mode", () => {
+    renderWithClient(
+      <AddSourceDialog notebookId="nb-test">
+        <button type="button">Add Source</button>
+      </AddSourceDialog>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Source" }));
+
+    // Switch to URL mode
+    const websiteButton = screen.getByRole("button", { name: /Websites/i });
+    fireEvent.click(websiteButton);
+
+    expect(screen.getByText("Add Web Link")).not.toBeNull();
+    expect(screen.getByText("Import an article, webpage, or video.")).not.toBeNull();
+
+    // Click header back button
+    const backBtn = screen.getByLabelText("Back");
+    fireEvent.click(backBtn);
+
+    // Should return to main menu
+    expect(screen.getByText("Add Knowledge Sources")).not.toBeNull();
+
+    // Switch to Text mode
+    const textButton = screen.getByRole("button", { name: /Copied Text/i });
+    fireEvent.click(textButton);
+
+    expect(screen.getByText("Paste Text")).not.toBeNull();
+    expect(screen.getByText("Add notes or copied text directly.")).not.toBeNull();
   });
 });

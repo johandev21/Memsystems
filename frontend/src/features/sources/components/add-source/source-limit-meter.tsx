@@ -9,10 +9,10 @@ export interface SourceLimitMeterProps {
 export function SourceLimitMeter({ count, usedPercent }: SourceLimitMeterProps) {
   const { t } = useTranslation("sources");
   return (
-    <div className="flex flex-col gap-2 px-2">
-      <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-1.5 px-1">
+      <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
         <span>{t("menu.sourcesUsed")}</span>
-        <span className="text-foreground">
+        <span className="font-mono text-foreground">
           {count} / {SOURCE_LIMIT}
         </span>
       </div>

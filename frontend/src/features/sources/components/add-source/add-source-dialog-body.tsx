@@ -96,7 +96,9 @@ export function AddSourceDialogBody({
         />
       )}
 
-      <SourceLimitMeter count={count} usedPercent={usedPercent} />
+      <div className="mt-auto pt-2">
+        <SourceLimitMeter count={count} usedPercent={usedPercent} />
+      </div>
     </div>
   );
 }

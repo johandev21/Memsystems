@@ -1246,7 +1246,11 @@ export default interface Resources {
   "sources": {
     "addSourceDialog": {
       "description": "Search the web or bring in your own material.",
-      "title": "Add Knowledge Sources"
+      "textDescription": "Add notes or copied text directly.",
+      "textTitle": "Paste Text",
+      "title": "Add Knowledge Sources",
+      "urlDescription": "Import an article, webpage, or video.",
+      "urlTitle": "Add Web Link"
     },
     "api": {
       "addSourceFailed": "Failed to add source ({{status}})",
@@ -1357,14 +1361,14 @@ export default interface Resources {
       "linesAndChars_other": "{{count}} lines · {{chars}} chars"
     },
     "textMode": {
-      "add": "Add Text Source",
+      "add": "Add text",
       "adding": "Adding text...",
       "back": "Back",
       "clear": "Clear",
-      "content": "Content",
-      "contentPlaceholder": "Paste your copied text here...",
+      "content": "Text content",
+      "contentPlaceholder": "Paste text, notes, or excerpts here...",
       "title": "Title",
-      "titlePlaceholder": "My Study Notes"
+      "titlePlaceholder": "e.g., Biology Lecture Notes"
     },
     "toasts": {
       "audioAdded": "Audio source added",
@@ -1412,35 +1416,35 @@ export default interface Resources {
       "uploadButton": "Upload .srt / .vtt / .txt"
     },
     "urlMode": {
-      "addArxiv": "Add arXiv Paper Source",
-      "addDoi": "Add DOI Academic Source",
-      "addWebsite": "Add Website Source",
-      "addYouTube": "Add YouTube Video Source",
+      "addArxiv": "Add arXiv paper",
+      "addDoi": "Add DOI publication",
+      "addWebsite": "Add web link",
+      "addYouTube": "Add YouTube video",
       "addingArxiv": "Acquiring arXiv paper...",
       "addingDoi": "Resolving DOI...",
       "addingWebsite": "Extracting website...",
       "addingYouTube": "Adding YouTube video...",
-      "advancedOptions": "Custom Captions & OAuth Options",
+      "advancedOptions": "Captions & video options",
       "arxivBadge": "arXiv Paper",
       "arxivInfo": "Imports paper metadata and PDF full-text from arXiv.",
       "back": "Back",
-      "captionFileLabel": "Upload Subtitles / Captions (.srt, .vtt, .txt, .json)",
-      "captionLabel": "Or Paste Subtitle / Transcript Text",
+      "captionFileLabel": "Upload subtitles or captions (.srt, .vtt, .txt, .json)",
+      "captionLabel": "Or paste subtitle or transcript text",
       "captionPlaceholder": "00:00:01.000 --> 00:00:04.000\nSpeaker: Text content...",
       "clear": "Clear",
       "doiBadge": "DOI Identifier",
       "doiInfo": "Resolves citation metadata, BibTeX, and accessible open-access articles.",
-      "oauthLabel": "Google OAuth Access Token (Optional, for private videos)",
-      "placeholderArxiv": "e.g. 2301.12345 or https://arxiv.org/abs/2301.12345",
-      "placeholderDoi": "e.g. 10.1000/182 or https://doi.org/10.1000/182",
-      "placeholderGeneric": "https://example.com/article, YouTube URL, arXiv ID, or DOI...",
+      "oauthLabel": "Google OAuth access token (optional, for private videos)",
+      "placeholderArxiv": "e.g., 2301.12345 or https://arxiv.org/abs/2301.12345",
+      "placeholderDoi": "e.g., 10.1000/182 or https://doi.org/10.1000/182",
+      "placeholderGeneric": "https://example.com/article or video link...",
       "placeholderYouTube": "https://youtube.com/watch?v=... or https://youtu.be/...",
-      "titleLabel": "Title (Optional)",
-      "titlePlaceholderArxiv": "Defaults to paper title",
-      "titlePlaceholderDoi": "Defaults to publication title",
-      "titlePlaceholderGeneric": "Defaults to webpage title",
-      "titlePlaceholderYouTube": "Defaults to video title",
-      "urlLabel": "URL or Academic Identifier",
+      "titleLabel": "Title (optional)",
+      "titlePlaceholderArxiv": "Leave blank to use paper title",
+      "titlePlaceholderDoi": "Leave blank to use publication title",
+      "titlePlaceholderGeneric": "Leave blank to use page title",
+      "titlePlaceholderYouTube": "Leave blank to use video title",
+      "urlLabel": "Web link or URL",
       "youtubeBadge": "YouTube Video"
     },
     "webSearch": {

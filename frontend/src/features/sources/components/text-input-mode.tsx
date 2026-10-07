@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,18 +33,11 @@ export function TextInputMode({
   };
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={busy}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit cursor-pointer"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("textMode.back")}
-      </button>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="source-text-title">{t("textMode.title")}</Label>
+    <form className="mx-auto flex w-full max-w-xl flex-col gap-5" onSubmit={handleSubmit}>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="source-text-title" className="text-xs font-medium text-foreground">
+          {t("textMode.title")}
+        </Label>
         <Input
           id="source-text-title"
           placeholder={t("textMode.titlePlaceholder")}
@@ -53,11 +46,15 @@ export function TextInputMode({
           autoFocus
           required
           disabled={busy}
+          className="h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
         />
       </div>
-      <div className="flex flex-col gap-2">
+
+      <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor="source-text-body">{t("textMode.content")}</Label>
+          <Label htmlFor="source-text-body" className="text-xs font-medium text-foreground">
+            {t("textMode.content")}
+          </Label>
           {textBody.length > 0 && (
             <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
               <span>
@@ -70,7 +67,7 @@ export function TextInputMode({
                 type="button"
                 onClick={() => onTextBodyChange("")}
                 disabled={busy}
-                className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                className="cursor-pointer text-muted-foreground transition-colors hover:text-destructive"
               >
                 {t("textMode.clear")}
               </button>
@@ -82,26 +79,38 @@ export function TextInputMode({
           placeholder={t("textMode.contentPlaceholder")}
           value={textBody}
           onChange={(e) => onTextBodyChange(e.target.value)}
-          rows={5}
+          rows={6}
           required
           disabled={busy}
-          className="min-h-32 max-h-64 overflow-y-auto resize-y break-words"
+          className="min-h-36 max-h-64 overflow-y-auto resize-y border-border/70 bg-background text-sm leading-relaxed focus-visible:border-ring break-words"
         />
       </div>
-      <Button
-        type="submit"
-        disabled={busy || !textTitle.trim() || !textBody.trim()}
-        className="cursor-pointer"
-      >
-        {isPending ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            {t("textMode.adding")}
-          </>
-        ) : (
-          t("textMode.add")
-        )}
-      </Button>
+
+      <div className="flex items-center justify-end gap-2.5 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={busy}
+          className="cursor-pointer"
+        >
+          {t("textMode.back")}
+        </Button>
+        <Button
+          type="submit"
+          disabled={busy || !textTitle.trim() || !textBody.trim()}
+          className="cursor-pointer"
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("textMode.adding")}
+            </>
+          ) : (
+            t("textMode.add")
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
