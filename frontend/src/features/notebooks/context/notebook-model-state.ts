@@ -17,18 +17,26 @@ export function resolveModelId(modelId: string): string {
 }
 
 export function getPersistedModel(notebookId: string): string {
-  if (typeof window === "undefined") return DEFAULT_MODEL_ID;
-  const stored =
-    localStorage.getItem(`${STORAGE_KEY}-${notebookId}`) ??
-    localStorage.getItem("memsystems:selected-model") ??
-    DEFAULT_MODEL_ID;
-  return resolveModelId(stored);
+  if (typeof window === "undefined" || !window.localStorage) return DEFAULT_MODEL_ID;
+  try {
+    const stored =
+      window.localStorage.getItem(`${STORAGE_KEY}-${notebookId}`) ??
+      window.localStorage.getItem("memsystems:selected-model") ??
+      DEFAULT_MODEL_ID;
+    return resolveModelId(stored);
+  } catch {
+    return DEFAULT_MODEL_ID;
+  }
 }
 
 export function setPersistedModel(notebookId: string, modelId: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(`${STORAGE_KEY}-${notebookId}`, modelId);
-  localStorage.setItem("memsystems:selected-model", modelId);
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(`${STORAGE_KEY}-${notebookId}`, modelId);
+    window.localStorage.setItem("memsystems:selected-model", modelId);
+  } catch {
+    // Ignore storage errors in restricted environments
+  }
 }
 
 export interface NotebookModelContextValue {

@@ -20,7 +20,6 @@ const PROBLEM_PRESETS = [4, 6, 8] as const;
 const MAX_PROBLEMS = 30;
 
 const DIFFICULTY_OPTIONS = [
-  { id: "auto", titleKey: "actions.auto", descKey: "options.auto.description" },
   {
     id: "easy",
     titleKey: "practice.difficulty.easy.title",
@@ -61,8 +60,12 @@ export function PracticeProblemsBriefForm({
   } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
-  const problemCount = value.practiceProblemsOptions?.problemCount ?? value.questionCount ?? 0;
-  const difficulty = value.practiceProblemsOptions?.difficulty ?? value.difficulty ?? "auto";
+  const rawProblemCount =
+    value.practiceProblemsOptions?.problemCount ?? value.questionCount;
+  const problemCount = rawProblemCount || 6;
+  const rawDifficulty = (value.practiceProblemsOptions?.difficulty ??
+    value.difficulty) as string | undefined;
+  const difficulty = (rawDifficulty === "auto" || !rawDifficulty ? "medium" : rawDifficulty) as DifficultyId;
 
   const updatePracticeProblems = (patch: { problemCount?: number; difficulty?: DifficultyId }) => {
     const nextCount = patch.problemCount ?? problemCount;
@@ -84,11 +87,9 @@ export function PracticeProblemsBriefForm({
   }));
 
   const problemLabel =
-    problemCount === 0
-      ? t("actions.autoDecides")
-      : problemCount >= MAX_PROBLEMS
-        ? t("practice.problemCountMax", { count: problemCount, max: MAX_PROBLEMS })
-        : t("practice.problemCount", { count: problemCount });
+    problemCount >= MAX_PROBLEMS
+      ? t("practice.problemCountMax", { count: problemCount, max: MAX_PROBLEMS })
+      : t("practice.problemCount", { count: problemCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
@@ -106,7 +107,7 @@ export function PracticeProblemsBriefForm({
               label={t("fields.targetDifficulty")}
               options={difficultyOptions}
               value={difficulty}
-              columns={4}
+              columns={3}
               onChange={(next) => updatePracticeProblems({ difficulty: next })}
             />
 

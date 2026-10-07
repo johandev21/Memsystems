@@ -11,7 +11,7 @@ const COLUMN_CLASS: Record<number, string> = {
 /**
  * Radio-card field shared by the generation dialogs. Cards match the Quiz
  * difficulty cards: title on top, description below, solid primary when
- * selected. Include an `"auto"` option to let the model choose.
+ * selected.
  */
 export function BriefChoiceField<T extends string>({
   label,

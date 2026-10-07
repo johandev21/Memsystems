@@ -18,7 +18,7 @@ function StatefulCountSelector({ onChange }: { onChange: (value: number) => void
   return (
     <CountSelector
       {...BASE_PROPS}
-      summary={value === 0 ? "Auto (AI decides)" : `${value} Questions`}
+      summary={`${value} Questions`}
       value={value}
       onValueChange={(next) => {
         onChange(next);
@@ -35,30 +35,25 @@ describe("CountSelector", () => {
     await i18n.changeLanguage("en");
   });
 
-  it("calls onValueChange(0) from Auto and presses it only when the value is 0", async () => {
-    const user = userEvent.setup();
+  it("marks the active preset as pressed", () => {
     const onValueChange = vi.fn();
     const { rerender } = render(
       <CountSelector {...BASE_PROPS} summary="10 Questions" value={10} onValueChange={onValueChange} />,
     );
 
-    const auto = screen.getByRole("button", { name: "Auto" });
-    expect(auto.getAttribute("aria-pressed")).toBe("false");
     expect(screen.getByRole("button", { name: "10" }).getAttribute("aria-pressed")).toBe("true");
-
-    await user.click(auto);
-    expect(onValueChange).toHaveBeenCalledWith(0);
+    expect(screen.getByRole("button", { name: "15" }).getAttribute("aria-pressed")).toBe("false");
 
     rerender(
       <CountSelector
         {...BASE_PROPS}
-        summary="Auto (AI decides)"
-        value={0}
+        summary="15 Questions"
+        value={15}
         onValueChange={onValueChange}
       />,
     );
-    expect(screen.getByRole("button", { name: "Auto" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "10" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "15" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("calls onValueChange with the clicked preset", async () => {

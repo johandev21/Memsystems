@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 export const StudyGuideOptions = z.object({
-  format: z.enum(["detailed", "revision", "auto"]).default("auto"),
-  // 0 = auto.
-  sectionCount: z.number().int().min(0).max(12).default(0),
+  format: z.enum(["detailed", "revision", "auto"]).default("detailed"),
+  sectionCount: z.number().int().min(0).max(12).default(6),
 });
 export type StudyGuideGenerationOptions = z.infer<typeof StudyGuideOptions>;
 

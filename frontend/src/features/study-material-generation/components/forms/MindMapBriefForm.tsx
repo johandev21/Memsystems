@@ -17,18 +17,18 @@ import { GenerationSourcePopover } from "./generation-source-popover";
 import type { BaseMaterialFormProps, MindMapOptions } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
-type GroupingId = "auto" | "plain" | "grouped";
+type GroupingId = "plain" | "grouped";
 
 const NODE_PRESETS = [10, 20, 30];
 const MAX_NODE_COUNT = 100;
 const CUSTOM_NODE_DEFAULT = 40;
 
 const DEFAULT_MIND_MAP_OPTIONS: MindMapOptions = {
-  nodeCount: 0,
+  nodeCount: 20,
   structure: "hierarchical",
-  colorGroups: "auto",
+  colorGroups: true,
   crossLinks: false,
-  detailLevel: "auto",
+  detailLevel: "basic",
 };
 
 export function MindMapBriefForm({
@@ -44,18 +44,19 @@ export function MindMapBriefForm({
     useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: 3 });
 
   const currentOptions = value.mindMapOptions ?? DEFAULT_MIND_MAP_OPTIONS;
-  const nodeCount = currentOptions.nodeCount;
-  const detailLevel = currentOptions.detailLevel;
-  const storedColorGroups = currentOptions.colorGroups;
-  const colorGroupsId: GroupingId =
-    storedColorGroups === "auto" ? "auto" : storedColorGroups ? "grouped" : "plain";
+  const nodeCount = currentOptions.nodeCount || DEFAULT_MIND_MAP_OPTIONS.nodeCount;
+  const rawDetailLevel = currentOptions.detailLevel as string;
+  const detailLevel = (rawDetailLevel === "auto" ? "basic" : rawDetailLevel) as "basic" | "detailed";
+  const storedColorGroups = currentOptions.colorGroups as boolean | "auto";
+  const normalizedColorGroups = storedColorGroups === "auto" ? true : storedColorGroups;
+  const colorGroupsId: GroupingId = normalizedColorGroups ? "grouped" : "plain";
 
   const updateMindMapOptions = (patch: Partial<MindMapOptions>) => {
     onChange({
       mindMapOptions: {
         nodeCount: patch.nodeCount ?? nodeCount,
         structure: "hierarchical",
-        colorGroups: patch.colorGroups !== undefined ? patch.colorGroups : storedColorGroups,
+        colorGroups: patch.colorGroups !== undefined ? patch.colorGroups : normalizedColorGroups,
         crossLinks: false,
         detailLevel: patch.detailLevel ?? detailLevel,
       },
@@ -63,7 +64,6 @@ export function MindMapBriefForm({
   };
 
   const detailOptions = [
-    { id: "auto" as const, title: t("actions.auto"), desc: t("options.auto.description") },
     {
       id: "basic" as const,
       title: t("mindMap.detail.basic.title"),
@@ -77,7 +77,6 @@ export function MindMapBriefForm({
   ];
 
   const groupingOptions = [
-    { id: "auto" as const, title: t("actions.auto"), desc: t("options.auto.description") },
     {
       id: "plain" as const,
       title: t("mindMap.colorGroups.plain.title"),
@@ -91,11 +90,9 @@ export function MindMapBriefForm({
   ];
 
   const mapSizeLabel =
-    nodeCount === 0
-      ? t("actions.autoDecides")
-      : nodeCount >= MAX_NODE_COUNT
-        ? t("mindMap.nodeCountMax", { count: nodeCount, max: MAX_NODE_COUNT })
-        : t("mindMap.nodeCount", { count: nodeCount });
+    nodeCount >= MAX_NODE_COUNT
+      ? t("mindMap.nodeCountMax", { count: nodeCount, max: MAX_NODE_COUNT })
+      : t("mindMap.nodeCount", { count: nodeCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
@@ -121,7 +118,7 @@ export function MindMapBriefForm({
             />
 
             <BriefChoiceField
-              columns={3}
+              columns={2}
               label={t("fields.detailLevelStep2")}
               options={detailOptions}
               value={detailLevel}
@@ -141,13 +138,11 @@ export function MindMapBriefForm({
         <BriefStep>
           <BriefStepFields>
             <BriefChoiceField
-              columns={3}
+              columns={2}
               label={t("mindMap.visualGroupingLabel")}
               options={groupingOptions}
               value={colorGroupsId}
-              onChange={(id) =>
-                updateMindMapOptions({ colorGroups: id === "auto" ? "auto" : id === "grouped" })
-              }
+              onChange={(id) => updateMindMapOptions({ colorGroups: id === "grouped" })}
             />
 
             <div className="flex flex-col gap-2">

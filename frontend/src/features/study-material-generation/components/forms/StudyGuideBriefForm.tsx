@@ -20,7 +20,7 @@ import { useBriefWizard } from "./use-brief-wizard";
 // Module Constants
 // ============================================================================
 
-type StudyGuideFormat = "detailed" | "revision" | "auto";
+type StudyGuideFormat = "detailed" | "revision";
 
 const SECTION_PRESETS = [4, 6, 8] as const;
 
@@ -49,8 +49,11 @@ export function StudyGuideBriefForm({
   } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
-  const format: StudyGuideFormat = value.studyGuideOptions?.format ?? "auto";
-  const sectionCount = value.studyGuideOptions?.sectionCount ?? 0;
+  const rawFormat = value.studyGuideOptions?.format as string | undefined;
+  const format: StudyGuideFormat =
+    rawFormat === "auto" || !rawFormat ? "detailed" : (rawFormat as StudyGuideFormat);
+  const rawSectionCount = value.studyGuideOptions?.sectionCount;
+  const sectionCount = rawSectionCount || 6;
 
   const updateStudyGuideOptions = (patch: {
     format?: StudyGuideFormat;
@@ -65,7 +68,6 @@ export function StudyGuideBriefForm({
   };
 
   const formatOptions = [
-    { id: "auto", title: t("actions.auto"), desc: t("options.auto.description") },
     {
       id: "detailed",
       title: t("studyGuide.format.detailed.title"),
@@ -78,10 +80,7 @@ export function StudyGuideBriefForm({
     },
   ] as const;
 
-  const sectionCountLabel =
-    sectionCount === 0
-      ? t("actions.autoDecides")
-      : t("studyGuide.sectionCount", { count: sectionCount });
+  const sectionCountLabel = t("studyGuide.sectionCount", { count: sectionCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
@@ -99,7 +98,7 @@ export function StudyGuideBriefForm({
               options={formatOptions}
               value={format}
               onChange={(next) => updateStudyGuideOptions({ format: next })}
-              columns={3}
+              columns={2}
             />
 
             <CountSelector

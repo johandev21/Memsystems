@@ -33,8 +33,11 @@ export function RoadmapBriefForm({
     useBriefWizard({ notebookId, value, onChange, disabled });
 
   const currentOptions = value.roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS;
-  const phaseCount = currentOptions.phaseCount;
-  const detailLevel = currentOptions.detailLevel;
+  const phaseCount = currentOptions.phaseCount || DEFAULT_ROADMAP_OPTIONS.phaseCount;
+  const rawDetailLevel = currentOptions.detailLevel as string | undefined;
+  const detailLevel = (rawDetailLevel === "auto" || !rawDetailLevel
+    ? DEFAULT_ROADMAP_OPTIONS.detailLevel
+    : rawDetailLevel) as "basic" | "detailed";
 
   const updateRoadmapOptions = (patch: Partial<RoadmapOptions>) => {
     onChange({
@@ -46,7 +49,6 @@ export function RoadmapBriefForm({
   };
 
   const detailOptions = [
-    { id: "auto" as const, title: t("actions.auto"), desc: t("options.auto.description") },
     ...DETAIL_OPTIONS.map((opt) => ({
       id: opt.id,
       title: t(opt.titleKey),
@@ -55,11 +57,9 @@ export function RoadmapBriefForm({
   ];
 
   const phaseLabel =
-    phaseCount === 0
-      ? t("actions.autoDecides")
-      : phaseCount >= MAX_PHASE_COUNT
-        ? t("roadmap.phaseCountMax", { count: phaseCount, max: MAX_PHASE_COUNT })
-        : t("roadmap.phaseCount", { count: phaseCount });
+    phaseCount >= MAX_PHASE_COUNT
+      ? t("roadmap.phaseCountMax", { count: phaseCount, max: MAX_PHASE_COUNT })
+      : t("roadmap.phaseCount", { count: phaseCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
@@ -85,7 +85,7 @@ export function RoadmapBriefForm({
             />
 
             <BriefChoiceField
-              columns={3}
+              columns={2}
               label={t("fields.detailLevelStep2")}
               options={detailOptions}
               value={detailLevel}

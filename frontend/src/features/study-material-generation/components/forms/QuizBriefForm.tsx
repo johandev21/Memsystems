@@ -47,11 +47,14 @@ export function QuizBriefForm({
   } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
-  const difficulty = value.difficulty ?? "auto";
-  const questionCount = value.questionCount ?? 0;
+  const rawDifficulty = value.difficulty as string | undefined;
+  const difficulty = (rawDifficulty === "auto" || !rawDifficulty ? "medium" : rawDifficulty) as
+    | "easy"
+    | "medium"
+    | "hard";
+  const questionCount = value.questionCount || 10;
 
   const difficultyOptions = [
-    { id: "auto", title: t("actions.auto"), desc: t("options.auto.description") },
     { id: "easy", title: t("quiz.difficulty.easy.title"), desc: t("quiz.difficulty.easy.desc") },
     {
       id: "medium",
@@ -62,11 +65,9 @@ export function QuizBriefForm({
   ] as const;
 
   const questionCountLabel =
-    questionCount === 0
-      ? t("actions.autoDecides")
-      : questionCount >= 50
-        ? t("quiz.questionCountMax", { count: questionCount, max: 50 })
-        : t("quiz.questionCount", { count: questionCount });
+    questionCount >= 50
+      ? t("quiz.questionCountMax", { count: questionCount, max: 50 })
+      : t("quiz.questionCount", { count: questionCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
@@ -84,7 +85,7 @@ export function QuizBriefForm({
               options={difficultyOptions}
               value={difficulty}
               onChange={(next) => patchFormData({ difficulty: next })}
-              columns={4}
+              columns={3}
             />
 
             <CountSelector

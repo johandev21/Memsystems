@@ -7,8 +7,7 @@ import { optionRowClass } from "./option-row";
 /**
  * Count selector shared by every generation dialog.
  *
- * Value contract: `0` means "Auto" — the model chooses the count from the
- * selected sources and the brief. Presets are explicit counts; "Custom"
+ * Value contract: explicit counts only (`>= min`); "Custom"
  * reveals a numeric input clamped to `[min, max]`.
  */
 
@@ -25,9 +24,9 @@ export const countInputClass =
 
 export interface CountSelectorProps {
   label: string;
-  /** Right-side status text, e.g. "10 Questions (Max 50)" or "Auto (AI decides)". */
+  /** Right-side status text, e.g. "10 Questions (Max 50)". */
   summary: string;
-  /** 0 = auto. */
+  /** Explicit count (>= min). */
   value: number;
   presets: readonly number[];
   max: number;
@@ -55,9 +54,8 @@ export function CountSelector({
 }: CountSelectorProps) {
   const { t } = useTranslation("generation");
 
-  const isAuto = value === 0;
-  const isPreset = !isAuto && presets.includes(value);
-  const isCustom = !isAuto && !isPreset;
+  const isPreset = presets.includes(value);
+  const isCustom = value > 0 && !isPreset;
   const fallback =
     customDefault ?? presets[Math.floor(presets.length / 2)] ?? Math.min(max, Math.max(min, 10));
   const [customText, setCustomText] = useState(() => (isCustom ? String(value) : String(fallback)));
@@ -85,7 +83,7 @@ export function CountSelector({
     onValueChange(next);
   };
 
-  const columns = presets.length + 2;
+  const columns = presets.length + 1;
 
   return (
     <div className="flex flex-col gap-2">
@@ -95,22 +93,8 @@ export function CountSelector({
       </div>
 
       <div className={cn("grid grid-cols-3 gap-2", COLUMN_CLASS[columns])}>
-        <button
-          type="button"
-          aria-pressed={isAuto}
-          disabled={disabled}
-          onClick={() => onValueChange(0)}
-          className={cn(
-            optionRowClass(isAuto),
-            "flex h-9 items-center justify-center gap-1.5 text-center text-sm",
-            isAuto ? "font-semibold" : "font-medium",
-          )}
-        >
-          {t("actions.auto")}
-        </button>
-
         {presets.map((preset) => {
-          const selected = !isAuto && !isCustom && value === preset;
+          const selected = !isCustom && value === preset;
           return (
             <button
               key={preset}

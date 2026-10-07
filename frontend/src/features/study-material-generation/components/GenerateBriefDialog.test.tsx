@@ -221,7 +221,7 @@ describe("GenerateBriefDialog", () => {
     );
   });
 
-  it("submits the Auto defaults for quiz when only instructions are provided", async () => {
+  it("submits the defaults for quiz when only instructions are provided", async () => {
     const user = userEvent.setup();
     render(
       <GenerateBriefDialog
@@ -239,7 +239,7 @@ describe("GenerateBriefDialog", () => {
       screen.getByPlaceholderText(
         "Provide specific focus areas, topics, or instructions for this quiz...",
       ),
-      "Auto defaults",
+      "Quiz defaults",
     );
 
     const generateBtn = screen.getByRole("button", { name: "Generate" });
@@ -252,9 +252,9 @@ describe("GenerateBriefDialog", () => {
       "nb-1",
       expect.objectContaining({
         kind: "quiz",
-        brief: "Auto defaults",
-        questionCount: 0,
-        difficulty: "auto",
+        brief: "Quiz defaults",
+        questionCount: 10,
+        difficulty: "medium",
       }),
       expect.anything(),
       expect.anything(),
@@ -396,7 +396,7 @@ describe("GenerateBriefDialog", () => {
     expect(screen.getByRole("button", { name: "Dark" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Generate" })).toBeNull();
 
-    // Auto is the default for every selector, so make explicit choices.
+    // Choose custom options for the slides wizard.
     await user.click(screen.getByRole("button", { name: "8" }));
     await user.click(screen.getByRole("button", { name: "Dark" }));
 
@@ -561,7 +561,7 @@ describe("GenerateBriefDialog", () => {
     expect(screen.queryByRole("button", { name: /Next Step/i })).toBeNull();
   });
 
-  it("walks the case study wizard across three steps and submits concepts with auto options", async () => {
+  it("walks the case study wizard across three steps and submits concepts with default options", async () => {
     const user = userEvent.setup();
     render(
       <GenerateBriefDialog
@@ -607,9 +607,9 @@ describe("GenerateBriefDialog", () => {
         kind: "case_study",
         brief: "Emergency department",
         caseStudyOptions: {
-          questionCount: 0,
+          questionCount: 4,
           focus: "Triage under scarcity",
-          comparePerspectives: "auto",
+          comparePerspectives: "single",
         },
       }),
       expect.anything(),

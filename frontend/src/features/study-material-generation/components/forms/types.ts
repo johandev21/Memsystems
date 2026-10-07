@@ -5,36 +5,36 @@ import type {
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 
 /**
- * Auto contract shared by every generation form: numeric counts use `0` to
- * mean "Auto" (the model chooses from the sources and the brief), and enum
- * options carry the literal `"auto"` member.
+ * Explicit-selection contract shared by every generation form: numeric counts
+ * are always explicit (`>= 1`) and enum options carry no `"auto"` member in
+ * the UI. The backend still accepts legacy `"auto"`/`0` values.
  */
 export interface RoadmapOptions {
-  /** 0 = auto. */
+  /** Explicit phase count. */
   phaseCount: number;
-  detailLevel: "basic" | "detailed" | "auto";
+  detailLevel: "basic" | "detailed";
 }
 
 export interface MindMapOptions {
-  /** 0 = auto. */
+  /** Explicit node count. */
   nodeCount: number;
   structure: "radial" | "hierarchical" | "organic";
-  colorGroups: boolean | "auto";
+  colorGroups: boolean;
   crossLinks: boolean;
-  detailLevel: "basic" | "detailed" | "auto";
+  detailLevel: "basic" | "detailed";
 }
 
 export interface SlidesOptions {
-  /** 0 = auto. */
+  /** Explicit slide count. */
   slideCount: number;
-  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm" | "auto";
-  detailLevel: "basic" | "detailed" | "auto";
+  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm";
+  detailLevel: "basic" | "detailed";
 }
 
 export interface PracticeProblemsOptions {
-  /** 0 = auto. */
+  /** Explicit problem count. */
   problemCount: number;
-  difficulty: "easy" | "medium" | "hard" | "auto";
+  difficulty: "easy" | "medium" | "hard";
 }
 
 export interface BriefFormData {
@@ -42,9 +42,9 @@ export interface BriefFormData {
   sourceIds: string[];
   folderId: string | null;
   model?: string;
-  /** 0 = auto. */
+  /** Explicit question count. */
   questionCount?: number;
-  difficulty?: "easy" | "medium" | "hard" | "auto";
+  difficulty?: "easy" | "medium" | "hard";
   roadmapOptions?: RoadmapOptions;
   mindMapOptions?: MindMapOptions;
   studyGuideOptions?: StudyGuideGenerationOptions;

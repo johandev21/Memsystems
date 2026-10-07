@@ -223,33 +223,33 @@ function StudyMaterialCapabilityGate({
 }
 
 /**
- * Every selector starts on "Auto": the model chooses from the selected
- * sources and the brief. Counts use 0 and enum options use "auto".
+ * Every selector starts on an explicit default so users always choose
+ * consciously. The backend still accepts legacy "auto"/0 values.
  */
 function getInitialBriefState(kind?: StudyMaterialKind | null): BriefFormData {
   return {
     brief: "",
     sourceIds: [],
     folderId: null,
-    questionCount: 0,
-    difficulty: "auto",
+    questionCount: 10,
+    difficulty: "medium",
     roadmapOptions: kind === "roadmap" ? { ...DEFAULT_ROADMAP_OPTIONS } : undefined,
     mindMapOptions:
       kind === "mind_map"
         ? {
-            nodeCount: 0,
+            nodeCount: 20,
             structure: "hierarchical",
-            colorGroups: "auto",
+            colorGroups: true,
             crossLinks: false,
-            detailLevel: "auto",
+            detailLevel: "basic",
           }
         : undefined,
     slidesOptions: kind === "slides" ? { ...DEFAULT_SLIDES_OPTIONS } : undefined,
-    studyGuideOptions: kind === "study_guide" ? { format: "auto", sectionCount: 0 } : undefined,
+    studyGuideOptions: kind === "study_guide" ? { format: "detailed", sectionCount: 6 } : undefined,
     practiceProblemsOptions:
-      kind === "practice_problems" ? { problemCount: 0, difficulty: "auto" } : undefined,
+      kind === "practice_problems" ? { problemCount: 6, difficulty: "medium" } : undefined,
     caseStudyOptions:
-      kind === "case_study" ? { questionCount: 0, focus: "", comparePerspectives: "auto" } : undefined,
+      kind === "case_study" ? { questionCount: 4, focus: "", comparePerspectives: "single" } : undefined,
   };
 }
 

@@ -18,6 +18,6 @@ export const DETAIL_OPTIONS = [
 ] as const;
 
 export const DEFAULT_ROADMAP_OPTIONS: RoadmapOptions = {
-  phaseCount: 0,
-  detailLevel: "auto",
+  phaseCount: 5,
+  detailLevel: "detailed",
 };

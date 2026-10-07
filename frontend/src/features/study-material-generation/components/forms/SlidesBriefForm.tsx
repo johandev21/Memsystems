@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/shared/utils/cn";
-import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefInstructionsStep } from "./brief-instructions-step";
@@ -40,9 +40,12 @@ export function SlidesBriefForm({
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: 3 });
 
-  const slideCount = value.slidesOptions?.slideCount ?? 0;
+  const slideCount = value.slidesOptions?.slideCount || 8;
   const theme = normalizeTheme(value.slidesOptions?.theme);
-  const detailLevel = value.slidesOptions?.detailLevel ?? "auto";
+  const rawDetail = value.slidesOptions?.detailLevel as string | undefined;
+  const detailLevel = (rawDetail === "auto" || rawDetail === undefined ? "basic" : rawDetail) as
+    | "basic"
+    | "detailed";
 
   const updateSlidesOptions = (patch: {
     slideCount?: number;
@@ -59,18 +62,14 @@ export function SlidesBriefForm({
   };
 
   const countLabel =
-    slideCount === 0
-      ? t("actions.autoDecides")
-      : slideCount >= MAX_SLIDE_COUNT
-        ? t("slides.countMax", { count: slideCount, max: MAX_SLIDE_COUNT })
-        : t("slides.count", { count: slideCount });
+    slideCount >= MAX_SLIDE_COUNT
+      ? t("slides.countMax", { count: slideCount, max: MAX_SLIDE_COUNT })
+      : t("slides.count", { count: slideCount });
 
   const themeOption = THEME_OPTIONS.find((opt) => opt.id === theme);
-  const themeDescription =
-    theme === "auto" ? t("actions.autoDecides") : themeOption ? t(themeOption.descKey) : null;
+  const themeDescription = themeOption ? t(themeOption.descKey) : null;
 
   const detailOptions = [
-    { id: "auto" as const, title: t("actions.auto"), desc: t("options.auto.description") },
     ...DETAIL_OPTIONS.map((opt) => ({
       id: opt.id,
       title: t(opt.titleKey),
@@ -108,34 +107,8 @@ export function SlidesBriefForm({
                 </Label>
                 <span className="text-xs font-medium text-text-tertiary">{themeDescription}</span>
               </div>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
                 <TooltipProvider delay={200}>
-                  <Tooltip>
-                    <TooltipTrigger
-                      type="button"
-                      aria-pressed={theme === "auto"}
-                      onClick={() => updateSlidesOptions({ theme: "auto" })}
-                      className={cn(
-                        "cursor-pointer rounded-2xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        theme === "auto"
-                          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3",
-                        "flex flex-col items-center gap-1.5 p-2 transition-all",
-                        theme === "auto" ? "font-semibold" : "font-medium",
-                      )}
-                    >
-                      <span className="relative flex h-7 w-full items-center justify-center overflow-hidden rounded-md border border-transparent bg-surface-3">
-                        <Sparkles className="size-3.5 text-primary" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-center text-sm font-semibold">
-                          {t("actions.auto")}
-                        </span>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>{t("options.auto.description")}</TooltipContent>
-                  </Tooltip>
-
                   {THEME_OPTIONS.map((opt) => {
                     const selected = theme === opt.id;
                     return (
@@ -207,7 +180,7 @@ export function SlidesBriefForm({
         <BriefStep>
           <BriefStepFields>
             <BriefChoiceField
-              columns={3}
+              columns={2}
               label={t("fields.detailLevelStep3")}
               options={detailOptions}
               value={detailLevel}

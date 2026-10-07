@@ -39,11 +39,14 @@ export function FlashcardBriefForm({
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: TOTAL_STEPS });
 
-  const difficulty = value.difficulty ?? "auto";
-  const cardCount = value.questionCount ?? 0;
+  const rawDifficulty = value.difficulty as string | undefined;
+  const difficulty = (rawDifficulty === "auto" || !rawDifficulty ? "medium" : rawDifficulty) as
+    | "easy"
+    | "medium"
+    | "hard";
+  const cardCount = value.questionCount || 15;
 
   const difficultyOptions = [
-    { id: "auto", title: t("actions.auto"), desc: t("options.auto.description") },
     {
       id: "easy",
       title: t("flashcards.difficulty.easy.title"),
@@ -62,11 +65,9 @@ export function FlashcardBriefForm({
   ] as const;
 
   const cardCountLabel =
-    cardCount === 0
-      ? t("actions.autoDecides")
-      : cardCount >= 50
-        ? t("flashcards.countMax", { count: cardCount, max: 50 })
-        : t("flashcards.count", { count: cardCount });
+    cardCount >= 50
+      ? t("flashcards.countMax", { count: cardCount, max: 50 })
+      : t("flashcards.count", { count: cardCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
@@ -84,7 +85,7 @@ export function FlashcardBriefForm({
               options={difficultyOptions}
               value={difficulty}
               onChange={(next) => patchFormData({ difficulty: next })}
-              columns={4}
+              columns={3}
             />
 
             <CountSelector

@@ -27,7 +27,6 @@ const QUESTION_PRESETS = [2, 4, 6] as const;
 const MAX_QUESTIONS = 10;
 
 const PERSPECTIVE_OPTIONS = [
-  { id: "auto", titleKey: "actions.auto", descKey: "options.auto.description" },
   {
     id: "single",
     titleKey: "caseStudy.perspective.single.title",
@@ -59,8 +58,11 @@ export function CaseStudyBriefForm({
     totalSteps: 3,
   });
 
-  const questionCount = value.caseStudyOptions?.questionCount ?? value.questionCount ?? 0;
-  const comparePerspectives = value.caseStudyOptions?.comparePerspectives ?? "auto";
+  const rawQuestionCount =
+    value.caseStudyOptions?.questionCount ?? value.questionCount;
+  const questionCount = rawQuestionCount || 4;
+  const rawCompare = value.caseStudyOptions?.comparePerspectives as string | undefined;
+  const comparePerspectives = (rawCompare === "auto" || !rawCompare ? "single" : rawCompare) as PerspectiveId;
   const [focus, setFocus] = useState(value.caseStudyOptions?.focus ?? "");
 
   const hasInstructions = value.brief.trim().length > 0 || focus.trim().length > 0;
@@ -92,10 +94,7 @@ export function CaseStudyBriefForm({
     desc: t(option.descKey),
   }));
 
-  const questionLabel =
-    questionCount === 0
-      ? t("actions.autoDecides")
-      : t("caseStudy.questionCount", { count: questionCount });
+  const questionLabel = t("caseStudy.questionCount", { count: questionCount });
 
   return (
     <div className="flex flex-col gap-5 font-sans text-text-tertiary">
@@ -125,7 +124,7 @@ export function CaseStudyBriefForm({
               label={t("caseStudy.perspectiveLabel")}
               options={perspectiveOptions}
               value={comparePerspectives}
-              columns={3}
+              columns={2}
               onChange={(next) => updateCaseStudyOptions({ comparePerspectives: next })}
             />
 
