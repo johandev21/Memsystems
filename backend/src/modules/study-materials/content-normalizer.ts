@@ -72,9 +72,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const toArray = (value: unknown): unknown[] =>
   Array.isArray(value) ? (value as unknown[]) : [];
 
-const arrayLength = (value: unknown): number =>
-  Array.isArray(value) ? value.length : 0;
-
 const stringify = (value: unknown): string =>
   typeof value === 'string' ? value : String(value);
 
@@ -270,9 +267,10 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
         (correctOptionIndex < 0 ||
           correctOptionIndex >= normalizedOptions.length)
       ) {
-        const explicitCorrectIdx = normalizedOptions.findIndex(
-          (opt) =>
-            /^(correct[oa]?s?|verdad(?:er[oa])?|right)/i.test(opt.explanation.trim()),
+        const explicitCorrectIdx = normalizedOptions.findIndex((opt) =>
+          /^(correct[oa]?s?|verdad(?:er[oa])?|right)/i.test(
+            opt.explanation.trim(),
+          ),
         );
         if (explicitCorrectIdx >= 0) {
           correctOptionIndex = explicitCorrectIdx;
@@ -286,11 +284,14 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
       ) {
         const currentOpt = normalizedOptions[correctOptionIndex];
         if (
-          /^(incorrect[oa]?s?|fals[oa]|not quite)/i.test(currentOpt.explanation.trim())
+          /^(incorrect[oa]?s?|fals[oa]|not quite)/i.test(
+            currentOpt.explanation.trim(),
+          )
         ) {
-          const realCorrectIdx = normalizedOptions.findIndex(
-            (opt) =>
-              /^(correct[oa]?s?|verdad(?:er[oa])?|right)/i.test(opt.explanation.trim()),
+          const realCorrectIdx = normalizedOptions.findIndex((opt) =>
+            /^(correct[oa]?s?|verdad(?:er[oa])?|right)/i.test(
+              opt.explanation.trim(),
+            ),
           );
           if (realCorrectIdx >= 0) {
             correctOptionIndex = realCorrectIdx;
@@ -303,7 +304,9 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
         (correctOptionIndex < 0 ||
           correctOptionIndex >= normalizedOptions.length)
       ) {
-        correctOptionIndex = Math.floor(Math.random() * normalizedOptions.length);
+        correctOptionIndex = Math.floor(
+          Math.random() * normalizedOptions.length,
+        );
       }
 
       if (!correctOptionId) {
@@ -990,32 +993,70 @@ export function generateTitle(
   let rawTitle = '';
   if (typeof record.title === 'string' && record.title.trim()) {
     rawTitle = record.title.trim();
-  } else {
+  }
+
+  if (!rawTitle) {
     switch (kind) {
       case 'quiz':
-        rawTitle = `Quiz (${arrayLength(record.questions)} questions)`;
-        break;
+        return 'Mastering Quiz Concepts';
       case 'simple_flashcard':
-        rawTitle = 'Flashcards';
-        break;
+        return 'Recalling Flashcard Concepts';
       case 'roadmap':
-        rawTitle = `Roadmap (${arrayLength(record.phases)} phases)`;
-        break;
+        return 'Navigating Learning Roadmap';
       case 'mind_map':
-        rawTitle = `Mind Map (${arrayLength(record.nodes)} nodes)`;
-        break;
+        return 'Mapping Core Concepts';
       case 'slides':
-        rawTitle = `Slides (${arrayLength(record.slides)} slides)`;
-        break;
+        return 'Exploring Slide Topics';
       case 'practice_problems':
-        rawTitle = `Practice Problems (${arrayLength(record.problems)} problems)`;
-        break;
+        return 'Solving Practice Problems';
       case 'case_study':
-        rawTitle = `Case Study (${arrayLength(record.questions)} questions)`;
-        break;
+        return 'Analyzing Case Study';
+      case 'study_guide':
+        return 'Understanding Study Guide';
       default:
-        rawTitle = 'Untitled';
+        return 'Mastering Key Concepts';
     }
   }
-  return slugifyTitle(rawTitle, kind);
+
+  // Strip wrapping quotes
+  let title = rawTitle.replace(/^["'`]+|["'`]+$/g, '').trim();
+
+  // Strip accidental trailing type suffixes (e.g., "-quiz", "-case-study", " (Quiz)")
+  const suffixMap: Record<StudyMaterialKind, string> = {
+    quiz: 'quiz',
+    simple_flashcard: 'flashcards?',
+    roadmap: 'roadmap',
+    mind_map: 'mind[-_ ]*map',
+    slides: 'slides?',
+    study_guide: 'study[-_ ]*guide',
+    practice_problems: 'practice[-_ ]*problems?',
+    case_study: 'case[-_ ]*study',
+  };
+  const suffixPattern = suffixMap[kind];
+  if (suffixPattern) {
+    const suffixRegex = new RegExp(
+      `(?:[-_\\s]+${suffixPattern}|\\s*\\(${suffixPattern}\\))$`,
+      'i',
+    );
+    title = title.replace(suffixRegex, '').trim();
+  }
+
+  // Convert raw kebab-case or snake_case without spaces to Title Case
+  if (!title.includes(' ') && (title.includes('-') || title.includes('_'))) {
+    title = title
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
+
+  // Collapse consecutive whitespace
+  title = title.replace(/\s+/g, ' ').trim();
+
+  // Cap at 50 characters as specified by the Bloom Objective convention
+  if (title.length > 50) {
+    title = title.slice(0, 50).trim();
+  }
+
+  return title || 'Mastering Key Concepts';
 }

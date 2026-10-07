@@ -42,7 +42,7 @@ describe('slides content', () => {
     expect(normalized.design.background).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
 
-  it('validates through the kind registry and generates a -slides title', () => {
+  it('validates through the kind registry and generates a natural title', () => {
     const normalized = normalizeContent('slides', {
       title: 'Nietzsche Core Ideas',
       slides: [{ id: 's1', title: 'Opening', bullets: ['One'] }],
@@ -51,9 +51,7 @@ describe('slides content', () => {
       slides: unknown[];
     };
     expect(validated.slides).toHaveLength(1);
-    expect(generateTitle('slides', normalized)).toBe(
-      'nietzsche-core-ideas-slides',
-    );
+    expect(generateTitle('slides', normalized)).toBe('Nietzsche Core Ideas');
     // The strict schema still rejects empty decks; the resolver is what
     // provides graceful fallbacks via validateContent/normalizeContent.
     expect(() => SlidesContent.parse({ title: 'x', slides: [] })).toThrow();

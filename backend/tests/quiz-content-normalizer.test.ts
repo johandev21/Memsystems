@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  generateTitle,
   normalizeQuizContent,
   sanitizeExplanation,
 } from '../src/modules/study-materials/content-normalizer';
@@ -66,12 +67,12 @@ describe('quiz answer identity', () => {
     expect(
       sanitizeExplanation('Incorrecto: Esa limitación describe IA reactiva.'),
     ).toBe('Esa limitación describe IA reactiva.');
-    expect(
-      sanitizeExplanation('o: esa limitación describe IA reactiva'),
-    ).toBe('esa limitación describe IA reactiva');
-    expect(
-      sanitizeExplanation('o. esa limitación describe IA reactiva'),
-    ).toBe('esa limitación describe IA reactiva');
+    expect(sanitizeExplanation('o: esa limitación describe IA reactiva')).toBe(
+      'esa limitación describe IA reactiva',
+    );
+    expect(sanitizeExplanation('o. esa limitación describe IA reactiva')).toBe(
+      'esa limitación describe IA reactiva',
+    );
   });
 
   it('recognizes Spanish explanation indicators during normalization and cleans explanations', () => {
@@ -83,7 +84,10 @@ describe('quiz answer identity', () => {
           prompt: '¿Cuál es correcta?',
           options: [
             { text: 'Primera', explanation: 'Incorrecto: no es verdad.' },
-            { text: 'Segunda', explanation: 'Correcto: es la definición exacta.' },
+            {
+              text: 'Segunda',
+              explanation: 'Correcto: es la definición exacta.',
+            },
           ],
         },
       ],
@@ -94,5 +98,60 @@ describe('quiz answer identity', () => {
     expect(content.questions[0].options[1].explanation).toBe(
       'es la definición exacta.',
     );
+  });
+});
+
+describe('generateTitle Bloom Objective naming', () => {
+  it('preserves natural Bloom Objective titles in Title Case', () => {
+    expect(generateTitle('quiz', { title: 'Mastering Socratic Ethics' })).toBe(
+      'Mastering Socratic Ethics',
+    );
+    expect(
+      generateTitle('simple_flashcard', { title: 'Recalling Key Organelles' }),
+    ).toBe('Recalling Key Organelles');
+    expect(
+      generateTitle('roadmap', {
+        title: 'Navigating Modern European History',
+      }),
+    ).toBe('Navigating Modern European History');
+  });
+
+  it('strips accidental type suffixes', () => {
+    expect(
+      generateTitle('quiz', { title: 'Mastering Socratic Ethics-quiz' }),
+    ).toBe('Mastering Socratic Ethics');
+    expect(
+      generateTitle('quiz', { title: 'Mastering Socratic Ethics (Quiz)' }),
+    ).toBe('Mastering Socratic Ethics');
+    expect(
+      generateTitle('slides', {
+        title: 'Exploring Nietzsche Philosophy-slides',
+      }),
+    ).toBe('Exploring Nietzsche Philosophy');
+  });
+
+  it('converts raw kebab-case or snake_case titles to Title Case', () => {
+    expect(
+      generateTitle('case_study', { title: 'clinic-triage-case-study' }),
+    ).toBe('Clinic Triage');
+    expect(
+      generateTitle('mind_map', { title: 'operating_systems_mind_map' }),
+    ).toBe('Operating Systems');
+  });
+
+  it('caps long titles to 50 characters', () => {
+    const longTitle =
+      'Mastering the Comprehensive Foundations of Advanced Differential Calculus';
+    const result = generateTitle('quiz', { title: longTitle });
+    expect(result.length).toBeLessThanOrEqual(50);
+    expect(result).toBe('Mastering the Comprehensive Foundations of Advance');
+  });
+
+  it('provides default Bloom Objective title when title is empty or missing', () => {
+    expect(generateTitle('quiz', {})).toBe('Mastering Quiz Concepts');
+    expect(generateTitle('simple_flashcard', { title: '   ' })).toBe(
+      'Recalling Flashcard Concepts',
+    );
+    expect(generateTitle('mind_map', null)).toBe('Mapping Core Concepts');
   });
 });

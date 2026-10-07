@@ -247,9 +247,9 @@ describe('practice problems normalizer', () => {
     expect(normalized.problems[0].id).toBeTruthy();
   });
 
-  it('generates a practice-problems title suffix and supports save/reopen content shape', () => {
+  it('generates a practice-problems title and supports save/reopen content shape', () => {
     expect(generateTitle('practice_problems', { title: 'Newton Laws' })).toBe(
-      'newton-laws-practice-problems',
+      'Newton Laws',
     );
     const reopened = validateContent('practice_problems', validSet);
     expect(reopened).toMatchObject({ title: validSet.title });

@@ -221,9 +221,9 @@ describe('case study normalizer', () => {
     expect(normalized.scenario.isFictional).toBe(true);
   });
 
-  it('generates a case-study title suffix and supports reopen', () => {
+  it('generates a case-study title and supports reopen', () => {
     expect(generateTitle('case_study', { title: 'Clinic Triage' })).toBe(
-      'clinic-triage-case-study',
+      'Clinic Triage',
     );
     const reopened = validateContent('case_study', validCase);
     expect(reopened).toMatchObject({ title: validCase.title });
