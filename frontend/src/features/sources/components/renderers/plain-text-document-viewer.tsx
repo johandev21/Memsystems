@@ -119,7 +119,7 @@ export function PlainTextDocumentViewer({
       return (
         <div
           ref={containerRef}
-          className="w-full relative font-mono text-sm h-(--virtual-total)"
+          className="w-full relative font-sans text-sm h-(--virtual-total)"
           style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
         >
           {virtualItems.map((virtualRow) => {
@@ -153,7 +153,7 @@ export function PlainTextDocumentViewer({
   }
 
   return (
-    <div ref={containerRef} className="w-full space-y-3 font-mono text-sm">
+    <div ref={containerRef} className="w-full space-y-3 font-sans text-sm">
       {blocks.map((block) => {
         const isHighlighted = highlightedIndex === block.index;
         return (

@@ -99,4 +99,42 @@ describe("PlainTextDocumentViewer", () => {
     expect(screen.getByText(/Block 1:/)).toBeTruthy();
     expect(container.querySelector("[data-text-block-index]")).not.toBeNull();
   });
+
+  it("applies font-sans (Poppins default font family) instead of font-mono", () => {
+    // Static mode
+    const { container: staticContainer } = render(
+      <PlainTextDocumentViewer content="Short text for testing font." />,
+    );
+    const staticDiv = staticContainer.firstElementChild;
+    expect(staticDiv?.classList.contains("font-sans")).toBe(true);
+    expect(staticDiv?.classList.contains("font-mono")).toBe(false);
+
+    // Virtualized mode
+    const paragraphs = Array.from({ length: 30 }, (_, i) => `Line ${i + 1}`);
+    const scrollContainer = document.createElement("div");
+    Object.defineProperty(scrollContainer, "clientHeight", { value: 600 });
+    Object.defineProperty(scrollContainer, "scrollHeight", { value: 2000 });
+    scrollContainer.getBoundingClientRect = () => ({
+      width: 800,
+      height: 600,
+      top: 0,
+      left: 0,
+      bottom: 600,
+      right: 800,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    const { container: virtContainer } = render(
+      <PlainTextDocumentViewer
+        content={paragraphs.join("\n\n")}
+        scrollElement={scrollContainer}
+      />,
+    );
+    const virtDiv = virtContainer.firstElementChild;
+    expect(virtDiv?.classList.contains("font-sans")).toBe(true);
+    expect(virtDiv?.classList.contains("font-mono")).toBe(false);
+  });
 });
+
