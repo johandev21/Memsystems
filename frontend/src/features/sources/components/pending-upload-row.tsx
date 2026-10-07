@@ -16,6 +16,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import type { PendingSourceUpload } from "../hooks/use-upload-store";
+import { SourceFavicon } from "./sources-list/source-icon";
 import { processingStageLabel } from "../utils/source-processing";
 import { isYouTubeUrl } from "../utils/detect-document-type";
 
@@ -63,20 +64,43 @@ interface PendingUploadRowProps {
   onCancel: (id: string) => void;
 }
 
+function PendingUploadKindIcon({
+  upload,
+  className,
+}: {
+  upload: PendingSourceUpload;
+  className?: string;
+}) {
+  if (upload.kind === "url" && upload.url) {
+    const isYoutube = isYouTubeUrl(upload.url);
+    const FallbackIcon = isYoutube ? Video : Globe;
+    return (
+      <SourceFavicon
+        url={upload.url}
+        title={upload.title}
+        className={className}
+        fallback={<FallbackIcon className={className} />}
+      />
+    );
+  }
+  const Icon = getKindIcon(upload);
+  return createElement(Icon, { className });
+}
+
 function UploadStatusIcon({
   isError,
   isTerminal,
-  Icon,
+  upload,
 }: {
   isError: boolean;
   isTerminal: boolean;
-  Icon: React.ComponentType<{ className?: string }>;
+  upload: PendingSourceUpload;
 }) {
   if (isError) {
     return <AlertCircle className="size-4 shrink-0 text-destructive" />;
   }
   if (isTerminal) {
-    return <Icon className="size-4 shrink-0 text-muted-foreground" />;
+    return <PendingUploadKindIcon upload={upload} className="size-4 shrink-0 text-muted-foreground" />;
   }
   return <Loader2 className="size-4 shrink-0 animate-spin text-primary" />;
 }
@@ -93,13 +117,16 @@ function UploadHeader({
   onCancel: (id: string) => void;
 }) {
   const { t } = useTranslation("sources");
-  const Icon = getKindIcon(upload);
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <UploadStatusIcon isError={isError} isTerminal={isTerminal} Icon={Icon} />
-        {!isTerminal &&
-          createElement(Icon, { className: "size-3.5 shrink-0 text-muted-foreground" })}
+        <UploadStatusIcon isError={isError} isTerminal={isTerminal} upload={upload} />
+        {!isTerminal && (
+          <PendingUploadKindIcon
+            upload={upload}
+            className="size-3.5 shrink-0 text-muted-foreground"
+          />
+        )}
         <span className="truncate text-xs font-medium text-foreground">{upload.title}</span>
       </div>
       <button

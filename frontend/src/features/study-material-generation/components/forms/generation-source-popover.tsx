@@ -8,20 +8,13 @@ import {
   generationSourceIconClass,
   generationSourceOptionClass,
 } from "./option-row";
+import { cn } from "@/shared/utils/cn";
+import { SourceFavicon } from "@/features/sources/components/sources-list/source-icon";
 
-/**
- * The box is inverted (primary-foreground on a primary row) so it stays
- * visible on the solid selected background. The `dark:` counterparts are
- * required: the base Checkbox ships `dark:data-checked:bg-primary`, which
- * has higher specificity than a bare `data-checked:` rule and would
- * otherwise repaint the box with the row color in dark mode (invisible
- * checkbox + invisible check). Matching the variant stack lets tailwind-merge
- * drop the base dark rule instead of fighting it in the cascade.
- */
 const CHECKED_SOURCE_CHECKBOX_CLASS =
   "border-primary-foreground/40 data-checked:border-primary-foreground data-checked:bg-primary-foreground data-checked:text-primary dark:border-primary-foreground/60 dark:data-checked:border-primary-foreground dark:data-checked:bg-primary-foreground dark:data-checked:text-primary";
 
-export type GenerationSource = { id: string; title: string; kind: string };
+export type GenerationSource = { id: string; title: string; kind: string; url?: string | null };
 
 interface GenerationSourcePopoverProps {
   sources: GenerationSource[];
@@ -128,8 +121,13 @@ export function GenerationSourcePopover({
                   className={generationSourceOptionClass(checked)}
                 >
                   <span className="flex min-w-0 items-center gap-2 truncate pr-2">
-                    {source.kind === "web" ? (
-                      <Globe className={generationSourceIconClass(checked)} />
+                    {source.kind === "web" || source.kind === "url" ? (
+                      <SourceFavicon
+                        url={source.url}
+                        title={source.title}
+                        className={cn(generationSourceIconClass(checked), "object-contain rounded-xs")}
+                        fallback={<Globe className={generationSourceIconClass(checked)} />}
+                      />
                     ) : source.kind === "file" ? (
                       <FileText className={generationSourceIconClass(checked)} />
                     ) : (

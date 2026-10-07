@@ -8,11 +8,23 @@ import {
   Link2,
   Presentation,
   Video,
+  type LucideIcon,
 } from "lucide-react";
 import type { Source } from "../../api/sources";
 import { isYouTubeUrl } from "../../utils/detect-document-type";
 
-export function getSourceIcon(source: Source) {
+export function getFaviconUrl(urlStr?: string | null, size = 32): string | null {
+  if (!urlStr) return null;
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=${size}`;
+  } catch {
+    return null;
+  }
+}
+
+export function getSourceIcon(source: Source): LucideIcon {
   if (
     source.modality === "video" ||
     source.contentType?.startsWith("video/") ||

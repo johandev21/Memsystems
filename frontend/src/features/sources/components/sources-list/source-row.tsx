@@ -1,4 +1,3 @@
-import { createElement } from "react";
 import type React from "react";
 import {
   AlertCircle,
@@ -36,7 +35,7 @@ import {
   sourceQualityCorrectiveAction,
   sourceQualityReasonLabel,
 } from "../../utils/source-processing";
-import { getSourceIcon } from "./source-icon";
+import { SourceIcon } from "./source-icon";
 
 export interface SourceRowProps {
   source: Source;
@@ -184,10 +183,7 @@ export function SourceRow({
       ) : degraded ? (
         <AlertTriangle className="size-(--tree-icon-size) shrink-0 text-warning" strokeWidth={1.7} />
       ) : (
-        createElement(getSourceIcon(source), {
-          className: "size-(--tree-icon-size) shrink-0",
-          strokeWidth: 1.7,
-        })
+        <SourceIcon source={source} className="size-(--tree-icon-size) shrink-0" />
       )}
       {isEditing ? (
         <InlineRename

@@ -45,6 +45,8 @@ import {
   useIsAnyOtherCitationActive,
 } from "@/shared/citations/citation-hover-group";
 import { useIsTouchDevice } from "@/shared/citations/use-touch-device";
+import { cn } from "@/shared/utils/cn";
+import { SourceFavicon } from "@/features/sources/components/sources-list/source-icon";
 
 function CitationKindIcon({
   kind,
@@ -57,6 +59,22 @@ function CitationKindIcon({
 }) {
   const normalized = (kind ?? "").toLowerCase();
   const isYoutube = Boolean(url && /youtube\.com|youtu\.be/i.test(url));
+
+  if (url && (normalized === "url" || normalized === "web" || isYoutube)) {
+    return (
+      <SourceFavicon
+        url={url}
+        className={cn("object-contain rounded-xs", className)}
+        fallback={
+          isYoutube ? (
+            <Video className={className} aria-hidden="true" />
+          ) : (
+            <Globe className={className} aria-hidden="true" />
+          )
+        }
+      />
+    );
+  }
 
   if (normalized === "video" || isYoutube) return <Video className={className} aria-hidden="true" />;
   if (normalized === "audio") return <Headphones className={className} aria-hidden="true" />;

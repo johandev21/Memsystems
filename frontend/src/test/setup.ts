@@ -82,4 +82,36 @@ if (typeof window !== "undefined") {
   if (typeof window.scrollTo !== "function") {
     window.scrollTo = () => {};
   }
+
+  if (typeof window.localStorage === "undefined" || !window.localStorage.clear) {
+    const store: Record<string, string> = {};
+    const mockStorage = {
+      getItem: (key: string) => store[key] ?? null,
+      setItem: (key: string, val: string) => {
+        store[key] = String(val);
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+      clear: () => {
+        for (const k of Object.keys(store)) {
+          delete store[k];
+        }
+      },
+      key: (i: number) => Object.keys(store)[i] ?? null,
+      get length() {
+        return Object.keys(store).length;
+      },
+    };
+    Object.defineProperty(window, "localStorage", {
+      value: mockStorage,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(globalThis, "localStorage", {
+      value: mockStorage,
+      writable: true,
+      configurable: true,
+    });
+  }
 }

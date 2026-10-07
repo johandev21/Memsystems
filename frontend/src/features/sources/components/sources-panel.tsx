@@ -53,6 +53,7 @@ import {
   SOURCE_POLL_INTERVAL_MS,
 } from "../utils/source-processing";
 import { SourcesList } from "./sources-list/sources-list";
+import { SourceIcon } from "./sources-list/source-icon";
 import { useSourceMutations } from "./sources-list/use-source-mutations";
 import { SourcesPanelHeader } from "@/features/notebooks/components/notebook-workspace/sources-panel-header";
 
@@ -642,6 +643,8 @@ function SourcesDragPreview({
     <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground shadow-lg">
       {isFolder ? (
         <Folder className="size-4 shrink-0 text-muted-foreground" />
+      ) : source ? (
+        <SourceIcon source={source} className="size-4 shrink-0 text-muted-foreground" />
       ) : (
         <FileText className="size-4 shrink-0 text-muted-foreground" />
       )}
