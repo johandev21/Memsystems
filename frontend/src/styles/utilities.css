@@ -86,6 +86,14 @@
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
 }
 
+@utility pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+@utility pt-safe-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 @utility bg-theme-preview {
   background: var(--tg-bg);
 }

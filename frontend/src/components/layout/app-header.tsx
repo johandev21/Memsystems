@@ -4,7 +4,7 @@ import { SettingsLink } from "./settings-link";
 
 export function AppHeader() {
   return (
-    <header className="flex items-center justify-center bg-background px-6 py-2">
+    <header className="flex items-center justify-center bg-background px-6 pb-2 pt-safe">
       <div className="flex w-full max-w-360 items-center justify-between px-6">
         <Link to="/" className="flex cursor-pointer items-center gap-1.5 select-none">
           <Logo className="size-6 text-foreground" />

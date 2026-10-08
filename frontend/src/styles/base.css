@@ -25,6 +25,13 @@
     scrollbar-width: thin;
   }
 
+  html {
+    font-family: var(--font-primary);
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-primary);
@@ -36,10 +43,7 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     text-wrap: pretty;
-  }
-
-  html {
-    font-family: var(--font-primary);
+    overscroll-behavior: none;
   }
 
   :where(h1, h2, h3, h4, h5, h6) {
@@ -50,6 +54,25 @@
 
   :where(button, input, textarea, select) {
     font: inherit;
+  }
+
+  /* Prevent iOS Safari auto-zoom on focus by enforcing 16px min size on coarse pointers */
+  @media (pointer: coarse) {
+    :where(input, textarea, select) {
+      font-size: 16px;
+    }
+  }
+
+  /* Optimize touch responsiveness and eliminate tap delay */
+  :where(button, a, [role="button"], [role="tab"], .tappable) {
+    touch-action: manipulation;
+  }
+
+  /* Prevent long-press text selection and callouts on controls */
+  :where(button, [role="button"], [role="tab"]) {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 }
 
@@ -104,10 +127,3 @@ input[type="password"]::-ms-clear {
   display: none;
 }
 
-/* Remove tap highlight on touch devices */
-button,
-a,
-input,
-textarea {
-  -webkit-tap-highlight-color: transparent;
-}
