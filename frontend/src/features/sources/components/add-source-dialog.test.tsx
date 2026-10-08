@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AddSourceDialog } from "./add-source-dialog";
+import { FileUploadMode } from "./file-upload-mode";
 import { TextInputMode } from "./text-input-mode";
 import { UrlInputMode } from "./url-input-mode";
 
@@ -201,4 +202,38 @@ describe("AddSourceDialog & Source Modes Layout & Transcript Handling", () => {
     expect(screen.getByText("Paste Text")).not.toBeNull();
     expect(screen.getByText("Add notes or copied text directly.")).not.toBeNull();
   });
+
+  describe("FileUploadMode", () => {
+    it("does not include hover brightness on dashed border and only highlights when dragging files", () => {
+      render(
+        <FileUploadMode
+          onSelectUrlMode={vi.fn()}
+          onSelectTextMode={vi.fn()}
+          onUploadFile={vi.fn()}
+          isUploading={false}
+          busy={false}
+        />,
+      );
+
+      const dropzone = screen.getByText("Drop your files here").closest(".border-dashed");
+      expect(dropzone).not.toBeNull();
+
+      // Normal state: dashed border is subtle without hover bright classes
+      expect(dropzone?.className).toContain("border-border/60");
+      expect(dropzone?.className).toContain("bg-muted/20");
+      expect(dropzone?.className).not.toContain("hover:border-primary/40");
+      expect(dropzone?.className).not.toContain("hover:bg-primary/5");
+
+      // When dragging files over: border and background change
+      fireEvent.dragEnter(dropzone!);
+      expect(dropzone?.className).toContain("border-primary");
+      expect(dropzone?.className).toContain("bg-primary/5");
+
+      // When drag leaves: returns to non-active state
+      fireEvent.dragLeave(dropzone!);
+      expect(dropzone?.className).toContain("border-border/60");
+      expect(dropzone?.className).not.toContain("border-primary");
+    });
+  });
 });
+

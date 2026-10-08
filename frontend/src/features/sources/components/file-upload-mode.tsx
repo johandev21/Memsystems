@@ -78,7 +78,7 @@ export function FileUploadMode({
       className={`relative flex flex-col items-center justify-center border-2 border-dashed py-10 px-6 rounded-xl ${
         isDragging
           ? "border-primary bg-primary/5"
-          : "border-border/60 bg-muted/20 hover:bg-primary/5 hover:border-primary/40"
+          : "border-border/60 bg-muted/20"
       }`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
