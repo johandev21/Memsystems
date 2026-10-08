@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ArrowUpDown,
   ChevronLeft,
-  ChevronRight,
   Folder,
   FolderInput,
   FolderPlus,
@@ -133,54 +132,83 @@ export function MobileLibraryView({
     <div className="flex flex-col gap-3 pb-24 w-full">
       {/* Mobile Navigation Header (Ticket 02) */}
       <header className="sticky top-0 z-20 flex flex-col gap-2 bg-background/95 pb-2 pt-1.5 backdrop-blur-xs w-full">
-        <div className="flex items-center justify-between gap-2 w-full">
-          {activeFolderId ? (
-            <button
-              type="button"
-              onClick={() => onOpenFolder(parentFolder?.id ?? null)}
-              className="group inline-flex items-center gap-1.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-97 touch-manipulation cursor-pointer"
-              aria-label={t("library.back", "Back")}
-            >
-              <ChevronLeft className="size-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
-              <span className="max-w-[180px] truncate" aria-hidden="true">
-                {parentFolder?.name ?? t("library.library")}
-              </span>
-            </button>
-          ) : (
-            <div className="text-sm font-medium text-muted-foreground">
-              {t("library.library")}
+        {activeFolderId ? (
+          <>
+            <div className="flex items-center justify-between gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => onOpenFolder(parentFolder?.id ?? null)}
+                className="group inline-flex items-center gap-1.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-97 touch-manipulation cursor-pointer"
+                aria-label={t("library.back", "Back")}
+              >
+                <ChevronLeft className="size-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+                <span className="max-w-[180px] truncate" aria-hidden="true">
+                  {parentFolder?.name ?? t("library.library")}
+                </span>
+              </button>
+
+              <Select
+                items={sortOptions}
+                value={sortKey}
+                onValueChange={(value) => onSortChange(value as LibrarySortKey)}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="h-8 gap-1.5 rounded-full px-2.5 text-xs touch-manipulation shrink-0"
+                  aria-label={t("library.sort.aria")}
+                >
+                  <ArrowUpDown className="size-3.5" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-56" align="end">
+                  {sortOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="items-start py-2">
+                      <span className="flex flex-col gap-0.5">
+                        <span className="font-medium">{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{option.description}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          <Select
-            items={sortOptions}
-            value={sortKey}
-            onValueChange={(value) => onSortChange(value as LibrarySortKey)}
-          >
-            <SelectTrigger
-              size="sm"
-              className="h-8 gap-1.5 rounded-full px-2.5 text-xs touch-manipulation"
-              aria-label={t("library.sort.aria")}
+            <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">
+              {activeFolder?.name ?? t("library.library")}
+            </h1>
+          </>
+        ) : (
+          <div className="flex items-center justify-between gap-2 w-full">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">
+              {t("library.library")}
+            </h1>
+
+            <Select
+              items={sortOptions}
+              value={sortKey}
+              onValueChange={(value) => onSortChange(value as LibrarySortKey)}
             >
-              <ArrowUpDown className="size-3.5" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="w-56" align="end">
-              {sortOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value} className="items-start py-2">
-                  <span className="flex flex-col gap-0.5">
-                    <span className="font-medium">{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">
-          {activeFolder?.name ?? t("library.library")}
-        </h1>
+              <SelectTrigger
+                size="sm"
+                className="h-8 gap-1.5 rounded-full px-2.5 text-xs touch-manipulation shrink-0"
+                aria-label={t("library.sort.aria")}
+              >
+                <ArrowUpDown className="size-3.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="w-56" align="end">
+                {sortOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="items-start py-2">
+                    <span className="flex flex-col gap-0.5">
+                      <span className="font-medium">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </header>
 
       {/* Tactile Item Tiles List (Ticket 03) */}
@@ -404,11 +432,9 @@ export function MobileLibraryView({
                       setIsCreateOpen(false);
                       onCreateNotebook();
                     }}
-                    className="flex w-full items-center gap-3.5 rounded-2xl border border-border/40 bg-card p-3.5 text-left transition-colors hover:bg-muted active:scale-95 touch-manipulation cursor-pointer"
+                    className="flex w-full items-center gap-3.5 rounded-2xl border border-border/20 bg-card p-3.5 text-left transition-colors hover:bg-muted active:scale-95 touch-manipulation cursor-pointer"
                   >
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <NotebookPen className="size-5" />
-                    </div>
+                    <NotebookPen className="size-10 shrink-0 text-foreground" />
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-foreground">
                         {t("library.create.notebook")}
@@ -427,11 +453,9 @@ export function MobileLibraryView({
                       setIsCreateOpen(false);
                       onCreateFolder();
                     }}
-                    className="flex w-full items-center gap-3.5 rounded-2xl border border-border/40 bg-card p-3.5 text-left transition-colors hover:bg-muted active:scale-95 touch-manipulation cursor-pointer"
+                    className="flex w-full items-center gap-3.5 rounded-2xl border border-border/20 bg-card p-3.5 text-left transition-colors hover:bg-muted active:scale-95 touch-manipulation cursor-pointer"
                   >
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <FolderPlus className="size-5" />
-                    </div>
+                    <FolderPlus className="size-10 shrink-0 text-foreground" />
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-foreground">
                         {t("library.create.folder")}
@@ -464,16 +488,14 @@ function MobileFolderTile({
   return (
     <div
       role="listitem"
-      className="group relative flex w-full items-center justify-between rounded-2xl border border-border/40 bg-card p-3 shadow-2xs transition-transform transition-colors hover:bg-muted/40 active:scale-95 duration-150 ease-out touch-manipulation select-none"
+      className="group relative flex w-full items-center justify-between rounded-2xl border border-border/20 bg-card p-3 shadow-2xs transition-transform transition-colors hover:bg-muted/40 active:scale-95 duration-150 ease-out touch-manipulation select-none"
     >
       <button
         type="button"
         onClick={onOpen}
         className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
       >
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Folder className="size-5 fill-primary/20" />
-        </div>
+        <Folder className="size-10 shrink-0 text-primary/70 fill-primary/15" />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-base font-medium leading-snug text-foreground">
             {folder.name}
@@ -496,7 +518,6 @@ function MobileFolderTile({
         >
           <MoreVertical className="size-4" />
         </button>
-        <ChevronRight className="size-4 text-muted-foreground/40 shrink-0 mr-1" />
       </div>
     </div>
   );
@@ -515,7 +536,7 @@ function MobileNotebookTile({
   return (
     <div
       role="listitem"
-      className="group relative flex w-full items-center justify-between rounded-2xl border border-border/40 bg-card p-3 shadow-2xs transition-transform transition-colors hover:bg-muted/40 active:scale-95 duration-150 ease-out touch-manipulation select-none"
+      className="group relative flex w-full items-center justify-between rounded-2xl border border-border/20 bg-card p-3 shadow-2xs transition-transform transition-colors hover:bg-muted/40 active:scale-95 duration-150 ease-out touch-manipulation select-none"
     >
       <button
         type="button"
