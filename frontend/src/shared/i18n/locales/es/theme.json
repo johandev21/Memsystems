@@ -11,16 +11,12 @@
   },
   "grid": {
     "ariaLabel": "Tema",
-    "hint_one": "{{count}} paleta · cada una con modo claro y oscuro",
-    "hint_many": "{{count}} paletas · cada una con modo claro y oscuro",
-    "hint_other": "{{count}} paletas · cada una con modo claro y oscuro",
     "selected": "{{name}}, seleccionado",
     "title": "Temas"
   },
   "scheme": {
     "dark": "Oscuro",
     "light": "Claro",
-    "summary": "Claro / Oscuro / Sistema",
     "system": "Sistema",
     "title": "Esquema de color"
   }

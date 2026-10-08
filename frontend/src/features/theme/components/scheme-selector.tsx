@@ -17,10 +17,7 @@ export function SchemeSelector() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h3 className="text-base font-semibold tracking-tight">{t("scheme.title")}</h3>
-        <span className="text-xs text-muted-foreground">{t("scheme.summary")}</span>
-      </div>
+      <h3 className="text-base font-semibold tracking-tight">{t("scheme.title")}</h3>
       <div
         className="grid grid-cols-1 gap-3 sm:grid-cols-3"
         role="radiogroup"

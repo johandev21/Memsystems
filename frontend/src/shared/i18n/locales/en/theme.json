@@ -11,15 +11,12 @@
   },
   "grid": {
     "ariaLabel": "Theme",
-    "hint_one": "{{count}} palette · each has light & dark",
-    "hint_other": "{{count}} palettes · each has light & dark",
     "selected": "{{name}}, selected",
     "title": "Themes"
   },
   "scheme": {
     "dark": "Dark",
     "light": "Light",
-    "summary": "Light / Dark / System",
     "system": "System",
     "title": "Color scheme"
   }
