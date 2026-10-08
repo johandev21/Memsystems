@@ -122,9 +122,9 @@ export function FolderLibrary({
       };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 w-full">
       {/* Mobile-Native View (sm:hidden) */}
-      <div className="sm:hidden">
+      <div className="sm:hidden w-full">
         <MobileLibraryView
           folders={folders}
           notebooks={notebooks}
@@ -146,7 +146,7 @@ export function FolderLibrary({
       </div>
 
       {/* Desktop View (hidden sm:flex) */}
-      <div className="hidden sm:flex flex-col gap-4">
+      <div className="hidden sm:flex flex-col gap-4 w-full">
         {activeFolder && <Breadcrumb folders={breadcrumbs} onOpenFolder={onOpenFolder} />}
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-foreground">

@@ -8,7 +8,7 @@ import { cn } from "@/shared/utils/cn";
 
 function NotebookHeaderSkeleton() {
   return (
-    <header className="flex h-11 sm:h-12 items-center justify-between px-3 sm:px-4 lg:px-6 bg-background shrink-0 gap-2">
+    <header className="flex h-11 sm:h-12 items-center justify-between px-3 sm:px-6 lg:px-8 bg-background shrink-0 gap-2">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
         <Logo className="size-6 text-foreground" />
         <span className="hidden sm:inline text-muted-foreground/40 font-mono text-xs select-none shrink-0">

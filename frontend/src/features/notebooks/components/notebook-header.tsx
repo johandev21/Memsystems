@@ -9,7 +9,7 @@ export function NotebookHeader({ id }: { id: string }) {
   const folderId = notebook?.folderId;
 
   return (
-    <header className="flex h-11 sm:h-12 items-center justify-between px-3 sm:px-4 lg:px-6 bg-background shrink-0 gap-2 pt-safe-header">
+    <header className="flex h-11 sm:h-12 items-center justify-between px-3 sm:px-6 lg:px-8 bg-background shrink-0 gap-2 pt-safe-header">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
         <Link
           to="/"

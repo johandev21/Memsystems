@@ -250,7 +250,7 @@ export function NotebookLibrary() {
   };
 
   return (
-    <div className="notebook-library flex flex-col">
+    <div className="notebook-library flex flex-col w-full">
       <LibraryHero onCreateNotebook={beginCreateNotebook} onCreateFolder={beginCreateFolder} />
       <DndContext
         sensors={interaction.sensors}
@@ -332,7 +332,7 @@ function LibraryHero({
 }) {
   const { t } = useTranslation("notebooks");
   return (
-    <section className="hidden sm:flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
+    <section className="hidden sm:flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between w-full">
       <div className="flex flex-col gap-2">
         <h1 className="max-w-md font-heading text-2xl leading-snug font-semibold tracking-tight text-foreground">
           {t("library.heroTitle")}

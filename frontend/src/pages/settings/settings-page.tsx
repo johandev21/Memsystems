@@ -6,9 +6,9 @@ export function SettingsPage() {
   const { t } = useTranslation("settings");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh flex flex-col bg-background">
       <AppHeader />
-      <main className="mx-auto max-w-260 px-5 pb-16 pt-10 sm:px-8 lg:pt-14">
+      <main className="w-full mx-auto max-w-260 px-3 sm:px-6 lg:px-8 pb-16 pt-6 sm:pt-10 lg:pt-14">
         <header className="mb-10">
           <div>
             <h1 className="text-3xl font-semibold leading-none tracking-tighter sm:text-4xl">

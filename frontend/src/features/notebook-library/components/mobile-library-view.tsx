@@ -130,10 +130,10 @@ export function MobileLibraryView({
   };
 
   return (
-    <div className="flex flex-col gap-3 pb-24">
+    <div className="flex flex-col gap-3 pb-24 w-full">
       {/* Mobile Navigation Header (Ticket 02) */}
-      <header className="sticky top-0 z-20 flex flex-col gap-2 bg-background/95 pb-2 pt-safe-header backdrop-blur-xs">
-        <div className="flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-20 flex flex-col gap-2 bg-background/95 pb-2 pt-1.5 backdrop-blur-xs w-full">
+        <div className="flex items-center justify-between gap-2 w-full">
           {activeFolderId ? (
             <button
               type="button"
@@ -193,7 +193,7 @@ export function MobileLibraryView({
           <p className="mt-1 text-xs text-muted-foreground max-w-xs">{emptyState.description}</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2" role="list">
+        <div className="flex flex-col gap-2 w-full" role="list">
           {items.map((item) =>
             item.kind === "folder" ? (
               <MobileFolderTile
