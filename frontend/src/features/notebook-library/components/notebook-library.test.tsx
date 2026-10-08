@@ -84,9 +84,9 @@ describe("NotebookLibrary create flow", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByText("No notebooks yet");
+    await screen.findAllByText("No notebooks yet");
 
-    await user.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(screen.getAllByRole("button", { name: "Create" })[0]);
     await user.click(await screen.findByRole("menuitem", { name: /Folder/ }));
 
     const input = (await screen.findByRole("textbox")) as HTMLInputElement;
@@ -216,9 +216,10 @@ describe("NotebookLibrary URL navigation and history", () => {
       </QueryClientProvider>,
     );
 
-    const sortTrigger = await screen.findByRole("combobox", {
+    const sortTriggers = await screen.findAllByRole("combobox", {
       name: "Sort library",
     });
+    const sortTrigger = sortTriggers[0];
     await user.click(sortTrigger);
 
     const updatedAtOption = await screen.findByRole("option", {
@@ -266,7 +267,7 @@ describe("NotebookLibrary URL navigation and history", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByRole("heading", { name: "Child" });
+    await screen.findAllByRole("heading", { name: "Child" });
 
     const parentCrumb = screen.getByRole("button", { name: "Parent" });
     await user.click(parentCrumb);

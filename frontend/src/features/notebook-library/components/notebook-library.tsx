@@ -288,6 +288,8 @@ export function NotebookLibrary() {
             onRemoveNotebook={requestRemoveNotebook}
             onOpenNotebook={openNotebook}
             onUpdateNotebook={(id, patch) => void mutations.updateNotebook(id, patch)}
+            onCreateFolder={beginCreateFolder}
+            onCreateNotebook={beginCreateNotebook}
           />
         </LibraryContent>
         {/* dropAnimation={null}: snap the overlay onto the drop target instead
@@ -330,7 +332,7 @@ function LibraryHero({
 }) {
   const { t } = useTranslation("notebooks");
   return (
-    <section className="flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
+    <section className="hidden sm:flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-2">
         <h1 className="max-w-md font-heading text-2xl leading-snug font-semibold tracking-tight text-foreground">
           {t("library.heroTitle")}

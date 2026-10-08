@@ -21,6 +21,7 @@ import {
 } from "../model/library-sort";
 import { FolderCard, NotebookCard } from "./library-cards";
 import { childFolders, descendantNotebooks, folderAncestors } from "../model/folder-hierarchy";
+import { MobileLibraryView } from "./mobile-library-view";
 
 export interface FolderLibraryProps {
   folders: LibraryFolder[];
@@ -39,7 +40,9 @@ export interface FolderLibraryProps {
   onRemoveFolder: (id: string) => void;
   onRemoveNotebook: (id: string) => void;
   onOpenNotebook: (id: string) => void;
-  onUpdateNotebook: (id: string, patch: { title?: string; description?: string }) => void;
+  onUpdateNotebook: (id: string, patch: { title?: string; description?: string; folderId?: string | null }) => void;
+  onCreateFolder?: () => void;
+  onCreateNotebook?: () => void;
 }
 
 export function FolderLibrary({
@@ -60,6 +63,8 @@ export function FolderLibrary({
   onRemoveNotebook,
   onOpenNotebook,
   onUpdateNotebook,
+  onCreateFolder,
+  onCreateNotebook,
 }: FolderLibraryProps) {
   const { t, i18n } = useTranslation("notebooks");
   const locale = i18n.resolvedLanguage;
@@ -106,62 +111,87 @@ export function FolderLibrary({
     [folders, notebooks, sortKey, locale],
   );
 
+  const emptyState = activeFolder
+    ? {
+        title: t("library.emptyFolderTitle"),
+        description: t("library.emptyFolderDescription"),
+      }
+    : {
+        title: t("library.emptyLibraryTitle"),
+        description: t("library.emptyLibraryDescription"),
+      };
+
   return (
     <div className="flex flex-col gap-4">
-      {activeFolder && <Breadcrumb folders={breadcrumbs} onOpenFolder={onOpenFolder} />}
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-foreground">
-          {activeFolder?.name ?? t("library.library")}
-        </h2>
-        <Select
-          items={sortOptions}
-          value={sortKey}
-          onValueChange={(value) => onSortChange(value as LibrarySortKey)}
-        >
-          <SelectTrigger size="sm" aria-label={t("library.sort.aria")}>
-            <ArrowUpDown className="size-4" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="w-56">
-            {sortOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="items-start py-2">
-                <span className="flex flex-col gap-0.5">
-                  <span className="font-medium">{option.label}</span>
-                  <span className="text-xs text-muted-foreground">{option.description}</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Mobile-Native View (sm:hidden) */}
+      <div className="sm:hidden">
+        <MobileLibraryView
+          folders={folders}
+          notebooks={notebooks}
+          items={items}
+          activeFolderId={activeFolderId}
+          sortKey={sortKey}
+          sortOptions={sortOptions}
+          onSortChange={onSortChange}
+          onOpenFolder={onOpenFolder}
+          onOpenNotebook={onOpenNotebook}
+          onRenameFolder={onRenameFolder}
+          onRemoveFolder={onRemoveFolder}
+          onRemoveNotebook={onRemoveNotebook}
+          onUpdateNotebook={onUpdateNotebook}
+          onCreateFolder={onCreateFolder}
+          onCreateNotebook={onCreateNotebook}
+          emptyState={emptyState}
+        />
       </div>
-      <LibraryGrid
-        items={items}
-        folderNotebooks={folderNotebooks}
-        destinationFolderId={activeFolderId}
-        draftId={draftId}
-        draftClientId={draftClientId}
-        selectedKey={selectedKey}
-        onCommitDraft={onCommitDraft}
-        onCancelDraft={onCancelDraft}
-        onSelectItem={onSelectItem}
-        emptyState={
-          activeFolder
-            ? {
-                title: t("library.emptyFolderTitle"),
-                description: t("library.emptyFolderDescription"),
-              }
-            : {
-                title: t("library.emptyLibraryTitle"),
-                description: t("library.emptyLibraryDescription"),
-              }
-        }
-        onOpenFolder={onOpenFolder}
-        onRenameFolder={onRenameFolder}
-        onRemoveFolder={onRemoveFolder}
-        onRemoveNotebook={onRemoveNotebook}
-        onOpenNotebook={onOpenNotebook}
-        onUpdateNotebook={onUpdateNotebook}
-      />
+
+      {/* Desktop View (hidden sm:flex) */}
+      <div className="hidden sm:flex flex-col gap-4">
+        {activeFolder && <Breadcrumb folders={breadcrumbs} onOpenFolder={onOpenFolder} />}
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-foreground">
+            {activeFolder?.name ?? t("library.library")}
+          </h2>
+          <Select
+            items={sortOptions}
+            value={sortKey}
+            onValueChange={(value) => onSortChange(value as LibrarySortKey)}
+          >
+            <SelectTrigger size="sm" aria-label={t("library.sort.aria")}>
+              <ArrowUpDown className="size-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="w-56">
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="items-start py-2">
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-medium">{option.label}</span>
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <LibraryGrid
+          items={items}
+          folderNotebooks={folderNotebooks}
+          destinationFolderId={activeFolderId}
+          draftId={draftId}
+          draftClientId={draftClientId}
+          selectedKey={selectedKey}
+          onCommitDraft={onCommitDraft}
+          onCancelDraft={onCancelDraft}
+          onSelectItem={onSelectItem}
+          emptyState={emptyState}
+          onOpenFolder={onOpenFolder}
+          onRenameFolder={onRenameFolder}
+          onRemoveFolder={onRemoveFolder}
+          onRemoveNotebook={onRemoveNotebook}
+          onOpenNotebook={onOpenNotebook}
+          onUpdateNotebook={onUpdateNotebook}
+        />
+      </div>
     </div>
   );
 }
