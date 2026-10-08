@@ -4,12 +4,12 @@ import { ModelSyncService } from './model-sync.service';
 import {
   buildGatewayOptions,
   createGatewayProvider,
+  gatewayServerKey,
   SINGLE_USER_ID,
   type GatewayRequestOptions,
 } from './providers/gateway.provider';
 import { resolveModelId } from './providers/model-catalog';
 import type { ProviderModel } from './providers/provider';
-import { UserSettingsService } from './user-settings.service';
 
 const HEALTH_TTL_MS = 60_000;
 
@@ -78,10 +78,7 @@ export class ConnectionService {
   /** Single-user mode: one gateway health probe for the single gateway key. */
   private readonly healthCache = new TtlCache<GatewayHealth>(HEALTH_TTL_MS);
 
-  constructor(
-    private readonly userSettingsService: UserSettingsService,
-    private readonly modelSyncService: ModelSyncService,
-  ) {}
+  constructor(private readonly modelSyncService: ModelSyncService) {}
 
   private async checkHealth(
     apiKey: string,
@@ -109,10 +106,10 @@ export class ConnectionService {
         params: { model: modelId },
       });
     }
-    const apiKey = await this.userSettingsService.getGatewayApiKey();
+    const apiKey = gatewayServerKey();
     if (!apiKey) {
       throw new ServiceUnavailableError(
-        'AI Gateway is not connected. Add your AI Gateway key in Settings.',
+        'AI Gateway is not connected. Configure AI_GATEWAY_API_KEY in your environment.',
         { messageKey: 'errors.ai.gateway.notConnected' },
       );
     }
@@ -132,10 +129,10 @@ export class ConnectionService {
 
   async snapshot(): Promise<ConnectionSnapshot> {
     const catalog = this.modelSyncService.getModels();
-    const apiKey = await this.userSettingsService.getGatewayApiKey();
+    const apiKey = gatewayServerKey();
     if (!apiKey) {
       return disconnectedSnapshot(
-        'No AI Gateway key configured. Add your key in Settings to use AI features.',
+        'No AI Gateway key configured. Set AI_GATEWAY_API_KEY in your environment to use AI features.',
       );
     }
 

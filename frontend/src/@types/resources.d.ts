@@ -7,7 +7,7 @@ export default interface Resources {
     },
     "errors": {
       "auth": {
-        "message": "Your key was rejected. Check your keys in Settings.",
+        "message": "Your API key was rejected. Check your AI_GATEWAY_API_KEY environment variable.",
         "title": "Connection needs attention"
       },
       "badRequest": {
@@ -46,8 +46,7 @@ export default interface Resources {
       }
     },
     "gatewayKeyPrompt": {
-      "description": "Add your AI Gateway key in Settings to unlock models.",
-      "openSettings": "Open Settings",
+      "description": "Configure AI_GATEWAY_API_KEY in your environment to unlock models.",
       "title": "AI Gateway key required"
     },
     "markdownTable": {
@@ -999,101 +998,6 @@ export default interface Resources {
       "description": "Choose how Memsystems looks. Theme sets the palette, color scheme sets light or dark.",
       "title": "Appearance"
     },
-    "embeddings": {
-      "apiKey": {
-        "confirmRemove": "Confirm Remove",
-        "hide": "Hide Voyage key",
-        "label": "Voyage API Key",
-        "placeholder": "Paste your Voyage AI key…",
-        "remove": "Remove",
-        "removeConfirm": "Removing your key stops source retrieval from working. Click again to confirm.",
-        "removing": "Removing…",
-        "replace": "Replace",
-        "save": "Save Key",
-        "saved": "Saved",
-        "saving": "Saving…",
-        "show": "Show Voyage key"
-      },
-      "description": {
-        "checking": "Checking embedding provider status…",
-        "connected": "Your Voyage AI key powers retrieval across all notebooks.",
-        "missing": "Add your Voyage AI key below to power source retrieval."
-      },
-      "modelInfo": "Model: {{model}} · {{dimensions}} dimensions",
-      "reembed": {
-        "action": "Re-embed All Sources",
-        "actionRunning": "Queueing…",
-        "hint": "Queues background re-indexing for every source.",
-        "title": "Re-embedding"
-      },
-      "status": {
-        "checking": "Checking",
-        "connected": "Connected",
-        "notConnected": "Not connected"
-      },
-      "title": "Embeddings",
-      "toast": {
-        "reembedFailed": "Could not queue re-embedding",
-        "reembedQueued": "Re-indexing queued for {{count}} sources",
-        "reembedQueued_one": "embeddings.toast.reembedQueued",
-        "reembedQueued_other": "embeddings.toast.reembedQueued",
-        "removeFailed": "Could not remove this key",
-        "removed": "Voyage key removed",
-        "requestFailed": "The request failed",
-        "saveFailed": "Could not save this key",
-        "saved": "Voyage key saved"
-      },
-      "whatIsIt": "What is Voyage AI?"
-    },
-    "gateway": {
-      "apiKey": {
-        "confirmRemove": "Confirm Remove",
-        "hide": "Hide gateway key",
-        "label": "Gateway API Key",
-        "placeholder": "Paste your Vercel AI Gateway key…",
-        "remove": "Remove",
-        "removeConfirm": "Removing your key disconnects every model. Click again to confirm.",
-        "removing": "Removing…",
-        "replace": "Replace",
-        "save": "Save Key",
-        "saved": "Saved",
-        "saving": "Saving…",
-        "show": "Show gateway key"
-      },
-      "description": {
-        "checkFailed": "Failed to check connection",
-        "checking": "Checking gateway status…",
-        "connected": "Your Vercel AI Gateway key connects models across all notebooks.",
-        "missing": "Add your AI Gateway key below to connect every model."
-      },
-      "lastChecked": "Last checked {{date}}",
-      "refresh": {
-        "action": "Refresh Models",
-        "refreshing": "Refreshing Models…"
-      },
-      "refreshHint": "Refreshes automatically every 6 hours.",
-      "stats": {
-        "balance": "Balance (Credits)",
-        "models": "Models",
-        "used": "Credits Used"
-      },
-      "status": {
-        "checking": "Checking",
-        "connected": "Connected",
-        "degraded": "Degraded",
-        "notConnected": "Not connected"
-      },
-      "title": "AI Gateway",
-      "toast": {
-        "modelsRefreshed": "Model list refreshed",
-        "refreshFailed": "Could not refresh the model list",
-        "removeFailed": "Could not remove this key",
-        "removed": "Gateway key removed",
-        "saveFailed": "Could not save this key",
-        "saved": "Gateway key saved"
-      },
-      "whatIsIt": "What is the gateway?"
-    },
     "language": {
       "description": "Choose the language used across the app.",
       "title": "Language"
@@ -1513,15 +1417,12 @@ export default interface Resources {
     },
     "grid": {
       "ariaLabel": "Theme",
-      "hint_one": "{{count}} palette · each has light & dark",
-      "hint_other": "{{count}} palettes · each has light & dark",
       "selected": "{{name}}, selected",
       "title": "Themes"
     },
     "scheme": {
       "dark": "Dark",
       "light": "Light",
-      "summary": "Light / Dark / System",
       "system": "System",
       "title": "Color scheme"
     }

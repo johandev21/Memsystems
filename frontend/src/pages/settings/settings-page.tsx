@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components/layout";
-import { AppearanceCard, EmbeddingsCard, GatewayCard, LanguageCard } from "@/features/settings";
+import { AppearanceCard, LanguageCard } from "@/features/settings";
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
@@ -17,15 +17,7 @@ export function SettingsPage() {
           </div>
         </header>
 
-        <section aria-labelledby="gateway-heading">
-          <GatewayCard />
-        </section>
-
-        <section className="mt-12" aria-labelledby="embeddings-heading">
-          <EmbeddingsCard />
-        </section>
-
-        <section className="mt-12" aria-labelledby="appearance-heading">
+        <section aria-labelledby="appearance-heading">
           <div className="mb-6">
             <h2 id="appearance-heading" className="text-base font-semibold tracking-tight">
               {t("appearance.title")}

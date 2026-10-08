@@ -938,11 +938,6 @@ export const notebookChatMessagesRelations = relations(
 
 export const appSettings = pgTable('app_settings', {
   id: text('id').primaryKey().default('global'),
-  // Global Vercel AI Gateway key (AES-256-GCM encrypted, see
-  // UserSettingsService). Funds every model for the single-user app.
-  gatewayApiKey: text('gateway_api_key'),
-  // Global Voyage AI key (AES-256-GCM encrypted) for embeddings.
-  voyageApiKey: text('voyage_api_key'),
   /**
    * The indexing representation (chunking/indexing versions plus the
    * embedding model and dimensions) applied to every Source by the last

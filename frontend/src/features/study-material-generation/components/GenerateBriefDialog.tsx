@@ -209,14 +209,6 @@ function StudyMaterialCapabilityGate({
             />
           </ModelSelectorContent>
         </ModelSelector>
-        {!capabilitiesVerified && (
-          <a
-            href="/settings"
-            className="text-xs font-medium text-text-tertiary underline underline-offset-4 transition-colors hover:text-text-primary"
-          >
-            {t("capabilityGate.refreshCatalog")}
-          </a>
-        )}
       </div>
     </div>
   );

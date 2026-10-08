@@ -5,7 +5,6 @@ import {
 } from '../../common/errors/domain-error';
 import { parseBoolean } from './config-parsing';
 import { voyageContextualEmbed, voyageEmbed } from './providers/voyage.client';
-import { UserSettingsService } from './user-settings.service';
 
 /**
  * The app embeds with Voyage AI (https://docs.voyageai.com) instead of the
@@ -88,7 +87,6 @@ export class EmbeddingService {
   private contextualActive: boolean;
 
   constructor(
-    private readonly userSettingsService: UserSettingsService,
     @Optional()
     @Inject(EMBEDDING_CONFIG)
     config?: EmbeddingConfig,
@@ -97,12 +95,9 @@ export class EmbeddingService {
     this.contextualActive = this.config.contextualEnabled;
   }
 
-  /** The effective Voyage key: stored settings key, else env fallback. */
-  async getVoyageApiKey(): Promise<string | null> {
-    return (
-      (await this.userSettingsService.getVoyageApiKey()) ??
-      voyageApiKeyFromEnv()
-    );
+  /** The effective Voyage key from environment. */
+  getVoyageApiKey(): Promise<string | null> {
+    return Promise.resolve(voyageApiKeyFromEnv());
   }
 
   /**
@@ -282,7 +277,7 @@ export class EmbeddingService {
     const apiKey = await this.getVoyageApiKey();
     if (!apiKey) {
       throw new ServiceUnavailableError(
-        'Embedding model is not configured. Add your Voyage API key in Settings.',
+        'Embedding model is not configured. Set VOYAGE_API_KEY in your environment.',
         { messageKey: 'errors.ai.embedding.notConfigured' },
       );
     }

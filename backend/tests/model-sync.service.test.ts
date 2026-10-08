@@ -47,12 +47,6 @@ function mockPublicList(data: unknown[]) {
   return fetchMock;
 }
 
-function settingsStub(storedKey: string | null = null) {
-  return {
-    getGatewayApiKey: vi.fn().mockResolvedValue(storedKey),
-  } as any;
-}
-
 describe('ModelSyncService', () => {
   const previousKey = process.env.AI_GATEWAY_API_KEY;
 
@@ -64,7 +58,7 @@ describe('ModelSyncService', () => {
   });
 
   it('serves the seed catalog, unverified, before any sync', () => {
-    const service = new ModelSyncService(settingsStub());
+    const service = new ModelSyncService();
     expect(service.getModels()).toEqual(SEED_GATEWAY_MODELS);
     expect(service.getStatus()).toMatchObject({
       source: 'seed',
@@ -78,7 +72,7 @@ describe('ModelSyncService', () => {
     delete process.env.AI_GATEWAY_API_KEY;
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    const service = new ModelSyncService(settingsStub());
+    const service = new ModelSyncService();
     const models = await service.refreshModels('test');
     expect(models).toEqual(SEED_GATEWAY_MODELS);
     expect(mockCreateGateway).not.toHaveBeenCalled();
@@ -89,8 +83,8 @@ describe('ModelSyncService', () => {
     });
   });
 
-  it('syncs from the stored key when no server key exists', async () => {
-    delete process.env.AI_GATEWAY_API_KEY;
+  it('syncs from the server key in environment', async () => {
+    process.env.AI_GATEWAY_API_KEY = 'env-key';
     const getAvailableModels = vi.fn().mockResolvedValue({
       models: [entry('openai/gpt-5.6-sol', 'language')],
     });
@@ -101,10 +95,10 @@ describe('ModelSyncService', () => {
       ]),
     ]);
 
-    const service = new ModelSyncService(settingsStub('stored-key'));
+    const service = new ModelSyncService();
     const models = await service.refreshModels('startup');
 
-    expect(mockCreateGateway).toHaveBeenCalledWith({ apiKey: 'stored-key' });
+    expect(mockCreateGateway).toHaveBeenCalledWith({ apiKey: 'env-key' });
     expect(models.map((m) => m.id)).toEqual(['openai/gpt-5.6-sol']);
     expect(service.getStatus()).toMatchObject({
       source: 'gateway',
@@ -134,7 +128,7 @@ describe('ModelSyncService', () => {
       publicModel('acme/unlisted', ['structured-output']),
     ]);
 
-    const service = new ModelSyncService(settingsStub());
+    const service = new ModelSyncService();
     const models = await service.refreshModels('test');
     const byId = new Map(models.map((m) => [m.id, m]));
 
@@ -176,7 +170,7 @@ describe('ModelSyncService', () => {
       vi.fn().mockRejectedValue(new Error('network down')),
     );
 
-    const service = new ModelSyncService(settingsStub());
+    const service = new ModelSyncService();
     const models = await service.refreshModels('test');
 
     expect(models.map((m) => m.id)).toEqual(['openai/gpt-5.6-sol']);
@@ -203,7 +197,7 @@ describe('ModelSyncService', () => {
       }),
     );
 
-    const service = new ModelSyncService(settingsStub());
+    const service = new ModelSyncService();
     const models = await service.refreshModels('test');
 
     expect(models[0].capabilities).toBeUndefined();
@@ -217,7 +211,7 @@ describe('ModelSyncService', () => {
     });
     mockPublicList([publicModel('openai/gpt-5.6-sol', ['structured-output'])]);
 
-    const service = new ModelSyncService(settingsStub());
+    const service = new ModelSyncService();
     const models = await service.refreshModels('test');
 
     expect(models).toEqual(SEED_GATEWAY_MODELS);

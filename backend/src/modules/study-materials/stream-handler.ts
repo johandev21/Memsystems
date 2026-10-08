@@ -219,7 +219,11 @@ export class StreamHandler {
             input.kind === 'quiz'
               ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)
               : validated;
-          const storable = this.prepareStorable(input, contentToStore, grounding);
+          const storable = this.prepareStorable(
+            input,
+            contentToStore,
+            grounding,
+          );
 
           if (abortSignal?.aborted) {
             cleanup();
@@ -362,7 +366,11 @@ export class StreamHandler {
               input.kind === 'quiz'
                 ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)
                 : validated;
-            const storable = this.prepareStorable(input, contentToStore, grounding);
+            const storable = this.prepareStorable(
+              input,
+              contentToStore,
+              grounding,
+            );
 
             if (abortSignal?.aborted) {
               cleanup();

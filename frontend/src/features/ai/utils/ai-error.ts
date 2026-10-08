@@ -113,7 +113,7 @@ function needsSettings(): ClassifiedAiError {
     title: i18n.t("errors.auth.title", { ns: "ai" }),
     message: i18n.t("errors.auth.message", { ns: "ai" }),
     showTopUp: false,
-    showSettings: true,
+    showSettings: false,
     showModelHint: false,
   };
 }

@@ -5,7 +5,7 @@
   },
   "errors": {
     "auth": {
-      "message": "Tu clave fue rechazada. Revisa tus claves en Ajustes.",
+      "message": "Tu clave de API fue rechazada. Revisa la variable de entorno AI_GATEWAY_API_KEY.",
       "title": "La conexión necesita atención"
     },
     "badRequest": {
@@ -44,8 +44,7 @@
     }
   },
   "gatewayKeyPrompt": {
-    "description": "Añade tu clave del Gateway de IA en Ajustes para desbloquear los modelos.",
-    "openSettings": "Abrir Ajustes",
+    "description": "Configura AI_GATEWAY_API_KEY en tu entorno para desbloquear los modelos.",
     "title": "Se requiere la clave del Gateway de IA"
   },
   "markdownTable": {

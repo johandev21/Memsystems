@@ -173,14 +173,6 @@ function EvaluationCapabilityGate({
             />
           </ModelSelectorContent>
         </ModelSelector>
-        {!capabilitiesVerified && (
-          <a
-            href="/settings"
-            className="text-xs font-medium text-muted-foreground underline underline-offset-3 transition-colors hover:text-foreground"
-          >
-            {t("practice.structuredOutput.refreshCatalog")}
-          </a>
-        )}
       </div>
     </Alert>
   );

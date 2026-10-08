@@ -141,6 +141,13 @@
       "when": 1790300000000,
       "tag": "0019_source_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790400000000,
+      "tag": "0020_drop_api_keys",
+      "breakpoints": true
     }
   ]
 }

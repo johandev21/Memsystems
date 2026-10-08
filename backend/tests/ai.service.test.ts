@@ -16,7 +16,7 @@ const mockGenerateText = vi.mocked(generateText);
 
 describe('AiService.searchWeb', () => {
   it('names the selected model and a compatible fallback in capability guards', () => {
-    const aiService = new AiService({} as any, {} as any, {} as any);
+    const aiService = new AiService({} as any, {} as any);
     const provider = {
       listModels: () => [
         {
@@ -48,7 +48,6 @@ describe('AiService.searchWeb', () => {
 
   it('rejects models that do not support web search', async () => {
     const aiService = new AiService(
-      {} as any,
       {
         requireConnected: vi.fn().mockResolvedValue(undefined),
       } as any,
@@ -90,7 +89,6 @@ describe('AiService.searchWeb', () => {
 
   it('maps escaped tool-choice rejections to a capability domain error', async () => {
     const aiService = new AiService(
-      {} as any,
       { requireConnected: vi.fn().mockResolvedValue(undefined) } as any,
       { getModels: () => [] } as any,
     );
@@ -115,7 +113,6 @@ describe('AiService.searchWeb', () => {
 
   it('returns curated sources and captures the gateway generation id', async () => {
     const aiService = new AiService(
-      {} as any,
       {
         requireConnected: vi.fn().mockResolvedValue(undefined),
       } as any,
@@ -187,7 +184,6 @@ describe('AiService.searchWeb', () => {
 
   it('maps gateway rate limits to a 429 domain error', async () => {
     const aiService = new AiService(
-      {} as any,
       {
         requireConnected: vi.fn().mockResolvedValue(undefined),
       } as any,
@@ -217,7 +213,6 @@ describe('AiService.searchWeb', () => {
 
   it('maps gateway entitlement gaps to a 403 domain error', async () => {
     const aiService = new AiService(
-      {} as any,
       {
         requireConnected: vi.fn().mockResolvedValue(undefined),
       } as any,
@@ -249,7 +244,6 @@ describe('AiService.searchWeb', () => {
 describe('AiService.requireStructuredOutput', () => {
   function setup(capabilitiesVerified: boolean) {
     const aiService = new AiService(
-      {} as any,
       {} as any,
       {
         getStatus: () => ({ capabilitiesVerified }),

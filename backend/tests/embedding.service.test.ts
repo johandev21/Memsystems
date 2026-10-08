@@ -25,13 +25,15 @@ vi.mock('../src/modules/ai/providers/voyage.client', () => ({
   voyageContextualEmbed: voyageContextualEmbedMock,
 }));
 
-function service(voyageApiKey: string | null = null, config?: EmbeddingConfig) {
-  return new EmbeddingService(
-    {
-      getVoyageApiKey: vi.fn().mockResolvedValue(voyageApiKey),
-    } as never,
-    config,
-  );
+function service(voyageApiKey?: string | null, config?: EmbeddingConfig) {
+  if (voyageApiKey !== undefined) {
+    if (voyageApiKey) {
+      process.env[VOYAGE_ENV_KEY] = voyageApiKey;
+    } else {
+      delete process.env[VOYAGE_ENV_KEY];
+    }
+  }
+  return new EmbeddingService(config);
 }
 
 const VOYAGE_ENV_KEY = 'VOYAGE_API_KEY';
@@ -98,15 +100,15 @@ describe('EmbeddingService', () => {
     );
   });
 
-  it('prefers the stored settings key over the environment fallback', async () => {
+  it('uses the environment key to embed queries', async () => {
     process.env[VOYAGE_ENV_KEY] = 'voy_env_key';
     voyageContextualEmbedMock.mockResolvedValue({
       embeddings: [[0.1]],
       totalTokens: 1,
     });
-    await service('voy_stored_key').embedQuery('q');
+    await service('voy_env_key').embedQuery('q');
     expect(voyageContextualEmbedMock).toHaveBeenCalledWith(
-      expect.objectContaining({ apiKey: 'voy_stored_key' }),
+      expect.objectContaining({ apiKey: 'voy_env_key' }),
     );
   });
 

@@ -48,11 +48,11 @@ async function fetchConnection(detail: string): Promise<ConnectionStatus> {
 }
 
 export function useConnectionStatus() {
-  const { t } = useTranslation("settings");
+  const { t } = useTranslation("ai");
 
   return useQuery({
     queryKey: ["connection-status"],
-    queryFn: () => fetchConnection(t("gateway.description.checkFailed")),
+    queryFn: () => fetchConnection(t("errors.generic.message")),
     refetchInterval: 15_000,
     retry: 1,
   });

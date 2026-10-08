@@ -9,7 +9,6 @@ import {
   type GatewayPublicModel,
 } from './providers/model-catalog';
 import type { ProviderModel } from './providers/provider';
-import { UserSettingsService } from './user-settings.service';
 
 /** Refresh the gateway model catalog every 6 hours. */
 const MODEL_SYNC_CRON = '0 */6 * * *';
@@ -69,7 +68,7 @@ export class ModelSyncService implements OnModuleInit {
    */
   private capabilitiesVerified = false;
 
-  constructor(private readonly userSettingsService: UserSettingsService) {}
+  constructor() {}
 
   onModuleInit() {
     // Fire-and-forget: the seed catalog serves requests until the first
@@ -96,27 +95,15 @@ export class ModelSyncService implements OnModuleInit {
   }
 
   /**
-   * Refresh the catalog. Key resolution order: an explicitly passed user key
-   * (e.g. the manual refresh button), then the optional server key
-   * (AI_GATEWAY_API_KEY), then the app-wide key stored in Settings. The stored
-   * fallback lets startup/cron syncs reach the gateway without a server key.
+   * Refresh the catalog. Key resolution order: an explicitly passed key,
+   * then the server key from environment (AI_GATEWAY_API_KEY).
    * Falls back to the seed catalog only when no key exists anywhere.
-   *
-   * Chat models, pricing and availability come from the SDK catalog. Model
-   * Capabilities are merged in by id from the Gateway public REST list, fetched
-   * alongside; the SDK list is account-scoped and carries no capability
-   * fields. When that public fetch fails the catalog may still refresh from
-   * the SDK, but every model gets no capability claims and
-   * `capabilitiesVerified` is false, so capability gates fail closed.
    */
   async refreshModels(
     reason = 'manual',
     apiKey?: string | null,
   ): Promise<ProviderModel[]> {
-    const key =
-      apiKey ??
-      gatewayServerKey() ??
-      (await this.userSettingsService.getGatewayApiKey());
+    const key = apiKey ?? gatewayServerKey();
     if (!key) {
       if (this.source !== 'seed' || this.models.length === 0) {
         this.models = [...SEED_GATEWAY_MODELS];

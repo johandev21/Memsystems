@@ -51,12 +51,12 @@ describe("classifyChatError", () => {
     expect(result.title).toBe("Model no longer available");
   });
 
-  it("maps auth failures to settings", () => {
+  it("maps auth failures", () => {
     const result = classifyChatError(
       JSON.stringify({ error: "Unauthorized", code: "unauthorized" }),
     );
     expect(result.title).toBe("Connection needs attention");
-    expect(result.showSettings).toBe(true);
+    expect(result.showSettings).toBe(false);
   });
 
   it.each([

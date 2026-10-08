@@ -16,13 +16,13 @@ import { ModelSyncService } from './model-sync.service';
 import {
   buildGatewayOptions,
   createGatewayProvider,
+  gatewayServerKey,
   SINGLE_USER_ID,
   type GatewayRequestOptions,
 } from './providers/gateway.provider';
 import { classifyGatewayError } from './providers/gateway-errors';
 import { resolveModelId } from './providers/model-catalog';
 import type { Provider, ProviderModel } from './providers/provider';
-import { UserSettingsService } from './user-settings.service';
 
 type ConvertInput = Parameters<typeof convertToModelMessages>[0];
 
@@ -86,7 +86,6 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
 
   constructor(
-    private readonly userSettingsService: UserSettingsService,
     private readonly connectionService: ConnectionService,
     private readonly modelSyncService: ModelSyncService,
   ) {}
@@ -103,7 +102,7 @@ export class AiService {
     const provider = await this.getProviderIfConnected();
     if (!provider) {
       throw new BadRequestError(
-        'AI Gateway is not connected. Add your AI Gateway key in Settings.',
+        'AI Gateway is not connected. Configure AI_GATEWAY_API_KEY in your environment.',
         { messageKey: 'errors.ai.gateway.notConnected' },
       );
     }
@@ -116,15 +115,15 @@ export class AiService {
    * `getProviderForModel` it validates no model id and never throws: the
    * caller degrades instead of failing the turn.
    */
-  async getProviderIfConnected(): Promise<Provider | null> {
-    if (!(await this.hasEffectiveAuth())) return null;
-    const apiKey = await this.userSettingsService.getGatewayApiKey();
-    if (!apiKey) return null;
-    // The global gateway key lives in the singleton app_settings row.
-    return createGatewayProvider({
-      apiKey,
-      getModels: () => this.modelSyncService.getModels(),
-    });
+  getProviderIfConnected(): Promise<Provider | null> {
+    const apiKey = gatewayServerKey();
+    if (!apiKey) return Promise.resolve(null);
+    return Promise.resolve(
+      createGatewayProvider({
+        apiKey,
+        getModels: () => this.modelSyncService.getModels(),
+      }),
+    );
   }
 
   /**
@@ -137,9 +136,8 @@ export class AiService {
     return buildGatewayOptions(SINGLE_USER_ID);
   }
 
-  private async hasEffectiveAuth(): Promise<boolean> {
-    const apiKey = await this.userSettingsService.getGatewayApiKey();
-    return Boolean(apiKey);
+  private hasEffectiveAuth(): boolean {
+    return Boolean(gatewayServerKey());
   }
 
   async listModels() {

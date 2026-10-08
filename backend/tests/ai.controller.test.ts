@@ -1,23 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
-import {
-  BadRequestError,
-  ServiceUnavailableError,
-  UnauthorizedError,
-} from '../src/common/errors/domain-error';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ServiceUnavailableError } from '../src/common/errors/domain-error';
 import { AiController } from '../src/modules/ai/ai.controller';
 
-const { mockGetCredits, mockGetAvailableModels, mockVerifyApiKey } = vi.hoisted(
-  () => ({
-    mockGetCredits: vi.fn(),
-    mockGetAvailableModels: vi.fn(),
-    mockVerifyApiKey: vi.fn(),
-  }),
-);
+const { mockGetCredits } = vi.hoisted(() => ({
+  mockGetCredits: vi.fn(),
+}));
 
 vi.mock('@ai-sdk/gateway', () => ({
   createGateway: vi.fn(() => ({
     getCredits: mockGetCredits,
-    getAvailableModels: mockGetAvailableModels,
   })),
 }));
 
@@ -35,22 +26,27 @@ function controller(model = 'voyage-context-4') {
       getStatus: vi.fn().mockReturnValue({ source: 'seed', count: 1 }),
     } as any,
     {
-      getGatewayApiKey: vi.fn().mockResolvedValue(null),
-      setGatewayApiKey: vi.fn().mockResolvedValue(undefined),
-      removeGatewayApiKey: vi.fn().mockResolvedValue(undefined),
-      getVoyageApiKey: vi.fn().mockResolvedValue(null),
-      setVoyageApiKey: vi.fn().mockResolvedValue(undefined),
-      removeVoyageApiKey: vi.fn().mockResolvedValue(undefined),
-    } as any,
-    {
       getVoyageApiKey: vi.fn().mockResolvedValue(null),
       documentEmbeddingModel: vi.fn().mockReturnValue(model),
-      verifyApiKey: mockVerifyApiKey,
     } as any,
   );
 }
 
-describe('AiController gateway keys', () => {
+describe('AiController gateway', () => {
+  const originalGatewayKey = process.env.AI_GATEWAY_API_KEY;
+
+  beforeEach(() => {
+    delete process.env.AI_GATEWAY_API_KEY;
+  });
+
+  afterEach(() => {
+    if (originalGatewayKey !== undefined) {
+      process.env.AI_GATEWAY_API_KEY = originalGatewayKey;
+    } else {
+      delete process.env.AI_GATEWAY_API_KEY;
+    }
+  });
+
   it('merges models with sync status on listModels', async () => {
     const result = await controller().listModels();
     expect(result).toMatchObject({
@@ -59,93 +55,32 @@ describe('AiController gateway keys', () => {
     });
   });
 
-  it('refreshModels drives the sync with the user key then snapshots', async () => {
+  it('refreshModels triggers model sync and snapshots', async () => {
     const c = controller();
-    (c as any).userSettingsService.getGatewayApiKey.mockResolvedValue(
-      'ag_live_user',
-    );
     const result = await c.refreshModels();
-    expect((c as any).modelSyncService.refreshModels).toHaveBeenCalledWith(
-      'manual',
-      'ag_live_user',
-    );
+    expect((c as any).modelSyncService.refreshModels).toHaveBeenCalledWith('manual');
     expect(result).toMatchObject({ ok: true });
   });
 
-  it('getCredits throws 503 without a user gateway key', async () => {
+  it('getCredits throws 503 without AI_GATEWAY_API_KEY in environment', async () => {
     await expect(controller().getCredits()).rejects.toBeInstanceOf(
       ServiceUnavailableError,
     );
   });
 
-  it('getCredits returns the gateway balance for the user key', async () => {
-    const c = controller();
-    (c as any).userSettingsService.getGatewayApiKey.mockResolvedValue(
-      'ag_live_user',
-    );
+  it('getCredits returns the gateway balance when AI_GATEWAY_API_KEY is configured', async () => {
+    process.env.AI_GATEWAY_API_KEY = 'ag_live_key';
     mockGetCredits.mockResolvedValue({ balance: '10', totalUsed: '5' });
+    const c = controller();
     await expect(c.getCredits()).resolves.toEqual({
       balance: '10',
       totalUsed: '5',
     });
   });
 
-  it('saves a gateway key after verification', async () => {
+  it('getConnectionStatus returns the snapshot from connectionService', async () => {
     const c = controller();
-    mockGetAvailableModels.mockResolvedValue({ models: [] });
-    await c.updateSettings({ gatewayApiKey: 'ag_live_new' });
-    expect(
-      (c as any).userSettingsService.setGatewayApiKey,
-    ).toHaveBeenCalledWith('ag_live_new');
-    expect((c as any).modelSyncService.refreshModels).toHaveBeenCalledWith(
-      'key-saved',
-      'ag_live_new',
-    );
-  });
-
-  it('rejects invalid gateway keys without storing them', async () => {
-    const c = controller();
-    mockGetAvailableModels.mockRejectedValue(
-      Object.assign(new Error('Unauthorized'), {
-        statusCode: 401,
-        type: 'auth_error',
-      }),
-    );
-    await expect(
-      c.updateSettings({ gatewayApiKey: 'ag_live_bad' }),
-    ).rejects.toBeInstanceOf(UnauthorizedError);
-    expect(
-      (c as any).userSettingsService.setGatewayApiKey,
-    ).not.toHaveBeenCalled();
-  });
-
-  it('removes the gateway key on null', async () => {
-    const c = controller();
-    await c.updateSettings({ gatewayApiKey: null });
-    expect(
-      (c as any).userSettingsService.removeGatewayApiKey,
-    ).toHaveBeenCalledWith();
-    expect((c as any).modelSyncService.refreshModels).toHaveBeenCalledWith(
-      'key-removed',
-    );
-  });
-
-  it('rejects the legacy per-provider payload with a migration message', async () => {
-    const c = controller();
-    await expect(
-      c.updateSettings({ provider: 'openai', apiKey: 'sk-x' } as any),
-    ).rejects.toThrow(BadRequestError);
-    await expect(
-      c.updateSettings({ provider: 'openai', apiKey: 'sk-x' } as any),
-    ).rejects.toThrow(/Per-provider keys were removed/);
-  });
-
-  it('deleteSettings removes the gateway key', async () => {
-    const c = controller();
-    await c.deleteSettings();
-    expect(
-      (c as any).userSettingsService.removeGatewayApiKey,
-    ).toHaveBeenCalledWith();
+    await expect(c.getConnectionStatus()).resolves.toEqual({ ok: true });
   });
 });
 
@@ -166,36 +101,5 @@ describe('AiController voyage (embedding) key', () => {
     await expect(c.getEmbeddingConnection()).resolves.toMatchObject({
       model: 'voyage-4',
     });
-  });
-
-  it('verifies then stores a voyage key against the active embedding path', async () => {
-    const c = controller();
-    mockVerifyApiKey.mockResolvedValue(undefined);
-    (c as any).embeddingService.getVoyageApiKey.mockResolvedValue('voy_new');
-    const result = await c.saveEmbeddingConnection({ voyageApiKey: 'voy_new' });
-    expect(mockVerifyApiKey).toHaveBeenCalledWith('voy_new');
-    expect((c as any).userSettingsService.setVoyageApiKey).toHaveBeenCalledWith(
-      'voy_new',
-    );
-    expect(result).toMatchObject({ hasKey: true, model: 'voyage-context-4' });
-  });
-
-  it('rejects a bad voyage key without storing it', async () => {
-    const c = controller();
-    mockVerifyApiKey.mockRejectedValue(new UnauthorizedError('rejected'));
-    await expect(
-      c.saveEmbeddingConnection({ voyageApiKey: 'voy_bad' }),
-    ).rejects.toBeInstanceOf(UnauthorizedError);
-    expect(
-      (c as any).userSettingsService.setVoyageApiKey,
-    ).not.toHaveBeenCalled();
-  });
-
-  it('removes the voyage key', async () => {
-    const c = controller();
-    await c.deleteEmbeddingConnection();
-    expect(
-      (c as any).userSettingsService.removeVoyageApiKey,
-    ).toHaveBeenCalledWith();
   });
 });
