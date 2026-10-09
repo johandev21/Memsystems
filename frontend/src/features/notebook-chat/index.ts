@@ -6,6 +6,7 @@ export * from "./components/chat-message-list";
 export * from "./components/assistant-message";
 export * from "./components/composer";
 export * from "./components/user-message";
+export * from "./components/clear-history-dialog";
 export * from "./hooks/use-chat-panel";
 export * from "./hooks/use-composer-models";
 export * from "./types";

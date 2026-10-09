@@ -78,18 +78,18 @@ export function Composer({
           value={input}
           onChange={(e) => onInputChange(e.currentTarget.value)}
           placeholder={t("composer.placeholder")}
-          className="min-h-12 max-h-48 select-text border-0 px-3 py-2 text-base leading-6 focus:ring-0 focus-visible:ring-0 sm:text-sm"
+          className="min-h-9 max-h-48 select-text border-0 px-2.5 py-1.5 text-base leading-5 focus:ring-0 focus-visible:ring-0 sm:min-h-12 sm:px-3 sm:py-2 sm:text-sm sm:leading-6"
         />
       </PromptInputBody>
-      <PromptInputFooter className="px-1.5 pt-0.5 pb-0.5">
+      <PromptInputFooter className="px-1.5 pt-0 pb-0.5 sm:pt-0.5">
         <PromptInputTools>
           <ModelSelector open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
             <ModelSelectorTrigger
               render={
-                <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-7rem))] cursor-pointer items-center gap-1.5 rounded-xl px-2 text-xs font-medium text-muted-foreground transition-tint duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground [@media(pointer:coarse)]:h-9">
+                <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-6rem))] cursor-pointer items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition-tint duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground touch-manipulation active:scale-97 sm:rounded-xl">
                   <ModelSelectorLogo
                     provider={modelState.activeProvider}
-                    className="size-4 opacity-80"
+                    className="size-3.5 opacity-80 sm:size-4"
                   />
                   <ModelSelectorName className="min-w-0">
                     {modelState.activeModel?.displayName || selectedModel}
@@ -124,7 +124,7 @@ export function Composer({
             content: isLoading ? t("composer.stopResponse") : t("composer.sendMessage"),
             shortcut: isLoading ? undefined : "Enter",
           }}
-          className="size-8 rounded-xl shadow-none transition-interactive duration-150 enabled:shadow-sm [@media(pointer:coarse)]:size-9"
+          className="size-8 rounded-lg shadow-none transition-interactive duration-150 enabled:shadow-sm touch-manipulation active:scale-97 cursor-pointer sm:rounded-xl"
         />
       </PromptInputFooter>
     </PromptInput>

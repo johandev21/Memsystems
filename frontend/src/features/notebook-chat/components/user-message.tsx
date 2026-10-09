@@ -18,14 +18,18 @@ const isFilePart = (part: UIMessage["parts"][number]): part is FilePart => {
   return part.type === "file" && typeof (part as FilePart).url === "string";
 };
 
-export function UserMessage({ message }: { message: UIMessage }) {
+export interface UserMessageProps {
+  message: UIMessage;
+}
+
+export function UserMessage({ message }: UserMessageProps) {
   const { t } = useTranslation("chat");
   const textParts = message.parts.filter(isTextPart);
   const fileParts = message.parts.filter(isFilePart);
 
   return (
     <Message from="user">
-      <MessageContent>
+      <MessageContent className="px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3">
         {fileParts.map((file, index) => {
           if (file.mediaType?.startsWith("image/")) {
             return (
