@@ -48,7 +48,7 @@ export function MobileTreeRowActions({
               variant="ghost"
               size="icon-xs"
               aria-label={t("row.actionsFor", { name: node.name })}
-              className="size-6 shrink-0 rounded-md hover:bg-accent hover:text-accent-foreground"
+              className="min-h-8 min-w-8 sm:size-6 shrink-0 rounded-md hover:bg-accent hover:text-accent-foreground touch-manipulation active:scale-97 cursor-pointer"
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
             />

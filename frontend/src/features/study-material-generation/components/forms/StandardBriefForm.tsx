@@ -52,7 +52,7 @@ export function StandardBriefForm({
           value={value.brief}
           onChange={(e) => update({ brief: e.target.value })}
           placeholder={t("standard.briefPlaceholder", { kind: label })}
-          className="min-h-22.5 max-h-50 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
+          className="min-h-22.5 max-h-50 text-base sm:text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
           disabled={disabled}
         />
       </div>
@@ -83,7 +83,7 @@ export function StandardBriefForm({
 
       <Button
         type="button"
-        className="w-full cursor-pointer"
+        className="min-h-11 sm:min-h-9 w-full cursor-pointer touch-manipulation active:scale-97"
         disabled={!canSubmit}
         onClick={onSubmit}
       >

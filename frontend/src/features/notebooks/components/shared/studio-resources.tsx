@@ -112,7 +112,7 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
   }
 
   return (
-    <div className="flex flex-col gap-2 p-2">
+    <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2">
       <ResourceGrid onGenerate={onGenerate} />
       <ActiveGenerationList
         generations={activeGenerations}
@@ -149,7 +149,7 @@ function CollapsedResourceList({
 
 function ResourceGrid({ onGenerate }: { onGenerate: (kind: StudyMaterialKind) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
       {RESOURCES.map((resource) => (
         <ResourceButton key={resource.key} resource={resource} onGenerate={onGenerate} />
       ))}
@@ -180,7 +180,7 @@ function ResourceButton({
               type="button"
               disabled={disabled}
               className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center relative cursor-pointer",
+                "flex h-9 w-9 shrink-0 items-center justify-center relative cursor-pointer touch-manipulation active:scale-97",
                 "text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground",
                 disabled && "opacity-50 cursor-not-allowed",
               )}
@@ -205,13 +205,13 @@ function ResourceButton({
       disabled={disabled}
       onClick={() => !disabled && onGenerate(resource.kind)}
       className={cn(
-        "relative flex min-h-11 h-auto w-full items-center justify-between gap-2 overflow-hidden rounded-2xl px-3 py-2.5 text-muted-foreground outline-none transition-colors duration-200 select-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background cursor-pointer active:scale-97 transition-transform touch-manipulation",
+        "relative flex min-h-11 h-auto w-full items-center justify-between gap-1.5 sm:gap-2 overflow-hidden rounded-2xl px-2.5 py-2 sm:px-3 sm:py-2.5 text-xs sm:text-sm font-medium text-muted-foreground outline-none transition-colors duration-200 select-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background cursor-pointer active:scale-97 transition-transform touch-manipulation",
         resource.colorClasses,
         disabled && "opacity-50 cursor-not-allowed",
       )}
     >
-      <span className="min-w-0 truncate text-sm font-medium leading-tight">{label}</span>
-      <resource.icon className="h-4.5 w-4.5 shrink-0" strokeWidth={1.75} />
+      <span className="min-w-0 truncate leading-tight">{label}</span>
+      <resource.icon className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0" strokeWidth={1.75} />
     </button>
   );
 }
@@ -272,7 +272,7 @@ function ActiveGenerationCard({
             <button
               type="button"
               onClick={() => onCancel(generation.id)}
-              className="mt-1 self-start text-xs font-medium text-primary hover:underline cursor-pointer"
+              className="mt-1 min-h-11 py-2 sm:min-h-0 sm:py-0 self-start text-xs font-medium text-primary hover:underline cursor-pointer touch-manipulation active:scale-97 inline-flex items-center"
             >
               {t("studio.dismiss")}
             </button>
@@ -281,11 +281,11 @@ function ActiveGenerationCard({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg"
+          className="min-h-11 min-w-11 sm:size-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg touch-manipulation active:scale-97"
           onClick={() => onCancel(generation.id)}
           title={t("studio.dismissError")}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
         </Button>
       </div>
     );
@@ -311,11 +311,11 @@ function ActiveGenerationCard({
       <Button
         variant="ghost"
         size="icon"
-        className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg"
+        className="min-h-11 min-w-11 sm:size-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg touch-manipulation active:scale-97"
         onClick={() => onCancel(generation.id)}
         title={t("studio.cancelGeneration")}
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
       </Button>
     </div>
   );

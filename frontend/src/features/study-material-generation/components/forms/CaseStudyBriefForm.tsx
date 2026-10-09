@@ -168,7 +168,7 @@ export function CaseStudyBriefForm({
                   updateCaseStudyOptions({ focus: event.target.value });
                 }}
                 placeholder={t("caseStudy.conceptsPlaceholder")}
-                className="min-h-40 max-h-60 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
+                className="min-h-40 max-h-60 text-base sm:text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>

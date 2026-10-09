@@ -43,7 +43,7 @@ export function BriefChoiceField<T extends string>({
               onClick={() => onChange(opt.id)}
               className={cn(
                 optionRowClass(selected),
-                "flex flex-col justify-between gap-1.5 p-3 text-left",
+                "flex flex-col justify-between gap-1.5 p-3 text-left touch-manipulation active:scale-97 transition-transform",
               )}
             >
               <span

@@ -118,7 +118,7 @@ export function SlidesBriefForm({
                           aria-pressed={selected}
                           onClick={() => updateSlidesOptions({ theme: opt.id })}
                           className={cn(
-                            "cursor-pointer rounded-2xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "cursor-pointer rounded-2xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation active:scale-97",
                             selected
                               ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
                               : "border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3",

@@ -20,7 +20,7 @@ const COLUMN_CLASS: Record<number, string> = {
 };
 
 export const countInputClass =
-  "h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-sm font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong";
+  "h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-base sm:text-sm font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong";
 
 export interface CountSelectorProps {
   label: string;
@@ -104,7 +104,7 @@ export function CountSelector({
               onClick={() => onValueChange(preset)}
               className={cn(
                 optionRowClass(selected),
-                "flex h-9 items-center justify-center gap-1.5 text-center text-sm",
+                "flex h-9 min-h-10 sm:min-h-9 items-center justify-center gap-1.5 text-center text-sm touch-manipulation active:scale-97",
                 selected ? "font-semibold" : "font-medium",
               )}
             >
@@ -136,7 +136,7 @@ export function CountSelector({
             onClick={handleEnableCustom}
             className={cn(
               optionRowClass(false),
-              "flex h-9 items-center justify-center gap-1.5 text-center text-sm font-medium",
+              "flex h-9 min-h-10 sm:min-h-9 items-center justify-center gap-1.5 text-center text-sm font-medium touch-manipulation active:scale-97",
             )}
           >
             {t("actions.custom")}

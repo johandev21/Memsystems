@@ -19,6 +19,7 @@ import { InlineRename } from "./inline-rename";
 import { MobileTreeRowActions } from "./mobile-tree-row-actions";
 import { RowMenu } from "./row-menu";
 import { getTreeIcon } from "./row-icon";
+import { studyMaterialsTreeRowVariants } from "./variants";
 
 type RowProps = {
   node: TreeNode;
@@ -105,16 +106,19 @@ export function Row({ node, depth }: RowProps) {
       role="treeitem"
       tabIndex={isFocused ? 0 : -1}
       style={{ "--tree-row-pad": `calc(var(--tree-root-inset) + ${depth} * var(--tree-indent-step))` } as React.CSSProperties}
-      className={getTreeRowClassName({
-        isSelected,
-        treeHasFocus: controller.treeHasFocus,
-        isOver,
-        canAcceptDrop,
-        isDragging,
-        isActiveItem,
-        isRenaming,
-        isCoarse,
-      })}
+      className={cn(
+        getTreeRowClassName({
+          isSelected,
+          treeHasFocus: controller.treeHasFocus,
+          isOver,
+          canAcceptDrop,
+          isDragging,
+          isActiveItem,
+          isRenaming,
+          isCoarse,
+        }),
+        studyMaterialsTreeRowVariants,
+      )}
       onPointerDown={(event) => {
         if (!isCoarse) {
           (

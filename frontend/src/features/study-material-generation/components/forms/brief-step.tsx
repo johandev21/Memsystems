@@ -65,7 +65,7 @@ export function BriefNextButton(props: BriefNavButtonProps) {
     <Button
       variant="surface"
       type="button"
-      className="h-9 cursor-pointer gap-1.5 rounded-full px-5 text-sm font-medium transition-colors"
+      className="min-h-11 sm:min-h-9 h-auto cursor-pointer gap-1.5 rounded-full px-5 text-sm font-medium transition-transform transition-colors active:scale-97 touch-manipulation"
       {...props}
     />
   );
@@ -76,7 +76,7 @@ export function BriefBackButton(props: BriefNavButtonProps) {
     <Button
       type="button"
       variant="ghost"
-      className="h-9 cursor-pointer gap-1.5 px-4 text-sm text-text-faint hover:text-text-secondary"
+      className="min-h-11 sm:min-h-9 h-auto cursor-pointer gap-1.5 px-4 text-sm text-text-faint hover:text-text-secondary transition-transform active:scale-97 touch-manipulation"
       {...props}
     />
   );
@@ -87,7 +87,7 @@ export function BriefSubmitButton(props: BriefNavButtonProps) {
     <Button
       variant="surface"
       type="button"
-      className="h-10 cursor-pointer gap-2 rounded-full px-6 text-sm font-medium transition-colors"
+      className="min-h-11 sm:min-h-9 h-auto cursor-pointer gap-2 rounded-full px-6 text-sm font-medium transition-transform transition-colors active:scale-97 touch-manipulation"
       {...props}
     />
   );

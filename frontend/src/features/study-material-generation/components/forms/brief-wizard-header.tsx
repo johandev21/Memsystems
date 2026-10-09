@@ -36,7 +36,7 @@ export function BriefWizardHeader({
             aria-label={t("wizard.stepAria", { step: index + 1 })}
             onClick={() => onStepChange(index + 1)}
             className={cn(
-              "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0",
+              "h-1.5 rounded-full transition-all cursor-pointer p-0 border-0 touch-manipulation active:scale-95",
               index < step ? "bg-primary" : "bg-surface-4",
             )}
           />

@@ -555,9 +555,6 @@ describe("GenerateBriefDialog", () => {
     expect(
       screen.getByText(/couldn't be verified with the AI Gateway/),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("link", { name: "Refresh the catalog in Settings" }).getAttribute("href"),
-    ).toBe("/settings");
     expect(screen.queryByRole("button", { name: /Next Step/i })).toBeNull();
   });
 

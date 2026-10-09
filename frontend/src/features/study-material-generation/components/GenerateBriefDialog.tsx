@@ -116,9 +116,13 @@ export function GenerateBriefDialog({
           "bg-surface-1 border border-surface-border generate-material-dialog",
           "max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden",
           "min-w-0 [&>*]:min-w-0",
-          "sm:max-w-2xl",
+          "sm:max-w-2xl pb-safe-lg sm:pb-6",
         )}
       >
+        <div
+          aria-hidden="true"
+          className="sm:hidden mx-auto -mt-2 mb-2 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30"
+        />
         <DialogHeader>
           <DialogTitle className="text-base font-semibold text-text-primary">
             {t("dialog.title", { kind: label })}
