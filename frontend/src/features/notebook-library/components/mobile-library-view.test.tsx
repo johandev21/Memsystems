@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import notebooksEn from "@/shared/i18n/locales/en/notebooks.json";
+import type { LibraryNotebook } from "../model/types";
 import { MobileLibraryView, type MobileLibraryViewProps } from "./mobile-library-view";
 
 beforeAll(() => {
@@ -34,11 +35,13 @@ const mockSubfolder = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
-const mockNotebook = {
+const mockNotebook: LibraryNotebook = {
   id: "notebook-1",
   title: "Republic",
   description: "Plato's Republic",
+  icon: "notebook",
   coverUrl: null,
+  coverVariants: null,
   folderId: "folder-1",
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -48,8 +51,8 @@ const defaultProps: MobileLibraryViewProps = {
   folders: [mockFolder, mockSubfolder],
   notebooks: [mockNotebook],
   items: [
-    { kind: "folder", id: "folder-2", folder: mockSubfolder },
-    { kind: "notebook", id: "notebook-1", notebook: mockNotebook },
+    { kind: "folder", folder: mockSubfolder },
+    { kind: "notebook", notebook: mockNotebook },
   ],
   activeFolderId: "folder-1",
   sortKey: "name",
