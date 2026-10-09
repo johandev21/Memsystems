@@ -9,6 +9,14 @@
   --typeset-flow: 1.25em;
 }
 
+@media (max-width: 639px) {
+  .typeset-chat {
+    --typeset-size: var(--type-size-prose-compact);
+    --typeset-leading: 1.55;
+    --typeset-flow: 0.875em;
+  }
+}
+
 /*
  * Document viewers (sources panel). Same type ramp as chat, one step down:
  * the panel is a side surface, so prose should sit below the chat's reading

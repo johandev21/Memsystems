@@ -43,7 +43,7 @@ export function MarkdownCodeBlock({
 
 function MarkdownInlineCode({ children }: { children: string }) {
   return (
-    <code className="rounded border border-border/40 bg-muted px-1.5 py-0.5 font-mono text-sm font-medium text-foreground">
+    <code className="rounded border border-border/40 bg-muted px-1.5 py-0.5 font-mono text-xs sm:text-sm font-medium text-foreground">
       {children}
     </code>
   );
@@ -62,7 +62,7 @@ function MarkdownBlockCode({
 }) {
   return (
     <CodeBlock
-      className={cn("my-4", containerClassName)}
+      className={cn("my-2.5 sm:my-4", containerClassName)}
       code={code}
       language={language}
       showLineNumbers={showLineNumbers}
