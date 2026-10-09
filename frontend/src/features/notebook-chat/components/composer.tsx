@@ -78,7 +78,7 @@ export function Composer({
           value={input}
           onChange={(e) => onInputChange(e.currentTarget.value)}
           placeholder={t("composer.placeholder")}
-          className="min-h-9 max-h-48 select-text border-0 px-2.5 py-1.5 text-base leading-5 focus:ring-0 focus-visible:ring-0 sm:min-h-12 sm:px-3 sm:py-2 sm:text-sm sm:leading-6"
+          className="min-h-9 max-h-48 select-text border-0 px-2.5 py-1.5 text-sm leading-5 placeholder:text-sm focus:ring-0 focus-visible:ring-0 sm:min-h-12 sm:px-3 sm:py-2 sm:leading-6"
         />
       </PromptInputBody>
       <PromptInputFooter className="px-1.5 pt-0 pb-0.5 sm:pt-0.5">
