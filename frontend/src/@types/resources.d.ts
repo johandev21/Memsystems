@@ -944,6 +944,7 @@ export default interface Resources {
       "processingSources": "processing sources"
     },
     "settings": {
+      "appSettings": "App settings",
       "ariaLabel": "Notebook settings",
       "cancel": "Cancel",
       "clearChat": "Clear chat",

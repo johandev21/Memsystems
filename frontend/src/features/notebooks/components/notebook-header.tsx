@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Logo, SettingsLink } from "@/components/layout";
 import { notebookQueryOptions } from "../api/notebooks";
 import { EditableNotebookTitle } from "./editable-notebook-title";
+import { MobileNotebookMenuDrawer } from "./mobile-notebook-menu-drawer";
 
 export function NotebookHeader({ id }: { id: string }) {
   const { data: notebook } = useQuery(notebookQueryOptions(id));
@@ -27,7 +28,12 @@ export function NotebookHeader({ id }: { id: string }) {
       </div>
 
       <div className="shrink-0">
-        <SettingsLink />
+        <div className="hidden sm:block">
+          <SettingsLink />
+        </div>
+        <div className="sm:hidden">
+          <MobileNotebookMenuDrawer notebookId={id} />
+        </div>
       </div>
     </header>
   );

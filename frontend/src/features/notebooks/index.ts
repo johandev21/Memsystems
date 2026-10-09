@@ -1,6 +1,7 @@
 export * from "./api";
 export * from "./components/dialogs/image-upload-dialog";
 export * from "./components/dialogs/notebook-settings-dialog";
+export * from "./components/mobile-notebook-menu-drawer";
 export * from "./components/editable-notebook-title";
 export * from "./components/notebook-card";
 export * from "./components/notebook-header";

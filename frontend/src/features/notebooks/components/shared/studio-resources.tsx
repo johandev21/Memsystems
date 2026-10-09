@@ -205,7 +205,7 @@ function ResourceButton({
       disabled={disabled}
       onClick={() => !disabled && onGenerate(resource.kind)}
       className={cn(
-        "relative flex min-h-11 h-auto w-full items-center justify-between gap-2 overflow-hidden rounded-2xl px-3 py-2.5 text-muted-foreground outline-none transition-colors duration-200 select-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background cursor-pointer",
+        "relative flex min-h-11 h-auto w-full items-center justify-between gap-2 overflow-hidden rounded-2xl px-3 py-2.5 text-muted-foreground outline-none transition-colors duration-200 select-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background cursor-pointer active:scale-97 transition-transform touch-manipulation",
         resource.colorClasses,
         disabled && "opacity-50 cursor-not-allowed",
       )}

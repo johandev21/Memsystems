@@ -73,7 +73,7 @@ export function MobileNotebookLayout({
               type="button"
               variant="outline"
               size="sm"
-              className="w-full justify-center gap-1.5 cursor-pointer"
+              className="w-full justify-center gap-1.5 cursor-pointer active:scale-97 transition-transform touch-manipulation"
               onClick={() => window.dispatchEvent(new CustomEvent("restore-study-material"))}
             >
               <ArrowLeft className="size-3.5" />

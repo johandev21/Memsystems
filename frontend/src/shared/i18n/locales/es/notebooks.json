@@ -146,6 +146,7 @@
     "processingSources": "procesando fuentes"
   },
   "settings": {
+    "appSettings": "Ajustes de la aplicación",
     "ariaLabel": "Ajustes del cuaderno",
     "cancel": "Cancelar",
     "clearChat": "Borrar chat",

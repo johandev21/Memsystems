@@ -54,7 +54,7 @@ export function SourcesPanelHeader({
                     type="button"
                     className={cn(
                       buttonVariants({ variant: "ghost", size: "icon" }),
-                      "h-7 w-7 cursor-pointer",
+                      "h-7 w-7 cursor-pointer active:scale-97 transition-transform touch-manipulation",
                     )}
                     aria-label={t("panels.addSource")}
                   >
@@ -66,15 +66,17 @@ export function SourcesPanelHeader({
             <TooltipContent>{t("panels.addSource")}</TooltipContent>
           </Tooltip>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={collapsed ? "mx-auto cursor-pointer" : "h-7 w-7 cursor-pointer"}
-          aria-label={collapsed ? t("panels.expandSources") : t("panels.collapseSources")}
-          onClick={onToggleCollapse}
-        >
-          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-        </Button>
+        {onToggleCollapse && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={collapsed ? "mx-auto cursor-pointer" : "h-7 w-7 cursor-pointer active:scale-97 transition-transform touch-manipulation"}
+            aria-label={collapsed ? t("panels.expandSources") : t("panels.collapseSources")}
+            onClick={onToggleCollapse}
+          >
+            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+          </Button>
+        )}
       </div>
     </header>
   );

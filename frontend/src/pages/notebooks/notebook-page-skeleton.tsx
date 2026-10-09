@@ -17,7 +17,10 @@ function NotebookHeaderSkeleton() {
         <Skeleton className="h-5 w-40" />
       </div>
       <div className="shrink-0">
-        <SettingsLink />
+        <div className="hidden sm:block">
+          <SettingsLink />
+        </div>
+        <Skeleton className="sm:hidden size-8 rounded-full" />
       </div>
     </header>
   );

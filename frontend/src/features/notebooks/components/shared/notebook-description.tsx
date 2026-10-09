@@ -42,7 +42,7 @@ export function NotebookDescription({
             rows={1}
             maxLength={500}
             aria-label={t("description.ariaLabel")}
-            className="min-h-7 max-h-24 resize-none rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent px-0 py-1 text-sm leading-relaxed text-foreground/80 shadow-none placeholder:text-foreground/45 focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/30 focus-visible:ring-0"
+            className="min-h-7 max-h-24 resize-none rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent px-0 py-1 text-base sm:text-sm leading-relaxed text-foreground/80 shadow-none placeholder:text-foreground/45 focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/30 focus-visible:ring-0"
           />
           {showCharacterCount ? (
             <span className="self-end text-xs text-foreground/50" aria-live="polite">

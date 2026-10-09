@@ -71,7 +71,7 @@ export function EditableNotebookTitle({ id }: { id: string }) {
             setIsEditing(false);
           }
         }}
-        className="text-sm font-semibold px-2 py-0.5 border border-foreground/30 bg-transparent text-foreground outline-none w-full max-w-[72vw] sm:w-60 sm:max-w-none rounded-xl focus:ring-1 focus:ring-ring"
+        className="text-base sm:text-sm font-semibold px-2 py-0.5 border border-foreground/30 bg-transparent text-foreground outline-none w-full max-w-[72vw] sm:w-60 sm:max-w-none rounded-xl focus:ring-1 focus:ring-ring"
         maxLength={200}
         disabled={mutation.isPending}
       />
