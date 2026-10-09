@@ -45,7 +45,7 @@ function StudyGuideReader({
         <p className="text-xs font-medium text-text-tertiary">
           {guide.format === "revision" ? t("studyGuide.revision") : t("studyGuide.detailed")}
         </p>
-        <h1 className="text-3xl leading-tight font-semibold break-words sm:text-3xl">
+        <h1 className="text-xl leading-tight font-semibold break-words sm:text-3xl">
           {guide.title.replace(/-study-guide$/, "").replaceAll("-", " ")}
         </h1>
         {guide.sourceIds.length === 0 && !hasReferences && (
@@ -59,8 +59,8 @@ function StudyGuideReader({
         headingLevel={2}
       />
       <nav aria-label={t("studyGuide.contentsAria")} className="space-y-3">
-        <h2 className="text-xl font-semibold">{t("studyGuide.contents")}</h2>
-        <ol className="list-decimal space-y-2 pl-5 marker:text-text-secondary">
+        <h2 className="text-base font-semibold sm:text-xl">{t("studyGuide.contents")}</h2>
+        <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base marker:text-text-secondary">
           {guide.sections.map((section) => (
             <li key={section.id}>
               <a
@@ -119,7 +119,7 @@ function GuideSection({
       className="scroll-mt-6 space-y-6 focus-visible:outline-2 focus-visible:outline-offset-4"
       aria-labelledby={`${anchorId}-title`}
     >
-      <h2 id={`${anchorId}-title`} className="text-xl font-semibold break-words sm:text-2xl">
+      <h2 id={`${anchorId}-title`} className="text-lg font-semibold break-words sm:text-2xl">
         {section.title}
       </h2>
       <GuideMarkdown text={section.explanation} headingLevel={3} />
@@ -173,7 +173,13 @@ function GuideList({
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <div className="space-y-2">
-      <Heading className={headingLevel === 2 ? "text-xl font-semibold" : "text-base font-semibold"}>
+      <Heading
+        className={
+          headingLevel === 2
+            ? "text-base font-semibold sm:text-xl"
+            : "text-sm font-semibold sm:text-base"
+        }
+      >
         {title}
       </Heading>
       <ul className="list-disc space-y-2 pl-5">

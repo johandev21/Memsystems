@@ -13,7 +13,7 @@ export function CaseStudyScenario({ study }: CaseStudyScenarioProps) {
     <>
       <header className="space-y-4">
         <p className="text-xs font-medium text-text-tertiary">{t("caseStudy.label")}</p>
-        <h1 className="text-3xl leading-tight font-semibold break-words sm:text-3xl">
+        <h1 className="text-xl leading-tight font-semibold break-words sm:text-3xl">
           {study.title.replace(/-case-study$/, "").replaceAll("-", " ")}
         </h1>
         {study.sourceIds.length === 0 ? (
@@ -31,7 +31,7 @@ export function CaseStudyScenario({ study }: CaseStudyScenarioProps) {
       </header>
 
       <section className="space-y-3" aria-label={t("common.learningObjectives")}>
-        <h2 className="text-xl font-semibold">{t("common.learningObjectives")}</h2>
+        <h2 className="text-base font-semibold sm:text-xl">{t("common.learningObjectives")}</h2>
         <ul className="list-disc space-y-2 pl-5">
           {study.learningObjectives.map((objective) => (
             <li key={objective}>
@@ -42,7 +42,7 @@ export function CaseStudyScenario({ study }: CaseStudyScenarioProps) {
       </section>
 
       <section aria-label={t("caseStudy.scenarioAria")} className="space-y-4">
-        <h2 className="text-xl font-semibold break-words sm:text-2xl">{study.scenario.title}</h2>
+        <h2 className="text-lg font-semibold break-words sm:text-2xl">{study.scenario.title}</h2>
         <p className="text-sm text-text-secondary">{t("caseStudy.fictionalNotice")}</p>
         <p className="text-sm text-text-secondary">{study.scenario.setting}</p>
         <CaseMarkdown text={study.scenario.narrative} />
@@ -50,7 +50,7 @@ export function CaseStudyScenario({ study }: CaseStudyScenarioProps) {
 
       {study.facts.length > 0 && (
         <section aria-label={t("caseStudy.relevantFacts")} className="space-y-3">
-          <h2 className="text-xl font-semibold">{t("caseStudy.relevantFacts")}</h2>
+          <h2 className="text-base font-semibold sm:text-xl">{t("caseStudy.relevantFacts")}</h2>
           <ul className="list-disc space-y-2 pl-5">
             {study.facts.map((fact) => (
               <li key={fact}>

@@ -23,8 +23,8 @@ export function QaCard({ question, answer, isRevealed }: QaCardProps) {
       <p
         className={
           isRevealed
-            ? "text-sm leading-relaxed whitespace-pre-wrap break-words text-text-secondary"
-            : "text-base sm:text-xl leading-relaxed font-medium whitespace-pre-wrap break-words text-text-primary"
+            ? "text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words text-text-secondary"
+            : "text-sm sm:text-lg md:text-xl leading-relaxed font-medium whitespace-pre-wrap break-words text-text-primary"
         }
       >
         {question}

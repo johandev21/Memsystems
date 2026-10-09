@@ -35,10 +35,10 @@ export function ProblemStatementSection({
     <section className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="space-y-1.5 flex-1">
-          <span className="text-sm font-medium text-text-secondary">
+          <span className="text-xs sm:text-sm font-medium text-text-secondary">
             {t("practice.problem", { number: activeIdx + 1 })}
           </span>
-          <div className="text-lg md:text-xl font-semibold text-text-primary leading-relaxed">
+          <div className="text-base sm:text-lg md:text-xl font-medium sm:font-semibold text-text-primary leading-snug sm:leading-relaxed">
             <MarkdownRenderer>{prompt}</MarkdownRenderer>
           </div>
         </div>
@@ -60,7 +60,7 @@ export function ProblemStatementSection({
         constraints.length > 0 ||
         checklist.length > 0 ||
         acceptableAlternatives.length > 0) && (
-        <div className="rounded-xl border border-surface-border-subtle bg-surface-2 p-5 space-y-5 text-sm">
+        <div className="rounded-xl border border-surface-border-subtle bg-surface-2 p-4 sm:p-5 space-y-4 sm:space-y-5 text-xs sm:text-sm">
           {givens.length > 0 && (
             <div>
               <h4 className="font-medium text-text-primary mb-1.5">{t("practice.givens")}</h4>

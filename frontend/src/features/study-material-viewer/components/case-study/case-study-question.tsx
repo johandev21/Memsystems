@@ -37,7 +37,7 @@ export function CaseQuestion({
 
   return (
     <section aria-label={t("caseStudy.question", { number: index + 1 })} className="space-y-6">
-      <h2 className="text-xl font-semibold sm:text-2xl">
+      <h2 className="text-lg font-semibold sm:text-2xl">
         {t("caseStudy.question", { number: index + 1 })}
       </h2>
       <CaseMarkdown text={question.prompt} />
@@ -48,7 +48,7 @@ export function CaseQuestion({
       )}
 
       <div className="space-y-2">
-        <label htmlFor={`case-response-${question.id}`} className="text-base font-semibold">
+        <label htmlFor={`case-response-${question.id}`} className="text-sm font-semibold sm:text-base">
           {t("caseStudy.yourResponse")}
         </label>
         <Textarea
@@ -77,12 +77,12 @@ export function CaseQuestion({
           </Button>
           <div id={`case-analysis-${question.id}`} hidden={!entry.revealed} className="space-y-6">
             <div className="space-y-2">
-              <h3 className="text-base font-semibold">{t("caseStudy.sampleReasoning")}</h3>
+              <h3 className="text-sm font-semibold sm:text-base">{t("caseStudy.sampleReasoning")}</h3>
               <CaseMarkdown text={analysis.reasoning} />
             </div>
             {analysis.keyPoints.length > 0 && (
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">{t("caseStudy.keyPoints")}</h3>
+                <h3 className="text-sm font-semibold sm:text-base">{t("caseStudy.keyPoints")}</h3>
                 <ul className="list-disc space-y-2 pl-5">
                   {analysis.keyPoints.map((point) => (
                     <li key={point}>
@@ -94,7 +94,7 @@ export function CaseQuestion({
             )}
             {analysis.conceptApplications.length > 0 && (
               <div className="space-y-2">
-                <h3 className="text-base font-semibold">{t("caseStudy.conceptsFromSources")}</h3>
+                <h3 className="text-sm font-semibold sm:text-base">{t("caseStudy.conceptsFromSources")}</h3>
                 {analysis.conceptApplications.map((app) => (
                   <div key={app.concept} className="space-y-2">
                     <p className="font-medium">{app.concept}</p>
@@ -113,7 +113,7 @@ export function CaseQuestion({
             )}
             {analysis.assumptions.length > 0 && (
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">{t("caseStudy.assumptions")}</h3>
+                <h3 className="text-sm font-semibold sm:text-base">{t("caseStudy.assumptions")}</h3>
                 <ul className="list-disc space-y-2 pl-5">
                   {analysis.assumptions.map((item) => (
                     <li key={item}>
@@ -125,7 +125,7 @@ export function CaseQuestion({
             )}
             {analysis.tradeoffs.length > 0 && (
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">{t("caseStudy.tradeoffs")}</h3>
+                <h3 className="text-sm font-semibold sm:text-base">{t("caseStudy.tradeoffs")}</h3>
                 <ul className="list-disc space-y-2 pl-5">
                   {analysis.tradeoffs.map((item) => (
                     <li key={item}>
@@ -137,7 +137,7 @@ export function CaseQuestion({
             )}
             {analysis.alternativePerspectives.length > 0 && (
               <div className="space-y-2">
-                <h3 className="text-base font-semibold">
+                <h3 className="text-sm font-semibold sm:text-base">
                   {t("caseStudy.alternativePerspectives")}
                 </h3>
                 {analysis.alternativePerspectives.map((alt) => (
@@ -158,7 +158,7 @@ export function CaseQuestion({
             )}
             {analysis.sourceIds.length > 0 && (
               <div className="space-y-2">
-                <h3 className="text-base font-semibold">{t("common.supportingSources")}</h3>
+                <h3 className="text-sm font-semibold sm:text-base">{t("common.supportingSources")}</h3>
                 <SourceRefs
                   ids={analysis.sourceIds}
                   sources={sources}

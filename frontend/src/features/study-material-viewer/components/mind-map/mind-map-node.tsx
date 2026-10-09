@@ -34,7 +34,7 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
         className="!h-1 !w-1 !border-0 !bg-transparent"
       />
       <div className="flex items-center gap-2">
-        <span className="text-sm sm:text-sm font-semibold leading-tight wrap-break-word">
+        <span className="text-xs sm:text-sm font-semibold leading-tight wrap-break-word">
           {data.item.label}
         </span>
       </div>

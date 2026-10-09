@@ -205,7 +205,7 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <div className="text-sm text-text-secondary">
+      <div className="text-xs sm:text-sm text-text-secondary">
         <span aria-live="polite">
           {t("flashcard.cardOf", { current: currentCardIndex + 1, total: cards.length })}
         </span>

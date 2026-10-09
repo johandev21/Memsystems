@@ -198,7 +198,7 @@ export function SolutionSection({
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-text-primary">{t("practice.solution")}</h3>
+        <h3 className="text-sm sm:text-base font-semibold text-text-primary">{t("practice.solution")}</h3>
 
         {difficulty === "medium" && (
           <Button
@@ -248,11 +248,11 @@ export function SolutionSection({
 
       {isRevealed && (
         <div className="space-y-6 pt-1">
-          <div className="rounded-xl border border-surface-border-subtle bg-surface-2 p-5 space-y-2">
-            <h4 className="text-sm font-semibold text-text-primary">
+          <div className="rounded-xl border border-surface-border-subtle bg-surface-2 p-4 sm:p-5 space-y-2">
+            <h4 className="text-xs sm:text-sm font-semibold text-text-primary">
               {t("practice.referenceAnswer")}
             </h4>
-            <div className="text-base text-text-primary leading-relaxed font-medium">
+            <div className="text-sm sm:text-base text-text-primary leading-relaxed font-medium">
               <MarkdownRenderer>{answer}</MarkdownRenderer>
             </div>
           </div>

@@ -85,9 +85,11 @@ describe("CaseStudyView", () => {
   it("replaces the saved message on storage failure while keeping the response editable", async () => {
     const user = userEvent.setup();
     renderCase();
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    const failStorage = () => {
       throw new Error("Storage full");
-    });
+    };
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(failStorage);
+    vi.spyOn(window.localStorage, "setItem").mockImplementation(failStorage);
     const response = screen.getByRole("textbox", { name: "Your Response" }) as HTMLTextAreaElement;
     await user.type(response, "My answer");
     expect(screen.getByRole("alert").textContent).toContain("Progress could not be saved");

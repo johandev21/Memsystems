@@ -43,7 +43,7 @@ export function PracticeStepperHeader({
           >
             {difficultyLabel}
           </Badge>
-          <span className="text-sm font-medium text-text-secondary">
+          <span className="text-xs sm:text-sm font-medium text-text-secondary">
             {t("practice.problemOf", { current: activeIdx + 1, total: totalProblems })}
           </span>
         </div>
@@ -58,7 +58,7 @@ export function PracticeStepperHeader({
                   type="button"
                   onClick={() => onGoToProblem(idx)}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition-all cursor-pointer border",
+                    "flex h-8 w-8 items-center justify-center rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer border",
                     isActive
                       ? "bg-primary text-primary-foreground font-semibold shadow-xs border-transparent"
                       : "bg-surface-2 border-surface-border-subtle text-text-secondary hover:bg-surface-3 hover:text-text-primary",

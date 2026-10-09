@@ -201,7 +201,7 @@ export function QuizQuestionStepper({
         </Button>
       )}
       <div className="space-y-3">
-        <div className="flex flex-wrap justify-between gap-2 text-sm text-text-secondary">
+        <div className="flex flex-wrap justify-between gap-2 text-xs sm:text-sm text-text-secondary">
           <span>{t("quiz.question", { number: currentIdx + 1 })}</span>
           <span>{t("quiz.answeredOf", { answered: answeredCount, total: questions.length })}</span>
         </div>
@@ -224,15 +224,15 @@ export function QuizQuestionStepper({
           id={id}
           ref={headingRef}
           tabIndex={-1}
-          className="text-lg font-semibold leading-relaxed break-words focus-visible:outline-none sm:text-xl"
+          className="text-base font-semibold leading-snug break-words focus-visible:outline-none sm:text-xl sm:leading-relaxed"
         >
           {q.prompt}
         </h2>
         {!isChecked && (
-          <p className="text-sm text-text-secondary">{t("quiz.selectNotice")}</p>
+          <p className="text-xs sm:text-sm text-text-secondary">{t("quiz.selectNotice")}</p>
         )}
         {isReviewMode && selectedIdx === undefined && (
-          <p className="text-sm text-text-secondary">{t("quiz.unansweredNotice")}</p>
+          <p className="text-xs sm:text-sm text-text-secondary">{t("quiz.unansweredNotice")}</p>
         )}
       </div>
       <div role="status" aria-live="polite" className="sr-only">

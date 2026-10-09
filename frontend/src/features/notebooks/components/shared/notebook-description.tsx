@@ -63,7 +63,7 @@ export function NotebookDescription({
           ref={captionRef}
           id={descriptionId}
           className={cn(
-            "whitespace-pre-wrap text-sm leading-relaxed text-foreground/70",
+            "whitespace-pre-wrap text-xs sm:text-sm leading-relaxed text-foreground/70",
             !isExpanded && "line-clamp-3",
           )}
         >

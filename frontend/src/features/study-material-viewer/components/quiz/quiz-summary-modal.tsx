@@ -100,21 +100,21 @@ export function QuizCompletionSummary({
       <h2
         ref={headingRef}
         tabIndex={-1}
-        className="text-xl font-semibold focus-visible:outline-none"
+        className="text-lg font-semibold focus-visible:outline-none sm:text-xl"
       >
         {t("quiz.complete")}
       </h2>
       <div className="space-y-2">
-        <p className="text-3xl font-semibold tabular-nums">{scorePercent}%</p>
-        <p className="text-sm text-text-secondary">
+        <p className="text-2xl sm:text-3xl font-semibold tabular-nums">{scorePercent}%</p>
+        <p className="text-xs sm:text-sm text-text-secondary">
           {t("quiz.scoreOf", { correct: correctCount, total: totalQuestions })}
         </p>
       </div>
       <dl className="flex flex-wrap gap-x-10 gap-y-4">
         {stats.map(({ label, count }) => (
           <div key={label} className="space-y-1">
-            <dt className="text-sm text-text-secondary">{label}</dt>
-            <dd className="text-lg font-semibold tabular-nums">{count}</dd>
+            <dt className="text-xs sm:text-sm text-text-secondary">{label}</dt>
+            <dd className="text-base sm:text-lg font-semibold tabular-nums">{count}</dd>
           </div>
         ))}
       </dl>
