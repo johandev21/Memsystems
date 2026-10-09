@@ -7,7 +7,11 @@
     "description": "Choose the language used across the app.",
     "title": "Language"
   },
+  "nav": {
+    "back": "Library"
+  },
   "page": {
     "title": "Settings"
   }
 }
+

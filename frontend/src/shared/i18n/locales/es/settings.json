@@ -7,7 +7,11 @@
     "description": "Elige el idioma que se usa en toda la aplicación.",
     "title": "Idioma"
   },
+  "nav": {
+    "back": "Biblioteca"
+  },
   "page": {
     "title": "Ajustes"
   }
 }
+

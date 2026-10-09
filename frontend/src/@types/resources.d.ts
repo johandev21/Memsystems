@@ -854,6 +854,7 @@ export default interface Resources {
       "strict": "Strict"
     },
     "library": {
+      "back": "Back",
       "breadcrumbAria": "Breadcrumb",
       "create": {
         "aria": "Create",
@@ -883,9 +884,11 @@ export default interface Resources {
       "folderCardAria_other": "{{name}}, {{count}} notebooks",
       "heroSubtitle": "Pick up where you left off, or start something fresh.",
       "heroTitle": "Make progress on what matters.",
+      "itemActions": "Actions for {{name}}",
       "library": "Library",
       "loadFailedDescription": "Something went wrong while loading your notebooks. Check your connection and try again.",
       "loadFailedTitle": "Couldn't load your library",
+      "moveToFolder": "Move to folder",
       "moving": "Moving {{name}}",
       "notebook": "notebook",
       "removeFolder": "Remove Folder",
@@ -893,6 +896,7 @@ export default interface Resources {
       "removeNotebookConfirm": "Permanently delete “{{title}}” and all of its contents? This cannot be undone.",
       "rename": "Rename",
       "retry": "Retry",
+      "selectDestinationFolder": "Select destination folder",
       "sort": {
         "aria": "Sort library",
         "createdAt": "Date created",
@@ -1001,6 +1005,9 @@ export default interface Resources {
     "language": {
       "description": "Choose the language used across the app.",
       "title": "Language"
+    },
+    "nav": {
+      "back": "Library"
     },
     "page": {
       "title": "Settings"
