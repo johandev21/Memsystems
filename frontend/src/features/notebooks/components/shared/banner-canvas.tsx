@@ -107,8 +107,13 @@ export function BannerEditToolbar({
 
   return (
     <>
-      <div className="absolute left-3 top-3 flex items-center gap-1.5">
-        <Button variant="secondary" size="sm" onClick={onOpenImageDialog}>
+      <div className="absolute left-3 top-3 flex items-center gap-1.5 z-10">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onOpenImageDialog}
+          className="min-h-11 sm:min-h-8 touch-manipulation active:scale-97 cursor-pointer"
+        >
           <ImagePlus data-icon="inline-start" />
           {visibleBannerUrl ? t("banner.change") : t("banner.add")}
         </Button>
@@ -118,6 +123,7 @@ export function BannerEditToolbar({
             size="icon-sm"
             aria-label={t("banner.remove")}
             onClick={onRemoveBanner}
+            className="min-h-11 min-w-11 sm:size-8 touch-manipulation active:scale-97 cursor-pointer"
           >
             <Trash2 />
           </Button>
@@ -128,16 +134,22 @@ export function BannerEditToolbar({
           </span>
         ) : null}
       </div>
-      <div className="absolute right-3 top-3 flex items-center gap-1.5">
+      <div className="absolute right-3 top-3 flex items-center gap-1.5 z-10">
         <Button
           variant="secondary"
           size="icon-sm"
           aria-label={t("banner.cancelEdits")}
           onClick={onCancel}
+          className="min-h-11 min-w-11 sm:size-8 touch-manipulation active:scale-97 cursor-pointer"
         >
           <X />
         </Button>
-        <Button size="sm" disabled={isSaving} onClick={onSave}>
+        <Button
+          size="sm"
+          disabled={isSaving}
+          onClick={onSave}
+          className="min-h-11 sm:min-h-8 touch-manipulation active:scale-97 cursor-pointer"
+        >
           <Check data-icon="inline-start" />
           {isSaving ? t("banner.saving") : t("banner.save")}
         </Button>
@@ -241,8 +253,12 @@ export function BannerCanvas({
       onMouseMove={focalPointDrag.handleMouseMove}
       onMouseUp={focalPointDrag.stopDragging}
       onMouseLeave={focalPointDrag.stopDragging}
+      onTouchStart={focalPointDrag.handleTouchStart}
+      onTouchMove={focalPointDrag.handleTouchMove}
+      onTouchEnd={focalPointDrag.stopDragging}
+      onTouchCancel={focalPointDrag.stopDragging}
       className={cn(
-        "relative aspect-3/1 w-full overflow-hidden rounded-4xl border border-border bg-muted select-none outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "relative aspect-2/1 sm:aspect-3/1 min-h-[140px] sm:min-h-0 w-full overflow-hidden rounded-2xl sm:rounded-4xl border border-border bg-muted select-none outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isEditing &&
           visibleBannerUrl &&
           (focalPointDrag.isDragging ? "cursor-grabbing" : "cursor-grab"),
@@ -272,7 +288,7 @@ export function BannerCanvas({
           onClick={onBeginEditing}
           aria-label={t("banner.editNotebook")}
           title={t("banner.editNotebook")}
-          className="absolute right-3 top-3 bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-fade hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100"
+          className="absolute right-3 top-3 bg-background/80 opacity-100 sm:opacity-0 shadow-sm backdrop-blur-sm transition-fade hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100 min-h-11 min-w-11 sm:size-8 sm:min-h-8 sm:min-w-8 touch-manipulation active:scale-97 cursor-pointer z-10"
         >
           <Pencil />
         </Button>

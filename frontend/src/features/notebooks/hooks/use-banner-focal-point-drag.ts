@@ -44,12 +44,48 @@ export function useBannerFocalPointDrag({
     });
   };
 
+  const handleTouchStart = (event: React.TouchEvent) => {
+    if (!enabled || (event.target as HTMLElement).closest("button, input")) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      mouseX: touch.clientX,
+      mouseY: touch.clientY,
+      initialX: focalPoint.x,
+      initialY: focalPoint.y,
+    };
+  };
+
+  const handleTouchMove = (event: React.TouchEvent) => {
+    if (!isDragging || !dragStartRef.current || !containerRef.current) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    onChange({
+      x: clamp(
+        dragStartRef.current.initialX - (touch.clientX - dragStartRef.current.mouseX) / rect.width,
+      ),
+      y: clamp(
+        dragStartRef.current.initialY - (touch.clientY - dragStartRef.current.mouseY) / rect.height,
+      ),
+    });
+  };
+
   const stopDragging = () => {
     setIsDragging(false);
     dragStartRef.current = null;
   };
 
-  return { containerRef, isDragging, handleMouseDown, handleMouseMove, stopDragging };
+  return {
+    containerRef,
+    isDragging,
+    handleMouseDown,
+    handleMouseMove,
+    handleTouchStart,
+    handleTouchMove,
+    stopDragging,
+  };
 }
 
 function clamp(value: number) {

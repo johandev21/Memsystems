@@ -65,9 +65,13 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-120 p-6 gap-5 rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl">
+      <DialogContent className="sm:max-w-120 p-5 sm:p-6 pb-safe-lg sm:pb-6 gap-4 sm:gap-5 rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl">
+        <div
+          aria-hidden="true"
+          className="sm:hidden mx-auto -mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30"
+        />
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold tracking-tight">
+          <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight">
             {t("upload.title")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
@@ -96,7 +100,7 @@ export function ImageUploadDialog({ open, onOpenChange, onSelectFile }: ImageUpl
           onClick={openFileDialog}
           onKeyDown={handleKeyDown}
           className={cn(
-            "relative flex h-48 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed transition-all bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "relative flex h-44 sm:h-48 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed transition-all bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation active:scale-98",
             isDragging
               ? "border-primary bg-primary/5 scale-99"
               : "border-border hover:border-primary/50 hover:bg-muted/50",

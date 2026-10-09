@@ -77,7 +77,7 @@ export function NotebookDescription({
             aria-controls={descriptionId}
             aria-expanded={isExpanded}
             onClick={() => setIsExpanded((expanded) => !expanded)}
-            className="h-auto rounded-none border-0 p-0 text-xs font-medium text-foreground/85 underline-offset-4 hover:text-foreground focus-visible:border-0 focus-visible:ring-0 focus-visible:underline active:translate-y-0"
+            className="h-auto rounded-none border-0 p-0 text-xs font-medium text-foreground/85 underline-offset-4 hover:text-foreground focus-visible:border-0 focus-visible:ring-0 focus-visible:underline active:translate-y-0 touch-manipulation active:scale-97 cursor-pointer"
           >
             {isExpanded ? t("description.less") : t("description.more")}
           </Button>
