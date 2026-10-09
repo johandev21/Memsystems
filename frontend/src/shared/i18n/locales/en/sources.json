@@ -7,6 +7,9 @@
     "urlDescription": "Import an article, webpage, or video.",
     "urlTitle": "Add Web Link"
   },
+  "actions": {
+    "viewContent": "View content"
+  },
   "api": {
     "addSourceFailed": "Failed to add source ({{status}})",
     "cancelSourceFailed": "Failed to cancel source ({{status}})",
@@ -100,6 +103,7 @@
   },
   "sourceRow": {
     "delete": "Delete source",
+    "moreActions": "Source actions",
     "retryProcessing": "Retry source processing"
   },
   "sourcesList": {

@@ -73,8 +73,8 @@ export function SourceContentViewer({
     <div
       className={
         readerControls.isEffectivelyFullscreen
-          ? "fixed inset-0 z-viewer flex h-dvh w-screen flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
-          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150"
+          ? "fixed inset-0 z-viewer flex h-dvh w-screen flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150 pb-safe"
+          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden animate-in fade-in duration-150 pb-safe"
       }
     >
       <SourceReaderHeader

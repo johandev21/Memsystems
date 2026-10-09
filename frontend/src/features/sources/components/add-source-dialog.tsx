@@ -73,8 +73,13 @@ export function AddSourceDialog({
       <DialogTrigger render={children} nativeButton={isNativeButton} />
       <DialogContent
         motion={false}
-        className="flex max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-panel border-border/60 bg-card p-0 shadow-2xl sm:max-h-[90vh] sm:max-w-170"
+        className="flex max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-panel border-border/60 bg-card p-0 shadow-2xl sm:max-h-[90vh] sm:max-w-170 pb-safe touch-manipulation"
       >
+        <div
+          className="sm:hidden mx-auto -mb-3 mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30"
+          aria-hidden="true"
+          data-slot="mobile-sheet-handle"
+        />
         <DialogHeader className="relative shrink-0 px-5 pb-2 pt-6 sm:px-6">
           {mode !== "menu" && (
             <Button
@@ -82,7 +87,7 @@ export function AddSourceDialog({
               variant="ghost"
               size="icon-sm"
               onClick={() => setMode("menu")}
-              className="absolute left-4 top-4 z-10 bg-secondary cursor-pointer"
+              className="absolute left-4 top-4 z-10 bg-secondary cursor-pointer min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 active:scale-97 transition-transform touch-manipulation"
               aria-label={t("urlMode.back")}
             >
               <ArrowLeft className="size-4" />

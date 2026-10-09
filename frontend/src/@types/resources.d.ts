@@ -1160,6 +1160,9 @@ export default interface Resources {
     }
   },
   "sources": {
+    "actions": {
+      "viewContent": "View content"
+    },
     "addSourceDialog": {
       "description": "Search the web or bring in your own material.",
       "textDescription": "Add notes or copied text directly.",
@@ -1261,6 +1264,7 @@ export default interface Resources {
     },
     "sourceRow": {
       "delete": "Delete source",
+      "moreActions": "Source actions",
       "retryProcessing": "Retry source processing"
     },
     "sourcesList": {

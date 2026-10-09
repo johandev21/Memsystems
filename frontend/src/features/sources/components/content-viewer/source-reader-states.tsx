@@ -37,7 +37,12 @@ export function SourceProcessingState({
         <p className="max-w-sm text-xs font-medium text-foreground">
           {sourceQualityCorrectiveAction(source) ?? t("quality.action.default")}
         </p>
-        <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          className="mt-2 cursor-pointer text-xs min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
+        >
           {t("states.backToSources")}
         </Button>
       </div>
@@ -59,7 +64,12 @@ export function SourceProcessingState({
           ? t("reader.processingWillBeAvailable")
           : error || t("reader.notAvailable")}
       </p>
-      <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onClose}
+        className="mt-2 cursor-pointer text-xs min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
+      >
         {t("states.backToSources")}
       </Button>
     </div>
@@ -77,7 +87,12 @@ export function SourceReaderError({ onClose }: { onClose: () => void }) {
       <p className="max-w-xs text-xs text-muted-foreground">
         {t("reader.loadFailedDescription")}
       </p>
-      <Button variant="outline" size="sm" onClick={onClose} className="mt-2 cursor-pointer text-xs">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onClose}
+        className="mt-2 cursor-pointer text-xs min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
+      >
         {t("states.backToSources")}
       </Button>
     </div>

@@ -7,6 +7,9 @@
     "urlDescription": "Importa un artículo, página web o vídeo.",
     "urlTitle": "Añadir enlace web"
   },
+  "actions": {
+    "viewContent": "Ver contenido"
+  },
   "api": {
     "addSourceFailed": "No se pudo añadir la fuente ({{status}})",
     "cancelSourceFailed": "No se pudo cancelar la fuente ({{status}})",
@@ -100,6 +103,7 @@
   },
   "sourceRow": {
     "delete": "Eliminar fuente",
+    "moreActions": "Acciones de la fuente",
     "retryProcessing": "Reintentar el procesamiento de la fuente"
   },
   "sourcesList": {

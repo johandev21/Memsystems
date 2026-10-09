@@ -37,7 +37,7 @@ function SkeletonHeader({
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0"
+          className="min-h-11 min-w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0 touch-manipulation active:scale-97 transition-transform"
           aria-label={t("reader.backToSources")}
           title={t("reader.backToSources")}
         >
@@ -54,11 +54,11 @@ function SkeletonHeader({
       </div>
 
       <div className="flex items-center gap-1">
-        <div className="h-8 w-8 flex items-center justify-center text-muted-foreground/30">
+        <div className="min-h-11 min-w-11 sm:h-8 sm:w-8 flex items-center justify-center text-muted-foreground/30">
           <MoreVertical className="h-4 w-4" />
         </div>
         {!forceFullscreen && (
-          <div className="h-8 w-8 flex items-center justify-center text-muted-foreground/30">
+          <div className="min-h-11 min-w-11 sm:h-8 sm:w-8 flex items-center justify-center text-muted-foreground/30">
             <Maximize2 className="h-4 w-4" />
           </div>
         )}
@@ -68,7 +68,7 @@ function SkeletonHeader({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
+            className="min-h-11 min-w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
             title={t("reader.close")}
           >
             <X className="h-4 w-4" />
@@ -112,8 +112,8 @@ export function SourceReaderSkeleton({
       data-testid="source-reader-skeleton"
       className={
         isEffectivelyFullscreen
-          ? "fixed inset-0 z-viewer flex h-dvh w-screen flex-col bg-panel-bg text-foreground overflow-hidden"
-          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden"
+          ? "fixed inset-0 z-viewer flex h-dvh w-screen flex-col bg-panel-bg text-foreground overflow-hidden pb-safe"
+          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden pb-safe"
       }
     >
       <SkeletonHeader

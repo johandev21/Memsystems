@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type React from "react";
 import {
   AlertCircle,
@@ -5,6 +6,7 @@ import {
   Folder,
   FolderInput,
   Loader2,
+  MoreVertical,
   Pencil,
   RotateCcw,
   Trash2,
@@ -36,6 +38,7 @@ import {
   sourceQualityReasonLabel,
 } from "../../utils/source-processing";
 import { SourceIcon } from "./source-icon";
+import { MobileSourceActionDrawer } from "../mobile-source-action-drawer";
 
 export interface SourceRowProps {
   source: Source;
@@ -87,6 +90,7 @@ export function SourceRow({
   onKeyDown,
 }: SourceRowProps) {
   const { t } = useTranslation(["sources", "tree"]);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const status = sourceProcessingStatus(source);
   const active = isSourceProcessing(source);
   const failed = status === "failed";
@@ -202,7 +206,25 @@ export function SourceRow({
         <span className="max-w-36 shrink-0 truncate text-xs opacity-75">{statusText}</span>
       )}
 
-      <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover/tree-row:opacity-100 group-focus-within/tree-row:opacity-100">
+      {!isEditing && (
+        <div className="absolute top-1/2 right-1 -translate-y-1/2 flex items-center sm:hidden">
+          <button
+            type="button"
+            data-slot="source-row-mobile-trigger"
+            aria-label={t("sources:sourceRow.moreActions", "Source actions")}
+            title={t("sources:sourceRow.moreActions", "Source actions")}
+            onClick={(event) => {
+              event.stopPropagation();
+              setMobileDrawerOpen(true);
+            }}
+            className="flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground active:scale-97 transition-transform touch-manipulation cursor-pointer"
+          >
+            <MoreVertical className="size-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="absolute top-1/2 right-1 hidden sm:flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover/tree-row:opacity-100 group-focus-within/tree-row:opacity-100">
         {failed && (
           <button
             type="button"
@@ -260,104 +282,122 @@ export function SourceRow({
   );
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger data-slot="source-row-trigger" render={rowContainer} />
-      <ContextMenuContent className="min-w-48">
-        <ContextMenuGroup>
-          <ContextMenuItem
-            data-slot="source-menu-rename"
-            onClick={(e) => {
-              e.stopPropagation();
-              onBeginRename?.(source.id);
-            }}
-          >
-            <Pencil className="size-4 mr-2" />
-            {t("tree:actions.rename", "Rename")}
-          </ContextMenuItem>
-        </ContextMenuGroup>
-        <ContextMenuSeparator />
-        {(source.folderId !== null || validTargetFolders.length > 0) && (
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger data-slot="source-row-trigger" render={rowContainer} />
+        <ContextMenuContent className="min-w-48">
           <ContextMenuGroup>
-            {source.folderId !== null && (
-              <ContextMenuItem
-                data-slot="source-menu-move-root"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMove?.(source.id, null);
-                }}
-              >
-                <FolderInput className="size-4 mr-2" />
-                {t("tree:actions.moveToSourcesRoot", "Move to Sources root")}
-              </ContextMenuItem>
-            )}
-            {validTargetFolders.length > 0 && (
-              <ContextMenuSub>
-                <ContextMenuSubTrigger data-slot="source-menu-move-folder">
-                  <FolderInput className="size-4 mr-2" />
-                  {t("tree:actions.moveToFolder", "Move to folder")}
-                </ContextMenuSubTrigger>
-                <ContextMenuSubContent className="min-w-44">
-                  {validTargetFolders.map((f) => (
-                    <ContextMenuItem
-                      key={f.id}
-                      data-slot={`move-source-target-${f.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMove?.(source.id, f.id);
-                      }}
-                    >
-                      <Folder className="size-4 mr-2 text-muted-foreground" />
-                      <span className="truncate">{f.name}</span>
-                    </ContextMenuItem>
-                  ))}
-                </ContextMenuSubContent>
-              </ContextMenuSub>
-            )}
+            <ContextMenuItem
+              data-slot="source-menu-rename"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBeginRename?.(source.id);
+              }}
+            >
+              <Pencil className="size-4 mr-2" />
+              {t("tree:actions.rename", "Rename")}
+            </ContextMenuItem>
           </ContextMenuGroup>
-        )}
-        {(source.folderId !== null || validTargetFolders.length > 0) && <ContextMenuSeparator />}
-        {(failed || active) && (
-          <>
+          <ContextMenuSeparator />
+          {(source.folderId !== null || validTargetFolders.length > 0) && (
             <ContextMenuGroup>
-              {failed && (
+              {source.folderId !== null && (
                 <ContextMenuItem
+                  data-slot="source-menu-move-root"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onRetry();
+                    onMove?.(source.id, null);
                   }}
                 >
-                  <RotateCcw className="size-4 mr-2" />
-                  {t("sources:sourceRow.retryProcessing", "Retry processing")}
+                  <FolderInput className="size-4 mr-2" />
+                  {t("tree:actions.moveToSourcesRoot", "Move to Sources root")}
                 </ContextMenuItem>
               )}
-              {active && (
-                <ContextMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCancel();
-                  }}
-                >
-                  <X className="size-4 mr-2" />
-                  {t("sources:pendingUpload.cancelProcessing", "Cancel")}
-                </ContextMenuItem>
+              {validTargetFolders.length > 0 && (
+                <ContextMenuSub>
+                  <ContextMenuSubTrigger data-slot="source-menu-move-folder">
+                    <FolderInput className="size-4 mr-2" />
+                    {t("tree:actions.moveToFolder", "Move to folder")}
+                  </ContextMenuSubTrigger>
+                  <ContextMenuSubContent className="min-w-44">
+                    {validTargetFolders.map((f) => (
+                      <ContextMenuItem
+                        key={f.id}
+                        data-slot={`move-source-target-${f.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMove?.(source.id, f.id);
+                        }}
+                      >
+                        <Folder className="size-4 mr-2 text-muted-foreground" />
+                        <span className="truncate">{f.name}</span>
+                      </ContextMenuItem>
+                    ))}
+                  </ContextMenuSubContent>
+                </ContextMenuSub>
               )}
             </ContextMenuGroup>
-            <ContextMenuSeparator />
-          </>
-        )}
-        <ContextMenuGroup>
-          <ContextMenuItem
-            variant="destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-          >
-            <Trash2 className="size-4 mr-2" />
-            {t("sources:sourceRow.delete", "Delete")}
-          </ContextMenuItem>
-        </ContextMenuGroup>
-      </ContextMenuContent>
-    </ContextMenu>
+          )}
+          {(source.folderId !== null || validTargetFolders.length > 0) && <ContextMenuSeparator />}
+          {(failed || active) && (
+            <>
+              <ContextMenuGroup>
+                {failed && (
+                  <ContextMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRetry();
+                    }}
+                  >
+                    <RotateCcw className="size-4 mr-2" />
+                    {t("sources:sourceRow.retryProcessing", "Retry processing")}
+                  </ContextMenuItem>
+                )}
+                {active && (
+                  <ContextMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCancel();
+                    }}
+                  >
+                    <X className="size-4 mr-2" />
+                    {t("sources:pendingUpload.cancelProcessing", "Cancel")}
+                  </ContextMenuItem>
+                )}
+              </ContextMenuGroup>
+              <ContextMenuSeparator />
+            </>
+          )}
+          <ContextMenuGroup>
+            <ContextMenuItem
+              variant="destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="size-4 mr-2" />
+              {t("sources:sourceRow.delete", "Delete")}
+            </ContextMenuItem>
+          </ContextMenuGroup>
+        </ContextMenuContent>
+      </ContextMenu>
+      <MobileSourceActionDrawer
+        source={source}
+        open={mobileDrawerOpen}
+        onOpenChange={setMobileDrawerOpen}
+        allFolders={allFolders}
+        canMove={canMove}
+        onViewContent={onClick}
+        onBeginRename={() => onBeginRename?.(source.id)}
+        onMove={(targetFolderId) => onMove?.(source.id, targetFolderId)}
+        onDelete={onDelete}
+        onRetry={onRetry}
+        onCancel={onCancel}
+        deleting={deleting}
+        retrying={retrying}
+        cancelling={cancelling}
+      />
+    </>
   );
 }

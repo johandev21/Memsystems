@@ -136,7 +136,7 @@ function AdvancedYouTubeSection({
               accept=".srt,.vtt,.txt,.json,.json3"
               onChange={handleFileUpload}
               disabled={busy}
-              className="text-xs file:text-xs"
+              className="text-base sm:text-xs file:text-xs min-h-11 sm:min-h-9"
             />
           </div>
 
@@ -157,7 +157,7 @@ function AdvancedYouTubeSection({
                     type="button"
                     onClick={() => onCaptionTextChange("")}
                     disabled={busy}
-                    className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                    className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer touch-manipulation active:scale-97 py-1 px-1.5"
                   >
                     {t("urlMode.clear")}
                   </button>
@@ -171,7 +171,7 @@ function AdvancedYouTubeSection({
               onChange={(e) => onCaptionTextChange(e.target.value)}
               disabled={busy}
               rows={3}
-              className="min-h-24 max-h-52 overflow-y-auto resize-y font-mono text-xs"
+              className="min-h-24 max-h-52 overflow-y-auto resize-y font-mono text-base sm:text-xs"
             />
           </div>
 
@@ -187,7 +187,7 @@ function AdvancedYouTubeSection({
                 value={oauthToken}
                 onChange={(e) => onOauthTokenChange(e.target.value)}
                 disabled={busy}
-                className="text-xs"
+                className="h-11 sm:h-9 text-base sm:text-xs"
               />
             </div>
           )}
@@ -299,7 +299,7 @@ export function UrlInputMode({
           value={urlTitle}
           onChange={(e) => onUrlTitleChange(e.target.value)}
           disabled={busy}
-          className="h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
+          className="h-11 sm:h-10 border-border/70 bg-background text-base sm:text-sm focus-visible:border-ring"
         />
       </div>
 
@@ -319,7 +319,7 @@ export function UrlInputMode({
           variant="outline"
           onClick={onBack}
           disabled={busy}
-          className="cursor-pointer"
+          className="cursor-pointer min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
         >
           {t("urlMode.back")}
         </Button>
@@ -373,7 +373,7 @@ function UrlAddressField({
         autoFocus
         required
         disabled={busy}
-        className="h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
+        className="h-11 sm:h-10 border-border/70 bg-background text-base sm:text-sm focus-visible:border-ring"
       />
       {meta.isArXiv && (
         <p className="text-xs text-muted-foreground">{arxivInfo}</p>
@@ -399,7 +399,11 @@ function UrlSubmitButton({
   pendingLabel: string;
 }) {
   return (
-    <Button type="submit" disabled={busy || !hasValue} className="cursor-pointer">
+    <Button
+      type="submit"
+      disabled={busy || !hasValue}
+      className="cursor-pointer min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
+    >
       {isPending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
