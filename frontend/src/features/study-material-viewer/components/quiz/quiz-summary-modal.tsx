@@ -47,12 +47,12 @@ export function QuizUnansweredModal({
           </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter className="gap-2 sm:gap-0 pt-4">
+        <DialogFooter className="gap-2 sm:gap-0 pt-4 pb-safe">
           <Button
             type="button"
             variant="outline"
             onClick={onReviewUnanswered}
-            className="cursor-pointer text-sm h-9 rounded-xl font-medium"
+            className="cursor-pointer text-sm min-h-11 sm:h-9 rounded-xl font-medium touch-manipulation active:scale-97 transition-transform"
           >
             {t("quiz.unanswered.review")}
           </Button>
@@ -60,7 +60,7 @@ export function QuizUnansweredModal({
             type="button"
             variant="default"
             onClick={onSubmitAnyway}
-            className="cursor-pointer text-sm h-9 rounded-xl font-semibold"
+            className="cursor-pointer text-sm min-h-11 sm:h-9 rounded-xl font-semibold touch-manipulation active:scale-97 transition-transform"
           >
             {t("quiz.unanswered.submitAnyway")}
           </Button>
@@ -96,7 +96,7 @@ export function QuizCompletionSummary({
     { label: t("quiz.stats.unanswered"), count: unansweredCount },
   ];
   return (
-    <section className="mx-auto w-full max-w-2xl space-y-8 py-3 text-text-primary sm:py-6">
+    <section className="mx-auto w-full max-w-2xl space-y-8 py-3 text-text-primary sm:py-6 pb-safe">
       <h2
         ref={headingRef}
         tabIndex={-1}
@@ -118,11 +118,20 @@ export function QuizCompletionSummary({
           </div>
         ))}
       </dl>
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button variant="ghost" onClick={onRetakeQuiz}>
+      <div className="flex flex-wrap justify-end gap-3 pt-2">
+        <Button
+          variant="ghost"
+          onClick={onRetakeQuiz}
+          className="min-h-11 sm:h-9 touch-manipulation active:scale-97 transition-transform"
+        >
           {t("quiz.retake")}
         </Button>
-        <Button onClick={onReviewQuiz}>{t("quiz.review")}</Button>
+        <Button
+          onClick={onReviewQuiz}
+          className="min-h-11 sm:h-9 touch-manipulation active:scale-97 transition-transform"
+        >
+          {t("quiz.review")}
+        </Button>
       </div>
     </section>
   );

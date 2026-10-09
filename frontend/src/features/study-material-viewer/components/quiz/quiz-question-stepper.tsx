@@ -26,9 +26,9 @@ function getOptionStatus(
 
 function getOptionContainerClass(checked: boolean, correct: boolean, selected: boolean): string {
   if (!checked) return "border-surface-border bg-surface-2 hover:bg-surface-3";
-  if (correct) return "border-success/60 bg-success/5";
-  if (selected) return "border-destructive/60 bg-destructive/5";
-  return "border-surface-border bg-surface-2";
+  if (correct) return "border-success/60 bg-success/10 text-text-primary";
+  if (selected) return "border-destructive/60 bg-destructive/10 text-text-primary";
+  return "border-surface-border bg-surface-2/60 opacity-80";
 }
 
 function OptionIndicator({
@@ -70,7 +70,7 @@ function OptionFeedback({
   explanation?: string;
 }) {
   return (
-    <div id={id} className="space-y-1 pb-4 pl-13 pr-4 text-sm leading-relaxed break-words">
+    <div id={id} className="space-y-1 pb-3 pl-12 pr-3.5 sm:pb-4 sm:pl-13 sm:pr-4 text-sm leading-relaxed break-words">
       {status && (
         <p className={cn("font-semibold", correct ? "text-success" : "text-destructive")}>
           {status}
@@ -110,11 +110,17 @@ function QuizOption({
   return (
     <div
       className={cn(
-        "rounded-xl border text-text-primary transition-colors focus-within:ring-2 focus-within:ring-primary",
+        "rounded-xl border text-text-primary transition-all",
+        !checked && "cursor-pointer active:scale-98",
         getOptionContainerClass(checked, correct, selected),
       )}
     >
-      <label className={cn("flex items-start gap-3 p-4", !checked && "cursor-pointer")}>
+      <label
+        className={cn(
+          "flex min-h-12 w-full items-start gap-3 px-3.5 py-3 sm:p-4 touch-manipulation select-none",
+          !checked && "cursor-pointer",
+        )}
+      >
         <input
           type="radio"
           name={name}
@@ -132,7 +138,7 @@ function QuizOption({
           selected={selected}
           index={index}
         />
-        <span className="min-w-0 text-sm leading-relaxed break-words">{option.text}</span>
+        <span className="min-w-0 flex-1 text-sm leading-relaxed break-words">{option.text}</span>
       </label>
       {showFeedback && (
         <OptionFeedback
@@ -183,9 +189,14 @@ export function QuizQuestionStepper({
   }, [currentIdx, isReviewMode]);
 
   return (
-    <section className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-3 text-text-primary sm:py-6">
+    <section className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-2 text-text-primary sm:py-6">
       {isReviewMode && (
-        <Button variant="ghost" size="sm" onClick={onBackToResults} className="self-start">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBackToResults}
+          className="self-start min-h-11 sm:min-h-8 sm:h-8 touch-manipulation active:scale-97"
+        >
           <ArrowLeft aria-hidden="true" className="size-4" /> {t("quiz.backToResults")}
         </Button>
       )}
@@ -246,20 +257,38 @@ export function QuizQuestionStepper({
           />
         ))}
       </fieldset>
-      <footer className="flex flex-wrap items-center justify-between gap-3 pt-2">
+      <footer className="sticky bottom-0 z-10 -mx-3 px-3 py-2.5 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:pt-2 flex items-center justify-between gap-2 border-t border-surface-border-subtle bg-surface-1/95 backdrop-blur-sm sm:border-t-0 sm:bg-transparent pb-safe">
         {isChecked && (
-          <Button variant="ghost" onClick={() => handleExplainInChat(q, selectedIdx)}>
+          <Button
+            variant="ghost"
+            onClick={() => handleExplainInChat(q, selectedIdx)}
+            className="min-h-11 sm:min-h-8 sm:h-8 touch-manipulation active:scale-97 text-xs sm:text-sm"
+          >
             {t("common.explain")}
           </Button>
         )}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button variant="ghost" onClick={onPrev} disabled={currentIdx === 0}>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={onPrev}
+            disabled={currentIdx === 0}
+            className="min-h-11 px-3 sm:min-h-8 sm:h-8 sm:px-3 touch-manipulation active:scale-97"
+          >
             <ChevronLeft aria-hidden="true" className="size-4" /> {t("common.previous")}
           </Button>
           {isLast && !isReviewMode ? (
-            <Button onClick={onSubmit}>{t("quiz.submit")}</Button>
+            <Button
+              onClick={onSubmit}
+              className="min-h-11 px-4 sm:min-h-8 sm:h-8 sm:px-3 touch-manipulation active:scale-97 font-medium"
+            >
+              {t("quiz.submit")}
+            </Button>
           ) : (
-            <Button onClick={onNext} disabled={isLast}>
+            <Button
+              onClick={onNext}
+              disabled={isLast}
+              className="min-h-11 px-4 sm:min-h-8 sm:h-8 sm:px-3 touch-manipulation active:scale-97"
+            >
               {t("common.next")} <ChevronRight aria-hidden="true" className="size-4" />
             </Button>
           )}

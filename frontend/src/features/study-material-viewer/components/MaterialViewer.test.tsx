@@ -121,13 +121,13 @@ describe("MaterialViewer Explain handoff", () => {
     const user = userEvent.setup();
     const onClose = renderViewer(quiz, { forceFullscreen: true });
 
-    await user.click(screen.getByRole("radio", { name: "A. Photosynthesis" }));
+    await user.click(screen.getByRole("radio", { name: /Photosynthesis/ }));
     await user.click(screen.getByRole("button", { name: "Explain" }));
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText("Which process uses light energy?")).toBeTruthy();
     expect(
-      (screen.getByRole("radio", { name: "A. Photosynthesis" }) as HTMLInputElement).checked,
+      (screen.getByRole("radio", { name: /Photosynthesis/ }) as HTMLInputElement).checked,
     ).toBe(true);
   });
 });

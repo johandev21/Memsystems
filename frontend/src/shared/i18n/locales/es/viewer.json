@@ -50,6 +50,8 @@
     "cardOf": "Tarjeta {{current}} de {{total}}",
     "empty": "No hay tarjetas disponibles.",
     "explainPrompt": "Estoy repasando tarjetas basadas en el material de origen y me gustaría ampliar mi comprensión de una de ellas.\n\nEn el anverso dice: \"{{front}}\"\n\nLa respuesta al reverso dice: \"{{back}}\"\n\nExplica este tema con más detalle.",
+    "flip": "Voltear",
+    "flipCard": "Voltear tarjeta",
     "nextCard": "Tarjeta siguiente",
     "previousCard": "Tarjeta anterior",
     "questionBadge": "Pregunta",

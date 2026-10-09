@@ -1569,6 +1569,8 @@ export default interface Resources {
       "cardOf": "Card {{current}} of {{total}}",
       "empty": "No flashcards available.",
       "explainPrompt": "I'm reviewing flashcards based on the source material and I'd like to expand my understanding of one of them.\n\nOn the front it reads: \"{{front}}\"\n\nThe answer on the back reads: \"{{back}}\"\n\nExplain this topic in more detail.",
+      "flip": "Flip",
+      "flipCard": "Flip Card",
       "nextCard": "Next Card",
       "previousCard": "Previous Card",
       "questionBadge": "Question",

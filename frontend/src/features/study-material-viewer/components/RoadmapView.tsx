@@ -200,7 +200,7 @@ function PhaseMilestoneCard({ phase, phaseIndex, onStudyPhase }: PhaseMilestoneC
         variant="outline"
         size="sm"
         onClick={() => onStudyPhase(phase, phaseIndex)}
-        className="mt-1 h-8 @sm:h-9 px-3 @sm:px-4 rounded-xl border border-surface-border-subtle bg-surface-2 text-text-secondary hover:bg-surface-3 text-xs @sm:text-sm font-medium cursor-pointer transition-colors"
+        className="mt-1 min-h-11 sm:min-h-8 sm:h-8 px-3.5 @sm:px-4 rounded-xl border border-surface-border-subtle bg-surface-2 text-text-secondary hover:bg-surface-3 text-xs @sm:text-sm font-medium cursor-pointer transition-colors touch-manipulation active:scale-97"
       >
         {t("roadmap.studyInChat")}
       </Button>
@@ -267,7 +267,7 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
           size="icon-sm"
           onClick={handleCopy}
           aria-label={t("roadmap.copyTopic", { title: formatDisplayTitle(topic.title) })}
-          className="absolute top-2 right-2 text-text-faint hover:text-text-secondary opacity-0 transition-opacity duration-200 focus-visible:opacity-100 group-hover:opacity-100"
+          className="absolute top-2 right-2 min-h-11 min-w-11 sm:min-h-7 sm:min-w-7 sm:size-7 text-text-faint hover:text-text-secondary opacity-100 sm:opacity-0 transition-opacity duration-200 focus-visible:opacity-100 group-hover:opacity-100 touch-manipulation active:scale-97 cursor-pointer"
         >
           {isCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
         </Button>
@@ -329,7 +329,7 @@ export function RoadmapView({ materialId, content }: RoadmapViewProps) {
 
   // 6. Render
   return (
-    <div className="@container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-20 select-none px-3 @sm:px-4">
+    <div className="@container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-safe pb-16 sm:pb-20 select-none px-3 @sm:px-4 overflow-x-auto overscroll-x-contain touch-pan-x">
       <RoadmapHeader title={content.title} description={content.description} />
 
       <RoadmapSpine phases={content.phases} onStudyPhase={handleStudyPhaseInChat} />

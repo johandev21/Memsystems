@@ -166,9 +166,9 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
   const activePreview = activeSlide ? previewById.get(activeSlide.id) : undefined;
 
   return (
-    <div className="flex w-full max-w-4xl mx-auto flex-col gap-4 animate-in fade-in duration-300 pb-20 select-none px-3 sm:px-4">
+    <div className="flex w-full max-w-4xl mx-auto flex-col gap-4 animate-in fade-in duration-300 pb-safe pb-16 sm:pb-20 select-none px-2.5 sm:px-4">
       <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-xs font-medium text-text-tertiary">
+        <span className="flex items-center gap-1.5 sm:gap-2 text-xs font-medium text-text-tertiary">
           {t("slides.position", { current: clampedIndex + 1, total: slides.length })}
           {designPreset && (
             <span
@@ -190,7 +190,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
           size="sm"
           onClick={handleDownload}
           disabled={isDownloading}
-          className="h-8 rounded-xl text-xs font-medium cursor-pointer"
+          className="min-h-11 sm:min-h-8 sm:h-8 rounded-xl text-xs font-medium cursor-pointer touch-manipulation active:scale-97 transition-transform"
         >
           {isDownloading ? (
             <Loader2 className="size-3.5 animate-spin" />
@@ -200,13 +200,13 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
           {t("slides.exportPptx")}
         </Button>
       </div>
-      <div className="relative overflow-hidden rounded-2xl border border-surface-border-subtle bg-black">
+      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-surface-border-subtle bg-black w-full aspect-video flex items-center justify-center">
         {activePreview ? (
           <img
             key={activeSlide.id}
             src={svgToDataUrl(activePreview)}
             alt={t("slides.previewAlt", { number: clampedIndex + 1, title: activeSlide.title })}
-            className="block h-auto w-full aspect-video object-contain bg-black"
+            className="block h-full max-h-[70vh] w-full aspect-video object-contain bg-black"
             draggable={false}
           />
         ) : (
@@ -216,18 +216,18 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
               number: clampedIndex + 1,
               title: activeSlide.title,
             })}
-            className="flex aspect-video w-full flex-col justify-center gap-2 p-8"
+            className="flex aspect-video w-full flex-col justify-center gap-2 p-4 sm:p-8 overflow-y-auto"
           >
-            <p className="text-lg font-bold text-text-primary">
+            <p className="text-base sm:text-lg font-bold text-text-primary">
               {formatDisplayTitle(activeSlide.title)}
             </p>
             {activeSlide.subtitle && (
-              <p className="text-sm text-text-secondary">{activeSlide.subtitle}</p>
+              <p className="text-xs sm:text-sm text-text-secondary">{activeSlide.subtitle}</p>
             )}
             {slideBodyLines(activeSlide)
               .slice(0, 6)
               .map((line) => (
-                <p key={line} className="text-sm text-text-secondary">
+                <p key={line} className="text-xs sm:text-sm text-text-secondary">
                   {line}
                 </p>
               ))}
@@ -241,7 +241,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
             size="icon"
             onClick={() => goTo(clampedIndex - 1)}
             aria-label={t("slides.previous")}
-            className="h-9 w-9 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer"
+            className="min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 sm:h-9 sm:w-9 rounded-full bg-black/60 text-white hover:bg-black/80 cursor-pointer touch-manipulation active:scale-97 transition-transform"
           >
             <ChevronLeft className="size-5" />
           </Button>
@@ -253,14 +253,14 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
             size="icon"
             onClick={() => goTo(clampedIndex + 1)}
             aria-label={t("slides.next")}
-            className="h-9 w-9 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer"
+            className="min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 sm:h-9 sm:w-9 rounded-full bg-black/60 text-white hover:bg-black/80 cursor-pointer touch-manipulation active:scale-97 transition-transform"
           >
             <ChevronRight className="size-5" />
           </Button>
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 touch-pan-x overscroll-x-contain">
         {slides.map((slide, index) => {
           const preview = previewById.get(slide.id);
           const selected = index === clampedIndex;
@@ -272,7 +272,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
               aria-label={t("slides.goToSlide", { number: index + 1 })}
               aria-current={selected}
               className={cn(
-                "shrink-0 w-28 overflow-hidden rounded-xl border transition-all cursor-pointer",
+                "shrink-0 w-24 sm:w-28 overflow-hidden rounded-xl border transition-all cursor-pointer touch-manipulation active:scale-97",
                 selected
                   ? "border-primary ring-1 ring-primary"
                   : "border-surface-border-subtle opacity-70 hover:opacity-100",
@@ -299,20 +299,22 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
       </div>
 
       {(activeSlide?.notes || activeSlide?.speakerNotes) && (
-        <p className="text-xs leading-relaxed text-text-faint">
-          {t("slides.speakerNotes", {
-            notes: activeSlide.speakerNotes ?? activeSlide.notes ?? "",
-          })}
-        </p>
+        <div className="rounded-xl border border-surface-border-subtle bg-surface-2/60 p-3 sm:p-4 text-xs leading-relaxed text-text-secondary">
+          <p className="whitespace-pre-wrap break-words">
+            {t("slides.speakerNotes", {
+              notes: activeSlide.speakerNotes ?? activeSlide.notes ?? "",
+            })}
+          </p>
+        </div>
       )}
 
-      <div className="flex justify-center">
+      <div className="flex justify-center pb-safe">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={handleStudyInChat}
-          className="h-8 rounded-xl text-xs font-medium cursor-pointer"
+          className="min-h-11 sm:min-h-8 sm:h-8 px-4 rounded-xl text-xs sm:text-sm font-medium cursor-pointer touch-manipulation active:scale-97 transition-transform"
         >
           {t("slides.studyInChat")}
         </Button>
