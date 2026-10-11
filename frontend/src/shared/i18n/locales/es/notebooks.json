@@ -48,6 +48,7 @@
       "moderate": "Fuentes primero, luego conocimiento general etiquetado",
       "strict": "Responde solo desde las fuentes"
     },
+    "drawerDescription": "Elige con qué rigor la IA se apega a tus fuentes.",
     "free": "Libre",
     "label": "Modo de fundamentación",
     "moderate": "Moderado",

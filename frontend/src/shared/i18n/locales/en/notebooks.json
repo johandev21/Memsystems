@@ -48,6 +48,7 @@
       "moderate": "Sources first, then labeled general knowledge",
       "strict": "Answers only from sources"
     },
+    "drawerDescription": "Choose how strictly the AI adheres to your sources.",
     "free": "Free",
     "label": "Grounding Mode",
     "moderate": "Moderate",

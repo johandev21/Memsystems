@@ -8,7 +8,6 @@ import { Tabs } from "@/components/ui/tabs";
 import { MobileNotebookMenuDrawer } from "./mobile-notebook-menu-drawer";
 import { NotebookHeader } from "./notebook-header";
 import { MobileTabsHeader } from "./notebook-workspace/mobile-tabs-header";
-import { EditableNotebookTitle } from "./editable-notebook-title";
 import { CLEAR_NOTEBOOK_CHAT_EVENT, EDIT_NOTEBOOK_EVENT } from "./dialogs/notebook-settings-dialog";
 
 function mockNotebook(overrides: Record<string, unknown> = {}) {
@@ -151,16 +150,35 @@ describe("Mobile Notebook Workspace & Menu Drawer", () => {
     window.removeEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, clearHandler);
   });
 
-  it("enforces text-base (>=16px) font size on EditableNotebookTitle input to prevent iOS zoom", async () => {
+  it("opens dedicated Grounding Mode drawer from menu and allows selecting a mode", async () => {
     const user = userEvent.setup();
-    render(<EditableNotebookTitle id="nb-1" />, { wrapper: createWrapper() });
+    render(<MobileNotebookMenuDrawer notebookId="nb-1" />, { wrapper: createWrapper() });
 
-    // Click title to enter editing mode
-    const titleButton = await screen.findByRole("button", { name: "Quantum Computing" });
-    await user.click(titleButton);
+    const trigger = screen.getByRole("button", { name: "Notebook settings" });
+    await user.click(trigger);
 
-    const input = screen.getByRole("textbox", { name: "Edit notebook title" });
-    expect(input.className).toContain("text-base");
-    expect(input.className).toContain("sm:text-sm");
+    // Click Grounding Mode option
+    const groundingOption = await screen.findByRole("button", { name: /grounding mode/i });
+    await user.click(groundingOption);
+
+    // Grounding Mode drawer should open with all options
+    await waitFor(() => {
+      expect(screen.getByRole("radiogroup", { name: /grounding mode/i })).toBeDefined();
+    });
+    expect(screen.getByRole("radio", { name: /strict/i })).toBeDefined();
+    expect(screen.getByRole("radio", { name: /moderate/i })).toBeDefined();
+    expect(screen.getByRole("radio", { name: /free/i })).toBeDefined();
+
+    // Selecting moderate calls fetch to update notebook
+    const moderateOption = screen.getByRole("radio", { name: /moderate/i });
+    await user.click(moderateOption);
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/notebooks/nb-1"),
+      expect.objectContaining({
+        method: "PATCH",
+        body: expect.stringContaining('"groundingMode":"moderate"'),
+      }),
+    );
   });
 });

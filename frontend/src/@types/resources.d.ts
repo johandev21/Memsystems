@@ -848,6 +848,7 @@ export default interface Resources {
         "moderate": "Sources first, then labeled general knowledge",
         "strict": "Answers only from sources"
       },
+      "drawerDescription": "Choose how strictly the AI adheres to your sources.",
       "free": "Free",
       "label": "Grounding Mode",
       "moderate": "Moderate",
@@ -1192,6 +1193,16 @@ export default interface Resources {
     "menu": {
       "orAddDirectly": "Or add a source directly",
       "sourcesUsed": "Sources used"
+    },
+    "mobile": {
+      "addSource": "Add source",
+      "back": "Back",
+      "emptyFolderDescription": "Move sources here or add new ones.",
+      "emptyFolderTitle": "This folder is empty",
+      "itemCount_one": "{{count}} item",
+      "itemCount_other": "{{count}} items",
+      "nameLabel": "Name",
+      "save": "Save"
     },
     "panel": {
       "addSourcesPrompt": "Add sources (PDF, Web, Text) to inform your AI study assistant",
