@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "./query-provider";
 import { AppThemeProvider } from "./theme-provider";
 
@@ -8,7 +8,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryProvider>
       <AppThemeProvider>
         {children}
-        <Toaster position="top-right" />
+        <Toaster />
       </AppThemeProvider>
     </QueryProvider>
   );

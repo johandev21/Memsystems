@@ -64,13 +64,6 @@
     font: inherit;
   }
 
-  /* Prevent iOS Safari auto-zoom on focus by enforcing 16px min size on coarse pointers */
-  @media (pointer: coarse) {
-    :where(input, textarea, select) {
-      font-size: 16px;
-    }
-  }
-
   /* Optimize touch responsiveness and eliminate tap delay */
   :where(button, a, [role="button"], [role="tab"], .tappable) {
     touch-action: manipulation;

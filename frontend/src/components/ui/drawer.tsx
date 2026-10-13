@@ -51,7 +51,7 @@ function DrawerContent({
       <DialogPrimitive.Popup
         data-slot="drawer-content"
         className={cn(
-          "fixed inset-x-0 bottom-0 z-modal-content max-h-[85vh] rounded-t-3xl border-t border-border/40 bg-popover p-5 text-sm text-popover-foreground shadow-2xl duration-200 outline-none data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom",
+          "fixed inset-x-0 bottom-0 z-modal-content max-h-[85vh] rounded-t-3xl border-t border-border/40 bg-background p-5 text-sm text-foreground shadow-2xl duration-200 outline-none data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom",
           className,
         )}
         {...props}
