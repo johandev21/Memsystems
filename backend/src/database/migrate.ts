@@ -30,6 +30,32 @@ async function main() {
     throw new Error('DATABASE_URL is not set. Cannot run migrations.');
   }
 
+  try {
+    const parsed = new URL(connectionString);
+    const dbName = parsed.pathname.slice(1);
+    if (dbName && /^[a-zA-Z0-9_]+$/.test(dbName)) {
+      const maintenanceUrl = new URL(connectionString);
+      maintenanceUrl.pathname = '/postgres';
+      const mPool = new Pool({ connectionString: maintenanceUrl.toString() });
+      try {
+        const check = await mPool.query(
+          'SELECT 1 FROM pg_database WHERE datname = $1',
+          [dbName],
+        );
+        if (check.rows.length === 0) {
+          await mPool.query(`CREATE DATABASE "${dbName}"`);
+          console.log(`Created database "${dbName}".`);
+        }
+      } catch {
+        // Ignore errors connecting to maintenance database
+      } finally {
+        await mPool.end();
+      }
+    }
+  } catch {
+    // Non-URL connection strings or invalid URLs fall through
+  }
+
   const pool = new Pool({ connectionString });
   const db = drizzle(pool);
 

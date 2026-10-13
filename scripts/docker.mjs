@@ -162,10 +162,15 @@ function runComposeDown(otherMode) {
 // Port collision guard: dev and prod share same host ports (3000/4000) via mirrored WSL networking
 // DB ports are now isolated (dev 5433, prod 5434, host 5432) but still check host postgres
 if (action === 'up') {
+  const envVals = parseEnv(envPath)
+  const currentAppPort = process.env.APP_PORT || envVals.get('APP_PORT') || '3000'
+  const currentApiPort = process.env.API_PORT || envVals.get('API_PORT') || '4000'
+  const isDefaultPorts = currentAppPort === '3000' || currentApiPort === '4000'
+
   const otherMode = mode === 'dev' ? 'prod' : 'dev'
   const otherProject = `memsystems-${otherMode}`
   const running = getRunningProjectContainers(otherProject)
-  if (running.length > 0) {
+  if (running.length > 0 && isDefaultPorts) {
     console.error(`\nPort conflict: ${otherMode} stack is already running (${running.join(', ')})`)
     console.error(`Both dev and prod use the same host ports 3000/4000 and cannot run together.`)
     console.error(`Stop the other stack first:`)
@@ -192,8 +197,7 @@ if (action === 'up') {
   }
 
   // Host postgres check for DB_PORT (dev 5433, prod 5434, host 5432)
-  const envVals = parseEnv(envPath)
-  const dbPort = envVals.get('DB_PORT') || '5432'
+  const dbPort = process.env.DB_PORT || envVals.get('DB_PORT') || '5432'
   function isHostPortTakenByNonDockerProxy(port) {
     const ssCheck = spawnSync('wsl', ['-d', 'Ubuntu-24.04', 'bash', '-c', `ss -tlnp 2>/dev/null | grep -E ':${port}\\b' || true`], { encoding: 'utf8', shell: false })
     const ssOut = (ssCheck.stdout || '').trim()

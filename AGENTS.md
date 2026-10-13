@@ -17,4 +17,4 @@ Load these files only when your task touches their branch:
 - **Backend modules, Drizzle schema, or API routes**: read [backend/AGENTS.md](backend/AGENTS.md).
 - **Writing, debugging, or running tests**: read [docs/testing.md](docs/testing.md).
 - **Domain vocabulary and naming**: read [CONTEXT.md](CONTEXT.md).
-- **Git worktrees or parallel dev/Docker ports**: read [docs/worktrees.md](docs/worktrees.md).
+- **Multi-agent environments, worktrees, or parallel ports**: read [docs/worktrees.md](docs/worktrees.md).
