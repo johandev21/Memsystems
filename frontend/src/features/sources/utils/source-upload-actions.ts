@@ -174,7 +174,6 @@ export function isClientSupportedSourceFile(file: File): boolean {
   return ACCEPTED_SOURCE_EXTENSIONS.some((ext) => name.endsWith(ext));
 }
 
-/** Kept as a small compatibility seam for callers that update an upload row. */
 export function updateUploadProgress(
   uploadId: string,
   update:

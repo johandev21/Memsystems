@@ -314,7 +314,6 @@ export function splitTextIntoChunks(rawText: string): string[] {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // Track fenced code blocks (``` or ~~~) so internal empty lines do not break chunks
     const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
     if (fenceMatch) {
       const matchFence = fenceMatch[1];

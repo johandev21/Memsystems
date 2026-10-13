@@ -7,12 +7,10 @@ export function SettingsPage() {
 
   return (
     <div className="min-h-dvh flex flex-col bg-background">
-      {/* Mobile-Native View (sm:hidden) */}
       <div className="sm:hidden w-full px-3">
         <MobileSettingsView />
       </div>
 
-      {/* Desktop View (hidden sm:flex flex-col) */}
       <div className="hidden sm:flex flex-col w-full">
         <AppHeader />
         <main className="w-full mx-auto max-w-260 px-3 sm:px-6 lg:px-8 pb-16 pt-6 sm:pt-10 lg:pt-14">

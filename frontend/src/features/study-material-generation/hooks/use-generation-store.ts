@@ -43,7 +43,6 @@ interface GenerationState {
       sourceIds: string[];
       folderId: string | null;
       model?: string;
-      /** 0 = auto. */
       questionCount?: number;
       difficulty?: "easy" | "medium" | "hard" | "auto";
       roadmapOptions?: RoadmapGenerationOptions;
@@ -121,7 +120,6 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
       id,
       setTimeout(() => {
         errorDismissTimers.delete(id);
-        // Only auto-dismiss error entries; leave active generations alone.
         if (get().generations[id]?.status === "error") {
           clearStallTimer(id);
           set((state) => {
@@ -172,7 +170,6 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
             i18n.t("errors.timedOut", { ns: "generation" }),
           );
         } else {
-          // Chunk arrived recently; re-arm for the remaining time.
           scheduleStallCheck(id, kind);
         }
       }, GENERATION_STALL_TIMEOUT_MS),
@@ -220,8 +217,6 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         }
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : String(err);
-        // A stale client can still hit the structured-output preflight: surface
-        // it as the capability block instead of a generic start failure.
         const msg = isStructuredOutputUnsupportedError(rawMessage)
           ? classifyChatError(rawMessage).message
           : rawMessage;
@@ -242,7 +237,6 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         try {
           await cancelGeneration(notebookId, requestId);
         } catch {
-          // ignore cancellation failure
         }
         return;
       }
@@ -277,7 +271,6 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
               try {
                 await cancelGeneration(notebookId, requestId);
               } catch {
-                // ignore
               }
               return;
             }
@@ -351,10 +344,6 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         } catch (err) {
           activeAborts.delete(requestId);
           const rawMessage = err instanceof Error ? err.message : String(err);
-          // Generation failures arrive as `{error, code[, model]}` envelopes
-          // (or raw provider text) — classify to friendly copy so toasts never
-          // show JSON or provider jargon. Synthetic client-side messages
-          // (timeout / EOF) are already friendly, so they bypass classification.
           failGeneration(requestId, input.kind, classifyChatError(rawMessage).message);
         }
       })();
@@ -371,7 +360,6 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
           await cancelGeneration(notebookId, id);
           toast.info(i18n.t("toasts.cancelled", { ns: "generation" }));
         } catch {
-          // ignore
         }
       }
     },

@@ -87,8 +87,6 @@ export const evaluatePracticeProblem = async (
   const payload: unknown = await res.json().catch(() => ({}));
   const errorData = payload as ApiErrorResponse;
   if (!res.ok) {
-    // Preserve the structured-output preflight key so the evaluation surface
-    // classifies it as a capability block instead of a generic failure.
     const messageKey = isStructuredOutputMessageKey(errorData.error)
       ? errorData.error
       : isStructuredOutputMessageKey(errorData.messageKey)

@@ -12,8 +12,6 @@ import { RightPane } from "../studio/right-pane";
 import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
 import type { SourceSegmentLocator } from "@/features/sources/types";
 
-// Lazy: the source reader graph (every document renderer: pdf/epub, audio,
-// video, pptx, image, …) is only needed once a source is actually opened.
 const SourceContentViewer = lazy(() =>
   import("@/features/sources/components/source-content-viewer").then(
     (m) => ({ default: m.SourceContentViewer }),

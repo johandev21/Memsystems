@@ -126,11 +126,6 @@ export function AttemptSection({
   );
 }
 
-/**
- * Blocks the evaluation call until the chosen model can produce structured
- * output. The picker opens in place and the gate disappears once a capable
- * model is chosen.
- */
 function EvaluationCapabilityGate({
   capabilitiesVerified,
   modelName,

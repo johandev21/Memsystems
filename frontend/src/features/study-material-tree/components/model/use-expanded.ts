@@ -18,10 +18,6 @@ export function computeExpandedForNotebook(
   return computeSharedExpandedForNotebook(`${STORAGE_PREFIX}${notebookId}`, folders);
 }
 
-/**
- * Persists expanded folder IDs per notebook, prunes stale IDs,
- * and expands newly encountered top-level folders by default.
- */
 export function usePersistentExpandedFolders(
   notebookId: string,
   folders: readonly FolderDTO[],

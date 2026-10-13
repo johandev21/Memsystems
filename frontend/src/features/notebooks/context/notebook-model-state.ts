@@ -35,7 +35,6 @@ export function setPersistedModel(notebookId: string, modelId: string): void {
     window.localStorage.setItem(`${STORAGE_KEY}-${notebookId}`, modelId);
     window.localStorage.setItem("memsystems:selected-model", modelId);
   } catch {
-    // Ignore storage errors in restricted environments
   }
 }
 

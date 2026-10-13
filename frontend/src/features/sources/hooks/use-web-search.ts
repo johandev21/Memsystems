@@ -44,7 +44,6 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
   const initializedSelectionForJob = useRef<string | null>(null);
   const clearInFlight = useRef(false);
 
-  // A new job invalidates previous review-session state.
   const jobId = job?.id ?? null;
   const jobQueryText = job?.query ?? "";
   const [prevJobId, setPrevJobId] = useState<string | null>(jobId);

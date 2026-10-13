@@ -16,17 +16,9 @@ import { GenerationSourcePopover } from "./generation-source-popover";
 import type { BaseMaterialFormProps } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
-// ============================================================================
-// Module Constants
-// ============================================================================
-
 type StudyGuideFormat = "detailed" | "revision";
 
 const SECTION_PRESETS = [4, 6, 8] as const;
-
-// ============================================================================
-// Study Guide Brief Form Component
-// ============================================================================
 
 export function StudyGuideBriefForm({
   notebookId,

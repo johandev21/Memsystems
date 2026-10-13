@@ -35,7 +35,6 @@ interface ParsedSheet {
 function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
   if (!rawText) return [];
 
-  // Check if multiple sheets are demarcated with ## Sheet: Name
   const sheetSections = rawText.split(/(?=## Sheet:\s*)/i);
   const sheets: ParsedSheet[] = [];
 
@@ -52,7 +51,6 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
       sheetName = titleMatch[1].trim();
     }
 
-    // Look for markdown table lines starting with |
     const tableLines = lines.filter((l) => l.startsWith("|") && l.endsWith("|"));
     if (tableLines.length >= 2) {
       const headerLine = tableLines[0];
@@ -61,7 +59,6 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
         .split("|")
         .map((h) => h.trim());
 
-      // Skip separator line (|---|---|)
       const dataLines = tableLines.slice(1).filter((l) => !/^\|[\s\-:|]+\|$/.test(l));
       const rows = dataLines.map((l) =>
         l
@@ -78,7 +75,6 @@ function parseMarkdownTableOrDelimited(rawText: string): ParsedSheet[] {
       continue;
     }
 
-    // Fallback: simple CSV / TSV delimited text
     const delim = section.includes("\t") ? "\t" : ",";
     const rows = lines.reduce<string[][]>((result, line) => {
       if (!line.startsWith("#") && !line.startsWith("**")) {
@@ -120,7 +116,6 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
   const [page, setPage] = useState(0);
   const pageSize = 30;
 
-  // React to locator selection
   const [prevLocator, setPrevLocator] = useState<typeof selectedLocator>(undefined);
   if (prevLocator !== selectedLocator) {
     setPrevLocator(selectedLocator);
@@ -145,7 +140,6 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const pageRows = filteredRows.slice(page * pageSize, (page + 1) * pageSize);
 
-  // Column types inferred from first non-empty samples
   const columnTypes = useMemo(() => {
     return activeSheet.headers.map((_, colIdx) => {
       for (const row of activeSheet.rows.slice(0, 20)) {
@@ -159,7 +153,6 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
 
   return (
     <div className="w-full flex flex-col gap-4 font-sans text-foreground">
-      {/* Top Banner & Metadata */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-border/60 bg-card shadow-sm">
         <div className="flex items-center gap-3">
           <div className="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
@@ -181,7 +174,6 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
           </div>
         </div>
 
-        {/* Search input */}
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
@@ -197,7 +189,6 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
         </div>
       </div>
 
-      {/* Multi-Sheet Selector Tabs */}
       {sheets.length > 1 && (
         <div className="flex items-center gap-1 border-b border-border/60 pb-1 overflow-x-auto">
           {sheets.map((sheet, index) => (
@@ -228,7 +219,6 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
         </div>
       )}
 
-      {/* Interactive Table Container */}
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto max-h-150 overscroll-contain">
           <table className="w-full text-left text-xs border-collapse">
@@ -303,7 +293,6 @@ export function TabularDocumentViewer({ source, selectedLocator }: TabularDocume
           </table>
         </div>
 
-        {/* Pagination & Footer controls */}
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/60 bg-muted/20 text-xs text-muted-foreground">
           <span>
             {t("tabularViewer.pagination", {

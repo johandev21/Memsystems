@@ -51,7 +51,6 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Local segments state to support instant optimistic speaker renames
   const [prevSourceId, setPrevSourceId] = useState(source.id);
   const [customSegments, setCustomSegments] = useState<SourceSegment[] | null>(null);
 
@@ -86,8 +85,6 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
   const filteredSegments = useFilteredAudioSegments(segments, searchQuery);
   const isVirtualized = filteredSegments.length > 30;
 
-  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
-  // this component is the intended behavior.
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: filteredSegments.length,
@@ -108,7 +105,6 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
     segmentElementsRef,
   });
 
-  // Handle citation jumping
   useEffect(() => {
     if (typeof selectedLocator?.startOffsetMs !== "number") return;
     const target = selectedLocator.startOffsetMs / 1000;
@@ -169,7 +165,6 @@ export function AudioDocumentViewer({ source, selectedLocator }: AudioDocumentVi
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-background text-foreground">
-      {/* Hidden native HTML5 audio element */}
       <audio
         ref={audioRef}
         data-testid="audio-element"

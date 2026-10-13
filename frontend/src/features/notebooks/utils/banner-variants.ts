@@ -40,13 +40,6 @@ function canvasToWebpBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   });
 }
 
-/**
- * Generates responsive WebP variants (480/960/1920 px wide) of an uploaded
- * banner. The original file is passed through untouched so the backend keeps
- * a canonical copy; variant generation is best-effort — if the browser cannot
- * decode or encode WebP, the returned variant set is simply empty and the
- * upload falls back to the single original image.
- */
 export async function createBannerVariants(file: File): Promise<BannerUploadPayload> {
   const variants: BannerVariantFiles = {};
   try {
@@ -65,7 +58,6 @@ export async function createBannerVariants(file: File): Promise<BannerUploadPayl
       bitmap.close();
     }
   } catch {
-    // Decoding failed (unsupported format/corrupt file): upload as-is.
   }
   return { file, variants };
 }

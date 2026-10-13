@@ -347,7 +347,6 @@ function findRenameTarget(
   return source ? { id: source.id, name: source.title } : null;
 }
 
-// The drawer needs a Source prop even while closed; it is never rendered open with this value.
 const placeholderSource = {
   id: "",
   title: "",

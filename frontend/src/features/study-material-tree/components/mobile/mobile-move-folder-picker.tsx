@@ -11,9 +11,6 @@ export interface MobileMoveFolderPickerProps {
   onSelect: (folderId: string | null) => void;
 }
 
-/**
- * Folder destinations for the mobile "Move to folder" step (replaces drag-and-drop on touch).
- */
 export function MobileMoveFolderPicker({
   folders,
   canMoveToRoot,

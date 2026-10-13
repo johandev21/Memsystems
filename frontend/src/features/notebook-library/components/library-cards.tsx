@@ -35,12 +35,6 @@ type NotebookCover = {
   coverVariants?: CoverVariants | null;
 };
 
-/**
- * Shared title-editing plumbing for the folder and notebook cards. Renaming is
- * explicit (F2 or the card context menu); this hook owns the `editRequest`
- * counter the title field watches, the "an edit is in flight" flag that keeps a
- * click from selecting the card, and the post-edit click/double-click guard.
- */
 function useCardTitleEditing({ autoEdit, onOpen }: { autoEdit?: boolean; onOpen: () => void }) {
   const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
   const editingTitleRef = useRef(Boolean(autoEdit));
@@ -51,9 +45,6 @@ function useCardTitleEditing({ autoEdit, onOpen }: { autoEdit?: boolean; onOpen:
     const wasEditing = editingTitleRef.current;
     editingTitleRef.current = editing;
     if (!wasEditing || editing) return;
-    // The blur that ends an edit is immediately followed by the click or
-    // double-click that caused it, so swallow that open. Focus then goes back
-    // to the card, unless the pointer already moved focus somewhere else.
     openSuppressedUntilRef.current = Date.now() + 500;
     if (document.activeElement === document.body) cardRef.current?.focus();
   }, []);
@@ -231,9 +222,6 @@ function FolderArtwork({
 }) {
   const covers = getFolderCovers(notebooks);
   const titleFontSize = useFittedFolderTitle(hideTitle ? "" : title);
-  // Compact drag preview over breadcrumbs: keep the positioned title slot
-  // (so the artwork shape is unchanged) but render it empty — the name
-  // would be unreadable at ~0.45 scale and the user already knows the item.
   const titleSlot = hideTitle ? (
     <span aria-hidden="true" />
   ) : (
@@ -274,11 +262,6 @@ function NotebookArtwork({
   titleSlot,
   hideTitle,
 }: NotebookPreviewProps & { titleSlot?: ReactNode; hideTitle?: boolean }) {
-  // Not aria-hidden: the title slot contains the inline-edit control, and an
-  // aria-hidden element must not contain focusable content.
-  // Compact drag preview outside the main area hides the whole label
-  // (icon pill + name): unreadable at ~0.45 scale, and the cover art alone
-  // identifies the notebook.
   return (
     <span className="library-artwork">
       {notebook.coverUrl ? (
@@ -317,8 +300,6 @@ export function NotebookCard({
     id: `notebook:${notebook.id}`,
     data: { kind: "notebook", notebookId: notebook.id },
   });
-  // Warm the notebook + chat caches on intent so opening a notebook renders
-  // immediately. Optimistic temp cards have no server record to prefetch.
   const prefetch = useCallback(() => {
     if (isTempId(notebook.id)) return;
     void queryClient.prefetchQuery(notebookQueryOptions(notebook.id));
@@ -351,8 +332,6 @@ export function NotebookCard({
       <span>{notebook.title}</span>
     </InlineEditableText>
   );
-  // A <div>, not <article>: dnd-kit imposes role="button" on the draggable
-  // card, and the button role is not allowed on <article>.
   return (
     <ContextMenu>
       <ContextMenuTrigger

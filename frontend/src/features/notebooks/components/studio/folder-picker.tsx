@@ -35,7 +35,6 @@ export function FolderPicker({
 
   const selectedItemRef = useRef<HTMLButtonElement | null>(null);
 
-  // Build hierarchical tree and ancestor paths
   const tree = useMemo(() => buildTree(folders), [folders]);
   const pathMap = useMemo(() => buildFolderPaths(folders), [folders]);
 
@@ -50,7 +49,6 @@ export function FolderPicker({
     return new Set([...expandedIds, ...ancestors]);
   }, [expandedIds, value, folders]);
 
-  // Auto-scroll to selected folder on open
   useEffect(() => {
     if (open) {
       const timer = setTimeout(() => {

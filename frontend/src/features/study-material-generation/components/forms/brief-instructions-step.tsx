@@ -12,14 +12,6 @@ import {
   BriefSubmitButton,
 } from "./brief-step";
 
-/**
- * Shared second step for every generation dialog: the custom instructions
- * textarea, an optional extra field block (e.g. Case Study concepts), the
- * destination folder, and the Back / Generate footer.
- *
- * Knowledge sources live on step one in every form, matching the Quiz
- * reference, so this step only carries the brief.
- */
 export interface BriefInstructionsStepProps {
   notebookId: string;
   brief: string;
@@ -29,7 +21,6 @@ export interface BriefInstructionsStepProps {
   submitLabel: string;
   placeholder: string;
   textareaId: string;
-  /** Extra field block rendered above the instructions textarea. */
   extra?: ReactNode;
   disabled?: boolean;
   onBriefChange: (brief: string) => void;

@@ -19,9 +19,7 @@ export interface ThemeMeta {
   id: ThemeName;
   label: string;
   descriptionKey: ThemeDescriptionKey;
-  /** Hue family for preview gradient generation */
   hue: number;
-  /** Preview swatch accents (light-mode / dark-mode) */
   preview: {
     light: string;
     dark: string;

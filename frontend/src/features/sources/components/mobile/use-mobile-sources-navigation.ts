@@ -20,11 +20,6 @@ function findNode(
   return undefined;
 }
 
-/**
- * Drill-down navigation over the sources tree: exposes only the children of
- * the folder currently being viewed. A folder that is deleted or moved while
- * open resolves to the root instead of leaving the user on a dead screen.
- */
 export function useMobileSourcesNavigation(
   folders: readonly SourceFolder[] | undefined,
   sources: readonly Source[] | undefined,

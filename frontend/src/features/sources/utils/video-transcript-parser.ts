@@ -11,10 +11,6 @@ export interface ParsedVideoSegment {
   locator?: SourceSegmentLocator;
 }
 
-/**
- * Parses timestamp string in MM:SS, M:SS, HH:MM:SS, or H:MM:SS format
- * with optional milliseconds (.mmm or ,mmm) into milliseconds.
- */
 export function parseTimestampToMs(timeStr: string): number {
   if (!timeStr) return 0;
   const clean = timeStr.trim().replace(",", ".");
@@ -43,7 +39,6 @@ export function parseTimestampToMs(timeStr: string): number {
   return 0;
 }
 
-/** Formats seconds into mm:ss or hh:mm:ss string */
 export function formatTime(seconds: number): string {
   if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return "00:00";
   const totalSec = Math.floor(seconds);
@@ -56,13 +51,6 @@ export function formatTime(seconds: number): string {
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
-/**
- * Matches timestamps at the beginning of a line or after a speaker prefix.
- * Supports:
- * - (00:04), (0:04), (1:23:45), (00:04 - 00:08)
- * - [00:04], [0:04], [1:23:45], [00:04 - 00:08]
- * - 00:04, 0:04, 1:23:45, 00:04 - 00:08, 00:00:04.000 --> 00:00:08.000
- */
 const TIMESTAMP_LINE_REGEX =
   /^\s*(?:\[|\()?(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?)(?:\s*(?:-|-->|–)\s*(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?))?(?:\]|\))?[:\s-]*(.*)$/i;
 
@@ -71,25 +59,18 @@ const SPEAKER_THEN_TIMESTAMP_REGEX =
 
 const SPEAKER_PREFIX_REGEX = /^\s*([^:\n]+?)\s*:\s*(.*)$/i;
 
-/**
- * Checks if raw text contains multiple timestamps indicating it can be split.
- */
 export function hasTimestampPatterns(text: string): boolean {
   if (!text) return false;
   const matches = text.match(/(?:\(|\[|\b)(\d{1,2}:\d{2}(?::\d{2})?)(?:\)|\]|\b)/g);
   return (matches?.length ?? 0) >= 2;
 }
 
-/**
- * Parse raw text with various timestamp formats into structured video segments.
- */
 export function parseRawTextToVideoSegments(
   rawText: string,
   totalDurationSeconds?: number,
 ): ParsedVideoSegment[] {
   if (!rawText || !rawText.trim()) return [];
 
-  // Remove WebVTT header or numeric cue indexes if present
   const lines = rawText
     .replace(/\r\n/g, "\n")
     .split("\n")
@@ -113,7 +94,6 @@ export function parseRawTextToVideoSegments(
   while (i < lines.length) {
     const line = lines[i];
 
-    // Skip lone integer cue numbers (SRT format)
     if (/^\d+$/.test(line) && i + 1 < lines.length) {
       const nextLine = lines[i + 1];
       if (TIMESTAMP_LINE_REGEX.test(nextLine) || nextLine.includes("-->")) {
@@ -122,7 +102,6 @@ export function parseRawTextToVideoSegments(
       }
     }
 
-    // Check Speaker: (00:04) Content
     const speakerTsMatch = line.match(SPEAKER_THEN_TIMESTAMP_REGEX);
     if (speakerTsMatch) {
       const speaker = speakerTsMatch[1].trim();
@@ -134,7 +113,6 @@ export function parseRawTextToVideoSegments(
       const endOffsetMs = endTime ? parseTimestampToMs(endTime) : undefined;
 
       let content = inlineContent;
-      // If line only had timestamp and speaker, check next line for speech content
       if (!content && i + 1 < lines.length && !lines[i + 1].match(TIMESTAMP_LINE_REGEX)) {
         i++;
         content = lines[i];
@@ -150,7 +128,6 @@ export function parseRawTextToVideoSegments(
       continue;
     }
 
-    // Check (00:04) Content or [00:04] Content or 00:04 Content
     const tsMatch = line.match(TIMESTAMP_LINE_REGEX);
     if (tsMatch) {
       const startTime = tsMatch[1];
@@ -168,7 +145,6 @@ export function parseRawTextToVideoSegments(
       }
 
       let content = remaining;
-      // Handle multi-line format (YouTube transcript copy: timestamp on line 1, text on line 2)
       if (!content && i + 1 < lines.length && !lines[i + 1].match(TIMESTAMP_LINE_REGEX)) {
         i++;
         content = lines[i];
@@ -189,7 +165,6 @@ export function parseRawTextToVideoSegments(
       continue;
     }
 
-    // Default line without explicit timestamp
     const defaultStartMs = (currentOrdinal - 1) * 10_000;
     rawSegments.push({
       startOffsetMs: defaultStartMs,
@@ -198,7 +173,6 @@ export function parseRawTextToVideoSegments(
     i++;
   }
 
-  // Adjust endOffsetMs for contiguous segments
   const result: ParsedVideoSegment[] = rawSegments.map((seg, idx) => {
     let endOffsetMs = seg.endOffsetMs;
     if (typeof endOffsetMs !== "number" || endOffsetMs <= seg.startOffsetMs) {

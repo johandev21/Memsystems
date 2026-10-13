@@ -155,7 +155,6 @@ export function GenerateBriefDialog({
             )}
           >
             <OverlayLayerContext.Provider value={MODAL_POPOVER_LAYER}>
-              {/* Native App Bar */}
               <div className="flex h-13 shrink-0 items-center justify-between border-b border-surface-border px-4 pt-safe select-none">
                 <DialogPrimitive.Title className="text-base font-semibold text-text-primary truncate">
                   {titleText}
@@ -175,7 +174,6 @@ export function GenerateBriefDialog({
                 </DialogPrimitive.Close>
               </div>
 
-              {/* Scrollable Form Body */}
               <div className="flex-1 flex flex-col overflow-y-auto overscroll-contain px-4 py-4 min-w-0 pb-safe-lg">
                 {bodyContent}
               </div>
@@ -215,11 +213,6 @@ interface StudyMaterialCapabilityGateProps {
   onSelect: (modelId: string) => void;
 }
 
-/**
- * Blocks the brief form until the notebook's model can produce structured
- * output. The picker opens in place; choosing a capable model swaps this gate
- * for the form without adding a permanent selector to the dialog.
- */
 function StudyMaterialCapabilityGate({
   modelName,
   capabilitiesVerified,
@@ -290,10 +283,6 @@ function StudyMaterialCapabilityGate({
   );
 }
 
-/**
- * Every selector starts on an explicit default so users always choose
- * consciously. The backend still accepts legacy "auto"/0 values.
- */
 function getInitialBriefState(kind?: StudyMaterialKind | null): BriefFormData {
   return {
     brief: "",

@@ -17,8 +17,6 @@ const translateDynamic = i18n.t as unknown as DynamicTranslate;
 export const SOURCE_POLL_INTERVAL_MS = 1_500;
 
 export function sourceProcessingStatus(source: Source): SourceProcessingStatus {
-  // Older API responses have no processing fields because those sources are
-  // already synchronously extracted and indexed.
   return source.processingStatus ?? "ready";
 }
 
@@ -31,7 +29,6 @@ export function isSourceDegraded(source: Source): boolean {
   return sourceProcessingStatus(source) === "degraded";
 }
 
-/** Maps the persisted `quality_<reason>` error code to its reason. */
 export function sourceQualityReason(source: Source): SourceQualityReason | null {
   const code = sourceProcessingErrorCode(source);
   switch (code) {

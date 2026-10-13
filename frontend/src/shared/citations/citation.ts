@@ -23,12 +23,6 @@ export function getCitationKindIcon(kind?: string | null, url?: string | null): 
   return File;
 }
 
-/**
- * Shared citation vocabulary for the surfaces that show source evidence:
- * Chat replies and generated Study Materials. Both store the same citation
- * contract, so the popover and its locator labels live once, here.
- */
-
 export interface CitationLocator {
   pageNumber?: number;
   slideNumber?: number;
@@ -48,7 +42,6 @@ export interface CitationLocator {
   };
 }
 
-/** The fields a citation popover needs, whatever surface produced it. */
 export interface CitationReference {
   id: string;
   citationKey: string;
@@ -72,7 +65,6 @@ export function getCitationExcerpt(reference: CitationReference): string {
   );
 }
 
-/** Returns a human-readable location without changing the source URL action. */
 export function getCitationLocatorLabel(reference: CitationReference): string | null {
   const locator = reference.locator;
   if (!locator) return null;
@@ -145,12 +137,6 @@ export function getSafeCitationUrl(url: string | null): string | null {
   }
 }
 
-/**
- * Reads the citations a generated Study Material stored. The server attaches
- * them after generation; a material from before citations existed simply has
- * none. Unknown or malformed entries are skipped rather than crashing the
- * viewer.
- */
 export function readMaterialCitations(content: unknown): CitationReference[] {
   if (!content || typeof content !== "object" || Array.isArray(content)) {
     return [];
@@ -181,8 +167,6 @@ export function readMaterialCitations(content: unknown): CitationReference[] {
         record.locator && typeof record.locator === "object"
           ? (record.locator as CitationLocator)
           : null,
-      // Stored citations keep working even when the source row is gone; the
-      // viewer upgrades this to false when the notebook's source list loads.
       isAvailable: true,
       sectionPath: Array.isArray(record.sectionPath)
         ? record.sectionPath.filter((p): p is string => typeof p === "string")
@@ -196,7 +180,6 @@ export function readMaterialCitations(content: unknown): CitationReference[] {
 const CITATION_MARKER_PATTERN =
   /`?\[ref:[a-zA-Z0-9_-]+\]`?|`?\[\d+\]\(#reference-[a-zA-Z0-9_-]+\)`?/gi;
 
-/** Removes the model's raw citation markers from text shown to the user. */
 export function stripCitationMarkers(text: string): string {
   return text
     .replace(CITATION_MARKER_PATTERN, "")
@@ -204,10 +187,6 @@ export function stripCitationMarkers(text: string): string {
     .replace(/ {2,}/g, " ");
 }
 
-/**
- * Removes the raw citation markers from every string in generated content, so
- * the viewer shows prose and a citation surface instead of `[ref:Rn]`.
- */
 export function stripCitationMarkersFromContent(content: unknown): unknown {
   if (typeof content === "string") return stripCitationMarkers(content);
   if (Array.isArray(content)) {
@@ -240,12 +219,6 @@ function formatTimestamp(offsetMs: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-/**
- * Normalizes prose text for citation card preview:
- * - Unescapes markdown escape sequences (e.g. "5\." -> "5.", "\*" -> "*")
- * - Cleans stray backslashes and extra whitespace
- * - Collapses hard line breaks into continuous, natural flowing prose
- */
 export function cleanProseText(text?: string | null): string {
   if (!text) return "";
   return text
@@ -257,9 +230,6 @@ export function cleanProseText(text?: string | null): string {
     .trim();
 }
 
-/**
- * Cleans individual breadcrumb heading segments from markdown escape artifacts.
- */
 export function cleanBreadcrumbSegment(segment: string): string {
   return segment
     .replace(/\\([!#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1")
@@ -268,9 +238,6 @@ export function cleanBreadcrumbSegment(segment: string): string {
     .trim();
 }
 
-/**
- * Detects whether a citation reference is authored in markdown or contains markdown syntax.
- */
 export function isMarkdownCitation(reference: CitationReference, text?: string): boolean {
   const kind = (reference.kind ?? "").toLowerCase();
   if (kind === "video" || kind === "audio" || kind === "transcript" || kind === "plaintext") {
@@ -289,12 +256,6 @@ export function isMarkdownCitation(reference: CitationReference, text?: string):
   return /(_[^\s_].*?_|[*][^\s*].*?[*]|`[^`]+`|\[[^\]]+\]\([^)]+\))/s.test(text);
 }
 
-/**
- * Prepares raw citation text for preview:
- * - Collapses single newlines within paragraphs into single spaces so prose flows naturally
- * - Preserves double newlines (\n\n) as paragraph breaks
- * - Strips stray leading backslashes (e.g. "\ In all")
- */
 export function prepareCitationText(text?: string | null): string {
   if (!text) return "";
   return text
@@ -310,5 +271,4 @@ export function prepareCitationText(text?: string | null): string {
     .filter(Boolean)
     .join("\n\n");
 }
-
 

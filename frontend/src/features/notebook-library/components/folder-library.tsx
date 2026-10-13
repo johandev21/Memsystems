@@ -127,7 +127,6 @@ export function FolderLibrary({
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* Mobile-Native View (sm:hidden) */}
       <div className="sm:hidden w-full">
         <MobileLibraryView
           folders={folders}
@@ -151,7 +150,6 @@ export function FolderLibrary({
         />
       </div>
 
-      {/* Desktop View (hidden sm:flex) */}
       <div className="hidden sm:flex flex-col gap-4 w-full">
         {activeFolder && <Breadcrumb folders={breadcrumbs} onOpenFolder={onOpenFolder} />}
         <div className="flex items-center justify-between gap-4">
@@ -370,8 +368,6 @@ function BreadcrumbTarget({
     id: `breadcrumb:${id ?? "root"}`,
     data: { folderId: id },
   });
-  // Highlight the hovered crumb while dragging so the drop target stays
-  // visible next to the shrunken preview.
   const highlightClass = isOver ? "bg-accent/60 text-accent-foreground" : undefined;
   return current ? (
     <span

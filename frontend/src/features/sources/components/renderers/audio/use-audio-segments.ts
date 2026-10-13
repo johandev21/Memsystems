@@ -108,7 +108,6 @@ export function useSpeakerRename(
       });
       queryClient.invalidateQueries({ queryKey: ["source", sourceId] });
     } catch {
-      // Backend may not support PATCH /speakers yet; local optimistic state handles it seamlessly
     }
   };
 
@@ -182,8 +181,6 @@ export function useAudioSegmentSync({
       }
     }
     if (found && found.id !== activeSegmentId) {
-      // The active segment mirrors <audio> playback time (an external system)
-      // and also drives transcript scrolling; it cannot be derived during render.
       // eslint-disable-next-line react/set-state-in-effect -- media time sync
       setActiveSegmentId(found.id);
       if (isVirtualized) {

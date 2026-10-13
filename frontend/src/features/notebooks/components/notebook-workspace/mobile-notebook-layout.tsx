@@ -12,8 +12,6 @@ import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
 import type { SourceSegmentLocator } from "@/features/sources/types";
 import { MobileTabsHeader } from "./mobile-tabs-header";
 
-// Lazy: the source reader graph (every document renderer: pdf/epub, audio,
-// video, pptx, image, …) is only needed once a source is actually opened.
 const SourceContentViewer = lazy(() =>
   import("@/features/sources/components/source-content-viewer").then(
     (m) => ({ default: m.SourceContentViewer }),
@@ -97,7 +95,6 @@ export function MobileNotebookLayout({
         </TabsContent>
       </Tabs>
 
-      {/* Mobile-only fullscreen viewers — never inline, always overlay */}
       {selectedSourceId && (
         <Suspense fallback={<SourceReaderSkeleton forceFullscreen onClose={() => onSelectSource(null)} />}>
           <SourceContentViewer
@@ -152,8 +149,6 @@ function useMobileChatNavigation() {
   useEffect(() => {
     if (activeTab !== "chat" || !pendingChatPrompt) return;
     const detail = pendingChatPrompt;
-    // Bridges a window event into tab navigation: the prompt is re-dispatched
-    // only after the chat panel has mounted, then the pending slot is cleared.
     // eslint-disable-next-line react/set-state-in-effect -- event bridge after mount
     setPendingChatPrompt(null);
     window.dispatchEvent(

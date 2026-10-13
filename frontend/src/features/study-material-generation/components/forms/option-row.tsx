@@ -1,14 +1,5 @@
 import { cn } from "@/shared/utils/cn";
 
-/**
- * Shared surface-ladder class strings for the generation dialog forms.
- * See docs/design/study-materials-ladder-spec.md §2.
- */
-
-/**
- * Option row / preset chip tones (difficulty pickers, count presets,
- * card-style radios, detail cards).
- */
 export function optionRowClass(selected: boolean, className?: string) {
   return cn(
     "cursor-pointer rounded-2xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -19,10 +10,6 @@ export function optionRowClass(selected: boolean, className?: string) {
   );
 }
 
-/**
- * Knowledge-source option row inside the generation source popovers
- * (Quiz / Flashcards / Mind Map / Roadmap brief forms).
- */
 export function generationSourceOptionClass(selected: boolean, className?: string) {
   return cn(
     "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors",
@@ -33,24 +20,10 @@ export function generationSourceOptionClass(selected: boolean, className?: strin
   );
 }
 
-/**
- * Leading icon tone for a knowledge-source option row.
- */
 export function generationSourceIconClass(checked: boolean, className?: string) {
   return cn("size-4 shrink-0", checked ? "text-primary-foreground" : "text-primary", className);
 }
 
-/**
- * Checkbox tone for a selected knowledge-source option row.
- *
- * The box is inverted (primary-foreground on a primary row) so it stays
- * visible on the solid selected background. The `dark:` counterparts are
- * required: the base Checkbox ships `dark:data-checked:bg-primary`, which
- * has higher specificity than a bare `data-checked:` rule and would
- * otherwise repaint the box with the row color in dark mode (invisible
- * checkbox + invisible check). Matching the variant stack lets tailwind-merge
- * drop the base dark rule instead of fighting it in the cascade.
- */
 export function generationSourceCheckboxClass(selected: boolean, className?: string) {
   return cn(
     selected &&

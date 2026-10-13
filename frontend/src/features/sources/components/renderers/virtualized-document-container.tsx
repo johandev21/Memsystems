@@ -31,8 +31,6 @@ export function VirtualizedDocumentContainer<T>({
   highlightedIndex,
   shouldAdjustScrollPositionOnItemSizeChange,
 }: VirtualizedDocumentContainerProps<T>) {
-  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
-  // this component is the intended behavior.
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: items.length,
@@ -52,12 +50,9 @@ export function VirtualizedDocumentContainer<T>({
     if (shouldAdjustScrollPositionOnItemSizeChange) {
       return shouldAdjustScrollPositionOnItemSizeChange(item, delta, instance);
     }
-    // During forward (downward) scroll, suppress negative scroll adjustment (which pulls
-    // the viewport upwards) to prevent the infinite scroll jump loop caused by height fluctuations.
     if (instance.scrollDirection === "forward" && delta < 0) {
       return false;
     }
-    // During backward (upward) scroll, suppress positive scroll adjustment.
     if (instance.scrollDirection === "backward" && delta > 0) {
       return false;
     }

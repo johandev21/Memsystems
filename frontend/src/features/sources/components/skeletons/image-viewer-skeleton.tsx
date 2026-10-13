@@ -9,9 +9,7 @@ export function ImageViewerSkeleton() {
       data-testid="image-viewer-skeleton"
       className="flex h-full w-full flex-col overflow-hidden bg-background text-foreground"
     >
-      {/* Top Toolbar */}
       <div className="shrink-0 border-b border-border/60 bg-card/60 p-2 sm:p-3 flex items-center justify-between gap-2 shadow-xs">
-        {/* View Mode Toggle Buttons */}
         <div className="flex items-center rounded-lg border border-border/70 p-0.5 bg-muted/40">
           <div className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-background shadow-xs text-foreground font-medium">
             <Columns2 className="size-3.5" />
@@ -27,7 +25,6 @@ export function ImageViewerSkeleton() {
           </div>
         </div>
 
-        {/* Zoom Controls */}
         <div className="flex items-center gap-1">
           <div className="size-7 flex items-center justify-center rounded border border-border/50 text-muted-foreground/50">
             <ZoomOut className="size-3.5" />
@@ -39,9 +36,7 @@ export function ImageViewerSkeleton() {
         </div>
       </div>
 
-      {/* Main Image Viewport & Notes Area */}
       <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
-        {/* Left: Image Viewport */}
         <div className="flex-1 bg-muted/20 flex items-center justify-center p-6 border-b sm:border-b-0 sm:border-r border-border/50 select-none">
           <div className="w-full max-w-lg aspect-4/3 rounded-xl border border-border/60 bg-card/60 flex flex-col items-center justify-center gap-3 p-6 shadow-xs">
             <div className="size-16 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground/40">
@@ -51,7 +46,6 @@ export function ImageViewerSkeleton() {
           </div>
         </div>
 
-        {/* Right: Notes Sidebar */}
         <div className="w-full sm:w-72 md:w-80 shrink-0 p-4 space-y-4 overflow-y-auto bg-card/20">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-28 rounded-full" />

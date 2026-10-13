@@ -20,11 +20,6 @@ function findNode(
   return undefined;
 }
 
-/**
- * Drill-down navigation over the study materials tree: exposes only the children
- * of the folder currently being viewed. If the active folder is deleted or moved,
- * resolves safely to the root.
- */
 export function useMobileStudyMaterialsNavigation(
   folders: readonly FolderDTO[] | undefined,
   materials: readonly StudyMaterialDTO[] | undefined,

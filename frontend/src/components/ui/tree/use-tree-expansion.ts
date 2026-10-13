@@ -75,7 +75,6 @@ function loadPersistedExpanded(storageKey: string): Set<string> | null {
       if (Array.isArray(parsed)) return new Set(parsed);
     }
   } catch {
-    // ignore
   }
   return null;
 }
@@ -85,7 +84,6 @@ function persistExpanded(storageKey: string, ids: Set<string>) {
   try {
     localStorage.setItem(storageKey, JSON.stringify([...ids]));
   } catch {
-    // ignore
   }
 }
 
@@ -121,10 +119,6 @@ function syncExpandedOnFoldersChange<
   return { nextFolderIds: currentFolderIds, nextOpenIds };
 }
 
-/**
- * Persists expanded folder IDs per key/notebook, prunes stale IDs,
- * and expands newly encountered top-level folders by default.
- */
 export function usePersistentExpandedFolders<
   TFolder extends { id: string; parentId: string | null; deletedAt?: string | null },
 >(

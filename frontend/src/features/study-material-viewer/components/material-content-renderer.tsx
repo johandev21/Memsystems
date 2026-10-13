@@ -36,8 +36,6 @@ export function MaterialContentRenderer({
 }: MaterialContentRendererProps) {
   const { t } = useTranslation("viewer");
 
-  // The model's raw `[ref:Rn]` markers are stripped from the prose for every
-  // kind. Citations are retained in the background data but not displayed in the UI.
   const content = stripCitationMarkersFromContent(material.content);
 
   let view: React.ReactNode;

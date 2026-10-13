@@ -31,10 +31,6 @@ export interface ComposerProps {
   models: ModelOption[];
   selectedModel: string;
   onModelChange: (model: string) => void;
-  /**
-   * True only when the Gateway catalog was verified. Non-capable rows stay
-   * selectable; the picker only marks and filters them.
-   */
   capabilitiesVerified: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 }

@@ -18,7 +18,6 @@ export interface UseSourcesTreeMutationsOptions {
   setExpandedIds: (updater: (prev: Set<string>) => Set<string>) => void;
 }
 
-/** Optimistic folder/source tree mutations shared by the desktop and mobile Sources panels. */
 export function useSourcesTreeMutations({
   notebookId,
   folders,
@@ -29,7 +28,6 @@ export function useSourcesTreeMutations({
   const queryClient = useQueryClient();
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-
 
   const createFolderMutation = useMutation({
     mutationFn: (input: { name: string; parentId?: string | null; skipAutoEdit?: boolean }) =>

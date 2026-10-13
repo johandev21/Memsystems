@@ -82,7 +82,6 @@ export interface Source {
   processingErrorCode?: string | null;
   processingErrorMessage?: string | null;
   processingError?: { code?: string | null; message?: string | null } | null;
-  /** Compatibility aliases used by early processing-status responses. */
   errorCode?: string | null;
   errorMessage?: string | null;
 }

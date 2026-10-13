@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { CoverVariants } from "../model/types";
 import { coverSrcSet, primaryCoverUrl } from "../model/artwork-assets";
 
-// Extracted from folder-prototype/Memsystems-export.html, then rounded: 16px outer corners, 14/10px tab corners, 8-10px inner corners. Colors use the application theme.
 const FOLDER_BACK_PATH =
   "M0 150.5L0 19.5Q0 5.5 13.94 5.5L77.77 5.5Q87.73 5.5 94.92 12.42L105.14 22.25Q112.33 29.167 122.29 29.167L222.07 29.167Q238 29.167 238 45.167L238 150.5Z";
 const FOLDER_FRONT_PATH =
@@ -10,10 +9,6 @@ const FOLDER_FRONT_PATH =
 const FOLDER_FRONT_PATH_EMPTY =
   "M8 0Q0 0 0 8L0 109A16 16 0 0 0 16 125L223 125A16 16 0 0 0 239 109L239 8Q239 0 231 0Z";
 
-// Cover photos render as fill layers behind the artwork chrome; real <img>
-// elements (unlike CSS backgrounds) can use srcset. The prototype artwork is
-// almost entirely above the fold and each file is only a few KB, so these
-// load eagerly with high priority to keep LCP fast.
 function CoverFill({ url, sizes, srcSet }: { url: string; sizes?: string; srcSet?: string }) {
   return (
     <img

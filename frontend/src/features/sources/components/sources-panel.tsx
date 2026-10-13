@@ -54,7 +54,6 @@ import { useSourcesTreeMutations } from "../hooks/use-sources-tree-mutations";
 import { MobileSourcesView } from "./mobile/mobile-sources-view";
 import { SourcesPanelHeader } from "@/features/notebooks/components/notebook-workspace/sources-panel-header";
 
-// Matches the breakpoint where MobileNotebookLayout replaces the desktop layout.
 const MOBILE_LAYOUT_QUERY = "(max-width: 1023px)";
 
 export function SourcesPanel({
@@ -221,7 +220,6 @@ export function SourcesPanel({
     cancelMutation,
   } = useSourceMutations(notebookId);
 
-  // ── Keyboard navigation ──────────────────────────────────────────────────
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const { treeHasFocus, registerTreeSurface, registerNode, focus } =
     useTreeFocusRegistry(setFocusedItemId);
@@ -263,7 +261,6 @@ export function SourcesPanel({
     beginRename: handleBeginRename,
     requestDelete: requestDeleteKbd,
   });
-  // ────────────────────────────────────────────────────────────────────────
 
   if (isMobileLayout) {
     return (

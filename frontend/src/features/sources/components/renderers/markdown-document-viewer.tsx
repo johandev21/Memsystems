@@ -142,7 +142,6 @@ export function MarkdownDocumentViewer({
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const chunks = useMemo(() => splitTextIntoChunks(content || ""), [content]);
 
-  // Find target chunk index based on selected locator
   const targetChunkIndex = useMemo(() => {
     if (!selectedLocator || chunks.length === 0) return null;
 
@@ -165,7 +164,6 @@ export function MarkdownDocumentViewer({
 
   const isVirtualized = chunks.length > 25 && scrollElement !== undefined;
 
-  // Handle citation scrolling and highlighting
   const [prevTargetChunkIndex, setPrevTargetChunkIndex] = useState<
     typeof targetChunkIndex | undefined
   >(undefined);

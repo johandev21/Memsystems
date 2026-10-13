@@ -9,10 +9,6 @@ import i18n from "@/shared/i18n";
 import { formatDisplayTitle } from "../utils/format-title";
 import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "../hooks/use-roadmap-progress";
 
-// =============================================================================
-// Types & Interfaces
-// =============================================================================
-
 import type { RoadmapContentType } from "../shapes/roadmap";
 
 export type RoadmapContent = RoadmapContentType;
@@ -49,26 +45,12 @@ interface RoadmapPhaseSectionProps {
   onStudyPhase: (phase: RoadmapPhase, phaseIndex: number) => void;
 }
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 const SEND_CHAT_PROMPT_EVENT = "send-chat-prompt";
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Formats a phase index label (e.g. "Phase 1").
- */
 function formatMilestoneLabel(phaseIndex: number): string {
   return i18n.t("roadmap.phase", { ns: "viewer", number: phaseIndex + 1 });
 }
 
-/**
- * Formats phase topics into a numbered summary list for AI chat prompts.
- */
 function formatTopicSummary(topics: RoadmapTopic[]): string {
   return topics
     .map(
@@ -78,9 +60,6 @@ function formatTopicSummary(topics: RoadmapTopic[]): string {
     .join("\n");
 }
 
-/**
- * Builds the AI chat prompt for studying an entire phase.
- */
 function buildPhaseStudyPrompt(
   phase: RoadmapPhase,
   phaseIndex: number,
@@ -102,9 +81,6 @@ function buildPhaseStudyPrompt(
   });
 }
 
-/**
- * Builds the clipboard text for a single topic node.
- */
 function buildTopicCopyText(topic: RoadmapTopic): string {
   const lines: string[] = [formatDisplayTitle(topic.title)];
   if (topic.description) {
@@ -117,9 +93,6 @@ function buildTopicCopyText(topic: RoadmapTopic): string {
   return lines.join("\n");
 }
 
-/**
- * Dispatches a custom event to send a prompt to the chat panel.
- */
 function dispatchChatPrompt(promptText: string): void {
   window.dispatchEvent(
     new CustomEvent(SEND_CHAT_PROMPT_EVENT, {
@@ -128,32 +101,9 @@ function dispatchChatPrompt(promptText: string): void {
   );
 }
 
-// =============================================================================
-// Utility Functions
-// =============================================================================
-
-/**
- * Determines if a topic index should be placed on the left side of the grid.
- */
 function isLeftPosition(topicIndex: number): boolean {
   return topicIndex % 2 === 0;
 }
-
-// =============================================================================
-// Custom Hooks
-// =============================================================================
-
-// (No custom hooks required; useRoadmapProgress is imported)
-
-// =============================================================================
-// Derived State Helpers
-// =============================================================================
-
-// (No derived state helpers required)
-
-// =============================================================================
-// Local Components
-// =============================================================================
 
 function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
   if (!title) return null;
@@ -241,7 +191,6 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
         isLeft ? "@3xl:justify-end @3xl:pr-6" : "@3xl:justify-start @3xl:pl-6",
       )}
     >
-      {/* Horizontal Connector Line (wide container only) */}
       <div
         className={cn(
           "hidden @3xl:block absolute top-1/2 border-t-2 border-dashed border-primary/40 z-0 w-6",
@@ -249,7 +198,6 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
         )}
       />
 
-      {/* Topic Box Card */}
       <div className="group relative rounded-xl border border-surface-border-subtle bg-surface-2 p-3.5 @sm:p-4 @3xl:p-5 flex flex-col gap-1.5 @sm:gap-2 w-full max-w-full @3xl:max-w-sm z-10">
         <h4 className="text-xs sm:text-sm @sm:text-base font-bold text-text-tertiary leading-snug wrap-break-word">
           {formatDisplayTitle(topic.title)}
@@ -279,7 +227,6 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
 function RoadmapSpine({ phases, onStudyPhase }: RoadmapSpineProps) {
   return (
     <div className="relative w-full flex flex-col items-center gap-8 @sm:gap-12 @3xl:gap-14 pt-2">
-      {/* Spine Line */}
       <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-surface-4 -translate-x-1/2 z-0" />
 
       {phases.map((phase, phaseIndex) => (
@@ -307,27 +254,14 @@ function RoadmapPhaseSection({ phase, phaseIndex, onStudyPhase }: RoadmapPhaseSe
   );
 }
 
-// =============================================================================
-// Main Component (Orchestrator)
-// =============================================================================
-
 export function RoadmapView({ materialId, content }: RoadmapViewProps) {
-  // 1. Hooks
   useRoadmapProgress(materialId, content.phases);
 
-  // 2. State
-
-  // 3. Derived Values
-
-  // 4. Memoized Values
-
-  // 5. Event Handlers
   const handleStudyPhaseInChat = (phase: RoadmapPhase, phaseIndex: number) => {
     const promptText = buildPhaseStudyPrompt(phase, phaseIndex, content.title);
     dispatchChatPrompt(promptText);
   };
 
-  // 6. Render
   return (
     <div className="@container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-safe pb-16 sm:pb-20 select-none px-3 @sm:px-4 overflow-x-auto overscroll-x-contain touch-pan-x">
       <RoadmapHeader title={content.title} description={content.description} />
@@ -336,9 +270,5 @@ export function RoadmapView({ materialId, content }: RoadmapViewProps) {
     </div>
   );
 }
-
-// =============================================================================
-// Export
-// =============================================================================
 
 export default RoadmapView;

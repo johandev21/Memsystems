@@ -1,15 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 export interface ChatConversationSkeletonProps {
-  /** Render a banner placeholder too, for when the notebook query is still pending. */
   withBanner?: boolean;
 }
 
-/**
- * First-load placeholder for a notebook conversation. Mirrors the real
- * layout (banner aspect ratio, message widths, vertical rhythm) so swapping
- * to real content never shifts layout.
- */
 export function ChatConversationSkeleton({ withBanner = false }: ChatConversationSkeletonProps) {
   return (
     <div aria-hidden="true" className="flex flex-col gap-8" data-testid="chat-history-skeleton">

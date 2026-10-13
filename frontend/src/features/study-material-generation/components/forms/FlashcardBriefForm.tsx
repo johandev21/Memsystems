@@ -16,16 +16,8 @@ import { GenerationSourcePopover } from "./generation-source-popover";
 import type { BaseMaterialFormProps } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
-// ============================================================================
-// Module Constants
-// ============================================================================
-
 const TOTAL_STEPS = 2;
 const CARD_PRESETS = [10, 15, 20] as const;
-
-// ============================================================================
-// Flashcard Brief Form Component
-// ============================================================================
 
 export function FlashcardBriefForm({
   notebookId,

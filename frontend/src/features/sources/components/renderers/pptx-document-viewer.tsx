@@ -62,8 +62,6 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
 
   const isSegmentsVirtualized = filteredSegments.length > 25;
 
-  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
-  // this component is the intended behavior.
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const segmentVirtualizer = useVirtualizer({
     count: filteredSegments.length,
@@ -75,7 +73,6 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
     initialRect: { width: 800, height: 600 },
   });
 
-  // Citation jump via selectedLocator.slideNumber
   useEffect(() => {
     if (typeof selectedLocator?.slideNumber === "number") {
       const target = selectedLocator.slideNumber;
@@ -143,11 +140,9 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
           onSelect={handleSlideSelect}
         />
 
-        {/* Center: Current Slide Content */}
         <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
           <PptxSearchBar searchQuery={searchQuery} onChange={setSearchQuery} />
 
-          {/* Slide content area */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             {activeSlideNumber !== null ? (
               <SlideContentCard
@@ -167,7 +162,6 @@ export function PptxDocumentViewer({ source, selectedLocator }: PptxDocumentView
           </div>
         </div>
 
-        {/* Right: Segment list */}
         <SegmentListPanel
           filteredSegments={filteredSegments}
           activeSlideNumber={activeSlideNumber}

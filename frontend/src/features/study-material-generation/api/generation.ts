@@ -8,13 +8,11 @@ import { getApiUrl } from "@/shared/api";
 export type { StudyMaterialKind };
 
 export interface RoadmapGenerationOptions {
-  /** 0 = auto. */
   phaseCount: number;
   detailLevel: "basic" | "detailed" | "auto";
 }
 
 export interface MindMapGenerationOptions {
-  /** 0 = auto. */
   nodeCount: number;
   structure: "radial" | "hierarchical" | "organic";
   colorGroups: boolean | "auto";
@@ -23,20 +21,17 @@ export interface MindMapGenerationOptions {
 }
 
 export interface SlidesGenerationOptions {
-  /** 0 = auto. */
   slideCount: number;
   theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm" | "auto";
   detailLevel: "basic" | "detailed" | "auto";
 }
 
 export interface PracticeProblemsGenerationOptions {
-  /** 0 = auto. */
   problemCount: number;
   difficulty: "easy" | "medium" | "hard" | "auto";
 }
 
 export interface CaseStudyGenerationOptionsInput {
-  /** 0 = auto. */
   questionCount: number;
   focus: string;
   comparePerspectives: "auto" | "single" | "compare";
@@ -49,7 +44,6 @@ export interface StartGenerationInput {
   folderId?: string | null;
   model?: string;
   groundingMode?: 'strict' | 'moderate' | 'free';
-  /** 0 = auto. */
   questionCount?: number;
   difficulty?: "easy" | "medium" | "hard" | "auto";
   roadmapOptions?: RoadmapGenerationOptions;
@@ -91,7 +85,6 @@ export function startGeneration(
           message = data.error;
         }
       } catch {
-        // Keep the HTTP status when the server returns a non-JSON error.
       }
       throw new Error(message);
     }
@@ -166,7 +159,6 @@ async function* iteratorFrom(
       await reader.cancel().catch(() => {});
       reader.releaseLock();
     } catch {
-      /* ignore */
     }
   }
 }

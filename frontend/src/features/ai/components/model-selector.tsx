@@ -142,11 +142,6 @@ export interface ModelSelectorFilterProps {
   className?: string;
 }
 
-/**
- * @deprecated Model selector now automatically filters for structured output when needed.
- * Quiet capability filter for the picker dialog. Sits under the search input
- * and composes with search; the caller owns the state.
- */
 export const ModelSelectorFilter = ({
   checked,
   onCheckedChange,
@@ -171,7 +166,6 @@ export const ModelSelectorFilter = ({
 
 export type ModelSelectorNoteProps = ComponentProps<"span">;
 
-/** Quiet per-row capability marker. One style for one meaning. */
 export const ModelSelectorNote = ({ className, ...props }: ModelSelectorNoteProps) => (
   <span className={cn("shrink-0 text-xs text-muted-foreground", className)} {...props} />
 );
@@ -185,10 +179,6 @@ export interface ModelSelectorModelsProps {
   className?: string;
 }
 
-/**
- * Grouped model rows shared by every picker: composer, generation gate, and
- * practice gate. Non-capable rows stay selectable; chat remains unrestricted.
- */
 export const ModelSelectorModels = ({
   groups,
   selectedModel,

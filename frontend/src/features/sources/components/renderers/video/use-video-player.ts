@@ -117,8 +117,6 @@ export function useVideoSegmentSync({
       }
     }
     if (found && found.id !== activeSegmentId) {
-      // The active segment mirrors video playback time (an external system)
-      // and also drives transcript scrolling; it cannot be derived during render.
       // eslint-disable-next-line react/set-state-in-effect -- media time sync
       setActiveSegmentId(found.id);
       if (isVirtualized) {

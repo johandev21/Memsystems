@@ -1,5 +1,3 @@
-// The full icon-name list comes from lucide's dynamic-import map (~55 KB gz),
-// so it is loaded on demand when the picker popover opens rather than statically.
 export async function loadAllIconNames(): Promise<string[]> {
   const { dynamicIconImports } = await import("lucide-react/dynamic");
   return Object.keys(dynamicIconImports);

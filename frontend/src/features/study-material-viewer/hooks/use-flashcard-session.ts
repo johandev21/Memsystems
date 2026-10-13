@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-/** Temporary navigation state; flashcard progress is deliberately not retained. */
 export function useFlashcardSession(totalCards: number) {
   const [state, setState] = useState({ currentCardIndex: 0, isRevealed: false });
 

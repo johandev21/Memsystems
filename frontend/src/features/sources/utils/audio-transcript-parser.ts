@@ -31,10 +31,6 @@ export function parseRawTextToAudioSegments(rawText: string): ParsedAudioSegment
     .filter(Boolean);
   const segments: ParsedAudioSegment[] = [];
 
-  // Regex patterns:
-  // [00:15] Speaker 1: text
-  // [01:23 - 01:45] Speaker A: text
-  // Speaker 1 (00:15): text
   const timestampPrefixRegex =
     /^\[(\d{1,2}:\d{2}(?::\d{2})?)(?:\s*-\s*(\d{1,2}:\d{2}(?::\d{2})?))?\]\s*(?:([^:]+):\s*)?(.*)$/i;
   const speakerPrefixRegex = /^([^:\n(]+)(?:\s*\((?:(\d{1,2}:\d{2}(?::\d{2})?))\))?:\s*(.*)$/i;
@@ -89,7 +85,6 @@ export function parseRawTextToAudioSegments(rawText: string): ParsedAudioSegment
       continue;
     }
 
-    // Default paragraph
     const startOffsetMs = (currentOrdinal - 1) * 10_000;
     segments.push({
       id: `raw-seg-${currentOrdinal}`,

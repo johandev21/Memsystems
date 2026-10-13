@@ -24,7 +24,6 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
   const segmentElementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Detect YouTube video
   const isYouTube = isYouTubeUrl(source.url);
   const youtubeVideoId = isYouTube ? extractYouTubeId(source.url) : null;
 
@@ -56,8 +55,6 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
 
   const isVirtualized = segments.length > 30;
 
-  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
-  // this component is the intended behavior.
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: segments.length,
@@ -116,7 +113,6 @@ export function VideoDocumentViewer({ source, selectedLocator }: VideoDocumentVi
     setActiveSegmentId(segment.id);
   };
 
-  // Handle citation jumping
   useEffect(() => {
     if (typeof selectedLocator?.startOffsetMs !== "number") return;
     const targetSeconds = selectedLocator.startOffsetMs / 1000;

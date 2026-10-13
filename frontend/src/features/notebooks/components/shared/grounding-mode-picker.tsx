@@ -6,7 +6,6 @@ export interface GroundingModePickerProps {
   value: GroundingMode;
   onChange: (mode: GroundingMode) => void;
   disabled?: boolean;
-  /** "compact" renders a segmented control; "full" adds the one-line descriptions. */
   variant?: "compact" | "full";
   className?: string;
 }

@@ -75,11 +75,6 @@ export type SourcesTreeFlatRow = {
   readonly depth: number;
 };
 
-/**
- * Flattens the visible tree into (node, depth) rows in display order.
- * Traversal matches `flattenVisibleTree`, so indices line up with the
- * keyboard-navigation `visibleItems` built from the same inputs.
- */
 export function flattenVisibleTreeWithDepth(
   nodes: readonly SourcesTreeNode[],
   openFolderIds: ReadonlySet<string>,

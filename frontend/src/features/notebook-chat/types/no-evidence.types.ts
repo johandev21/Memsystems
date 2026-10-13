@@ -44,12 +44,6 @@ function unhelpfulSourceOf(raw: unknown): NoEvidenceSourceRef | null {
   return { id, title };
 }
 
-/**
- * Extracts the no-evidence metadata block from an assistant message
- * metadata object, so the UI can render the distinct abstention state
- * instead of a source-grounded reply. Returns null for every other message.
- * Malformed entries are dropped instead of rendering raw i18n keys.
- */
 export function noEvidenceMetadataOf(metadata: unknown): NoEvidenceMetadata | null {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
   const block = (metadata as { noEvidence?: unknown }).noEvidence;

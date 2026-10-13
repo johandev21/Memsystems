@@ -214,7 +214,6 @@ export function CitationActions({
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
       copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
-      // ignore
     }
   };
 
@@ -242,7 +241,6 @@ export function CitationActions({
   );
 
   const canOpenInApp = hasInAppViewer && Boolean(reference.id);
-  // Without an in-app viewer the external URL is the only way to reach the source.
   const canOpenExternal = Boolean(safeUrl) && !canOpenInApp;
 
   return (
@@ -263,8 +261,6 @@ export function CitationActions({
           ) : (
             <Copy className="size-3" data-icon="inline-start" />
           )}
-          {/* min-w keeps the button width stable when the label swaps, so the
-              footer never reflows on click. */}
           <span className="min-w-12 text-left">
             {copied ? t("referencePopover.quoteCopied") : t("referencePopover.copyQuote")}
           </span>

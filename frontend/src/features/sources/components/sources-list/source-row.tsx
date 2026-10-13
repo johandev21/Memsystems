@@ -155,7 +155,6 @@ export function SourceRow({
           isDragging,
           isRenaming: isEditing,
         }),
-        // Reserve room for the hover action cluster so labels never slide under it.
         "pr-14",
       )}
       onFocus={(e) => {

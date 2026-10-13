@@ -48,7 +48,6 @@ export function MobileStudyMaterialCreateDrawer({
         </DrawerHeader>
 
         <div className="flex flex-col gap-1 py-1 overflow-y-auto overscroll-contain">
-          {/* First option: New Folder */}
           <button
             type="button"
             data-slot="mobile-create-option-folder"
@@ -68,7 +67,6 @@ export function MobileStudyMaterialCreateDrawer({
 
           <div className="my-1.5 h-px bg-border/40" />
 
-          {/* 8 Study Material Types */}
           {RESOURCES.map((resource) => {
             const inScope = isInScope(resource.kind);
             const label = t(`notebooks:${KIND_LABEL_KEYS[resource.kind]}`, resource.key);

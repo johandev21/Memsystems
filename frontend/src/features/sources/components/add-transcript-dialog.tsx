@@ -39,7 +39,6 @@ export function AddTranscriptDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputId = useId();
 
-  // Real-time preview of parsed segments
   const parsedSegments = useMemo(() => {
     return parseRawTextToVideoSegments(transcriptText);
   }, [transcriptText]);

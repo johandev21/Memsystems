@@ -1,14 +1,8 @@
-/**
- * Formats a title for display in study materials (Roadmaps, Slides).
- * Converts kebab-case titles (e.g. "life-and-key-milestones") to Title Case ("Life and Key Milestones").
- * Cleans roadmap-specific phase prefixes.
- */
 export function formatDisplayTitle(title?: string): string {
   if (!title) return "";
 
   const clean = title.replace(/^Phase \d+:\s*/i, "").trim();
 
-  // If string contains hyphens and no spaces, convert kebab-case to Title Case
   if (!/\s/.test(clean) && /-/.test(clean)) {
     const minorWords = new Set([
       "and",

@@ -21,9 +21,6 @@ export function InlineRename({
 }: InlineRenameProps) {
   const [value, setValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Enter commits, then unmount fires blur with the same value. Skip the
-  // duplicate so a single rename never issues two writes. Cleared on edit
-  // so a retry after a failed commit still goes through.
   const lastCommittedRef = useRef<string | null>(null);
 
   const commit = useCallback(

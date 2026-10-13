@@ -85,8 +85,6 @@ export async function createFileSource(
     method: "PUT",
     headers: targetData.headers,
     body: file,
-    // Local streaming targets require the app session; presigned S3 URLs do
-    // not and should not receive browser credentials cross-origin.
     credentials: targetData.uploadUrl.startsWith("/") ? "include" : "omit",
     signal,
   });
@@ -122,11 +120,9 @@ async function sha256File(file: File): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Re-enqueue source processing after a failed or cancelled attempt. */
 export async function retrySource(sourceId: string): Promise<unknown> {
   const response = await fetchApi(`/api/sources/${sourceId}/retry`, { method: "POST" });
   if (response.status === 404) {
-    // Older backends expose reindex as the equivalent operator action.
     const legacyResponse = await fetchApi(`/api/sources/${sourceId}/reindex`, { method: "POST" });
     const legacyData = await legacyResponse.json().catch(() => ({}));
     if (!legacyResponse.ok) {
@@ -146,7 +142,6 @@ export async function retrySource(sourceId: string): Promise<unknown> {
   return data;
 }
 
-/** Request cancellation of an active source-processing job. */
 export async function cancelSource(sourceId: string): Promise<void> {
   const response = await fetchApi(`/api/sources/${sourceId}/cancel`, { method: "POST" });
   if (!response.ok) {

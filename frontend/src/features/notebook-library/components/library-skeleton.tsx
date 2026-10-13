@@ -19,12 +19,10 @@ export function LibraryHeroSkeleton() {
 export function MobileLibrarySkeleton() {
   return (
     <div className="flex flex-col gap-4 px-2 pb-24 w-full sm:hidden" aria-hidden="true">
-      {/* Mobile Header: Title */}
       <div className="flex items-center w-full pt-5">
         <Skeleton className="h-5 w-20 rounded-md" />
       </div>
 
-      {/* Minimalist item rows */}
       <div className="flex flex-col gap-3.5 w-full">
         {Array.from({ length: 5 }).map((_, index) => (
           <div key={index} className="flex w-full items-center justify-between">
@@ -42,7 +40,6 @@ export function MobileLibrarySkeleton() {
         ))}
       </div>
 
-      {/* Floating Action Button placeholder */}
       <Skeleton className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-5 z-30 size-14 rounded-full shadow-lg" />
     </div>
   );

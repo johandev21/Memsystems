@@ -36,11 +36,6 @@ export interface SourcesTreeBranchProps {
   onFocusItem?: (id: string) => void;
 }
 
-/**
- * Renders a single tree node (folder or source) with no children.
- * Used by `SourcesTreeBranch` and by the virtualized tree list, which
- * flattens visible rows and renders them one by one.
- */
 export function SourcesTreeNodeRow({
   node,
   allFolders,

@@ -6,11 +6,6 @@ export interface QaCardProps {
   isRevealed: boolean;
 }
 
-/**
- * The single flashcard presentation: the question on its own until it is
- * revealed, then the question restated above a "SOLUTION" divider with the
- * answer underneath.
- */
 export function QaCard({ question, answer, isRevealed }: QaCardProps) {
   const { t } = useTranslation("viewer");
 

@@ -95,9 +95,6 @@ interface InlineEditableDisplayProps {
   children?: ReactNode;
 }
 
-// Plain text, not a control: editing is entered explicitly (F2 or the card's
-// context menu), so the title must not look or behave like a text field.
-// Clicks land on the card around it and select it like any other card area.
 function InlineEditableDisplay({
   value,
   className,
@@ -121,8 +118,6 @@ function InlineEditableDisplay({
   const title = (
     <span
       ref={titleRef}
-      // Not `data-slot`: base-ui's `render` prop lets the rendered element's
-      // own props win, which would shadow the tooltip trigger's data-slot.
       data-library-title=""
       className={cn("library-inline-editable", className)}
     >
@@ -132,8 +127,6 @@ function InlineEditableDisplay({
 
   if (!tooltip || !truncated) return title;
 
-  // Pointer-only from here on: the title is no longer focusable, and the
-  // owning card already exposes the full name through its aria-label.
   return (
     <Tooltip>
       <TooltipTrigger render={title} />
@@ -148,7 +141,6 @@ export interface InlineEditableTextProps {
   onCancel?: () => void;
   onDismiss?: (value: string) => void;
   onEditingChange?: (editing: boolean) => void;
-  /** Item label for the editing field, e.g. "notebook" -> "Edit notebook". */
   ariaLabel: string;
   className?: string;
   inputClassName?: string;
@@ -180,8 +172,6 @@ export function InlineEditableText({
   const [editing, setEditing] = useState(editRequest > 0);
   const [prevEditRequest, setPrevEditRequest] = useState(editRequest);
 
-  // Editing is only ever entered explicitly, by bumping `editRequest` from the
-  // owning card (F2, the context menu, or a freshly created draft card).
   if (editRequest !== prevEditRequest) {
     setPrevEditRequest(editRequest);
     if (editRequest > 0 && !editing) {

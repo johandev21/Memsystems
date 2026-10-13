@@ -26,8 +26,6 @@ export type LibraryNotebook = {
 
 export type Draft = {
   kind: "folder" | "notebook";
-  /** Live id: the optimistic temp id until the create resolves, then the server id. */
   id: string;
-  /** Stable optimistic id used as the React key so the draft card never remounts. */
   clientId: string;
 };

@@ -6,8 +6,6 @@ import { useNotebookPanels } from "../../hooks/use-notebook-panels";
 import { useSourcesPanel } from "../../hooks/use-sources-panel";
 import { useStudioDialogs } from "../../hooks/use-studio-dialogs";
 
-// Lazy: the generation dialog drags the brief forms, editor schemas and zod
-// into its chunk — none of it is needed until the user opens the dialog.
 const GenerateBriefDialog = lazy(() =>
   import("@/features/study-material-generation/components/GenerateBriefDialog").then(
     (m) => ({ default: m.GenerateBriefDialog }),
@@ -73,8 +71,6 @@ function NotebookWorkspaceInner({ notebookId }: { notebookId: string }) {
         selectedLocator={sources.selectedLocator}
         onSelectSource={sources.setSelectedSourceId}
       />
-      {/* Single instance: both layouts stay mounted (CSS-hidden), so mounting
-          the dialog here avoids duplicate stacked dialogs with divergent state. */}
       {dialogs.dialogOpen && (
         <Suspense fallback={null}>
           <GenerateBriefDialog

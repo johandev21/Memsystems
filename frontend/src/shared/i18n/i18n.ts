@@ -4,11 +4,6 @@ import { initReactI18next } from "react-i18next";
 
 export const defaultNS = "common";
 
-// Locale bundles load on demand instead of shipping both languages and every
-// namespace in the eager bundle. The active language's "common" namespace is
-// fetched at startup; route namespaces load when a component first declares
-// them (react-i18next suspends via the app-level Suspense boundary until the
-// local chunk arrives).
 const localeModules = import.meta.glob<{ default: Record<string, unknown> }>(
   "./locales/*/*.json",
 );
@@ -32,8 +27,6 @@ void i18n
     ) {
       const load = localeModules[`./locales/${language}/${namespace}.json`];
       if (!load) {
-        // Unknown language/namespace combination: empty bundle, i18next falls
-        // back to the fallback language.
         callback(null, {});
         return;
       }

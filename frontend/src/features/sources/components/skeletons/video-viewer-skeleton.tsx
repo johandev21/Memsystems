@@ -7,7 +7,6 @@ export function VideoViewerSkeleton() {
       data-testid="video-viewer-skeleton"
       className="@container flex h-full w-full flex-col @min-[720px]:flex-row overflow-hidden bg-surface-0 text-text-primary"
     >
-      {/* Video Viewport Container */}
       <div className="flex flex-col @min-[720px]:w-1/2 @min-[900px]:w-3/5 shrink-0 border-b @min-[720px]:border-b-0 @min-[720px]:border-r border-surface-border bg-black items-center justify-center">
         <div className="relative w-full aspect-video max-h-[45vh] @min-[720px]:max-h-full bg-black/90 flex items-center justify-center overflow-hidden shrink-0 select-none">
           <div className="size-12 rounded-full border border-white/20 bg-white/10 flex items-center justify-center backdrop-blur-xs">
@@ -16,7 +15,6 @@ export function VideoViewerSkeleton() {
         </div>
       </div>
 
-      {/* Video Transcript Pane */}
       <div className="flex flex-col flex-1 min-h-0 min-w-0 bg-surface-0 overflow-hidden">
         <div className="shrink-0 border-b border-surface-border bg-surface-0 px-3 py-2 @min-[720px]:px-4 @min-[720px]:py-2.5">
           <Skeleton className="h-8 w-full max-w-sm rounded-md" />

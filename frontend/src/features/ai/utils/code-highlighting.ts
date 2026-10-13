@@ -74,7 +74,6 @@ export const highlightCode = (
         await highlighter.loadLanguage(language);
         langToUse = language;
       } catch {
-        // Unknown language identifiers intentionally fall back to plain text.
       }
 
       const result = highlighter.codeToTokens(code, {

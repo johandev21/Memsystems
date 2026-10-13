@@ -18,9 +18,7 @@ export interface IconPickerProps {
 }
 
 const BATCH_SIZE = 60;
-// Fallback row pitch: size-9 cell (2.25rem) + gap-1 (0.25rem) at a 16px root.
 const ROW_PITCH_FALLBACK = 40;
-// Wait for the scroll to settle before pulling the viewport back onto a row.
 const SNAP_SETTLE_MS = 140;
 
 export function IconPicker({
@@ -110,12 +108,6 @@ export function IconPicker({
     return matchingIcons.slice(0, visibleCount);
   }, [matchingIcons, visibleCount]);
 
-  // Rows and category labels sit on whole multiples of the row pitch, and the
-  // viewport is a whole number of rows tall, so pulling the offset onto the
-  // nearest multiple always leaves whole rows at both edges. Doing it here
-  // instead of with `scroll-snap-type` keeps it deterministic when the results
-  // change underneath the scroller (snap-after-layout is not reliable across
-  // browsers, and scroll anchoring can shift the offset on its own).
   const snapToNearestRow = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -156,7 +148,6 @@ export function IconPicker({
     };
   }, []);
 
-  // A new query (or reopening the picker) starts at the first row.
   useEffect(() => {
     if (!open) return;
     const container = scrollContainerRef.current;
@@ -275,10 +266,6 @@ export function IconPicker({
           )}
         </div>
 
-        {/* The viewport is exactly 7 rows: every cell is size-9 (2.25rem) plus
-            gap-1 (0.25rem) of row pitch. The grid content and category labels
-            are whole multiples of that pitch too, so the JS snap below always
-            lands on a row boundary. */}
         <div
           id={listId}
           ref={scrollContainerRef}

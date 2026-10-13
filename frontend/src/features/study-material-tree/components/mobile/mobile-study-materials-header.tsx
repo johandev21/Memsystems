@@ -7,9 +7,6 @@ export interface MobileStudyMaterialsHeaderProps {
   onCreateFolder: () => void;
 }
 
-/**
- * 44px panel-header contract matching mobile sources header (p-1.5 + min-h-11, h-8 touch children).
- */
 export function MobileStudyMaterialsHeader({
   folderName,
   onBack,

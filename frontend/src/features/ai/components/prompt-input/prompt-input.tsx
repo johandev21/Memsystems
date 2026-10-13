@@ -31,7 +31,6 @@ import {
   useOptionalPromptInputController,
 } from "./prompt-input-context";
 
-
 export interface PromptInputMessage {
   text: string;
   files: FileUIPart[];
@@ -217,7 +216,6 @@ export const PromptInput = ({
               controller.textInput.clear();
             }
           } catch {
-            // keep state on error
           }
         } else {
           clear();
@@ -226,7 +224,6 @@ export const PromptInput = ({
           }
         }
       } catch {
-        // keep state on error
       }
     },
     [usingProvider, controller, files, onSubmit, clear],

@@ -30,7 +30,6 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
   const noteElementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const imageViewportRef = useRef<HTMLDivElement>(null);
 
-  // Fetch original image download URL
   const {
     data: downloadData,
     isLoading: isLoadingImage,
@@ -51,7 +50,6 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
 
   const imageUrl = downloadData?.url || source.url || null;
 
-  // Prepare normalized sections
   const sections = useMemo<ParsedImageSection[]>(() => {
     if (source.segments && source.segments.length > 0) {
       return source.segments.map((seg, idx) => ({
@@ -67,7 +65,6 @@ export function ImageDocumentViewer({ source, selectedLocator }: ImageDocumentVi
     return parseRawTextToSections(source.rawText || "");
   }, [source.segments, source.rawText]);
 
-  // Handle selected locator from citations
   const [prevLocator, setPrevLocator] = useState<typeof selectedLocator>(undefined);
   if (prevLocator !== selectedLocator) {
     setPrevLocator(selectedLocator);

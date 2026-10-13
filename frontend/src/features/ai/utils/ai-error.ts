@@ -22,10 +22,6 @@ const AUTH_PATTERNS = /invalid api key|incorrect api key|unauthorized|authentica
 const CAPABILITY_PATTERNS =
   /tool[_ ]choice.*(?:did not match|unsupported|not supported|not found.*tools?.*parameter)|does not support (?:tools?|function calling)|unsupported(?:\s+\w+)*\s+tool|tools? (?:are|is) not supported/i;
 
-/**
- * Backend preflight keys for the structured-output gate. They are matched as
- * keys (not substrings) so the classifier cannot drift with copy changes.
- */
 export const STRUCTURED_OUTPUT_MESSAGE_KEYS = [
   "errors.ai.model.structuredOutputUnsupported",
   "errors.studyMaterials.evaluation.structuredOutputUnsupported",
@@ -37,11 +33,6 @@ export function isStructuredOutputMessageKey(value: unknown): boolean {
   return typeof value === "string" && STRUCTURED_OUTPUT_MESSAGE_KEY_SET.has(value.trim());
 }
 
-/**
- * True when a raw transport message is, or carries, one of the structured
- * output preflight keys. Handles the bare key and the `{error, code, params}`
- * envelope, including the `messageKey` alias.
- */
 export function isStructuredOutputUnsupportedError(
   rawMessage: string | undefined | null,
 ): boolean {
@@ -168,11 +159,6 @@ function classifyText(text: string, model?: string): ClassifiedAiError | null {
   return null;
 }
 
-/**
- * Turns raw transport failures (backend `{error, code}` envelopes or raw
- * AI SDK / gateway messages) into a friendly card. Never surfaces raw
- * technical text except for our own validation messages.
- */
 export function classifyAiError(rawMessage: string | undefined | null): ClassifiedAiError {
   const message = (rawMessage ?? "").trim();
   if (isStructuredOutputUnsupportedError(message)) return structuredCapability();
@@ -214,13 +200,11 @@ export function classifyAiError(rawMessage: string | undefined | null): Classifi
           return classifyText(inner || message, model) ?? generic();
       }
     } catch {
-      // Not actually JSON — fall through to text rules.
     }
   }
   return classifyText(message) ?? generic();
 }
 
-/** Alias for chat domain backwards compatibility */
 export const classifyChatError = classifyAiError;
 export type ClassifiedChatError = ClassifiedAiError;
 export type ChatErrorAction = AiErrorAction;

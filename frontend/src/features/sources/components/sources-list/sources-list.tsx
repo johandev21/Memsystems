@@ -14,7 +14,6 @@ import { SourcesTreeBranch, SourcesTreeNodeRow } from "../sources-tree-branch";
 import { treeVariants } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 
-// Past this many visible rows the tree switches to virtualized rendering.
 const TREE_VIRTUALIZATION_THRESHOLD = 25;
 
 export interface SourcesListProps {
@@ -107,8 +106,6 @@ export function SourcesList({
   const isVirtualized =
     flatRows.length > TREE_VIRTUALIZATION_THRESHOLD && scrollElement !== undefined;
 
-  // TanStack Virtual returns functions that React Compiler cannot memoize; the
-  // compiler already skips this component, which is the intended behavior.
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: flatRows.length,

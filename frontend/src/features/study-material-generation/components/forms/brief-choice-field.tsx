@@ -8,11 +8,6 @@ const COLUMN_CLASS: Record<number, string> = {
   4: "grid-cols-2 sm:grid-cols-4",
 };
 
-/**
- * Radio-card field shared by the generation dialogs. Cards match the Quiz
- * difficulty cards: title on top, description below, solid primary when
- * selected.
- */
 export function BriefChoiceField<T extends string>({
   label,
   options,

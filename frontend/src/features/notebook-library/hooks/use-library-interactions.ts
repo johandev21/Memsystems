@@ -28,16 +28,10 @@ export function useLibraryInteractions({
     kind: "folder" | "notebook";
     id: string;
   } | null>(null);
-  // Tracks the current drop target so the drag preview can shrink outside
-  // the main grid/folder area. `hasOverEvent` distinguishes "drag just
-  // started in the main area" (full-size preview) from "pointer over no
-  // droppable", e.g. the chevron gaps between breadcrumb crumbs (compact).
   const [overId, setOverId] = useState<string | null>(null);
   const [hasOverEvent, setHasOverEvent] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    // Moves are drag-and-drop only, so keyboard users need to be able to pick
-    // up a card too: Space grabs and drops, arrows move, Escape cancels.
     useSensor(KeyboardSensor, {
       keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space"] },
     }),
@@ -56,8 +50,6 @@ export function useLibraryInteractions({
 
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current;
-    // Drags start in the main area, so the preview begins full-size and only
-    // shrinks once the pointer leaves for the first time.
     setHasOverEvent(false);
     setOverId(null);
     setDraggedItem(
@@ -81,8 +73,6 @@ export function useLibraryInteractions({
     if (folderId !== null && typeof folderId !== "string") return;
     const data = active.data.current;
     if (data?.kind === "folder") {
-      // Skip drops that would not change anything (the folder itself, its
-      // current parent, or one of its descendants).
       if (!canMoveFolder(folders, String(data.folderId), folderId)) return;
       onMoveFolder(String(data.folderId), folderId);
     } else if (data?.kind === "notebook") {
@@ -92,10 +82,6 @@ export function useLibraryInteractions({
     }
   }
 
-  // Compact everywhere outside the main grid/folder-card area
-  // (`library:*`, `folder:*` droppables): breadcrumbs, chevron gaps, and any
-  // other non-droppable space. Staying compact across gaps avoids a
-  // resize flicker on every crumb boundary.
   const isOverMainArea =
     overId?.startsWith("library:") === true || overId?.startsWith("folder:") === true;
 

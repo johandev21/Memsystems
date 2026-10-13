@@ -9,8 +9,6 @@ export interface DynamicIconProps extends Omit<LucideProps, "ref" | "name"> {
   fallbackIcon?: typeof BookOpen;
 }
 
-// The icon mounts only after the lazy lucide map chunk resolves; fade it in
-// so it doesn't pop over content that rendered first.
 const MOUNT_FADE = "animate-in fade-in motion-reduce:animate-none";
 
 export function DynamicIcon({

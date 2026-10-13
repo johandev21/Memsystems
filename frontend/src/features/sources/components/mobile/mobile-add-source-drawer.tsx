@@ -175,14 +175,12 @@ export function MobileAddSourceDrawer({
             </DrawerHeader>
 
             <div className="flex flex-col gap-4 py-1">
-              {/* Web Search */}
               <WebSearchComposer
                 notebookId={notebookId}
                 remainingSourceSlots={remainingSourceSlots}
                 showHeader={false}
               />
 
-              {/* Direct Actions */}
               <div className="flex flex-col gap-0.5">
                 <button
                   type="button"
@@ -241,7 +239,6 @@ export function MobileAddSourceDrawer({
                 </button>
               </div>
 
-              {/* Source Limit Meter */}
               <div className="pt-1">
                 <SourceLimitMeter count={count} usedPercent={usedPercent} />
               </div>

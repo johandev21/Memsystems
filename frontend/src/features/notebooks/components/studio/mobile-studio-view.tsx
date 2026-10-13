@@ -60,7 +60,6 @@ export function MobileStudioView({
         onOpenChange={setCreateDrawerOpen}
         onGenerate={onGenerate}
         onCreateFolder={() => {
-          // Trigger folder creation in active folder or root
           window.dispatchEvent(new CustomEvent("create-study-material-folder"));
         }}
       />

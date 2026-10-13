@@ -1,6 +1,3 @@
-// Folder artwork shows up to two notebook covers as its preview. Cover
-// variants are presigned URLs; a notebook without generated variants falls
-// back to its single cover URL so the crop slots never render empty.
 import type { CoverVariants } from "./types";
 
 export type NotebookCoverSource = {
@@ -15,7 +12,6 @@ export function getFolderCovers(notebooks: NotebookCoverSource[]) {
   });
 }
 
-/** Best single URL for a cover slot, preferring the 480w variant. */
 export function primaryCoverUrl(
   variants: CoverVariants | null | undefined,
 ): string | null {
@@ -23,7 +19,6 @@ export function primaryCoverUrl(
   return variants.w480 ?? variants.w960 ?? variants.w240 ?? null;
 }
 
-/** Builds a `srcset` from whichever variant widths exist. */
 export function coverSrcSet(
   variants: CoverVariants | null | undefined,
   widths: readonly (keyof CoverVariants)[],

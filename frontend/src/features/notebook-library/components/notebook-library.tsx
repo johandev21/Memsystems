@@ -29,8 +29,6 @@ import { FolderLibrary } from "./folder-library";
 import { LibraryGridSkeleton } from "./library-skeleton";
 import { FolderPreview, NotebookPreview } from "./library-cards";
 
-// Keyboard drags have no pointer coordinates, so `pointerWithin` never matches
-// them. Fall back to the nearest droppable center for keyboard moves.
 const libraryCollisionDetection: CollisionDetection = (args) =>
   args.pointerCoordinates ? pointerWithin(args) : closestCenter(args);
 
@@ -126,12 +124,6 @@ export function NotebookLibrary() {
 
   const draftKey = draft ? `${draft.kind}:${draft.id}` : null;
 
-  // Creates are optimistic: the card appears with a client id right away and
-  // the inline rename is queued against the real id once the POST resolves.
-  // The draft keeps the client id as its stable key across the temp-to-server
-  // id swap, so the open rename editor survives the row being replaced. The
-  // mutation reports the server id before it swaps the cached row, which keeps
-  // that key stable on every intermediate render.
   const beginCreateFolder = () => {
     setSelectedKey(null);
     const { tempId, promise } = mutations.createFolder(
@@ -307,8 +299,6 @@ export function NotebookLibrary() {
             onCreateNotebookNamed={handleCreateNotebookMobile}
           />
         </LibraryContent>
-        {/* dropAnimation={null}: snap the overlay onto the drop target instead
-            of dnd-kit's default release animation, so a drop lands instantly. */}
         <DragOverlay dropAnimation={null}>
           {interaction.draggedNotebook ? (
             <NotebookPreview

@@ -17,12 +17,6 @@ export interface ConnectionStatus {
   gateway: GatewayKeyStatus;
 }
 
-/**
- * The AI backend is usable when healthy OR degraded. Degraded means auth is
- * fine but the gateway is flaky (rate limit, entitlement gap, outage) —
- * requests should still go through and fail per-request with an explainer,
- * instead of locking the UI behind key prompts.
- */
 export function isConnectionUsable(
   status: Pick<ConnectionStatus, "ok" | "degraded"> | null | undefined,
 ): boolean {

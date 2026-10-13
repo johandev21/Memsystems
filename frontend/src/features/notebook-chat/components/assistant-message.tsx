@@ -152,12 +152,7 @@ function useAssistantMessageContent(
   const parts = message?.parts ?? [];
   const hasStreamingText = parts.some((part) => isTextPart(part) && isLivePart(part));
   const hasStreamingReasoning = parts.some((part) => isReasoningPart(part) && isLivePart(part));
-  // Live = any part still streaming. Reasoning-only phases (no text yet)
-  // must count as streaming, otherwise the Reasoning header never shows its
-  // live "Thinking..." state.
   const isStreaming = hasStreamingText || hasStreamingReasoning;
-  // Reasoning is "live" only while it streams and no answer text streams yet.
-  // Once text starts, the answer takes over and reasoning collapses to done.
   const isReasoningStreaming = hasStreamingReasoning && !hasStreamingText;
   const reasoningText = getReasoningText(parts);
   const textParts = parts.filter(isTextPart);
@@ -172,9 +167,6 @@ function useAssistantMessageContent(
         if (referenceKey) {
           const reference = referencesByKey.get(referenceKey.toUpperCase());
           if (reference) return <CitationHoverCard reference={reference}>{children}</CitationHoverCard>;
-          // Unknown citation key (e.g. model hallucinated R9 or live message
-          // before history refetch): render plain number text instead of a
-          // dead `#reference-*` fragment link or raw markdown.
           return <span className="font-medium text-muted-foreground">{children}</span>;
         }
         return (

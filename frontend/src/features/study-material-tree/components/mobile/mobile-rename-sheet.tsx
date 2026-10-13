@@ -20,7 +20,6 @@ export function MobileRenameSheet({
   return (
     <Drawer open={open} onOpenChange={(next) => !next && onCancel()}>
       <DrawerContent className="p-4 pb-safe-lg">
-        {/* Remounted per open so the field always starts from the current name. */}
         {open && <RenameForm initialValue={initialValue} onCommit={onCommit} />}
       </DrawerContent>
     </Drawer>

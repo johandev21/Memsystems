@@ -1,11 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-/**
- * When inside a folder, renders a compact navigation bar with back arrow and folder name.
- * At the root level of the Sources tab, returns null because the active tab header already
- * establishes the section title without duplicating chrome.
- */
 export function MobileSourcesHeader({
   folderName,
   onBack,

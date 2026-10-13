@@ -8,10 +8,6 @@ import {
   studyMaterialsQueryOptions,
 } from "@/features/study-material-viewer/api";
 
-// Lazy: the viewer graph (all material views + mind-map d3 + AI chat bridge)
-// is only needed once an actual study material is displayed. Imported
-// directly (not via the barrel) so the module stays out of statically-shared
-// chunks.
 const MaterialViewer = lazy(() =>
   import("@/features/study-material-viewer/components/MaterialViewer").then(
     (m) => ({ default: m.MaterialViewer }),

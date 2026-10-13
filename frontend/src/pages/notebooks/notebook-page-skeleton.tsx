@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { Logo, SettingsLink } from "@/components/layout";
 import { Skeleton } from "@/components/ui/skeleton";
-// Direct import: the @/features/notebook-chat barrel pulls the AI SDK and the
-// composer graph into the pending chunk; only the placeholder is needed here.
 import { ChatConversationSkeleton } from "@/features/notebook-chat/components/chat-conversation-skeleton";
 import { cn } from "@/shared/utils/cn";
 

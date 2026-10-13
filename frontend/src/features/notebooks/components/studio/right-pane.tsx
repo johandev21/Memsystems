@@ -2,9 +2,6 @@ import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer/types";
 
-// Lazy: everything the material view needs (queries, skeletons, the viewer
-// graph itself) lives behind this boundary so the notebook route never loads
-// it until a study material is actually opened.
 const StudyMaterialPane = lazy(() =>
   import("./study-material-pane").then((m) => ({ default: m.StudyMaterialPane })),
 );

@@ -34,7 +34,6 @@ export function usePromptInputFiles({
     filesRef.current = files;
   }, [files]);
 
-  // Revoke leftover blob URLs for the local mode on unmount.
   useEffect(() => {
     return () => {
       if (!usingProvider) {

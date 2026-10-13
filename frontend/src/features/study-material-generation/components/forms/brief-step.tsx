@@ -3,15 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/shared/utils/cn";
 
-/**
- * Shared wizard shell pieces for the generation dialogs.
- *
- * The Quiz form is the reference: a two-step wizard whose step body keeps a
- * stable `min-h-95` frame with the footer pinned to the bottom. Every form
- * composes these pieces so the dialogs share the same height, rhythm, and
- * navigation feel.
- */
-
 export function BriefStep({
   children,
   className,
@@ -70,12 +61,6 @@ export function BriefFieldLabel({
     </Label>
   );
 }
-
-/**
- * Navigation buttons for the wizard footers. The literal class strings live
- * here (not at the call sites) so every dialog keeps identical navigation and
- * the shadcn static-classes lint rule stays satisfied.
- */
 
 type BriefNavButtonProps = Omit<ComponentProps<typeof Button>, "className" | "variant" | "type">;
 

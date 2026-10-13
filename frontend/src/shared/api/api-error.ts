@@ -9,7 +9,6 @@ export interface ApiErrorResponse {
   message?: string;
   statusCode?: number;
   code?: string;
-  /** Alias some endpoints use for the i18n key carried by `error`. */
   messageKey?: string;
   params?: Record<string, string | number>;
 }

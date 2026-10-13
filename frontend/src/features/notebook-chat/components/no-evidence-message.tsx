@@ -2,11 +2,6 @@ import { SearchX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { NoEvidenceMetadata } from "../types/no-evidence.types";
 
-/**
- * The visually distinct no-evidence state. Rendered instead of a grounded
- * reply when retrieval abstains: it names the degraded or unhelpful sources
- * and offers a corrective action, and never shows citations.
- */
 export function NoEvidencePanel({ metadata }: { metadata: NoEvidenceMetadata }) {
   const { t } = useTranslation("chat");
   const { t: tSources } = useTranslation("sources");

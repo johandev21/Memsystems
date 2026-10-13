@@ -70,8 +70,6 @@ export function buildStudyMaterialTree(state: TreeState): TreeNode[] {
   return visit(null);
 }
 
-
-
 export function canMoveItem(
   state: TreeState,
   itemId: string,
@@ -146,7 +144,6 @@ export function createFolder(
   id: string = `folder-${crypto.randomUUID()}`,
   now: string = new Date().toISOString(),
 ): StudyMaterialTreeFolder {
-  // Use a placeholder notebookId; caller should override if needed. For fixture/local use this is acceptable.
   return {
     id,
     notebookId: "notebook-placeholder",

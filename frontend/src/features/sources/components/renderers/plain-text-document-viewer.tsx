@@ -37,7 +37,6 @@ export function PlainTextDocumentViewer({
 
   const blocks = useMemo(() => parsePlainParagraphs(content || ""), [content]);
 
-  // Find target block index based on selected locator
   const targetIndex = useMemo(() => {
     if (!selectedLocator || blocks.length === 0) return null;
 
@@ -68,8 +67,6 @@ export function PlainTextDocumentViewer({
 
   const isVirtualized = blocks.length > 25 && scrollElement !== undefined && scrollElement !== null;
 
-  // TanStack Virtual exposes non-memoizable functions; the compiler skipping
-  // this component is the intended behavior.
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
     count: blocks.length,
@@ -81,7 +78,6 @@ export function PlainTextDocumentViewer({
     initialRect: { width: 800, height: 600 },
   });
 
-  // Handle citation scrolling and highlighting
   useEffect(() => {
     if (typeof targetIndex !== "number" || targetIndex < 0) return;
 

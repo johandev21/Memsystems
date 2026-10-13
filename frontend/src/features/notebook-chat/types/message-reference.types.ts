@@ -13,8 +13,6 @@ const TRAILING_REFERENCE_PATTERN = /\s*\[ref:[^\]\n]*$/i;
 const TRAILING_LINK_SHAPE_PATTERN = /\s*`?\[\d+\]\(#reference-[^\s)\n]*$/i;
 const STREAMING_REF_PATTERN = /\s*`?\[ref:[a-zA-Z0-9_-]+\]`?/gi;
 const STREAMING_LINK_PATTERN = /\s*`?\[\d+\]\(#reference-[a-zA-Z0-9_-]+\)`?/gi;
-// Separates adjacent citation links so markdown always parses them as
-// distinct links and the pills render with a gap.
 const ADJACENT_CITATION_LINKS_PATTERN = /(\]\(#reference-[^)\s]+\))(?=\[)/gi;
 const FENCED_BLOCK_SPLIT = /(```[\s\S]*?(?:```|$))/g;
 const INLINE_CODE_SPLIT = /(`+[^`\n]*`+)/g;
@@ -55,9 +53,6 @@ export function prepareReferenceMessage(
 
   const resolveLinkShape = (_marker: string, displayNumber: string, rawKey: string): string => {
     const reference = referencesByKey.get(rawKey.toUpperCase());
-    // Model sometimes invents display numbers — always renormalize to the
-    // backend-assigned number. Unknown keys degrade to plain number text so
-    // no raw markdown leaks.
     if (!reference) return displayNumber;
 
     inlineCitationKeys.add(reference.citationKey);
@@ -91,9 +86,6 @@ export function prepareReferenceMessage(
       .map((part) => {
         if (!part) return part;
         if (part.startsWith("`")) {
-          // The model often wraps a whole cluster in one code span, e.g.
-          // `[ref:R2][ref:R7]`. Unwrap and convert when it holds at least
-          // one known citation; otherwise leave genuine code alone.
           const inner = part.replace(/^`+|`+$/g, "");
           if (containsKnownCitation(inner)) return normalizeProse(inner);
           return part;
@@ -106,8 +98,6 @@ export function prepareReferenceMessage(
   let markdown = text
     .split(FENCED_BLOCK_SPLIT)
     .map((chunk) => {
-      // Leave fenced code blocks untouched so real code samples never turn
-      // into citation popovers.
       if (chunk.startsWith("```")) return chunk;
       return normalizeInlineChunk(chunk);
     })

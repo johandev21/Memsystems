@@ -8,7 +8,6 @@ export function ThemeGrid() {
   const { t } = useTranslation("theme");
   const { theme, setTheme, themes } = usePalette();
 
-  // Ensure we render from canonical THEMES but allow themes prop override
   const list = themes?.length ? themes : THEMES;
 
   return (

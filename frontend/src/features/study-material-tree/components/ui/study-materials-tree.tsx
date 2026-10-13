@@ -58,15 +58,9 @@ export interface ProductionStudyMaterialsTreeProps {
   className?: string;
   expandedIds?: Set<string>;
   onExpandedChange?: (ids: Set<string>) => void;
-  /**
-   * When true, renders prototype-specific copy (empty state and delete dialog).
-   * Production uses generic copy.
-   */
   isPrototype?: boolean;
-  /** Panel chrome: when provided, header shows collapse toggle and content is conditionally hidden */
   isPanelExpanded?: boolean;
   onPanelToggle?: () => void;
-  /** CardContent height variant */
   contentHeight?: "desktop" | "mobile" | "standalone";
 }
 
@@ -314,6 +308,5 @@ function DeleteTreeItemDialog({
   );
 }
 
-// Re-export for convenience
 export type { CommandResult, TreeCommand, TreeCommandExecutor } from "../model/commands";
 export type { TreeNode, TreeState } from "../model/tree";

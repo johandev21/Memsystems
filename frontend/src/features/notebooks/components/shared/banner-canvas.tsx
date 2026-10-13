@@ -49,8 +49,6 @@ export function BannerImage({
   imageError: boolean;
   onImageError: () => void;
 }) {
-  // Keyed by URL so a changed banner (e.g. an edit preview) fades in again
-  // instead of reusing the previous image's "loaded" state.
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const isLoaded = loadedUrl === visibleBannerUrl;
 

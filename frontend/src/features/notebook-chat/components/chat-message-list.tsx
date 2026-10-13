@@ -13,19 +13,8 @@ import { CHAT_ENTRANCE_CLASS, chatEntranceDelay } from "../utils/chat-entrance";
 export interface ChatMessageListProps {
   messages: UIMessage[];
   citedSourcesMap: Map<string, CitedSourceDTO[]>;
-  /**
-   * True only while the request is in flight AND no assistant content
-   * (reasoning or text) has streamed yet. Never true once the first
-   * reasoning/text part arrives — the live Reasoning block / answer takes over.
-   */
   showPendingIndicator: boolean;
-  /** Truthful copy for the pending phase, e.g. "Thinking…" vs "Waiting…". */
   pendingLabel?: string;
-  /**
-   * Id of the user message that is allowed to pull the viewport. Only set for
-   * messages sent during this session; hydrated history leaves it null so the
-   * conversation opens at the banner instead of jumping to the last turn.
-   */
   anchorMessageId?: string | null;
   error?: Error | null;
   onCopy: (text: string) => void;

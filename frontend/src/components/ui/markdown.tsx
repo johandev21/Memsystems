@@ -32,10 +32,6 @@ export type MarkdownRendererProps = Omit<
   trailingContent?: ReactNode;
 };
 
-/**
- * The application Markdown boundary. Untrusted Markdown is sanitized before
- * trusted KaTeX rendering, and raw HTML remains disabled by react-markdown.
- */
 export function MarkdownRenderer({
   className,
   components,

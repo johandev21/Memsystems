@@ -8,7 +8,6 @@ function getInitialTheme(): ThemeName {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (stored && isThemeName(stored)) return stored;
   } catch {
-    // ignore
   }
   return "default";
 }
@@ -27,12 +26,10 @@ export function PaletteProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeName>(() => getInitialTheme());
   const [isHydrated] = useState(() => typeof window !== "undefined");
 
-  // Sync attribute on mount + theme change
   useEffect(() => {
     applyThemeAttribute(theme);
   }, [theme]);
 
-  // Listen for cross-tab changes
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === THEME_STORAGE_KEY) {
@@ -59,7 +56,6 @@ export function PaletteProvider({ children }: { children: ReactNode }) {
         window.localStorage.setItem(THEME_STORAGE_KEY, next);
       }
     } catch {
-      // ignore
     }
     applyThemeAttribute(next);
   }, []);

@@ -6,9 +6,6 @@ interface GatewayKeyPromptProps {
   description?: string;
 }
 
-/**
- * Shown wherever AI is unavailable for lack of a gateway key.
- */
 export function GatewayKeyPrompt({ className = "", description }: GatewayKeyPromptProps) {
   const { t } = useTranslation("ai");
   const resolvedDescription = description ?? t("gatewayKeyPrompt.description");

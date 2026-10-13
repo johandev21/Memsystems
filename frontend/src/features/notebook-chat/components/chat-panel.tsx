@@ -72,10 +72,6 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
   const selectedModelSupportsReasoning = modelOptions.some(
     (m) => m.id === selectedModel && m.capabilities?.reasoning === true,
   );
-  // Only show the generic pending row while NO assistant content has arrived
-  // yet. As soon as the first reasoning/text part streams, the live
-  // AssistantMessage (Reasoning block / answer) takes over and this hides,
-  // so we never double-render "Thinking…" alongside real reasoning.
   const lastMessage = messages.at(-1);
   const hasAssistantPlaceholder =
     lastMessage?.role === "assistant" && (lastMessage.parts?.length ?? 0) > 0;
@@ -198,8 +194,6 @@ function ChatContent({
     isHistoryPending,
     showPendingIndicator,
   } = flags;
-  // Show the skeleton until the first history result settles, but never block
-  // a user who starts typing straight away: any optimistic message wins.
   const showHistorySkeleton = isHistoryPending && !hasMessages;
   return (
     <ConversationContent

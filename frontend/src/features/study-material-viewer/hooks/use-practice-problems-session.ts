@@ -153,8 +153,6 @@ export function usePracticeProblemsSession(
           modelId,
           message,
         });
-        // The structured-output preflight rejection is a capability block, not
-        // a transport failure: surface it with its friendly capability copy.
         const friendlyMessage = isStructuredOutputUnsupportedError(message)
           ? classifyAiError(message).message
           : message;

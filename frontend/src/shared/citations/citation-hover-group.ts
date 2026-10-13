@@ -23,7 +23,6 @@ export function notifyCitationClosed(id: string) {
   if (resetTimer) {
     clearTimeout(resetTimer);
   }
-  // Grace period so cursor moving between adjacent citation chips retains the instant open delay
   resetTimer = setTimeout(() => {
     if (activeCitationId === id) {
       emit(null);

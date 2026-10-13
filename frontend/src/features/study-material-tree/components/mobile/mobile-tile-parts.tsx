@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 
-/** Shared row surface: no card chrome, press feedback only, never hover-gated state. */
 export const MOBILE_TILE_CLASS =
   "flex w-full items-center rounded-xl transition-[background-color,transform] duration-150 ease-out active:bg-muted/60 active:scale-[0.99] select-none";
 

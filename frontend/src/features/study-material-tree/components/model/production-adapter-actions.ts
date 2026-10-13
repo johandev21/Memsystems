@@ -2,8 +2,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import i18n from "@/shared/i18n";
 import { createFolder, updateFolder, deleteFolder } from "../../api/folders";
-// API module import: the viewer barrel pulls every material view + the AI SDK
-// chain, which must stay lazy.
 import {
   duplicateStudyMaterial,
   moveStudyMaterial,

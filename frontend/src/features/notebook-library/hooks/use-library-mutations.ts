@@ -50,14 +50,6 @@ function toastWithRetry(message: string, retryLabel: string, retry: () => void) 
   toast.error(message, { action: { label: retryLabel, onClick: retry } });
 }
 
-/**
- * Library mutations are optimistic end-to-end:
- * - creates insert a client-id card immediately and swap it for the server row
- *   once the POST resolves; queued renames/moves wait on the real id,
- * - updates/deletes patch the cache first and roll back on failure,
- * - no blanket invalidation runs on settle, so nothing flickers or reorders
- *   behind the user's back.
- */
 export function useLibraryMutations() {
   const queryClient = useQueryClient();
   const { t } = useTranslation("notebooks");
@@ -95,9 +87,6 @@ export function useLibraryMutations() {
       }));
     },
     onSuccess: (folder, { tempId, onCreated }) => {
-      // Report the server id before the cache swap. Callers that keep the draft
-      // keyed by its stable id must update first, otherwise the card remounts
-      // between the two updates and the open rename editor is lost.
       onCreated?.(tempId, folder.id);
       const pendingName = pendingNames.current.get(tempId);
       pendingNames.current.delete(tempId);
@@ -207,9 +196,6 @@ export function useLibraryMutations() {
       }));
     },
     onSuccess: (notebook, { tempId, onCreated }) => {
-      // Report the server id before the cache swap. Callers that keep the draft
-      // keyed by its stable id must update first, otherwise the card remounts
-      // between the two updates and the open rename editor is lost.
       onCreated?.(tempId, notebook.id);
       const pendingTitle = pendingNames.current.get(tempId);
       pendingNames.current.delete(tempId);
@@ -309,8 +295,6 @@ export function useLibraryMutations() {
   const updateFolder = async (id: string, input: UpdateFolderLibraryInput) => {
     if (isTempId(id) && input.name !== undefined) {
       if (pendingCreates.current.has(id)) pendingNames.current.set(id, input.name);
-      // Show the typed name on the temp card right away instead of waiting for
-      // the create round-trip; the swap applies the same name to the server row.
       patchLibrary(queryClient, (current) => ({
         ...current,
         folders: current.folders.map((folder) =>
@@ -343,8 +327,6 @@ export function useLibraryMutations() {
 
   const deleteFolder = async (id: string) => {
     if (isTempId(id) && pendingCreates.current.has(id)) {
-      // Dismissing a pending create is instant: drop the temp card now and
-      // delete the server row once the POST settles.
       patchLibrary(queryClient, (current) => ({
         ...current,
         folders: current.folders.filter((item) => item.id !== id),

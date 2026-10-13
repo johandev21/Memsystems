@@ -186,9 +186,6 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;
 
-  // Only a user message sent during this session is allowed to pull the
-  // viewport. Messages hydrated from persisted history must never anchor, or
-  // opening a notebook would scroll straight past the banner to the last turn.
   const hydratedMessageIds = useMemo(
     () => new Set((chatHistory ?? []).map((message) => message.id)),
     [chatHistory],

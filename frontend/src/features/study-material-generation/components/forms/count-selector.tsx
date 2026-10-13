@@ -4,13 +4,6 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/shared/utils/cn";
 import { optionRowClass } from "./option-row";
 
-/**
- * Count selector shared by every generation dialog.
- *
- * Value contract: explicit counts only (`>= min`); "Custom"
- * reveals a numeric input clamped to `[min, max]`.
- */
-
 const COLUMN_CLASS: Record<number, string> = {
   3: "grid-cols-3",
   4: "grid-cols-4",
@@ -24,14 +17,11 @@ export const countInputClass =
 
 export interface CountSelectorProps {
   label: string;
-  /** Right-side status text, e.g. "10 Questions (Max 50)". */
   summary: string;
-  /** Explicit count (>= min). */
   value: number;
   presets: readonly number[];
   max: number;
   min?: number;
-  /** Starting value when the user opens the Custom input. */
   customDefault?: number;
   customAriaLabel: string;
   presetLabel?: (value: number) => string;

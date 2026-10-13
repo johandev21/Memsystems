@@ -7,7 +7,6 @@ export interface ModelListFilters {
   capabilitiesVerified?: boolean;
 }
 
-/** Search and capability filters compose; with nothing set the list is intact. */
 export function filterModels(models: ModelOption[], filters: ModelListFilters = {}): ModelOption[] {
   const query = filters.search?.trim().toLowerCase() ?? "";
   const structuredOnly = filters.structuredOnly === true;

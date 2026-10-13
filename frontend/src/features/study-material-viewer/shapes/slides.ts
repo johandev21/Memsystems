@@ -76,7 +76,6 @@ export const SlideElement = z.object({
 
 export type SlideElementType = z.infer<typeof SlideElement>;
 
-/** A slide scene; legacy prose fields stay optional so old decks render. */
 export const SlidesSlide = z.object({
   id: z.string(),
   role: z

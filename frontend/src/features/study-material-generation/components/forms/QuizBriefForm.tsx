@@ -16,15 +16,7 @@ import { GenerationSourcePopover } from "./generation-source-popover";
 import type { BaseMaterialFormProps } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
-// ============================================================================
-// Module Constants
-// ============================================================================
-
 const QUESTION_PRESETS = [5, 10, 15] as const;
-
-// ============================================================================
-// Quiz Brief Form Component
-// ============================================================================
 
 export function QuizBriefForm({
   notebookId,

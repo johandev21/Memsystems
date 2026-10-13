@@ -4,19 +4,12 @@ import type {
 } from "@/features/study-material-viewer";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 
-/**
- * Explicit-selection contract shared by every generation form: numeric counts
- * are always explicit (`>= 1`) and enum options carry no `"auto"` member in
- * the UI. The backend still accepts legacy `"auto"`/`0` values.
- */
 export interface RoadmapOptions {
-  /** Explicit phase count. */
   phaseCount: number;
   detailLevel: "basic" | "detailed";
 }
 
 export interface MindMapOptions {
-  /** Explicit node count. */
   nodeCount: number;
   structure: "radial" | "hierarchical" | "organic";
   colorGroups: boolean;
@@ -25,14 +18,12 @@ export interface MindMapOptions {
 }
 
 export interface SlidesOptions {
-  /** Explicit slide count. */
   slideCount: number;
   theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm";
   detailLevel: "basic" | "detailed";
 }
 
 export interface PracticeProblemsOptions {
-  /** Explicit problem count. */
   problemCount: number;
   difficulty: "easy" | "medium" | "hard";
 }
@@ -42,7 +33,6 @@ export interface BriefFormData {
   sourceIds: string[];
   folderId: string | null;
   model?: string;
-  /** Explicit question count. */
   questionCount?: number;
   difficulty?: "easy" | "medium" | "hard";
   roadmapOptions?: RoadmapOptions;

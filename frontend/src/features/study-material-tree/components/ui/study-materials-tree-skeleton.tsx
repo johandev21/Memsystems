@@ -11,7 +11,6 @@ export function StudyMaterialsTreeSkeleton({ className }: { className?: string }
       aria-label={t("tree.loading")}
       aria-busy="true"
     >
-      {/* Header skeleton */}
       <div className="flex items-center justify-between px-2 py-1">
         <Skeleton className="h-4 w-28" />
         <div className="flex gap-1">
@@ -20,7 +19,6 @@ export function StudyMaterialsTreeSkeleton({ className }: { className?: string }
           <Skeleton className="h-6 w-6 rounded-md" />
         </div>
       </div>
-      {/* Tree rows skeleton - tree shaped */}
       <div className="flex flex-col gap-1.5 px-2">
         <div className="flex items-center gap-2">
           <Skeleton className="h-3 w-3 rounded-sm" />
