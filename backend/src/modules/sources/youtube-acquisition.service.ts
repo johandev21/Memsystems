@@ -245,6 +245,43 @@ export class YouTubeAcquisitionService {
       }
     }
 
+    const publicTranscript = await this.fetchPublicTranscript(videoId);
+    if (publicTranscript && publicTranscript.segments.length > 0) {
+      const needsMetadataFallback =
+        !publicTranscript.title ||
+        publicTranscript.title === `YouTube Video (${videoId})`;
+      const meta = needsMetadataFallback
+        ? await this.fetchMetadata(videoId)
+        : null;
+      const title =
+        publicTranscript.title && !needsMetadataFallback
+          ? publicTranscript.title
+          : meta?.title || `YouTube Video (${videoId})`;
+      const author = publicTranscript.author ?? meta?.author;
+      const durationMs =
+        publicTranscript.durationMs ??
+        meta?.durationMs ??
+        publicTranscript.segments[publicTranscript.segments.length - 1]
+          .endOffsetMs;
+      const thumbnailUrl =
+        publicTranscript.thumbnailUrl ||
+        meta?.thumbnailUrl ||
+        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+      const rawText = publicTranscript.segments
+        .map((s) => s.content)
+        .join('\n\n');
+
+      return {
+        videoId,
+        title,
+        author,
+        durationMs,
+        thumbnailUrl,
+        segments: publicTranscript.segments,
+        rawText,
+      };
+    }
+
     const meta = await this.fetchMetadata(videoId);
     return {
       videoId,
@@ -255,6 +292,158 @@ export class YouTubeAcquisitionService {
       segments: [],
       rawText: '',
     };
+  }
+
+  async fetchPublicTranscript(videoId: string): Promise<{
+    title?: string;
+    author?: string;
+    durationMs?: number;
+    thumbnailUrl?: string;
+    segments: YouTubeSegment[];
+  } | null> {
+    try {
+      const androidHeaders: Record<string, string> = {
+        'User-Agent':
+          'com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip',
+        'Accept-Language': 'en-US,en;q=0.9',
+      };
+
+      const playerUrl =
+        'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
+      const playerRes = await fetch(playerUrl, {
+        method: 'POST',
+        headers: {
+          ...androidHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: 'ANDROID',
+              clientVersion: '20.10.38',
+            },
+          },
+          videoId,
+        }),
+      });
+      if (!playerRes.ok) return null;
+
+      const playerData = (await playerRes.json()) as {
+        videoDetails?: {
+          title?: string;
+          author?: string;
+          lengthSeconds?: string | number;
+        };
+        captions?: {
+          playerCaptionsTracklistRenderer?: {
+            captionTracks?: Array<{
+              baseUrl?: string;
+              languageCode?: string;
+              kind?: string;
+            }>;
+          };
+        };
+      };
+      const videoDetails = playerData?.videoDetails;
+      const title =
+        typeof videoDetails?.title === 'string' && videoDetails.title.trim()
+          ? videoDetails.title.trim()
+          : undefined;
+      const author =
+        typeof videoDetails?.author === 'string' && videoDetails.author.trim()
+          ? videoDetails.author.trim()
+          : undefined;
+      const durationSeconds = videoDetails?.lengthSeconds
+        ? parseInt(String(videoDetails.lengthSeconds), 10)
+        : undefined;
+      const durationMs =
+        durationSeconds && !isNaN(durationSeconds)
+          ? durationSeconds * 1000
+          : undefined;
+
+      const captionTracks =
+        playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      if (!Array.isArray(captionTracks) || captionTracks.length === 0) {
+        return null;
+      }
+
+      const track = this.selectPreferredCaptionTrack(captionTracks);
+      if (!track || typeof track.baseUrl !== 'string') {
+        return null;
+      }
+
+      const transcriptUrl = track.baseUrl.replace(/&fmt=srv3/g, '');
+      const transcriptRes = await fetch(transcriptUrl, {
+        headers: androidHeaders,
+      });
+      if (!transcriptRes.ok) return null;
+
+      const captionPayload = await transcriptRes.text();
+      const rawSegments = this.captionParser.parse(captionPayload, 'auto');
+      if (rawSegments.length === 0) return null;
+
+      const segments = this.coalesceSegments(rawSegments);
+      return {
+        title,
+        author,
+        durationMs,
+        thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        segments,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private selectPreferredCaptionTrack(
+    tracks: Array<{ baseUrl?: string; languageCode?: string; kind?: string }>,
+  ): { baseUrl?: string; languageCode?: string; kind?: string } | undefined {
+    const isLang = (
+      track: { languageCode?: string },
+      prefix: string,
+    ): boolean =>
+      typeof track?.languageCode === 'string' &&
+      (track.languageCode === prefix ||
+        track.languageCode.startsWith(`${prefix}-`));
+
+    return (
+      tracks.find((t) => t.kind !== 'asr' && isLang(t, 'en')) ||
+      tracks.find((t) => isLang(t, 'en')) ||
+      tracks.find((t) => t.kind !== 'asr' && isLang(t, 'es')) ||
+      tracks.find((t) => isLang(t, 'es')) ||
+      tracks.find((t) => t.kind !== 'asr') ||
+      tracks[0]
+    );
+  }
+
+  private coalesceSegments(segments: YouTubeSegment[]): YouTubeSegment[] {
+    if (segments.length <= 4) {
+      return segments;
+    }
+
+    const merged: YouTubeSegment[] = [];
+    let current: YouTubeSegment = { ...segments[0] };
+
+    for (let i = 1; i < segments.length; i++) {
+      const next = segments[i];
+      const sameSpeaker = current.speaker === next.speaker;
+      const combinedLength = current.content.length + 1 + next.content.length;
+      const combinedDurationMs = next.endOffsetMs - current.startOffsetMs;
+
+      if (
+        sameSpeaker &&
+        combinedLength <= 320 &&
+        combinedDurationMs <= 25_000
+      ) {
+        current.content = `${current.content} ${next.content}`.trim();
+        current.endOffsetMs = Math.max(current.endOffsetMs, next.endOffsetMs);
+      } else {
+        merged.push(current);
+        current = { ...next };
+      }
+    }
+    merged.push(current);
+    return merged;
   }
 
   async fetchMetadata(videoId: string): Promise<{

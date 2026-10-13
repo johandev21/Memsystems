@@ -347,6 +347,32 @@ export class CaptionParserService {
       }
     }
 
+    if (segments.length === 0) {
+      const pTagRe = /<p\s+([^>]+)>([\s\S]*?)<\/p>/gi;
+      while ((match = pTagRe.exec(xmlStr)) !== null) {
+        const attrs = match[1];
+        const rawText = match[2];
+
+        const tMatch = attrs.match(/\bt="(\d+)"/);
+        if (!tMatch) continue;
+        const dMatch = attrs.match(/\bd="(\d+)"/);
+
+        const startOffsetMs = parseInt(tMatch[1], 10);
+        const durationMs = dMatch ? parseInt(dMatch[1], 10) : 1000;
+        const endOffsetMs = startOffsetMs + Math.max(durationMs, 500);
+
+        const { text, speaker } = cleanCaptionText(rawText);
+        if (text) {
+          segments.push({
+            content: text,
+            startOffsetMs,
+            endOffsetMs,
+            ...(speaker ? { speaker } : {}),
+          });
+        }
+      }
+    }
+
     return segments;
   }
 

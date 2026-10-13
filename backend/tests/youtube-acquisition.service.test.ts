@@ -171,11 +171,115 @@ describe('YouTubeAcquisitionService', () => {
         endOffsetMs: 7500,
       });
     });
+    it('parses timedtext format="3" <p t="..." d="..."> XML tags', () => {
+      const srv3Payload = `
+        <timedtext format="3">
+          <body>
+            <p t="1200" d="2800"><s>First</s><s> timedtext</s><s> line.</s></p>
+            <p t="4500" d="3000">Second line with &amp;amp; entity.</p>
+          </body>
+        </timedtext>
+      `;
+
+      const segments = service.parseXmlCaptions(srv3Payload);
+      expect(segments).toHaveLength(2);
+      expect(segments[0]).toEqual({
+        content: 'First timedtext line.',
+        startOffsetMs: 1200,
+        endOffsetMs: 4000,
+      });
+      expect(segments[1]).toEqual({
+        content: 'Second line with & entity.',
+        startOffsetMs: 4500,
+        endOffsetMs: 7500,
+      });
+    });
+  });
+
+  describe('Automatic InnerTube public transcript acquisition', () => {
+    it('queries ANDROID player API directly, strips fmt=srv3, and parses XML transcript', async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              videoDetails: {
+                title: 'Why Your AI Generates Crap Code',
+                author: 'Web Dev Simplified',
+                lengthSeconds: '1434',
+              },
+              captions: {
+                playerCaptionsTracklistRenderer: {
+                  captionTracks: [
+                    {
+                      baseUrl:
+                        'https://www.youtube.com/api/timedtext?v=jojMVmRZABw&lang=en&fmt=srv3',
+                      languageCode: 'en',
+                      kind: 'asr',
+                    },
+                  ],
+                },
+              },
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            `<transcript>
+              <text start="0.0" dur="3.5">In this video I will show you how to configure AI.</text>
+              <text start="3.5" dur="4.0">Keep your AGENTS.md concise and use context pointers.</text>
+            </transcript>`,
+            { status: 200 },
+          ),
+        );
+
+      const result = await service.acquire(
+        'https://www.youtube.com/watch?v=jojMVmRZABw',
+      );
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(fetchSpy).toHaveBeenNthCalledWith(
+        1,
+        'https://www.youtube.com/youtubei/v1/player?prettyPrint=false',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            context: {
+              client: {
+                clientName: 'ANDROID',
+                clientVersion: '20.10.38',
+              },
+            },
+            videoId: 'jojMVmRZABw',
+          }),
+        }),
+      );
+      expect(fetchSpy).toHaveBeenNthCalledWith(
+        2,
+        'https://www.youtube.com/api/timedtext?v=jojMVmRZABw&lang=en',
+        expect.any(Object),
+      );
+
+      expect(result.videoId).toBe('jojMVmRZABw');
+      expect(result.title).toBe('Why Your AI Generates Crap Code');
+      expect(result.author).toBe('Web Dev Simplified');
+      expect(result.durationMs).toBe(1434000);
+      expect(result.segments).toHaveLength(2);
+      expect(result.rawText).toContain(
+        'Keep your AGENTS.md concise and use context pointers.',
+      );
+
+      fetchSpy.mockRestore();
+    });
   });
 
   describe('Video metadata acquisition without auto transcripts', () => {
-    it('returns empty segments and empty rawText when no captions are provided', async () => {
-      vi.spyOn(service, 'fetchMetadata').mockResolvedValue({
+    it('returns empty segments and empty rawText when no captions are available', async () => {
+      const publicSpy = vi
+        .spyOn(service, 'fetchPublicTranscript')
+        .mockResolvedValue(null);
+      const metaSpy = vi.spyOn(service, 'fetchMetadata').mockResolvedValue({
         title: 'Rick Astley - Never Gonna Give You Up',
         author: 'RickAstleyVEVO',
         durationMs: 213000,
@@ -192,6 +296,9 @@ describe('YouTubeAcquisitionService', () => {
       expect(result.durationMs).toBe(213000);
       expect(result.segments).toEqual([]);
       expect(result.rawText).toBe('');
+
+      publicSpy.mockRestore();
+      metaSpy.mockRestore();
     });
 
     it('throws BadRequestError when given an invalid URL', async () => {
