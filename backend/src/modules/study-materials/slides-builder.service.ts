@@ -23,8 +23,6 @@ function hex(input: string | undefined, fallback: string): string {
 }
 
 function pptxFont(supported: string | undefined): string {
-  // pptxgenjs fontFace must reference a font available on the viewer's
-  // machine; the resolver already whitelists to these families.
   switch (supported) {
     case 'Georgia':
       return 'Georgia';
@@ -72,10 +70,6 @@ const CENTERED_ROLES: ReadonlySet<string> = new Set([
   'closing',
 ]);
 
-// pptxgenjs slide type (loose structural typing to avoid version coupling).
-
-// Slide type derived from the library so helpers stay typed without
-// coupling to a specific pptxgenjs version's exported type names.
 type PptxSlide = ReturnType<InstanceType<typeof PptxGenJS>['addSlide']>;
 
 function addChrome(
@@ -315,7 +309,6 @@ function addElement(
     }
     case 'timeline':
     case 'process': {
-      // Native editable shapes: one rounded box per step with a number badge.
       const steps = element.steps.slice(0, 6);
       const cols = steps.length <= 3 ? steps.length : 3;
       const gap = 0.25;
@@ -436,7 +429,6 @@ function addElement(
       break;
     }
     case 'shape': {
-      // Decorative only: a small native accent bar (editable, harmless).
       pptSlide.addShape('rect', {
         x: fullWidth ? X : X,
         y: cursor.y,

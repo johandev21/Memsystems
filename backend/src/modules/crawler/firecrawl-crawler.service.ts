@@ -103,9 +103,6 @@ export class FirecrawlCrawlerService implements CrawlerService {
   private readonly timeoutMs: number;
 
   constructor() {
-    // Firecrawl Cloud by default. The key is required for Cloud and is read
-    // here for client construction only — it is never written to logs.
-    // Point FIRECRAWL_API_URL at a self-hosted instance to use that instead.
     const config = loadFirecrawlConfig();
     this.apiUrl = config.apiUrl;
     this.timeoutMs = config.timeoutMs;
@@ -151,10 +148,6 @@ export class FirecrawlCrawlerService implements CrawlerService {
     }
   }
 
-  /**
-   * Model-free web search. Returns basic result metadata (no AI summary);
-   * full page content is fetched later through scrape() at import time.
-   */
   async search(query: string, limit = 10): Promise<SearchResultItem[]> {
     const startedAt = Date.now();
     try {
@@ -173,7 +166,6 @@ export class FirecrawlCrawlerService implements CrawlerService {
         if (typeof record.url !== 'string' || record.url.length === 0) {
           return [];
         }
-        // Firecrawl descriptions can exceed our 500-char metadata budget.
         const description =
           typeof record.description === 'string'
             ? record.description.slice(0, 500)

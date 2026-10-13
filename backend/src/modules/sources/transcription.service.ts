@@ -53,7 +53,6 @@ export function normalizeSpeakerLabel(
     return 'Speaker A';
   }
 
-  // If already in standard format "Speaker X", preserve it
   if (/^Speaker\s+[A-Z]$/i.test(trimmed)) {
     const letter = trimmed.split(/\s+/)[1].toUpperCase();
     const formatted = `Speaker ${letter}`;
@@ -119,7 +118,6 @@ export function parseTranscriptionJson(text: string): {
           ? Math.max(0, Math.round(item.startOffsetMs))
           : lastEndMs;
 
-      // Enforce monotonic non-decreasing start timestamp
       if (startOffsetMs < lastEndMs) {
         startOffsetMs = lastEndMs;
       }
@@ -130,7 +128,6 @@ export function parseTranscriptionJson(text: string): {
           ? Math.round(item.endOffsetMs)
           : startOffsetMs + 1000;
 
-      // Enforce endOffsetMs > startOffsetMs
       if (endOffsetMs <= startOffsetMs) {
         endOffsetMs = startOffsetMs + 1000;
       }
@@ -312,7 +309,6 @@ export class TranscriptionService implements TranscriptionPort {
         return audioModels[0].id;
       }
 
-      // If no explicit audioInput capability model, check general multimodal models
       const multimodalModels = snapshot.models.filter(
         (m) => m.capabilities?.imageInput === true,
       );

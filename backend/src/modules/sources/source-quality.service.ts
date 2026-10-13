@@ -6,19 +6,12 @@ import type {
   SourceQualitySignals,
 } from '../../database/schema';
 
-/** Link density, repetition, and score thresholds used by the ingestion gate. */
 export interface SourceQualityConfig {
-  /** Minimum score for a source version to be ready. */
   threshold: number;
-  /** Link density (0..1) that scores zero on its own. */
   linkDensityLimit: number;
-  /** Below this word count, link density is not considered. */
   linkDensityMinWords: number;
-  /** Repetition ratio (0..1) that scores zero on its own. */
   repetitionLimit: number;
-  /** Below this word count, repetition is not considered. */
   repetitionMinWords: number;
-  /** Below this word count, a paywall marker degrades the source. */
   paywallMaxWords: number;
 }
 
@@ -45,7 +38,6 @@ function numberEnv(
   return Math.min(maximum, Math.max(minimum, parsed));
 }
 
-/** Reads gate thresholds from the environment, falling back to the defaults. */
 export function loadSourceQualityConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): SourceQualityConfig {
@@ -89,13 +81,11 @@ export function loadSourceQualityConfig(
   };
 }
 
-/** The failure persisted on a degraded source, used by the API and the UI. */
 export interface SourceQualityFailure {
   code: string;
   messageKey: string;
 }
 
-/** Fallback failure for degraded versions whose reason is unavailable. */
 export const UNKNOWN_QUALITY_FAILURE: SourceQualityFailure = {
   code: 'content_quality',
   messageKey: 'errors.sources.quality.unknown',
@@ -122,7 +112,6 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-/** Counts substantive words; single characters and pure punctuation are noise. */
 export function wordTokens(text: string): string[] {
   return text
     .toLowerCase()
@@ -134,10 +123,6 @@ function wordsIn(text: string): number {
   return wordTokens(text).length;
 }
 
-/**
- * Link density of text that may carry Markdown links or bare URLs. The
- * denominator is the visible text (link targets are not visible words).
- */
 export function measureTextLinkDensity(text: string): number {
   let linkWords = 0;
   const withoutTargets = text.replace(
@@ -181,11 +166,6 @@ function countPaywallHits(text: string): number {
   return hits;
 }
 
-/**
- * Word-based link density of one element: anchor words over total words.
- * Used by web extraction to decide whether the main-content heuristic picked
- * navigation instead of the article.
- */
 export function measureElementLinkDensity(element: Element): number {
   const total = wordsIn(element.textContent ?? '');
   if (total === 0) return 0;
@@ -196,7 +176,6 @@ export function measureElementLinkDensity(element: Element): number {
   return round(clamp01(linkWords / total));
 }
 
-/** Word-based link density of rendered HTML. */
 export function measureHtmlLinkDensity(html: string): number {
   if (!html || !html.trim()) return 0;
   const dom = new JSDOM(html);
@@ -217,7 +196,6 @@ export function qualityFailureOf(
   };
 }
 
-/** The source fields applied when a version is judged degraded. */
 export function qualityFailureLifecycle(failure: SourceQualityFailure): {
   processingStatus: 'degraded';
   processingStage: null;
@@ -232,11 +210,6 @@ export function qualityFailureLifecycle(failure: SourceQualityFailure): {
   };
 }
 
-/**
- * The source lifecycle applied when a version is persisted. A degraded
- * assessment parks the source in the degraded state; otherwise the source
- * moves on to indexing.
- */
 export function qualityLifecycleValues(failure: SourceQualityFailure | null): {
   processingStatus: 'degraded' | 'processing';
   processingStage: 'indexing' | null;
@@ -255,15 +228,9 @@ export function qualityLifecycleValues(failure: SourceQualityFailure | null): {
 export interface QualityAssessableDocument {
   text: string;
   markdown?: string;
-  /** Precomputed word-based density for HTML extractions that drop link markup. */
   linkDensity?: number;
 }
 
-/**
- * Scores an extracted document for content quality. A navigation-only page,
- * repeated boilerplate, or a paywall interstitial scores below the threshold
- * and must be marked degraded instead of indexed as Evidence.
- */
 @Injectable()
 export class SourceQualityService {
   private readonly config: SourceQualityConfig;
@@ -291,8 +258,6 @@ export class SourceQualityService {
       paywallHits: countPaywallHits(text),
     };
 
-    // Text without markup does not reveal its links, so a short text is not
-    // judged on density; a measured HTML density is always trusted.
     const linkPenalty =
       !measuredLinkDensity && wordCount < this.config.linkDensityMinWords
         ? 0

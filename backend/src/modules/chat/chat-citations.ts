@@ -9,20 +9,12 @@ export const MIN_CITATION_SPAN_LENGTH = 35;
 export const MIN_CITATION_SPAN_WORDS = 5;
 export const MAX_PASSAGE_CONTEXT_LENGTH = 1000;
 
-/** Content words a reply segment needs before it can be a claim. */
 const MIN_CLAIM_WORDS = 4;
 
-/** Share of a claim's content words a passage must cover to be its evidence. */
 const ATTRIBUTION_MIN_COVERAGE = 0.5;
 
-/** How far the best passage must lead the runner-up to be trusted. */
 const ATTRIBUTION_MARGIN = 0.1;
 
-/**
- * How a citation was attached to the reply: the model emitted its key at the
- * end of a claim sentence, or the verifier attributed an unmarked claim to
- * the nearest Evidence passage.
- */
 export type CitationAttribution = 'explicit' | 'nearest';
 
 export interface CitationEvidence extends RetrievedChunk {
@@ -43,13 +35,9 @@ export interface CitedSourceEntry {
   kind: string | null;
   url: string | null;
   description: string | null;
-  /** The supporting span, not the whole chunk. */
   quote: string | null;
-  /** Explicit marker or nearest-Evidence attribution. */
   attribution: CitationAttribution;
-  /** Heading hierarchy / breadcrumb path. */
   sectionPath?: string[] | null;
-  /** Surrounding paragraph context window (~600–1000 characters). */
   context?: string | null;
 }
 
@@ -71,12 +59,6 @@ export function createCitationEvidence(
   }));
 }
 
-/**
- * The Evidence block the model reads. It carries the document title, the
- * section context assembly selected, and the passage body; the retrieval
- * score is deliberately absent, because the model cannot act on it and tends
- * to narrate it.
- */
 export function formatCitationContext(evidence: CitationEvidence[]): string {
   return evidence
     .map((item) => {
@@ -94,32 +76,12 @@ export function formatCitationContext(evidence: CitationEvidence[]): string {
     .join('\n\n---\n\n');
 }
 
-/** The outcome of the post-generation citation check. */
 export interface CitationVerification {
-  /** Verified entries in first-appearance order. */
   entries: CitedSourceEntry[];
-  /** Keys the reply emitted that no retrieved chunk matched, deduped. */
   droppedKeys: string[];
-  /**
-   * Unmarked claims matched to a retrieved chunk. A claim whose passage is
-   * already cited explicitly still counts; its entry is deduplicated.
-   */
   attributedClaims: number;
 }
 
-/**
- * Verifies the citations of one reply against the Evidence it was given:
- * every emitted key must map to a retrieved chunk, every entry stores the
- * supporting span for its claim, and an unmarked claim is attributed to the
- * nearest Evidence passage when one clearly supports it. Unresolvable
- * references are dropped from the entries (the reply text itself is streamed
- * and only rendered through keys that resolve).
- *
- * A marker that trails its sentence ("The pressure depends on the gradient.
- * [ref:R1]") belongs to that sentence, not to the next one, so an explicit
- * citation always claims the text before it and only falls back to the
- * previous sentence when the marker opens a segment.
- */
 export function verifyCitations(
   text: string,
   evidence: CitationEvidence[],
@@ -159,9 +121,6 @@ export function verifyCitations(
   let attributedClaims = 0;
   if (attribution) {
     for (const segment of segments) {
-      // A segment the model marked is its own claim; only a marker that
-      // resolves suppresses attribution, so a bogus marker does not hide the
-      // sentence it was attached to.
       const resolvedMarker = markerOccurrences(segment.text).some((marker) =>
         evidenceByKey.has(marker.key),
       );
@@ -170,9 +129,6 @@ export function verifyCitations(
       if (!isClaim(claim)) continue;
       const match = nearestEvidence(claim, evidence);
       if (!match) continue;
-      // The claim is grounded to the matched passage; when that passage is
-      // already cited, the entry itself is deduplicated below, but the claim
-      // still counts as attributed.
       candidates.push({
         position: segment.start,
         order: order++,
@@ -185,10 +141,6 @@ export function verifyCitations(
     }
   }
 
-  // One entry per passage. When a claim is attributed before the model's own
-  // explicit marker for the same passage appears, the explicit marker wins:
-  // it is the model's own grounding, and the entry should carry the claim the
-  // marker actually supports.
   const byKey = new Map<string, CitationCandidate>();
   for (const candidate of candidates) {
     const existing = byKey.get(candidate.citationKey);
@@ -227,7 +179,6 @@ interface CitationCandidate {
   attribution: CitationAttribution;
 }
 
-/** Compatibility wrapper: the verified entries of one reply. */
 export function extractCitationEntries(
   text: string,
   evidence: CitationEvidence[],
@@ -235,11 +186,8 @@ export function extractCitationEntries(
   return verifyCitations(text, evidence).entries;
 }
 
-/** A supporting span of a chunk: the text a citation points at. */
 export interface SupportingSpan {
-  /** The span text, whitespace-normalized and capped for display. */
   text: string;
-  /** Share of the claim's content words the span covers, in [0, 1]. */
   coverage: number;
 }
 
@@ -277,13 +225,6 @@ export function findFallbackSpan(
   return capSpan(body.slice(sentences[0].start, end));
 }
 
-/**
- * Selects the span of `content` that best supports `claim`. Spans are one
- * sentence or two adjacent ones; the best coverage wins, ties go to the
- * shorter and then the earlier span, so the result is deterministic.
- * Zero-coverage matches or unconstrained claims safely fall back to the lead
- * passage rather than picking the shortest snippet.
- */
 export function selectSupportingSpan(
   content: string,
   claim: string,
@@ -393,18 +334,12 @@ export function selectSupportingSpan(
   };
 }
 
-/** One sentence or line of a text, with its offsets in that text. */
 interface SentenceSegment {
   text: string;
   start: number;
   end: number;
 }
 
-/**
- * Splits a reply into claim-sized segments: sentence terminators and line
- * breaks end a segment, and fenced code blocks are skipped so code samples
- * are never attributed to a Source.
- */
 function sentenceSegments(text: string): SentenceSegment[] {
   const fenced = fencedRanges(text);
   const segments: SentenceSegment[] = [];
@@ -464,7 +399,6 @@ function fencedRanges(text: string): { start: number; end: number }[] {
   return ranges;
 }
 
-/** The claim sentence of a segment, without the markers it carries. */
 function claimSentence(text: string): string {
   return text.replace(CITATION_PATTERN, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -474,7 +408,6 @@ interface MarkerOccurrence {
   index: number;
 }
 
-/** The marker occurrences of a segment, in text order. */
 function markerOccurrences(text: string): MarkerOccurrence[] {
   const occurrences: MarkerOccurrence[] = [];
   for (const match of text.matchAll(CITATION_PATTERN)) {
@@ -486,17 +419,12 @@ function markerOccurrences(text: string): MarkerOccurrence[] {
   return occurrences;
 }
 
-/** A sentence worth attributing: long enough and not a question. */
 function isClaim(text: string): boolean {
   const sentence = claimSentence(text);
   if (sentence.endsWith('?')) return false;
   return contentTerms(sentence).size >= MIN_CLAIM_WORDS;
 }
 
-/**
- * The Evidence passage whose best span covers the claim most completely, if
- * it clears the coverage floor and is clearly ahead of the runner-up.
- */
 function nearestEvidence(
   claim: string,
   evidence: CitationEvidence[],
@@ -654,11 +582,9 @@ function entryFromEvidence(
   };
 }
 
-/** The marker shapes the model emits, optionally wrapped in backticks. */
 const CITATION_PATTERN =
   /`?\[ref:([a-zA-Z0-9_-]+)\]`?|`?\[(\d+)\]\(#reference-([a-zA-Z0-9_-]+)\)`?/gi;
 
-/** Short or ubiquitous words carry no attribution signal. */
 const CLAIM_STOP_WORDS = new Set([
   'and',
   'are',
@@ -691,7 +617,6 @@ const CLAIM_STOP_WORDS = new Set([
   'your',
 ]);
 
-/** Content words of a claim or span: word tokens with the stop words out. */
 function contentTerms(text: string): Set<string> {
   const terms = new Set<string>();
   for (const token of text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []) {
@@ -710,12 +635,6 @@ function coverageOf(claimTerms: Set<string>, spanTokens: Set<string>): number {
   return hit / claimTerms.size;
 }
 
-/**
- * Caps a span at the excerpt limit, cutting at a whitespace boundary. The
- * stored span stays a literal substring of the chunk it cites: no whitespace
- * normalization and no ellipsis, so a stored quote can always be located in
- * the source text. Only outer whitespace is trimmed.
- */
 function capSpan(text: string): string {
   const trimmed = text.trim();
   if (trimmed.length <= MAX_CITATION_EXCERPT_LENGTH) return trimmed;
@@ -787,7 +706,6 @@ export function sanitizeReferenceUrl(url: string | null): string | null {
   }
 }
 
-/** Keep only the location fields understood by the citation contract. */
 export function normalizeCitationLocator(
   locator: unknown,
 ): CitationLocator | null {

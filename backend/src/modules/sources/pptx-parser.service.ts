@@ -34,7 +34,6 @@ function decodeXmlEntities(str: string): string {
 
 function extractATextNodes(xml: string, warnings: string[]): string[] {
   try {
-    // Limit entity expansion depth via simple check
     if ((xml.match(/&[^;]+;/g) || []).length > 10000) {
       warnings.push('Excessive XML entities detected, truncated.');
       xml = xml.slice(0, 100000);
@@ -120,15 +119,11 @@ export class PptxParserService {
       warnings.push('No slides found in PPTX.');
     }
 
-    // Try to determine order via presentation.xml sldIdLst if available
     const orderedNumbers: number[] = [...slideMap.keys()].sort((a, b) => a - b);
     try {
       const pres = parsed.entries.get('ppt/presentation.xml');
       if (pres) {
         const presText = pres.toString('utf8');
-        // Extract slide ids order: <p:sldId r:id="rId2"/> ; then resolve rId to target via _rels/presentation.xml.rels
-        // Simpler: just parse order of sldId elements, but without rels mapping we assume numeric order already sorted
-        // Check for malformed XML entities limit
         if ((presText.match(/<!ENTITY/g) || []).length > 10) {
           warnings.push('Suspicious ENTITY expansion in presentation.xml');
         }
@@ -160,7 +155,6 @@ export class PptxParserService {
           warnings.push(`Slide ${slideNumber} truncated: exceeds 5MB.`);
           xml = xml.slice(0, 5 * 1024 * 1024);
         }
-        // Check entity expansion
         const entityCount = (xml.match(/<!ENTITY/g) || []).length;
         if (entityCount > 5) {
           warnings.push(

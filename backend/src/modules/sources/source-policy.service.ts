@@ -10,7 +10,6 @@ export type RobotsDecisionValue =
 export const SOURCE_FETCH_CONFIG = 'SOURCE_FETCH_CONFIG';
 
 export interface HostnameResolver {
-  /** Resolves every address of a hostname; throws when unresolvable. */
   lookupAll(hostname: string): Promise<string[]>;
 }
 
@@ -22,21 +21,13 @@ const defaultResolver: HostnameResolver = {
 };
 
 export interface SourceFetchConfig {
-  /** Per-request timeout in milliseconds. */
   timeoutMs: number;
-  /** Maximum response bytes read from the body. */
   maxBytes: number;
-  /** Maximum redirect hops per request. */
   maxRedirects: number;
-  /** Maximum accepted URL length. */
   maxUrlLength: number;
-  /** User-Agent header sent on every request. */
   userAgent: string;
-  /** robots.txt behavior: 'off' skips the check, 'respect' enforces it. */
   robots: RobotsMode;
-  /** Allow requests to private/loopback/link-local addresses (development use only). */
   allowPrivateAddresses: boolean;
-  /** Ports that may be requested; other ports are rejected. */
   allowedPorts: number[];
 }
 
@@ -96,15 +87,9 @@ export function loadSourceFetchConfig(
 
 export interface ValidatedUrl {
   url: URL;
-  /** Canonical identity: lowercase host, no fragment, default port stripped. */
   normalizedUrl: string;
 }
 
-/**
- * Robots.txt parser for the subset of the standard that matters here:
- * `User-agent`, `Allow`, `Disallow` rules with `*` wildcards and trailing `$`
- * anchors. Groups are ordered; the first group matching the user agent wins.
- */
 export class RobotsTxt {
   private constructor(
     private readonly groups: {
@@ -180,20 +165,19 @@ function globToRegex(pattern: string): RegExp {
 }
 
 function isPrivateIpv4(o1: number, o2: number, o3: number): boolean {
-  if (o1 === 0) return true; // 0.0.0.0/8
-  if (o1 === 10) return true; // 10.0.0.0/8
-  if (o1 === 100 && o2 >= 64 && o2 <= 127) return true; // 100.64.0.0/10 (CGNAT)
-  if (o1 === 127) return true; // 127.0.0.0/8 loopback
-  if (o1 === 169 && o2 === 254) return true; // 169.254.0.0/16 link-local + cloud metadata
-  if (o1 === 172 && o2 >= 16 && o2 <= 31) return true; // 172.16.0.0/12
-  if (o1 === 192 && o2 === 168) return true; // 192.168.0.0/16
-  if (o1 === 192 && o2 === 0 && o3 === 0) return true; // 192.0.0.0/24
-  if (o1 === 198 && (o2 === 18 || o2 === 19)) return true; // 198.18.0.0/15
-  if (o1 >= 224) return true; // multicast + reserved
+  if (o1 === 0) return true;
+  if (o1 === 10) return true;
+  if (o1 === 100 && o2 >= 64 && o2 <= 127) return true;
+  if (o1 === 127) return true;
+  if (o1 === 169 && o2 === 254) return true;
+  if (o1 === 172 && o2 >= 16 && o2 <= 31) return true;
+  if (o1 === 192 && o2 === 168) return true;
+  if (o1 === 192 && o2 === 0 && o3 === 0) return true;
+  if (o1 === 198 && (o2 === 18 || o2 === 19)) return true;
+  if (o1 >= 224) return true;
   return false;
 }
 
-/** Expands an IPv6 address (with `::`) into 8 hextets, or null when malformed. */
 function expandIpv6(address: string): string[] | null {
   if (!address.includes('::')) {
     const parts = address.split(':');
@@ -217,7 +201,6 @@ function isPrivateIpv6(address: string): boolean {
   const mappedV4 = address.toLowerCase().match(/^::ffff:(.+)$/);
   if (mappedV4) {
     const inner = mappedV4[1];
-    // Node's URL parser normalizes mapped IPv4 to hex, e.g. ::ffff:7f00:1
     if (inner.includes('.')) return isPrivateAddress(inner);
     const [hi, lo] = inner.split(':');
     if (!hi || !lo) return true;
@@ -228,20 +211,20 @@ function isPrivateIpv6(address: string): boolean {
   }
 
   const parts = expandIpv6(address);
-  if (!parts) return true; // malformed literal: fail closed
+  if (!parts) return true;
   const first = Number.parseInt(parts[0], 16);
   const second = Number.parseInt(parts[1], 16);
-  if (first === 0 && parts.slice(1).every((h) => h === '0')) return true; // ::
+  if (first === 0 && parts.slice(1).every((h) => h === '0')) return true;
   if (
     first === 0 &&
     second === 0 &&
     parts[7] === '1' &&
     parts.slice(2, 7).every((h) => h === '0')
   ) {
-    return true; // ::1 loopback
+    return true;
   }
-  if (first >= 0xfc00 && first <= 0xfdff) return true; // fc00::/7 unique local
-  if (first >= 0xfe80 && first <= 0xfebf) return true; // fe80::/10 link-local
+  if (first >= 0xfc00 && first <= 0xfdff) return true;
+  if (first >= 0xfe80 && first <= 0xfebf) return true;
   return false;
 }
 
@@ -251,7 +234,7 @@ export function isPrivateAddress(address: string): boolean {
     return isPrivateIpv4(parts[0], parts[1], parts[2]);
   }
   if (isIPv6(address)) return isPrivateIpv6(address);
-  return true; // unknown format: fail closed
+  return true;
 }
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-_.]*[a-z0-9])?$/i;
@@ -275,10 +258,6 @@ export class SourcePolicyService {
     this.resolver = resolver ?? defaultResolver;
   }
 
-  /**
-   * Validates a URL for acquisition: scheme, hostname shape, port policy,
-   * length, credentials, and SSRF safety (resolved DNS addresses).
-   */
   async validateUrl(input: string): Promise<ValidatedUrl> {
     if (typeof input !== 'string' || input.length === 0) {
       throw new WebScrapeError('URL is required', 'invalid_url', {
@@ -385,17 +364,11 @@ export class SourcePolicyService {
     try {
       addresses = await this.resolver.lookupAll(lower);
     } catch {
-      return true; // unresolvable host: fail closed
+      return true;
     }
     return addresses.length === 0 || addresses.some((a) => isPrivateAddress(a));
   }
 
-  /**
-   * Normalizes a URL for identity purposes: lowercases the host, removes
-   * credentials, fragments and default ports, and adds a trailing slash to an
-   * empty path. The query string is preserved as requested (identity includes
-   * query parameters; parameter-level policies are a later dedup concern).
-   */
   normalizeUrl(input: string | URL): string {
     const url =
       input instanceof URL ? new URL(input.toString()) : new URL(input);
@@ -413,7 +386,6 @@ export class SourcePolicyService {
     return url.toString();
   }
 
-  /** Robots.txt policy check. Records whether fetching is allowed, denied, or skipped. */
   async checkRobots(url: URL): Promise<RobotsDecisionValue> {
     if (this.config.robots !== 'respect') return 'skipped';
 

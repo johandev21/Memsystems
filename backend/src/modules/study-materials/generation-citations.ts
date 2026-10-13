@@ -6,15 +6,6 @@ import {
   type CitedSourceEntry,
 } from '../chat/chat-citations';
 
-/**
- * Generated Study Materials carry the same citation contract Chat replies do:
- * every citation maps to a Source Chunk that was actually retrieved for the
- * Generation, and unresolvable markers are dropped. The shapes live here so
- * the per-kind content schemas can embed them without depending on the Chat
- * module's internals.
- */
-
-/** Hard cap on the citations stored with one generated material. */
 export const GENERATION_CITATION_LIMIT = 200;
 
 export const GenerationCitationLocatorSchema = z.object({
@@ -38,11 +29,6 @@ export const GenerationCitationLocatorSchema = z.object({
     .optional(),
 });
 
-/**
- * The stored citation shape. Annotated with the Chat contract's
- * `CitedSourceEntry` so the two surfaces cannot drift: if the Chat citation
- * gains or changes a field, this schema stops type-checking until it follows.
- */
 export const GenerationCitationSchema: z.ZodType<CitedSourceEntry> = z.object({
   schemaVersion: z
     .number()
@@ -73,12 +59,6 @@ export const GenerationCitationsSchema = z
 
 export type GenerationCitation = z.infer<typeof GenerationCitationSchema>;
 
-/**
- * Extracts the evidence keys the model cited in its output. The content is
- * serialized because structured output carries the markers inside string
- * fields; the extractor itself only accepts keys present in `evidence`, so an
- * invented key can never become a citation.
- */
 export function extractGenerationCitations(
   content: unknown,
   evidence: CitationEvidence[],
@@ -99,12 +79,6 @@ export function extractGenerationCitations(
   );
 }
 
-/**
- * Attaches the verified citations to the content that will be persisted. The
- * citations are always written from the extraction result, never from a field
- * the model produced, so the stored material cannot reference evidence that
- * was not retrieved for it.
- */
 export function attachGenerationCitations<T extends object>(
   content: T,
   citations: CitedSourceEntry[],

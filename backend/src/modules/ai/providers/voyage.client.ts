@@ -11,59 +11,22 @@ export const VOYAGE_CONTEXTUAL_EMBEDDINGS_URL =
   'https://api.voyageai.com/v1/contextualizedembeddings';
 export const VOYAGE_RERANK_URL = 'https://api.voyageai.com/v1/rerank';
 
-/** Voyage accepts at most 1,000 texts per request; stay well under it. */
 const MAX_TEXTS_PER_REQUEST = 256;
 
-/**
- * Contextualized chunk embeddings: the endpoint embeds each inner list as a
- * group, so every chunk is encoded in the context of the chunks around it.
- * One request may carry at most 1,000 input lists, 16,000 chunks, and — for
- * pre-chunked inputs, the mode this client uses — 32,000 tokens in total.
- * (The 120,000-token figure applies only with `enable_auto_chunking`, which
- * the app does not use.) Batches stay under the real limit with margin.
- */
 const MAX_CONTEXTUAL_INPUTS_PER_REQUEST = 256;
 const MAX_CONTEXTUAL_CHUNKS_PER_REQUEST = 1_024;
 const MAX_CONTEXTUAL_TOKENS_PER_REQUEST = 30_000;
 
-/**
- * Voyage caps rerank requests at 1,000 documents. The retrieval pipeline
- * clamps its candidate depth to this limit and skips reranking when a
- * selected-source scope still exceeds it, so an over-limit request is never
- * sent. A request that stays under the document cap but exceeds the model's
- * token budget fails and degrades to fused order.
- */
 export const MAX_RERANK_DOCUMENTS = 1000;
 
-/**
- * Rerank is on the critical path of a Chat turn. Its request timeout is
- * shorter than the embeddings timeout so an unresponsive reranker degrades
- * to fused order quickly instead of stalling the turn.
- */
 const RERANK_TIMEOUT_MS = 15_000;
 
-/**
- * Voyage caps tokens per request at 320K (voyage-4) or 120K
- * (voyage-4-large). Batches stay under 240K estimated tokens — below
- * either cap — with tokens estimated at ~4 chars each. Estimation is only
- * used to split batches; the API truncates real over-length inputs.
- */
 const MAX_ESTIMATED_TOKENS_PER_REQUEST = 240_000;
 
-/**
- * Voyage token estimation ratio: about four characters per token. Chunking
- * uses the same ratio to size chunks in tokens, and batch splitting uses it
- * to stay under the provider's per-request caps.
- */
 export const VOYAGE_CHARS_PER_TOKEN = 4;
 
 const REQUEST_TIMEOUT_MS = 60_000;
 
-/**
- * Estimates Voyage input tokens from text length (~4 chars each). Batch
- * splitting uses it, and retrieval traces record it as the query's token
- * cost without a second provider call.
- */
 export function estimateVoyageTokens(text: string): number {
   return Math.ceil(text.length / VOYAGE_CHARS_PER_TOKEN);
 }
@@ -75,17 +38,10 @@ export interface VoyageEmbedOptions {
   model: string;
   input: string[];
   inputType: VoyageInputType;
-  /** Request timeout; capability probes pass a shorter one. */
   timeoutMs?: number;
-  /** Test seam; defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
 
-/**
- * Thin client for Voyage AI's embeddings endpoint. Splits large inputs into
- * API-sized batches, preserves input order, and maps HTTP failures onto
- * localized domain errors. No SDK dependency: the endpoint is a single POST.
- */
 export async function voyageEmbed(
   options: VoyageEmbedOptions,
 ): Promise<number[][]> {
@@ -109,29 +65,17 @@ export async function voyageEmbed(
   return results.flat();
 }
 
-/**
- * Thin client for Voyage AI's contextualized chunk embeddings endpoint
- * (voyage-context). Each inner list is embedded as a group, so a chunk's
- * vector encodes the document context around it. Batches preserve group and
- * chunk order, and the client maps HTTP failures onto the same localized
- * domain errors as the plain embeddings endpoint.
- */
 export interface VoyageContextualEmbedOptions {
   apiKey: string;
   model: string;
-  /** One inner list per document; each list is embedded as a group. */
   groups: string[][];
   inputType: VoyageInputType;
-  /** Request timeout; capability probes pass a shorter one. */
   timeoutMs?: number;
-  /** Test seam; defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
 
 export interface VoyageContextualEmbedResponse {
-  /** Embeddings in group order, then chunk order within each group. */
   embeddings: number[][];
-  /** Provider-reported tokens spent embedding. */
   totalTokens: number;
 }
 
@@ -168,31 +112,19 @@ export interface VoyageRerankOptions {
   model: string;
   query: string;
   documents: string[];
-  /** Test seam; defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
 
 export interface VoyageRerankCandidate {
-  /** Position of the document in the request list. */
   index: number;
-  /** Cross-encoder relevance score, higher is more relevant. */
   relevanceScore: number;
 }
 
 export interface VoyageRerankResponse {
-  /** Every requested document, ordered by descending relevance score. */
   candidates: VoyageRerankCandidate[];
-  /** Provider-reported tokens spent reranking. */
   totalTokens: number;
 }
 
-/**
- * Thin client for Voyage AI's reranker endpoint. The cross-encoder scores
- * each query-document pair jointly, which is why retrieval uses it to refine
- * the fused candidate order. HTTP failures map onto the same localized
- * domain errors as embeddings; the pipeline treats them as a signal to fall
- * back to the fused order.
- */
 export async function voyageRerank(
   options: VoyageRerankOptions,
 ): Promise<VoyageRerankResponse> {
@@ -239,11 +171,6 @@ export async function voyageRerank(
   };
 }
 
-/**
- * POSTs JSON to a Voyage endpoint and maps transport and HTTP failures onto
- * domain errors. Callers validate the payload shape; a body that is not JSON
- * at all is rejected here.
- */
 async function postVoyageJson<T>(options: {
   url: string;
   apiKey: string;
@@ -340,8 +267,6 @@ async function requestBatch(deps: {
     throw malformedResponse('embeddings');
   }
 
-  // The API documents an `index` per embedding; honor it instead of array
-  // order so batch results always line up with the input texts.
   const embeddings = payload.data.map((entry, position) => ({
     index: typeof entry.index === 'number' ? entry.index : position,
     embedding: entry.embedding,
@@ -355,13 +280,6 @@ async function requestBatch(deps: {
   });
 }
 
-/**
- * Splits groups into batches that respect every contextualized-endpoint cap.
- * A group larger than one request's token budget is first split into
- * contiguous subgroups, so no request is ever over the limit. A single chunk
- * larger than the budget cannot be split further and is sent on its own; the
- * chunker never produces one, so that only guards against corrupt input.
- */
 function splitIntoGroupBatches(groups: string[][]): string[][][] {
   const fitted: string[][] = [];
   for (const group of groups) {
@@ -442,8 +360,6 @@ async function requestContextualBatch(deps: {
     throw malformedResponse('contextual embeddings');
   }
 
-  // Each entry is one group; both the group and its chunks carry an `index`.
-  // Honor them instead of array order so results always line up with inputs.
   const groups = payload.data.map((entry, position) => ({
     index: typeof entry.index === 'number' ? entry.index : position,
     chunks: Array.isArray(entry.data) ? entry.data : [],

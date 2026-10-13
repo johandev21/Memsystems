@@ -315,9 +315,6 @@ export class StudyMaterialService {
         messageKey: 'errors.studyMaterials.exportDeleted',
       });
     }
-    // Validate to guarantee the builder receives a well-formed deck.
-    // Previews are derived presentation images and are stripped before
-    // building so the .pptx contains only native editable elements.
     const validated = validateContent('slides', sm.content) as Record<
       string,
       unknown
@@ -341,21 +338,18 @@ export class StudyMaterialService {
       });
     }
 
-    // Validate content before copying; ensures kind/content invariant
     const validatedContent = validateContent(source.kind, source.content);
     const storable =
       source.kind === 'slides'
         ? withSlidePreviews(validatedContent as Record<string, unknown>)
         : validatedContent;
 
-    // Title derivation: append " copy" while preserving 200 char limit
     const suffix = ' copy';
     const trimmedTitle = source.title.trim();
     const maxBaseLength = 200 - suffix.length;
     const base = trimmedTitle.slice(0, maxBaseLength);
     const newTitle = `${base}${suffix}`;
 
-    // Folder handling: preserve active same-notebook folder, else place at root; reject impossible cross-notebook
     let targetFolderId: string | null = source.folderId;
     if (targetFolderId) {
       const [folder] = await this.db
@@ -396,14 +390,6 @@ export class StudyMaterialService {
     );
   }
 
-  /**
-   * Previews are derived presentation images, not source of truth. Regenerate
-   * them on read so decks persisted before a renderer fix (or with missing
-   * previews) self-heal without a data migration. Legacy prose decks are
-   * resolved into scenes in-memory so old rows render through the new scene
-   * model; they are persisted as v2 on the next update. The .pptx export
-   * path strips previews, so this never affects the editable deck.
-   */
   private refreshDerivedContent<T extends { kind: string; content: unknown }>(
     row: T,
   ): T {

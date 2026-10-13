@@ -4,7 +4,6 @@ import { GeneralKnowledgeSupplementSchema } from './generation-supplement';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const CaseStudyOptions = z.object({
-  // 0 means auto: the model chooses the number of questions.
   questionCount: z.number().int().min(0).max(10).default(0),
   focus: z.string().max(2000).default(''),
   comparePerspectives: z.enum(['auto', 'single', 'compare']).default('auto'),
@@ -143,8 +142,6 @@ export function prepareGeneratedCaseStudy(
     focus: options?.focus ?? study.conceptsFocus ?? '',
     comparePerspectives: options?.comparePerspectives ?? 'auto',
   });
-  // Auto (0) accepts whatever the model produced; only an explicit request is
-  // checked against the output.
   if (
     settings.questionCount > 0 &&
     study.questions.length !== settings.questionCount

@@ -9,68 +9,20 @@ import { stripChunkContentHeader } from './chunking.service';
 import { estimateVoyageTokens } from './providers/voyage.client';
 import { containedShare, textSignature } from './text-similarity';
 
-/**
- * Evidence assembly turns the candidates that cleared the relevance threshold
- * into the final passage set the model reads. Retrieval's ranking stages
- * optimise for finding the best individual passages; assembly optimises for
- * the set: overlapping passages collapse to the best-ranked one, one Source
- * cannot fill the whole set, each passage may carry its section context, and
- * the set is bounded by a token budget instead of a character cut. The
- * assembly is pure and deterministic, so the same candidates always produce
- * the same Evidence order.
- */
-
-/** How assembly turns candidates into the model-facing Evidence set. */
 export interface RetrievalEvidenceConfig {
-  /** Master switch; off restores the pre-assembly top-k selection. */
   enabled: boolean;
-  /**
-   * Share of a passage's tokens that a better-ranked passage must contain for
-   * the passage to count as an overlap and be dropped. The check runs for
-   * thresholds in (0, 1); 1 disables it.
-   */
   overlapThreshold: number;
-  /**
-   * How many passages one Source may contribute before the diversity pass
-   * parks the rest; overflow backfills when the set is not full. 0 disables
-   * the cap.
-   */
   maxPerSource: number;
-  /** Estimated-token ceiling for the assembled passages. */
   tokenBudget: number;
-  /**
-   * Carry each selected chunk's section heading path into its passage. The
-   * section context is the heading path itself: assembly attaches it to the
-   * model-facing passage (and to the citation's context) rather than fetching
-   * neighbouring chunk text, so every passage stays the chunk the reranker
-   * judged and citations stay per chunk. The header's tokens count against
-   * the budget like any other passage text.
-   */
   sectionExpansion: boolean;
 }
 
 export const RETRIEVAL_EVIDENCE_CONFIG = 'RETRIEVAL_EVIDENCE_CONFIG';
 
-/**
- * Documented default for the overlap threshold. Chunks repeat a window of
- * their neighbour's text when a section spans several chunks; a passage 80%
- * contained in a better-ranked passage adds nothing to the model's context.
- */
 export const DEFAULT_OVERLAP_THRESHOLD = 0.8;
 
-/**
- * Documented default for the per-Source cap. With the default top-k of 8, no
- * single Source can contribute more than half of the Evidence set; candidates
- * the cap excludes backfill the remaining slots when the set is not full.
- */
 export const DEFAULT_MAX_PER_SOURCE = 4;
 
-/**
- * Documented default Evidence budget. The model catalog exposes no context
- * window, so this is the conservative bound on the answer context, roughly a
- * quarter of a small model's window; callers that know their model's window
- * can pass a per-request `tokenBudget` override.
- */
 export const DEFAULT_EVIDENCE_TOKEN_BUDGET = 20000;
 
 export const DEFAULT_EVIDENCE_CONFIG: RetrievalEvidenceConfig = {
@@ -81,10 +33,6 @@ export const DEFAULT_EVIDENCE_CONFIG: RetrievalEvidenceConfig = {
   sectionExpansion: true,
 };
 
-/**
- * Reads the Evidence-assembly configuration from the environment, falling
- * back to the documented defaults for anything unset or unusable.
- */
 export function loadRetrievalEvidenceConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RetrievalEvidenceConfig {
@@ -94,13 +42,10 @@ export function loadRetrievalEvidenceConfig(
   );
   return {
     enabled: parseBoolean(env.RETRIEVAL_EVIDENCE_ENABLED, true),
-    // Above 1 disables the check; at or below 0 the value is unusable (every
-    // passage would overlap) and the default stands.
     overlapThreshold:
       overlapThreshold > 0
         ? Math.min(overlapThreshold, 1)
         : DEFAULT_OVERLAP_THRESHOLD,
-    // 0 is a documented value: unlimited.
     maxPerSource: parseNonNegativeInt(
       env.RETRIEVAL_MAX_PER_SOURCE,
       DEFAULT_MAX_PER_SOURCE,
@@ -117,53 +62,36 @@ export function loadRetrievalEvidenceConfig(
   };
 }
 
-/** The passage content without the source-title header the chunk carries. */
 export function chunkBody(content: string): string {
   return stripChunkContentHeader(content);
 }
 
-/** One candidate passage entering assembly. */
 export interface EvidencePassage {
   chunkId: string;
   sourceId: string;
   chunkIndex: number;
-  /** The heading path of the chunk's section; empty when it has none. */
   sectionPath: string[];
-  /** The chunk content, possibly with its source-title header. */
   content: string;
 }
 
-/** One selected passage with the assembly decision recorded. */
 export interface AssembledEvidenceItem {
   passage: EvidencePassage;
-  /** True when the section heading path was carried into the passage. */
   sectionExpanded: boolean;
-  /** Estimated tokens of the assembled passage. */
   tokens: number;
 }
 
 export interface EvidenceAssembly {
   items: AssembledEvidenceItem[];
-  /** Passages dropped because a better-ranked passage contained them. */
   droppedOverlap: EvidencePassage[];
-  /** Passages the diversity pass and top-k left out. */
   droppedDiversity: EvidencePassage[];
-  /** Passages dropped because the token budget was exhausted. */
   droppedBudget: EvidencePassage[];
-  /** Estimated tokens of all assembled passages. */
   tokens: number;
   budgetExhausted: boolean;
 }
 
-/**
- * Assembles the final Evidence set. Candidates must arrive in final rank
- * order; the returned order is that order with overlapping passages removed,
- * so the best-ranked representative of each group is the one kept.
- */
 export function assembleEvidence(input: {
   candidates: EvidencePassage[];
   topK: number;
-  /** Selected-source scope: `topK` bounds each source independently. */
   perSource: boolean;
   config: RetrievalEvidenceConfig;
 }): EvidenceAssembly {
@@ -175,8 +103,6 @@ export function assembleEvidence(input: {
   const { selected, droppedDiversity } = selectWithinCaps(unique, {
     topK,
     perSource,
-    // In the selected-source scope `topK` already bounds each source, so the
-    // diversity cap has nothing to add.
     maxPerSource: config.enabled && !perSource ? config.maxPerSource : 0,
   });
 
@@ -196,13 +122,6 @@ export function assembleEvidence(input: {
   };
 }
 
-/**
- * Drops a passage when a better-ranked passage already contains it. The
- * similarity is order-sensitive containment, not Jaccard: a short excerpt
- * repeated inside a long passage is an overlap, while a longer candidate that
- * merely contains an earlier passage adds text and is kept, and a passage
- * whose words appear elsewhere in a different arrangement is not an overlap.
- */
 function removeOverlapping(
   candidates: EvidencePassage[],
   threshold: number,
@@ -231,12 +150,6 @@ function removeOverlapping(
   return { unique, droppedOverlap };
 }
 
-/**
- * Applies the per-Source diversity cap first, then backfills the set with the
- * overflow in rank order. The backfill keeps recall when the sources that
- * were skipped have nothing else to offer (for example a single-source
- * Notebook), while a multi-source Notebook still shows breadth before depth.
- */
 function selectWithinCaps(
   candidates: EvidencePassage[],
   input: { topK: number; perSource: boolean; maxPerSource: number },
@@ -276,13 +189,6 @@ function selectWithinCaps(
   return { selected, droppedDiversity };
 }
 
-/**
- * Bounds the assembled set by the token budget and decides which passages
- * carry their section context. The first selected passage always fits, so the
- * budget can never turn a non-empty result into an abstention: the threshold
- * is what gates Evidence. A section header that no longer fits is dropped
- * before the passage it belongs to.
- */
 function applyTokenBudget(
   selected: EvidencePassage[],
   sectionExpansion: boolean,
@@ -317,8 +223,6 @@ function applyTokenBudget(
         budgetExhausted = true;
         continue;
       }
-      // The first passage is always kept; shed its section header if the
-      // header alone is what breaks the budget.
       if (sectionExpanded && tokens + bodyTokens <= tokenBudget) {
         sectionExpanded = false;
         itemTokens = bodyTokens;
@@ -333,9 +237,6 @@ function applyTokenBudget(
   return { items, droppedBudget, tokens, budgetExhausted };
 }
 
-/** The section line assembly renders into a passage, for token accounting. */
 function sectionLine(sectionPath: string[]): string {
-  // Keep in step with `formatCitationContext` in chat-citations, which
-  // renders the same line into the model-facing passage.
   return `Section: ${sectionPath.join(' > ')}\n`;
 }

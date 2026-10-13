@@ -68,11 +68,6 @@ export interface DocumentSection {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Shared internal document contract produced by every acquisition adapter.
- * Consumers must not rely on it being a slice of the original input: it is a
- * normalized view with deterministic whitespace and citation handling.
- */
 export interface NormalizedDocument {
   title: string;
   text: string;
@@ -89,11 +84,6 @@ export interface NormalizedDocument {
   contentType?: string;
   contentHash: string;
   sections: DocumentSection[];
-  /**
-   * Word-based link density measured from the extracted article HTML. HTML
-   * extraction drops link markup, so the quality gate reads this signal
-   * instead of recomputing it from plain text.
-   */
   linkDensity?: number;
 }
 
@@ -105,14 +95,9 @@ export interface FileDocumentInput {
   pageCount?: number;
 }
 
-/** Bump when normalization rules change; used for idempotent re-processing. */
 export const NORMALIZATION_VERSION = 1;
-/** Bump when the extraction adapters change; used for re-processing decisions. */
 export const EXTRACTOR_VERSION = '2-firecrawl';
 
-/** Inline citation markers that have already been removed by DOM cleaning are
- * stripped again only when directly anchored to sentence punctuation, so
- * legitimate text such as `[RFC 9110]`, `arr[0]`, or `[1, 2]` is preserved. */
 const PROVEN_CITATION_RE = /(?<=[.!?])\s*\[\d{1,3}\]/g;
 
 function normalizeProse(text: string): string {
@@ -161,7 +146,6 @@ const HEADING_LEVELS: Record<string, number> = {
 
 const TEXT_NODE = 3;
 
-/** Joins text nodes with spaces while preserving exact whitespace in PRE/CODE. */
 function inlineText(el: Element): string {
   let out = '';
   const walk = (node: Node): void => {
@@ -185,8 +169,8 @@ function inlineText(el: Element): string {
     .split('\u0000')
     .map((segment, index) => {
       const trimmed = segment.trim();
-      if (index % 2 !== 0) return trimmed; // PRE/CODE: exact whitespace
-      return trimmed.replace(/[ \t\r\n]+/g, ' '); // prose: collapse
+      if (index % 2 !== 0) return trimmed;
+      return trimmed.replace(/[ \t\r\n]+/g, ' ');
     })
     .filter((segment) => segment.length > 0)
     .join(' ');
@@ -205,7 +189,6 @@ interface SectionAccumulator {
   blocks: string[];
 }
 
-/** Builds sections from article HTML, splitting on heading hierarchy. */
 export function sectionsFromHtml(articleHtml: string): DocumentSection[] {
   const dom = new JSDOM(articleHtml);
   const root = dom.window.document.body;
@@ -266,7 +249,6 @@ export function sectionsFromHtml(articleHtml: string): DocumentSection[] {
 
 const FENCE_RE = /^```/;
 
-/** Builds sections from Markdown, splitting on `#` headings outside code fences. */
 export function sectionsFromMarkdown(markdown: string): DocumentSection[] {
   const lines = markdown.split('\n');
   const sections: SectionAccumulator[] = [];
@@ -314,7 +296,6 @@ export function sectionsFromMarkdown(markdown: string): DocumentSection[] {
 
 @Injectable()
 export class DocumentNormalizerService {
-  /** Pasted text: a single section, no markdown. */
   fromText(text: string, title: string): NormalizedDocument {
     const normalized = normalizeProse(text);
     return {
@@ -326,7 +307,6 @@ export class DocumentNormalizerService {
     };
   }
 
-  /** Uploaded file: markdown keeps its structure, everything else is prose. */
   fromFile(input: FileDocumentInput): NormalizedDocument {
     const { text, contentType, fileName, title } = input;
     const kind = detectMarkdown(contentType, fileName);
@@ -355,7 +335,6 @@ export class DocumentNormalizerService {
     };
   }
 
-  /** HTML/Readability extraction: derives sections from article headings. */
   fromHtml(
     page: ScrapedPage,
     meta: {
@@ -385,7 +364,6 @@ export class DocumentNormalizerService {
     };
   }
 
-  /** Vision extraction: maps structured visual/text segments into sections with kind & imageRegion locator. */
   fromFirecrawlResult(
     doc: FirecrawlDocumentInput,
     meta: FirecrawlMetaInput,
@@ -472,7 +450,6 @@ export class DocumentNormalizerService {
     };
   }
 
-  /** Transcription extraction: maps structured transcript segments into sections with kind 'transcript' & start/end offset locator. */
   fromAudioResult(
     result: TranscriptionResult,
     options: AudioDocumentOptions = {},
@@ -535,7 +512,6 @@ export class DocumentNormalizerService {
     };
   }
 
-  /** Video transcription & visual keyframes extraction: maps structured transcript and visual segments into sections with timestamps and imageRegion locators. */
   fromVideoResult(
     result: TranscriptionResult,
     options: VideoDocumentOptions = {},
@@ -611,7 +587,6 @@ export class DocumentNormalizerService {
       }
     }
 
-    // Merge all sections and sort chronologically by startOffsetMs
     const allSections = [...transcriptSections, ...visualSections].sort(
       (a, b) =>
         (a.locator?.startOffsetMs ?? 0) - (b.locator?.startOffsetMs ?? 0),
@@ -641,7 +616,6 @@ export class DocumentNormalizerService {
     };
   }
 
-  /** YouTube acquisition: maps YouTube transcript/metadata into structured sections with kind 'transcript'. */
   fromYouTubeResult(
     result: YouTubeAcquisitionResult,
     options: YouTubeDocumentOptions = {},
@@ -702,7 +676,6 @@ export class DocumentNormalizerService {
   ): NormalizedDocument {
     const title =
       options.title ?? options.filename ?? options.fileName ?? 'PPTX Document';
-    // Build sections: each slide -> heading+text, notes -> separate transcript-like text
     const sections: DocumentSection[] = [];
     let ordinal = 0;
     for (const slide of result.slides) {

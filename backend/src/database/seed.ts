@@ -19,9 +19,6 @@ interface SeedNotebook {
   banner: string;
 }
 
-// Library folders created before notebooks. Paths are processed in order so
-// parents always exist before their children. Mirrors the notebook library
-// design: Classical Philosophy > Aristotle, Modern Philosophy, Empty folder.
 const SEED_FOLDER_PATHS = [
   'Classical Philosophy',
   'Classical Philosophy/Aristotle',
@@ -29,7 +26,6 @@ const SEED_FOLDER_PATHS = [
   'Empty folder',
 ] as const;
 
-// Notebooks are filed by seed title; anything not listed stays at the root.
 const SEED_NOTEBOOK_FOLDERS: Record<string, string> = {
   Platón: 'Classical Philosophy',
   Sócrates: 'Classical Philosophy',
@@ -50,15 +46,8 @@ const BANNER_CONTENT_TYPES: Record<string, string> = {
   '.webp': 'image/webp',
 };
 
-// Responsive WebP variants generated from the seed JPGs with the same
-// contract as client uploads: banners/<sha>-<width>w.webp, so the frontend
-// srcset serves right-sized files instead of the full-size original.
 const BANNER_VARIANT_WIDTHS = [240, 480, 960, 1920] as const;
 
-/**
- * Creates the seed folder tree idempotently and returns a Map of folder path
- * (`"Classical Philosophy/Aristotle"`) to folder id.
- */
 async function ensureSeedFolders(
   db: NodePgDatabase<typeof appSchema>,
   paths: readonly string[],
@@ -147,7 +136,6 @@ async function main() {
       throw new Error(`Seed folder not found for "${title}": ${folderPath}`);
     }
 
-    // Idempotency: a notebook with the same title is never inserted twice.
     const [existing] = await db
       .select({
         id: notebooks.id,
@@ -159,8 +147,6 @@ async function main() {
       .where(eq(notebooks.title, title))
       .limit(1);
 
-    // Store the banner bytes. Same bytes always produce the same storage
-    // key, so re-running the seed safely overwrites identical content.
     let bannerKey: string | null = null;
     let variantKeys: {
       w240?: string;
@@ -235,8 +221,6 @@ async function main() {
           .where(eq(notebooks.id, existing.id));
         bannersBackfilled++;
       }
-      // File seeded notebooks that are still unfiled; never override a folder
-      // the user chose later.
       if (folderId && existing.folderId === null) {
         await db
           .update(notebooks)

@@ -3,10 +3,6 @@ import type { ModelCapabilities, ProviderModel } from './provider';
 
 export const GATEWAY_DEFAULT_MODEL = 'openai/gpt-5.6-sol';
 
-/**
- * Stale model IDs (persisted in localStorage/DB or sent by old clients) and
- * their gateway replacements. Applied by resolveModelId() before validation.
- */
 export const MODEL_ID_ALIASES: Record<string, string> = {
   'kimi/kimi-k3': 'moonshotai/kimi-k3',
   'kimi/kimi-k2.6': 'moonshotai/kimi-k2.6',
@@ -19,7 +15,6 @@ export function resolveModelId(modelId: string): string {
   return MODEL_ID_ALIASES[modelId] ?? modelId;
 }
 
-/** Gateway creator prefix of a `creator/model` id (`null` when malformed). */
 export function creatorFromModel(modelId: string): string | null {
   const resolved = resolveModelId(modelId);
   const slash = resolved.indexOf('/');
@@ -27,12 +22,6 @@ export function creatorFromModel(modelId: string): string | null {
   return resolved.slice(0, slash);
 }
 
-/**
- * One entry of the Gateway public model list (`GET /v1/models`), the only
- * capability source. The documented shape carries `tags` (union of the
- * model's active provider endpoints) and `supported_parameters`; everything
- * else is ignored here.
- */
 export interface GatewayPublicModel {
   id: string;
   name?: string | null;
@@ -41,13 +30,6 @@ export interface GatewayPublicModel {
   supported_parameters?: string[] | null;
 }
 
-/**
- * Maps one Gateway public-list entry to the seven Model Capabilities.
- * Tags are the primary signal; `supported_parameters` corroborates the two
- * capabilities that have a reliable parameter spelling (`tools`,
- * `structured_outputs`/`response_format`). Absent tags mean the capability
- * is not claimed (fail closed).
- */
 export function capabilitiesFromPublicModel(
   entry: GatewayPublicModel,
 ): ModelCapabilities {
@@ -67,11 +49,6 @@ export function capabilitiesFromPublicModel(
   };
 }
 
-/**
- * Capability lookup keyed by resolved model id, built from the Gateway public
- * list. Only models present in the list get claims; the overlay is passed to
- * buildChatCatalog() during a verified sync.
- */
 export function buildCapabilityOverlay(
   entries: readonly GatewayPublicModel[],
 ): Map<string, ModelCapabilities> {
@@ -82,10 +59,6 @@ export function buildCapabilityOverlay(
   return overlay;
 }
 
-/**
- * Slug fragments identifying non-chat modalities. Only used as a fallback
- * when a gateway entry has no `modelType` discriminator.
- */
 const NON_CHAT_SLUG_PATTERNS = [
   '-image',
   'image-',
@@ -156,34 +129,6 @@ function displayNameFor(id: string, gatewayName?: string | null): string {
     .join(' ');
 }
 
-/**
- * GatewayLanguageModelEntry findings (@ai-sdk/gateway, inspected in
- * backend/node_modules/@ai-sdk/gateway/dist/index.d.ts):
- * `{ id: string; name: string; description?: string | null;
- *    pricing?: { input: string; output: string;
- *      cachedInputTokens?: string; cacheCreationInputTokens?: string } | null;
- *    specification: Pick<LanguageModelV4,
- *      'specificationVersion' | 'provider' | 'modelId'>;
- *    modelType?: KnownModelType | null }`
- * where KnownModelType = 'embedding' | 'image' | 'language' | 'realtime' |
- * 'reranking' | 'speech' | 'transcription' | 'video'.
- * The SDK catalog carries NO capability flags (its zod schema strips tags),
- * so capabilities are merged in separately from the REST public list; see
- * ModelSyncService. Chat, pricing and availability still come from here.
- * Creator prefixes observed in the GatewayModelId union (~256 models):
- * alibaba, amazon, anthropic, bytedance, cohere, deepseek, google, inception,
- * inclusionai, interfaze, kwaipilot, meta, minimax, mistral, moonshotai,
- * morph, nvidia, openai, perplexity, poolside, sakana, spacexai, stepfun,
- * tencent, thinkingmachines, xiaomi, zai (plus legacy `xai`, `zhipu`,
- * `zhipuai`, `qwen`, `kimi` aliases remapped via MODEL_ID_ALIASES).
- *
- * Maps one gateway metadata entry to a chat ProviderModel, or `null` when
- * the entry is not a chat-completion model. Pure function (unit-tested).
- *
- * `capabilities` is the overlay built from the Gateway public list for this
- * model id. When it is missing (public list unavailable, model absent from
- * the list) the model carries no capability claims at all.
- */
 export function toProviderModel(
   entry: GatewayLanguageModelEntry,
   capabilities?: ModelCapabilities | null,
@@ -210,11 +155,6 @@ export function toProviderModel(
   return model;
 }
 
-/**
- * Builds the sorted chat catalog from gateway metadata. Pure (unit-tested).
- * Capabilities are applied from the optional Gateway-public-list overlay,
- * keyed by resolved id; entries without an overlay get no claims.
- */
 export function buildChatCatalog(
   entries: GatewayLanguageModelEntry[],
   capabilityOverlay?: ReadonlyMap<string, ModelCapabilities>,
@@ -232,20 +172,9 @@ export function buildChatCatalog(
 }
 
 function seedModel(id: string, displayName: string): ProviderModel {
-  // Seeds carry no capability claims: the Gateway public list is the only
-  // authority and a seed catalog was never verified against it.
   return { id, displayName };
 }
 
-/**
- * Curated fallback catalog used until the first successful gateway sync
- * (no API key configured, gateway unreachable, first boot). All IDs are
- * gateway-valid `creator/model` slugs.
- * Freshness verified against the GatewayModelId union in
- * @ai-sdk/gateway (dist/index.d.ts): GATEWAY_DEFAULT_MODEL
- * (`openai/gpt-5.6-sol`) and every seed slug below are present, so no
- * seed update is needed at this time.
- */
 export const SEED_GATEWAY_MODELS: ProviderModel[] = [
   seedModel('openai/gpt-4o-mini', 'GPT-4o Mini'),
   seedModel('openai/gpt-5.6-sol', 'GPT-5.6 Sol'),

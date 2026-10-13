@@ -72,8 +72,6 @@ export class SourceJobsService {
       });
 
     if (source.processingStatus === 'degraded') {
-      // Degraded content is never indexed as Evidence. Re-run extraction so
-      // the quality gate can re-evaluate it instead.
       return this.enqueueProcessing(sourceId);
     }
 
@@ -101,7 +99,6 @@ export class SourceJobsService {
     return formatSourceJob(job);
   }
 
-  /** Enqueues extraction from an immutable original artifact. */
   async enqueueProcessing(sourceId: string): Promise<FormattedSourceJob> {
     const [source] = await this.db
       .select()
@@ -133,29 +130,12 @@ export class SourceJobsService {
     return result.sourcesQueued;
   }
 
-  /**
-   * Operator action: re-index every source in the app. Used after an
-   * embedding-model switch or a representation version bump invalidates
-   * stored vectors. The work fans out as one indexing job per Source through
-   * the queue; the jobs' shouldSkip and atomic-replace checks make repeated
-   * fan-outs idempotent. `sourcesQueued` counts the Sources the queued
-   * fan-out will rebuild.
-   */
   async reembedAll(): Promise<{ sourcesQueued: number; jobId: string }> {
     const targets = await this.listReindexTargets(null);
     const job = await this.enqueueReindexAll({ notebookId: null });
     return { sourcesQueued: targets.length, jobId: job.id };
   }
 
-  /**
-   * Ensures every Source is rebuilt with the running representation. The
-   * bookmark in `app_settings` holds the last representation a completed
-   * fan-out applied, so a version bump triggers exactly one fan-out; a
-   * restart with the same representation does nothing. The bookmark is
-   * written by the fan-out job when it succeeds, so a failed fan-out is
-   * retried on the next startup instead of being forgotten. `fanOutQueued`
-   * says whether this call queued the fan-out.
-   */
   async ensureRepresentationCurrent(
     representation: string,
   ): Promise<{ fanOutQueued: boolean }> {
@@ -175,7 +155,6 @@ export class SourceJobsService {
     return { fanOutQueued: true };
   }
 
-  /** Records the representation a completed reindex-all applied. */
   async recordRepresentation(representation: string): Promise<void> {
     await this.db
       .insert(appSettings)
@@ -186,7 +165,6 @@ export class SourceJobsService {
       });
   }
 
-  /** Enqueues one indexing job per eligible Source. */
   async fanOutReindexes(
     notebookId: string | null,
   ): Promise<SourceReindexAllResult> {
@@ -194,14 +172,11 @@ export class SourceJobsService {
     let sourcesQueued = 0;
     let skipped = 0;
     for (const row of rows) {
-      // Degraded sources have no usable Evidence to re-index; retrying them
-      // individually re-runs extraction instead.
       if (row.kind === 'file' && row.s3Key && !row.currentVersionId) {
         await this.enqueueProcessing(row.id);
       } else if (row.currentVersionId || row.rawText.trim().length > 0) {
         await this.enqueue(row.id);
       } else {
-        // An unextracted source with no original artifact cannot be indexed.
         skipped++;
         continue;
       }
@@ -210,10 +185,6 @@ export class SourceJobsService {
     return { sourcesQueued, skipped };
   }
 
-  /**
-   * The sources a reindex-all run can rebuild: everything that is not
-   * degraded and has some representation (a version or raw text).
-   */
   private async listReindexTargets(notebookId: string | null) {
     const rows = await this.db
       .select({

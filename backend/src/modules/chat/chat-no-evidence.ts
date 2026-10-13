@@ -1,32 +1,26 @@
 import type { RetrievalAbstentionReason } from '../ai/retrieval.service';
 import type { SourceQualityReason } from '../../database/schema';
 
-/** A source the no-evidence reply names as unhelpful. */
 export interface NoEvidenceSourceRef {
   id: string;
   title: string;
 }
 
-/** A degraded source named in the no-evidence reply. */
 export interface NoEvidenceDegradedSource extends NoEvidenceSourceRef {
-  /** The quality reason behind the degraded state, when known. */
   reason: SourceQualityReason | null;
 }
 
-/** Everything the no-evidence reply needs to name. */
 export interface NoEvidenceContext {
   degradedSources: NoEvidenceDegradedSource[];
   unhelpfulSources: NoEvidenceSourceRef[];
 }
 
-/** The persisted metadata block that drives the distinct no-evidence UI. */
 export interface NoEvidenceMetadata {
   abstentionReason: RetrievalAbstentionReason;
   degradedSources: NoEvidenceDegradedSource[];
   unhelpfulSources: NoEvidenceSourceRef[];
 }
 
-/** Maps the persisted `quality_<reason>` error code to its reason. */
 const QUALITY_REASON_BY_CODE: Record<string, SourceQualityReason> = {
   quality_navigation: 'navigation',
   quality_boilerplate: 'boilerplate',
@@ -101,12 +95,6 @@ function degradedPhrase(
   );
 }
 
-/**
- * Composes the deterministic no-evidence reply. The Chat shows this text
- * instead of an answer when retrieval abstains, naming the degraded or
- * unhelpful sources and offering a corrective action — never a
- * general-knowledge answer presented as grounded.
- */
 export function composeNoEvidenceReply(
   context: NoEvidenceContext,
   language?: string | null,
@@ -133,7 +121,6 @@ export function composeNoEvidenceReply(
   return paragraphs.join('\n\n');
 }
 
-/** Builds the metadata block persisted with a no-evidence assistant message. */
 export function noEvidenceMetadata(
   context: NoEvidenceContext,
   abstentionReason: RetrievalAbstentionReason,

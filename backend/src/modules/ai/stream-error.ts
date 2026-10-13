@@ -32,18 +32,6 @@ function envelope(error: string, code: string, model: string): string {
   return JSON.stringify({ error, code, model, params: { model } });
 }
 
-/**
- * Maps a failed model-call error to the client-facing string for AI SDK
- * `toUIMessageStreamResponse({ onError })` and similar surfaces. The SDK
- * masks raw server errors ("An error occurred.") by default, which the
- * frontend cannot classify — so this always returns a
- * `{error, code[, model]}` JSON envelope the `classifyChatError` rules
- * understand, or passes model-substitution failures through verbatim.
- *
- * Curated messages only: raw provider text never reaches the client, so
- * URLs, key fragments, and gateway internals cannot leak. Every message is
- * phrased to also match the frontend text rules as a second layer.
- */
 export function toClientStreamError(
   error: unknown,
   model: StreamErrorModel,

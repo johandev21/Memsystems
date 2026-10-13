@@ -119,7 +119,6 @@ function pickExtension(originalName: string): string {
 }
 
 function looksLikeUrlTitle(title: string): boolean {
-  // Derived titles look like "en.wikipedia.org/wiki/Philosophy" or "https://..."
   if (/^https?:\/\//i.test(title)) return true;
   return /^[\w-]+(\.[\w-]+)+(\/.*)?$/.test(title);
 }
@@ -367,7 +366,6 @@ export class SourcesService {
     });
 
     const title = (customTitle?.trim() || fileName).slice(0, 500);
-    // PPTX -> slides, EPUB -> ebook, CSV/TSV/XLSX -> dataset
     const modality = isVideo
       ? 'video'
       : isAudio
@@ -389,8 +387,6 @@ export class SourcesService {
         notebookId,
         kind: 'file',
         title,
-        // File extraction is deliberately deferred to source_processing. Keep
-        // this compatibility projection empty until the worker succeeds.
         rawText: '',
         s3Key,
         contentType: fileType || null,
@@ -402,14 +398,11 @@ export class SourcesService {
     if (this.sourceJobsService.enqueueProcessing) {
       await this.sourceJobsService.enqueueProcessing(row.id);
     } else {
-      // Characterization-test adapters from the pre-queue contract only know
-      // about enqueue(sourceId); retain that seam during migration.
       await this.sourceJobsService.enqueue(row.id);
     }
     return row;
   }
 
-  /** Create a source after a direct upload has already persisted its artifact. */
   async createFileFromArtifact(
     notebookId: string,
     input: CreateFileArtifactInput,
@@ -596,14 +589,12 @@ export class SourcesService {
     return updated;
   }
 
-  /** Explicit operator re-run: enqueues a fresh indexing job for a source. */
   async reindex(id: string) {
     await this.fetchOwned(id);
     const job = await this.sourceJobsService.enqueue(id);
     return job;
   }
 
-  /** Retry extraction for artifacts, or indexing for already-normalized sources. */
   async retry(id: string) {
     const source = await this.fetchOwned(id);
     await this.db
@@ -640,12 +631,6 @@ export class SourcesService {
     return { enqueued: count };
   }
 
-  /**
-   * Re-indexes every source, e.g. after an embedding-model switch or a
-   * representation version bump. The work fans out per Source through the
-   * job queue. The response keeps the frontend's `enqueued` contract and
-   * reports how many Sources the queued fan-out will rebuild.
-   */
   async reembedAll() {
     const { sourcesQueued, jobId } = await this.sourceJobsService.reembedAll();
     return { enqueued: sourcesQueued, jobId };
@@ -816,10 +801,6 @@ export class SourcesService {
     return this.sourceQuality.assess(document);
   }
 
-  /**
-   * Persists the version, marks the source degraded when the assessment says
-   * so, and otherwise schedules indexing.
-   */
   private async persistVersionAndIndex(
     row: typeof sources.$inferSelect,
     document: NormalizedDocument,
@@ -833,7 +814,6 @@ export class SourcesService {
     return row;
   }
 
-  /** Mirrors the persisted degraded lifecycle on the response row. */
   private withQualityFailure(
     row: typeof sources.$inferSelect,
     quality: SourceQualityAssessment,
@@ -851,8 +831,6 @@ export class SourcesService {
     document: NormalizedDocument,
     quality: SourceQualityAssessment | null = null,
   ): Promise<void> {
-    // Optional keeps old unit-test adapters and pre-0A deployments usable;
-    // the application module always provides this persistence seam.
     if (this.sourceVersionService) {
       await this.sourceVersionService.persist(sourceId, document, { quality });
     }

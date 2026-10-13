@@ -4,7 +4,6 @@ import { GeneralKnowledgeSupplementSchema } from './generation-supplement';
 import { BadRequestError } from '../../common/errors/domain-error';
 
 export const PracticeProblemsOptions = z.object({
-  // 0 means auto: the model chooses the number of problems.
   problemCount: z.number().int().min(0).max(30).default(0),
   difficulty: z.enum(['easy', 'medium', 'hard', 'auto']).default('auto'),
 });
@@ -128,8 +127,6 @@ export function prepareGeneratedPracticeProblems(
     problemCount: requested ?? set.problems.length,
     difficulty: options?.difficulty ?? 'auto',
   });
-  // Auto (0) accepts whatever the model produced; only an explicit request is
-  // checked against the output.
   if (
     settings.problemCount > 0 &&
     set.problems.length !== settings.problemCount
@@ -141,7 +138,6 @@ export function prepareGeneratedPracticeProblems(
   }
   return {
     ...set,
-    // Auto keeps the difficulty the model chose for the set.
     difficulty:
       settings.difficulty === 'auto' ? set.difficulty : settings.difficulty,
   };

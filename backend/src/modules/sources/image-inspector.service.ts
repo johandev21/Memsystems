@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { BadRequestError } from '../../common/errors/domain-error';
 
-export const MAX_IMAGE_BYTES = 20 * 1024 * 1024; // 20 MB
-export const MAX_IMAGE_PIXELS = 40_000_000; // 40 MP
+export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+export const MAX_IMAGE_PIXELS = 40_000_000;
 
 export type SupportedImageMimeType = 'image/png' | 'image/jpeg' | 'image/webp';
 
@@ -177,10 +177,9 @@ export class ImageInspectorService {
     width: number;
     height: number;
   } {
-    let offset = 2; // Skip SOI (FF D8)
+    let offset = 2;
 
     while (offset < buffer.length) {
-      // Advance to next marker
       while (offset < buffer.length && buffer[offset] === 0xff) {
         offset++;
       }
@@ -191,12 +190,10 @@ export class ImageInspectorService {
 
       const marker = buffer[offset++];
 
-      // Stop if SOS (Start of Scan) or EOI (End of Image) reached
       if (marker === 0xda || marker === 0xd9) {
         break;
       }
 
-      // Skip standalone markers without length (RST0-RST7, TEM, byte stuffing)
       if (
         (marker >= 0xd0 && marker <= 0xd7) ||
         marker === 0x01 ||
@@ -218,7 +215,6 @@ export class ImageInspectorService {
         );
       }
 
-      // SOF markers: SOF0..SOF3, SOF5..SOF7, SOF9..SOF11, SOF13..SOF15
       const isSOF =
         marker >= 0xc0 &&
         marker <= 0xcf &&
@@ -262,20 +258,17 @@ export class ImageInspectorService {
     const chunkType = buffer.toString('ascii', 12, 16);
 
     if (chunkType === 'VP8 ') {
-      // Simple lossy WebP
       if (buffer.length < 30) {
         throw new BadRequestError(
           'Corrupted VP8 WebP header: buffer too small.',
         );
       }
 
-      // Check keyframe bit (bit 0 of byte 20 must be 0)
       const isKeyframe = (buffer[20] & 0x01) === 0;
       if (!isKeyframe) {
         throw new BadRequestError('Invalid VP8 WebP: not a keyframe.');
       }
 
-      // Start code 0x9D 0x01 0x2A
       if (buffer[23] !== 0x9d || buffer[24] !== 0x01 || buffer[25] !== 0x2a) {
         throw new BadRequestError('Corrupted VP8 WebP: invalid start code.');
       }
@@ -291,14 +284,12 @@ export class ImageInspectorService {
     }
 
     if (chunkType === 'VP8L') {
-      // Lossless WebP
       if (buffer.length < 25) {
         throw new BadRequestError(
           'Corrupted VP8L WebP header: buffer too small.',
         );
       }
 
-      // Byte 20 is 1-byte signature (0x2F)
       if (buffer[20] !== 0x2f) {
         throw new BadRequestError(
           'Corrupted VP8L WebP: invalid signature byte.',
@@ -321,7 +312,6 @@ export class ImageInspectorService {
     }
 
     if (chunkType === 'VP8X') {
-      // Extended WebP
       if (buffer.length < 30) {
         throw new BadRequestError(
           'Corrupted VP8X WebP header: buffer too small.',

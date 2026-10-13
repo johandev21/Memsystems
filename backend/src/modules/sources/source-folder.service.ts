@@ -118,13 +118,11 @@ export class SourceFolderService {
     const descendantFolderIds = await this.getDescendantFolderIds(folder);
 
     const doDelete = async (executor: typeof this.db) => {
-      // Reparent direct and indirect sources in the subtree to root
       await executor
         .update(sources)
         .set({ folderId: null })
         .where(inArray(sources.folderId, descendantFolderIds));
 
-      // Delete all folders in the subtree
       await executor
         .delete(sourceFolders)
         .where(inArray(sourceFolders.id, descendantFolderIds));

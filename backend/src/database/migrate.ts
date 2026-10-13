@@ -54,9 +54,6 @@ async function main() {
     ? path.resolve(__dirname, '../../drizzle')
     : path.resolve(process.cwd(), 'drizzle');
 
-  // If the database already has the baseline schema (e.g. enum chat_role or table notebooks),
-  // ensure drizzle.__drizzle_migrations records the baseline migration so Drizzle does not
-  // attempt to re-create existing types and tables from 0000_baseline.sql.
   const schemaExistsResult = await pool.query(
     `SELECT 1 FROM pg_type WHERE typname = 'chat_role'`,
   );

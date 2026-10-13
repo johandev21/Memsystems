@@ -60,8 +60,6 @@ export class AiController {
     const hasKey = Boolean(await this.embeddingService.getVoyageApiKey());
     return {
       hasKey,
-      // The model indexing and retrieval actually use, which is the fallback
-      // when the contextual path is disabled or the key cannot use it.
       model: this.embeddingService.documentEmbeddingModel(),
       dimensions: EMBEDDING_DIMENSIONS,
     };

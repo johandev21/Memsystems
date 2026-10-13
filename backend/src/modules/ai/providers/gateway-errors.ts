@@ -1,9 +1,3 @@
-/**
- * Maps AI Gateway / AI SDK failures to stable, user-facing categories.
- * Reads `type`/`statusCode`/`isRetryable` when present (GatewayError shape)
- * and falls back to status codes and stable message phrases. AI SDK retry
- * wrappers ("Failed after N attempts…") are unwrapped to the last error.
- */
 export type GatewayFailureKind =
   | 'auth'
   | 'entitlement'
@@ -17,11 +11,6 @@ export interface ClassifiedGatewayError {
   kind: GatewayFailureKind;
   retryable: boolean;
   statusCode?: number;
-  /**
-   * Which capability the provider rejected, when `kind` is `capability`.
-   * `structured_output` covers response-format/schema failures; `tools`
-   * covers the existing tool-call classification.
-   */
   capability?: 'tools' | 'structured_output';
   detail: string;
 }
@@ -39,7 +28,6 @@ function unwrapRetryError(error: unknown): unknown {
       current = next;
       continue;
     }
-    // AI SDK RetryError message shape: "Failed after N attempts. Last error: <cause>"
     if (
       current instanceof Error &&
       /failed after \d+ attempts/i.test(current.message)

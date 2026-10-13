@@ -1,19 +1,8 @@
 import type { GroundingMode } from '../notebooks/grounding-mode';
 
-/**
- * Instructs the model to answer in the user's own message language rather
- * than the interface language. The request `language` field is still accepted
- * for API compatibility, but only drives the deterministic no-evidence reply
- * localization (see `composeNoEvidenceReply`); the streamed answer follows
- * the latest user message instead.
- */
 export const MESSAGE_LANGUAGE_INSTRUCTION =
   "\n\nRespond in the same language as the user's latest message.";
 
-/**
- * Returns the per-mode instruction block appended to the system prompt, after
- * the Evidence block / base SYSTEM_PROMPT in `chat.service.ts`.
- */
 export function groundingDirective(mode: GroundingMode): string {
   switch (mode) {
     case 'strict':

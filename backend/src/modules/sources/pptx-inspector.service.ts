@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { assertNotArchiveBomb, parseZipEntries } from './zip-helpers';
 
-export const MAX_PPTX_BYTES = 200 * 1024 * 1024; // 200 MB
+export const MAX_PPTX_BYTES = 200 * 1024 * 1024;
 export const MAX_PPTX_SLIDES = 500;
 
 export type SupportedPptxMimeType =
@@ -88,7 +88,6 @@ export class PptxInspectorService {
       );
     }
 
-    // Legacy PPT OLE detection: D0 CF 11 E0 A1 B1 1A E1
     if (buffer.length >= 8) {
       const sig0 = buffer.readUInt32BE(0);
       const sig1 = buffer.readUInt32BE(4);
@@ -99,7 +98,6 @@ export class PptxInspectorService {
       }
     }
 
-    // ZIP magic check
     if (
       buffer.length < 4 ||
       buffer[0] !== 0x50 ||
@@ -126,7 +124,6 @@ export class PptxInspectorService {
       const parsed = parseZipEntries(buffer);
       assertNotArchiveBomb(parsed);
 
-      // Count slides
       let count = 0;
       let notesCount = 0;
       for (const info of parsed.entryInfos) {
@@ -146,11 +143,9 @@ export class PptxInspectorService {
         );
       }
 
-      // Try to parse presentation size from ppt/presentation.xml if present
       const presXml = parsed.entries.get('ppt/presentation.xml');
       if (presXml) {
         const text = presXml.toString('utf8');
-        // <p:sldSz cx="..." cy="..."/>
         const match = text.match(
           /<p:sldSz[^>]*cx="(\d+)"[^>]*cy="(\d+)"|<p:sldSz[^>]*cy="(\d+)"[^>]*cx="(\d+)"/,
         );
@@ -158,23 +153,10 @@ export class PptxInspectorService {
           const cx = match[1] ? parseInt(match[1], 10) : parseInt(match[4], 10);
           const cy = match[2] ? parseInt(match[2], 10) : parseInt(match[3], 10);
           if (!isNaN(cx) && !isNaN(cy)) {
-            // EMU to approx pixels? 914400 EMU = 1 inch, assume 96 DPI -> pixels = EMU / 914400 * 96
             width = Math.round((cx / 914400) * 96);
             height = Math.round((cy / 914400) * 96);
           }
         }
-      }
-
-      // Verify essential PPTX entries exist to detect corrupt vs arbitrary zip
-      const hasContentTypes =
-        parsed.entries.has('[Content_Types].xml') ||
-        parsed.entryInfos.some((e) => e.fileName === '[Content_Types].xml');
-      const hasPresentation = parsed.entries.has('ppt/presentation.xml');
-      if (!hasContentTypes && !hasPresentation && count === 0) {
-        // Check if it's an empty zip or arbitrary zip without PPTX structure
-        // We already validated PK header, but if no PPTX structure, warn but still return slideCount 0?
-        // For strict validation, if no slide and no presentation, it's corrupt
-        // Instead of throwing, leave slideCount as 0 for inspector – parser will warn
       }
     } catch (err) {
       if (err instanceof BadRequestError) throw err;

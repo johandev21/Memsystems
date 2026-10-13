@@ -26,7 +26,6 @@ import {
   type CrawlerService,
 } from '../crawler/crawler.types';
 
-/** A normalized URL document plus the fetch provenance used for persistence. */
 export interface AcquiredUrlDocument extends NormalizedDocument {
   status?: number;
   httpContentType?: string;
@@ -54,10 +53,6 @@ export class SourceAcquisitionService {
     private readonly crawler?: CrawlerService,
   ) {}
 
-  /**
-   * Full URL pipeline: identifies YouTube video URLs and routes to dedicated adapter,
-   * or runs standard policy validation -> bounded fetch -> Readability extraction -> normalized document.
-   */
   async acquireUrl(
     input: string,
     options: AcquireUrlOptions = {},
@@ -83,7 +78,6 @@ export class SourceAcquisitionService {
       };
     }
 
-    // Default web fetch & scrape pipeline
     const validated = await this.policyService.validateUrl(input);
 
     if (this.crawler) {
@@ -92,9 +86,6 @@ export class SourceAcquisitionService {
         await this.crawler.scrape(requestedUrl),
         input,
       );
-      // A link-dense or very short main-content extraction is retried with
-      // the heuristic loosened, so pages whose article was misclassified
-      // still have a chance of being captured.
       if (this.needsLooserExtraction(document)) {
         const relaxed = await this.crawler
           .scrape(requestedUrl, { onlyMainContent: false })
@@ -129,7 +120,6 @@ export class SourceAcquisitionService {
     };
   }
 
-  /** Uploaded file pipeline: extraction -> normalized document. */
   async acquireFile(
     buffer: Buffer,
     contentType: string,
@@ -163,7 +153,6 @@ export class SourceAcquisitionService {
     });
   }
 
-  /** Pasted text pipeline: direct normalization. */
   fromText(rawText: string, title: string): NormalizedDocument {
     return this.normalizer.fromText(rawText, title);
   }

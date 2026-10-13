@@ -147,17 +147,6 @@ export class SourcesModule implements OnModuleInit {
     await this.ensureIndexingRepresentation();
   }
 
-  /**
-   * A representation version bump (or a switch of the embedding path)
-   * invalidates every stored chunk. Probe the configured embedding path
-   * first: if the key cannot use the contextual model, the probe flips the
-   * whole process to the fallback, so the representation key below rebuilds
-   * every Source with the model queries will use. Then fan out one
-   * reindex-all job exactly once, so no Source is left behind and no Source
-   * has to be reindexed by hand. Without a Voyage key the fan-out is
-   * deferred: indexing jobs would only fail and mark Sources failed, so the
-   * check retries on the next startup, after the key is configured.
-   */
   private async ensureIndexingRepresentation(): Promise<void> {
     try {
       const apiKey = await this.embeddingService.getVoyageApiKey();
@@ -171,8 +160,6 @@ export class SourcesModule implements OnModuleInit {
         ),
       );
     } catch (error) {
-      // A stale bookmark must never stop the app from booting; the check
-      // runs again on the next start.
       this.logger.warn(
         `Could not check the indexing representation: ${
           error instanceof Error ? error.message : String(error)

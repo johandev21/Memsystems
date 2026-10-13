@@ -37,7 +37,6 @@ export interface ParsedTabularResult {
   rawText: string;
 }
 
-/** Delimiter autodetection for delimited text */
 export function sniffDelimiter(text: string): string {
   const lines = text
     .slice(0, 4096)
@@ -53,7 +52,6 @@ export function sniffDelimiter(text: string): string {
   for (const delim of delimiters) {
     const counts = lines.map((line) => line.split(delim).length);
     const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
-    // Check if consistent across lines
     const isConsistent = counts.every((c) => c === counts[0] && c > 1);
     if (isConsistent && avg > maxCount) {
       maxCount = avg;
@@ -66,7 +64,6 @@ export function sniffDelimiter(text: string): string {
   return bestDelim;
 }
 
-/** RFC 4180 CSV / Delimited tokenizer */
 export function parseDelimitedText(text: string, delimiter = ','): string[][] {
   const rows: string[][] = [];
   let currentRow: string[] = [];
@@ -81,7 +78,7 @@ export function parseDelimitedText(text: string, delimiter = ','): string[][] {
       if (char === '"') {
         if (nextChar === '"') {
           currentField += '"';
-          i++; // Skip escaped quote
+          i++;
         } else {
           inQuotes = false;
         }
@@ -116,7 +113,6 @@ export function parseDelimitedText(text: string, delimiter = ','): string[][] {
     rows.push(currentRow);
   }
 
-  // Filter out trailing completely empty rows
   return rows.filter((r) => r.some((cell) => cell.length > 0));
 }
 
@@ -207,7 +203,6 @@ function buildMarkdownTable(
   return `${head}\n${sep}\n${body}`;
 }
 
-/** Converts column letter like "A", "B", "Z", "AA", "AB" to 0-based index */
 function colLetterToIndex(colStr: string): number {
   let index = 0;
   for (let i = 0; i < colStr.length; i++) {
@@ -218,10 +213,6 @@ function colLetterToIndex(colStr: string): number {
 
 @Injectable()
 export class TabularParserService {
-  /**
-   * Parses CSV, TSV, or XLSX tabular datasets into structured columns, types,
-   * summary statistics, and markdown table views.
-   */
   parse(input: Buffer | string, fileName = 'dataset.csv'): ParsedTabularResult {
     const ext = getFileExtension(fileName);
     const title = fileName.replace(/\.[a-z0-9]+$/i, '');
@@ -282,9 +273,6 @@ export class TabularParserService {
     };
   }
 
-  /**
-   * Parses OpenXML XLSX workbook archive using zip-helpers and XML parsing.
-   */
   private parseXlsxBuffer(
     buffer: Buffer,
     fileName: string,
@@ -300,14 +288,12 @@ export class TabularParserService {
       );
     }
 
-    // 1. Parse Shared Strings
     const sharedStrings: string[] = [];
     const sharedStrBuf = zip.entries.get('xl/sharedStrings.xml');
     if (sharedStrBuf) {
       const xml = sharedStrBuf.toString('utf-8');
       const siMatches = xml.match(/<si>[\s\S]*?<\/si>/g) || [];
       for (const si of siMatches) {
-        // Extract all <t>...</t> tags inside <si>
         const tMatches = si.match(/<t(?:\s+[^>]*)?>([\s\S]*?)<\/t>/g) || [];
         const text = tMatches
           .map((t) => t.replace(/<t(?:\s+[^>]*)?>|<\/t>/g, ''))
@@ -316,7 +302,6 @@ export class TabularParserService {
       }
     }
 
-    // 2. Parse Workbook Sheet Names
     const sheetMap: { name: string; path: string }[] = [];
     const wbBuf = zip.entries.get('xl/workbook.xml');
     if (wbBuf) {
@@ -334,7 +319,6 @@ export class TabularParserService {
       }
     }
 
-    // Fallback if workbook sheet map is empty: look for all xl/worksheets/sheet*.xml
     if (sheetMap.length === 0) {
       for (const key of zip.entries.keys()) {
         if (/^xl\/worksheets\/sheet\d+\.xml$/i.test(key)) {
@@ -357,7 +341,6 @@ export class TabularParserService {
       const dimMatch = xml.match(/<dimension\s+ref="([^"]+)"/);
       const cellRange = dimMatch ? dimMatch[1] : 'A1';
 
-      // Parse rows
       const rowMatches = xml.match(/<row\s+[^>]*>[\s\S]*?<\/row>/g) || [];
       const sheetRows: string[][] = [];
 
@@ -385,12 +368,10 @@ export class TabularParserService {
               val = sharedStrings[strIdx] ?? val;
             }
           } else {
-            // Inline string
             const isMatch = c.match(/<is><t>([\s\S]*?)<\/t><\/is>/);
             if (isMatch) val = isMatch[1];
           }
 
-          // Expand row array to column index
           while (rowCells.length <= colIdx) {
             rowCells.push('');
           }

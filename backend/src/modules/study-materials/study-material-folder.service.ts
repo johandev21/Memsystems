@@ -136,7 +136,6 @@ export class StudyMaterialFolderService {
     }
 
     const now = new Date();
-    // Single bulk update is atomic; transaction ensures no partial state if future logic adds steps
     const doDelete = async (executor: typeof this.db) => {
       await executor
         .update(studyMaterialFolders)
@@ -144,7 +143,6 @@ export class StudyMaterialFolderService {
         .where(inArray(studyMaterialFolders.id, descendantFolderIds));
     };
 
-    // Use transaction when available for strict atomicity
     const maybeTx = (
       this.db as unknown as {
         transaction?: (
@@ -173,7 +171,6 @@ export class StudyMaterialFolderService {
     const folderId = typeof arg === 'string' ? arg : arg.id;
     const notebookId = typeof arg === 'string' ? null : arg.notebookId;
 
-    // Efficient: one query for all active folders of the notebook, then in-memory BFS
     if (notebookId) {
       const allFolders = await this.db
         .select({
@@ -207,7 +204,6 @@ export class StudyMaterialFolderService {
       return ids;
     }
 
-    // Fallback recursive for legacy string-only call (N+1) — kept for wouldCreateCycle style callers if ever used
     const ids: string[] = [folderId];
     const children = await this.db
       .select({ id: studyMaterialFolders.id })

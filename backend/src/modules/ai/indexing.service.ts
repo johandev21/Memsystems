@@ -15,19 +15,8 @@ import { DRIZZLE } from '../database/database.module';
 import { ChunkingService, CHUNKING_VERSION } from './chunking.service';
 import { EmbeddingService, EMBEDDING_DIMENSIONS } from './embedding.service';
 
-/**
- * Bump when the chunk/embed/replace workflow changes; used for idempotency.
- * Version 2 is the structure-aware chunking plus contextual chunk embedding
- * representation (see also `CHUNKING_VERSION` in chunking.service.ts).
- */
 export const INDEX_PROCESSING_VERSION = 2;
 
-/**
- * The representation key recorded in `app_settings` after a reindex-all run:
- * the chunking and indexing versions plus the effective embedding model and
- * dimensions. A mismatch means stored chunks predate the running
- * representation and must be rebuilt.
- */
 export function indexingRepresentationKey(
   embeddingModel: string,
   dimensions: number,
@@ -35,7 +24,6 @@ export function indexingRepresentationKey(
   return `chunking=${CHUNKING_VERSION};indexing=${INDEX_PROCESSING_VERSION};model=${embeddingModel};dims=${dimensions}`;
 }
 
-/** Reads the heading path a segment persisted in its metadata. */
 function headingPathOf(metadata: SourceSegmentMetadata | null): string[] {
   const value = metadata?.headingPath;
   if (!Array.isArray(value)) return [];
@@ -46,13 +34,10 @@ const CHUNK_INSERT_BATCH = 200;
 
 export interface IndexResult {
   chunksCount: number;
-  /** True when the source was missing or produced no chunks. */
   skipped: boolean;
-  /** True when a cancellation/supersession invalidated the indexing attempt. */
   cancelled: boolean;
   contentHash: string | null;
   processingVersion: number;
-  /** The chunk representation the stored chunks were built with. */
   chunkingVersion: number;
   embeddingModel: string;
   embeddingDimensions: number;
@@ -68,11 +53,6 @@ export class IndexingService {
     private readonly embeddingService: EmbeddingService,
   ) {}
 
-  /**
-   * Chunks a source, generates embeddings, and atomically replaces the
-   * previous chunk set. The old chunks remain untouched until new embeddings
-   * have been generated successfully.
-   */
   async indexSource(
     sourceId: string,
     requestedVersionId?: string,
@@ -135,8 +115,6 @@ export class IndexingService {
       return this.emptyResult(source.contentHash ?? null, sourceVersionId);
     }
 
-    // One Source's ordered chunks are embedded as one contextual group, so
-    // every chunk encodes its document context.
     const embedding = await this.embeddingService.embedDocumentGroups([
       chunks.map((chunk) => chunk.searchableText),
     ]);
@@ -155,9 +133,6 @@ export class IndexingService {
     }
 
     const replaced = await this.db.transaction(async (tx) => {
-      // Cancellation and supersession update the job before the source. Keep
-      // the same lock order here so a cancellation that committed before this
-      // transaction began is observed before any old chunks are removed.
       if (jobId) {
         const [job] = await tx
           .select({ status: jobs.status })
@@ -178,10 +153,6 @@ export class IndexingService {
         .where(eq(sources.id, sourceId))
         .for('update');
 
-      // The source/version snapshot used for embedding must still be current.
-      // In particular, a raw-text job has a null version fence: a newly
-      // persisted version must invalidate it just as a changed version id
-      // invalidates a versioned job.
       if (
         !currentSource ||
         currentSource.processingStatus === 'cancelled' ||

@@ -117,7 +117,7 @@ export class NotebooksController {
       try {
         focalPoint = JSON.parse(focalPointRaw) as { x: number; y: number };
       } catch {
-        // Ignore malformed focal point JSON
+        void 0;
       }
     }
 

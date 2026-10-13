@@ -165,7 +165,6 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
     return this.mapJob<TPayload, TResult>(row);
   }
 
-  /** Enqueue a child only while its parent remains in processing state. */
   async enqueueIfActive<TPayload, TResult = unknown>(
     parentJobId: string,
     type: string,
@@ -275,8 +274,6 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
 
   async deleteByGroup(groupKey: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      // Keep cancelled in-flight rows until their handlers return, so a
-      // handler cannot mistake a deleted row for an active one.
       await tx
         .update(jobs)
         .set({ status: 'cancelled' })

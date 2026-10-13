@@ -17,78 +17,37 @@ import {
 import type { RetrievalTrace } from '../ai/retrieval-trace';
 import type { StudyMaterialKind } from './shapes';
 
-/**
- * How many chunks one selected Source contributes to a Generation. Retrieval
- * is planned per section (below), and the per-source budget is spent round
- * robin across those passes, so a long Source's evidence spans its whole
- * range instead of clustering at the head.
- */
 export const GENERATION_EVIDENCE_CHUNKS_PER_SOURCE = 16;
 
-/**
- * Retrieval passes planned per Source. One pass per section, capped: a source
- * with more sections than the cap has its sections grouped into that many
- * contiguous buckets, each searched with the bucket's headings, so no section
- * is silently dropped from the plan.
- */
 export const GENERATION_MAX_SECTION_PASSES_PER_SOURCE = 8;
 
-/**
- * Retrieval passes per Generation across every selected Source. The cap is
- * soft: it is divided evenly across the selected sources, but every source
- * keeps at least one pass so no selected source is dropped from the plan.
- * Above this many sources the total exceeds the number; the grounding logs
- * that instead of silently trimming the selection.
- */
 export const GENERATION_MAX_RETRIEVAL_PASSES = 16;
 
-/**
- * Retrieval calls run concurrently up to this bound. Each pass is an
- * embedding call plus a cross-encoder call against the provider, so the bound
- * keeps a many-section Generation from hammering the provider while still
- * completing well inside the stream's stall timeout.
- */
 export const GENERATION_RETRIEVAL_CONCURRENCY = 4;
 
-/** A pass query is a search query, not an essay; cap it like the rewriter does. */
 export const GENERATION_MAX_PASS_QUERY_CHARS = 600;
 
-/** The total source text a Generation prompt carries. */
 export const GENERATION_MAX_PROMPT_SOURCE_CHARS = 100_000;
 
-/** One selected Source with the evidence retrieved for it. */
 export interface GroundedSource {
   id: string;
   title: string;
   kind: string;
   url: string | null;
-  /** Evidence in chunk order, the order citations and the trace report it. */
   chunks: RetrievedChunk[];
-  /**
-   * Evidence in the order the prompt presents it: round robin across the
-   * source's retrieval passes, so the first blocks span sections and a prompt
-   * budget cut costs every section a little instead of lopping off the tail.
-   */
   promptChunks: RetrievedChunk[];
 }
 
-/** A selected Source that contributed no evidence to the Generation. */
 export interface UnavailableSource {
   id: string;
   title: string;
   kind: string;
 }
 
-/**
- * The grounding a Generation is built from: the evidence per source, the flat
- * evidence list with its citation keys, the selected sources that could not
- * contribute, and one retrieval trace per pass.
- */
 export interface GenerationGrounding {
   sources: GroundedSource[];
   evidence: CitationEvidence[];
   unavailableSources: UnavailableSource[];
-  /** Selected sources that are marked degraded at ingestion. */
   degradedSources: UnavailableSource[];
   traces: RetrievalTrace[];
 }
@@ -100,7 +59,6 @@ export interface GenerationGroundingRequest {
   sourceIds: string[];
 }
 
-/** A section of a selected source, as the chunk metadata describes it. */
 interface SourceSection {
   headingPath: string[];
 }
@@ -110,13 +68,6 @@ interface PlannedPass {
   query: string;
 }
 
-/**
- * Plans and runs the retrieval passes a Generation is grounded on. The
- * retrieval pipeline remains the only selector of Evidence: this module only
- * decides which queries to run (the brief, plus one pass per section of every
- * selected source) and how to spend the per-source evidence budget across
- * them. It never reads chunk bodies to build Evidence.
- */
 @Injectable()
 export class GenerationGroundingService {
   private readonly logger = new Logger(GenerationGroundingService.name);
@@ -186,8 +137,6 @@ export class GenerationGroundingService {
     );
 
     const passes: PlannedPass[] = [];
-    // A Generation without a brief still needs a topical query; the material
-    // kind is the only signal available, so it stands in for the topic.
     const topic = request.brief.trim() || request.kind.replaceAll('_', ' ');
     for (const sourceId of selectedIds) {
       const source = sourceById.get(sourceId);
@@ -216,9 +165,6 @@ export class GenerationGroundingService {
             query: pass.query,
             sourceIds: [pass.sourceId],
             topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
-            // Selected sources are in scope by definition; the relevance
-            // floor and rerank threshold only gate Notebook-wide Evidence
-            // for Chat.
             relevanceFloor: 0,
             rerankThreshold: 0,
           } satisfies RetrievalRequest),
@@ -236,8 +182,6 @@ export class GenerationGroundingService {
       const passIndexes = passes.flatMap((pass, index) =>
         pass.sourceId === sourceId ? [index] : [],
       );
-      // `selectPerPass` returns the chunks in round-robin order across the
-      // passes; that is the order the prompt presents them in.
       const promptChunks = selectPerPass(
         chunksByPass,
         passIndexes,
@@ -290,12 +234,6 @@ export function emptyGrounding(): GenerationGrounding {
   };
 }
 
-/**
- * Plans one retrieval pass per section of a source, grouped into at most
- * `maxPasses` contiguous buckets ordered by chunk position. The query names
- * the source and the bucket's headings, so the pass retrieves that part of
- * the source rather than a single head-weighted set.
- */
 function planPasses(
   source: { id: string; title: string },
   sections: SourceSection[],
@@ -342,13 +280,6 @@ function buildPassQuery(
     .trim();
 }
 
-/**
- * Spends a source's evidence budget round robin across its retrieval passes:
- * the best chunk of each pass first, then the second best, and so on. A long
- * source therefore keeps a foothold in every section it was planned from
- * instead of letting one section fill the budget, and the returned order is
- * also the prompt order.
- */
 function selectPerPass(
   chunksByPass: RetrievedChunk[][],
   passIndexes: number[],
@@ -377,38 +308,17 @@ const BLOCK_SEPARATOR = '\n\n';
 
 export interface FormattedGroundedSourceText {
   text: string;
-  /** Evidence blocks the prompt budget excluded, across all sources. */
   droppedBlocks: number;
-  /** Source ids whose excerpt was cut mid-block to fit the budget. */
   truncatedSourceIds: string[];
-  /**
-   * Chunk ids the prompt renders, complete or truncated. The evaluation uses
-   * this to measure what the model could actually see and cite.
-   */
   renderedChunkIds: string[];
-  /** Chunk ids cut mid-block by the budget. */
   truncatedChunkIds: string[];
 }
 
 export interface FormatGroundedSourceTextOptions {
-  /** Hard cap on the whole source block. Defaults to the Generation budget. */
   maxChars?: number;
-  /**
-   * Print the `Source ID` line. The kinds whose content references sourceIds
-   * (study guide, practice problems, case study) need it; the others do not,
-   * and it only spends prompt budget.
-   */
   includeSourceId?: boolean;
 }
 
-/**
- * Formats the grounding for the Generation prompt. Each retrieved chunk is
- * labeled with its evidence key so the model can cite it, each source's
- * blocks are presented in the round-robin order the grounding planned, and
- * the budget is split fairly across the selected sources so the total never
- * exceeds the cap. Blocks the budget excluded and excerpts it cut are
- * reported, so a truncation is never silent.
- */
 export function formatGroundedSourceText(
   grounding: Pick<GenerationGrounding, 'sources' | 'evidence'>,
   options: FormatGroundedSourceTextOptions = {},
@@ -441,10 +351,6 @@ export function formatGroundedSourceText(
     ),
   );
 
-  // The headers, section separators, and per-section block separator come out
-  // of the budget first, then what is left is split evenly. The arithmetic
-  // makes the cap hard: the total of the sections can never exceed
-  // headers + separators + sources * share.
   const headerChars = sources.reduce(
     (sum, source) => sum + headerOf(source).length,
     0,
@@ -478,8 +384,6 @@ export function formatGroundedSourceText(
         continue;
       }
       if (kept.length === 0 && share > 0) {
-        // The first block does not fit the share: keep a truncated excerpt so
-        // the source still has a foothold, and record the cut.
         kept.push(block.text.slice(0, share));
         renderedChunkIds.push(block.chunkId);
         truncatedChunkIds.push(block.chunkId);
@@ -498,8 +402,6 @@ export function formatGroundedSourceText(
   }
 
   let text = sections.join(SOURCE_SEPARATOR);
-  // Defensive: the accounting above already keeps the total within the cap,
-  // but the prompt contract is a hard cap, so never exceed it.
   if (text.length > maxChars) text = text.slice(0, maxChars);
 
   return {
@@ -519,7 +421,6 @@ function formatEvidenceBlock(
   return citationKey ? `[Evidence ${citationKey}]\n${body}` : body;
 }
 
-/** Runs the tasks with a bounded number in flight, preserving result order. */
 async function runWithConcurrency<T>(
   tasks: (() => Promise<T>)[],
   limit: number,

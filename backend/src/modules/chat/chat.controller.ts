@@ -110,7 +110,6 @@ export class ChatController {
         },
       );
 
-      // Pipe Web Response headers & body directly to Express Response
       res.status(streamResponse.status);
       streamResponse.headers.forEach((value, key) => {
         res.setHeader(key, value);

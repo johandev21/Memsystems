@@ -45,18 +45,10 @@ import type {
 
 export type { RetrievalAbstentionReason } from './retrieval-trace';
 
-/** Sources named in a no-evidence reply, capped to keep the reply readable. */
 const MAX_UNHELPFUL_SOURCES = 5;
 
-/**
- * Cap on the lexemes OR-ed into one lexical query, so a long message cannot
- * build an unbounded tsquery. Lexemes come from the parser in lexicographic
- * order, which keeps the selection deterministic; ordinary questions stay
- * well below the cap.
- */
 const MAX_LEXICAL_TERMS = 64;
 
-/** Location metadata carried from a source segment into an index chunk. */
 export interface CitationLocator {
   pageNumber?: number;
   slideNumber?: number;
@@ -82,17 +74,7 @@ export interface RetrievedChunk {
   sourceId: string;
   title: string;
   content: string;
-  /**
-   * The heading path of the chunk's section, empty when assembly did not
-   * carry section context. It is what the model-facing passage shows as
-   * `Section:` and what a citation can display as its location context.
-   */
   sectionPath: string[];
-  /**
-   * The dense retrieval score (cosine similarity). Reranking reorders chunks
-   * but never overwrites this value. The score is trace-only: it is no longer
-   * shown in the Evidence block the model reads.
-   */
   score: number;
   url: string | null;
   kind: string;
@@ -102,7 +84,6 @@ export interface RetrievedChunk {
 
 export const DEFAULT_TOP_K = 8;
 
-/** The distinct source behind candidates that did not clear the threshold. */
 export interface UnhelpfulSource {
   id: string;
   title: string;
@@ -110,12 +91,6 @@ export interface UnhelpfulSource {
   url: string | null;
 }
 
-/**
- * The retrieval outcome. A normal result carries the Evidence chunks; an
- * abstention carries no chunks, a reason, and the sources whose candidates
- * failed the applied threshold so the Chat can name them. Every outcome
- * carries the structured trace that callers persist for diagnosis.
- */
 export interface RetrievalResult {
   chunks: RetrievedChunk[];
   abstained: boolean;
@@ -127,88 +102,38 @@ export interface RetrievalOutcome extends RetrievalResult {
   trace: RetrievalTrace;
 }
 
-/**
- * One call through the retrieval pipeline. Chat searches the whole Notebook;
- * Study Material Generation restricts the search to the selected sources,
- * where `topK` bounds each source independently so every selected source
- * contributes its best chunks.
- */
 export interface RetrievalRequest {
   notebookId: string;
   query: string;
   topK?: number;
   sourceIds?: string[];
-  /**
-   * Recent turns the rewrite may resolve follow-up references from, oldest
-   * first. Chat passes its last few messages; Generation passes none.
-   */
   history?: RetrievalHistoryTurn[];
-  /** Overrides the configured floor for this call (grounding may pass 0). */
   relevanceFloor?: number;
-  /** Overrides the configured rerank threshold (grounding may pass 0). */
   rerankThreshold?: number;
-  /**
-   * Overrides the configured evidence token budget for this call. Callers
-   * that know the answering model's context window can bound the Evidence to
-   * a conservative fraction of it; when unset, the configured budget stands.
-   */
   tokenBudget?: number;
 }
 
-/** Minimum cosine similarity for a chunk to serve as Evidence. */
 export interface RetrievalRelevanceConfig {
   relevanceFloor: number;
 }
 
-/**
- * Documented default for the relevance floor. Cosine similarity below this
- * value is treated as unrelated material, not as weak Evidence. It is the
- * threshold applied when reranking is unavailable; a reranked Evidence set
- * is gated by the rerank threshold instead.
- */
 export const DEFAULT_RELEVANCE_FLOOR = 0.3;
 
 export const RETRIEVAL_RELEVANCE_CONFIG = 'RETRIEVAL_RELEVANCE_CONFIG';
 
-/**
- * Documented default for how many candidates each retrieval leg over-fetches
- * before the legs are fused, near-duplicates are removed, and the survivors
- * are reranked. Four times the default top-k is deep enough for the reranker
- * to promote a passage a leg ranked low, without paying for hundreds of
- * documents.
- */
 export const DEFAULT_CANDIDATE_DEPTH = 32;
 
-/**
- * Documented default for the Reciprocal Rank Fusion smoothing constant. The
- * original RRF paper's k = 60 is deliberately high: it flattens the
- * contribution of the very top ranks so one leg's first place cannot dominate
- * the fused order.
- */
 export const DEFAULT_FUSION_K = 60;
 
-/**
- * Documented default reranker. `rerank-2.5` is the provider's recommended
- * quality model; `rerank-2.5-lite` is the cheaper alternative.
- */
 export const DEFAULT_RERANK_MODEL = 'rerank-2.5';
 
-/**
- * Documented default for the rerank threshold. The provider scores
- * relevance from 0 to 1; its published examples place clearly relevant
- * passages well above 0.4 and unrelated passages around 0.25–0.3, so 0.4
- * drops unrelated material while keeping borderline passages. Tune it on
- * the evaluation set (see docs/retrieval-evaluation.md).
- */
 export const DEFAULT_RERANK_THRESHOLD = 0.4;
 
-/** The reranking stage's knobs and the Evidence bound it selects. */
 export interface RetrievalRerankConfig {
   enabled: boolean;
   model: string;
   candidateDepth: number;
   threshold: number;
-  /** Final Evidence depth; per source when the scope is selected sources. */
   topK: number;
 }
 
@@ -222,24 +147,12 @@ export const DEFAULT_RERANK_CONFIG: RetrievalRerankConfig = {
   topK: DEFAULT_TOP_K,
 };
 
-/**
- * Hybrid retrieval's knobs: the lexical leg and the Reciprocal Rank Fusion it
- * feeds. The lexical leg runs over the chunk's generated `search_vector`,
- * which uses the `simple` configuration — no stemming and no stop words — so
- * identifiers and mixed-language terms are matched exactly.
- */
 export interface RetrievalHybridConfig {
-  /** Whether the lexical leg runs and contributes to the fusion. */
   enabled: boolean;
-  /** RRF smoothing constant; higher values flatten the rank contribution. */
   fusionK: number;
-  /** The dense leg's fusion weight in [0, 1]. */
   denseWeight: number;
-  /** The lexical leg's fusion weight in [0, 1]. */
   lexicalWeight: number;
-  /** Dense-leg over-fetch override; null uses the configured candidate depth. */
   denseCandidateDepth: number | null;
-  /** Lexical-leg over-fetch override; null uses the configured candidate depth. */
   lexicalCandidateDepth: number | null;
 }
 
@@ -254,7 +167,6 @@ export const DEFAULT_HYBRID_CONFIG: RetrievalHybridConfig = {
   lexicalCandidateDepth: null,
 };
 
-/** Reads the relevance floor from the environment, falling back to the default. */
 export function loadRetrievalRelevanceConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RetrievalRelevanceConfig {
@@ -267,13 +179,6 @@ export function loadRetrievalRelevanceConfig(
   };
 }
 
-/**
- * Reads the reranking configuration from the environment, falling back to
- * the documented defaults for anything unset or invalid. Candidate depth is
- * clamped to the provider's per-request document limit; a candidate set that
- * still exceeds it (many selected sources over-fetch in parallel) skips
- * reranking rather than sending an over-limit request.
- */
 export function loadRetrievalRerankConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RetrievalRerankConfig {
@@ -294,13 +199,6 @@ export function loadRetrievalRerankConfig(
   };
 }
 
-/**
- * Reads the hybrid retrieval configuration from the environment, falling
- * back to the documented defaults for anything unset or invalid. Weights are
- * ratios in [0, 1]; a weight of 0 removes that leg from the fusion. A per-leg
- * depth override is clamped to the provider's document limit; an unset
- * override keeps the shared candidate depth.
- */
 export function loadRetrievalHybridConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RetrievalHybridConfig {
@@ -339,28 +237,18 @@ interface RetrievalChunkRow {
   source_version_id: string | null;
   locator: CitationLocator | null;
   content: string;
-  /** The heading path of the chunk's section; null on legacy chunks. */
   heading_path: string[] | null;
-  /** Contextual searchable text; what the reranker scores. */
   searchable_text: string;
-  /** The leg's own score: cosine similarity or `ts_rank_cd`. */
   score: number;
-  /**
-   * Cosine similarity, selected by the lexical leg too so a lexical-only
-   * candidate still has a dense relevance signal for the floor and Evidence.
-   */
   dense_score?: number | null;
 }
 
-/** One candidate after fusion, with its cross-encoder score when reranked. */
 interface RankedCandidate {
   row: RetrievalChunkRow;
-  /** The Reciprocal Rank Fusion score that ordered the candidate. */
   fusedScore: number;
   rerankScore: number | null;
 }
 
-/** The resolved knobs one `retrieve` call runs with. */
 interface RetrievalPolicy {
   topK: number;
   sourceIds: string[] | null;
@@ -371,31 +259,13 @@ interface RetrievalPolicy {
 interface RerankOutcome {
   applied: boolean;
   skippedReason: RetrievalRerankSkippedReason | null;
-  /** Candidates in final order; fused order when reranking did not apply. */
   candidates: RankedCandidate[];
-  /** Cross-encoder scores in reranked order; empty when not applied. */
   traceCandidates: RetrievalTraceRerankedCandidate[];
   inputTokens: number;
 }
 
-/**
- * Token-set Jaccard similarity at or above which two candidates are treated
- * as near-duplicates. Re-ingesting the same content, or importing the same
- * page twice, produces chunks that share almost every token; the threshold
- * keeps genuinely overlapping chunks (partial repetition) in the candidate
- * set.
- */
 const NEAR_DUPLICATE_SIMILARITY = 0.9;
 
-/**
- * The single retrieval pipeline entry point. It composes the retrieval
- * stages (query embedding, dense and lexical search legs, reciprocal rank
- * fusion, near-duplicate removal, reranking, relevance threshold, top-k
- * selection) and returns both the Evidence and the trace that explains how
- * it was chosen. Chat and Study Material Generation both call this; later
- * retrieval tickets change the stages behind it rather than adding call
- * sites.
- */
 @Injectable()
 export class RetrievalService {
   private readonly logger = new Logger(RetrievalService.name);
@@ -434,7 +304,6 @@ export class RetrievalService {
     this.evidenceConfig = evidenceConfig ?? DEFAULT_EVIDENCE_CONFIG;
   }
 
-  /** The model the query embedding used, for the retrieval trace. */
   private embeddingModelName(): string {
     return this.embeddingService.queryEmbeddingModel();
   }
@@ -447,9 +316,6 @@ export class RetrievalService {
       rerankThreshold: request.rerankThreshold ?? this.rerankConfig.threshold,
       sourceIds: request.sourceIds ? [...request.sourceIds] : null,
     };
-    // The reranker needs candidates the legs ranked below the requested
-    // top-k, so over-fetch at least the configured candidate depth. Each leg
-    // can override that depth independently.
     const candidateDepth = Math.max(
       this.rerankConfig.candidateDepth,
       policy.topK,
@@ -462,8 +328,6 @@ export class RetrievalService {
       this.hybridConfig.lexicalCandidateDepth ?? candidateDepth,
       policy.topK,
     );
-    // The fusion record is also what an empty outcome reports, so it is
-    // built once the number of query variants is known.
     const buildFusion = (variants: number): RetrievalTraceFusion => ({
       k: this.hybridConfig.fusionK,
       weights: {
@@ -477,8 +341,6 @@ export class RetrievalService {
       variants,
     });
 
-    // An explicitly empty selection can never match a chunk, and there is
-    // nothing for query understanding to search.
     if (policy.sourceIds && policy.sourceIds.length === 0) {
       return this.emptyOutcome(request, policy, {
         fusion: buildFusion(1),
@@ -489,10 +351,6 @@ export class RetrievalService {
       });
     }
 
-    // Query understanding runs before the legs: it decides whether the
-    // message is worth rewriting, resolves follow-up references from the
-    // recent turns, and can contribute paraphrases and a hypothetical
-    // answer. Its decision is recorded in the trace either way.
     const understanding = this.queryUnderstanding
       ? await this.queryUnderstanding.understand({
           message: request.query,
@@ -503,14 +361,8 @@ export class RetrievalService {
     const rewrite = traceRewrite(understanding, request.query);
     const fusion = buildFusion(queries.length);
 
-    // Every query variant runs the same legs over the same scope and fuses
-    // into one candidate list. The reranker and the Evidence threshold see
-    // the fused list, so a paraphrase can add candidates the primary query's
-    // legs never returned.
     const legRuns = await Promise.all(
       queries.map(async (query, variant) => {
-        // The primary variant embeds the hypothetical answer instead of the
-        // query when the stage produced one; paraphrases embed themselves.
         const embedded =
           variant === 0 && understanding.hypotheticalAnswer
             ? understanding.hypotheticalAnswer
@@ -537,12 +389,6 @@ export class RetrievalService {
       }),
     );
 
-    // Every variant contributes an equal share: with N variants each leg's
-    // weight is divided by N, so the total RRF score is comparable to a
-    // single-query run but no variant is privileged. The tradeoff is that a
-    // paraphrase-only candidate ranked by both of its legs can outrank a
-    // primary-query candidate ranked by one. With a single query the weights
-    // are exactly the configured leg weights.
     const variantWeight = 1 / legRuns.length;
     const legs: {
       kind: RetrievalTraceLeg['kind'];
@@ -579,7 +425,6 @@ export class RetrievalService {
       (row) => row.chunk_id,
       this.hybridConfig.fusionK,
     );
-    // Every embedded text is billed, including a hypothetical answer.
     const embeddingInputTokens = legRuns.reduce(
       (sum, run) => sum + estimateVoyageTokens(run.embedded),
       0,
@@ -599,17 +444,12 @@ export class RetrievalService {
       });
     }
 
-    // The fused order feeds reranking; near-duplicates are removed first so
-    // the reranker never scores the same passage twice.
     const deduped = dedupeNearDuplicates(fused);
     const fusedOrder = deduped.map((candidate, index) =>
       traceCandidate(candidate.candidate, index + 1, candidate.score),
     );
 
     const rerank = await this.rerankCandidates(queries[0], deduped);
-    // Reranking gates Evidence on the cross-encoder score; without it, the
-    // dense cosine floor is the gate, so a lexical-only candidate that is
-    // semantically distant is dropped rather than padding the answer.
     const threshold = rerank.applied
       ? policy.rerankThreshold
       : policy.relevanceFloor;
@@ -620,11 +460,6 @@ export class RetrievalService {
       else below.push(chunkFromRow(candidate.row, []));
     }
 
-    // Assembly turns the above-threshold candidates into the Evidence set the
-    // model reads: overlapping passages collapse, a Source cannot fill the
-    // set, selected passages carry their section context, and the whole set
-    // stays inside the token budget. The assembly is deterministic, so the
-    // same candidates always produce the same Evidence order.
     const evidenceConfig: RetrievalEvidenceConfig = {
       ...this.evidenceConfig,
       tokenBudget: request.tokenBudget ?? this.evidenceConfig.tokenBudget,
@@ -699,7 +534,6 @@ export class RetrievalService {
     };
   }
 
-  /** An empty retrieval outcome: no chunks, an explicit reason, a full trace. */
   private emptyOutcome(
     request: RetrievalRequest,
     policy: RetrievalPolicy,
@@ -707,7 +541,6 @@ export class RetrievalService {
       legs?: RetrievalTraceLeg[];
       fusion: RetrievalTraceFusion;
       rewrite: RetrievalTraceRewrite | null;
-      /** Tokens the rewrite model spent; 0 when it did not run. */
       rewriteInputTokens?: number;
       rewriteOutputTokens?: number;
       abstentionReason: RetrievalAbstentionReason;
@@ -751,11 +584,6 @@ export class RetrievalService {
     };
   }
 
-  /**
-   * Reranks the fused candidates with the cross-encoder. Any provider
-   * failure — or an unconfigured key — degrades to the fused order so the
-   * turn still answers; the trace records why.
-   */
   private async rerankCandidates(
     query: string,
     fused: FusedCandidate<RetrievalChunkRow>[],
@@ -776,9 +604,6 @@ export class RetrievalService {
 
     if (!this.rerankConfig.enabled) return fallback('disabled');
     if (!this.reranker) return fallback('unavailable');
-    // The provider caps a request at 1,000 documents. Selected-source scopes
-    // over-fetch per source, so many selected sources can exceed that even
-    // with candidate depth clamped; degrade rather than send an invalid call.
     if (fused.length > MAX_RERANK_DOCUMENTS) {
       return fallback('too_many_candidates');
     }
@@ -787,10 +612,6 @@ export class RetrievalService {
     try {
       response = await this.reranker.rerank({
         query,
-        // Score the contextual searchable text, not just the body: a chunk
-        // that refers to "the second argument" is only judgeable with its
-        // section and document context in view. The stored body still stays
-        // the text shown to the model and used for citations.
         documents: fused.map(({ candidate }) => candidate.searchable_text),
         model: this.rerankConfig.model,
       });
@@ -831,7 +652,6 @@ export class RetrievalService {
     };
   }
 
-  /** The dense leg: nearest neighbours by cosine similarity. */
   private async searchDense(
     notebookId: string,
     embedding: number[],
@@ -846,21 +666,11 @@ export class RetrievalService {
           ${chunkColumns()},
           1 - (sc.embedding <=> ${vectorLiteral}::vector) AS score
         `,
-        // Ordering on the distance keeps the HNSW index usable.
         rank: sql`sc.embedding <=> ${vectorLiteral}::vector`,
       },
     );
   }
 
-  /**
-   * The lexical leg: full-text candidates ranked by `ts_rank_cd`. The tsquery
-   * is built by the database's own parser so a term is lexed exactly as it
-   * was indexed — `RFC-2616` becomes the same lexemes on both sides — and the
-   * terms are OR-ed. `ts_rank_cd` then orders by cover density: how many of
-   * the query's lexemes a chunk contains and how close together they are. The
-   * leg also selects the cosine similarity, so a lexical-only candidate still
-   * carries a dense relevance signal.
-   */
   private async searchLexical(
     notebookId: string,
     query: string,
@@ -900,24 +710,13 @@ export class RetrievalService {
     );
   }
 
-  /**
-   * Runs one leg over the resolved scope. Both legs share the same filters —
-   * notebook, non-degraded sources, and the selected source ids — so a
-   * filter can never apply to one candidate list but not the other. The
-   * per-source scope bounds each selected source independently.
-   */
   private async runLegSearch(
     search: { notebookId: string; depth: number; sourceIds: string[] | null },
     leg: {
-      /** Leading CTE the projection and predicate reference, if any. */
       cte?: SQL;
-      /** Extra FROM/JOIN fragment the projection depends on. */
       join?: SQL;
-      /** Extra WHERE predicate, starting with AND, if any. */
       predicate?: SQL;
-      /** The leg's SELECT columns, including its score columns. */
       projection: SQL;
-      /** The leg's ordering expression, best first. */
       rank: SQL;
     },
   ): Promise<RetrievalChunkRow[]> {
@@ -972,7 +771,6 @@ export class RetrievalService {
   }
 }
 
-/** The columns every leg selects; the leg appends its own score columns. */
 function chunkColumns(): SQL {
   return sql`
     sc.id AS chunk_id,
@@ -1041,7 +839,6 @@ function buildTrace(input: {
   };
 }
 
-/** The resolved Evidence-assembly knobs as the trace records them. */
 function evidenceKnobs(config: RetrievalEvidenceConfig): {
   overlapThreshold: number;
   maxPerSource: number;
@@ -1056,11 +853,6 @@ function evidenceKnobs(config: RetrievalEvidenceConfig): {
   };
 }
 
-/**
- * Projects the assembly result onto the trace. Dropped candidates carry the
- * rank and fused score they held among the above-threshold candidates, so a
- * diagnosis can tell which passage displaced them.
- */
 function traceEvidence(
   assembly: EvidenceAssembly,
   config: RetrievalEvidenceConfig,
@@ -1093,10 +885,6 @@ function traceEvidence(
   };
 }
 
-/**
- * The empty-outcome Evidence record: the resolved knobs with nothing
- * assembled, so the trace never omits why the set is empty.
- */
 function emptyTraceEvidence(
   config: RetrievalEvidenceConfig,
 ): RetrievalTraceEvidence {
@@ -1154,7 +942,6 @@ function chunkFromRow(
   };
 }
 
-/** The cosine similarity of a row, whether it came from the dense or lexical leg. */
 function denseScoreOf(row: RetrievalChunkRow): number {
   return Number(row.dense_score ?? row.score);
 }
@@ -1163,11 +950,6 @@ function candidateScore(candidate: RankedCandidate): number {
   return candidate.rerankScore ?? denseScoreOf(candidate.row);
 }
 
-/**
- * Maps reranker results back onto the candidate list. Returns null when the
- * response does not score every candidate exactly once, which the pipeline
- * treats as a failed rerank.
- */
 function mapRerankScores(
   candidates: { index: number; relevanceScore: number }[],
   count: number,
@@ -1189,10 +971,6 @@ function mapRerankScores(
   return scores as number[];
 }
 
-/**
- * Removes near-duplicate candidates from the fused order before reranking,
- * keeping the best-ranked representative of each duplicate group.
- */
 function dedupeNearDuplicates(
   candidates: FusedCandidate<RetrievalChunkRow>[],
 ): FusedCandidate<RetrievalChunkRow>[] {

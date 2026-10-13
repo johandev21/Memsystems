@@ -75,7 +75,6 @@ function disconnectedSnapshot(detail: string): ConnectionSnapshot {
 
 @Injectable()
 export class ConnectionService {
-  /** Single-user mode: one gateway health probe for the single gateway key. */
   private readonly healthCache = new TtlCache<GatewayHealth>(HEALTH_TTL_MS);
 
   constructor(private readonly modelSyncService: ModelSyncService) {}
@@ -117,9 +116,6 @@ export class ConnectionService {
       apiKey,
       buildGatewayOptions(SINGLE_USER_ID),
     );
-    // Degraded (rate-limited, non-entitled, upstream blip) is NOT
-    // disconnected: let the request through so it can retry, fall back,
-    // or fail with a specific, user-facing error.
     if (!health.ok && !health.degraded)
       throw new ServiceUnavailableError(
         health.detail ?? 'AI Gateway connection failed',
@@ -142,8 +138,6 @@ export class ConnectionService {
     );
     const healthy = health.ok === true;
     const degraded = health.degraded === true && !healthy;
-    // Degraded keeps the full catalog: auth is fine, the service is flaky,
-    // and requests should still go through (retry/fallback/per-call errors).
     const models = healthy || degraded ? catalog : [];
     const checkedAt = new Date(health.checkedAt).toISOString();
     return {

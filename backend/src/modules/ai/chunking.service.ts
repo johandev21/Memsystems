@@ -6,14 +6,6 @@ import {
   VOYAGE_CHARS_PER_TOKEN,
 } from './providers/voyage.client';
 
-/**
- * Token-based chunk sizing. `targetTokens` is the size packing aims for,
- * `minTokens` is the floor below which a fragment is merged into a
- * neighbour, and `overlapTokens` is the tail of the previous chunk repeated
- * at the start of the next one. Tokens are estimated at
- * `VOYAGE_CHARS_PER_TOKEN` characters each, the same ratio the Voyage client
- * uses to batch requests.
- */
 export interface ChunkingConfig {
   targetTokens: number;
   minTokens: number;
@@ -47,12 +39,10 @@ export interface ChunkInput {
 export interface SourceSegmentInput {
   id: string;
   content: string;
-  /** The heading path of the section the segment belongs to. */
   headingPath?: string[];
   locator?: Record<string, unknown> | null;
 }
 
-/** One chunk body before the document and section context is attached. */
 interface ChunkPiece {
   body: string;
   segmentIds: string[];
@@ -64,22 +54,10 @@ export interface ChunkOutput {
   sourceId: string;
   notebookId: string;
   chunkIndex: number;
-  /**
-   * The text shown to the model and used for citations: the source title
-   * followed by the chunk body. It never carries the section context header,
-   * which belongs to the searchable representation only.
-   */
   content: string;
-  /**
-   * The contextualized text the dense and lexical legs index: the document
-   * and section context header plus the chunk body.
-   */
   searchableText: string;
-  /** The document and section context header prepended to `searchableText`. */
   contextHeader: string;
-  /** The heading path of the source segment this chunk came from. */
   headingPath: string[];
-  /** The kind of the Source this chunk belongs to. */
   sourceKind: SourceKind;
   sourceVersionId?: string | null;
   locator: Record<string, unknown>;
@@ -88,14 +66,8 @@ export interface ChunkOutput {
   contentHash: string;
 }
 
-/**
- * Bump when the chunk representation changes. Together with
- * `INDEX_PROCESSING_VERSION` it invalidates stored chunks and makes a
- * reindex-all job rebuild them.
- */
 export const CHUNKING_VERSION = 2;
 
-/** Reads the chunking configuration from the environment. */
 export function loadChunkingConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): ChunkingConfig {
@@ -116,11 +88,6 @@ export function loadChunkingConfig(
   });
 }
 
-/**
- * Clamps a chunking configuration into a usable shape: the minimum never
- * exceeds the target, and the overlap is always smaller than the target so
- * consecutive chunks cannot grow without bound.
- */
 export function normalizeChunkingConfig(
   config: ChunkingConfig,
 ): ChunkingConfig {
@@ -136,27 +103,14 @@ export function normalizeChunkingConfig(
   return { targetTokens, minTokens, overlapTokens };
 }
 
-/**
- * Every indexed chunk body starts with this header so the embedded text
- * carries the source title. Callers that need the bare body (for example the
- * Generation prompt, which adds the title itself) strip it with
- * `stripChunkContentHeader`.
- */
 export function chunkContentHeader(title: string): string {
   return `Source: "${title}"\n`;
 }
 
-/** Removes the header added by `chunkContentHeader`, if present. */
 export function stripChunkContentHeader(content: string): string {
   return content.replace(/^Source: "[^\n]*"\n/, '');
 }
 
-/**
- * The document and section context header prepended to the searchable text:
- * the source title, the source kind, and the heading path of the section the
- * chunk came from. A passage that says "the second argument" becomes
- * searchable as a passage about its actual subject.
- */
 export function chunkContextHeader(input: {
   title: string;
   kind: SourceKind;
@@ -169,12 +123,10 @@ export function chunkContextHeader(input: {
   return `${lines.join('\n')}\n`;
 }
 
-/** Estimates the token length of a chunk with the Voyage ~4 chars/token ratio. */
 export function estimateChunkTokens(text: string): number {
   return estimateVoyageTokens(text);
 }
 
-/** Paragraphs are separated by blank lines. */
 function splitParagraphs(text: string): string[] {
   return text
     .split(/\n{2,}/)
@@ -182,14 +134,6 @@ function splitParagraphs(text: string): string[] {
     .filter((paragraph) => paragraph.length > 0);
 }
 
-/**
- * Sentences end at `.`, `!`, or `?` and keep their punctuation. Every
- * character survives: a paragraph may contain single newlines (hard wraps or
- * heading lines), text may precede the first terminator, and a run of
- * terminators (`What?!`) stays with its sentence. The only characters the
- * splitter drops are the whitespace around the boundaries, which the packer
- * re-joins.
- */
 function splitSentences(paragraph: string): string[] {
   const sentences: string[] = [];
   let start = 0;
@@ -208,7 +152,6 @@ function splitSentences(paragraph: string): string[] {
   return sentences.length > 0 ? sentences : [paragraph];
 }
 
-/** A single sentence longer than the target is split on word boundaries. */
 function splitWords(text: string, targetTokens: number): string[] {
   const pieces: string[] = [];
   let current = '';
@@ -219,18 +162,12 @@ function splitWords(text: string, targetTokens: number): string[] {
       continue;
     }
     if (current) pieces.push(current);
-    // A single word longer than the target cannot be split further.
     current = word;
   }
   if (current) pieces.push(current);
   return pieces;
 }
 
-/**
- * Splits text at the deepest boundary it can respect: paragraphs first, then
- * sentences, then words. Every returned block fits the target on its own, so
- * the packer never has to cut a block in half.
- */
 function splitIntoBlocks(text: string, targetTokens: number): string[] {
   const blocks: string[] = [];
   for (const paragraph of splitParagraphs(text)) {
@@ -249,7 +186,6 @@ function splitIntoBlocks(text: string, targetTokens: number): string[] {
   return blocks;
 }
 
-/** Greedily packs blocks into chunks that stay within the target. */
 function packBlocks(blocks: string[], targetTokens: number): string[] {
   const chunks: string[] = [];
   let current = '';
@@ -270,18 +206,6 @@ function packBlocks(blocks: string[], targetTokens: number): string[] {
   return chunks;
 }
 
-/**
- * Merges fragments below the minimum into a neighbour: short fragments
- * accumulate into the following chunk, and a short tail is appended to the
- * previous one. A document smaller than the minimum stays one chunk.
- *
- * Merging happens inside one section: `chunkText` is called per segment, so
- * a whole sub-minimum section (a slide title, a short transcript line) stays
- * its own chunk rather than merging with a neighbour. That keeps the
- * section's heading path and locator attached to the text a citation points
- * at; the alternative — merging across sections — would make the citation's
- * location ambiguous.
- */
 function mergeShortFragments(chunks: string[], minTokens: number): string[] {
   if (chunks.length <= 1) return chunks;
 
@@ -305,7 +229,6 @@ function mergeShortFragments(chunks: string[], minTokens: number): string[] {
   return merged;
 }
 
-/** Repeats the tail of each chunk at the start of the next one. */
 function applyOverlap(chunks: string[], overlapTokens: number): string[] {
   if (chunks.length <= 1 || overlapTokens <= 0) return chunks;
 
@@ -317,10 +240,6 @@ function applyOverlap(chunks: string[], overlapTokens: number): string[] {
   return result;
 }
 
-/**
- * The overlap slice of a chunk, snapped forward to the next word boundary so
- * the repeated text never starts mid-word.
- */
 function overlapTail(text: string, overlapTokens: number): string {
   const maxChars = overlapTokens * VOYAGE_CHARS_PER_TOKEN;
   if (text.length <= maxChars) return text;
@@ -346,13 +265,6 @@ function toInt(value: number, fallback: number): number {
   return Math.floor(value);
 }
 
-/**
- * Structure-aware, token-based chunking. Sections (source segments) are
- * chunked independently so a chunk never merges two sections, boundaries
- * follow paragraphs and sentences, and the heading path travels with every
- * chunk as first-class metadata. The service is also the single place that
- * builds the searchable representation: contextual header plus body.
- */
 @Injectable()
 export class ChunkingService {
   private readonly config: ChunkingConfig;

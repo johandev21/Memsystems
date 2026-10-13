@@ -60,16 +60,8 @@ export interface StreamResult {
   materialId: string;
 }
 
-/** The Generation request fields the stream handler needs. */
 export type StreamInput = Omit<StartGenerationInput, 'sourceIds'>;
 
-/**
- * Bounded no-output guard: if the model call has not produced a single
- * parsable NDJSON frame within this window, abort it and surface a
- * structured-output capability error instead of dead-airing until the
- * 5-minute stall watchdog. Covers both the native and the JSON fallback
- * attempt.
- */
 const NO_OUTPUT_GUARD_MS = 90_000;
 
 @Injectable()
@@ -99,8 +91,6 @@ export class StreamHandler {
       citationDirective(hasEvidence) +
       groundingDirective(input.groundingMode, hasEvidence);
     const formatted = formatGroundedSourceText(grounding, {
-      // Only the kinds whose content references sourceIds need the ID line in
-      // the prompt; the rest would spend budget on an unused identifier.
       includeSourceId: kindReferencesSources(input.kind),
     });
     if (
@@ -134,8 +124,6 @@ export class StreamHandler {
         let requestOptions: GatewayRequestOptions = {
           providerOptions: { gateway: {} },
         };
-        // Abort controller for the model calls: combines the caller's cancel
-        // signal with the no-output guard's abort.
         const modelAbort = new AbortController();
         const abortModel = () => modelAbort.abort();
         if (abortSignal) {
@@ -155,8 +143,6 @@ export class StreamHandler {
           }
           abortSignal?.removeEventListener('abort', abortModel);
         };
-        // A parsable NDJSON frame resets the no-output guard for the rest of
-        // the Generation (both attempts share the same window).
         const emitFrame = (payload: unknown) => {
           firstFrameEmitted = true;
           if (guardTimer !== undefined) {
@@ -192,9 +178,6 @@ export class StreamHandler {
         try {
           const modelId = input.model!;
           const provider = await this.aiService.getProviderForModel(modelId);
-          // The Generation preflight gated this model on Gateway-verified
-          // structured output; native Output.object is the first attempt and
-          // the strict-JSON prompt below is the safety net.
           model = provider.createModel(modelId);
           requestOptions = this.aiService.getGatewayRequestOptions();
 
@@ -261,7 +244,6 @@ export class StreamHandler {
           onDone({ materialId: inserted.id });
         } catch (nativeError) {
           if (guardFired) {
-            // The guard already errored the stream and reported the failure.
             cleanup();
             return;
           }
@@ -306,15 +288,12 @@ export class StreamHandler {
                   emitFrame(parsed.value);
                 }
               } catch {
-                // Ignore partial parse errors
+                void 0;
               }
             }
 
             const cleanText = extractJson(accumulatedText);
 
-            // Staged tolerant parse: strict JSON -> AI SDK partial repair ->
-            // single-quote/trailing-comma repair -> strict again -> partial of
-            // the repaired text. Throws with a truncated preview for logs.
             let parsedContent: unknown;
             try {
               parsedContent = JSON.parse(cleanText);
@@ -408,7 +387,6 @@ export class StreamHandler {
             onDone({ materialId: inserted.id });
           } catch (fallbackError) {
             if (guardFired) {
-              // The guard already errored the stream and reported the failure.
               cleanup();
               return;
             }
@@ -438,18 +416,6 @@ export class StreamHandler {
     return { stream };
   }
 
-  /**
-   * Validates and shapes the model output for storage, then attaches the
-   * citations the model actually emitted. Extraction runs against the final
-   * content and only accepts evidence keys retrieved for this Generation, so
-   * an invented or stale key is dropped rather than stored.
-   *
-   * The validated content already carries a moderate-mode supplement when the
-   * model emitted one (the schemas accept it, the normalizer preserves it);
-   * citations are extracted before it is attached below, so supplement text
-   * can never mint a citation. Strict and free generations strip the field
-   * defensively so only moderate output ever persists it.
-   */
   private prepareStorable(
     input: StreamInput,
     validated: unknown,
@@ -502,10 +468,6 @@ export class StreamHandler {
   }
 }
 
-/**
- * Detect an abort/response-aborted error so it is not surfaced to the client
- * as a generation failure.
- */
 function isAbortError(error: unknown): boolean {
   return (
     error instanceof Error &&
@@ -513,10 +475,6 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
-/**
- * The kinds whose generated content carries sourceIds: only they need the
- * Source ID line in the prompt.
- */
 function kindReferencesSources(kind: StudyMaterialKind): boolean {
   return (
     kind === 'study_guide' ||
@@ -525,12 +483,6 @@ function kindReferencesSources(kind: StudyMaterialKind): boolean {
   );
 }
 
-/**
- * The citation contract for every kind. Evidence keys are printed in the
- * source block; the model echoes them in the text it generates and the stream
- * handler turns them into stored citations. Only added when the Generation is
- * actually grounded, so an ungrounded material is never asked to cite.
- */
 function citationDirective(hasEvidence: boolean): string {
   if (!hasEvidence) return '';
   return `
@@ -542,12 +494,6 @@ CITATIONS:
 - Questions, examples, and explanations you create are your own work; cite only the passages that support the facts they rest on.`;
 }
 
-/**
- * The grounding-mode contract appended after the citation directive.
- * Strict (and an unset mode) adds nothing: the prompt is byte-identical to
- * before. Moderate asks for the labeled supplement field; free without
- * evidence answers from general knowledge with no citations.
- */
 function groundingDirective(
   groundingMode: StreamInput['groundingMode'],
   hasEvidence: boolean,
@@ -558,11 +504,6 @@ function groundingDirective(
   return '';
 }
 
-/**
- * Concise per-kind schema hint for the JSON fallback prompt: required shape
- * plus one tiny valid example. Hand-written (no zod-to-json-schema dep) and
- * deliberately minimal to keep the prompt short.
- */
 function fallbackSchemaHint(
   kind: StudyMaterialKind,
   groundingMode?: StreamInput['groundingMode'],
@@ -626,7 +567,6 @@ function buildOptions(input: StreamInput): Record<string, unknown> | null {
       return input.mindMapOptions;
     }
     case 'study_guide':
-      // 0 / 'auto' are stored as-is so the saved options mirror the request.
       return {
         format: input.studyGuideOptions?.format ?? 'auto',
         sectionCount: input.studyGuideOptions?.sectionCount ?? 0,

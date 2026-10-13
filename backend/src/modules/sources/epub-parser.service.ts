@@ -39,22 +39,18 @@ function decodeXmlEntities(str: string): string {
 
 function sanitizeXhtml(html: string): string {
   let out = html;
-  // Remove script, style, object, embed, form, iframe, link with unsafe
   out = out.replace(/<script[\s\S]*?<\/script>/gi, '');
   out = out.replace(/<style[\s\S]*?<\/style>/gi, '');
   out = out.replace(/<object[\s\S]*?<\/object>/gi, '');
   out = out.replace(/<embed[^>]*\/?>/gi, '');
   out = out.replace(/<form[\s\S]*?<\/form>/gi, '');
   out = out.replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
-  // Remove event handler attributes on*="..."
   out = out.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  // Remove javascript: hrefs
   out = out.replace(/\s+href\s*=\s*["']\s*javascript:[^"']*["']/gi, '');
   return out;
 }
 
 function extractTextFromHtml(html: string): string {
-  // Simple tag stripping preserving spaces
   let text = sanitizeXhtml(html);
   text = text.replace(/<br\s*\/?>/gi, '\n');
   text = text.replace(/<\/p>/gi, '\n\n');
@@ -65,7 +61,6 @@ function extractTextFromHtml(html: string): string {
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  // Collapse multiple spaces
   text = text.replace(/[ \t]{2,}/g, ' ');
   return text;
 }
@@ -144,11 +139,8 @@ function resolveHref(basePath: string, href: string): string {
   if (href.startsWith('/') || href.includes('://')) return href;
   const lastSlash = basePath.lastIndexOf('/');
   const baseDir = lastSlash >= 0 ? basePath.slice(0, lastSlash + 1) : '';
-  // Simple normalization: handle ../ and ./
   let combined = baseDir + href;
-  // Remove ./ segments
   combined = combined.replace(/\/\.\//g, '/');
-  // Handle ../
   const parts = combined.split('/');
   const resolved: string[] = [];
   for (const p of parts) {
@@ -208,7 +200,6 @@ export class EpubParserService {
       parsed.entries.get('META-INF/container.xml')?.toString('utf8') ?? '';
     let opfPath = parseContainerXml(containerXml, warnings);
     if (!opfPath) {
-      // Fallback: search for .opf
       for (const name of parsed.entries.keys()) {
         if (name.toLowerCase().endsWith('.opf')) {
           opfPath = name;
@@ -242,10 +233,8 @@ export class EpubParserService {
       }
       const href = item.href;
       const resolvedHref = resolveHref(opfPath, href);
-      // Try resolved then raw href
       let contentBuf =
         parsed.entries.get(resolvedHref) ?? parsed.entries.get(href);
-      // Try also without base dir resolution fallback search by basename
       if (!contentBuf) {
         const basename = href.split('/').pop()?.toLowerCase();
         if (basename) {
@@ -285,7 +274,6 @@ export class EpubParserService {
       }
 
       const sanitized = sanitizeXhtml(html);
-      // Additionally check for active content presence
       if (/<script/i.test(html) || /\son\w+\s*=/i.test(html)) {
         warnings.push(`Active content stripped from "${href}".`);
       }
@@ -300,7 +288,6 @@ export class EpubParserService {
       }
     }
 
-    // Fallback if spine parsing yielded nothing but there are html files
     if (chapters.length === 0) {
       warnings.push(
         'No spine chapters resolved; falling back to scanning HTML files.',

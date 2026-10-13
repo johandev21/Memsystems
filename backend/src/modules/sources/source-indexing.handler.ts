@@ -77,8 +77,6 @@ export class SourceIndexingHandler implements JobHandler<
 
     if (!priorJob || !priorJob.result) return null;
 
-    // An older result that predates a version field fails these comparisons
-    // (undefined !== current), so it is reindexed rather than skipped.
     const priorResult = priorJob.result as IndexResult;
     if (
       priorResult.contentHash === job.payload.contentHash &&
@@ -181,8 +179,6 @@ export class SourceIndexingHandler implements JobHandler<
     sourceVersionId: string | null,
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
-      // Match the indexing transaction's lock order. A cancellation that has
-      // already won the job fence must not be followed by a ready transition.
       const [job] = await tx
         .select({ status: jobs.status })
         .from(jobs)
@@ -206,8 +202,6 @@ export class SourceIndexingHandler implements JobHandler<
         return;
       }
 
-      // Re-indexing never promotes a degraded version: its content was judged
-      // unusable, so the source keeps the degraded state and reason.
       const [version] = sourceVersionId
         ? await tx
             .select({

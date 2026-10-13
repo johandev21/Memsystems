@@ -44,12 +44,6 @@ export class CrawlerController {
 
   constructor(private readonly crawler: FirecrawlCrawlerService) {}
 
-  /**
-   * Credit-safe health check. Reads the free credit-usage endpoint, which
-   * proves connectivity AND that the API key works without spending a
-   * scrape credit. Pass ?probe=true for one real scrape (costs 1 credit)
-   * when a human explicitly tests the full read path.
-   */
   @Get('crawler')
   async getCrawlerHealth(
     @Query('probe') probe?: string,
@@ -103,8 +97,6 @@ export class CrawlerController {
         };
       }
       const body = (await response.json()) as Record<string, unknown>;
-      // Documented shape: { credits_total, credits_used, credits_remaining }.
-      // Live shape (v2): { success, data: { planCredits, remainingCredits } }.
       const data =
         body['data'] && typeof body['data'] === 'object'
           ? (body['data'] as Record<string, unknown>)

@@ -22,7 +22,6 @@ export interface YouTubeVideoMetadata {
   thumbnailUrl?: string;
 }
 
-/** Parses ISO 8601 duration format (e.g., "PT1H2M10S", "PT15M33S", "PT45S") to milliseconds. */
 export function parseIso8601Duration(durationStr: string): number | undefined {
   if (!durationStr || typeof durationStr !== 'string') return undefined;
   const match = durationStr.match(
@@ -39,10 +38,6 @@ export function parseIso8601Duration(durationStr: string): number | undefined {
 
 @Injectable()
 export class YouTubeOAuthService {
-  /**
-   * Fetches the list of caption tracks for a video via YouTube Data API v3.
-   * Requires OAuth access token with caption permissions (e.g., youtube.force-ssl or youtube.readonly).
-   */
   async listCaptions(
     videoId: string,
     accessToken: string,
@@ -90,9 +85,6 @@ export class YouTubeOAuthService {
     }));
   }
 
-  /**
-   * Downloads an authorized caption track content (in SRT or VTT format).
-   */
   async downloadCaption(
     captionId: string,
     accessToken: string,
@@ -130,9 +122,6 @@ export class YouTubeOAuthService {
     return response.text();
   }
 
-  /**
-   * Fetches official video metadata via YouTube Data API v3.
-   */
   async getVideoMetadata(
     videoId: string,
     auth: { accessToken?: string; apiKey?: string } = {},

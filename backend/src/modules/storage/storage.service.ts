@@ -96,11 +96,6 @@ export class StorageService {
     );
   }
 
-  /**
-   * Writes an upload incrementally in local mode. This is intentionally kept
-   * separate from putObject: callers must opt into the bounded stream API and
-   * can never accidentally turn a large request into an in-memory Buffer.
-   */
   async putObjectStream(input: StreamUploadInput): Promise<{
     contentLength: number;
     sha256: string;

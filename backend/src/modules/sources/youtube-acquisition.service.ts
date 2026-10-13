@@ -87,7 +87,7 @@ export function extractYouTubeVideoId(urlOrId: string): string | null {
       }
     }
   } catch {
-    // Not a standard URL
+    void 0;
   }
 
   return null;
@@ -153,7 +153,6 @@ export class YouTubeAcquisitionService {
 
     const fallbackOnError = options.fallbackOnError ?? true;
 
-    // Mode 1: User-supplied caption / transcript text
     if (options.captionText && options.captionText.trim().length > 0) {
       try {
         const segments = this.captionParser.parse(
@@ -186,7 +185,6 @@ export class YouTubeAcquisitionService {
       }
     }
 
-    // Mode 2: Google OAuth token authorized caption download
     if (options.oauthToken) {
       try {
         const tracks = await this.youtubeOAuth.listCaptions(
@@ -194,7 +192,6 @@ export class YouTubeAcquisitionService {
           options.oauthToken,
         );
         if (tracks.length > 0) {
-          // Prefer English track or first available
           const track =
             tracks.find(
               (t) =>
@@ -248,10 +245,6 @@ export class YouTubeAcquisitionService {
       }
     }
 
-    // Mode 3: No custom captions or OAuth token provided.
-    // We do NOT scrape captions or generate fake transcripts.
-    // Instead, we fetch video metadata (title, author, duration, thumbnail)
-    // and return an empty segments array so the video viewer is clean.
     const meta = await this.fetchMetadata(videoId);
     return {
       videoId,
@@ -270,7 +263,6 @@ export class YouTubeAcquisitionService {
     durationMs?: number;
     thumbnailUrl?: string;
   }> {
-    // 1. Try YouTube oEmbed first (fast, public, unauthenticated, never IP-blocked)
     try {
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
       const res = await fetch(oembedUrl, {
@@ -293,10 +285,9 @@ export class YouTubeAcquisitionService {
         }
       }
     } catch {
-      // Fall through to watch page scraping or default
+      void 0;
     }
 
-    // 2. Try watch page title extraction
     try {
       const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const response = await fetch(watchUrl, {
@@ -316,7 +307,7 @@ export class YouTubeAcquisitionService {
           try {
             playerResponse = JSON.parse(playerResponseMatch[1]);
           } catch {
-            // ignore
+            void 0;
           }
         }
         const videoDetails = playerResponse?.videoDetails;
@@ -346,7 +337,7 @@ export class YouTubeAcquisitionService {
         };
       }
     } catch {
-      // Fall through
+      void 0;
     }
 
     return {

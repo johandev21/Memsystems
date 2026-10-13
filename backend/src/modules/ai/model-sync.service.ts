@@ -10,19 +10,11 @@ import {
 } from './providers/model-catalog';
 import type { ProviderModel } from './providers/provider';
 
-/** Refresh the gateway model catalog every 6 hours. */
 const MODEL_SYNC_CRON = '0 */6 * * *';
 
-/**
- * Public Gateway model list (`GET /v1/models`, no auth). It is the only
- * source of Model Capabilities — the SDK's `getAvailableModels()` zod schema
- * strips `tags` and `supported_parameters`. The AI SDK exposes no configured
- * base URL for this call, so the endpoint lives here as a named constant.
- */
 export const GATEWAY_PUBLIC_MODELS_URL =
   'https://ai-gateway.vercel.sh/v1/models';
 
-/** Bound the capability fetch so a hung gateway cannot stall the sync. */
 const GATEWAY_PUBLIC_MODELS_TIMEOUT_MS = 10_000;
 
 function isGatewayPublicModel(value: unknown): value is GatewayPublicModel {
@@ -33,11 +25,6 @@ function isGatewayPublicModel(value: unknown): value is GatewayPublicModel {
   );
 }
 
-/**
- * Fetches the public model list. Never rejects: any failure (network, HTTP
- * status, malformed payload, timeout) returns `null`, which callers treat as
- * "capabilities not verified" and fail closed.
- */
 async function fetchGatewayPublicModels(): Promise<
   GatewayPublicModel[] | null
 > {
@@ -61,18 +48,11 @@ export class ModelSyncService implements OnModuleInit {
   private models: ProviderModel[] = [...SEED_GATEWAY_MODELS];
   private source: 'gateway' | 'seed' = 'seed';
   private lastSyncAt: string | null = null;
-  /**
-   * True only when the Gateway public list was fetched successfully as part
-   * of the current catalog state. Consumed by capability gates, which fail
-   * closed when it is false.
-   */
   private capabilitiesVerified = false;
 
   constructor() {}
 
   onModuleInit() {
-    // Fire-and-forget: the seed catalog serves requests until the first
-    // successful sync. refreshModels() never rejects.
     void this.refreshModels('startup');
   }
 
@@ -94,11 +74,6 @@ export class ModelSyncService implements OnModuleInit {
     };
   }
 
-  /**
-   * Refresh the catalog. Key resolution order: an explicitly passed key,
-   * then the server key from environment (AI_GATEWAY_API_KEY).
-   * Falls back to the seed catalog only when no key exists anywhere.
-   */
   async refreshModels(
     reason = 'manual',
     apiKey?: string | null,

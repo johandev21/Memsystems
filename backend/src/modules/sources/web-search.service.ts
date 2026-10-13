@@ -9,7 +9,6 @@ import {
 
 const MIN_WEB_SEARCH_SOURCE_TEXT_LENGTH = 1000;
 
-/** Number of candidates requested per search (current behaviour, kept). */
 export const WEB_SEARCH_RESULT_LIMIT = 10;
 
 export interface WebSearchCandidate {
@@ -24,7 +23,6 @@ export interface WebSearchSearchInput {
 
 export interface WebSearchSearchResponse {
   query: string;
-  /** Firecrawl search returns no AI summary; always null. */
   summary: string | null;
   sources: WebSearchCandidate[];
 }
@@ -134,7 +132,6 @@ export class WebSearchService {
 
     for (const candidate of input.candidates) {
       const fallbackTitle = candidate.url;
-      // Descriptions arrive from Firecrawl unbounded; cap for metadata.
       const description = candidate.description?.slice(0, 500) ?? null;
 
       if (count >= SOURCE_LIMIT) {

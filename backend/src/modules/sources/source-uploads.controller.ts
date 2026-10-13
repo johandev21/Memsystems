@@ -26,7 +26,6 @@ const finalizeUploadSchema = z.object({
   title: z.string().trim().max(500).optional(),
 });
 
-/** Direct upload control plane. The artifact PUT itself is streamed in local mode. */
 @Controller()
 export class SourceUploadsController {
   constructor(private readonly uploadsService: SourceUploadsService) {}

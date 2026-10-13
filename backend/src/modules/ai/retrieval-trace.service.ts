@@ -17,11 +17,6 @@ export interface RecordRetrievalTraceInput {
   trace: RetrievalTrace;
 }
 
-/**
- * Persists retrieval traces. Observability must never fail a Chat turn or a
- * Generation, so write failures are logged instead of thrown; callers verify
- * the row only in tests.
- */
 @Injectable()
 export class RetrievalTraceService {
   private readonly logger = new Logger(RetrievalTraceService.name);
@@ -49,7 +44,6 @@ export class RetrievalTraceService {
     }
   }
 
-  /** Clearing a Notebook's chat clears its Chat traces with it. */
   async clearChatTraces(notebookId: string): Promise<void> {
     await this.db
       .delete(retrievalTraces)

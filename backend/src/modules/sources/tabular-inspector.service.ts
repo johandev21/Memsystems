@@ -9,7 +9,7 @@ export function getFileExtension(filename?: string | null): string {
   return clean.slice(lastDot + 1).toLowerCase();
 }
 
-export const MAX_TABULAR_BYTES = 100 * 1024 * 1024; // 100 MB
+export const MAX_TABULAR_BYTES = 100 * 1024 * 1024;
 
 export const TABULAR_EXTENSIONS = new Set([
   'csv',
@@ -55,9 +55,6 @@ const LOCAL_FILE_HEADER_SIG = 0x04034b50;
 
 @Injectable()
 export class TabularInspectorService {
-  /**
-   * Validates size, format extensions, and ZIP header for XLSX workbooks.
-   */
   inspect(
     buffer: Buffer,
     fileName = 'dataset.csv',

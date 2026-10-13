@@ -102,8 +102,6 @@ export class SourcesController {
   }
 
   @Post('notebooks/:notebookId/sources/file')
-  // Keep this compatibility endpoint bounded while larger files use the
-  // direct target/stream flow. Multer rejects before exposing file.buffer.
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
   )

@@ -63,10 +63,6 @@ export class GenerationService {
     const modelId = input.model ?? MODELS_BY_KIND[input.kind];
     await this.connectionService.requireConnected(modelId);
 
-    // Preflight capability gate: a Generation may only start on a model the
-    // Gateway tagged `structured-output` in the current, verified catalog.
-    // Checked before any retrieval/request work so a non-capable model costs
-    // nothing and fails with a model-switchable domain error.
     const provider = await this.aiService.getProviderForModel(modelId);
     this.aiService.requireStructuredOutput(
       provider,
@@ -74,9 +70,6 @@ export class GenerationService {
       'errors.ai.model.structuredOutputUnsupported',
     );
 
-    // Grounding retrieves the material per section of every selected source,
-    // so a long source is represented beyond a single bounded set and a
-    // multi-source Generation keeps its selection order.
     const grounding = await this.groundingService.ground({
       notebookId,
       kind: input.kind,
@@ -84,10 +77,6 @@ export class GenerationService {
       sourceIds: input.sourceIds,
     });
 
-    // Every retrieval pass the Generation ran persists its own trace, all
-    // correlated by the generation request when one exists. Traces are
-    // recorded before any rejection, so the passes that ran are diagnosable
-    // even when the Generation never starts streaming.
     const recordTraces = async (generationRequestId?: string) => {
       for (const trace of grounding.traces) {
         await this.retrievalTraceService.record({
@@ -100,12 +89,6 @@ export class GenerationService {
       }
     };
 
-    // A selected source with no Evidence is unavailable, whatever the reason
-    // (deleted, failed, degraded, or not indexed yet). Every kind reports it
-    // with the same error the study guide flow has always used, instead of
-    // silently generating from a smaller selection. This holds in every
-    // grounding mode: free only skips the rejection vacuously, when no
-    // sources were selected at all (there is then nothing unavailable).
     const hasSelectedSources = input.sourceIds.length > 0;
     if (
       grounding.unavailableSources.length > 0 &&
@@ -132,10 +115,6 @@ export class GenerationService {
 
     const sourceCount = grounding.sources.length;
 
-    // Free answers from the brief and general knowledge with no sources, so
-    // the source-or-brief requirements below do not apply to it. Strict and
-    // moderate share the same gates. The count bounds stay unconditional:
-    // they gate the request shape, not the grounding.
     const requiresSourceOrBrief = groundingMode !== 'free';
 
     if (input.kind === 'study_guide') {
@@ -150,8 +129,6 @@ export class GenerationService {
     if (input.kind === 'practice_problems') {
       const problemCount =
         input.practiceProblemsOptions?.problemCount ?? input.questionCount;
-      // 0 is auto: the model chooses the count, so only explicit values are
-      // bounded. Negative values can only arrive programmatically.
       if (
         problemCount != null &&
         problemCount !== 0 &&
@@ -176,8 +153,6 @@ export class GenerationService {
     if (input.kind === 'case_study') {
       const questionCount =
         input.caseStudyOptions?.questionCount ?? input.questionCount;
-      // 0 is auto: the model chooses the count, so only explicit values are
-      // bounded. Negative values can only arrive programmatically.
       if (
         questionCount != null &&
         questionCount !== 0 &&

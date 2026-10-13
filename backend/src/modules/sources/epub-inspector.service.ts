@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { assertNotArchiveBomb, parseZipEntries } from './zip-helpers';
 
-export const MAX_EPUB_BYTES = 200 * 1024 * 1024; // 200 MB
+export const MAX_EPUB_BYTES = 200 * 1024 * 1024;
 export const MAX_EPUB_CHAPTERS = 500;
 
 export type SupportedEpubMimeType = 'application/epub+zip';
@@ -98,14 +98,12 @@ export class EpubInspectorService {
       const parsed = parseZipEntries(buffer);
       assertNotArchiveBomb(parsed);
 
-      // EPUB validation: mimetype must exist and be first entry uncompressed with correct value
       const mimetypeEntry = parsed.entryInfos.find(
         (e) => e.fileName === 'mimetype',
       );
       if (!mimetypeEntry) {
         throw new BadRequestError('Invalid EPUB: missing mimetype file.');
       }
-      // Check mimetype is first entry (first in entryInfos)
       const firstFile = parsed.entryInfos.find((e) => !e.isDirectory);
       if (firstFile && firstFile.fileName !== 'mimetype') {
         throw new BadRequestError(
@@ -134,8 +132,6 @@ export class EpubInspectorService {
         );
       }
 
-      // Best-effort chapter count: count spine-referenced xhtml/html or fallback to counting
-      // Try to parse container -> OPF to get spine, else count files
       let spineCount: number | undefined;
       try {
         const containerXml =
@@ -146,10 +142,8 @@ export class EpubInspectorService {
         const opfPath = rootMatch ? rootMatch[1] : null;
         if (opfPath && parsed.entries.has(opfPath)) {
           const opfContent = parsed.entries.get(opfPath)!.toString('utf8');
-          // Count spine itemrefs
           const spineMatches = opfContent.match(/<itemref[^>]*>/gi);
           spineCount = spineMatches ? spineMatches.length : undefined;
-          // Detect TOC: look for NCX (media-type application/x-dtbncx+xml) or nav property
           const hasNcx =
             /media-type\s*=\s*["']application\/x-dtbncx\+xml["']/i.test(
               opfContent,
@@ -161,13 +155,12 @@ export class EpubInspectorService {
           hasToc = hasNcx || hasNav || hasTocTag || false;
         }
       } catch {
-        // ignore
+        void 0;
       }
 
       if (spineCount !== undefined) {
         chapterCount = spineCount;
       } else {
-        // Fallback: count .xhtml/.html/.htm files
         let count = 0;
         for (const info of parsed.entryInfos) {
           const lower = info.fileName.toLowerCase();
@@ -176,14 +169,12 @@ export class EpubInspectorService {
             lower.endsWith('.html') ||
             lower.endsWith('.htm')
           ) {
-            // Exclude nav and container files? Keep simple
             count++;
           }
         }
         chapterCount = count;
       }
 
-      // If hasToc still undefined, check manifest for toc.ncx or nav.xhtml existence
       if (hasToc === undefined) {
         hasToc = parsed.entryInfos.some(
           (e) =>

@@ -48,14 +48,12 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
       break;
     }
     if (sig !== LOCAL_FILE_HEADER_SIG) {
-      // No more local headers
       break;
     }
 
     const flag = buffer.readUInt16LE(offset + 6);
     const method = buffer.readUInt16LE(offset + 8);
     const compressedSize = buffer.readUInt32LE(offset + 18);
-    const uncompressedSize = buffer.readUInt32LE(offset + 22);
     const fileNameLen = buffer.readUInt16LE(offset + 26);
     const extraLen = buffer.readUInt16LE(offset + 28);
 
@@ -73,10 +71,7 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
     );
     const dataStart = offset + 30 + fileNameLen + extraLen;
 
-    // Data descriptor flag (bit 3) – unsupported for reliable bomb detection
     if ((flag & 0x08) !== 0) {
-      // For bomb safety reject or handle by scanning forward
-      // Scan for next local header to estimate
       let nextHeader = -1;
       for (let i = dataStart; i + 4 <= buffer.length; i++) {
         const s = buffer.readUInt32LE(i);
@@ -92,8 +87,6 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
       if (nextHeader === -1) {
         nextHeader = buffer.length;
       }
-      // Treat as bomb-unsafe: entry count still increments, sizes unknown
-      // Use compressed size as nextHeader - dataStart for estimation
       const estimatedCompressed = nextHeader - dataStart;
       totalCompressed += estimatedCompressed;
       totalUncompressed += estimatedCompressed;
@@ -134,10 +127,6 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
           { messageKey: 'errors.sources.parse.zipCorrupted' },
         );
       }
-      // Verify uncompressed size if header had it
-      if (uncompressedSize !== 0 && data.length !== uncompressedSize) {
-        // Allow mismatch? Log warning but don't fail – some encoders are inaccurate
-      }
     } else {
       throw new BadRequestError(
         `Unsupported ZIP compression method ${method} for entry "${fileName}".`,
@@ -164,7 +153,6 @@ export function parseZipEntries(buffer: Buffer): ParsedZip {
 
     offset = dataStart + compressedSize;
 
-    // Guard infinite loop
     if (offset === dataStart) {
       break;
     }
@@ -200,9 +188,7 @@ export function assertNotArchiveBomb(parsed: ParsedZip): void {
         { messageKey: 'errors.sources.parse.zipCorrupted' },
       );
     }
-    // Also guard absolute uncompressed > 1GB? Not needed but spec says 200MB for pptx/epub
   }
-  // Also if any single entry ratio extreme
   for (const info of parsed.entryInfos) {
     if (
       info.compressedSize > 0 &&
@@ -220,18 +206,17 @@ export function createStoredZipEntry(
   fileName: string,
   content: Buffer,
 ): Buffer {
-  // Helper for tests to create simple stored (method 0) ZIP entries without compression
   const fileNameBuf = Buffer.from(fileName, 'utf8');
   const header = Buffer.alloc(30);
   header.writeUInt32LE(LOCAL_FILE_HEADER_SIG, 0);
-  header.writeUInt16LE(20, 4); // version needed
-  header.writeUInt16LE(0, 6); // flag
-  header.writeUInt16LE(0, 8); // method stored
-  header.writeUInt16LE(0, 10); // time
-  header.writeUInt16LE(0, 12); // date
-  header.writeUInt32LE(0, 14); // crc (0 for test)
-  header.writeUInt32LE(content.length, 18); // compressed size
-  header.writeUInt32LE(content.length, 22); // uncompressed size
+  header.writeUInt16LE(20, 4);
+  header.writeUInt16LE(0, 6);
+  header.writeUInt16LE(0, 8);
+  header.writeUInt16LE(0, 10);
+  header.writeUInt16LE(0, 12);
+  header.writeUInt32LE(0, 14);
+  header.writeUInt32LE(content.length, 18);
+  header.writeUInt32LE(content.length, 22);
   header.writeUInt16LE(fileNameBuf.length, 26);
   header.writeUInt16LE(0, 28);
   return Buffer.concat([header, fileNameBuf, content]);
@@ -248,13 +233,8 @@ export function createStoredZip(
         : e.content;
     parts.push(createStoredZipEntry(e.name, content));
   }
-  // Add minimal end of central directory to make it look like valid zip for external tools (optional)
-  // But our parser stops at central dir signature, so we need to append central dir sig to terminate correctly.
-  // For test zips we can just leave without central dir; parser will stop at end.
-  // Add EOCD with 0 entries to allow graceful stop if inspector scans.
   const eocd = Buffer.alloc(22);
   eocd.writeUInt32LE(END_OF_CENTRAL_DIR_SIG, 0);
-  // rest zeros
   parts.push(eocd);
   return Buffer.concat(parts);
 }

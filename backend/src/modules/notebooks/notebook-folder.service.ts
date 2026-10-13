@@ -100,11 +100,6 @@ export class NotebookFolderService {
     return updated;
   }
 
-  /**
-   * Removes a folder without losing content: its direct child folders and
-   * notebooks are re-parented to the removed folder's parent, mirroring the
-   * notebook library prototype. The whole operation is atomic.
-   */
   async delete(folderId: string): Promise<NotebookFolderResponse> {
     const folder = await this.fetchFolder(folderId);
     await this.db.transaction(async (tx) => {

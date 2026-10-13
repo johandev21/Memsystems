@@ -24,10 +24,6 @@ export interface CrawledDocument {
 }
 
 export interface CrawlerScrapeOptions {
-  /**
-   * Whether to extract only the main content. Web ingestion retries with
-   * `false` when the main-content extraction looks link-dense or too short.
-   */
   onlyMainContent?: boolean;
 }
 

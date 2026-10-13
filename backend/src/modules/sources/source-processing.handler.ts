@@ -56,7 +56,6 @@ export class SourceProcessingCancelledError extends Error {
   }
 }
 
-/** Extracts an immutable source version from a stored artifact and schedules indexing. */
 @Injectable()
 export class SourceProcessingHandler implements JobHandler<
   SourceProcessingJobPayload,
@@ -113,8 +112,6 @@ export class SourceProcessingHandler implements JobHandler<
       }
 
       let document: NormalizedDocument;
-      // Tabular data is structured, not prose: the link/boilerplate quality
-      // heuristic does not apply to it.
       let qualityGateApplies = true;
       if (source.s3Key) {
         const isVideo =
@@ -311,8 +308,6 @@ export class SourceProcessingHandler implements JobHandler<
         quality,
       });
       if (quality?.status === 'degraded') {
-        // Unusable extraction: keep the version and segments for inspection,
-        // but never index them as Evidence.
         return {
           sourceVersionId: version.id,
           segmentCount: version.segmentCount,

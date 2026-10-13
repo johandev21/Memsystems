@@ -1,9 +1,3 @@
-/**
- * Shared parsing for the retrieval configuration loaders. Every loader falls
- * back to its documented default for anything unset, blank, or unusable, so a
- * typo in the environment never takes retrieval down.
- */
-
 export function parseBoolean(
   value: string | undefined,
   fallback: boolean,
@@ -25,7 +19,6 @@ export function parsePositiveInt(
   return parsed;
 }
 
-/** Parses a value that accepts zero as a documented "unlimited" sentinel. */
 export function parseNonNegativeInt(
   value: string | undefined,
   fallback: number,

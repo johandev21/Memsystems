@@ -125,7 +125,6 @@ export class StudyMaterialsController {
     private readonly generationService: GenerationService,
   ) {}
 
-  // --- Study Materials ---
   @Get('notebooks/:notebookId/study-materials')
   async listStudyMaterials(
     @Param('notebookId') notebookId: string,
@@ -222,7 +221,6 @@ export class StudyMaterialsController {
     return this.studyMaterialService.evaluatePracticeProblem(id, body);
   }
 
-  // --- Folders ---
   @Get('notebooks/:notebookId/folders')
   async listFolders(@Param('notebookId') notebookId: string) {
     return this.folderService.list(notebookId);
@@ -256,7 +254,6 @@ export class StudyMaterialsController {
     return this.folderService.restore(id);
   }
 
-  // --- Trash ---
   @Get('notebooks/:notebookId/trash')
   async listTrash(@Param('notebookId') notebookId: string) {
     return this.trashService.list(notebookId);
@@ -274,7 +271,6 @@ export class StudyMaterialsController {
     return { success: true };
   }
 
-  // --- Generation ---
   @Post('notebooks/:id/generate')
   @UsePipes(new ZodValidationPipe(generateRequestSchema))
   async generate(
@@ -301,9 +297,6 @@ export class StudyMaterialsController {
     res.setHeader('X-Generation-Request-Id', requestId);
 
     const reader = stream.getReader();
-    // Terminal-frame contract: the client hangs until it sees a `{done: true}`
-    // or `{error}` NDJSON frame (or the response ends). Track whether one was
-    // sent and always emit a terminal signal before res.end().
     let terminalSent = false;
     const writeTerminalError = (message: string) => {
       if (terminalSent) return;
@@ -328,7 +321,6 @@ export class StudyMaterialsController {
         }
         if (chunk.done) break;
         if (chunk.value) {
-          // Detect a terminal frame so a clean close without one can be fixed.
           try {
             const text = Buffer.from(chunk.value).toString('utf8');
             for (const line of text.split('\n')) {
@@ -344,11 +336,11 @@ export class StudyMaterialsController {
                   terminalSent = true;
                 }
               } catch {
-                // Partial/progress line — not a terminal frame.
+                void 0;
               }
             }
           } catch {
-            // Detection must never break streaming.
+            void 0;
           }
           res.write(chunk.value);
         }
@@ -361,7 +353,7 @@ export class StudyMaterialsController {
       try {
         reader.releaseLock();
       } catch {
-        // Ignore release errors on an already-errored stream.
+        void 0;
       }
       if (!res.writableEnded) res.end();
     }

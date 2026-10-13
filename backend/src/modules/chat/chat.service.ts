@@ -268,9 +268,6 @@ export class ChatService {
       notebookGroundingMode,
     );
 
-    // The client-facing assistant message id is created before retrieval so
-    // the trace can be correlated even when the turn fails before the
-    // assistant row is persisted.
     const assistantMessageId = createId();
 
     let userMessage: {
@@ -340,12 +337,6 @@ export class ChatService {
       userMessage.id,
     );
 
-    // Retrieval runs after the user message is persisted, so the rewrite can
-    // resolve follow-up references ("expand on the second chapter") from the
-    // recent turns. An image/file-only message has no text to embed:
-    // retrieval is optional for multimodal turns, so let the model inspect
-    // the supplied parts directly instead of passing an empty query to the
-    // embedding provider.
     const retrievalOutcome: RetrievalOutcome | null = input.content.trim()
       ? await this.retrievalService.retrieve({
           notebookId,
@@ -368,13 +359,6 @@ export class ChatService {
     const retrievedChunks = retrievalOutcome?.chunks ?? [];
     const citationEvidence = createCitationEvidence(retrievedChunks);
 
-    // The Evidence block is already bounded by the retrieval token budget
-    // (`RETRIEVAL_EVIDENCE_TOKEN_BUDGET`, or the request's override), so it is
-    // rendered whole: a character slice here could cut the tail of an
-    // assembled passage. The model catalog exposes no context window today, so
-    // the configured budget is the only bound and is documented as
-    // conservative and tunable; a caller that knows its model's window can
-    // pass a `tokenBudget` override to retrieval.
     const sourceContext = formatCitationContext(citationEvidence);
 
     const history = [
@@ -391,12 +375,6 @@ export class ChatService {
 
     input.abortSignal?.throwIfAborted();
 
-    // Retrieval abstained: nothing cleared the relevance floor. In strict
-    // mode the Chat produces the deterministic no-evidence reply naming the
-    // degraded or unhelpful sources instead of answering from general
-    // knowledge. In moderate/free the turn proceeds to the model with empty
-    // Evidence so it can answer from general knowledge per its grounding
-    // directive; those modes never show the no-evidence state.
     if (retrievalOutcome?.abstained && groundingMode === 'strict') {
       return this.sendNoEvidenceReply(
         notebookId,
@@ -442,12 +420,6 @@ export class ChatService {
     const selectedModel = provider
       .listModels?.()
       .find((candidate) => candidate.id === modelId);
-    // Always forward reasoning chunks when the model emits them. Gating on
-    // the static capability catalog caused reasoning-capable models that were
-    // misclassified to stream no reasoning live (reasoning only appeared
-    // after persist + history refetch). `sendReasoning: true` is a no-op for
-    // models that emit no reasoning.
-    // `selectedModel` is still used for error messages below.
     void selectedModel;
     const model = provider.createModel(modelId);
     const requestOptions = this.aiService.getGatewayRequestOptions();
@@ -516,10 +488,6 @@ export class ChatService {
       if (assistantMessagePersisted || !text.trim()) return;
       assistantMessagePersisted = true;
 
-      // Post-generation verification: every key the reply emitted must map to
-      // a retrieved chunk, entries store their supporting span, and unmarked
-      // claims are attributed to the nearest Evidence. Unresolvable
-      // references are dropped from the stored citations.
       const verification = verifyCitations(text, citationEvidence, {
         attribution: false,
       });
@@ -581,8 +549,6 @@ export class ChatService {
         onChunk: ({ chunk }) => {
           if (chunk.type === 'text-delta') streamedText += chunk.text;
           if (chunk.type === 'reasoning-delta') {
-            // `text` is the ai v7 field; fall back to legacy `textDelta`
-            // so abort-persist still captures reasoning across SDK shapes.
             const asRecord = chunk as unknown as Record<string, unknown>;
             const delta =
               typeof asRecord.text === 'string'
@@ -599,7 +565,6 @@ export class ChatService {
           });
         },
         onLanguageModelCallEnd: ({ providerMetadata }) => {
-          // Gateway generation id for cost/usage lookup (getGenerationInfo).
           const gatewayMeta = providerMetadata?.gateway as
             | {
                 generationId?: unknown;
@@ -610,9 +575,6 @@ export class ChatService {
               }
             | undefined;
           const generationId = gatewayMeta?.generationId;
-          // Fail loud on model substitution: the gateway must serve the
-          // requested model or fail. Serving a different model silently
-          // (e.g. via fallbacks) would present the wrong model as working.
           const served =
             gatewayMeta?.routing?.canonicalSlug ??
             gatewayMeta?.routing?.originalModelId;
@@ -708,9 +670,6 @@ export class ChatService {
             };
           }
         },
-        // The SDK masks raw server errors ("An error occurred.") by default,
-        // which the client cannot classify. Map failures to curated
-        // `{error, code[, model]}` envelopes instead.
         onError: (error) =>
           toClientStreamError(error, {
             id: modelId,
@@ -721,11 +680,6 @@ export class ChatService {
     };
   }
 
-  /**
-   * The no-evidence outcome: no model call, a deterministic reply that names
-   * the degraded or unhelpful sources and suggests a corrective action,
-   * persisted with metadata so the UI can render the distinct state.
-   */
   private async sendNoEvidenceReply(
     notebookId: string,
     input: SendInput,

@@ -21,7 +21,6 @@ import {
   qualityLifecycleValues,
 } from './source-quality.service';
 
-/** The small persistence seam shared by synchronous and queued ingestion. */
 export interface PersistedSourceVersion {
   id: string;
   sourceId: string;
@@ -48,10 +47,6 @@ function toSegments(document: NormalizedDocument): DocumentSection[] {
   return [{ headingPath: [], content: document.text, ordinal: 0 }];
 }
 
-/**
- * Persists one immutable interpretation and its ordered semantic segments in
- * a single transaction. `sources.rawText` remains a compatibility projection.
- */
 @Injectable()
 export class SourceVersionService {
   constructor(
@@ -73,8 +68,6 @@ export class SourceVersionService {
 
     const failure = quality ? qualityFailureOf(quality) : null;
     const degraded = failure !== null;
-    // A degraded version keeps its extraction for inspection, but the source
-    // must not look ready and no Evidence may be indexed from it.
     const lifecycle = qualityLifecycleValues(failure);
 
     await this.db.transaction(async (tx) => {

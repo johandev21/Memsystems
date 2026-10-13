@@ -22,8 +22,6 @@ import { isTabularFile, MAX_TABULAR_BYTES } from './tabular-inspector.service';
 import { SourceExtractionService } from './source-extraction.service';
 import { SourcesService } from './sources.service';
 
-// Current extractors buffer documents in the worker, so keep this aligned
-// with the legacy safe limit until streaming media extractors exist.
 export const SOURCE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 export {
   MAX_IMAGE_BYTES,
@@ -293,9 +291,6 @@ export class SourceUploadsService {
           messageKey: 'errors.sources.upload.integrityFailed',
         });
       }
-      // S3 metadata does not expose a provider-independent object digest. The
-      // exact byte count remains mandatory; clients may additionally provide
-      // a SHA-256 metadata value, which is checked above.
       uploaded = { size: metadata.contentLength, sha256: digest ?? '' };
       await this.db
         .update(sourceUploadIntents)
@@ -352,8 +347,6 @@ export class SourceUploadsService {
         );
       return source;
     } catch (error) {
-      // Let a transient source-creation error be retried while preserving the
-      // one-consumer claim against concurrent finalizers.
       await this.db
         .update(sourceUploadIntents)
         .set({ status: 'uploaded' })

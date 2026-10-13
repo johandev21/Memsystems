@@ -4,18 +4,6 @@ import { GATEWAY_DEFAULT_MODEL, resolveModelId } from './model-catalog';
 import { classifyGatewayError } from './gateway-errors';
 import type { HealthCheckResult, Provider, ProviderModel } from './provider';
 
-// NOTE on the `ai` version pin (backend/package.json pins ai to exactly
-// 7.0.91): ai@7.0.92 shipped with a typo in addLanguageModelUsage
-// (`usage.outputTokenDetails.outputTokenDetails.reasoningTokens`, one level
-// too deep) that crashes every generateText/streamText call, and the 7.0.92
-// tarball was republished in place so the version cannot be trusted.
-// Do NOT float `ai` back to ^7.0.92. Re-evaluate once upstream publishes a
-// fixed release (7.0.93+) and re-run the live inference test.
-
-/**
- * Optional server gateway key, used only for background model-catalog syncs.
- * Inference and embeddings use the app-wide key from UserSettingsService.
- */
 export function gatewayServerKey(): string | null {
   const key = process.env.AI_GATEWAY_API_KEY?.trim();
   return key ? key : null;
@@ -25,19 +13,8 @@ export interface GatewayRequestOptions {
   providerOptions: { gateway: Record<string, JSONValue> };
 }
 
-/**
- * Stable gateway attribution id for requests made by this single-user app.
- */
 export const SINGLE_USER_ID = 'single-user';
 
-/**
- * Builds per-request gateway options with a stable id for spend attribution.
- * The app-wide key travels with the provider instance, not the options bag.
- * The bag stays plain JSON so it satisfies the AI SDK
- * provider-options type at every call site. Note: no fallback model chain is
- * attached — the gateway must serve the requested model or fail, never
- * silently substitute another model.
- */
 export function buildGatewayOptions(userId?: string): GatewayRequestOptions {
   const gateway: Record<string, JSONValue> = {};
   if (userId) gateway.user = userId;
@@ -85,9 +62,6 @@ async function probeGateway(
   apiKey: string | null,
   options: GatewayRequestOptions,
 ): Promise<HealthCheckResult> {
-  // With an account key, a metadata call proves auth + reachability without
-  // spending inference quota. Without one (OIDC environments), fall back to
-  // a tiny inference probe.
   if (apiKey) {
     try {
       await gateway.getAvailableModels();
@@ -96,9 +70,6 @@ async function probeGateway(
       return classifiedProbeResult(error);
     }
   }
-  // Probe cheap, long-lived models: the default may not be entitled on
-  // free-tier accounts, but any success proves the credential reaches the
-  // gateway. Failures are not billed.
   const candidates = [
     GATEWAY_DEFAULT_MODEL,
     'openai/gpt-4o-mini',

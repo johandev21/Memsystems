@@ -109,12 +109,6 @@ export class AiService {
     return provider;
   }
 
-  /**
-   * The gateway provider for a background task (retrieval query rewriting),
-   * or `null` when the AI Gateway is not connected. Unlike
-   * `getProviderForModel` it validates no model id and never throws: the
-   * caller degrades instead of failing the turn.
-   */
   getProviderIfConnected(): Promise<Provider | null> {
     const apiKey = gatewayServerKey();
     if (!apiKey) return Promise.resolve(null);
@@ -126,12 +120,6 @@ export class AiService {
     );
   }
 
-  /**
-   * Per-request gateway options with the single-user id for spend
-   * attribution. Auth travels with the provider instance (the single
-   * gateway key), not the options bag. The gateway must serve the requested
-   * model or fail — silent substitution via fallback models is not allowed.
-   */
   getGatewayRequestOptions(): GatewayRequestOptions {
     return buildGatewayOptions(SINGLE_USER_ID);
   }
@@ -165,14 +153,6 @@ export class AiService {
     );
   }
 
-  /**
-   * Gate for Study Material Generation and practice-problem evaluation: the
-   * model must be in the synced catalog and the Gateway public list must have
-   * tagged it `structured-output` during the current, verified sync. Aliases
-   * are resolved before lookup. Capability data that is not Gateway-fresh
-   * fails closed, so seed/offline catalogs and failed public fetches cannot
-   * start a Generation or an evaluation.
-   */
   requireStructuredOutput(
     provider: Provider,
     modelId: string,
@@ -226,8 +206,6 @@ export class AiService {
         tools: {
           web_search: webSearchTool,
         },
-        // Only one tool is present, so `required` still guarantees search
-        // without forcing a provider-specific translated tool name.
         toolChoice: 'required',
         stopWhen: isStepCount(2),
         ...requestOptions,
@@ -362,12 +340,9 @@ function extractWebSearchResults(
       sources?: { type?: string; url?: string }[];
       results?: Array<{ url?: string; title?: string }>;
     };
-    // Legacy OpenAI web_search shape.
     for (const s of output.sources ?? []) {
       if (s?.type === 'url' && s.url) results.push({ url: s.url });
     }
-    // Gateway Perplexity search shape: { results: [{ url, title, ... }] }.
-    // Parsed defensively — unknown shapes are ignored, never trusted blindly.
     const perplexityResults = output.results;
     if (Array.isArray(perplexityResults)) {
       for (const r of perplexityResults) {
@@ -407,7 +382,6 @@ export function reconcileSearchSources(
   },
   parsed: ParsedSearchOutput | null,
 ): WebSearchSource[] {
-  // Real URLs the web_search actually returned (deduped, normalized).
   const realUrls = new Set<string>();
   for (const source of result.sources ?? []) {
     if (source.sourceType !== 'url' || !source.url) continue;
@@ -417,7 +391,6 @@ export function reconcileSearchSources(
     realUrls.add(normalizeUrl(url));
   }
 
-  // Title hints from citation sources (priority over model JSON).
   const citationTitles = new Map<string, string>();
   for (const source of result.sources ?? []) {
     if (source.sourceType !== 'url' || !source.url || !source.title) continue;
@@ -433,7 +406,7 @@ export function reconcileSearchSources(
     description?: string | null,
   ) => {
     const normalized = normalizeUrl(url);
-    if (!realUrls.has(normalized)) return; // never trust hallucinated URLs
+    if (!realUrls.has(normalized)) return;
     if (seen.has(normalized)) return;
     seen.add(normalized);
     const realTitle = citationTitles.get(normalized);
@@ -447,7 +420,6 @@ export function reconcileSearchSources(
   const modelSources = parsed?.sources ?? [];
 
   if (modelSources.length === 0) {
-    // Fallback when the model didn't emit JSON: keep real sources with citation titles.
     for (const source of result.sources ?? []) {
       if (source.sourceType !== 'url' || !source.url) continue;
       addSource(source.url, source.title);
@@ -458,7 +430,6 @@ export function reconcileSearchSources(
       addSource(url, title);
     }
   } else {
-    // Only keep sources the model explicitly chose (it curates for quality).
     for (const s of modelSources) {
       if (s.url) addSource(s.url, s.title, s.description);
     }

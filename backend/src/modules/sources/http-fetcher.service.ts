@@ -8,20 +8,15 @@ import {
 import type { SourceFetchConfig } from './source-policy.service';
 
 export interface FetchedHtml {
-  /** Requested URL (original input). */
   requestedUrl: string;
-  /** Final URL after redirects. */
   url: string;
-  /** Canonical identity of the final URL. */
   canonicalUrl: string;
   status: number;
   contentType: string;
   body: string;
   etag?: string;
   lastModified?: string;
-  /** Robots decision for the final hop. */
   robotsDecision: string;
-  /** Redirect hop URLs, in order (excludes the final URL). */
   redirects: string[];
 }
 

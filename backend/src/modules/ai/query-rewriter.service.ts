@@ -15,13 +15,6 @@ import {
   type RetrievalRewriteConfig,
 } from './query-understanding';
 
-/**
- * The gateway-backed rewrite model. It asks the configured chat model for a
- * JSON search query plus optional paraphrases and a hypothetical answer, and
- * validates the reply before the pipeline sees it. A missing gateway key
- * returns `null`; provider failures and unusable replies throw, so the
- * query-understanding stage degrades to its heuristic and records why.
- */
 @Injectable()
 export class QueryRewriterService implements QueryRewriter {
   private readonly config: RetrievalRewriteConfig;

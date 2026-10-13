@@ -214,7 +214,6 @@ export class VisionExtractionService implements VisionExtractionPort {
         };
       }
 
-      // If parsing failed or gave 0 segments, wrap text response if available
       const rawText = result.text.trim();
       if (rawText.length > 0) {
         return {
