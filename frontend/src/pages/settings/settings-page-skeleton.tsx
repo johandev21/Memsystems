@@ -15,10 +15,7 @@ function MobileSettingsSkeleton() {
   return (
     <div className="flex flex-col gap-6 pb-24 w-full" aria-hidden="true">
       {/* Header Skeleton */}
-      <div className="sticky top-0 z-20 flex flex-col gap-2 bg-background/95 pb-2 pt-safe backdrop-blur-xs w-full">
-        <div className="flex items-center gap-1.5 py-1">
-          <Skeleton className="h-5 w-18 rounded-md" />
-        </div>
+      <div className="sticky top-0 z-20 flex flex-col pt-4 bg-background/95 backdrop-blur-xs w-full">
         <Skeleton className="h-8 w-32 rounded-lg" />
       </div>
 

@@ -17,22 +17,6 @@ vi.mock("next-themes", () => ({
   }),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    to,
-    ...props
-  }: {
-    children: ReactNode;
-    to: string;
-    [key: string]: unknown;
-  }) => (
-    <a href={to} {...props}>
-      {children}
-    </a>
-  ),
-}));
-
 function renderWithProviders(ui: ReactNode) {
   return render(<PaletteProvider>{ui}</PaletteProvider>);
 }
@@ -48,12 +32,8 @@ describe("MobileSettingsView", () => {
 
   afterEach(cleanup);
 
-  it("renders mobile settings header with back navigation to root", () => {
+  it("renders mobile settings header", () => {
     renderWithProviders(<MobileSettingsView />);
-
-    const backLink = screen.getByRole("link", { name: "Library" });
-    expect(backLink).toBeDefined();
-    expect(backLink.getAttribute("href")).toBe("/");
 
     expect(screen.getByRole("heading", { name: "Settings" })).toBeDefined();
   });
