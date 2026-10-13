@@ -22,6 +22,7 @@ export interface MobileCreatePromptDrawerProps {
   cancelLabel?: string;
   onConfirm: (name: string) => void | Promise<void>;
   isSubmitting?: boolean;
+  maxLength?: number;
 }
 
 export function MobileCreatePromptDrawer({
@@ -35,6 +36,7 @@ export function MobileCreatePromptDrawer({
   cancelLabel,
   onConfirm,
   isSubmitting = false,
+  maxLength = 200,
 }: MobileCreatePromptDrawerProps) {
   return (
     <Drawer
@@ -57,6 +59,7 @@ export function MobileCreatePromptDrawer({
             onCancel={() => onOpenChange(false)}
             onConfirm={onConfirm}
             isSubmitting={isSubmitting}
+            maxLength={maxLength}
           />
         )}
       </DrawerContent>
@@ -74,6 +77,7 @@ function CreatePromptForm({
   onCancel,
   onConfirm,
   isSubmitting,
+  maxLength = 200,
 }: {
   title: string;
   description?: string;
@@ -84,6 +88,7 @@ function CreatePromptForm({
   onCancel: () => void;
   onConfirm: (name: string) => void | Promise<void>;
   isSubmitting: boolean;
+  maxLength?: number;
 }) {
   const { t } = useTranslation(["common", "notebooks"]);
   const [value, setValue] = useState(initialValue);
@@ -111,6 +116,7 @@ function CreatePromptForm({
           autoFocus
           value={value}
           onChange={(event) => setValue(event.target.value)}
+          maxLength={maxLength}
           placeholder={placeholder}
           aria-label={title}
           enterKeyHint="done"

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import type { LibraryItem } from "../model/library-sort";
+import { MAX_TITLE_LENGTH } from "../model/title";
 
 export interface MobileRenameDrawerProps {
   item: LibraryItem | null;
@@ -54,6 +55,7 @@ export function MobileRenameDrawer({
           <Input
             value={value}
             onChange={(e) => onChangeValue(e.target.value)}
+            maxLength={MAX_TITLE_LENGTH}
             autoFocus
             className="h-11 text-base rounded-xl"
             placeholder={placeholder}

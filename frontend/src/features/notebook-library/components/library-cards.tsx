@@ -15,7 +15,7 @@ import { cn } from "@/shared/utils/cn";
 import { getFolderCovers } from "../model/artwork-assets";
 import { isTempId } from "../model/temp-id";
 import type { CoverVariants } from "../model/types";
-import { MAX_TITLE_LENGTH } from "../model/title";
+import { formatDisplayTitle, MAX_TITLE_LENGTH } from "../model/title";
 import { useFittedFolderTitle } from "../hooks/use-fitted-folder-title";
 import {
   EmptyFolderArtwork,
@@ -329,7 +329,7 @@ export function NotebookCard({
       className="library-artwork__title-editor"
       inputClassName="library-notebook-title-input"
     >
-      <span>{notebook.title}</span>
+      <span>{formatDisplayTitle(notebook.title)}</span>
     </InlineEditableText>
   );
   return (
