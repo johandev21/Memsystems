@@ -63,6 +63,9 @@
     "ready": "Listo para mover materiales de estudio en memoria.",
     "renamed": "Se cambió el nombre de {{previousName}} a {{nextName}}."
   },
+  "mobile": {
+    "newFolderDescription": "Organiza los materiales de estudio en carpetas."
+  },
   "row": {
     "actionsFor": "Acciones para {{name}}",
     "dragHandle": "Arrastra para mover",
@@ -70,9 +73,12 @@
   },
   "tree": {
     "ariaLabel": "Materiales de estudio",
+    "emptyFolder": "Esta carpeta está vacía",
+    "emptyFolderDescription": "Mueve materiales aquí o toca + para generar nuevos.",
     "emptyDescription": "Crea una carpeta para empezar.",
     "emptyDescriptionPrototype": "Crea una carpeta para empezar el prototipo en memoria.",
     "emptyTitle": "No hay materiales de estudio",
+    "mobileEmptyDescription": "Toca + para generar un cuestionario, tarjetas o guía de estudio.",
     "loading": "Cargando materiales de estudio",
     "updating": "Actualizando materiales de estudio"
   }

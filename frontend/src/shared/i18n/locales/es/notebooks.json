@@ -61,6 +61,10 @@
       "folder": "Carpeta",
       "folderDescription": "Agrupa cuadernos",
       "label": "Crear nuevo",
+      "newFolder": "Nueva carpeta",
+      "folderPlaceholder": "Nombre de la carpeta",
+      "newNotebook": "Nuevo cuaderno",
+      "notebookPlaceholder": "Título del cuaderno",
       "notebook": "Cuaderno",
       "notebookDescription": "Empezar un cuaderno en blanco"
     },
@@ -173,6 +177,7 @@
     "failedToGenerate": "No se pudo generar {{kind}}",
     "generating": "Generando {{kind}}...",
     "generationFailed": "La generación falló",
+    "newMaterial": "Nuevo material de estudio",
     "resources": {
       "caseStudy": "Caso práctico",
       "flashcards": "Tarjetas",

@@ -4,6 +4,7 @@
     "autoDecides": "Auto (AI decides)",
     "back": "Back",
     "custom": "Custom",
+    "done": "Done",
     "generate": "Generate",
     "generateKind": "Generate {{kind}}",
     "generateNow": "Generate {{kind}} Now",
@@ -40,6 +41,7 @@
     "questionCount_other": "{{count}} Questions"
   },
   "dialog": {
+    "close": "Close",
     "gatewayDescription": "An AI Gateway key is required to generate study materials.",
     "title": "Generate {{kind}}"
   },

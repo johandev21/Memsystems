@@ -32,6 +32,21 @@
     "orAddDirectly": "O añade una fuente directamente",
     "sourcesUsed": "Fuentes usadas"
   },
+  "mobile": {
+    "addSource": "Añadir fuente",
+    "back": "Atrás",
+    "emptyFolderDescription": "Mueve fuentes aquí o añade nuevas.",
+    "emptyFolderTitle": "Esta carpeta está vacía",
+    "directImportSection": "Importación directa",
+    "itemCount_one": "{{count}} elemento",
+    "itemCount_other": "{{count}} elementos",
+    "nameLabel": "Nombre",
+    "newFolderDescription": "Organiza las fuentes en carpetas.",
+    "newMenu": "Nuevo",
+    "save": "Guardar",
+    "uploadFilesHint": "Compatible con PDF, DOCX, TXT, imágenes, audio y vídeo.",
+    "webSearchSection": "Investigación web"
+  },
   "panel": {
     "addSourcesPrompt": "Añade fuentes (PDF, web, texto) para nutrir a tu asistente de estudio con IA",
     "deleteDescription": "¿Seguro que quieres eliminar “{{title}}”?",

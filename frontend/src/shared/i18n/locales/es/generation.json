@@ -4,6 +4,7 @@
     "autoDecides": "Auto (la IA decide)",
     "back": "Atrás",
     "custom": "Personalizado",
+    "done": "Listo",
     "generate": "Generar",
     "generateKind": "Generar {{kind}}",
     "generateNow": "Generar {{kind}} ahora",
@@ -41,6 +42,7 @@
     "questionCount_other": "{{count}} preguntas"
   },
   "dialog": {
+    "close": "Cerrar",
     "gatewayDescription": "Se requiere una clave del Gateway de IA para generar materiales de estudio.",
     "title": "Generar {{kind}}"
   },

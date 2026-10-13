@@ -63,6 +63,9 @@
     "ready": "Ready to move study materials in memory.",
     "renamed": "Renamed {{previousName}} to {{nextName}}."
   },
+  "mobile": {
+    "newFolderDescription": "Organize study materials into folders."
+  },
   "row": {
     "actionsFor": "Actions for {{name}}",
     "dragHandle": "Drag to move",
@@ -70,9 +73,12 @@
   },
   "tree": {
     "ariaLabel": "Study materials",
+    "emptyFolder": "This folder is empty",
+    "emptyFolderDescription": "Move materials here or tap + to generate new ones.",
     "emptyDescription": "Create a folder to begin.",
     "emptyDescriptionPrototype": "Create a folder to begin the in-memory prototype.",
     "emptyTitle": "No study materials",
+    "mobileEmptyDescription": "Tap + to generate a quiz, flashcards, or study guide.",
     "loading": "Loading study materials",
     "updating": "Updating study materials"
   }

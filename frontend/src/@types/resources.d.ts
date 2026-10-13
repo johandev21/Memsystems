@@ -496,6 +496,7 @@ export default interface Resources {
       "autoDecides": "Auto (AI decides)",
       "back": "Back",
       "custom": "Custom",
+      "done": "Done",
       "generate": "Generate",
       "generateKind": "Generate {{kind}}",
       "generateNow": "Generate {{kind}} Now",
@@ -532,6 +533,7 @@ export default interface Resources {
       "questionCount_other": "{{count}} Questions"
     },
     "dialog": {
+      "close": "Close",
       "gatewayDescription": "An AI Gateway key is required to generate study materials.",
       "title": "Generate {{kind}}"
     },
@@ -861,9 +863,13 @@ export default interface Resources {
         "aria": "Create",
         "folder": "Folder",
         "folderDescription": "Group notebooks together",
+        "folderPlaceholder": "Folder name",
         "label": "Create new",
+        "newFolder": "New folder",
+        "newNotebook": "New notebook",
         "notebook": "Notebook",
-        "notebookDescription": "Start a blank notebook"
+        "notebookDescription": "Start a blank notebook",
+        "notebookPlaceholder": "Notebook title"
       },
       "dnd": {
         "dragCancel": "Moving {{name}} was cancelled.",
@@ -971,6 +977,7 @@ export default interface Resources {
       "failedToGenerate": "Failed to generate {{kind}}",
       "generating": "Generating {{kind}}...",
       "generationFailed": "Generation failed",
+      "newMaterial": "New study material",
       "resources": {
         "caseStudy": "Case Study",
         "flashcards": "Flashcards",
@@ -1007,9 +1014,6 @@ export default interface Resources {
     "language": {
       "description": "Choose the language used across the app.",
       "title": "Language"
-    },
-    "nav": {
-      "back": "Library"
     },
     "page": {
       "title": "Settings"
@@ -1197,12 +1201,17 @@ export default interface Resources {
     "mobile": {
       "addSource": "Add source",
       "back": "Back",
+      "directImportSection": "Direct import",
       "emptyFolderDescription": "Move sources here or add new ones.",
       "emptyFolderTitle": "This folder is empty",
       "itemCount_one": "{{count}} item",
       "itemCount_other": "{{count}} items",
       "nameLabel": "Name",
-      "save": "Save"
+      "newFolderDescription": "Organize sources into folders.",
+      "newMenu": "New",
+      "save": "Save",
+      "uploadFilesHint": "Compatible with PDF, DOCX, TXT, images, audio, and video.",
+      "webSearchSection": "Web research"
     },
     "panel": {
       "addSourcesPrompt": "Add sources (PDF, Web, Text) to inform your AI study assistant",
@@ -1515,6 +1524,9 @@ export default interface Resources {
       "ready": "Ready to move study materials in memory.",
       "renamed": "Renamed {{previousName}} to {{nextName}}."
     },
+    "mobile": {
+      "newFolderDescription": "Organize study materials into folders."
+    },
     "row": {
       "actionsFor": "Actions for {{name}}",
       "dragHandle": "Drag to move",
@@ -1524,8 +1536,11 @@ export default interface Resources {
       "ariaLabel": "Study materials",
       "emptyDescription": "Create a folder to begin.",
       "emptyDescriptionPrototype": "Create a folder to begin the in-memory prototype.",
+      "emptyFolder": "This folder is empty",
+      "emptyFolderDescription": "Move materials here or tap + to generate new ones.",
       "emptyTitle": "No study materials",
       "loading": "Loading study materials",
+      "mobileEmptyDescription": "Tap + to generate a quiz, flashcards, or study guide.",
       "updating": "Updating study materials"
     }
   },

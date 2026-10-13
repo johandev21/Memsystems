@@ -61,6 +61,10 @@
       "folder": "Folder",
       "folderDescription": "Group notebooks together",
       "label": "Create new",
+      "newFolder": "New folder",
+      "folderPlaceholder": "Folder name",
+      "newNotebook": "New notebook",
+      "notebookPlaceholder": "Notebook title",
       "notebook": "Notebook",
       "notebookDescription": "Start a blank notebook"
     },
@@ -171,6 +175,7 @@
     "failedToGenerate": "Failed to generate {{kind}}",
     "generating": "Generating {{kind}}...",
     "generationFailed": "Generation failed",
+    "newMaterial": "New study material",
     "resources": {
       "caseStudy": "Case Study",
       "flashcards": "Flashcards",

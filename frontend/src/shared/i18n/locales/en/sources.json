@@ -32,6 +32,21 @@
     "orAddDirectly": "Or add a source directly",
     "sourcesUsed": "Sources used"
   },
+  "mobile": {
+    "addSource": "Add source",
+    "back": "Back",
+    "emptyFolderDescription": "Move sources here or add new ones.",
+    "emptyFolderTitle": "This folder is empty",
+    "directImportSection": "Direct import",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "nameLabel": "Name",
+    "newFolderDescription": "Organize sources into folders.",
+    "newMenu": "New",
+    "save": "Save",
+    "uploadFilesHint": "Compatible with PDF, DOCX, TXT, images, audio, and video.",
+    "webSearchSection": "Web research"
+  },
   "panel": {
     "addSourcesPrompt": "Add sources (PDF, Web, Text) to inform your AI study assistant",
     "deleteDescription": "Are you sure you want to delete \"{{title}}\"?",
