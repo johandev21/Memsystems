@@ -249,6 +249,19 @@ export function NotebookLibrary() {
     void navigate({ to: "/notebooks/$notebookId", params: { notebookId: id } });
   };
 
+  const handleCreateFolderMobile = async (name: string) => {
+    const { promise } = mutations.createFolder({ name, parentId: activeFolderId });
+    await promise;
+  };
+
+  const handleCreateNotebookMobile = async (title: string) => {
+    const { promise } = mutations.createNotebook({ title, folderId: activeFolderId });
+    const serverId = await promise;
+    if (serverId) {
+      void navigate({ to: "/notebooks/$notebookId", params: { notebookId: serverId } });
+    }
+  };
+
   return (
     <div className="notebook-library flex flex-col w-full">
       <LibraryHero onCreateNotebook={beginCreateNotebook} onCreateFolder={beginCreateFolder} />
@@ -290,6 +303,8 @@ export function NotebookLibrary() {
             onUpdateNotebook={(id, patch) => void mutations.updateNotebook(id, patch)}
             onCreateFolder={beginCreateFolder}
             onCreateNotebook={beginCreateNotebook}
+            onCreateFolderNamed={handleCreateFolderMobile}
+            onCreateNotebookNamed={handleCreateNotebookMobile}
           />
         </LibraryContent>
         {/* dropAnimation={null}: snap the overlay onto the drop target instead

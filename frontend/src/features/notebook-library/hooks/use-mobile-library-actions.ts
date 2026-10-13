@@ -9,6 +9,8 @@ export interface UseMobileLibraryActionsOptions {
     id: string,
     patch: { title?: string; description?: string; folderId?: string | null },
   ) => void;
+  onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
+  onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
 }
 
 export function useMobileLibraryActions({
@@ -16,12 +18,17 @@ export function useMobileLibraryActions({
   onRemoveFolder,
   onRemoveNotebook,
   onUpdateNotebook,
+  onCreateFolderNamed,
+  onCreateNotebookNamed,
 }: UseMobileLibraryActionsOptions) {
   const [activeItem, setActiveItem] = useState<LibraryItem | null>(null);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [isCreateNotebookOpen, setIsCreateNotebookOpen] = useState(false);
+  const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
 
   const openActionDrawer = (item: LibraryItem) => {
     setActiveItem(item);
@@ -68,6 +75,38 @@ export function useMobileLibraryActions({
     setActiveItem(null);
   };
 
+  const startCreateFolder = () => {
+    setIsCreateOpen(false);
+    setIsCreateFolderOpen(true);
+  };
+
+  const startCreateNotebook = () => {
+    setIsCreateOpen(false);
+    setIsCreateNotebookOpen(true);
+  };
+
+  const confirmCreateFolder = async (name: string) => {
+    if (!name.trim()) return;
+    setIsSubmittingCreate(true);
+    try {
+      await onCreateFolderNamed?.(name.trim());
+      setIsCreateFolderOpen(false);
+    } finally {
+      setIsSubmittingCreate(false);
+    }
+  };
+
+  const confirmCreateNotebook = async (title: string) => {
+    if (!title.trim()) return;
+    setIsSubmittingCreate(true);
+    try {
+      await onCreateNotebookNamed?.(title.trim());
+      setIsCreateNotebookOpen(false);
+    } finally {
+      setIsSubmittingCreate(false);
+    }
+  };
+
   return {
     activeItem,
     openActionDrawer,
@@ -84,5 +123,14 @@ export function useMobileLibraryActions({
     deleteItem,
     isCreateOpen,
     setIsCreateOpen,
+    isCreateFolderOpen,
+    setIsCreateFolderOpen,
+    isCreateNotebookOpen,
+    setIsCreateNotebookOpen,
+    isSubmittingCreate,
+    startCreateFolder,
+    startCreateNotebook,
+    confirmCreateFolder,
+    confirmCreateNotebook,
   };
 }

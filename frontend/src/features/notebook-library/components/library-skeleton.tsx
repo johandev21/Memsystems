@@ -18,33 +18,26 @@ export function LibraryHeroSkeleton() {
 
 export function MobileLibrarySkeleton() {
   return (
-    <div className="flex flex-col gap-3 pb-24 w-full sm:hidden" aria-hidden="true">
-      {/* Mobile Header: Title + Sort control */}
-      <div className="flex items-center justify-between gap-2 w-full py-1.5">
-        <Skeleton className="h-8 w-28 rounded-lg" />
-        <Skeleton className="h-8 w-22 rounded-full" />
+    <div className="flex flex-col gap-4 px-2 pb-24 w-full sm:hidden" aria-hidden="true">
+      {/* Mobile Header: Title */}
+      <div className="flex items-center w-full pt-5">
+        <Skeleton className="h-5 w-20 rounded-md" />
       </div>
 
-      {/* Tactile item tiles */}
-      <div className="flex flex-col gap-2 w-full">
+      {/* Minimalist item rows */}
+      <div className="flex flex-col gap-3.5 w-full">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={index}
-            className="flex w-full items-center justify-between rounded-2xl border border-border/20 bg-card p-3 shadow-2xs"
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Skeleton className="size-10 shrink-0 rounded-xl" />
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <Skeleton
-                  className={cn(
-                    "h-4 rounded-md",
-                    index % 3 === 0 ? "w-36" : index % 3 === 1 ? "w-44" : "w-28",
-                  )}
-                />
-                <Skeleton className="h-3 w-14 rounded-md" />
-              </div>
+          <div key={index} className="flex w-full items-center justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Skeleton className="size-5 shrink-0 rounded-sm" />
+              <Skeleton
+                className={cn(
+                  "h-4 rounded-md",
+                  index % 3 === 0 ? "w-36" : index % 3 === 1 ? "w-44" : "w-28",
+                )}
+              />
             </div>
-            <Skeleton className="size-8 shrink-0 rounded-xl" />
+            <Skeleton className="size-5 shrink-0 rounded-md" />
           </div>
         ))}
       </div>

@@ -163,4 +163,41 @@ describe("MobileLibraryView", () => {
 
     expect(onCreateNotebook).toHaveBeenCalled();
   });
+
+  it("matches minimalist design specs: 16px medium title, 12px back nav, 14px spacing, unified folder colors, and notebook icon fallback", () => {
+    const { container } = renderWithProviders(<MobileLibraryView {...defaultProps} />);
+
+    // Title: 16px (text-base), medium weight (font-medium)
+    const heading = screen.getByRole("heading", { name: "Philosophy" });
+    expect(heading.className).toContain("text-base");
+    expect(heading.className).toContain("font-medium");
+
+    // Header keeps h1 at pt-5 with back button positioned above at top-0 left-0
+    const header = heading.closest("header");
+    expect(header?.className).toContain("pt-5");
+    const backBtn = screen.getByRole("button", { name: "Back" });
+    expect(backBtn.className).toContain("absolute");
+    expect(backBtn.className).toContain("top-0");
+    expect(backBtn.className).toContain("text-xs");
+    const backIcon = backBtn.querySelector("svg");
+    expect(backIcon?.getAttribute("class")).toContain("size-3");
+
+    // File tree spacing: 14px (gap-3.5) between elements
+    const list = screen.getByRole("list");
+    expect(list.className).toContain("gap-3.5");
+
+    // Folders: folder name, icon, and menu icon on the right use the same color
+    const folderTile = container.querySelector('[data-slot="mobile-folder-tile"]');
+    expect(folderTile?.className).toContain("text-text-secondary");
+    const folderIcon = folderTile?.querySelector("button svg");
+    expect(folderIcon?.getAttribute("class")).toContain("text-current");
+    const folderMenuBtn = screen.getByRole("button", { name: "Actions for Ancient Philosophy" });
+    expect(folderMenuBtn.className).toContain("text-current");
+
+    // Notebooks without a banner: show the lucide Notebook icon
+    const notebookTile = container.querySelector('[data-slot="mobile-notebook-tile"]');
+    const notebookIcon = notebookTile?.querySelector("button svg.lucide-notebook");
+    expect(notebookIcon).not.toBeNull();
+  });
 });
+

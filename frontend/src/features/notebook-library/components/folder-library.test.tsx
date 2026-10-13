@@ -290,7 +290,11 @@ describe("FolderLibrary notebook deletion", () => {
         />
       </DndContext>,
     );
-    fireEvent.contextMenu(screen.getByRole("button", { name: "Notebook" }));
+    // Both mobile list and desktop grid render the notebook button in JSDOM (CSS sm:hidden / hidden sm:flex).
+    // Target the desktop card button to open the context menu.
+    const notebookButtons = screen.getAllByRole("button", { name: "Notebook" });
+    const desktopCard = notebookButtons[notebookButtons.length - 1];
+    fireEvent.contextMenu(desktopCard);
     await user.click(await screen.findByRole("menuitem", { name: "Delete Notebook" }));
     expect(onRemoveNotebook).toHaveBeenCalledWith("notebook-1");
   });

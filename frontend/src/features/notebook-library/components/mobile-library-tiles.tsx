@@ -1,4 +1,4 @@
-import { Folder, MoreVertical, NotebookText } from "lucide-react";
+import { Folder, MoreVertical, Notebook } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { LibraryFolder, LibraryNotebook } from "../model/types";
 
@@ -13,38 +13,34 @@ export function MobileFolderTile({ folder, onOpen, onActions }: MobileFolderTile
   return (
     <div
       role="listitem"
-      className="group relative flex w-full items-center justify-between rounded-2xl border border-border/20 bg-card p-3 shadow-2xs transition-transform transition-colors hover:bg-muted/40 active:scale-95 duration-150 ease-out touch-manipulation select-none"
+      data-slot="mobile-folder-tile"
+      className="group relative flex w-full items-center justify-between text-text-secondary select-none"
     >
       <button
         type="button"
         onClick={onOpen}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+        className="flex min-w-0 flex-1 items-center gap-2 text-left text-current transition-opacity active:opacity-70 touch-manipulation cursor-pointer"
       >
-        <Folder className="size-10 shrink-0 text-primary/70 fill-primary/15" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-base font-medium leading-snug text-foreground">
-            {folder.name}
-          </span>
-          <span className="text-xs text-muted-foreground">{t("library.folder")}</span>
-        </div>
+        <Folder className="size-5 shrink-0 text-current" />
+        <span className="min-w-0 flex-1 truncate text-sm font-normal leading-5 text-current">
+          {folder.name}
+        </span>
       </button>
 
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onActions();
-          }}
-          aria-label={t("library.itemActions", {
-            name: folder.name,
-            defaultValue: `Actions for ${folder.name}`,
-          })}
-          className="flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-transform touch-manipulation cursor-pointer"
-        >
-          <MoreVertical className="size-4" />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onActions();
+        }}
+        aria-label={t("library.itemActions", {
+          name: folder.name,
+          defaultValue: `Actions for ${folder.name}`,
+        })}
+        className="relative flex size-5 shrink-0 items-center justify-center rounded-md text-current transition-opacity active:opacity-70 touch-manipulation cursor-pointer after:absolute after:-inset-2 after:content-['']"
+      >
+        <MoreVertical className="size-5 text-current" />
+      </button>
     </div>
   );
 }
@@ -60,44 +56,41 @@ export function MobileNotebookTile({ notebook, onOpen, onActions }: MobileNotebo
   return (
     <div
       role="listitem"
-      className="group relative flex w-full items-center justify-between rounded-2xl border border-border/20 bg-card p-3 shadow-2xs transition-transform transition-colors hover:bg-muted/40 active:scale-95 duration-150 ease-out touch-manipulation select-none"
+      data-slot="mobile-notebook-tile"
+      className="group relative flex w-full items-center justify-between text-text-secondary select-none"
     >
       <button
         type="button"
         onClick={onOpen}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+        className="flex min-w-0 flex-1 items-center gap-2 text-left text-current transition-opacity active:opacity-70 touch-manipulation cursor-pointer"
       >
-        <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">
-          {notebook.coverUrl ? (
+        {notebook.coverUrl ? (
+          <div className="h-3.5 w-5 shrink-0 overflow-hidden rounded-xs bg-muted">
             <img src={notebook.coverUrl} alt="" className="size-full object-cover" />
-          ) : (
-            <NotebookText className="size-5 text-muted-foreground" />
-          )}
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-base font-medium leading-snug text-foreground">
-            {notebook.title}
-          </span>
-          <span className="text-xs text-muted-foreground">{t("library.notebook")}</span>
-        </div>
+          </div>
+        ) : (
+          <Notebook className="size-5 shrink-0 text-current" />
+        )}
+        <span className="min-w-0 flex-1 truncate text-sm font-normal leading-5 text-current">
+          {notebook.title}
+        </span>
       </button>
 
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onActions();
-          }}
-          aria-label={t("library.itemActions", {
-            name: notebook.title,
-            defaultValue: `Actions for ${notebook.title}`,
-          })}
-          className="flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-transform touch-manipulation cursor-pointer"
-        >
-          <MoreVertical className="size-4" />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onActions();
+        }}
+        aria-label={t("library.itemActions", {
+          name: notebook.title,
+          defaultValue: `Actions for ${notebook.title}`,
+        })}
+        className="relative flex size-5 shrink-0 items-center justify-center rounded-md text-current transition-opacity active:opacity-70 touch-manipulation cursor-pointer after:absolute after:-inset-2 after:content-['']"
+      >
+        <MoreVertical className="size-5 text-current" />
+      </button>
     </div>
   );
 }
+

@@ -43,6 +43,8 @@ export interface FolderLibraryProps {
   onUpdateNotebook: (id: string, patch: { title?: string; description?: string; folderId?: string | null }) => void;
   onCreateFolder?: () => void;
   onCreateNotebook?: () => void;
+  onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
+  onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
 }
 
 export function FolderLibrary({
@@ -65,6 +67,8 @@ export function FolderLibrary({
   onUpdateNotebook,
   onCreateFolder,
   onCreateNotebook,
+  onCreateFolderNamed,
+  onCreateNotebookNamed,
 }: FolderLibraryProps) {
   const { t, i18n } = useTranslation("notebooks");
   const locale = i18n.resolvedLanguage;
@@ -141,6 +145,8 @@ export function FolderLibrary({
           onUpdateNotebook={onUpdateNotebook}
           onCreateFolder={onCreateFolder}
           onCreateNotebook={onCreateNotebook}
+          onCreateFolderNamed={onCreateFolderNamed}
+          onCreateNotebookNamed={onCreateNotebookNamed}
           emptyState={emptyState}
         />
       </div>

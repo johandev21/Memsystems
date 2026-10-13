@@ -1,4 +1,6 @@
-import { Folder, NotebookText } from "lucide-react";
+import { Folder, Notebook } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { MobileCreatePromptDrawer } from "@/components/ui/mobile-create-prompt-drawer";
 import { useMobileLibraryActions } from "../hooks/use-mobile-library-actions";
 import { folderAncestors } from "../model/folder-hierarchy";
 import type { LibraryItem, LibrarySortKey } from "../model/library-sort";
@@ -29,6 +31,8 @@ export interface MobileLibraryViewProps {
   ) => void;
   onCreateFolder?: () => void;
   onCreateNotebook?: () => void;
+  onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
+  onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
   emptyState: { title: string; description: string };
 }
 
@@ -47,8 +51,11 @@ export function MobileLibraryView({
   onUpdateNotebook,
   onCreateFolder,
   onCreateNotebook,
+  onCreateFolderNamed,
+  onCreateNotebookNamed,
   emptyState,
 }: MobileLibraryViewProps) {
+  const { t } = useTranslation("notebooks");
   const activeFolder = folders.find((folder) => folder.id === activeFolderId);
   const breadcrumbs = folderAncestors(folders, activeFolderId);
   const parentFolder = breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2] : null;
@@ -58,10 +65,12 @@ export function MobileLibraryView({
     onRemoveFolder,
     onRemoveNotebook,
     onUpdateNotebook,
+    onCreateFolderNamed,
+    onCreateNotebookNamed,
   });
 
   return (
-    <div className="flex flex-col gap-3 pb-24 w-full">
+    <div className="flex flex-col gap-4 px-2 pb-24 w-full">
       <MobileLibraryHeader
         activeFolder={activeFolder}
         parentFolder={parentFolder}
@@ -115,8 +124,30 @@ export function MobileLibraryView({
       <MobileCreateDrawer
         isOpen={actions.isCreateOpen}
         onOpenChange={actions.setIsCreateOpen}
-        onCreateNotebook={onCreateNotebook}
-        onCreateFolder={onCreateFolder}
+        onCreateNotebook={
+          onCreateNotebookNamed ? actions.startCreateNotebook : onCreateNotebook
+        }
+        onCreateFolder={
+          onCreateFolderNamed ? actions.startCreateFolder : onCreateFolder
+        }
+      />
+
+      <MobileCreatePromptDrawer
+        open={actions.isCreateFolderOpen}
+        onOpenChange={actions.setIsCreateFolderOpen}
+        title={t("library.create.newFolder", "New folder")}
+        placeholder={t("library.create.folderPlaceholder", "Folder name")}
+        onConfirm={actions.confirmCreateFolder}
+        isSubmitting={actions.isSubmittingCreate}
+      />
+
+      <MobileCreatePromptDrawer
+        open={actions.isCreateNotebookOpen}
+        onOpenChange={actions.setIsCreateNotebookOpen}
+        title={t("library.create.newNotebook", "New notebook")}
+        placeholder={t("library.create.notebookPlaceholder", "Notebook title")}
+        onConfirm={actions.confirmCreateNotebook}
+        isSubmitting={actions.isSubmittingCreate}
       />
     </div>
   );
@@ -134,7 +165,7 @@ function MobileLibraryEmptyState({
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 py-12 px-4 text-center">
       <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground">
-        {hasActiveFolder ? <Folder className="size-6" /> : <NotebookText className="size-6" />}
+        {hasActiveFolder ? <Folder className="size-6" /> : <Notebook className="size-6" />}
       </div>
       <p className="text-base font-medium text-foreground">{title}</p>
       <p className="mt-1 text-xs text-muted-foreground max-w-xs">{description}</p>
@@ -154,7 +185,7 @@ function MobileLibraryItemList({
   onOpenActions: (item: LibraryItem) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 w-full" role="list">
+    <div className="flex flex-col gap-3.5 w-full" role="list">
       {items.map((item) =>
         item.kind === "folder" ? (
           <MobileFolderTile
@@ -175,3 +206,4 @@ function MobileLibraryItemList({
     </div>
   );
 }
+
