@@ -7,6 +7,7 @@ export * from "./components/markdown-code-block";
 export * from "./components/markdown-table";
 export * from "./components/message";
 export * from "./components/model-selector";
+export * from "./components/mobile-model-selector-drawer";
 export * from "./components/prompt-input";
 export * from "./components/reasoning";
 export { useReasoning } from "./components/reasoning-context";

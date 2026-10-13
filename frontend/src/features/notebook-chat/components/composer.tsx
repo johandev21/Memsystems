@@ -2,6 +2,7 @@ import type { FileUIPart } from "ai";
 import { type RefObject, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  MobileModelSelectorDrawer,
   ModelSelector,
   ModelSelectorContent,
   ModelSelectorInput,
@@ -19,6 +20,7 @@ import {
 } from "@/features/ai";
 import type { ModelOption } from "@/features/ai";
 import { useComposerModels } from "../hooks/use-composer-models";
+import { useMediaQuery } from "../hooks/use-media-query";
 
 export interface ComposerProps {
   input: string;
@@ -50,6 +52,7 @@ export function Composer({
   textareaRef,
 }: ComposerProps) {
   const { t } = useTranslation("chat");
+  const isDesktop = useMediaQuery("(min-width: 640px)");
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -64,6 +67,18 @@ export function Composer({
   const modelState = useComposerModels(models, selectedModel, search, {
     capabilitiesVerified,
   });
+
+  const modelTriggerButton = (
+    <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-6rem))] cursor-pointer items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition-tint duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground touch-manipulation active:scale-97 sm:rounded-xl">
+      <ModelSelectorLogo
+        provider={modelState.activeProvider}
+        className="size-3.5 opacity-80 sm:size-4"
+      />
+      <ModelSelectorName className="min-w-0">
+        {modelState.activeModel?.displayName || selectedModel}
+      </ModelSelectorName>
+    </PromptInputButton>
+  );
 
   return (
     <PromptInput
@@ -83,38 +98,45 @@ export function Composer({
       </PromptInputBody>
       <PromptInputFooter className="px-1.5 pt-0 pb-0.5 sm:pt-0.5">
         <PromptInputTools>
-          <ModelSelector open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
-            <ModelSelectorTrigger
-              render={
-                <PromptInputButton className="group/model-trigger flex h-8 max-w-[min(18rem,calc(100vw-6rem))] cursor-pointer items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition-tint duration-150 hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/70 aria-expanded:text-foreground touch-manipulation active:scale-97 sm:rounded-xl">
-                  <ModelSelectorLogo
-                    provider={modelState.activeProvider}
-                    className="size-3.5 opacity-80 sm:size-4"
-                  />
-                  <ModelSelectorName className="min-w-0">
-                    {modelState.activeModel?.displayName || selectedModel}
-                  </ModelSelectorName>
-                </PromptInputButton>
-              }
+          {isDesktop ? (
+            <ModelSelector open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
+              <ModelSelectorTrigger render={modelTriggerButton} />
+              <ModelSelectorContent title={t("composer.selectModelTitle")}>
+                <ModelSelectorInput
+                  placeholder={t("composer.searchPlaceholder")}
+                  value={search}
+                  onValueChange={setSearch}
+                />
+                <ModelSelectorModels
+                  groups={modelState.groups}
+                  selectedModel={selectedModel}
+                  capabilitiesVerified={capabilitiesVerified}
+                  emptyLabel={t("composer.noModelsFound")}
+                  onSelect={(model) => {
+                    onModelChange(model);
+                    setModelSelectorOpen(false);
+                  }}
+                />
+              </ModelSelectorContent>
+            </ModelSelector>
+          ) : (
+            <MobileModelSelectorDrawer
+              open={modelSelectorOpen}
+              onOpenChange={setModelSelectorOpen}
+              trigger={modelTriggerButton}
+              groups={modelState.groups}
+              selectedModel={selectedModel}
+              onSelect={(model) => {
+                onModelChange(model);
+                setModelSelectorOpen(false);
+              }}
+              search={search}
+              onSearchChange={setSearch}
+              title={t("composer.selectModelTitle")}
+              searchPlaceholder={t("composer.searchPlaceholder")}
+              emptyLabel={t("composer.noModelsFound")}
             />
-            <ModelSelectorContent title={t("composer.selectModelTitle")}>
-              <ModelSelectorInput
-                placeholder={t("composer.searchPlaceholder")}
-                value={search}
-                onValueChange={setSearch}
-              />
-              <ModelSelectorModels
-                groups={modelState.groups}
-                selectedModel={selectedModel}
-                capabilitiesVerified={capabilitiesVerified}
-                emptyLabel={t("composer.noModelsFound")}
-                onSelect={(model) => {
-                  onModelChange(model);
-                  setModelSelectorOpen(false);
-                }}
-              />
-            </ModelSelectorContent>
-          </ModelSelector>
+          )}
         </PromptInputTools>
         <PromptInputSubmit
           status={isLoading ? "streaming" : "ready"}

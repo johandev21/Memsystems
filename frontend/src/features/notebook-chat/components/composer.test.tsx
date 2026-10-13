@@ -126,4 +126,24 @@ describe("Composer", () => {
 
     expect(onStop).toHaveBeenCalledOnce();
   });
+
+  it("renders desktop dialog on desktop viewports", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "matchMedia").mockReturnValue({
+      matches: true,
+      media: "(min-width: 640px)",
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    } as unknown as MediaQueryList);
+
+    render(<ComposerHarness />);
+
+    await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(await screen.findByRole("option", { name: /GPT-5.6 Luna/ })).toBeTruthy();
+  });
 });

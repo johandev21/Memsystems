@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  MobileModelSelectorDrawer,
   ModelSelector,
   ModelSelectorContent,
   ModelSelectorInput,
@@ -13,6 +14,7 @@ import {
   useModelList,
 } from "@/features/ai";
 import type { ModelOption } from "@/features/ai";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { AttemptFeedbackCard } from "./practice-solution-section";
 
 export interface AttemptCapability {
@@ -142,6 +144,8 @@ function EvaluationCapabilityGate({
   const [search, setSearch] = useState("");
   const groups = useModelList(models, { search, structuredOnly: true, capabilitiesVerified });
 
+  const isMobile = useMediaQuery("(max-width: 639px)");
+
   return (
     <Alert>
       <AlertTitle>{t("practice.structuredOutput.title")}</AlertTitle>
@@ -151,28 +155,47 @@ function EvaluationCapabilityGate({
           : t("practice.structuredOutput.unverifiedDescription")}
       </AlertDescription>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <ModelSelector open={pickerOpen} onOpenChange={setPickerOpen}>
-          <ModelSelectorTrigger render={<Button size="sm" />}>
-            {t("practice.structuredOutput.chooseModel")}
-          </ModelSelectorTrigger>
-          <ModelSelectorContent title={t("practice.structuredOutput.pickerTitle")}>
-            <ModelSelectorInput
-              placeholder={t("practice.structuredOutput.searchPlaceholder")}
-              value={search}
-              onValueChange={setSearch}
-            />
-            <ModelSelectorModels
-              groups={groups}
-              selectedModel={selectedModel}
-              capabilitiesVerified={capabilitiesVerified}
-              onSelect={(modelId) => {
-                onModelChange(modelId);
-                setPickerOpen(false);
-                onSelected();
-              }}
-            />
-          </ModelSelectorContent>
-        </ModelSelector>
+        {isMobile ? (
+          <MobileModelSelectorDrawer
+            open={pickerOpen}
+            onOpenChange={setPickerOpen}
+            trigger={<Button size="sm">{t("practice.structuredOutput.chooseModel")}</Button>}
+            groups={groups}
+            selectedModel={selectedModel}
+            onSelect={(modelId) => {
+              onModelChange(modelId);
+              setPickerOpen(false);
+              onSelected();
+            }}
+            search={search}
+            onSearchChange={setSearch}
+            title={t("practice.structuredOutput.pickerTitle")}
+            searchPlaceholder={t("practice.structuredOutput.searchPlaceholder")}
+          />
+        ) : (
+          <ModelSelector open={pickerOpen} onOpenChange={setPickerOpen}>
+            <ModelSelectorTrigger render={<Button size="sm" />}>
+              {t("practice.structuredOutput.chooseModel")}
+            </ModelSelectorTrigger>
+            <ModelSelectorContent title={t("practice.structuredOutput.pickerTitle")}>
+              <ModelSelectorInput
+                placeholder={t("practice.structuredOutput.searchPlaceholder")}
+                value={search}
+                onValueChange={setSearch}
+              />
+              <ModelSelectorModels
+                groups={groups}
+                selectedModel={selectedModel}
+                capabilitiesVerified={capabilitiesVerified}
+                onSelect={(modelId) => {
+                  onModelChange(modelId);
+                  setPickerOpen(false);
+                  onSelected();
+                }}
+              />
+            </ModelSelectorContent>
+          </ModelSelector>
+        )}
       </div>
     </Alert>
   );

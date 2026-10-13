@@ -80,20 +80,13 @@ export function ClearHistoryDialog({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="p-4 pb-safe-lg max-h-[85vh]">
-        <DrawerHeader className="text-left">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-              <Eraser className="size-5 text-muted-foreground" />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <DrawerTitle className="text-base font-semibold">
-                {t("clearHistory.title")}
-              </DrawerTitle>
-              <DrawerDescription className="text-xs text-muted-foreground">
-                {t("clearHistory.description")}
-              </DrawerDescription>
-            </div>
-          </div>
+        <DrawerHeader className="pb-2 text-left">
+          <DrawerTitle className="text-base font-semibold">
+            {t("clearHistory.title")}
+          </DrawerTitle>
+          <DrawerDescription className="text-xs text-muted-foreground">
+            {t("clearHistory.description")}
+          </DrawerDescription>
         </DrawerHeader>
         <DrawerFooter className="mt-4 flex flex-col gap-2 p-0">
           <Button

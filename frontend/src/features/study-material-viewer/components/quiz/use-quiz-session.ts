@@ -21,6 +21,11 @@ export function useQuizSession(
     shuffle ? shuffleQuestionsOptions(questions) : questions,
   );
 
+  const [viewMode, setViewMode] = useState<ViewMode>("active");
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>({});
+  const [showUnansweredModal, setShowUnansweredModal] = useState(false);
+
   const prevQuestionsRef = useRef(questions);
   useEffect(() => {
     if (prevQuestionsRef.current !== questions) {
@@ -33,11 +38,6 @@ export function useQuizSession(
   }, [questions, shuffle]);
 
   const totalQuestions = sessionQuestions.length;
-
-  const [viewMode, setViewMode] = useState<ViewMode>("active");
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>({});
-  const [showUnansweredModal, setShowUnansweredModal] = useState(false);
 
   const answeredCount = Object.keys(selectedOptions).length;
   const unansweredCount = totalQuestions - answeredCount;

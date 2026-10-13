@@ -359,8 +359,11 @@ function useComposerHeight(
     const parent = conversationRef.current;
     const composer = composerRef.current;
     if (!parent || !composer) return;
-    const updateHeight = () =>
-      parent.style.setProperty("--composer-height", `${composer.offsetHeight}px`);
+    const updateHeight = () => {
+      const height = `${composer.offsetHeight}px`;
+      parent.style.setProperty("--composer-height", height);
+      document.documentElement.style.setProperty("--composer-height", height);
+    };
     updateHeight();
     const observer = new ResizeObserver(updateHeight);
     observer.observe(composer);
@@ -368,6 +371,7 @@ function useComposerHeight(
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", updateHeight);
+      document.documentElement.style.removeProperty("--composer-height");
     };
   }, [conversationRef, composerRef]);
 }

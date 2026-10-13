@@ -6,8 +6,18 @@ export const PROVIDER_NAMES: Record<string, string> = {
   anthropic: "Anthropic",
   deepseek: "DeepSeek",
   kimi: "Kimi",
+  alibaba: "Alibaba",
+  meta: "Meta",
+  mistral: "Mistral",
+  cohere: "Cohere",
+  groq: "Groq",
+  xai: "xAI",
+  amazon: "Amazon",
+  microsoft: "Microsoft",
+  together: "Together",
 };
 
 export function getProviderName(provider: string): string {
-  return PROVIDER_NAMES[provider] || provider.charAt(0).toUpperCase() + provider.slice(1);
+  const normalized = provider.toLowerCase();
+  return PROVIDER_NAMES[normalized] || provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase();
 }
