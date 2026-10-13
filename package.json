@@ -3,15 +3,15 @@
   "private": true,
   "packageManager": "pnpm@12.5.1",
   "scripts": {
-    "dev": "turbo run dev",
-    "dev:backend": "turbo run dev --filter=backend",
-    "dev:frontend": "turbo run dev --filter=frontend",
-    "build": "turbo run build",
-    "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
-    "format": "turbo run format",
-    "format:check": "turbo run format:check",
+    "dev": "pnpm --parallel -r run dev",
+    "dev:backend": "pnpm --filter backend run dev",
+    "dev:frontend": "pnpm --filter frontend run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "format": "pnpm -r run format",
+    "format:check": "pnpm -r run format:check",
     "docker:dev": "node scripts/docker.mjs dev up",
     "docker:dev:down": "node scripts/docker.mjs dev down",
     "docker:dev:logs": "node scripts/docker.mjs dev logs",
@@ -25,9 +25,5 @@
     "docker:prod:migrate": "node scripts/docker.mjs prod migrate",
     "docker:prod:reset": "node scripts/docker.mjs prod reset",
     "worktree:setup": "node scripts/worktree-setup.mjs"
-  },
-  "devDependencies": {
-    "drizzle-kit": "^0.31.10",
-    "turbo": "^2.4.0"
   }
 }

@@ -16,9 +16,7 @@ frontend/node_modules
 **/dist
 backend/dist
 frontend/dist
-.turbo
 **/*.tsbuildinfo
-.tanstack
 
 # Environment files (secrets must never enter the image)
 **/.env*
@@ -35,5 +33,4 @@ frontend/dist
 # Repo-local tooling & docs not needed to build/run
 .agents
 docs
-chatbot.md
 skills-lock.json

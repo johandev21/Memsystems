@@ -15,7 +15,7 @@
     "db:migrate": "ts-node src/database/migrate.ts",
     "db:seed": "ts-node src/database/seed.ts",
     "db:seed:variants": "ts-node scripts/generate-seed-variants.ts",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -48,7 +48,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
@@ -57,21 +56,17 @@
     "@types/jsdom": "^21.1.7",
     "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
-    "@types/pdf-parse": "^1.1.4",
     "@types/pg": "^8.20.0",
-    "@types/supertest": "^7.0.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.0.0",
     "prettier": "^3.4.2",
     "sharp": "^0.35.4",
-    "supertest": "^7.0.0",
     "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
-    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.9"
   }
 }

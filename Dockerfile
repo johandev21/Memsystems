@@ -13,7 +13,7 @@ WORKDIR /app
 # deps: install the full monorepo (devDeps included, required for building)
 # ---------------------------------------------------------------------------
 FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 RUN --mount=type=cache,id=memsystems-pnpm-store,target=/pnpm/store \
@@ -33,8 +33,7 @@ RUN --mount=type=cache,id=memsystems-pnpm-store,target=/pnpm/store \
 # ---------------------------------------------------------------------------
 FROM deps AS backend-build
 COPY backend ./backend
-RUN --mount=type=cache,id=memsystems-turbo-cache,target=/app/.turbo \
-    pnpm --filter=backend build
+RUN pnpm --filter=backend build
 
 # ---------------------------------------------------------------------------
 # frontend-build: compile the Vite + React frontend
@@ -42,7 +41,7 @@ RUN --mount=type=cache,id=memsystems-turbo-cache,target=/app/.turbo \
 # ---------------------------------------------------------------------------
 FROM deps AS frontend-build
 COPY frontend ./frontend
-RUN --mount=type=cache,id=memsystems-turbo-cache,target=/app/.turbo \
+RUN --mount=type=cache,id=memsystems-frontend-tsbuildinfo,target=/app/frontend/node_modules/.tmp \
     pnpm --filter=frontend build
 
 # ---------------------------------------------------------------------------
