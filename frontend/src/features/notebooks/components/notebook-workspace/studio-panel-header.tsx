@@ -11,7 +11,7 @@ export function StudioPanelHeader({ collapsed, onToggleCollapse }: StudioPanelHe
   const { t } = useTranslation("notebooks");
 
   return (
-    <header className="flex items-center justify-between p-1.5 bg-panel-header-bg">
+    <header className="flex items-center justify-between p-1.5 bg-panel-header-bg min-h-11">
       <h2 className={`text-sm font-semibold ${collapsed ? "hidden" : ""}`}>{t("panels.studio")}</h2>
       <Button
         variant="ghost"

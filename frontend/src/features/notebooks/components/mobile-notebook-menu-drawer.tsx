@@ -1,12 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
   Eraser,
   MoreVertical,
   Pencil,
-  Settings,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
@@ -26,10 +25,8 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -182,15 +179,6 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
               <span>{t("settings.clearChat")}</span>
             </button>
 
-            <Link
-              to="/settings"
-              onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted active:scale-97 transition-transform transition-colors touch-manipulation cursor-pointer"
-            >
-              <Settings className="size-4 text-muted-foreground shrink-0" />
-              <span>{t("settings.appSettings", "App settings")}</span>
-            </Link>
-
             <button
               type="button"
               onClick={handleOpenDelete}
@@ -205,24 +193,17 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
 
       <Drawer open={groundingDrawerOpen} onOpenChange={setGroundingDrawerOpen}>
         <DrawerContent className="p-4 pb-safe-lg max-h-[85vh]">
-          <DrawerHeader className="text-left">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                <SlidersHorizontal className="size-5 text-muted-foreground" />
-              </div>
-              <div className="min-w-0 space-y-1">
-                <DrawerTitle className="text-base font-semibold">
-                  {t("groundingMode.label")}
-                </DrawerTitle>
-                <DrawerDescription className="text-xs text-muted-foreground">
-                  {t("groundingMode.drawerDescription")}
-                </DrawerDescription>
-              </div>
-            </div>
+          <DrawerHeader className="pb-2 text-left">
+            <DrawerTitle className="text-base font-semibold">
+              {t("groundingMode.label")}
+            </DrawerTitle>
+            <DrawerDescription className="text-xs text-muted-foreground">
+              {t("groundingMode.drawerDescription")}
+            </DrawerDescription>
           </DrawerHeader>
 
           <div
-            className="flex flex-col gap-2 py-3"
+            className="flex flex-col gap-1 py-2"
             role="radiogroup"
             aria-label={t("groundingMode.label")}
           >
@@ -237,14 +218,12 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
                   disabled={isSavingMode}
                   onClick={() => handleSelectGroundingMode(mode)}
                   className={cn(
-                    "flex w-full cursor-pointer items-center justify-between rounded-2xl border p-3.5 text-left transition-all active:scale-[0.98] touch-manipulation",
-                    isSelected
-                      ? "border-primary bg-primary/10 shadow-xs"
-                      : "border-border/60 bg-muted/20 hover:bg-muted/40",
+                    "flex w-full cursor-pointer items-center justify-between rounded-xl px-3.5 py-3 text-left transition-colors active:scale-98 touch-manipulation",
+                    isSelected ? "bg-muted font-medium" : "hover:bg-muted/60",
                   )}
                 >
-                  <div className="flex flex-col gap-0.5 pr-3">
-                    <span className="text-sm font-semibold text-foreground">
+                  <div className="flex flex-col gap-0.5 pr-3 min-w-0 flex-1">
+                    <span className="text-sm font-medium text-foreground">
                       {t(`groundingMode.${mode}`)}
                     </span>
                     <span className="text-xs text-muted-foreground leading-normal">
@@ -252,27 +231,12 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
                     </span>
                   </div>
                   {isSelected && (
-                    <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      <Check className="size-3.5" />
-                    </div>
+                    <Check className="size-4.5 shrink-0 text-primary" />
                   )}
                 </button>
               );
             })}
           </div>
-
-          <DrawerFooter className="mt-2 flex flex-col gap-2 p-0">
-            <DrawerClose
-              render={
-                <Button
-                  variant="outline"
-                  className="h-11 min-h-11 w-full rounded-xl text-sm font-medium touch-manipulation active:scale-97 cursor-pointer"
-                >
-                  {t("settings.cancel")}
-                </Button>
-              }
-            />
-          </DrawerFooter>
         </DrawerContent>
       </Drawer>
 

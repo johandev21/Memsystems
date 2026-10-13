@@ -25,22 +25,22 @@ export function MaterialViewerHeader({
 
   return (
     <div
-      className={`flex items-center justify-between gap-2 p-1.5 min-h-11 shrink-0 select-none bg-panel-header-bg border-b border-surface-border-subtle ${
+      className={`flex items-center justify-between gap-2 p-1.5 min-h-11 shrink-0 select-none bg-panel-header-bg ${
         isEffectivelyFullscreen ? "pt-safe" : ""
       }`}
     >
-      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         {!isEffectivelyFullscreen && !hasChatHandoff && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="min-h-11 min-w-11 sm:size-8 sm:h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary cursor-pointer flex items-center justify-center rounded-lg shrink-0 touch-manipulation active:scale-97 transition-transform"
+            className="h-8 px-2.5 text-xs text-text-secondary hover:text-text-primary cursor-pointer flex items-center gap-1.5 rounded-lg shrink-0 touch-manipulation active:scale-97 transition-transform"
             title={t("header.returnToStudio")}
             aria-label={t("header.returnToStudio")}
           >
-            <ArrowLeft className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+            <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
         )}
         <h3 className="text-sm font-semibold truncate text-text-primary ml-1 min-w-0 flex-1">
@@ -55,7 +55,7 @@ export function MaterialViewerHeader({
             variant="ghost"
             size="icon"
             onClick={onToggleFullscreen}
-            className="min-h-11 min-w-11 sm:size-8 sm:h-8 sm:w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
+            className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
             title={
               isFullscreen
                 ? t("header.exitFullscreenTitle")
@@ -80,7 +80,7 @@ export function MaterialViewerHeader({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="min-h-11 min-w-11 sm:size-8 sm:h-8 sm:w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
+            className="h-8 w-8 text-text-secondary hover:text-text-primary cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
             title={t("common.close")}
             aria-label={t("common.close")}
           >

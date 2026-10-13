@@ -33,7 +33,7 @@ function ReaderMoreMenu({
         render={
           <button
             type="button"
-            className="min-h-11 min-w-11 sm:h-8 sm:w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer touch-manipulation active:scale-97 transition-transform"
+            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer touch-manipulation active:scale-97 transition-transform"
             aria-label={t("reader.moreActions")}
           />
         }
@@ -98,7 +98,7 @@ export function SourceReaderHeader({
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="min-h-11 min-w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0 touch-manipulation active:scale-97 transition-transform"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0 touch-manipulation active:scale-97 transition-transform"
           aria-label={t("reader.backToSources")}
           title={t("reader.backToSources")}
         >
@@ -121,7 +121,7 @@ export function SourceReaderHeader({
             variant="ghost"
             size="icon"
             onClick={controls.toggleFullscreen}
-            className="min-h-11 min-w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
             title={controls.isFullscreen ? t("reader.exitFullscreen") : t("reader.fullscreenMode")}
           >
             {controls.isFullscreen ? (
@@ -137,7 +137,7 @@ export function SourceReaderHeader({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="min-h-11 min-w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
             title={t("reader.close")}
           >
             <X className="h-4 w-4" />

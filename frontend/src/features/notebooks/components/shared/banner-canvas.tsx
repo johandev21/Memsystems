@@ -202,7 +202,7 @@ export function BannerTitleCard({
             onChange={(event) => onDraftTitleChange(event.target.value)}
             maxLength={200}
             aria-label={t("banner.titleAria")}
-            className="h-7 min-w-0 rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent p-0 text-base sm:text-sm font-medium shadow-none selection:bg-primary/25 selection:text-foreground focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/40 focus-visible:ring-0"
+            className="h-7 min-w-0 rounded-none border-x-0 border-t-0 border-b border-transparent bg-transparent p-0 text-sm font-medium shadow-none selection:bg-primary/25 selection:text-foreground focus-visible:border-x-0 focus-visible:border-t-0 focus-visible:border-b-foreground/40 focus-visible:ring-0"
           />
         ) : (
           <span className="truncate text-sm font-medium tracking-tight">

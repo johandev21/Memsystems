@@ -1,15 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ChatPanel } from "@/features/notebook-chat";
 import { SourcesPanel } from "@/features/sources/components/sources-panel";
 import { SourceReaderSkeleton } from "@/features/sources/components/skeletons/source-reader-skeleton";
-import { MobileStudyMaterialsPanel } from "@/features/study-material-tree";
-import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
+import { MobileStudioView } from "../studio/mobile-studio-view";
 import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
 import type { SourceSegmentLocator } from "@/features/sources/types";
 import { MobileTabsHeader } from "./mobile-tabs-header";
@@ -91,19 +89,11 @@ export function MobileNotebookLayout({
         </TabsContent>
 
         <TabsContent value="studio" className="flex-1 mt-0 min-h-0">
-          <ScrollArea className="h-full">
-            <div className="p-3 space-y-3">
-              <StudioResources
-                notebookId={notebookId}
-                collapsed={false}
-                onGenerate={dialogs.handleGenerate}
-              />
-              <MobileStudyMaterialsPanel
-                notebookId={notebookId}
-                onSelectMaterial={dialogs.setSelectedStudyMaterialId}
-              />
-            </div>
-          </ScrollArea>
+          <MobileStudioView
+            notebookId={notebookId}
+            onGenerate={dialogs.handleGenerate}
+            onSelectMaterial={dialogs.setSelectedStudyMaterialId}
+          />
         </TabsContent>
       </Tabs>
 

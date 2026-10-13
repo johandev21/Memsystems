@@ -92,10 +92,16 @@ describe("Mobile Notebook Workspace & Menu Drawer", () => {
       </Tabs>,
     );
 
-    // Renders tabs for sources, chat, and studio
-    expect(screen.getByRole("tab", { name: /sources/i })).toBeDefined();
-    expect(screen.getByRole("tab", { name: /chat/i })).toBeDefined();
-    expect(screen.getByRole("tab", { name: /studio/i })).toBeDefined();
+    // Renders tabs for sources, chat, and studio without icons
+    const sourcesTab = screen.getByRole("tab", { name: /sources/i });
+    const chatTab = screen.getByRole("tab", { name: /chat/i });
+    const studioTab = screen.getByRole("tab", { name: /studio/i });
+    expect(sourcesTab).toBeDefined();
+    expect(chatTab).toBeDefined();
+    expect(studioTab).toBeDefined();
+    expect(sourcesTab.querySelector("svg")).toBeNull();
+    expect(chatTab.querySelector("svg")).toBeNull();
+    expect(studioTab.querySelector("svg")).toBeNull();
 
     // No settings button or dialog inside MobileTabsHeader
     expect(screen.queryByRole("button", { name: /notebook settings/i })).toBeNull();
@@ -119,7 +125,7 @@ describe("Mobile Notebook Workspace & Menu Drawer", () => {
     // Actions
     expect(screen.getByRole("button", { name: "Edit notebook" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Clear chat" })).toBeDefined();
-    expect(screen.getByRole("link", { name: /app settings/i })).toBeDefined();
+    expect(screen.queryByRole("link", { name: /app settings/i })).toBeNull();
     expect(screen.getByRole("button", { name: "Delete notebook" })).toBeDefined();
   });
 
