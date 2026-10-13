@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowUpDown, ChevronRight, NotebookText } from "lucide-react";
+import { ArrowUpDown, ChevronRight, MoreHorizontal, NotebookText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/shared/utils/cn";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -152,30 +158,36 @@ export function FolderLibrary({
 
       <div className="hidden sm:flex flex-col gap-4 w-full">
         {activeFolder && <Breadcrumb folders={breadcrumbs} onOpenFolder={onOpenFolder} />}
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-foreground">
+        <div className="flex items-start sm:items-center justify-between gap-4 min-w-0">
+          <h2
+            dir="auto"
+            className="text-lg font-semibold text-foreground min-w-0 break-words [overflow-wrap:anywhere] line-clamp-3"
+            title={activeFolder?.name ?? t("library.library")}
+          >
             {activeFolder?.name ?? t("library.library")}
           </h2>
-          <Select
-            items={sortOptions}
-            value={sortKey}
-            onValueChange={(value) => onSortChange(value as LibrarySortKey)}
-          >
-            <SelectTrigger size="sm" aria-label={t("library.sort.aria")}>
-              <ArrowUpDown className="size-4" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="w-56">
-              {sortOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value} className="items-start py-2">
-                  <span className="flex flex-col gap-0.5">
-                    <span className="font-medium">{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="shrink-0">
+            <Select
+              items={sortOptions}
+              value={sortKey}
+              onValueChange={(value) => onSortChange(value as LibrarySortKey)}
+            >
+              <SelectTrigger size="sm" aria-label={t("library.sort.aria")} className="shrink-0">
+                <ArrowUpDown className="size-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="w-56">
+                {sortOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="items-start py-2">
+                    <span className="flex flex-col gap-0.5">
+                      <span className="font-medium">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <LibraryGrid
           items={items}
@@ -331,15 +343,44 @@ function Breadcrumb({
   onOpenFolder: (id: string | null) => void;
 }) {
   const { t } = useTranslation("notebooks");
+  const shouldCollapse = folders.length > 3;
+  const collapsedFolders = shouldCollapse ? folders.slice(0, -2) : [];
+  const visibleFolders = shouldCollapse ? folders.slice(-2) : folders;
+
   return (
     <nav
       aria-label={t("library.breadcrumbAria")}
-      className="flex items-center gap-1 text-sm text-muted-foreground"
+      className="flex items-center gap-1 text-sm text-muted-foreground flex-wrap min-w-0"
     >
       <BreadcrumbTarget id={null} label={t("library.library")} onOpenFolder={onOpenFolder} />
-      {folders.map((folder) => (
-        <span key={folder.id} className="contents">
-          <ChevronRight className="size-4" />
+      {shouldCollapse && (
+        <span className="inline-flex items-center gap-1 shrink-0">
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="inline-flex items-center justify-center size-6 rounded-md hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer select-none"
+              aria-label="Show ancestor folders"
+            >
+              <MoreHorizontal className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-48 max-w-72">
+              {collapsedFolders.map((folder) => (
+                <DropdownMenuItem
+                  key={folder.id}
+                  onClick={() => onOpenFolder(folder.id)}
+                  className="cursor-pointer truncate text-sm"
+                  title={folder.name}
+                >
+                  <span className="truncate" dir="auto">{folder.name}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </span>
+      )}
+      {visibleFolders.map((folder) => (
+        <span key={folder.id} className="inline-flex items-center gap-1 min-w-0">
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
           <BreadcrumbTarget
             id={folder.id}
             label={folder.name}
@@ -374,7 +415,9 @@ function BreadcrumbTarget({
       ref={setNodeRef}
       aria-current="page"
       data-drop-target={isOver ? "valid" : undefined}
-      className={cn("min-w-0 truncate rounded-md text-foreground", highlightClass)}
+      dir="auto"
+      className={cn("min-w-0 max-w-44 sm:max-w-64 truncate rounded-md text-foreground font-medium", highlightClass)}
+      title={label}
     >
       {label}
     </span>
@@ -383,8 +426,9 @@ function BreadcrumbTarget({
       ref={setNodeRef}
       type="button"
       data-drop-target={isOver ? "valid" : undefined}
+      dir="auto"
       className={cn(
-        "rounded-md px-2 py-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring",
+        "rounded-md px-1.5 py-1 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring min-w-0 max-w-32 sm:max-w-48 truncate cursor-pointer transition-colors",
         highlightClass,
       )}
       onClick={() => onOpenFolder(id)}

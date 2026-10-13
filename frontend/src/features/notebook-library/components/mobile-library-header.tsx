@@ -29,13 +29,16 @@ export function MobileLibraryHeader({
           aria-label={t("library.back", "Back")}
         >
           <ChevronLeft className="size-3 shrink-0 transition-transform group-hover:-translate-x-0.5" />
-          <span className="max-w-48 truncate" aria-hidden="true">
+          <span className="max-w-48 truncate" aria-hidden="true" dir="auto">
             {parentFolder?.name ?? t("library.library")}
           </span>
         </button>
       )}
 
-      <h1 className="text-base font-medium leading-snug text-foreground truncate">
+      <h1
+        dir="auto"
+        className="text-base font-medium leading-snug text-foreground min-w-0 line-clamp-2 break-words [overflow-wrap:anywhere]"
+      >
         {activeFolder ? activeFolder.name : t("library.library")}
       </h1>
     </header>
