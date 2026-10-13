@@ -45,9 +45,6 @@ export const SimpleFlashcardContent = z.preprocess(
   (val) => {
     if (val && typeof val === 'object' && 'front' in val && 'back' in val) {
       const record = val as Record<string, unknown>;
-      // Thread a moderate-mode supplement through the single-card shorthand;
-      // every other key follows the historical path (cards only) so strict
-      // validation behavior is unchanged.
       const supplement = record.generalKnowledgeSupplement;
       return {
         cards: [{ front: record.front, back: record.back }],
@@ -129,47 +126,6 @@ export const MindMapContent = z.object({
   citations: GenerationCitationsSchema,
 });
 
-export const SlidesTheme = z.object({
-  background: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .default('#0F172A'),
-  accent: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .default('#38BDF8'),
-  text: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .default('#F8FAFC'),
-  muted: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .default('#94A3B8'),
-});
-
-export const SlidesSlide = z.object({
-  id: z.string(),
-  layout: z
-    .enum(['title', 'title-bullets', 'two-column', 'quote', 'closing'])
-    .default('title-bullets'),
-  title: z.string().min(1).max(200),
-  subtitle: z.string().max(500).default(''),
-  bullets: z.array(z.string().min(1).max(500)).max(6).default([]),
-  body: z.string().max(2000).default(''),
-  notes: z.string().max(2000).default(''),
-});
-
-export const SlidesPreview = z.object({
-  slideId: z.string(),
-  svg: z.string().min(1).max(200000),
-});
-
-// ---------------------------------------------------------------------------
-// Structured slide IR (v2). The canonical deck schema lives in
-// `slides-design.schema.ts`; the legacy prose types above are kept so older
-// decks remain readable and convertible via the resolver.
-// ---------------------------------------------------------------------------
 export {
   SlideDeckSchema as SlidesContentSchema,
   SlideDesignSchema,
@@ -213,9 +169,6 @@ export function validateContent(kind: string, content: unknown) {
   if (kind === 'practice_problems') return validatePracticeProblems(content);
   if (kind === 'case_study') return validateCaseStudy(content);
   if (kind === 'slides') {
-    // Slides accept legacy prose decks, structured scenes, and malformed
-    // partial output: the resolver always produces a complete v2 deck, and
-    // the strict schema then guarantees renderer-safe output.
     const resolved = resolveSlideDeck(content);
     const result = SlideDeckSchema.safeParse(resolved);
     if (!result.success) {

@@ -1,7 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
 import {
-  chatRoleEnum,
-  notebookChatMessages,
   notebooks,
   sourceFolders,
   sources,
@@ -22,29 +20,6 @@ export async function seedNotebook(
     })
     .returning();
   return { id: row.id, title: row.title };
-}
-
-export async function seedChatMessage(
-  notebookId: string,
-  input: {
-    role: (typeof chatRoleEnum.enumValues)[number];
-    content: string;
-    createdAt?: Date;
-    citedSourceIds?:
-      { sourceId: string; number: number; quote: string | null }[] | null;
-  },
-): Promise<{ id: string }> {
-  const [row] = await db
-    .insert(notebookChatMessages)
-    .values({
-      notebookId,
-      role: input.role,
-      content: input.content,
-      citedSourceIds: input.citedSourceIds ?? null,
-      createdAt: input.createdAt ?? new Date(),
-    })
-    .returning();
-  return { id: row.id };
 }
 
 export async function seedSource(

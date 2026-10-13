@@ -2,9 +2,8 @@ import * as zlib from 'node:zlib';
 import { Injectable } from '@nestjs/common';
 import { BadRequestError } from '../../common/errors/domain-error';
 
-export const MAX_VIDEO_BYTES = 1024 * 1024 * 1024; // 1 GB = 1,073,741,824 bytes
-export const MAX_VIDEO_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours = 14,400,000 ms
-export const MAX_VIDEO_DURATION_SECONDS = 4 * 60 * 60; // 4 hours = 14,400 seconds
+export const MAX_VIDEO_BYTES = 1024 * 1024 * 1024;
+export const MAX_VIDEO_DURATION_MS = 4 * 60 * 60 * 1000;
 
 export type SupportedVideoMimeType =
   'video/mp4' | 'video/webm' | 'video/quicktime' | 'video/x-matroska';
@@ -71,7 +70,7 @@ export function isVideoFile(
   return false;
 }
 
-const FTYP_MAGIC = Buffer.from([0x66, 0x74, 0x79, 0x70]); // 'ftyp'
+const FTYP_MAGIC = Buffer.from([0x66, 0x74, 0x79, 0x70]);
 const EBML_MAGIC = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
 
 const COMPATIBLE_MP4_BRANDS = new Set([
@@ -97,7 +96,6 @@ export class VideoInspectorService {
       | { filename?: string; contentType?: string; sizeBytes?: number },
     filenameOrKey?: string | null,
   ): InspectedVideo {
-    // Support both legacy positional args (contentType, filename) and options-object form { filename, contentType, sizeBytes }
     let declaredContentType: string | null | undefined;
     let effectiveFilename: string | null | undefined = filenameOrKey;
     let sizeBytes: number | undefined;
@@ -180,13 +178,11 @@ export class VideoInspectorService {
       return null;
     }
 
-    // 1. MP4 / MOV (ISO Base Media container with ftyp box)
     if (buffer.length >= 8 && buffer.subarray(4, 8).equals(FTYP_MAGIC)) {
       const boxSize = buffer.readUInt32BE(0);
       const majorBrand =
         buffer.length >= 12 ? buffer.toString('ascii', 8, 12) : '';
 
-      // Collect compatible brands
       const brands: string[] = [majorBrand];
       const ftypEnd = Math.min(
         buffer.length,
@@ -197,7 +193,6 @@ export class VideoInspectorService {
       }
 
       if (majorBrand === 'qt  ' || brands.includes('qt  ')) {
-        // If it only identifies as qt or major brand is qt, classify as QuickTime
         if (
           majorBrand === 'qt  ' &&
           !brands.some((b) => COMPATIBLE_MP4_BRANDS.has(b))
@@ -217,16 +212,13 @@ export class VideoInspectorService {
         return 'video/quicktime';
       }
 
-      // Default valid ftyp to video/mp4
       return 'video/mp4';
     }
 
-    // 2. WebM / Matroska (EBML container)
     if (buffer.length >= 4 && buffer.subarray(0, 4).equals(EBML_MAGIC)) {
       const headerLimit = Math.min(buffer.length, 4096);
       const headerSlice = buffer.subarray(0, headerLimit);
 
-      // Search for DocType (0x42 0x82)
       const docTypeIdx = headerSlice.indexOf(Buffer.from([0x42, 0x82]));
       if (docTypeIdx !== -1 && docTypeIdx + 3 <= headerLimit) {
         const lenByte = headerSlice[docTypeIdx + 2];
@@ -245,7 +237,6 @@ export class VideoInspectorService {
         }
       }
 
-      // Default EBML to WebM if not explicitly Matroska
       return 'video/webm';
     }
 
@@ -384,7 +375,6 @@ export class VideoInspectorService {
               trakOffset += tboxSize;
             }
 
-            // Check trak slice for audio or video sample entries
             const trakData = buffer.subarray(moovOffset, trakEnd);
             if (
               trakData.indexOf(Buffer.from('soun')) !== -1 ||
@@ -396,7 +386,6 @@ export class VideoInspectorService {
               hasAudio = true;
             }
 
-            // Fallback for visual dimensions from sample entries
             if (!width || !height) {
               for (const codec of [
                 'avc1',
@@ -441,8 +430,7 @@ export class VideoInspectorService {
     let height: number | undefined;
     let hasAudio = false;
 
-    // 1. TimecodeScale (0x2A 0xD7 0xB1) and Duration (0x44 0x89)
-    let timecodeScaleNs = 1_000_000; // default 1ms
+    let timecodeScaleNs = 1_000_000;
 
     const timecodeScaleIdx = buffer.indexOf(Buffer.from([0x2a, 0xd7, 0xb1]));
     if (timecodeScaleIdx !== -1 && timecodeScaleIdx + 7 <= buffer.length) {
@@ -466,12 +454,10 @@ export class VideoInspectorService {
       }
     }
 
-    // 2. Audio track presence
-    const audioTrackIdx = buffer.indexOf(Buffer.from([0xe1])); // Audio settings element
+    const audioTrackIdx = buffer.indexOf(Buffer.from([0xe1]));
     if (audioTrackIdx !== -1) {
       hasAudio = true;
     } else {
-      // Check TrackType element (0x83) with value 2 (Audio)
       let searchPos = 0;
       while (searchPos + 3 <= buffer.length) {
         const trackTypeIdx = buffer.indexOf(Buffer.from([0x83]), searchPos);
@@ -485,8 +471,7 @@ export class VideoInspectorService {
       }
     }
 
-    // 3. Video dimensions: PixelWidth (0xB0) and PixelHeight (0xBA)
-    const videoTrackIdx = buffer.indexOf(Buffer.from([0xe0])); // Video settings element
+    const videoTrackIdx = buffer.indexOf(Buffer.from([0xe0]));
     if (videoTrackIdx !== -1) {
       const trackSlice = buffer.subarray(
         videoTrackIdx,
@@ -521,11 +506,6 @@ export class VideoInspectorService {
     return { width, height, durationMs, hasAudio };
   }
 
-  /**
-   * Bounded keyframe / scene transition sampling for video recordings.
-   * Extracts or samples keyframe timestamps (e.g. from MP4 stss / WebM keyframe cues or bounded intervals)
-   * and produces inspectable frame images for vision analysis.
-   */
   sampleKeyframes(
     buffer: Buffer,
     options?: VideoKeyframeOptions,
@@ -557,13 +537,11 @@ export class VideoInspectorService {
     const durationMs =
       detectedDurationMs && detectedDurationMs > 0 ? detectedDurationMs : 10000;
 
-    // 1. Try finding container sync sample timestamps (e.g. from MP4 stss box)
     let candidateTimestampsMs: number[] = [];
     if (mimeType === 'video/mp4' || mimeType === 'video/quicktime') {
       candidateTimestampsMs = this.extractIsoBmffKeyframeTimestamps(buffer);
     }
 
-    // 2. If container keyframes were not found or sparse, generate bounded temporal samples
     if (candidateTimestampsMs.length === 0) {
       if (durationMs <= minIntervalMs) {
         candidateTimestampsMs = [0];
@@ -578,7 +556,6 @@ export class VideoInspectorService {
         }
       }
     } else {
-      // Filter container keyframe timestamps by minIntervalMs and maxKeyframes
       const filtered: number[] = [];
       let lastT = -minIntervalMs;
       for (const t of candidateTimestampsMs) {
@@ -591,7 +568,6 @@ export class VideoInspectorService {
       candidateTimestampsMs = filtered.length > 0 ? filtered : [0];
     }
 
-    // Generate valid PNG frame buffers with proper dimensions
     const frameWidth = Math.min(width || 1920, 3840);
     const frameHeight = Math.min(height || 1080, 2160);
 
@@ -662,14 +638,12 @@ export class VideoInspectorService {
               }
             }
 
-            // Scan for stss inside trak/mdia/minf/stbl
             const subSlice = buffer.subarray(moovOffset, moovOffset + subSize);
             const stssIdx = subSlice.indexOf(Buffer.from('stss'));
             if (stssIdx >= 4 && stssIdx + 12 <= subSlice.length) {
               const entryCount = subSlice.readUInt32BE(stssIdx + 8);
               const sampleEntries = Math.min(entryCount, 100);
 
-              // Look for stts in the same slice
               let sampleDelta = timeScale > 0 ? Math.round(timeScale / 30) : 33;
               const sttsIdx = subSlice.indexOf(Buffer.from('stts'));
               if (sttsIdx >= 4 && sttsIdx + 16 <= subSlice.length) {
@@ -696,7 +670,7 @@ export class VideoInspectorService {
         offset += boxSize;
       }
     } catch {
-      // Fallback on error
+      void 0;
     }
 
     return timestamps;
@@ -735,8 +709,8 @@ export function createValidPngBuffer(width: number, height: number): Buffer {
   const ihdrData = Buffer.alloc(13);
   ihdrData.writeUInt32BE(width, 0);
   ihdrData.writeUInt32BE(height, 4);
-  ihdrData.writeUInt8(8, 8); // 8-bit depth
-  ihdrData.writeUInt8(2, 9); // Truecolor RGB
+  ihdrData.writeUInt8(8, 8);
+  ihdrData.writeUInt8(2, 9);
   ihdrData.writeUInt8(0, 10);
   ihdrData.writeUInt8(0, 11);
   ihdrData.writeUInt8(0, 12);

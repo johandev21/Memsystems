@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import {
   sourceChunks,
-  sourceIndexJobs,
   sourceSegments,
   sources,
   sourceVersions,

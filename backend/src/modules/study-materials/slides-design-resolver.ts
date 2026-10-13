@@ -106,10 +106,6 @@ const DESIGN_PRESETS: Record<SlideDesignPreset, SlideDesign> = {
   },
 };
 
-export const SLIDES_PRESET_IDS = Object.keys(
-  DESIGN_PRESETS,
-) as SlideDesignPreset[];
-
 export function presetForThemeName(
   theme: string | undefined,
 ): SlideDesignPreset {
@@ -224,14 +220,12 @@ function bestTextOn(background: string): string {
   return white >= black ? '#F8FAFC' : '#111827';
 }
 
-/** Resolve a (possibly AI-proposed) design into complete, safe tokens. */
 export function resolveDesign(input: unknown): SlideDesign {
   const record = isRecord(input) ? input : {};
   const presetName =
     typeof record.preset === 'string' && record.preset in DESIGN_PRESETS
       ? (record.preset as SlideDesignPreset)
       : undefined;
-  // Legacy `theme: 'dark' | 'light' | 'accent'` maps onto presets.
   const legacyTheme =
     typeof record.theme === 'string'
       ? presetForThemeName(record.theme)
@@ -240,7 +234,6 @@ export function resolveDesign(input: unknown): SlideDesign {
 
   const pick = (key: keyof SlideDesign): string | undefined => {
     const v = record[key];
-    // Legacy decks use `accent` for the primary color.
     if (key === 'primary' && !cleanHex(v) && cleanHex(record.accent)) {
       return cleanHex(record.accent);
     }
@@ -279,7 +272,6 @@ export function resolveDesign(input: unknown): SlideDesign {
         : base.decoration,
   };
 
-  // Preserve preset fonts when the AI did not propose explicit fonts.
   if (!isRecord(input) || input.fontHeading === undefined) {
     design.fontHeading = base.fontHeading;
   }
@@ -287,7 +279,6 @@ export function resolveDesign(input: unknown): SlideDesign {
     design.fontBody = base.fontBody;
   }
 
-  // Contrast safety: text must remain readable on the background.
   if (contrastRatio(design.text, design.background) < 3) {
     design.text = bestTextOn(design.background);
   }
@@ -321,7 +312,6 @@ function cleanPosition(
   ) {
     return undefined;
   }
-  // Clamp to the 1280x720 canvas; drop positions entirely outside.
   const cx = Math.min(1280, Math.max(0, x));
   const cy = Math.min(720, Math.max(0, y));
   const cw = Math.min(1280 - cx, Math.max(1, w));
@@ -493,7 +483,6 @@ function resolveElement(value: unknown): SlideElement | null {
   }
 }
 
-/** Convert a legacy prose slide into a structured scene. */
 export function legacySlideToScene(
   slide: LegacySlidesSlide,
   index: number,
@@ -618,7 +607,6 @@ function resolveScene(value: unknown, index: number): SlideScene | null {
     .filter((element): element is SlideElement => element !== null)
     .slice(0, MAX_ELEMENTS_PER_SLIDE);
 
-  // Bridge legacy prose fields inside a structured-looking slide.
   if (elements.length === 0) {
     const bullets = (Array.isArray(value.bullets) ? value.bullets : [])
       .map((bullet) => clampText(toString(bullet).trim(), 500))
@@ -649,7 +637,6 @@ function resolveScene(value: unknown, index: number): SlideScene | null {
     }
   }
 
-  // Partially-valid scene: drop invalid elements, keep safe text fallback.
   if (elements.length === 0) {
     const fallback = subtitle ? `${title}. ${subtitle}` : title;
     elements = [{ type: 'text', text: clampText(fallback, 2000) }];
@@ -672,10 +659,8 @@ function applyRoleRules(scenes: SlideScene[]): SlideScene[] {
     elements: [...scene.elements],
   }));
 
-  // First slide must be `title`.
   next[0] = { ...next[0], role: 'title' };
 
-  // Final slide must be `closing` or `takeaways` (single-slide decks stay `title`).
   if (next.length > 1) {
     const last = next[next.length - 1];
     if (last.role !== 'closing' && last.role !== 'takeaways') {
@@ -683,7 +668,6 @@ function applyRoleRules(scenes: SlideScene[]): SlideScene[] {
     }
   }
 
-  // No more than two consecutive `content` slides: the third becomes `cards`.
   let consecutive = 0;
   for (let i = 0; i < next.length; i++) {
     if (next[i].role === 'content') {
@@ -697,7 +681,6 @@ function applyRoleRules(scenes: SlideScene[]): SlideScene[] {
     }
   }
 
-  // `section` slides clarify major transitions: cap at 3, extras become `content`.
   let sections = 0;
   for (let i = 0; i < next.length; i++) {
     if (next[i].role === 'section') {
@@ -710,11 +693,6 @@ function applyRoleRules(scenes: SlideScene[]): SlideScene[] {
   return next;
 }
 
-/**
- * Accept new structured AI output, legacy slide output, or malformed partial
- * output and always return a complete, validated deck (or throw only when
- * nothing renderable remains).
- */
 export function resolveSlideDeck(input: unknown): SlideDeck {
   const record = isRecord(input) ? input : {};
   const title = clampText(
@@ -740,7 +718,6 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
       })();
 
   if (rawSlides.length > 0 && !isStructuredSlidesContent(input)) {
-    // Legacy deck: convert prose slides into scenes.
     scenes = (rawSlides as LegacySlidesContent['slides']).map(
       (slide, index) => {
         if (!isRecord(slide)) {
@@ -807,7 +784,6 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
     ];
   }
 
-  // Enforce deck-level element budget deterministically (trim trailing elements).
   let total = scenes.reduce((sum, scene) => sum + scene.elements.length, 0);
   if (total > MAX_ELEMENTS_PER_DECK) {
     let overflow = total - MAX_ELEMENTS_PER_DECK;
@@ -830,7 +806,6 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
 
   scenes = applyRoleRules(scenes);
 
-  // Deduplicate IDs deterministically.
   const seen = new Set<string>();
   scenes = scenes.map((scene, index) => {
     let id = scene.id.trim() || `slide-${index + 1}`;
@@ -842,8 +817,6 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
   });
 
   const citations = asCitations(record.citations);
-  // A moderate-mode supplement is deck-level metadata, not a scene: carry it
-  // through the rebuild so reads, exports, and copies keep it.
   const supplement = sanitizeGeneralKnowledgeSupplement(record);
 
   return {
@@ -858,7 +831,6 @@ export function resolveSlideDeck(input: unknown): SlideDeck {
   };
 }
 
-/** Normalizes an optional citations array the way the other deck fields are. */
 function asCitations(value: unknown): SlideDeck['citations'] {
   return Array.isArray(value) ? (value as SlideDeck['citations']) : undefined;
 }

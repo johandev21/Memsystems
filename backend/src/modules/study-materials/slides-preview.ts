@@ -10,9 +10,6 @@ import type {
 const WIDTH = 1280;
 const HEIGHT = 720;
 
-// Bottom edge of the usable content region. Everything text-related must be
-// laid out above this so nothing spills past the viewBox and gets clipped by
-// the <img> viewport in the frontend.
 const CONTENT_BOTTOM = 656;
 
 type DeckSlide = {
@@ -38,11 +35,6 @@ function truncate(value: string, max: number): string {
   return `${value.slice(0, max - 1)}…`;
 }
 
-/**
- * Greedy word-wrap. SVG <text> never wraps on its own, so every string must
- * be split into lines that fit the available pixel width (approximated via a
- * per-line char budget) before rendering.
- */
 function wrapWords(text: string, maxChars: number): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -70,7 +62,6 @@ function wrapWords(text: string, maxChars: number): string[] {
   return lines;
 }
 
-/** Wrap then cap the line count, ellipsizing the last visible line. */
 function fitLines(text: string, maxChars: number, maxLines: number): string[] {
   const wrapped = wrapWords(text, maxChars);
   if (wrapped.length <= maxLines) return wrapped;
@@ -88,7 +79,6 @@ export type LegacyPreviewTheme = {
 
 type Theme = LegacyPreviewTheme;
 
-/** Map a supported font name to an SVG font-family stack. */
 function fontFamilyFor(
   font: string | undefined,
   kind: 'heading' | 'body',
@@ -228,10 +218,6 @@ function bulletBlock(options: {
   }
   return { svg, nextY: cursor };
 }
-
-// ---------------------------------------------------------------------------
-// Legacy prose renderer (kept for legacy slides until migration completes).
-// ---------------------------------------------------------------------------
 
 function renderTitleClosing(slide: DeckSlide, theme: Theme): string {
   const titleLines = fitLines(slide.title || 'Slide', 30, 2);
@@ -468,10 +454,6 @@ function renderLegacySlide(
   }
   return renderBullets(slide, theme, layout === 'two-column');
 }
-
-// ---------------------------------------------------------------------------
-// Structured scene renderer.
-// ---------------------------------------------------------------------------
 
 const ROLE_EYEBROW: Partial<Record<SlideScene['role'], string>> = {
   section: 'Section',
@@ -712,7 +694,6 @@ function renderCardGroupElement(
   const cardHeight = 168;
   const totalHeight = rows * cardHeight + (rows - 1) * gap;
   if (y + totalHeight > ctx.maxY) {
-    // Truncate to the rows that fit.
     const fittingRows = Math.max(
       0,
       Math.floor((ctx.maxY - y + gap) / (cardHeight + gap)),
@@ -1165,7 +1146,6 @@ function renderSceneSlide(
   let svg = '';
 
   if (center) {
-    // Centered roles stack title first; elements flow below in a centered column.
     const titleHeight = titleLines.length * (tokens.titleSize + 14);
     cursor = scene.role === 'title' ? 250 : 210;
     if (eyebrow && scene.role !== 'title') {
@@ -1229,7 +1209,6 @@ function renderSceneSlide(
     return svg;
   }
 
-  // Left-aligned roles: eyebrow, title, subtitle, accent rule, then elements.
   cursor = 150;
   if (eyebrow) {
     svg += textBlock({
@@ -1324,8 +1303,6 @@ export function renderSlideSvg(
   if (isScene && design) {
     contentSvg = renderSceneSlide(slide, index, total, design);
   } else if (isScene) {
-    // Scene without a design (direct unit-test calls): resolve a default
-    // design from the legacy theme colors.
     const fallback: SlideDesign = {
       background: legacyTheme.background,
       surface: legacyTheme.background,
@@ -1374,29 +1351,6 @@ export function renderSceneSvg(
 }
 
 function toDeck(content: unknown): SlideDeck {
-  if (
-    content &&
-    typeof content === 'object' &&
-    'design' in content &&
-    'slides' in content &&
-    Array.isArray((content as { slides: unknown }).slides) &&
-    (content as { slides: unknown[] }).slides.length > 0 &&
-    ((): boolean => {
-      const first = (content as { slides: unknown[] }).slides[0] as Record<
-        string,
-        unknown
-      > | null;
-      return (
-        !!first &&
-        typeof first === 'object' &&
-        ('role' in first || 'elements' in first)
-      );
-    })()
-  ) {
-    // Already a resolved deck; still pass through the resolver for safety so
-    // partially-hand-edited content degrades instead of crashing rendering.
-    return resolveSlideDeck(content);
-  }
   return resolveSlideDeck(content);
 }
 

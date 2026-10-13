@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { BadRequestError } from '../../common/errors/domain-error';
 
-export const MAX_AUDIO_BYTES = 500 * 1024 * 1024; // 500 MB = 524,288,000 bytes
-export const MAX_AUDIO_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours = 14,400,000 ms
-export const MAX_AUDIO_DURATION_SECONDS = 4 * 60 * 60; // 4 hours = 14,400 seconds
+export const MAX_AUDIO_BYTES = 500 * 1024 * 1024;
+export const MAX_AUDIO_DURATION_MS = 4 * 60 * 60 * 1000;
 
 export type SupportedAudioMimeType =
   | 'audio/mpeg'
@@ -69,8 +68,8 @@ export function isAudioFile(
   return false;
 }
 
-const MP3_ID3_MAGIC = Buffer.from([0x49, 0x44, 0x33]); // 'ID3'
-const OGG_MAGIC = Buffer.from([0x4f, 0x67, 0x67, 0x53]); // 'OggS'
+const MP3_ID3_MAGIC = Buffer.from([0x49, 0x44, 0x33]);
+const OGG_MAGIC = Buffer.from([0x4f, 0x67, 0x67, 0x53]);
 const WEBM_EBML_MAGIC = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
 
 const MP3_V1_L3_BITRATES = [
@@ -158,20 +157,17 @@ export class AudioInspectorService {
       return null;
     }
 
-    // 1. MP3 with ID3 header
     if (buffer.length >= 3 && buffer.subarray(0, 3).equals(MP3_ID3_MAGIC)) {
       return 'audio/mpeg';
     }
 
-    // 2. MP3 raw frame sync (11 bits set: 0xFF followed by 0xE0 mask)
     if (
       buffer.length >= 4 &&
       buffer[0] === 0xff &&
       (buffer[1] & 0xe0) === 0xe0 &&
-      ((buffer[1] >> 3) & 3) !== 1 && // valid version
-      ((buffer[1] >> 1) & 3) !== 0 // valid layer
+      ((buffer[1] >> 3) & 3) !== 1 &&
+      ((buffer[1] >> 1) & 3) !== 0
     ) {
-      // Check if it's AAC ADTS sync (0xFFF1 or 0xFFF9, layer bits are 00)
       const layer = (buffer[1] >> 1) & 3;
       if (layer === 0) {
         return 'audio/aac';
@@ -179,7 +175,6 @@ export class AudioInspectorService {
       return 'audio/mpeg';
     }
 
-    // 3. AAC ADTS sync (0xFFF1, 0xFFF9 or layer = 0)
     if (
       buffer.length >= 4 &&
       buffer[0] === 0xff &&
@@ -188,7 +183,6 @@ export class AudioInspectorService {
       return 'audio/aac';
     }
 
-    // 4. WAV RIFF container
     if (
       buffer.length >= 12 &&
       buffer.toString('ascii', 0, 4) === 'RIFF' &&
@@ -197,17 +191,14 @@ export class AudioInspectorService {
       return 'audio/wav';
     }
 
-    // 5. M4A / MP4 ISO base media format (ftyp box)
     if (buffer.length >= 8 && buffer.toString('ascii', 4, 8) === 'ftyp') {
       return 'audio/mp4';
     }
 
-    // 6. WebM EBML container
     if (buffer.length >= 4 && buffer.subarray(0, 4).equals(WEBM_EBML_MAGIC)) {
       return 'audio/webm';
     }
 
-    // 7. OGG container
     if (buffer.length >= 4 && buffer.subarray(0, 4).equals(OGG_MAGIC)) {
       return 'audio/ogg';
     }
@@ -321,7 +312,6 @@ export class AudioInspectorService {
     let offset = 0;
     let tlenDurationMs: number | undefined;
 
-    // Parse ID3v2 if present
     if (buffer.length >= 10 && buffer.subarray(0, 3).equals(MP3_ID3_MAGIC)) {
       const flags = buffer[5];
       const tagSize =
@@ -333,12 +323,11 @@ export class AudioInspectorService {
       const hasFooter = (flags & 0x10) !== 0;
       const totalId3Length = 10 + tagSize + (hasFooter ? 10 : 0);
 
-      // Search for TLEN inside ID3v2 frames
       let frameOffset = 10;
       const id3Limit = Math.min(buffer.length, 10 + tagSize);
       while (frameOffset + 10 <= id3Limit) {
         const frameId = buffer.toString('ascii', frameOffset, frameOffset + 4);
-        if (frameId.charCodeAt(0) === 0) break; // Padding reached
+        if (frameId.charCodeAt(0) === 0) break;
 
         const frameSize =
           buffer[3] === 4
@@ -368,7 +357,6 @@ export class AudioInspectorService {
       offset = Math.min(buffer.length, totalId3Length);
     }
 
-    // Find first MPEG audio sync frame
     let frameOffset = -1;
     for (let i = offset; i + 4 <= buffer.length; i++) {
       if (
@@ -393,11 +381,11 @@ export class AudioInspectorService {
     const b2 = buffer[frameOffset + 2];
     const b3 = buffer[frameOffset + 3];
 
-    const versionBits = (b1 >> 3) & 3; // 3: v1, 2: v2, 0: v2.5
-    const layerBits = (b1 >> 1) & 3; // 1: Layer III, 2: Layer II, 3: Layer I
+    const versionBits = (b1 >> 3) & 3;
+    const layerBits = (b1 >> 1) & 3;
     const bitrateIdx = (b2 >> 4) & 15;
     const sampleRateIdx = (b2 >> 2) & 3;
-    const channelMode = (b3 >> 6) & 3; // 3: Mono (1), others: Stereo (2)
+    const channelMode = (b3 >> 6) & 3;
 
     const channels = channelMode === 3 ? 1 : 2;
 
@@ -420,7 +408,6 @@ export class AudioInspectorService {
 
     let durationMs = tlenDurationMs;
 
-    // Check for Xing / Info VBR header
     if (!durationMs && sampleRate && sampleRate > 0) {
       const xingOffset =
         frameOffset +
@@ -448,7 +435,6 @@ export class AudioInspectorService {
       }
     }
 
-    // Fallback: estimate from bitrate and remaining audio bytes
     if (!durationMs && bitrateKbps > 0) {
       const audioBytes = buffer.length - offset;
       durationMs = Math.round((audioBytes * 8 * 1000) / (bitrateKbps * 1000));
@@ -510,7 +496,6 @@ export class AudioInspectorService {
             }
           }
 
-          // Search inside trak for stsd audio parameters
           if (subType === 'trak') {
             const trakData = buffer.subarray(moovOffset, moovOffset + subSize);
             const mp4aIdx = trakData.indexOf(Buffer.from('mp4a'));
@@ -570,8 +555,7 @@ export class AudioInspectorService {
     let channels: number | undefined;
     let sampleRate: number | undefined;
 
-    // Search for TimecodeScale (0x2A 0xD7 0xB1) and Duration (0x44 0x89) in EBML
-    let timecodeScaleNs = 1_000_000; // default 1ms
+    let timecodeScaleNs = 1_000_000;
 
     const timecodeScaleIdx = buffer.indexOf(Buffer.from([0x2a, 0xd7, 0xb1]));
     if (timecodeScaleIdx !== -1 && timecodeScaleIdx + 7 <= buffer.length) {
@@ -595,8 +579,7 @@ export class AudioInspectorService {
       }
     }
 
-    // Channels (0x9F) and SamplingFrequency (0xB5)
-    const audioTrackIdx = buffer.indexOf(Buffer.from([0xe1])); // Audio settings element
+    const audioTrackIdx = buffer.indexOf(Buffer.from([0xe1]));
     if (audioTrackIdx !== -1) {
       const trackSlice = buffer.subarray(
         audioTrackIdx,
@@ -632,7 +615,6 @@ export class AudioInspectorService {
     let sampleRate: number | undefined;
     let isOpus = false;
 
-    // Check Vorbis (\x01vorbis)
     if (
       packetOffset + 30 <= buffer.length &&
       buffer.subarray(packetOffset, packetOffset + 7).toString('ascii') ===
@@ -642,7 +624,6 @@ export class AudioInspectorService {
       sampleRate = buffer.readUInt32LE(packetOffset + 12);
     }
 
-    // Check Opus (OpusHead)
     if (
       packetOffset + 19 <= buffer.length &&
       buffer.subarray(packetOffset, packetOffset + 8).toString('ascii') ===
@@ -653,7 +634,6 @@ export class AudioInspectorService {
       sampleRate = buffer.readUInt32LE(packetOffset + 12);
     }
 
-    // Search backwards for the last OggS page to extract total granule position
     let durationMs: number | undefined;
     for (let i = buffer.length - 27; i >= 0; i--) {
       if (

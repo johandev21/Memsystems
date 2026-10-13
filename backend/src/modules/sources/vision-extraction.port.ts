@@ -33,5 +33,3 @@ export interface VisionExtractionResult {
 export interface VisionExtractionPort {
   extract(input: VisionExtractionInput): Promise<VisionExtractionResult>;
 }
-
-export const VISION_EXTRACTION_PORT = Symbol('VISION_EXTRACTION_PORT');

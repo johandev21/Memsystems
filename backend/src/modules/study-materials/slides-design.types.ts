@@ -1,20 +1,8 @@
-/**
- * Authoritative slide IR types (backend-owned).
- *
- * The AI proposes design + scenes; the resolver
- * (`slides-design-resolver.ts`) remains the authority for validation,
- * fallbacks, and contrast safety. SVG (`slides-preview.ts`) and PPTX
- * (`slides-builder.service.ts`) renderers consume only resolved decks.
- */
-
 import type { GenerationCitation } from './generation-citations';
-
-export const SLIDES_SCHEMA_VERSION = 2 as const;
 
 export type SlideDesignPreset =
   'dark' | 'light' | 'editorial' | 'academic' | 'technical' | 'warm';
 
-/** Legacy theme name kept as an alias for backwards compatibility. */
 export type LegacySlidesThemeName = 'dark' | 'light' | 'accent';
 
 export type SupportedFont =
@@ -150,7 +138,6 @@ export type SlideScene = {
   title: string;
   subtitle?: string;
   speakerNotes?: string;
-  /** Legacy alias: `notes` is accepted on input and normalized to `speakerNotes`. */
   notes?: string;
   elements: SlideElement[];
 };
@@ -161,13 +148,10 @@ export type SlideDeck = {
   design: SlideDesign;
   slides: SlideScene[];
   previews?: { slideId: string; svg: string }[];
-  /** Moderate-mode general-knowledge supplement; never source-grounded. */
   generalKnowledgeSupplement?: string;
-  /** Evidence citations attached after generation; never model-authored. */
   citations?: GenerationCitation[];
 };
 
-/** Legacy prose slide (pre-IR renderer). Convertible via the resolver. */
 export type LegacySlidesSlide = {
   id: string;
   layout: 'title' | 'title-bullets' | 'two-column' | 'quote' | 'closing';

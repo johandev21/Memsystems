@@ -75,11 +75,6 @@ const toArray = (value: unknown): unknown[] =>
 const stringify = (value: unknown): string =>
   typeof value === 'string' ? value : String(value);
 
-/**
- * Citations are attached after generation and must survive every read path
- * that re-normalizes content, so the normalizers carry the field through
- * untouched (the content schemas validate it).
- */
 const citationsField = (content: unknown): unknown[] =>
   isRecord(content) && Array.isArray(content.citations)
     ? (content.citations as unknown[])
@@ -261,7 +256,6 @@ export function normalizeQuizContent(content: unknown): NormalizedQuizContent {
         }
       }
 
-      // Check option explanations for explicit "Correct" or "Right answer" vs "Incorrect"
       if (
         !correctOptionId &&
         (correctOptionIndex < 0 ||
@@ -496,9 +490,6 @@ export function normalizeMindMapContent(
 }
 
 export function normalizeSlidesContent(content: unknown): SlideDeck {
-  // The resolver is authoritative: it accepts structured scenes, legacy
-  // prose slides, and malformed partial output, always returning a complete
-  // validated deck. Previews passthrough is handled by the caller.
   return resolveSlideDeckPreservingPreviews(content);
 }
 
@@ -703,10 +694,6 @@ export function normalizeContent(
     return content;
   }
 
-  // The per-kind normalizers rebuild their objects field by field; carry a
-  // moderate-mode supplement across so it survives normalization (and the
-  // quiz read paths that re-normalize stored content). Sanitized here so the
-  // JSON fallback path, which has no schema cap, cannot break validation.
   const supplement = sanitizeGeneralKnowledgeSupplement(content);
 
   let normalized: unknown;
@@ -756,7 +743,6 @@ export function extractJson(text: string): string {
 
   let working = trimmed;
 
-  // 1. Fenced code blocks: prefer the first block containing JSON structure.
   const fencePattern = /```(?:json)?\s*([\s\S]*?)```/gi;
   const blocks: string[] = [];
   let fenceMatch: RegExpExecArray | null;
@@ -769,7 +755,6 @@ export function extractJson(text: string): string {
       blocks[0]
     ).trim();
   } else {
-    // 2. <structured_output> wrappers (case-insensitive, closing tag optional).
     const structuredMatch = trimmed.match(
       /<structured_output>\s*([\s\S]*?)(?:<\/structured_output>|$)/i,
     );
@@ -779,7 +764,6 @@ export function extractJson(text: string): string {
     ) {
       working = structuredMatch[1].trim();
     } else {
-      // 3. Strip stray tags, then slice from the first { or [ (leading prose).
       working = trimmed.replace(/<\/?structured_output>/gi, '').trim();
       const firstBrace = working.indexOf('{');
       const firstBracket = working.indexOf('[');
@@ -798,13 +782,9 @@ export function extractJson(text: string): string {
     }
   }
 
-  // 4. Drop trailing fence fragments / closing tags left over from streaming.
   working = working.replace(/```[\s\S]*$/, '').trim();
   working = working.replace(/<\/structured_output>[\s\S]*$/i, '').trim();
 
-  // 5. Drop trailing prose after the last } / ], but only when the tail shows
-  // no sign of being a truncated partial (partials almost always carry a
-  // structural continuation such as ":", "{" or "[").
   const lastBrace = working.lastIndexOf('}');
   const lastBracket = working.lastIndexOf(']');
   const lastClose = Math.max(lastBrace, lastBracket);
@@ -818,14 +798,6 @@ export function extractJson(text: string): string {
   return working;
 }
 
-/**
- * Minimal tolerant repair for near-JSON model output. Handles the failure
- * modes seen from small/flash models: single-quoted strings (e.g. 'p2-s8'),
- * trailing commas, smart quotes, and stray JS comments. Single-quote
- * conversion only applies outside double-quoted strings, so apostrophes
- * inside "..." are never touched. Best-effort: anything beyond these cases
- * should fail downstream with a truncated preview (see parseJsonLenient).
- */
 export function repairJsonText(text: string): string {
   const normalized = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 
@@ -856,7 +828,6 @@ export function repairJsonText(text: string): string {
       continue;
     }
 
-    // Strip JS-style comments outside strings.
     if (ch === '/' && i + 1 < len) {
       const next = normalized[i + 1];
       if (next === '/') {
@@ -876,7 +847,6 @@ export function repairJsonText(text: string): string {
       }
     }
 
-    // Convert single-quoted strings to double-quoted.
     if (ch === "'") {
       let j = i + 1;
       let inner = '';
@@ -896,8 +866,6 @@ export function repairJsonText(text: string): string {
         j += 1;
       }
       if (!closed) {
-        // Unterminated quote: emit an opening double quote and let the
-        // downstream parser fail with a preview.
         out += '"';
         i += 1;
         continue;
@@ -912,14 +880,9 @@ export function repairJsonText(text: string): string {
     i += 1;
   }
 
-  // Drop trailing commas before } or ].
   return out.replace(/,(\s*[}\]])/g, '$1');
 }
 
-/**
- * Strict parse with a single tolerant-repair retry. Throws a SyntaxError with
- * a truncated preview of the offending text so logs stay useful.
- */
 export function parseJsonLenient(text: string): unknown {
   const cleaned = extractJson(text);
   try {
@@ -930,7 +893,7 @@ export function parseJsonLenient(text: string): unknown {
       try {
         return JSON.parse(repaired);
       } catch {
-        // Fall through to the preview error below.
+        void 0;
       }
     }
     const preview = cleaned.slice(0, 500);
@@ -940,49 +903,6 @@ export function parseJsonLenient(text: string): unknown {
       `Lenient JSON parse failed (${reason}). Preview: ${preview}`,
     );
   }
-}
-
-export function slugifyTitle(title: string, kind: StudyMaterialKind): string {
-  const suffixMap: Record<StudyMaterialKind, string> = {
-    quiz: '-quiz',
-    simple_flashcard: '-flashcards',
-    roadmap: '-roadmap',
-    mind_map: '-mind-map',
-    slides: '-slides',
-    study_guide: '-study-guide',
-    practice_problems: '-practice-problems',
-    case_study: '-case-study',
-  };
-
-  const suffix = suffixMap[kind];
-  let base = title.trim();
-
-  const suffixWithoutHyphen = suffix.startsWith('-')
-    ? suffix.substring(1)
-    : suffix;
-  const suffixRegex = new RegExp(
-    `(?:[-\\s]${suffixWithoutHyphen}|^${suffixWithoutHyphen})$`,
-    'i',
-  );
-  if (suffixRegex.test(base)) {
-    base = base.replace(suffixRegex, '');
-  }
-
-  let slug = base
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-
-  slug = slug.replace(/[^a-z0-9 -]/g, '');
-  slug = slug.replace(/[\s_]+/g, '-');
-  slug = slug.replace(/-+/g, '-');
-  slug = slug.replace(/^-+|-+$/g, '');
-
-  if (!slug) {
-    slug = kind.replace('_', '-');
-  }
-
-  return `${slug}${suffix}`;
 }
 
 export function generateTitle(
@@ -1018,10 +938,8 @@ export function generateTitle(
     }
   }
 
-  // Strip wrapping quotes
   let title = rawTitle.replace(/^["'`]+|["'`]+$/g, '').trim();
 
-  // Strip accidental trailing type suffixes (e.g., "-quiz", "-case-study", " (Quiz)")
   const suffixMap: Record<StudyMaterialKind, string> = {
     quiz: 'quiz',
     simple_flashcard: 'flashcards?',
@@ -1041,7 +959,6 @@ export function generateTitle(
     title = title.replace(suffixRegex, '').trim();
   }
 
-  // Convert raw kebab-case or snake_case without spaces to Title Case
   if (!title.includes(' ') && (title.includes('-') || title.includes('_'))) {
     title = title
       .split(/[-_]+/)
@@ -1050,10 +967,8 @@ export function generateTitle(
       .join(' ');
   }
 
-  // Collapse consecutive whitespace
   title = title.replace(/\s+/g, ' ').trim();
 
-  // Cap at 50 characters as specified by the Bloom Objective convention
   if (title.length > 50) {
     title = title.slice(0, 50).trim();
   }

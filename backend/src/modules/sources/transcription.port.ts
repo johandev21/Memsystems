@@ -38,5 +38,3 @@ export interface TranscriptionPort {
   transcribe(input: TranscriptionInput): Promise<TranscriptionResult>;
   transcribeAudio?(input: TranscriptionInput): Promise<TranscriptionResult>;
 }
-
-export const TRANSCRIPTION_PORT = Symbol('TRANSCRIPTION_PORT');
