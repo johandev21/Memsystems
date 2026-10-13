@@ -16,7 +16,7 @@ All AI features need an AI Gateway key. Indexing and retrieval also need a Voyag
 
 ## 2. Repository layout
 
-pnpm workspace with two packages, orchestrated by Turborepo.
+pnpm workspace with two packages (`frontend` and `backend`).
 
 | Path | Contents |
 | --- | --- |

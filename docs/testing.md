@@ -12,7 +12,7 @@ pnpm run typecheck   # tsc --noEmit en ambos paquetes
 pnpm run test        # Vitest en frontend y backend
 ```
 
-`pnpm run test` ejecuta **ambos paquetes** mediante Turborepo. No es solo backend.
+`pnpm run test` ejecuta **ambos paquetes** mediante `pnpm -r`. No es solo backend.
 
 Para un paquete concreto:
 
