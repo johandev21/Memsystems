@@ -83,7 +83,7 @@ describe("StudyMaterials host composition — desktop and mobile share productio
     expect(onSelect).toHaveBeenCalledWith("m1");
   });
 
-  it("mobile panel renders same production tree and preserves activation separation", async () => {
+  it("mobile panel renders mobile view with drill-down and activates viewer on item tap", async () => {
     const folders = [makeFolder({ id: "f1", name: "Foundations" })];
     const materials = [makeMaterial({ id: "m1", title: "Epistemology", folderId: "f1" })];
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -102,15 +102,17 @@ describe("StudyMaterials host composition — desktop and mobile share productio
       </QueryClientProvider>,
     );
 
-    const tree = await screen.findByRole("tree", { name: "Study materials" });
-    expect(tree).toBeTruthy();
-    expect(screen.getByText("Epistemology")).toBeTruthy();
+    // Root level shows the folder
+    expect(await screen.findByText("Foundations")).toBeTruthy();
 
-    const row = screen.getByText("Epistemology").closest('[role="treeitem"]') as HTMLElement;
-    const { fireEvent } = await import("@testing-library/react");
-    fireEvent.focus(row);
-    expect(onSelect).not.toHaveBeenCalled();
-    await userEvent.click(row);
+    // Click folder to drill down
+    await userEvent.click(screen.getByText("Foundations"));
+
+    // Folder header and child material are now visible
+    expect(await screen.findByText("Epistemology")).toBeTruthy();
+
+    // Clicking material activates viewer
+    await userEvent.click(screen.getByText("Epistemology"));
     expect(onSelect).toHaveBeenCalledWith("m1");
   });
 });

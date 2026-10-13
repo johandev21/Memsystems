@@ -27,9 +27,10 @@ export interface AdapterContext {
 export async function executeCreateFolder(
   ctx: AdapterContext,
   parentId: string | null | undefined,
+  name?: string,
 ): Promise<CommandResult> {
   const result = await createFolder(ctx.notebookId, {
-    name: i18n.t("defaults.untitledFolder", { ns: "tree" }),
+    name: name?.trim() || i18n.t("defaults.untitledFolder", { ns: "tree" }),
     parentId: parentId ?? undefined,
   });
   ctx.queryClient.setQueryData<FolderDTO[]>(

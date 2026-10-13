@@ -1,10 +1,10 @@
-import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefInstructionsStep } from "./brief-instructions-step";
 import {
   BriefBackButton,
+  BriefFieldLabel,
   BriefNextButton,
   BriefStep,
   BriefStepFields,
@@ -95,7 +95,7 @@ export function MindMapBriefForm({
       : t("mindMap.nodeCount", { count: nodeCount });
 
   return (
-    <div className="flex flex-col gap-5 font-sans text-text-tertiary">
+    <div className="flex flex-1 flex-col gap-5 font-sans text-text-tertiary">
       <BriefWizardHeader
         title={t("wizard.title", { kind: t("kinds.mind_map") })}
         step={step}
@@ -146,10 +146,9 @@ export function MindMapBriefForm({
             />
 
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium text-text-primary">
+              <BriefFieldLabel required={!hasInstructions}>
                 {t("fields.knowledgeSourcesStep4")}
-                {!hasInstructions && <span className="text-destructive ml-0.5">*</span>}
-              </Label>
+              </BriefFieldLabel>
               <GenerationSourcePopover
                 sources={sources}
                 selectedIds={value.sourceIds}

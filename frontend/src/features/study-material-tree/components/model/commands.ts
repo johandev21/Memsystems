@@ -1,5 +1,5 @@
 export type TreeCommand =
-  | { type: "createFolder"; parentId: string | null }
+  | { type: "createFolder"; parentId: string | null; name?: string }
   | { type: "renameItem"; id: string; name: string }
   | { type: "duplicateMaterial"; id: string }
   | { type: "moveItem"; id: string; targetFolderId: string | null }

@@ -52,7 +52,7 @@ export function StandardBriefForm({
           value={value.brief}
           onChange={(e) => update({ brief: e.target.value })}
           placeholder={t("standard.briefPlaceholder", { kind: label })}
-          className="min-h-22.5 max-h-50 text-base sm:text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
+          className="min-h-30 max-h-50 text-base sm:text-sm resize-none break-words max-w-full overflow-x-hidden w-full"
           disabled={disabled}
         />
       </div>

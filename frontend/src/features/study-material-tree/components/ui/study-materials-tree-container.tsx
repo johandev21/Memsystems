@@ -9,6 +9,7 @@ import { StudyMaterialsTreeError } from "./study-materials-tree-error";
 import { usePersistentExpandedFolders } from "../model/use-expanded";
 import { useProductionTreeAdapter } from "../model/production-adapter";
 import type { TreeCommandExecutor } from "../model/commands";
+import { MobileStudyMaterialsView } from "../mobile/mobile-study-materials-view";
 
 export interface StudyMaterialsTreeContainerProps {
   notebookId: string;
@@ -117,6 +118,26 @@ export function StudyMaterialsTreeContainer({
   const [isPanelExpanded, setIsPanelExpanded] = useState(true);
   const productionExecute = useProductionTreeAdapter(notebookId);
   const effectiveOnCommand = onCommand ?? productionExecute;
+
+  if (variant === "mobile") {
+    return (
+      <div data-slot="study-materials-tree-container" className={className}>
+        {data.isFetching && data.hasData && <TreeUpdatingIndicator />}
+        <MobileStudyMaterialsView
+          notebookId={notebookId}
+          folders={data.folders}
+          materials={data.materials}
+          isPending={data.isInitialLoading && !data.hasData}
+          isError={data.isError && !data.hasData}
+          errorMessage={data.errorMessage}
+          onRetryLoad={data.handleRetry}
+          onSelectMaterial={(id) => id && onMaterialActivate?.(id)}
+          onCommand={effectiveOnCommand}
+        />
+        {data.isError && data.hasData && <TreeRefreshError onRetry={data.handleRetry} />}
+      </div>
+    );
+  }
 
   if (data.isInitialLoading && !data.hasData) {
     return <StudyMaterialsTreeSkeleton className={className} />;

@@ -7,6 +7,7 @@ import { BriefChoiceField } from "./brief-choice-field";
 import { BriefInstructionsStep } from "./brief-instructions-step";
 import {
   BriefBackButton,
+  BriefFieldLabel,
   BriefNextButton,
   BriefStep,
   BriefStepFields,
@@ -97,7 +98,7 @@ export function CaseStudyBriefForm({
   const questionLabel = t("caseStudy.questionCount", { count: questionCount });
 
   return (
-    <div className="flex flex-col gap-5 font-sans text-text-tertiary">
+    <div className="flex flex-1 flex-col gap-5 font-sans text-text-tertiary">
       <BriefWizardHeader
         title={t("wizard.title", { kind: t("kinds.case_study") })}
         step={step}
@@ -129,10 +130,9 @@ export function CaseStudyBriefForm({
             />
 
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium text-text-primary">
+              <BriefFieldLabel required={!hasInstructions && !showFreeHint}>
                 {t("fields.knowledgeSourcesStep3")}
-                {!hasInstructions && !showFreeHint && <span className="text-destructive ml-0.5">*</span>}
-              </Label>
+              </BriefFieldLabel>
               <GenerationSourcePopover
                 sources={sources}
                 selectedIds={value.sourceIds}
@@ -168,7 +168,7 @@ export function CaseStudyBriefForm({
                   updateCaseStudyOptions({ focus: event.target.value });
                 }}
                 placeholder={t("caseStudy.conceptsPlaceholder")}
-                className="min-h-40 max-h-60 text-base sm:text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
+                className="min-h-40 max-h-60 text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
                 disabled={disabled}
               />
             </div>

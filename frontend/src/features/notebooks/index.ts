@@ -10,6 +10,7 @@ export * from "./components/notebook-workspace";
 export * from "./components/shared/notebook-banner";
 export * from "./components/shared/notebook-card-preview";
 export * from "./components/shared/studio-resources";
+export * from "./components/shared/studio-resources-config";
 export * from "./components/studio/folder-picker";
 export * from "./components/studio/right-pane";
 export * from "./components/studio/source-multi-select";

@@ -12,3 +12,6 @@ export type {
 export { StudyMaterialsTreeContainer } from "./ui/study-materials-tree-container";
 export { StudyMaterialsTreeError } from "./ui/study-materials-tree-error";
 export { StudyMaterialsTreeSkeleton } from "./ui/study-materials-tree-skeleton";
+export { MobileStudyMaterialsView } from "./mobile/mobile-study-materials-view";
+export { MobileStudyMaterialsPanel } from "./mobile-study-materials-panel";
+export { StudyMaterialsPanel } from "./study-materials-panel";

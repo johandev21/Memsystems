@@ -1,9 +1,9 @@
-import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefInstructionsStep } from "./brief-instructions-step";
 import {
+  BriefFieldLabel,
   BriefNextButton,
   BriefStep,
   BriefStepFields,
@@ -92,7 +92,7 @@ export function PracticeProblemsBriefForm({
       : t("practice.problemCount", { count: problemCount });
 
   return (
-    <div className="flex flex-col gap-5 font-sans text-text-tertiary">
+    <div className="flex flex-1 flex-col gap-5 font-sans text-text-tertiary">
       <BriefWizardHeader
         title={t("wizard.title", { kind: t("kinds.practice_problems") })}
         step={step}
@@ -124,10 +124,9 @@ export function PracticeProblemsBriefForm({
             />
 
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium text-text-primary">
+              <BriefFieldLabel required={!hasInstructions && !showFreeHint}>
                 {t("fields.knowledgeSourcesStep3")}
-                {!hasInstructions && !showFreeHint && <span className="text-destructive ml-0.5">*</span>}
-              </Label>
+              </BriefFieldLabel>
               <GenerationSourcePopover
                 sources={sources}
                 selectedIds={value.sourceIds}

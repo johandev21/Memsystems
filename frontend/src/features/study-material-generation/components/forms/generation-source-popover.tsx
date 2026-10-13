@@ -5,6 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import {
   generationSourceIconClass,
   generationSourceOptionClass,
 } from "./option-row";
@@ -55,27 +64,126 @@ export function GenerationSourcePopover({
     );
   };
 
+  const isMobile = useMediaQuery("(max-width: 639px)");
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const triggerButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-11 sm:h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 px-3.5 text-sm font-medium text-text-tertiary hover:bg-surface-3 hover:text-text-secondary active:scale-[0.99] touch-manipulation cursor-pointer"
+    >
+      <span className="flex min-w-0 items-center gap-2 truncate">
+        <BookOpen className="size-4 shrink-0 text-primary" />
+        <span className="truncate">
+          {selectedIds.length === 0
+            ? t("knowledge.noneSelected")
+            : t("knowledge.selected", { count: selectedIds.length })}
+        </span>
+      </span>
+      <ChevronDown className="size-4 shrink-0 text-text-faint" />
+    </Button>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
+        <DrawerTrigger render={triggerButton} />
+        <DrawerContent className="max-h-[85dvh] p-4 pb-safe-lg overflow-y-auto">
+          <DrawerHeader className="px-0 pt-0 pb-3 text-left">
+            <DrawerTitle className="text-base font-semibold text-foreground">
+              {t("fields.knowledgeSources", "Knowledge Sources")}
+            </DrawerTitle>
+            <DrawerDescription className="text-xs text-muted-foreground">
+              {t("knowledge.selectedCount", { count: selectedIds.length })}
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3.5 py-2 mb-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Search className="size-4 shrink-0 text-text-faint" />
+              <input
+                type="text"
+                placeholder={t("knowledge.searchPlaceholder")}
+                aria-label={t("knowledge.searchAriaLabel")}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint h-9"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={toggleAllSources}
+              disabled={filteredSources.length === 0}
+              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-faint hover:text-text-secondary active:scale-95 touch-manipulation"
+            >
+              {t("knowledge.selectAll")}
+              <Checkbox
+                checked={allFilteredSourcesSelected}
+                tabIndex={-1}
+                aria-hidden
+                className="pointer-events-none"
+              />
+            </button>
+          </div>
+
+          {sources.length === 0 ? (
+            <div className="py-8 text-center text-xs text-text-faint">{emptyMessage}</div>
+          ) : (
+            <div className="max-h-[50dvh] space-y-1.5 overflow-y-auto overscroll-contain py-1">
+              {filteredSources.map((source) => {
+                const checked = selectedIdSet.has(source.id);
+                return (
+                  <button
+                    key={source.id}
+                    type="button"
+                    onClick={() => toggleSource(source.id)}
+                    className={cn(
+                      generationSourceOptionClass(checked),
+                      "min-h-12 py-3 px-3.5 active:scale-[0.99] touch-manipulation",
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5 truncate pr-2">
+                      {source.kind === "web" || source.kind === "url" ? (
+                        <SourceFavicon
+                          url={source.url}
+                          title={source.title}
+                          className={cn(generationSourceIconClass(checked), "object-contain rounded-xs")}
+                          fallback={<Globe className={generationSourceIconClass(checked)} />}
+                        />
+                      ) : source.kind === "file" ? (
+                        <FileText className={generationSourceIconClass(checked)} />
+                      ) : (
+                        <BookOpen className={generationSourceIconClass(checked)} />
+                      )}
+                      <span className="truncate text-sm">{source.title}</span>
+                    </span>
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleSource(source.id)}
+                      className={checked ? CHECKED_SOURCE_CHECKBOX_CLASS : undefined}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <Button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="mt-3 h-12 w-full font-semibold rounded-xl active:scale-[0.98] touch-manipulation cursor-pointer"
+          >
+            {t("actions.done", "Done")}
+          </Button>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 w-full justify-between gap-2 rounded-2xl border border-surface-border-subtle bg-surface-2 px-3.5 text-sm font-medium text-text-tertiary hover:bg-surface-3 hover:text-text-secondary"
-          >
-            <span className="flex min-w-0 items-center gap-2 truncate">
-              <BookOpen className="size-4 shrink-0 text-primary" />
-              <span className="truncate">
-                {selectedIds.length === 0
-                  ? t("knowledge.noneSelected")
-                  : t("knowledge.selected", { count: selectedIds.length })}
-              </span>
-            </span>
-            <ChevronDown className="size-4 shrink-0 text-text-faint" />
-          </Button>
-        }
-      />
+      <PopoverTrigger render={triggerButton} />
       <PopoverContent
         align="start"
         className="w-80 overflow-hidden rounded-2xl border border-surface-border bg-surface-1 p-0 shadow-xl"

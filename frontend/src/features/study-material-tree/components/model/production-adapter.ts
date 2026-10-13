@@ -75,7 +75,7 @@ export function useProductionTreeAdapter(notebookId: string): TreeCommandExecuto
       try {
         switch (command.type) {
           case "createFolder":
-            return await executeCreateFolder(ctx, command.parentId);
+            return await executeCreateFolder(ctx, command.parentId, command.name);
           case "renameItem":
             return await executeRenameItem(ctx, command.id, command.name);
           case "deleteItem":

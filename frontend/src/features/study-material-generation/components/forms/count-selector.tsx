@@ -12,15 +12,15 @@ import { optionRowClass } from "./option-row";
  */
 
 const COLUMN_CLASS: Record<number, string> = {
-  3: "sm:grid-cols-3",
-  4: "sm:grid-cols-4",
-  5: "sm:grid-cols-5",
-  6: "sm:grid-cols-6",
-  7: "sm:grid-cols-7",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+  5: "grid-cols-3 sm:grid-cols-5",
+  6: "grid-cols-3 sm:grid-cols-6",
+  7: "grid-cols-4 sm:grid-cols-7",
 };
 
 export const countInputClass =
-  "h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-base sm:text-sm font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong";
+  "h-10 sm:h-9 w-full rounded-2xl border border-primary bg-surface-2 px-2 text-center text-sm font-semibold text-text-primary shadow-2xs outline-none focus:ring-1 focus:ring-surface-border-strong";
 
 export interface CountSelectorProps {
   label: string;
@@ -88,11 +88,14 @@ export function CountSelector({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-text-primary">{label}</Label>
+        <Label className="text-sm font-medium text-text-primary">
+          <span className="sm:hidden">{label.replace(/^\d+\.\s*/, "")}</span>
+          <span className="hidden sm:inline">{label}</span>
+        </Label>
         <span className="text-xs font-medium text-primary">{summary}</span>
       </div>
 
-      <div className={cn("grid grid-cols-3 gap-2", COLUMN_CLASS[columns])}>
+      <div className={cn("grid gap-2", COLUMN_CLASS[columns] ?? "grid-cols-4")}>
         {presets.map((preset) => {
           const selected = !isCustom && value === preset;
           return (
@@ -104,7 +107,7 @@ export function CountSelector({
               onClick={() => onValueChange(preset)}
               className={cn(
                 optionRowClass(selected),
-                "flex h-9 min-h-10 sm:min-h-9 items-center justify-center gap-1.5 text-center text-sm touch-manipulation active:scale-97",
+                "flex h-11 sm:h-9 items-center justify-center gap-1 text-center text-sm touch-manipulation active:scale-97 select-none px-1",
                 selected ? "font-semibold" : "font-medium",
               )}
             >
@@ -114,9 +117,12 @@ export function CountSelector({
         })}
 
         {isCustom ? (
-          <div className="relative flex h-9 items-center">
+          <div className="relative flex h-11 sm:h-9 items-center">
             <input
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
               min={min}
               max={max}
               value={customText}
@@ -124,7 +130,7 @@ export function CountSelector({
               onBlur={handleCustomBlur}
               placeholder={`${min}-${max}`}
               aria-label={customAriaLabel}
-              className={countInputClass}
+              className={cn(countInputClass, "text-base sm:text-sm h-11 sm:h-9")}
               disabled={disabled}
               autoFocus
             />
@@ -136,7 +142,7 @@ export function CountSelector({
             onClick={handleEnableCustom}
             className={cn(
               optionRowClass(false),
-              "flex h-9 min-h-10 sm:min-h-9 items-center justify-center gap-1.5 text-center text-sm font-medium touch-manipulation active:scale-97",
+              "flex h-11 sm:h-9 items-center justify-center gap-1 text-center text-sm font-medium touch-manipulation active:scale-97 select-none px-1",
             )}
           >
             {t("actions.custom")}

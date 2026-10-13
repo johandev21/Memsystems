@@ -132,7 +132,7 @@ export function FolderPicker({
                 setSearch("");
               }
             }}
-            className="w-full bg-transparent text-base sm:text-sm outline-none placeholder:text-text-faint text-text-primary"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint text-text-primary"
             autoFocus
           />
           {search && (

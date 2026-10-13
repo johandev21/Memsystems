@@ -1,19 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ParseKeys, TFunction } from "i18next";
-import {
-  Brain,
-  BookOpen,
-  CircleAlert,
-  HelpCircle,
-  type LucideIcon,
-  Map as MapIcon,
-  Network,
-  ListChecks,
-  Presentation,
-  Briefcase,
-  RefreshCw,
-  X,
-} from "lucide-react";
+import type { TFunction } from "i18next";
+import { CircleAlert, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,75 +8,12 @@ import { useGenerationStore } from "@/features/study-material-generation/hooks/u
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 import { sourcesQueryOptions } from "@/features/sources/api/sources";
 import { cn } from "@/shared/utils/cn";
-
-const KIND_LABEL_KEYS = {
-  quiz: "studio.resources.quiz",
-  simple_flashcard: "studio.resources.flashcards",
-  roadmap: "studio.resources.roadmap",
-  mind_map: "studio.resources.mindMap",
-  slides: "studio.resources.slides",
-  study_guide: "studio.resources.studyGuide",
-  practice_problems: "studio.resources.practiceProblems",
-  case_study: "studio.resources.caseStudy",
-} as const satisfies Record<StudyMaterialKind, ParseKeys<"notebooks">>;
-
-type ResourceConfig = {
-  key: string;
-  kind: StudyMaterialKind;
-  icon: LucideIcon;
-  colorClasses: string;
-};
-
-const RESOURCES: ResourceConfig[] = [
-  {
-    key: "studyGuide",
-    kind: "study_guide",
-    icon: BookOpen,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "quiz",
-    kind: "quiz",
-    icon: HelpCircle,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "flashcards",
-    kind: "simple_flashcard",
-    icon: Brain,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "roadmap",
-    kind: "roadmap",
-    icon: MapIcon,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "mindMap",
-    kind: "mind_map",
-    icon: Network,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "practiceProblems",
-    kind: "practice_problems",
-    icon: ListChecks,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "slides",
-    kind: "slides",
-    icon: Presentation,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "caseStudy",
-    kind: "case_study",
-    icon: Briefcase,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-];
+import {
+  KIND_LABEL_KEYS,
+  RESOURCES,
+  type ResourceConfig,
+  isInScope,
+} from "./studio-resources-config";
 
 export interface StudioResourcesProps {
   notebookId: string;
@@ -218,7 +142,7 @@ function ResourceButton({
 
 type Generation = ReturnType<typeof useGenerationStore.getState>["generations"][string];
 
-function ActiveGenerationList({
+export function ActiveGenerationList({
   generations,
   totalSourceCount,
   onCancel,
@@ -329,17 +253,4 @@ function getGenerationSubtitle(
   const sourceCount = generation.sourceIds?.length ?? totalSourceCount;
   if (sourceCount > 0) return t("resources.basedOnSources", { count: sourceCount });
   return generation.brief ? t("resources.basedOnBrief") : t("resources.processingSources");
-}
-
-function isInScope(kind: StudyMaterialKind): boolean {
-  return [
-    "quiz",
-    "simple_flashcard",
-    "roadmap",
-    "mind_map",
-    "slides",
-    "study_guide",
-    "practice_problems",
-    "case_study",
-  ].includes(kind);
 }

@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/shared/utils/cn";
 import { useTranslation } from "react-i18next";
 
@@ -21,9 +20,9 @@ export function BriefWizardHeader({
         <div className="flex items-center gap-2 font-medium text-text-primary">
           <span className="text-sm font-semibold">{title}</span>
         </div>
-        <Badge variant="outline" className="text-xs font-normal">
+        <span className="text-xs font-medium text-muted-foreground">
           {t("wizard.stepOf", { step, total: totalSteps })}
-        </Badge>
+        </span>
       </div>
       <div
         className="grid gap-2 grid-cols-(--wizard-steps)"

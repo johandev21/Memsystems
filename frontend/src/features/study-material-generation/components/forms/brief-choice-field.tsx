@@ -4,7 +4,7 @@ import { optionRowClass } from "./option-row";
 
 const COLUMN_CLASS: Record<number, string> = {
   2: "grid-cols-2",
-  3: "grid-cols-2 sm:grid-cols-3",
+  3: "grid-cols-1 sm:grid-cols-3",
   4: "grid-cols-2 sm:grid-cols-4",
 };
 
@@ -30,7 +30,10 @@ export function BriefChoiceField<T extends string>({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-sm font-medium text-text-primary">{label}</Label>
+      <Label className="text-sm font-medium text-text-primary">
+        <span className="sm:hidden">{label.replace(/^\d+\.\s*/, "")}</span>
+        <span className="hidden sm:inline">{label}</span>
+      </Label>
       <div className={cn("grid gap-2", COLUMN_CLASS[columns])}>
         {options.map((opt) => {
           const selected = value === opt.id;
@@ -48,16 +51,19 @@ export function BriefChoiceField<T extends string>({
             >
               <span
                 className={cn(
-                  "text-sm font-semibold",
-                  selected ? "text-primary-foreground" : "text-text-tertiary",
+                  "text-sm font-semibold flex items-center justify-between",
+                  selected ? "text-primary-foreground" : "text-text-primary",
                 )}
               >
                 {opt.title}
+                {selected && (
+                  <span aria-hidden="true" className="sm:hidden text-xs font-bold text-primary-foreground">✓</span>
+                )}
               </span>
               <span
                 className={cn(
-                  "text-xs leading-tight",
-                  selected ? "text-primary-foreground/80" : "text-text-faint",
+                  "text-sm leading-snug sm:text-xs sm:leading-tight",
+                  selected ? "text-primary-foreground/90" : "text-text-secondary sm:text-text-faint",
                 )}
               >
                 {opt.desc}

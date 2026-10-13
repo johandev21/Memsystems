@@ -71,7 +71,7 @@ export function BriefInstructionsStep({
             value={brief}
             onChange={(event) => onBriefChange(event.target.value)}
             placeholder={placeholder}
-            className="min-h-30 max-h-50 text-base sm:text-sm resize-none break-all max-w-full overflow-x-hidden w-full"
+            className="min-h-36 sm:min-h-30 max-h-60 text-base sm:text-sm resize-none break-words max-w-full overflow-x-hidden w-full"
             disabled={disabled}
           />
         </div>

@@ -613,4 +613,33 @@ describe("GenerateBriefDialog", () => {
       expect.anything(),
     );
   });
+
+  it("renders a mobile fullscreen modal on viewports under 640px", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+      matches: query === "(max-width: 639px)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    } as unknown as MediaQueryList));
+
+    render(
+      <GenerateBriefDialog
+        notebookId="nb-1"
+        kind="quiz"
+        open={true}
+        onOpenChange={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.getByRole("heading", { name: "Generate Quiz" })).toBeTruthy();
+    const dialogPopup = document.querySelector('[data-slot="mobile-fullscreen-dialog"]');
+    expect(dialogPopup).toBeTruthy();
+    expect(document.querySelector('[data-slot="mobile-fullscreen-close"]')).toBeTruthy();
+  });
 });

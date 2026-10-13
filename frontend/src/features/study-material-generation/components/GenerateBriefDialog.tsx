@@ -4,6 +4,7 @@ import {
   GatewayKeyPrompt,
   isConnectionUsable,
   isStudyMaterialCapable,
+  MobileModelSelectorDrawer,
   ModelSelector,
   ModelSelectorContent,
   ModelSelectorInput,
@@ -14,8 +15,11 @@ import {
   useModelsCatalog,
 } from "@/features/ai";
 import type { ModelOption } from "@/features/ai";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { XIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { MODAL_POPOVER_LAYER, OverlayLayerContext } from "@/components/ui/overlay-layer";
 import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
 import { useNotebookGroundingMode } from "@/features/notebooks/model/grounding-mode";
 import { useGenerationStore } from "../hooks/use-generation-store";
@@ -27,6 +31,7 @@ import { DEFAULT_ROADMAP_OPTIONS } from "./forms/roadmap-options";
 import { DEFAULT_SLIDES_OPTIONS } from "./forms/slides-theme-options";
 import { BriefForm } from "./BriefForm";
 import { cn } from "@/shared/utils/cn";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 
 export interface GenerateBriefDialogProps {
   notebookId: string;
@@ -43,6 +48,7 @@ export function GenerateBriefDialog({
   onOpenChange,
   onComplete,
 }: GenerateBriefDialogProps) {
+  const isMobile = useMediaQuery("(max-width: 639px)");
   const queryClient = useQueryClient();
   const { t } = useTranslation("generation");
   const startBackgroundGeneration = useGenerationStore((s) => s.startBackgroundGeneration);
@@ -108,6 +114,77 @@ export function GenerateBriefDialog({
   if (kind === null) return null;
 
   const label = t(kindLabelKey(kind));
+  const titleText = t("dialog.title", { kind: label });
+
+  const bodyContent = !isConnectionUsable(connection) ? (
+    <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
+  ) : isCapable ? (
+    <BriefForm
+      notebookId={notebookId}
+      kind={kind}
+      value={value}
+      onChange={updateBriefForm}
+      onSubmit={handleSubmit}
+      submitLabel={t("actions.generate")}
+      disabled={false}
+    />
+  ) : (
+    <StudyMaterialCapabilityGate
+      modelName={activeModel?.displayName ?? selectedModel}
+      capabilitiesVerified={capabilitiesVerified}
+      models={models}
+      selectedModel={selectedModel}
+      onSelect={setModel}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <DialogPrimitive.Root open={open} onOpenChange={handleClose}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Backdrop
+            data-slot="mobile-fullscreen-backdrop"
+            className="fixed inset-0 isolate z-modal-backdrop bg-black/40 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          />
+          <DialogPrimitive.Popup
+            data-slot="mobile-fullscreen-dialog"
+            className={cn(
+              "fixed inset-0 z-modal-content flex flex-col bg-surface-1 text-text-primary",
+              "h-dvh w-screen overflow-hidden outline-none generate-material-dialog",
+              "duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+            )}
+          >
+            <OverlayLayerContext.Provider value={MODAL_POPOVER_LAYER}>
+              {/* Native App Bar */}
+              <div className="flex h-13 shrink-0 items-center justify-between border-b border-surface-border px-4 pt-safe select-none">
+                <DialogPrimitive.Title className="text-base font-semibold text-text-primary truncate">
+                  {titleText}
+                </DialogPrimitive.Title>
+                <DialogPrimitive.Close
+                  data-slot="mobile-fullscreen-close"
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-text-secondary hover:text-text-primary rounded-lg touch-manipulation active:scale-95 cursor-pointer"
+                    />
+                  }
+                >
+                  <XIcon className="size-4.5" />
+                  <span className="sr-only">{t("dialog.close", "Close")}</span>
+                </DialogPrimitive.Close>
+              </div>
+
+              {/* Scrollable Form Body */}
+              <div className="flex-1 flex flex-col overflow-y-auto overscroll-contain px-4 py-4 min-w-0 pb-safe-lg">
+                {bodyContent}
+              </div>
+            </OverlayLayerContext.Provider>
+          </DialogPrimitive.Popup>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -116,39 +193,15 @@ export function GenerateBriefDialog({
           "bg-surface-1 border border-surface-border generate-material-dialog",
           "max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden",
           "min-w-0 [&>*]:min-w-0",
-          "sm:max-w-2xl pb-safe-lg sm:pb-6",
+          "sm:max-w-2xl sm:pb-6",
         )}
       >
-        <div
-          aria-hidden="true"
-          className="sm:hidden mx-auto -mt-2 mb-2 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30"
-        />
         <DialogHeader>
           <DialogTitle className="text-base font-semibold text-text-primary">
-            {t("dialog.title", { kind: label })}
+            {titleText}
           </DialogTitle>
         </DialogHeader>
-        {!isConnectionUsable(connection) ? (
-          <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
-        ) : isCapable ? (
-          <BriefForm
-            notebookId={notebookId}
-            kind={kind}
-            value={value}
-            onChange={updateBriefForm}
-            onSubmit={handleSubmit}
-            submitLabel={t("actions.generate")}
-            disabled={false}
-          />
-        ) : (
-          <StudyMaterialCapabilityGate
-            modelName={activeModel?.displayName ?? selectedModel}
-            capabilitiesVerified={capabilitiesVerified}
-            models={models}
-            selectedModel={selectedModel}
-            onSelect={setModel}
-          />
-        )}
+        {bodyContent}
       </DialogContent>
     </Dialog>
   );
@@ -175,6 +228,7 @@ function StudyMaterialCapabilityGate({
   onSelect,
 }: StudyMaterialCapabilityGateProps) {
   const { t } = useTranslation("generation");
+  const isMobile = useMediaQuery("(max-width: 639px)");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const groups = useModelList(models, { search, structuredOnly: true, capabilitiesVerified });
@@ -192,27 +246,45 @@ function StudyMaterialCapabilityGate({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <ModelSelector open={pickerOpen} onOpenChange={setPickerOpen}>
-          <ModelSelectorTrigger render={<Button size="sm" />}>
-            {t("capabilityGate.chooseModel")}
-          </ModelSelectorTrigger>
-          <ModelSelectorContent title={t("capabilityGate.pickerTitle")}>
-            <ModelSelectorInput
-              placeholder={t("capabilityGate.searchPlaceholder")}
-              value={search}
-              onValueChange={setSearch}
-            />
-            <ModelSelectorModels
-              groups={groups}
-              selectedModel={selectedModel}
-              capabilitiesVerified={capabilitiesVerified}
-              onSelect={(modelId) => {
-                onSelect(modelId);
-                setPickerOpen(false);
-              }}
-            />
-          </ModelSelectorContent>
-        </ModelSelector>
+        {isMobile ? (
+          <MobileModelSelectorDrawer
+            open={pickerOpen}
+            onOpenChange={setPickerOpen}
+            trigger={<Button size="sm">{t("capabilityGate.chooseModel")}</Button>}
+            groups={groups}
+            selectedModel={selectedModel}
+            onSelect={(modelId) => {
+              onSelect(modelId);
+              setPickerOpen(false);
+            }}
+            search={search}
+            onSearchChange={setSearch}
+            title={t("capabilityGate.pickerTitle")}
+            searchPlaceholder={t("capabilityGate.searchPlaceholder")}
+          />
+        ) : (
+          <ModelSelector open={pickerOpen} onOpenChange={setPickerOpen}>
+            <ModelSelectorTrigger render={<Button size="sm" />}>
+              {t("capabilityGate.chooseModel")}
+            </ModelSelectorTrigger>
+            <ModelSelectorContent title={t("capabilityGate.pickerTitle")}>
+              <ModelSelectorInput
+                placeholder={t("capabilityGate.searchPlaceholder")}
+                value={search}
+                onValueChange={setSearch}
+              />
+              <ModelSelectorModels
+                groups={groups}
+                selectedModel={selectedModel}
+                capabilitiesVerified={capabilitiesVerified}
+                onSelect={(modelId) => {
+                  onSelect(modelId);
+                  setPickerOpen(false);
+                }}
+              />
+            </ModelSelectorContent>
+          </ModelSelector>
+        )}
       </div>
     </div>
   );

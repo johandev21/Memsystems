@@ -109,9 +109,9 @@ export function useTreeMutations({
   );
 
   const createFolderInternal = useCallback(
-    async (parentId: string | null) => {
+    async (parentId: string | null, name?: string) => {
       if (onCommand) {
-        const command: TreeCommand = { type: "createFolder", parentId };
+        const command: TreeCommand = { type: "createFolder", parentId, name };
         const key = getCommandPendingKey(command);
         if (isPending(key)) return;
         setPending(key, true);
@@ -130,7 +130,9 @@ export function useTreeMutations({
           if (parentId) setFolderOpen(parentId, true);
           setSelectedId(newId);
           setFocusedItemId(newId);
-          setRenamingItemId(newId);
+          if (!name) {
+            setRenamingItemId(newId);
+          }
         } finally {
           setPending(key, false);
         }
@@ -139,6 +141,9 @@ export function useTreeMutations({
       const now = new Date().toISOString();
       const id = `folder-${crypto.randomUUID()}`;
       const folder = createFolder(parentId, id, now);
+      if (name) {
+        folder.name = name;
+      }
       const notebookId = effectiveState.folders[0]?.notebookId ?? "notebook-placeholder";
       const folderWithNotebook = { ...folder, notebookId };
       onInternalStateChange?.((prev) => ({
@@ -148,7 +153,9 @@ export function useTreeMutations({
       if (parentId) setFolderOpen(parentId, true);
       setSelectedId(folderWithNotebook.id);
       setFocusedItemId(folderWithNotebook.id);
-      setRenamingItemId(folderWithNotebook.id);
+      if (!name) {
+        setRenamingItemId(folderWithNotebook.id);
+      }
       setLastAction?.(`Created ${folderWithNotebook.name}.`);
     },
     [
