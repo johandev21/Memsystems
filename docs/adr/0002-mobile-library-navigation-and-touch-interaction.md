@@ -12,5 +12,7 @@ The desktop Library interface relies on skeuomorphic 239px binder cards arranged
 
 - The Library view branches cleanly at mobile viewports (<640px) or coarse pointer environments without polluting desktop grid styling or keyboard workflows.
 - `@dnd-kit` sensors are bypassed or deactivated on mobile viewports, eliminating scroll hijacking and unintentional drags.
-- Mobile interactions strictly obey mobile-native ergonomics: `overscroll-behavior: contain` on scroll containers, `touch-action: manipulation` on tappables, safe area padding via `env(safe-area-inset-*)`, and minimum 16px input font sizes during renaming to prevent iOS viewport auto-zoom.
+- Mobile interactions strictly obey mobile-native ergonomics: `overscroll-behavior: contain` on scroll containers, `touch-action: manipulation` on tappables, safe area padding via `env(safe-area-inset-*)`.
 - Moving notebooks between folders is handled deterministically through the Folder Picker Sheet rather than touch drag-and-drop.
+- The notebook Sources panel (`/notebooks/$id` Sources tab) extends this same architecture via `MobileSourcesView`: drill-down navigation stack, 56px list tiles with subtitle status lines, `MobileFolderActionDrawer` / `MobileSourceActionDrawer` for touch actions, and bottom FAB for source creation, keeping the desktop tree and `@dnd-kit` decoupled from mobile screens (<1024px).
+

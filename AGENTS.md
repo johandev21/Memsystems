@@ -5,6 +5,15 @@ pnpm workspace: `frontend/` (Vite + React 19) + `backend/` (NestJS 11). Turborep
 Do not test until you modify some actual code or is explicitely requested by the user. 
 And when you do modify some code and add tests just test the stuff you modifed do not run the full tests. 
 
+## Mobile redesign: desktop is frozen
+
+Mobile work must not change the desktop (`sm:` and up) design. Tailwind is mobile-first, so an unprefixed utility also applies on desktop.
+
+- Express mobile-only changes with `max-sm:` (or `max-md:`), e.g. `max-sm:min-h-11`. Never write an unprefixed utility and "undo" it with `sm:`: resets like `sm:h-8` do not cancel `min-h-11`, and the element still grows on desktop.
+- Prefer additive classes (`touch-manipulation`, `active:scale-97`) over changing existing sizes, spacing, borders or typography.
+- Panel headers in `/notebooks/$id` (chat, sources, source reader, studio, material viewer and their skeletons) are always 44px: `p-1.5` + `min-h-11`, children `h-8`. Never enlarge them; enlarge hit areas with `max-sm:` only if it does not change the header height. `panel-header-consistency.test.ts` enforces this.
+- Before finishing, run `git diff main` on every file you touched and check that no unprefixed class changed.
+
 ## Commands
 
 | Command | Purpose |
