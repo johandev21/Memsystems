@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   DndContext,
   DragOverlay,
@@ -13,7 +13,6 @@ import {
 import { ChevronsUpDown, FileText, Folder, FolderOpen, FolderPlus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   ContextMenu,
@@ -33,18 +32,13 @@ import {
 } from "@/components/ui/tree";
 import {
   type Source,
-  moveSource,
   sourcesQueryOptions,
-  updateSource,
 } from "../api/sources";
 import {
-  createSourceFolder,
-  deleteSourceFolder,
   sourceFoldersQueryOptions,
-  updateSourceFolder,
 } from "../api/source-folders";
 import type { SourceFolder } from "../types/source-folder.types";
-import { buildSourcesTree, canMoveSourcesItem, getDescendantFolderIds } from "../model/sources-tree";
+import { buildSourcesTree, canMoveSourcesItem } from "../model/sources-tree";
 import { useUploadStore } from "../hooks/use-upload-store";
 import { AddSourceDialog } from "./add-source-dialog";
 import { PendingUploadRow } from "./pending-upload-row";
@@ -55,7 +49,13 @@ import {
 import { SourcesList } from "./sources-list/sources-list";
 import { SourceIcon } from "./sources-list/source-icon";
 import { useSourceMutations } from "./sources-list/use-source-mutations";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import { useSourcesTreeMutations } from "../hooks/use-sources-tree-mutations";
+import { MobileSourcesView } from "./mobile/mobile-sources-view";
 import { SourcesPanelHeader } from "@/features/notebooks/components/notebook-workspace/sources-panel-header";
+
+// Matches the breakpoint where MobileNotebookLayout replaces the desktop layout.
+const MOBILE_LAYOUT_QUERY = "(max-width: 1023px)";
 
 export function SourcesPanel({
   notebookId,
@@ -70,9 +70,9 @@ export function SourcesPanel({
   onToggleCollapse?: () => void;
   showHeader?: boolean;
 }) {
+  const isMobileLayout = useMediaQuery(MOBILE_LAYOUT_QUERY);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const { t } = useTranslation(["sources", "tree"]);
-  const queryClient = useQueryClient();
 
   const {
     data: sources,
@@ -163,234 +163,15 @@ export function SourcesPanel({
     [folders, sources],
   );
 
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-
-
-  const createFolderMutation = useMutation({
-    mutationFn: (input: { name: string; parentId?: string | null }) =>
-      createSourceFolder(notebookId, input),
-    onSuccess: (newFolder) => {
-      queryClient.invalidateQueries({ queryKey: ["source-folders", notebookId] });
-      if (newFolder.parentId) {
-        setExpandedIds((prev) => new Set([...prev, newFolder.parentId!]));
-      }
-      setEditingItemId(newFolder.id);
-    },
-  });
-
-  const handleCreateFolder = useCallback(
-    (parentId: string | null = null) => {
-      createFolderMutation.mutate({
-        name: t("tree:defaults.untitledFolder", "Untitled folder"),
-        parentId,
-      });
-    },
-    [createFolderMutation, t],
-  );
-
-  const renameMutation = useMutation({
-    mutationFn: async ({ itemId, nextName }: { itemId: string; nextName: string }) => {
-      const isFolder = folders?.some((f) => f.id === itemId);
-      if (isFolder) {
-        return updateSourceFolder(itemId, { name: nextName });
-      }
-      return updateSource(itemId, { title: nextName });
-    },
-    onMutate: async ({ itemId, nextName }) => {
-      await queryClient.cancelQueries({ queryKey: ["sources", notebookId] });
-      await queryClient.cancelQueries({ queryKey: ["source-folders", notebookId] });
-
-      const previousSources = queryClient.getQueryData<Source[]>(["sources", notebookId]);
-      const previousFolders = queryClient.getQueryData<SourceFolder[]>(["source-folders", notebookId]);
-
-      const now = new Date().toISOString();
-      const isFolder = previousFolders?.some((f) => f.id === itemId);
-
-      if (isFolder) {
-        queryClient.setQueryData<SourceFolder[]>(["source-folders", notebookId], (old) => {
-          if (!old) return old;
-          return old.map((f) => (f.id === itemId ? { ...f, name: nextName, updatedAt: now } : f));
-        });
-      } else {
-        queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
-          if (!old) return old;
-          return old.map((s) => (s.id === itemId ? { ...s, title: nextName } : s));
-        });
-      }
-
-      return { previousSources, previousFolders };
-    },
-    onError: (err, _vars, context) => {
-      if (context?.previousSources) {
-        queryClient.setQueryData(["sources", notebookId], context.previousSources);
-      }
-      if (context?.previousFolders) {
-        queryClient.setQueryData(["source-folders", notebookId], context.previousFolders);
-      }
-      const message =
-        err instanceof Error ? err.message : t("tree:errors.renameFailed", "Failed to rename");
-      toast.error(message);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-      queryClient.invalidateQueries({ queryKey: ["source-folders", notebookId] });
-    },
-  });
-
-  const handleBeginRename = useCallback((id: string) => {
-    setEditingItemId(id);
-  }, []);
-
-  const handleRenameCommit = useCallback(
-    (id: string, nextName: string) => {
-      setEditingItemId(null);
-      const trimmed = nextName.trim();
-      if (!trimmed) return;
-
-      const folder = folders?.find((f) => f.id === id);
-      if (folder) {
-        if (folder.name === trimmed) return;
-        renameMutation.mutate({ itemId: id, nextName: trimmed });
-        return;
-      }
-
-      const source = sources?.find((s) => s.id === id);
-      if (source) {
-        if (source.title === trimmed) return;
-        renameMutation.mutate({ itemId: id, nextName: trimmed });
-        return;
-      }
-    },
-    [folders, sources, renameMutation],
-  );
-
-  const handleRenameCancel = useCallback(() => {
-    setEditingItemId(null);
-  }, []);
-
-  const deleteFolderMutation = useMutation({
-    mutationFn: async (folderId: string) => {
-      return deleteSourceFolder(folderId);
-    },
-    onMutate: async (folderId: string) => {
-      await queryClient.cancelQueries({ queryKey: ["sources", notebookId] });
-      await queryClient.cancelQueries({ queryKey: ["source-folders", notebookId] });
-
-      const previousSources = queryClient.getQueryData<Source[]>(["sources", notebookId]);
-      const previousFolders = queryClient.getQueryData<SourceFolder[]>(["source-folders", notebookId]);
-
-      if (previousFolders) {
-        const descendants = getDescendantFolderIds(previousFolders, folderId);
-        const deletedIds = new Set([folderId, ...descendants]);
-
-        queryClient.setQueryData<SourceFolder[]>(["source-folders", notebookId], (old) => {
-          if (!old) return old;
-          return old.filter((f) => !deletedIds.has(f.id));
-        });
-
-        if (previousSources) {
-          queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
-            if (!old) return old;
-            return old.map((s) =>
-              s.folderId && deletedIds.has(s.folderId) ? { ...s, folderId: null } : s,
-            );
-          });
-        }
-      }
-
-      return { previousSources, previousFolders };
-    },
-    onError: (err, _vars, context) => {
-      if (context?.previousSources) {
-        queryClient.setQueryData(["sources", notebookId], context.previousSources);
-      }
-      if (context?.previousFolders) {
-        queryClient.setQueryData(["source-folders", notebookId], context.previousFolders);
-      }
-      const message =
-        err instanceof Error
-          ? err.message
-          : t("tree:errors.deleteFolderFailed", "Failed to delete folder");
-      toast.error(message);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-      queryClient.invalidateQueries({ queryKey: ["source-folders", notebookId] });
-    },
-  });
-
-  const handleDeleteFolder = useCallback(
-    (folderId: string) => {
-      deleteFolderMutation.mutate(folderId);
-    },
-    [deleteFolderMutation],
-  );
-
-  const moveItemMutation = useMutation({
-    mutationFn: async ({
-      itemId,
-      targetFolderId,
-    }: {
-      itemId: string;
-      targetFolderId: string | null;
-    }) => {
-      const isFolder = folders?.some((f) => f.id === itemId);
-      if (isFolder) {
-        return updateSourceFolder(itemId, { parentId: targetFolderId });
-      }
-      return moveSource(itemId, targetFolderId);
-    },
-    onMutate: async ({ itemId, targetFolderId }) => {
-      await queryClient.cancelQueries({ queryKey: ["sources", notebookId] });
-      await queryClient.cancelQueries({ queryKey: ["source-folders", notebookId] });
-
-      const previousSources = queryClient.getQueryData<Source[]>(["sources", notebookId]);
-      const previousFolders = queryClient.getQueryData<SourceFolder[]>(["source-folders", notebookId]);
-
-      const isFolder = previousFolders?.some((f) => f.id === itemId);
-
-      if (isFolder) {
-        queryClient.setQueryData<SourceFolder[]>(["source-folders", notebookId], (old) => {
-          if (!old) return old;
-          return old.map((f) => (f.id === itemId ? { ...f, parentId: targetFolderId } : f));
-        });
-      } else {
-        queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
-          if (!old) return old;
-          return old.map((s) => (s.id === itemId ? { ...s, folderId: targetFolderId } : s));
-        });
-      }
-
-      if (targetFolderId !== null) {
-        setExpandedIds((prev) => new Set([...prev, targetFolderId]));
-      }
-
-      return { previousSources, previousFolders };
-    },
-    onError: (err, _vars, context) => {
-      if (context?.previousSources) {
-        queryClient.setQueryData(["sources", notebookId], context.previousSources);
-      }
-      if (context?.previousFolders) {
-        queryClient.setQueryData(["source-folders", notebookId], context.previousFolders);
-      }
-      const message =
-        err instanceof Error ? err.message : t("tree:errors.moveFailed", "Failed to move item");
-      toast.error(message);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-      queryClient.invalidateQueries({ queryKey: ["source-folders", notebookId] });
-    },
-  });
-
-  const handleMove = useCallback(
-    (itemId: string, targetFolderId: string | null) => {
-      if (!canMove(itemId, targetFolderId)) return;
-      moveItemMutation.mutate({ itemId, targetFolderId });
-    },
-    [canMove, moveItemMutation],
-  );
+  const {
+    editingItemId,
+    handleCreateFolder,
+    handleBeginRename,
+    handleRenameCommit,
+    handleRenameCancel,
+    handleDeleteFolder,
+    handleMove,
+  } = useSourcesTreeMutations({ notebookId, folders, canMove, setExpandedIds });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -483,6 +264,50 @@ export function SourcesPanel({
     requestDelete: requestDeleteKbd,
   });
   // ────────────────────────────────────────────────────────────────────────
+
+  if (isMobileLayout) {
+    return (
+      <>
+        <MobileSourcesView
+          notebookId={notebookId}
+          sources={sources}
+          folders={folders}
+          pendingUploads={pendingUploads}
+          isPending={isPending}
+          isError={isError}
+          onRetryLoad={handleRetryLoad}
+          onSelectSource={onSelectSource}
+          onCancelPendingUpload={cancelPendingUpload}
+          canMove={canMove}
+          onMove={handleMove}
+          onCreateFolder={handleCreateFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onDeleteSource={(source) => setSourceToDelete({ id: source.id, title: source.title })}
+          onRetrySource={(source) => retryMutation.mutate(source.id)}
+          onCancelSource={(source) => cancelMutation.mutate(source.id)}
+          deletingId={deleteMutation.isPending ? deleteMutation.variables : undefined}
+          retryingId={retryMutation.isPending ? retryMutation.variables : undefined}
+          cancellingId={cancelMutation.isPending ? cancelMutation.variables : undefined}
+          editingItemId={editingItemId}
+          onBeginRename={handleBeginRename}
+          onRenameCommit={handleRenameCommit}
+          onRenameCancel={handleRenameCancel}
+        />
+        <ConfirmDeleteDialog
+          open={sourceToDelete !== null}
+          onOpenChange={(open) => !open && setSourceToDelete(null)}
+          title={t("sources:panel.deleteTitle")}
+          description={t("sources:panel.deleteDescription", { title: sourceToDelete?.title ?? "" })}
+          onConfirm={() => {
+            if (!sourceToDelete) return;
+            deleteMutation.mutate(sourceToDelete.id);
+            setSourceToDelete(null);
+          }}
+          isLoading={deleteMutation.isPending}
+        />
+      </>
+    );
+  }
 
   if (collapsed) {
     return (

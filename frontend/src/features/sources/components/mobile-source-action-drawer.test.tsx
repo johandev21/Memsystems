@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Source } from "../api/sources";
 import type { SourceFolder } from "../types/source-folder.types";
 import { MobileSourceActionDrawer } from "./mobile-source-action-drawer";
-import { SourceRow } from "./sources-list/source-row";
+import { MobileSourceTile } from "./mobile/mobile-source-tile";
 
 function makeSource(overrides: Partial<Source> = {}): Source {
   return {
@@ -191,27 +191,23 @@ describe("MobileSourceActionDrawer", () => {
     expect(viewBtn.className).toContain("active:scale-98");
   });
 
-  it("renders mobile trigger button in SourceRow and opens drawer on tap", () => {
+  it("renders mobile trigger button in MobileSourceTile and triggers actions callback on tap", () => {
     const source = makeSource();
+    const handleActions = vi.fn();
     render(
-      <SourceRow
+      <MobileSourceTile
         source={source}
-        onClick={vi.fn()}
-        onDelete={vi.fn()}
-        onRetry={vi.fn()}
-        onCancel={vi.fn()}
-        deleting={false}
-        retrying={false}
-        cancelling={false}
+        onOpen={vi.fn()}
+        onActions={handleActions}
       />,
     );
 
     const trigger = screen.getByRole("button", { name: /source actions/i });
     expect(trigger).toBeTruthy();
     expect(trigger.className).toContain("touch-manipulation");
-    expect(trigger.className).toContain("size-11");
+    expect(trigger.className).toContain("size-12");
 
     fireEvent.click(trigger);
-    expect(screen.getByRole("button", { name: /view content/i })).toBeTruthy();
+    expect(handleActions).toHaveBeenCalledOnce();
   });
 });

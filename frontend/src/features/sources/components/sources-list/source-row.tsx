@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type React from "react";
 import {
   AlertCircle,
@@ -6,7 +5,6 @@ import {
   Folder,
   FolderInput,
   Loader2,
-  MoreVertical,
   Pencil,
   RotateCcw,
   Trash2,
@@ -38,7 +36,6 @@ import {
   sourceQualityReasonLabel,
 } from "../../utils/source-processing";
 import { SourceIcon } from "./source-icon";
-import { MobileSourceActionDrawer } from "../mobile-source-action-drawer";
 
 export interface SourceRowProps {
   source: Source;
@@ -90,7 +87,6 @@ export function SourceRow({
   onKeyDown,
 }: SourceRowProps) {
   const { t } = useTranslation(["sources", "tree"]);
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const status = sourceProcessingStatus(source);
   const active = isSourceProcessing(source);
   const failed = status === "failed";
@@ -206,25 +202,7 @@ export function SourceRow({
         <span className="max-w-36 shrink-0 truncate text-xs opacity-75">{statusText}</span>
       )}
 
-      {!isEditing && (
-        <div className="absolute top-1/2 right-1 -translate-y-1/2 flex items-center sm:hidden">
-          <button
-            type="button"
-            data-slot="source-row-mobile-trigger"
-            aria-label={t("sources:sourceRow.moreActions", "Source actions")}
-            title={t("sources:sourceRow.moreActions", "Source actions")}
-            onClick={(event) => {
-              event.stopPropagation();
-              setMobileDrawerOpen(true);
-            }}
-            className="flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground active:scale-97 transition-transform touch-manipulation cursor-pointer"
-          >
-            <MoreVertical className="size-4" />
-          </button>
-        </div>
-      )}
-
-      <div className="absolute top-1/2 right-1 hidden sm:flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover/tree-row:opacity-100 group-focus-within/tree-row:opacity-100">
+      <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover/tree-row:opacity-100 group-focus-within/tree-row:opacity-100">
         {failed && (
           <button
             type="button"
@@ -282,8 +260,7 @@ export function SourceRow({
   );
 
   return (
-    <>
-      <ContextMenu>
+    <ContextMenu>
         <ContextMenuTrigger data-slot="source-row-trigger" render={rowContainer} />
         <ContextMenuContent className="min-w-48">
           <ContextMenuGroup>
@@ -381,23 +358,6 @@ export function SourceRow({
             </ContextMenuItem>
           </ContextMenuGroup>
         </ContextMenuContent>
-      </ContextMenu>
-      <MobileSourceActionDrawer
-        source={source}
-        open={mobileDrawerOpen}
-        onOpenChange={setMobileDrawerOpen}
-        allFolders={allFolders}
-        canMove={canMove}
-        onViewContent={onClick}
-        onBeginRename={() => onBeginRename?.(source.id)}
-        onMove={(targetFolderId) => onMove?.(source.id, targetFolderId)}
-        onDelete={onDelete}
-        onRetry={onRetry}
-        onCancel={onCancel}
-        deleting={deleting}
-        retrying={retrying}
-        cancelling={cancelling}
-      />
-    </>
+    </ContextMenu>
   );
 }

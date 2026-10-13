@@ -2,7 +2,6 @@ import {
   ArrowLeft,
   ChevronRight,
   Eye,
-  Folder,
   FolderInput,
   Loader2,
   Pencil,
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/drawer";
 import type { Source } from "../api/sources";
 import type { SourceFolder } from "../types/source-folder.types";
+import { MobileMoveFolderPicker } from "./mobile/mobile-move-folder-picker";
 import { SourceIcon } from "./sources-list/source-icon";
 import {
   isSourceProcessing,
@@ -119,40 +119,11 @@ export function MobileSourceActionDrawer({
               </div>
             </DrawerHeader>
 
-            <div className="flex flex-col gap-1 py-1 max-h-[60vh] overflow-y-auto">
-              {canMoveToRoot && (
-                <button
-                  type="button"
-                  data-slot="mobile-move-target-root"
-                  onClick={() => handleSelectMoveTarget(null)}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer"
-                >
-                  <FolderInput className="size-4.5 text-muted-foreground shrink-0" />
-                  <span className="truncate">
-                    {t("tree:actions.moveToSourcesRoot", "Move to Sources root")}
-                  </span>
-                </button>
-              )}
-
-              {validTargetFolders.map((folder) => (
-                <button
-                  key={folder.id}
-                  type="button"
-                  data-slot={`mobile-move-target-${folder.id}`}
-                  onClick={() => handleSelectMoveTarget(folder.id)}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer"
-                >
-                  <Folder className="size-4.5 text-muted-foreground shrink-0" />
-                  <span className="truncate">{folder.name}</span>
-                </button>
-              ))}
-
-              {!hasMoveTargets && (
-                <p className="py-4 text-center text-xs text-muted-foreground">
-                  {t("tree:tree.emptyDescription", "No folders available")}
-                </p>
-              )}
-            </div>
+            <MobileMoveFolderPicker
+              folders={validTargetFolders}
+              canMoveToRoot={canMoveToRoot}
+              onSelect={handleSelectMoveTarget}
+            />
           </>
         ) : (
           <>

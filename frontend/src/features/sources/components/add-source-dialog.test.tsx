@@ -46,6 +46,38 @@ describe("AddSourceDialog & Source Modes Layout & Transcript Handling", () => {
     expect(screen.getByPlaceholderText("What would you like to research?")).not.toBeNull();
   });
 
+  it("renders MobileAddSourceDrawer on mobile without dashed dropzone and navigates sub-modes", () => {
+    renderWithClient(
+      <AddSourceDialog notebookId="nb-test" forceDrawer open>
+        <button type="button">Add Source</button>
+      </AddSourceDialog>,
+    );
+
+    // Shows drawer content
+    expect(screen.getByRole("heading", { name: /add source/i })).not.toBeNull();
+
+    // The desktop dropzone is NOT present on mobile
+    expect(screen.queryByText(/drop files/i)).toBeNull();
+
+    // Direct import options are present with generous touch targets
+    const uploadOption = screen.getByRole("button", { name: /upload files/i });
+    const urlOption = screen.getByRole("button", { name: /add web link/i });
+    const textOption = screen.getByRole("button", { name: /paste text/i });
+
+    expect(uploadOption).not.toBeNull();
+    expect(urlOption).not.toBeNull();
+    expect(textOption).not.toBeNull();
+
+    // Navigating to URL mode
+    fireEvent.click(urlOption);
+    expect(screen.getByLabelText(/web link or url/i)).not.toBeNull();
+
+    // Back button in header returns to menu
+    const backBtn = screen.getAllByRole("button", { name: /back/i })[0];
+    fireEvent.click(backBtn);
+    expect(screen.getByRole("button", { name: /upload files/i })).not.toBeNull();
+  });
+
   describe("UrlInputMode", () => {
     it("renders caption textarea with bounded height and handles large transcripts", () => {
       const handleCaptionChange = vi.fn();

@@ -12,20 +12,32 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { SOURCE_LIMIT, sourcesQueryOptions } from "../api/sources";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { useAddSourceDialogState } from "../hooks/use-add-source-dialog-state";
 import { useAddSourceActions } from "../hooks/use-add-source-actions";
 import { AddSourceDialogBody } from "./add-source/add-source-dialog-body";
+import { MobileAddSourceDrawer } from "./mobile/mobile-add-source-drawer";
+
+export interface AddSourceDialogProps {
+  notebookId: string;
+  children?: ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  forceDrawer?: boolean;
+}
 
 export function AddSourceDialog({
   notebookId,
   children,
-}: {
-  notebookId: string;
-  children: ReactElement;
-}) {
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  forceDrawer,
+}: AddSourceDialogProps) {
   const { t } = useTranslation("sources");
   const { data: sources } = useQuery(sourcesQueryOptions(notebookId));
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const sourceState = useAddSourceDialogState();
   const {
     mode,
@@ -60,7 +72,44 @@ export function AddSourceDialog({
     handleStartTextUpload,
   } = useAddSourceActions(notebookId, sourceState, handleCloseAndReset);
 
-  const isNativeButton = children.type === "button";
+  const isMobile = useMediaQuery("(max-width: 1023px)");
+  const useDrawer = forceDrawer ?? isMobile;
+  const isNativeButton = children?.type === "button";
+
+  if (useDrawer) {
+    return (
+      <MobileAddSourceDrawer
+        open={open}
+        onOpenChange={(value) => {
+          setOpen(value);
+          if (!value) reset();
+        }}
+        notebookId={notebookId}
+        mode={mode}
+        setMode={setMode}
+        remainingSourceSlots={remainingSourceSlots}
+        count={count}
+        usedPercent={usedPercent}
+        onUploadFile={handleStartFileUpload}
+        urlValue={urlValue}
+        onUrlValueChange={setUrlValue}
+        urlTitle={urlTitle}
+        onUrlTitleChange={setUrlTitle}
+        captionText={captionText}
+        onCaptionTextChange={setCaptionText}
+        oauthToken={oauthToken}
+        onOauthTokenChange={setOauthToken}
+        onSubmitUrl={handleStartUrlUpload}
+        textTitle={textTitle}
+        onTextTitleChange={setTextTitle}
+        textBody={textBody}
+        onTextBodyChange={setTextBody}
+        onSubmitText={handleStartTextUpload}
+      >
+        {children}
+      </MobileAddSourceDrawer>
+    );
+  }
 
   return (
     <Dialog
@@ -70,7 +119,7 @@ export function AddSourceDialog({
         if (!value) reset();
       }}
     >
-      <DialogTrigger render={children} nativeButton={isNativeButton} />
+      {children && <DialogTrigger render={children} nativeButton={isNativeButton} />}
       <DialogContent
         motion={false}
         className="flex max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-panel border-border/60 bg-card p-0 shadow-2xl sm:max-h-[90vh] sm:max-w-170 pb-safe touch-manipulation"

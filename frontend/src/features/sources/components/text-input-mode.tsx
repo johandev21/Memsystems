@@ -46,7 +46,7 @@ export function TextInputMode({
           autoFocus
           required
           disabled={busy}
-          className="h-11 sm:h-10 border-border/70 bg-background text-base sm:text-sm focus-visible:border-ring"
+          className="h-11 sm:h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
         />
       </div>
 
@@ -82,7 +82,7 @@ export function TextInputMode({
           rows={6}
           required
           disabled={busy}
-          className="min-h-36 max-h-64 overflow-y-auto resize-y border-border/70 bg-background text-base sm:text-sm leading-relaxed focus-visible:border-ring break-words"
+          className="min-h-36 max-h-64 overflow-y-auto resize-y border-border/70 bg-background text-sm leading-relaxed focus-visible:border-ring break-words"
         />
       </div>
 

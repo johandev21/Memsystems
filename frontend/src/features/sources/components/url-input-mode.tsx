@@ -136,7 +136,7 @@ function AdvancedYouTubeSection({
               accept=".srt,.vtt,.txt,.json,.json3"
               onChange={handleFileUpload}
               disabled={busy}
-              className="text-base sm:text-xs file:text-xs min-h-11 sm:min-h-9"
+              className="text-xs file:text-xs min-h-11 sm:min-h-9"
             />
           </div>
 
@@ -171,7 +171,7 @@ function AdvancedYouTubeSection({
               onChange={(e) => onCaptionTextChange(e.target.value)}
               disabled={busy}
               rows={3}
-              className="min-h-24 max-h-52 overflow-y-auto resize-y font-mono text-base sm:text-xs"
+              className="min-h-24 max-h-52 overflow-y-auto resize-y font-mono text-xs"
             />
           </div>
 
@@ -187,7 +187,7 @@ function AdvancedYouTubeSection({
                 value={oauthToken}
                 onChange={(e) => onOauthTokenChange(e.target.value)}
                 disabled={busy}
-                className="h-11 sm:h-9 text-base sm:text-xs"
+                className="h-11 sm:h-9 text-xs"
               />
             </div>
           )}
@@ -299,7 +299,7 @@ export function UrlInputMode({
           value={urlTitle}
           onChange={(e) => onUrlTitleChange(e.target.value)}
           disabled={busy}
-          className="h-11 sm:h-10 border-border/70 bg-background text-base sm:text-sm focus-visible:border-ring"
+          className="h-11 sm:h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
         />
       </div>
 
@@ -373,7 +373,7 @@ function UrlAddressField({
         autoFocus
         required
         disabled={busy}
-        className="h-11 sm:h-10 border-border/70 bg-background text-base sm:text-sm focus-visible:border-ring"
+        className="h-11 sm:h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
       />
       {meta.isArXiv && (
         <p className="text-xs text-muted-foreground">{arxivInfo}</p>

@@ -12,9 +12,11 @@ export type { WebSearchImportResultItem };
 export function WebSearchComposer({
   notebookId,
   remainingSourceSlots,
+  showHeader = true,
 }: {
   notebookId: string;
   remainingSourceSlots: number;
+  showHeader?: boolean;
 }) {
   const { t } = useTranslation("sources");
   const webSearch = useWebSearch(notebookId, remainingSourceSlots);
@@ -61,14 +63,16 @@ export function WebSearchComposer({
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {clearAnnouncement}
       </div>
-      <div>
-        <h3 id="web-source-search-title" className="font-medium text-foreground">
-          {t("webSearch.title")}
-        </h3>
-        <p className="mt-1 text-sm leading-5 text-muted-foreground">
-          {t("webSearch.intro")}
-        </p>
-      </div>
+      {showHeader && (
+        <div>
+          <h3 id="web-source-search-title" className="font-medium text-foreground">
+            {t("webSearch.title")}
+          </h3>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">
+            {t("webSearch.intro")}
+          </p>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-composer-border bg-composer-bg p-2 shadow-sm transition-frame focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15">
         <textarea
