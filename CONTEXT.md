@@ -2,8 +2,6 @@
 
 Memsystems is a single-user study workspace. A person collects source material in a notebook, chats with an AI about that material, and generates study materials from it.
 
-For the system overview, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). This file is only the vocabulary.
-
 ## Language
 
 ### Workspace
@@ -35,6 +33,21 @@ _Avoid_: cover, thumbnail
 **Artwork**:
 The generated folder and notebook visuals on the library cards.
 _Avoid_: cover, illustration
+
+**Navigation Stack (Mobile)**:
+The mobile drill-down mechanism where tapping a folder pushes a dedicated folder view with a sticky header and `< Parent Folder` back button instead of desktop card strips and breadcrumbs.
+
+**Item Tile (Mobile)**:
+A full-width touch row for a folder or notebook (`min-h-12`, `:active` scale feedback, artwork, metadata, and trailing action button).
+
+**Action Drawer (Mobile)**:
+A bottom sheet triggered from an Item Tile's `...` button that houses Rename, Move to Folder, and Delete actions in place of desktop context menus.
+
+**Folder Picker Sheet (Mobile)**:
+A bottom sheet listing target folders for moving an item on mobile without drag-and-drop gestures.
+
+**Creation FAB (Mobile)**:
+The floating action button pinned above the bottom safe area that opens the mobile creation sheet.
 
 ### Sources
 

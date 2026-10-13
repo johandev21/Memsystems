@@ -242,7 +242,6 @@ docs/       Documentación técnica del proyecto
 
 ## Documentación
 
-- [Arquitectura y comportamiento](docs/ARCHITECTURE.md)
 - [Glosario](CONTEXT.md)
 - [Pruebas](docs/testing.md)
 
