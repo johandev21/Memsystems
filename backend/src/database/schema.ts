@@ -13,7 +13,7 @@ import {
   varchar,
   vector,
 } from 'drizzle-orm/pg-core';
-import type { RetrievalTrace } from '../modules/ai/retrieval-trace';
+import type { RetrievalTrace } from '../modules/ai/retrieval/retrieval-trace';
 
 const tsvector = customType<{ data: string; driverData: string }>({
   dataType: () => 'tsvector',

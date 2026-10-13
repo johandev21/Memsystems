@@ -29,9 +29,9 @@ import {
 import {
   RetrievalService,
   type RetrievalOutcome,
-} from '../ai/retrieval.service';
-import type { CitationLocator } from '../ai/retrieval.service';
-import { RetrievalTraceService } from '../ai/retrieval-trace.service';
+} from '../ai/retrieval/retrieval.service';
+import type { CitationLocator } from '../ai/retrieval/retrieval.service';
+import { RetrievalTraceService } from '../ai/retrieval/retrieval-trace.service';
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import {

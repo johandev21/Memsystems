@@ -6,7 +6,7 @@
 
 import { createId } from '@paralleldrive/cuid2';
 import { sourceChunks } from '../../src/database/schema';
-import { chunkContextHeader } from '../../src/modules/ai/chunking.service';
+import { chunkContextHeader } from '../../src/modules/ai/indexing/chunking.service';
 import { db } from '../db';
 import { seedNotebook, seedSource } from '../fixtures';
 import type { EvalEmbedder } from './deterministic-embedder';

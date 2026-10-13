@@ -1,4 +1,4 @@
-import type { RetrievalAbstentionReason } from '../ai/retrieval.service';
+import type { RetrievalAbstentionReason } from '../ai/retrieval/retrieval.service';
 import type { SourceQualityReason } from '../../database/schema';
 
 export interface NoEvidenceSourceRef {

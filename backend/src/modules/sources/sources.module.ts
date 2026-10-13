@@ -3,36 +3,36 @@ import { AiModule } from '../ai/ai.module';
 import {
   EMBEDDING_DIMENSIONS,
   EmbeddingService,
-} from '../ai/embedding.service';
-import { indexingRepresentationKey } from '../ai/indexing.service';
+} from '../ai/indexing/embedding.service';
+import { indexingRepresentationKey } from '../ai/indexing/indexing.service';
 import { CrawlerModule } from '../crawler/crawler.module';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { NotebooksModule } from '../notebooks/notebooks.module';
-import { DocumentNormalizerService } from './document-normalizer.service';
-import { HttpFetcherService } from './http-fetcher.service';
-import { SourceAcquisitionService } from './source-acquisition.service';
-import { SourceExtractionService } from './source-extraction.service';
-import { SourceIndexingHandler } from './source-indexing.handler';
-import { SourceProcessingHandler } from './source-processing.handler';
-import { SourceReindexAllHandler } from './source-reindex-all.handler';
-import { SourceJobsService } from './source-jobs.service';
+import { DocumentNormalizerService } from './extraction/document-normalizer.service';
+import { HttpFetcherService } from './acquisition/http-fetcher.service';
+import { SourceAcquisitionService } from './acquisition/source-acquisition.service';
+import { SourceExtractionService } from './extraction/source-extraction.service';
+import { SourceIndexingHandler } from './jobs/source-indexing.handler';
+import { SourceProcessingHandler } from './jobs/source-processing.handler';
+import { SourceReindexAllHandler } from './jobs/source-reindex-all.handler';
+import { SourceJobsService } from './jobs/source-jobs.service';
 import { SourceVersionService } from './source-version.service';
-import { SourceUploadsController } from './source-uploads.controller';
-import { SourceUploadsService } from './source-uploads.service';
-import { ImageInspectorService } from './image-inspector.service';
-import { VisionExtractionService } from './vision-extraction.service';
-import { AudioInspectorService } from './audio-inspector.service';
-import { VideoInspectorService } from './video-inspector.service';
-import { YouTubeAcquisitionService } from './youtube-acquisition.service';
-import { TranscriptionService } from './transcription.service';
-import { PptxInspectorService } from './pptx-inspector.service';
-import { EpubInspectorService } from './epub-inspector.service';
-import { PptxParserService } from './pptx-parser.service';
-import { EpubParserService } from './epub-parser.service';
-import { CaptionParserService } from './caption-parser.service';
-import { YouTubeOAuthService } from './youtube-oauth.service';
-import { TabularInspectorService } from './tabular-inspector.service';
-import { TabularParserService } from './tabular-parser.service';
+import { SourceUploadsController } from './uploads/source-uploads.controller';
+import { SourceUploadsService } from './uploads/source-uploads.service';
+import { ImageInspectorService } from './extraction/image-inspector.service';
+import { VisionExtractionService } from './extraction/vision-extraction.service';
+import { AudioInspectorService } from './extraction/audio-inspector.service';
+import { VideoInspectorService } from './extraction/video-inspector.service';
+import { YouTubeAcquisitionService } from './acquisition/youtube-acquisition.service';
+import { TranscriptionService } from './extraction/transcription.service';
+import { PptxInspectorService } from './extraction/pptx-inspector.service';
+import { EpubInspectorService } from './extraction/epub-inspector.service';
+import { PptxParserService } from './extraction/pptx-parser.service';
+import { EpubParserService } from './extraction/epub-parser.service';
+import { CaptionParserService } from './extraction/caption-parser.service';
+import { YouTubeOAuthService } from './acquisition/youtube-oauth.service';
+import { TabularInspectorService } from './extraction/tabular-inspector.service';
+import { TabularParserService } from './extraction/tabular-parser.service';
 import {
   loadSourceFetchConfig,
   SOURCE_FETCH_CONFIG,
@@ -43,14 +43,14 @@ import {
   SOURCE_QUALITY_CONFIG,
   SourceQualityService,
 } from './source-quality.service';
-import { SourceFolderService } from './source-folder.service';
-import { SourceFoldersController } from './source-folders.controller';
+import { SourceFolderService } from './folders/source-folder.service';
+import { SourceFoldersController } from './folders/source-folders.controller';
 import { SourcesController } from './sources.controller';
 import { SourcesService } from './sources.service';
-import { WebScraperService } from './web-scraper.service';
-import { WebSearchHandler } from './web-search.handler';
-import { WebSearchJobsService } from './web-search-jobs.service';
-import { WebSearchService } from './web-search.service';
+import { WebScraperService } from './acquisition/web-scraper.service';
+import { WebSearchHandler } from './jobs/web-search.handler';
+import { WebSearchJobsService } from './acquisition/web-search-jobs.service';
+import { WebSearchService } from './acquisition/web-search.service';
 
 @Module({
   imports: [NotebooksModule, AiModule, CrawlerModule],

@@ -24,17 +24,35 @@ import {
   EXTRACTOR_VERSION,
   NormalizedDocument,
   NORMALIZATION_VERSION,
-} from './document-normalizer.service';
-import { CaptionParserService } from './caption-parser.service';
-import { isImageFile, MAX_IMAGE_BYTES } from './image-inspector.service';
-import { isAudioFile, MAX_AUDIO_BYTES } from './audio-inspector.service';
-import { isVideoFile, MAX_VIDEO_BYTES } from './video-inspector.service';
-import { isPptxFile, MAX_PPTX_BYTES } from './pptx-inspector.service';
-import { isEpubFile, MAX_EPUB_BYTES } from './epub-inspector.service';
-import { isTabularFile, MAX_TABULAR_BYTES } from './tabular-inspector.service';
-import { SourceAcquisitionService } from './source-acquisition.service';
-import { SourceExtractionService } from './source-extraction.service';
-import { SourceJobsService } from './source-jobs.service';
+} from './extraction/document-normalizer.service';
+import { CaptionParserService } from './extraction/caption-parser.service';
+import {
+  isImageFile,
+  MAX_IMAGE_BYTES,
+} from './extraction/image-inspector.service';
+import {
+  isAudioFile,
+  MAX_AUDIO_BYTES,
+} from './extraction/audio-inspector.service';
+import {
+  isVideoFile,
+  MAX_VIDEO_BYTES,
+} from './extraction/video-inspector.service';
+import {
+  isPptxFile,
+  MAX_PPTX_BYTES,
+} from './extraction/pptx-inspector.service';
+import {
+  isEpubFile,
+  MAX_EPUB_BYTES,
+} from './extraction/epub-inspector.service';
+import {
+  isTabularFile,
+  MAX_TABULAR_BYTES,
+} from './extraction/tabular-inspector.service';
+import { SourceAcquisitionService } from './acquisition/source-acquisition.service';
+import { SourceExtractionService } from './extraction/source-extraction.service';
+import { SourceJobsService } from './jobs/source-jobs.service';
 import {
   qualityFailureLifecycle,
   qualityFailureOf,

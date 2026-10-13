@@ -11,11 +11,11 @@ import {
 import {
   validateStudyGuide,
   validateStudyGuideSources,
-} from './study-guide-content';
+} from './content/study-guide-content';
 import {
   validateCaseStudy,
   validateCaseStudySources,
-} from './case-study-content';
+} from './content/case-study-content';
 import {
   BadRequestError,
   CapabilityUnsupportedError,
@@ -34,8 +34,8 @@ import {
   shuffleQuizOptions,
   StudyMaterialKind,
   validateContent,
-} from './shapes';
-import { normalizeContent } from './content-normalizer';
+} from './content/shapes';
+import { normalizeContent } from './content/content-normalizer';
 import { Output, generateText } from 'ai';
 import { AiService } from '../ai/ai.service';
 import { classifyGatewayError } from '../ai/providers/gateway-errors';
@@ -44,10 +44,10 @@ import {
   type ProblemEvaluationResult,
   ProblemEvaluationSchema,
   validatePracticeProblems,
-} from './practice-problems-content';
-import { buildSlidePreviews, withSlidePreviews } from './slides-preview';
-import { resolveSlideDeck } from './slides-design-resolver';
-import { SlidesBuilderService } from './slides-builder.service';
+} from './content/practice-problems-content';
+import { buildSlidePreviews, withSlidePreviews } from './slides/slides-preview';
+import { resolveSlideDeck } from './slides/slides-design-resolver';
+import { SlidesBuilderService } from './slides/slides-builder.service';
 
 export interface CreateStudyMaterialInput {
   kind: StudyMaterialKind;

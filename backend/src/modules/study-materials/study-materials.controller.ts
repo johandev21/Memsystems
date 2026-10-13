@@ -12,16 +12,16 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
-import { StudyGuideOptions } from './study-guide-content';
+import { StudyGuideOptions } from './content/study-guide-content';
 import {
   EvaluateProblemRequestSchema,
   type EvaluateProblemRequest,
   PracticeProblemsOptions,
-} from './practice-problems-content';
-import { CaseStudyOptions } from './case-study-content';
+} from './content/practice-problems-content';
+import { CaseStudyOptions } from './content/case-study-content';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { GenerationService } from './generation.service';
-import { StudyMaterialKind } from './shapes';
+import { GenerationService } from './generation/generation.service';
+import { StudyMaterialKind } from './content/shapes';
 import { StudyMaterialFolderService } from './study-material-folder.service';
 import { StudyMaterialService } from './study-material.service';
 import { TrashService } from './trash.service';

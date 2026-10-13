@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { NotebooksModule } from '../notebooks/notebooks.module';
-import { GenerationGroundingService } from './generation-grounding';
-import { GenerationRequestManager } from './generation-request-manager';
-import { GenerationService } from './generation.service';
-import { SlidesBuilderService } from './slides-builder.service';
+import { GenerationGroundingService } from './generation/generation-grounding';
+import { GenerationRequestManager } from './generation/generation-request-manager';
+import { GenerationService } from './generation/generation.service';
+import { SlidesBuilderService } from './slides/slides-builder.service';
 
-import { StreamHandler } from './stream-handler';
+import { StreamHandler } from './generation/stream-handler';
 import { StudyMaterialFolderService } from './study-material-folder.service';
 import { StudyMaterialService } from './study-material.service';
 import { StudyMaterialsController } from './study-materials.controller';

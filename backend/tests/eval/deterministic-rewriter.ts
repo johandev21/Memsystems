@@ -23,7 +23,7 @@ import {
   type QueryRewriteRequest,
   type QueryRewriteResult,
   type QueryRewriter,
-} from '../../src/modules/ai/query-understanding';
+} from '../../src/modules/ai/retrieval/query-understanding';
 import { buildIdfWeights, tokenizeForEval } from './deterministic-embedder';
 
 /**

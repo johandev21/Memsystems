@@ -15,8 +15,8 @@ import { z } from 'zod';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { SourcesService } from './sources.service';
-import { WebSearchJobsService } from './web-search-jobs.service';
-import { WebSearchService } from './web-search.service';
+import { WebSearchJobsService } from './acquisition/web-search-jobs.service';
+import { WebSearchService } from './acquisition/web-search.service';
 
 const textSourceSchema = z.object({
   title: z.string().min(1, 'Title is required').max(500),

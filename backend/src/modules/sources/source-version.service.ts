@@ -15,7 +15,7 @@ import {
   NormalizedDocument,
   EXTRACTOR_VERSION,
   NORMALIZATION_VERSION,
-} from './document-normalizer.service';
+} from './extraction/document-normalizer.service';
 import {
   qualityFailureOf,
   qualityLifecycleValues,

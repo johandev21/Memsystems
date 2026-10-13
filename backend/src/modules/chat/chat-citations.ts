@@ -1,7 +1,10 @@
-import type { CitationLocator, RetrievedChunk } from '../ai/retrieval.service';
-import { chunkBody } from '../ai/evidence-assembly';
+import type {
+  CitationLocator,
+  RetrievedChunk,
+} from '../ai/retrieval/retrieval.service';
+import { chunkBody } from '../ai/retrieval/evidence-assembly';
 
-export { type CitationLocator } from '../ai/retrieval.service';
+export { type CitationLocator } from '../ai/retrieval/retrieval.service';
 
 export const CITATION_SCHEMA_VERSION = 3;
 export const MAX_CITATION_EXCERPT_LENGTH = 500;

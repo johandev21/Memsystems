@@ -17,20 +17,20 @@ import {
   DEFAULT_FUSION_K,
   RetrievalService,
   type RetrievedChunk,
-} from '../../src/modules/ai/retrieval.service';
+} from '../../src/modules/ai/retrieval/retrieval.service';
 import {
   QueryUnderstandingService,
   type QueryRewriter,
   type RetrievalRewriteConfig,
-} from '../../src/modules/ai/query-understanding';
-import type { Reranker } from '../../src/modules/ai/reranker.service';
+} from '../../src/modules/ai/retrieval/query-understanding';
+import type { Reranker } from '../../src/modules/ai/retrieval/reranker.service';
 import {
   createCitationEvidence,
   verifyCitations,
   type CitationEvidence,
   type CitationVerification,
 } from '../../src/modules/chat/chat-citations';
-import { chunkBody } from '../../src/modules/ai/evidence-assembly';
+import { chunkBody } from '../../src/modules/ai/retrieval/evidence-assembly';
 import { db } from '../db';
 import {
   DeterministicEmbedder,

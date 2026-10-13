@@ -3,7 +3,10 @@ import { createGateway } from '@ai-sdk/gateway';
 import { ServiceUnavailableError } from '../../common/errors/domain-error';
 import { AiService } from './ai.service';
 import { ConnectionService } from './connection.service';
-import { EMBEDDING_DIMENSIONS, EmbeddingService } from './embedding.service';
+import {
+  EMBEDDING_DIMENSIONS,
+  EmbeddingService,
+} from './indexing/embedding.service';
 import { ModelSyncService } from './model-sync.service';
 import { gatewayServerKey } from './providers/gateway.provider';
 

@@ -18,7 +18,7 @@ import type {
   RerankRequest,
   RerankResponse,
   Reranker,
-} from '../../src/modules/ai/reranker.service';
+} from '../../src/modules/ai/retrieval/reranker.service';
 import { estimateVoyageTokens } from '../../src/modules/ai/providers/voyage.client';
 import { buildIdfWeights, tokenizeForEval } from './deterministic-embedder';
 

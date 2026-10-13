@@ -6,27 +6,27 @@ import {
   CHUNKING_CONFIG,
   ChunkingService,
   loadChunkingConfig,
-} from './chunking.service';
+} from './indexing/chunking.service';
 import { ConnectionService } from './connection.service';
 import {
   EMBEDDING_CONFIG,
   EmbeddingService,
   loadEmbeddingConfig,
-} from './embedding.service';
-import { IndexingService } from './indexing.service';
+} from './indexing/embedding.service';
+import { IndexingService } from './indexing/indexing.service';
 import {
   RETRIEVAL_EVIDENCE_CONFIG,
   loadRetrievalEvidenceConfig,
-} from './evidence-assembly';
+} from './retrieval/evidence-assembly';
 import { ModelSyncService } from './model-sync.service';
 import {
   QUERY_REWRITER,
   QueryUnderstandingService,
   RETRIEVAL_REWRITE_CONFIG,
   loadRetrievalRewriteConfig,
-} from './query-understanding';
-import { QueryRewriterService } from './query-rewriter.service';
-import { RerankerService } from './reranker.service';
+} from './retrieval/query-understanding';
+import { QueryRewriterService } from './retrieval/query-rewriter.service';
+import { RerankerService } from './retrieval/reranker.service';
 import {
   RETRIEVAL_HYBRID_CONFIG,
   RETRIEVAL_RERANK_CONFIG,
@@ -35,8 +35,8 @@ import {
   loadRetrievalHybridConfig,
   loadRetrievalRerankConfig,
   loadRetrievalRelevanceConfig,
-} from './retrieval.service';
-import { RetrievalTraceService } from './retrieval-trace.service';
+} from './retrieval/retrieval.service';
+import { RetrievalTraceService } from './retrieval/retrieval-trace.service';
 import { UserSettingsService } from './user-settings.service';
 
 @Global()

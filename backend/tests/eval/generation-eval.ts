@@ -23,7 +23,7 @@ import { sourceChunks } from '../../src/database/schema';
 import {
   DEFAULT_FUSION_K,
   RetrievalService,
-} from '../../src/modules/ai/retrieval.service';
+} from '../../src/modules/ai/retrieval/retrieval.service';
 import { createCitationEvidence } from '../../src/modules/chat/chat-citations';
 import {
   GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
@@ -31,11 +31,11 @@ import {
   formatGroundedSourceText,
   type GenerationGrounding,
   type GroundedSource,
-} from '../../src/modules/study-materials/generation-grounding';
+} from '../../src/modules/study-materials/generation/generation-grounding';
 import {
   attachGenerationCitations,
   extractGenerationCitations,
-} from '../../src/modules/study-materials/generation-citations';
+} from '../../src/modules/study-materials/generation/generation-citations';
 import { db } from '../db';
 import { DeterministicEmbedder } from './deterministic-embedder';
 import { DeterministicReranker } from './deterministic-reranker';

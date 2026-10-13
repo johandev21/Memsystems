@@ -1,0 +1,57 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { and, eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as appSchema from '../../../database/schema';
+import { retrievalTraces } from '../../../database/schema';
+import { DRIZZLE } from '../../database/database.module';
+import type { RetrievalTrace, RetrievalTraceKind } from './retrieval-trace';
+import type { GroundingMode } from '../../../database/schema';
+import { DEFAULT_GROUNDING_MODE } from '../../notebooks/grounding-mode';
+
+export interface RecordRetrievalTraceInput {
+  notebookId: string;
+  kind: RetrievalTraceKind;
+  chatMessageId?: string;
+  generationRequestId?: string;
+  groundingMode?: GroundingMode;
+  trace: RetrievalTrace;
+}
+
+@Injectable()
+export class RetrievalTraceService {
+  private readonly logger = new Logger(RetrievalTraceService.name);
+
+  constructor(
+    @Inject(DRIZZLE)
+    private readonly db: NodePgDatabase<typeof appSchema>,
+  ) {}
+
+  async record(input: RecordRetrievalTraceInput): Promise<void> {
+    try {
+      await this.db.insert(retrievalTraces).values({
+        notebookId: input.notebookId,
+        kind: input.kind,
+        chatMessageId: input.chatMessageId ?? null,
+        generationRequestId: input.generationRequestId ?? null,
+        groundingMode: input.groundingMode ?? DEFAULT_GROUNDING_MODE,
+        query: input.trace.query,
+        trace: input.trace,
+        latencyMs: input.trace.latencyMs,
+        embeddingInputTokens: input.trace.cost.embeddingInputTokens,
+      });
+    } catch (error) {
+      this.logger.error('failed to persist retrieval trace', error);
+    }
+  }
+
+  async clearChatTraces(notebookId: string): Promise<void> {
+    await this.db
+      .delete(retrievalTraces)
+      .where(
+        and(
+          eq(retrievalTraces.notebookId, notebookId),
+          eq(retrievalTraces.kind, 'chat'),
+        ),
+      );
+  }
+}
