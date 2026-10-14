@@ -133,13 +133,13 @@
 
 @utility library-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 239px);
+  grid-template-columns: repeat(auto-fill, 256px);
   justify-content: start;
   align-items: end;
-  gap: 16px;
+  gap: 24px;
   @media (max-width: 639px) {
     grid-template-columns: none;
-    grid-auto-columns: 239px;
+    grid-auto-columns: 256px;
     grid-auto-flow: column;
     overflow-x: auto;
     padding: 8px;
@@ -151,10 +151,10 @@
   position: relative;
   isolation: isolate;
   flex: none;
-  width: 239px;
+  width: 256px;
   padding: 0;
   border: 0;
-  height: 168.5px;
+  height: 180.5px;
   border-radius: var(--notebook-folder-radius);
   cursor: pointer;
   &::before {
@@ -198,10 +198,10 @@
   position: relative;
   isolation: isolate;
   flex: none;
-  width: 239px;
+  width: 256px;
   padding: 0;
   border: 0;
-  height: 137px;
+  height: 147px;
   cursor: pointer;
   &::before {
     content: "";
@@ -236,10 +236,10 @@
   position: relative;
   isolation: isolate;
   flex: none;
-  width: 239px;
+  width: 256px;
   padding: 0;
   border: 0;
-  height: 137px;
+  height: 147px;
   box-shadow: var(--shadow-lg);
 }
 
@@ -257,7 +257,7 @@
   position: relative;
   display: block;
   pointer-events: none;
-  width: 239px;
+  width: 256px;
   height: 100%;
   font-family: Poppins, system-ui, sans-serif;
   font-weight: 500;
@@ -295,7 +295,7 @@
 }
 
 @utility library-artwork__folder-title {
-  width: 170px;
+  width: 182px;
   overflow: hidden;
 }
 

@@ -1,8 +1,8 @@
 import { useLayoutEffect, useState } from "react";
 
-const MAX_SIZE = 29.4;
+const MAX_SIZE = 31.5;
 const MIN_SIZE = 16;
-const AVAILABLE_WIDTH = 170;
+const AVAILABLE_WIDTH = 182;
 
 export function useFittedFolderTitle(title: string) {
   const [fontSize, setFontSize] = useState(MAX_SIZE);

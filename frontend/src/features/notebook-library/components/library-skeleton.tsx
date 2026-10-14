@@ -51,7 +51,7 @@ export function LibraryGridSkeleton() {
       <MobileLibrarySkeleton />
       <div className="hidden sm:grid library-grid py-2" aria-hidden="true">
         {Array.from({ length: 8 }).map((_, index) => (
-          <Skeleton key={index} className="h-42 w-59.75 rounded-artwork" />
+          <Skeleton key={index} className="h-[147px] w-64 rounded-artwork" />
         ))}
       </div>
     </>
