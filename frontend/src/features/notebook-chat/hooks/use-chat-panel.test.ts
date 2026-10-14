@@ -362,4 +362,49 @@ describe("useChatPanel initial anchor", () => {
 
     expect(result.current.anchorMessageId).toBe("user-2");
   });
+
+  it("clears the anchor when clearAnchor is called", () => {
+    mocks.chatHistory = [createMessage({ id: "user-1", role: "user", content: "Old question" })];
+    mocks.chatState.messages = [
+      { id: "user-1", role: "user", parts: [{ type: "text", text: "Old question" }] },
+      { id: "user-2", role: "user", parts: [{ type: "text", text: "New question" }] },
+    ];
+
+    const { result } = renderHook(() => useChatPanel("notebook-1"));
+
+    expect(result.current.anchorMessageId).toBe("user-2");
+
+    act(() => {
+      result.current.clearAnchor();
+    });
+
+    expect(result.current.anchorMessageId).toBeNull();
+  });
+
+  it("re-anchors when a new user message arrives after clearing", () => {
+    mocks.chatHistory = [createMessage({ id: "user-1", role: "user", content: "Old question" })];
+    mocks.chatState.messages = [
+      { id: "user-1", role: "user", parts: [{ type: "text", text: "Old question" }] },
+      { id: "user-2", role: "user", parts: [{ type: "text", text: "New question" }] },
+    ];
+
+    const { result, rerender } = renderHook(() => useChatPanel("notebook-1"));
+
+    expect(result.current.anchorMessageId).toBe("user-2");
+
+    act(() => {
+      result.current.clearAnchor();
+    });
+
+    expect(result.current.anchorMessageId).toBeNull();
+
+    mocks.chatState.messages = [
+      ...mocks.chatState.messages,
+      { id: "user-3", role: "user", parts: [{ type: "text", text: "Third question" }] },
+    ];
+
+    rerender();
+
+    expect(result.current.anchorMessageId).toBe("user-3");
+  });
 });

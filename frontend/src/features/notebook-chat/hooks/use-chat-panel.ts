@@ -186,11 +186,13 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;
 
+  const [clearedAnchorId, setClearedAnchorId] = useState<string | null>(null);
+
   const hydratedMessageIds = useMemo(
     () => new Set((chatHistory ?? []).map((message) => message.id)),
     [chatHistory],
   );
-  const anchorMessageId = useMemo(() => {
+  const rawAnchorMessageId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const message = messages[i];
       if (message?.role === "user") {
@@ -199,6 +201,17 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     }
     return null;
   }, [messages, hydratedMessageIds]);
+
+  const anchorMessageId =
+    rawAnchorMessageId && rawAnchorMessageId !== clearedAnchorId
+      ? rawAnchorMessageId
+      : null;
+
+  const clearAnchor = useCallback(() => {
+    if (rawAnchorMessageId && clearedAnchorId !== rawAnchorMessageId) {
+      setClearedAnchorId(rawAnchorMessageId);
+    }
+  }, [rawAnchorMessageId, clearedAnchorId]);
 
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState("");
@@ -209,6 +222,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     mutationFn: () => clearChatHistory(notebookId),
     onSuccess: () => {
       abortedMessagesRef.current = null;
+      setClearedAnchorId(null);
       setMessages([]);
       queryClient.setQueryData(["chat", notebookId, "messages"], []);
       queryClient.invalidateQueries({
@@ -234,6 +248,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
       if ((!trimmed && !hasFiles) || isLoading) return;
       abortedMessagesRef.current = null;
+      setClearedAnchorId(null);
       setInput("");
 
       if (hasFiles && files) {
@@ -270,6 +285,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
   const handleRegenerate = useCallback(() => {
     abortedMessagesRef.current = null;
+    setClearedAnchorId(null);
     regenerate();
   }, [regenerate]);
 
@@ -331,6 +347,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     error,
     messageCount,
     anchorMessageId,
+    clearAnchor,
     input,
     setInput,
     isClearDialogOpen,

@@ -188,6 +188,31 @@ describe("ChatMessageList scroll anchoring", () => {
     ).toBe("false");
   });
 
+  it("clears the scroll anchor when anchorMessageId is set to null", () => {
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "First question"),
+      assistantMessage("msg-asst-1", "First answer"),
+    ];
+
+    const { container, rerender } = renderChatMessageList(messages, {
+      anchorMessageId: "msg-user-1",
+    });
+
+    expect(
+      container.querySelector('[data-message-id="msg-user-1"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("true");
+
+    rerender(
+      buildChatTree(messages, {
+        anchorMessageId: null,
+      }),
+    );
+
+    expect(
+      container.querySelector('[data-message-id="msg-user-1"]')?.getAttribute("data-scroll-anchor"),
+    ).toBe("false");
+  });
+
   it("groups multiple consecutive assistant responses into a single versioned turn", () => {
     const messages: UIMessage[] = [
       userMessage("msg-user-1", "What is on the image?"),

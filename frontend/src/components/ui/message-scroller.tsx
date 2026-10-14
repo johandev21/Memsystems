@@ -1,4 +1,7 @@
-import { MessageScroller as MessageScrollerPrimitive } from "@shadcn/react/message-scroller";
+import {
+  MessageScroller as MessageScrollerPrimitive,
+  useMessageScroller,
+} from "@shadcn/react/message-scroller";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -66,14 +69,18 @@ function MessageScrollerItem({
     <MessageScrollerPrimitive.Item
       data-slot="message-scroller-item"
       scrollAnchor={scrollAnchor}
-      className={cn(
-        "min-w-0 shrink-0 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]",
-        className,
-      )}
+      className={cn("min-w-0 shrink-0", className)}
       {...props}
     />
   );
 }
+
+export type MessageScrollerButtonProps = React.ComponentProps<
+  typeof MessageScrollerPrimitive.Button
+> &
+  Pick<React.ComponentProps<typeof Button>, "variant" | "size"> & {
+    onScrollToEnd?: () => void;
+  };
 
 function MessageScrollerButton({
   direction = "end",
@@ -82,10 +89,41 @@ function MessageScrollerButton({
   render,
   variant = "secondary",
   size = "icon-sm",
+  onScrollToEnd,
+  onClick,
   ...props
-}: React.ComponentProps<typeof MessageScrollerPrimitive.Button> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+}: MessageScrollerButtonProps) {
   const { t } = useTranslation();
+  const { scrollToEnd } = useMessageScroller();
+
+  const handleClick = React.useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      onClick?.(e);
+      if (e.defaultPrevented) return;
+
+      if (direction === "end") {
+        onScrollToEnd?.();
+
+        const viewport = e.currentTarget
+          .closest('[data-slot="message-scroller"]')
+          ?.querySelector('[data-slot="message-scroller-viewport"]');
+        const activeAnchor = viewport?.querySelector('[data-scroll-anchor="true"]');
+        if (activeAnchor) {
+          activeAnchor.setAttribute("data-scroll-anchor", "false");
+        }
+
+        scrollToEnd({ behavior: props.behavior ?? "smooth" });
+
+        if (viewport instanceof HTMLElement) {
+          viewport.scrollTo({
+            top: viewport.scrollHeight,
+            behavior: props.behavior ?? "smooth",
+          });
+        }
+      }
+    },
+    [direction, onClick, onScrollToEnd, props.behavior, scrollToEnd],
+  );
 
   return (
     <MessageScrollerPrimitive.Button
@@ -99,6 +137,7 @@ function MessageScrollerButton({
         className,
       )}
       render={render ?? <Button variant={variant} size={size} />}
+      onClick={handleClick}
       {...props}
     >
       {children ?? (

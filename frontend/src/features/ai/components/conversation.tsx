@@ -95,12 +95,15 @@ export const ConversationEmptyState = ({
   );
 };
 
-export type ConversationScrollButtonProps = ComponentProps<typeof MessageScrollerButton>;
+export type ConversationScrollButtonProps = ComponentProps<typeof MessageScrollerButton> & {
+  onScrollToEnd?: () => void;
+};
 
 export const ConversationScrollButton = ({
   className,
   variant = "outline",
   size = "icon",
+  onScrollToEnd,
   ...props
 }: ConversationScrollButtonProps) => {
   return (
@@ -111,6 +114,7 @@ export const ConversationScrollButton = ({
       )}
       size={size}
       variant={variant}
+      onScrollToEnd={onScrollToEnd}
       {...props}
     />
   );

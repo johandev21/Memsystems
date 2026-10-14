@@ -2,7 +2,10 @@ import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-const { providerProps } = vi.hoisted(() => ({ providerProps: vi.fn() }));
+const { providerProps, mockScrollToEnd } = vi.hoisted(() => ({
+  providerProps: vi.fn(),
+  mockScrollToEnd: vi.fn(),
+}));
 
 vi.mock("@/components/ui/message-scroller", async () => {
   const React = await import("react");
@@ -27,7 +30,25 @@ vi.mock("@/components/ui/message-scroller", async () => {
         "data-message-id": props.messageId as string | undefined,
         "data-scroll-anchor": String((props.scrollAnchor as boolean | undefined) ?? false),
       }),
-    MessageScrollerButton: () => null,
+    MessageScrollerButton: ({
+      onScrollToEnd,
+      onClick,
+      ...props
+    }: DivProps & { onScrollToEnd?: () => void; onClick?: (e: unknown) => void }) =>
+      React.createElement("button", {
+        ...props,
+        "data-slot": "message-scroller-button",
+        onClick: (e: unknown) => {
+          onClick?.(e);
+          onScrollToEnd?.();
+          mockScrollToEnd();
+        },
+      }),
+    useMessageScroller: () => ({
+      scrollToEnd: mockScrollToEnd,
+      scrollToStart: vi.fn(),
+      scrollToMessage: vi.fn(),
+    }),
   };
 });
 
@@ -85,5 +106,25 @@ describe("Conversation Component", () => {
     expect(providerProps).toHaveBeenLastCalledWith(
       expect.objectContaining({ defaultScrollPosition: "start" }),
     );
+  });
+
+  it("triggers onScrollToEnd and scrollToEnd when ConversationScrollButton is clicked", () => {
+    const onScrollToEnd = vi.fn();
+    const onClick = vi.fn();
+    const { container } = render(
+      <Conversation>
+        <ConversationContent>content</ConversationContent>
+        <ConversationScrollButton onScrollToEnd={onScrollToEnd} onClick={onClick} />
+      </Conversation>,
+    );
+
+    const button = container.querySelector('[data-slot="message-scroller-button"]');
+    expect(button).not.toBeNull();
+
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onScrollToEnd).toHaveBeenCalledTimes(1);
+    expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
   });
 });

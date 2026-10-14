@@ -1,6 +1,11 @@
 export * from "./api";
 export * from "./components/code-block";
 export * from "./components/conversation";
+export {
+  useMessageScroller,
+  useMessageScrollerScrollable,
+  useMessageScrollerVisibility,
+} from "@/components/ui/use-message-scroller";
 export { messagesToMarkdown } from "./components/conversation-markdown";
 export * from "./components/gateway-key-prompt";
 export * from "./components/markdown-code-block";

@@ -47,7 +47,7 @@ export function ChatMessageList({
             <MessageScrollerItem
               key={turn.id}
               messageId={turn.id}
-              scrollAnchor={turn.id === anchorMessageId}
+              scrollAnchor={Boolean(anchorMessageId && turn.id === anchorMessageId)}
             >
               <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
                 <UserMessage message={turn.message} />

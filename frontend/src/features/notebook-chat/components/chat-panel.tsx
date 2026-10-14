@@ -7,7 +7,7 @@ import {
 } from "@/features/ai";
 import { NotebookBanner } from "@/features/notebooks/components/shared/notebook-banner";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks/components/dialogs/notebook-settings-dialog";
-import { useEffect, useLayoutEffect, memo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
@@ -38,6 +38,7 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
     error,
     messageCount,
     anchorMessageId,
+    clearAnchor,
     input,
     setInput,
     isClearDialogOpen,
@@ -52,6 +53,10 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
   } = useChatPanel(notebookId, panelRef);
 
   useComposerHeight(conversationWrapperRef, composerWrapperRef);
+
+  const handleScrollToBottom = useCallback(() => {
+    clearAnchor();
+  }, [clearAnchor]);
 
   useEffect(() => {
     const handleClearRequest = (event: Event) => {
@@ -131,6 +136,8 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-floating-control select-none px-2">
             <div className="relative mx-auto w-full max-w-4xl">
               <ConversationScrollButton
+                onScrollToEnd={handleScrollToBottom}
+                onClick={handleScrollToBottom}
                 className="pointer-events-auto absolute right-1 sm:right-2 left-auto start-auto translate-x-0 data-[direction=end]:bottom-(--composer-offset)"
                 style={
                   {
