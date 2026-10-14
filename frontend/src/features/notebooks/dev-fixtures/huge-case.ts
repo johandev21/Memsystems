@@ -61,11 +61,11 @@ export const hugeCaseStudyMaterials: StudyMaterialDTO[] = Array.from({ length: 2
   const folderIndex = i % 12;
   const folderId = folderIndex < 10 ? `huge-smf-${folderIndex + 1}` : null;
   const kinds = [
-    "study_guide",
+    "quiz",
     "simple_flashcard",
     "quiz",
     "mind_map",
-    "practice_problems",
+    "slides",
     "slides",
   ] as const;
   return {

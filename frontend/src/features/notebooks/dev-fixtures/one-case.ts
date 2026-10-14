@@ -45,7 +45,7 @@ export const oneCaseStudyMaterials: StudyMaterialDTO[] = [
     id: "sm-solo-1",
     notebookId: "one-case-notebook",
     folderId: null,
-    kind: "study_guide",
+    kind: "quiz",
     title: "Solo Study Guide",
     content: { sections: [] },
     options: null,

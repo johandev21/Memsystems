@@ -227,7 +227,7 @@ export const worstCaseStudyMaterials: StudyMaterialDTO[] = [
     id: "sm-1",
     notebookId: "worst-case-notebook",
     folderId: "smf-2",
-    kind: "study_guide",
+    kind: "quiz",
     title:
       "Rindfleischetikettierungsüberwachungsaufgabenübertragungsgesetz und Verbraucherschutzgrundlagenermittlungskatalog",
     content: { sections: [] },
@@ -276,7 +276,7 @@ export const worstCaseStudyMaterials: StudyMaterialDTO[] = [
     id: "sm-5",
     notebookId: "worst-case-notebook",
     folderId: null,
-    kind: "practice_problems",
+    kind: "slides",
     title: "12,345 Practice Problems for Advanced Multilinear Tensor Calculus & Differential Topology",
     content: { problems: [] },
     options: null,
