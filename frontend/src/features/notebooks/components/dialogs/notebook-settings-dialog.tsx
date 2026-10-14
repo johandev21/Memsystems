@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Eraser, Pencil, Settings, Trash2 } from "lucide-react";
+import { Eraser, Pencil, Settings, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -17,15 +17,20 @@ import {
 import { deleteNotebook, notebookQueryOptions, updateNotebook } from "../../api/notebooks";
 import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { GroundingModePicker } from "../shared/grounding-mode-picker";
-import { resolveGroundingMode, type GroundingMode } from "../../model/grounding-mode";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { GROUNDING_MODES, resolveGroundingMode, type GroundingMode } from "../../model/grounding-mode";
 
 export const EDIT_NOTEBOOK_EVENT = "edit-notebook";
 export const CLEAR_NOTEBOOK_CHAT_EVENT = "clear-notebook-chat";
@@ -95,8 +100,8 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger
           render={
             <Button
               variant="ghost"
@@ -107,52 +112,73 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
           }
         >
           <Settings />
-        </PopoverTrigger>
-        <PopoverContent align="end" sideOffset={8} className="w-64 gap-2 rounded-2xl p-2">
-          <PopoverHeader className="px-2 py-1.5">
-            <PopoverTitle className="text-sm">{t("settings.title")}</PopoverTitle>
-            <PopoverDescription className="text-xs">
-              {t("settings.description")}
-            </PopoverDescription>
-          </PopoverHeader>
-          <div className="flex flex-col gap-1">
-            <div className="px-2 py-1.5">
-              <p className="mb-1.5 text-xs font-medium text-text-secondary">
-                {t("groundingMode.label")}
-              </p>
-              <GroundingModePicker
-                value={groundingMode}
-                onChange={handleGroundingModeChange}
-                disabled={isSavingMode}
-              />
-            </div>
-            <Button
-              variant="ghost"
-              className="justify-start hover:!bg-popover-hover focus-visible:!bg-popover-hover"
-              onClick={handleEdit}
-            >
-              <Pencil data-icon="inline-start" />
-              {t("settings.edit")}
-            </Button>
-            <Button
-              variant="ghost"
-              className="justify-start hover:!bg-popover-hover focus-visible:!bg-popover-hover"
-              onClick={handleClearChat}
-            >
-              <Eraser data-icon="inline-start" />
-              {t("settings.clearChat")}
-            </Button>
-            <Button
-              variant="ghost"
-              className="justify-start text-destructive hover:!bg-popover-hover hover:!text-destructive focus-visible:!bg-popover-hover"
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={8} className="w-72">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="flex flex-col gap-0.5 px-2 py-1.5">
+              <span className="text-sm font-semibold text-foreground">{t("settings.title")}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {t("settings.description")}
+              </span>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
+              <Pencil />
+              <span>{t("settings.edit")}</span>
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="cursor-pointer whitespace-nowrap [&>svg:last-child]:ml-0">
+                <SlidersHorizontal />
+                <span>{t("groundingMode.label")}</span>
+                <span className="ml-auto mr-1 text-xs text-muted-foreground font-normal capitalize">
+                  {t(`groundingMode.${groundingMode}`)}
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-72 p-1">
+                <DropdownMenuRadioGroup
+                  value={groundingMode}
+                  onValueChange={(val) => handleGroundingModeChange(val as GroundingMode)}
+                >
+                  {GROUNDING_MODES.map((mode) => (
+                    <DropdownMenuRadioItem
+                      key={mode}
+                      value={mode}
+                      disabled={isSavingMode}
+                      className="cursor-pointer items-start py-2 pr-8 [&_[data-slot=dropdown-menu-radio-item-indicator]]:top-2.5"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-foreground">
+                          {t(`groundingMode.${mode}`)}
+                        </span>
+                        <span className="text-xs text-muted-foreground font-normal leading-snug whitespace-normal">
+                          {t(`groundingMode.descriptions.${mode}`)}
+                        </span>
+                      </div>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={handleClearChat} className="cursor-pointer">
+              <Eraser />
+              <span>{t("settings.clearChat")}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
               onClick={handleOpenDelete}
+              className="cursor-pointer"
             >
-              <Trash2 data-icon="inline-start" />
-              {t("settings.delete")}
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+              <Trash2 />
+              <span>{t("settings.delete")}</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="rounded-3xl">

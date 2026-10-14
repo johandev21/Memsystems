@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -63,18 +63,29 @@ describe("NotebookSettingsDialog grounding mode", () => {
     render(<NotebookSettingsDialog notebookId="nb-1" />, { wrapper: wrapper() });
 
     await user.click(screen.getByRole("button", { name: "Notebook settings" }));
-    expect(
-      screen.getByRole("button", { name: "Strict" }).getAttribute("aria-pressed"),
-    ).toBe("true");
 
-    await user.click(screen.getByRole("button", { name: "Free" }));
+    // Verify trigger displays current mode
+    const groundingTrigger = await screen.findByRole("menuitem", { name: /grounding mode/i });
+    expect(groundingTrigger.textContent).toContain("Strict");
+
+    // Open submenu
+    fireEvent.pointerEnter(groundingTrigger);
+    fireEvent.click(groundingTrigger);
+
+    const strictRadio = await screen.findByRole("menuitemradio", { name: /strict/i });
+    expect(strictRadio.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText("Answers only from sources")).toBeDefined();
+    expect(screen.getByText("Sources first, then labeled general knowledge")).toBeDefined();
+    expect(screen.getByText("Answers freely, using sources only when relevant")).toBeDefined();
+
+    const freeRadio = await screen.findByRole("menuitemradio", { name: /free/i });
+    fireEvent.click(freeRadio);
+
     await waitFor(() => {
       expect(patched).toEqual({ groundingMode: "free" });
     });
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Free" }).getAttribute("aria-pressed"),
-      ).toBe("true");
+      expect(freeRadio.getAttribute("aria-checked")).toBe("true");
     });
   });
 });
