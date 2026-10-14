@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 
 export function useStudioDialogs() {
@@ -6,26 +6,35 @@ export function useStudioDialogs() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStudyMaterialId, setSelectedStudyMaterialId] = useState<string | null>(null);
 
-  const handleGenerate = (kind: StudyMaterialKind) => {
+  const handleGenerate = useCallback((kind: StudyMaterialKind) => {
     setGenerateKind(kind);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleGenerateComplete = (materialId: string) => {
+  const handleGenerateComplete = useCallback((materialId: string) => {
     setDialogOpen(false);
     setGenerateKind(null);
     setSelectedStudyMaterialId(materialId);
-  };
+  }, []);
 
-  return {
-    generateKind,
-    dialogOpen,
-    selectedStudyMaterialId,
-    handleGenerate,
-    setDialogOpen,
-    setSelectedStudyMaterialId,
-    handleGenerateComplete,
-  };
+  return useMemo(
+    () => ({
+      generateKind,
+      dialogOpen,
+      selectedStudyMaterialId,
+      handleGenerate,
+      setDialogOpen,
+      setSelectedStudyMaterialId,
+      handleGenerateComplete,
+    }),
+    [
+      generateKind,
+      dialogOpen,
+      selectedStudyMaterialId,
+      handleGenerate,
+      handleGenerateComplete,
+    ],
+  );
 }
 
 export type UseStudioDialogsReturn = ReturnType<typeof useStudioDialogs>;

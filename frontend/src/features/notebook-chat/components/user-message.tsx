@@ -29,7 +29,7 @@ export function UserMessage({ message }: UserMessageProps) {
 
   return (
     <Message from="user">
-      <MessageContent className="px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3">
+      <MessageContent className="px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3 break-words [overflow-wrap:anywhere]">
         {fileParts.map((file, index) => {
           if (file.mediaType?.startsWith("image/")) {
             return (
@@ -48,7 +48,9 @@ export function UserMessage({ message }: UserMessageProps) {
           return null;
         })}
         {textParts.map((part, index) => (
-          <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+          <MessageResponse key={`${message.id}-${index}`} className="break-words [overflow-wrap:anywhere]">
+            {part.text}
+          </MessageResponse>
         ))}
       </MessageContent>
     </Message>

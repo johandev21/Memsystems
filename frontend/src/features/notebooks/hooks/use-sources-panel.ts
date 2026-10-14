@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SourceSegmentLocator } from "@/features/sources";
 
 export interface OpenSourceViewerDetail {
@@ -23,17 +23,23 @@ export function useSourcesPanel() {
     return () => window.removeEventListener("open-source-viewer", handleOpenSource);
   }, []);
 
-  const handleSelectSource = (id: string | null, locator?: SourceSegmentLocator | null) => {
-    setSelectedSourceId(id);
-    setSelectedLocator(locator ?? null);
-  };
+  const handleSelectSource = useCallback(
+    (id: string | null, locator?: SourceSegmentLocator | null) => {
+      setSelectedSourceId(id);
+      setSelectedLocator(locator ?? null);
+    },
+    [],
+  );
 
-  return {
-    selectedSourceId,
-    setSelectedSourceId: handleSelectSource,
-    selectedLocator,
-    setSelectedLocator,
-  };
+  return useMemo(
+    () => ({
+      selectedSourceId,
+      setSelectedSourceId: handleSelectSource,
+      selectedLocator,
+      setSelectedLocator,
+    }),
+    [selectedSourceId, handleSelectSource, selectedLocator],
+  );
 }
 
 export type UseSourcesPanelReturn = ReturnType<typeof useSourcesPanel>;

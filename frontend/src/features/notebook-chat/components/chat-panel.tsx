@@ -7,7 +7,7 @@ import {
 } from "@/features/ai";
 import { NotebookBanner } from "@/features/notebooks/components/shared/notebook-banner";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks/components/dialogs/notebook-settings-dialog";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
@@ -18,7 +18,7 @@ import { ChatMessageList } from "./chat-message-list";
 import { ClearHistoryDialog } from "./clear-history-dialog";
 import { Composer } from "./composer";
 
-export function ChatPanel({ notebookId }: { notebookId: string }) {
+export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: string }) {
   const { t } = useTranslation("chat");
   const panelRef = useRef<HTMLDivElement>(null);
   const composerWrapperRef = useRef<HTMLDivElement>(null);
@@ -99,7 +99,16 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
         className="relative flex w-full min-h-0 flex-1 flex-col"
         style={{ "--composer-height": "96px" } as React.CSSProperties}
       >
-        <Conversation key={notebookId} className="flex-1 min-h-0" defaultScrollPosition="start">
+        <Conversation
+          key={notebookId}
+          className="flex-1 min-h-0"
+          defaultScrollPosition={
+            typeof window !== "undefined" &&
+            new URLSearchParams(window.location.search).get("scroll") === "end"
+              ? "end"
+              : "start"
+          }
+        >
           <ChatContent
             notebook={notebook}
             notebookTitle={notebookTitle}
@@ -119,14 +128,18 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
             onCopy={handleCopy}
             onRegenerate={handleRegenerate}
           />
-          <ConversationScrollButton
-            className="data-[direction=end]:bottom-(--composer-offset)"
-            style={
-              {
-                "--composer-offset": "calc(var(--composer-height, 96px) + 0.75rem)",
-              } as React.CSSProperties
-            }
-          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-floating-control select-none px-2">
+            <div className="relative mx-auto w-full max-w-4xl">
+              <ConversationScrollButton
+                className="pointer-events-auto absolute right-1 sm:right-2 left-auto start-auto translate-x-0 data-[direction=end]:bottom-(--composer-offset)"
+                style={
+                  {
+                    "--composer-offset": "calc(var(--composer-height, 96px) + 0.25rem)",
+                  } as React.CSSProperties
+                }
+              />
+            </div>
+          </div>
         </Conversation>
 
         <ChatComposerArea
@@ -150,7 +163,7 @@ export function ChatPanel({ notebookId }: { notebookId: string }) {
       </div>
     </div>
   );
-}
+});
 
 interface ChatContentFlags {
   isUntitled: boolean;
@@ -353,16 +366,21 @@ function useComposerHeight(
     const parent = conversationRef.current;
     const composer = composerRef.current;
     if (!parent || !composer) return;
+    let rafId: number | null = null;
     const updateHeight = () => {
       const height = `${composer.offsetHeight}px`;
       parent.style.setProperty("--composer-height", height);
       document.documentElement.style.setProperty("--composer-height", height);
     };
     updateHeight();
-    const observer = new ResizeObserver(updateHeight);
+    const observer = new ResizeObserver(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateHeight);
+    });
     observer.observe(composer);
     window.addEventListener("resize", updateHeight);
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
       window.removeEventListener("resize", updateHeight);
       document.documentElement.style.removeProperty("--composer-height");

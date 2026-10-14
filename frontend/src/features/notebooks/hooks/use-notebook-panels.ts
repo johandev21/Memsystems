@@ -19,11 +19,13 @@ export function useNotebookPanels(): UseNotebookPanelsReturn {
   const [studioCollapsed, setStudioCollapsed] = useState(false);
 
   const syncSources = () => {
-    setSourcesCollapsed(sourcesRef.current?.isCollapsed() ?? false);
+    const isCollapsed = sourcesRef.current?.isCollapsed() ?? false;
+    setSourcesCollapsed((prev) => (prev !== isCollapsed ? isCollapsed : prev));
   };
 
   const syncStudio = () => {
-    setStudioCollapsed(studioRef.current?.isCollapsed() ?? false);
+    const isCollapsed = studioRef.current?.isCollapsed() ?? false;
+    setStudioCollapsed((prev) => (prev !== isCollapsed ? isCollapsed : prev));
   };
 
   return {

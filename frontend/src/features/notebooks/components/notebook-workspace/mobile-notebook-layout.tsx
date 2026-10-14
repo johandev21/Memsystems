@@ -125,7 +125,15 @@ export function MobileNotebookLayout({
 }
 
 function useMobileChatNavigation() {
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const tabParam = new URLSearchParams(window.location.search).get("tab");
+      if (tabParam === "sources" || tabParam === "studio" || tabParam === "chat") {
+        return tabParam;
+      }
+    }
+    return "chat";
+  });
   const [pendingChatPrompt, setPendingChatPrompt] = useState<{
     prompt: string;
     autoSend?: boolean;

@@ -4,6 +4,7 @@ import {
   resolveApiErrorMessage,
   type ApiErrorResponse,
 } from "./api-error";
+import { handleDevBreakUiMock } from "@/features/notebooks/dev-fixtures";
 
 export function getApiUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
@@ -13,6 +14,10 @@ export function getApiUrl(path: string): string {
 }
 
 export async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
+  if (import.meta.env.DEV) {
+    const mockRes = handleDevBreakUiMock(path, init);
+    if (mockRes) return mockRes;
+  }
   const options: RequestInit = { credentials: "include", ...init };
   return fetch(getApiUrl(path), options);
 }

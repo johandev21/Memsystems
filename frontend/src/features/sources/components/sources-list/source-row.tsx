@@ -198,7 +198,9 @@ export function SourceRow({
         </span>
       )}
       {statusText && (
-        <span className="max-w-36 shrink-0 truncate text-xs opacity-75">{statusText}</span>
+        <span className="max-w-20 sm:max-w-24 shrink-0 truncate text-xs opacity-75">
+          {statusText}
+        </span>
       )}
 
       <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover/tree-row:opacity-100 group-focus-within/tree-row:opacity-100">
