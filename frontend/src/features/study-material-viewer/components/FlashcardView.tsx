@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
-import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useFlashcardSession } from "../hooks/use-flashcard-session";
@@ -33,24 +33,22 @@ function FlashcardControls({
   onExplain,
   onPrev,
   onNext,
-  onFlip,
   disabled,
 }: {
   onExplain: () => void;
   onPrev: () => void;
   onNext: () => void;
-  onFlip: () => void;
   disabled: boolean;
 }) {
   const { t } = useTranslation("viewer");
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2.5 pb-safe pt-2">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <Button
           type="button"
           variant="ghost"
           onClick={onExplain}
-          className="min-h-11 min-w-11 sm:h-9 whitespace-nowrap rounded-xl touch-manipulation active:scale-97 transition-transform text-xs sm:text-sm"
+          className="h-10 whitespace-nowrap rounded-xl"
         >
           {t("common.explain")}
         </Button>
@@ -58,24 +56,13 @@ function FlashcardControls({
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <Button
           type="button"
-          variant="outline"
-          aria-label={t("flashcard.flipCard")}
-          onClick={onFlip}
-          className="min-h-11 px-3 sm:h-9 whitespace-nowrap rounded-xl touch-manipulation active:scale-97 transition-transform text-xs sm:text-sm cursor-pointer"
-          title={t("flashcard.flipCard")}
-        >
-          <RotateCw aria-hidden="true" className="size-4 mr-1.5" />
-          {t("flashcard.flip")}
-        </Button>
-        <Button
-          type="button"
           variant="ghost"
           aria-label={t("flashcard.previousCard")}
           disabled={disabled}
           onClick={onPrev}
-          className="min-h-11 min-w-11 sm:h-9 whitespace-nowrap rounded-xl touch-manipulation active:scale-97 transition-transform text-xs sm:text-sm cursor-pointer"
+          className="h-10 min-w-0 whitespace-nowrap rounded-xl"
         >
-          <ChevronLeft aria-hidden="true" className="size-4" /> {t("common.previous")}
+          <ChevronLeft aria-hidden="true" /> {t("common.previous")}
         </Button>
         <Button
           type="button"
@@ -83,9 +70,9 @@ function FlashcardControls({
           aria-label={t("flashcard.nextCard")}
           disabled={disabled}
           onClick={onNext}
-          className="min-h-11 min-w-11 sm:h-9 whitespace-nowrap rounded-xl touch-manipulation active:scale-97 transition-transform text-xs sm:text-sm cursor-pointer"
+          className="h-10 min-w-0 whitespace-nowrap rounded-xl"
         >
-          {t("common.next")} <ChevronRight aria-hidden="true" className="size-4" />
+          {t("common.next")} <ChevronRight aria-hidden="true" />
         </Button>
       </div>
     </div>
@@ -119,7 +106,7 @@ function FlashcardStage({
       })}
       onClick={onToggleReveal}
       onKeyDown={onRevealKeyDown}
-      className="w-full cursor-pointer rounded-flashcard transition-all duration-200 focus-visible:outline-2 focus-visible:outline-ring touch-manipulation active:scale-99 select-none"
+      className="cursor-pointer rounded-flashcard transition-shadow duration-200 focus-visible:outline-2 focus-visible:outline-ring"
     >
       <QaCard question={activeCard.front} answer={activeCard.back} isRevealed={isRevealed} />
     </div>
@@ -205,7 +192,7 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <div className="text-xs sm:text-sm text-text-secondary">
+      <div className="text-sm text-text-secondary">
         <span aria-live="polite">
           {t("flashcard.cardOf", { current: currentCardIndex + 1, total: cards.length })}
         </span>
@@ -224,7 +211,6 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
         onExplain={handleExplainInChat}
         onPrev={() => navigate(handlePrev)}
         onNext={() => navigate(handleNext)}
-        onFlip={() => setIsRevealed(!isRevealed)}
         disabled={cards.length <= 1}
       />
     </div>

@@ -10,7 +10,7 @@ export function QaCard({ question, answer, isRevealed }: QaCardProps) {
   const { t } = useTranslation("viewer");
 
   return (
-    <article className="flex w-full min-h-52 sm:min-h-64 flex-col gap-4 sm:gap-5 rounded-flashcard border border-surface-border-subtle bg-card p-4.5 sm:p-8 text-left shadow-xs transition-colors">
+    <article className="flex w-full flex-col gap-5 rounded-flashcard border border-surface-border-subtle bg-card p-6 text-left shadow-xs sm:p-8">
       <span className="w-fit rounded-md border border-surface-border bg-surface-2 px-2 py-0.5 text-xs font-semibold tracking-wide text-text-tertiary">
         {t("flashcard.questionBadge")}
       </span>
@@ -18,8 +18,8 @@ export function QaCard({ question, answer, isRevealed }: QaCardProps) {
       <p
         className={
           isRevealed
-            ? "text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words text-text-secondary"
-            : "text-sm sm:text-lg md:text-xl leading-relaxed font-medium whitespace-pre-wrap break-words text-text-primary"
+            ? "text-sm leading-relaxed whitespace-pre-wrap break-words text-text-secondary"
+            : "text-lg leading-relaxed font-medium whitespace-pre-wrap break-words text-text-primary sm:text-xl"
         }
       >
         {question}
@@ -28,7 +28,7 @@ export function QaCard({ question, answer, isRevealed }: QaCardProps) {
       {isRevealed && (
         <>
           <SolutionDivider label={t("flashcard.solution")} />
-          <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words text-text-primary">
+          <p className="text-base leading-relaxed whitespace-pre-wrap break-words text-text-primary">
             {answer}
           </p>
         </>
