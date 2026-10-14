@@ -21,7 +21,7 @@ export function MobileFolderTile({ folder, onOpen, onActions }: MobileFolderTile
         onClick={onOpen}
         className="flex min-w-0 flex-1 items-center gap-2 text-left text-current transition-opacity active:opacity-70 touch-manipulation cursor-pointer"
       >
-        <Folder className="size-5 shrink-0 text-current" />
+        <Folder className="size-8 shrink-0 text-current" />
         <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-normal leading-5 text-current">
           {folder.name}
         </span>
@@ -65,11 +65,11 @@ export function MobileNotebookTile({ notebook, onOpen, onActions }: MobileNotebo
         className="flex min-w-0 flex-1 items-center gap-2 text-left text-current transition-opacity active:opacity-70 touch-manipulation cursor-pointer"
       >
         {notebook.coverUrl ? (
-          <div className="h-3.5 w-5 shrink-0 overflow-hidden rounded-xs bg-muted">
+          <div className="h-8 aspect-10/7 shrink-0 overflow-hidden rounded-xs bg-muted">
             <img src={notebook.coverUrl} alt="" className="size-full object-cover" />
           </div>
         ) : (
-          <Notebook className="size-5 shrink-0 text-current" />
+          <Notebook className="size-8 shrink-0 text-current" />
         )}
         <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-normal leading-5 text-current">
           {notebook.title}

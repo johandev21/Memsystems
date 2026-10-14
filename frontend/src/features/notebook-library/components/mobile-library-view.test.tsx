@@ -191,6 +191,7 @@ describe("MobileLibraryView", () => {
     expect(folderTile?.className).toContain("text-text-secondary");
     const folderIcon = folderTile?.querySelector("button svg");
     expect(folderIcon?.getAttribute("class")).toContain("text-current");
+    expect(folderIcon?.getAttribute("class")).toContain("size-8");
     const folderMenuBtn = screen.getByRole("button", { name: "Actions for Ancient Philosophy" });
     expect(folderMenuBtn.className).toContain("text-current");
 
@@ -198,6 +199,27 @@ describe("MobileLibraryView", () => {
     const notebookTile = container.querySelector('[data-slot="mobile-notebook-tile"]');
     const notebookIcon = notebookTile?.querySelector("button svg.lucide-notebook");
     expect(notebookIcon).not.toBeNull();
+    expect(notebookIcon?.getAttribute("class")).toContain("size-8");
+  });
+
+  it("renders notebook banner image with 32px height and preserves aspect ratio", () => {
+    const notebookWithCover: LibraryNotebook = {
+      ...mockNotebook,
+      id: "notebook-cover",
+      coverUrl: "https://example.com/cover.jpg",
+    };
+
+    const { container } = renderWithProviders(
+      <MobileLibraryView
+        {...defaultProps}
+        items={[{ kind: "notebook", notebook: notebookWithCover }]}
+      />,
+    );
+
+    const notebookTile = container.querySelector('[data-slot="mobile-notebook-tile"]');
+    const bannerContainer = notebookTile?.querySelector("button > div");
+    expect(bannerContainer?.className).toContain("h-8");
+    expect(bannerContainer?.className).toContain("aspect-10/7");
   });
 });
 
