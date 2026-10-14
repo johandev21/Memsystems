@@ -78,15 +78,15 @@ export function MobileNotebookLayout({
           </div>
         )}
 
-        <TabsContent value="sources" className="flex-1 mt-0 min-h-0">
+        <TabsContent value="sources" keepMounted className="flex-1 mt-0 min-h-0 data-[hidden]:hidden">
           <SourcesPanel notebookId={notebookId} onSelectSource={onSelectSource} />
         </TabsContent>
 
-        <TabsContent value="chat" className="flex-1 mt-0 min-h-0">
+        <TabsContent value="chat" keepMounted className="flex-1 mt-0 min-h-0 data-[hidden]:hidden">
           <ChatPanel notebookId={notebookId} />
         </TabsContent>
 
-        <TabsContent value="studio" className="flex-1 mt-0 min-h-0">
+        <TabsContent value="studio" keepMounted className="flex-1 mt-0 min-h-0 data-[hidden]:hidden">
           <MobileStudioView
             notebookId={notebookId}
             onGenerate={dialogs.handleGenerate}
