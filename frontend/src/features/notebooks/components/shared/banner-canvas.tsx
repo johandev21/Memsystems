@@ -110,7 +110,7 @@ export function BannerEditToolbar({
           variant="secondary"
           size="sm"
           onClick={onOpenImageDialog}
-          className="min-h-11 sm:min-h-8 touch-manipulation active:scale-97 cursor-pointer"
+          className="max-sm:min-h-11 touch-manipulation active:scale-97 cursor-pointer"
         >
           <ImagePlus data-icon="inline-start" />
           {visibleBannerUrl ? t("banner.change") : t("banner.add")}
@@ -121,7 +121,7 @@ export function BannerEditToolbar({
             size="icon-sm"
             aria-label={t("banner.remove")}
             onClick={onRemoveBanner}
-            className="min-h-11 min-w-11 sm:size-8 touch-manipulation active:scale-97 cursor-pointer"
+            className="max-sm:min-h-11 max-sm:min-w-11 touch-manipulation active:scale-97 cursor-pointer"
           >
             <Trash2 />
           </Button>
@@ -138,7 +138,7 @@ export function BannerEditToolbar({
           size="icon-sm"
           aria-label={t("banner.cancelEdits")}
           onClick={onCancel}
-          className="min-h-11 min-w-11 sm:size-8 touch-manipulation active:scale-97 cursor-pointer"
+          className="max-sm:min-h-11 max-sm:min-w-11 touch-manipulation active:scale-97 cursor-pointer"
         >
           <X />
         </Button>
@@ -146,7 +146,7 @@ export function BannerEditToolbar({
           size="sm"
           disabled={isSaving}
           onClick={onSave}
-          className="min-h-11 sm:min-h-8 touch-manipulation active:scale-97 cursor-pointer"
+          className="max-sm:min-h-11 touch-manipulation active:scale-97 cursor-pointer"
         >
           <Check data-icon="inline-start" />
           {isSaving ? t("banner.saving") : t("banner.save")}
@@ -286,7 +286,7 @@ export function BannerCanvas({
           onClick={onBeginEditing}
           aria-label={t("banner.editNotebook")}
           title={t("banner.editNotebook")}
-          className="absolute right-3 top-3 bg-background/80 opacity-100 sm:opacity-0 shadow-sm backdrop-blur-sm transition-fade hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100 min-h-11 min-w-11 sm:size-8 sm:min-h-8 sm:min-w-8 touch-manipulation active:scale-97 cursor-pointer z-10"
+          className="absolute right-3 top-3 bg-background/80 opacity-100 sm:opacity-0 shadow-sm backdrop-blur-sm transition-fade hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100 max-sm:min-h-11 max-sm:min-w-11 touch-manipulation active:scale-97 cursor-pointer z-10"
         >
           <Pencil />
         </Button>
