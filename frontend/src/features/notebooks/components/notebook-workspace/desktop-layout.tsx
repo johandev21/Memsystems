@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { GroupImperativeHandle, PanelImperativeHandle } from "react-resizable-panels";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/shared/utils/cn";
 import { ChatPanel, ChatPanelHeader } from "@/features/notebook-chat";
 import { SourcesPanel } from "@/features/sources/components/sources-panel";
 import { SourceReaderSkeleton } from "@/features/sources/components/skeletons/source-reader-skeleton";
@@ -65,35 +66,50 @@ export function DesktopLayout({
   const panelGroupRef = useRef<HTMLDivElement>(null);
   const panelGroupApiRef = useRef<GroupImperativeHandle>(null);
   const responsiveChatMinSize = useResponsiveChatMinimum(panelGroupRef);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const exitStudyMaterialReview = () => {
+  const startTransition = useCallback(() => {
+    setIsTransitioning(true);
+    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    transitionTimerRef.current = setTimeout(() => {
+      setIsTransitioning(false);
+    }, 250);
+  }, []);
+
+  const exitStudyMaterialReview = useCallback(() => {
+    startTransition();
     dialogs.setSelectedStudyMaterialId(null);
     sourcesRef.current?.expand();
     requestAnimationFrame(() => {
       panelGroupApiRef.current?.setLayout(DEFAULT_WORKSPACE_LAYOUT);
     });
-  };
+  }, [dialogs, sourcesRef, startTransition]);
 
-  const toggleSourcesCollapse = () => {
+  const toggleSourcesCollapse = useCallback(() => {
     if (isReviewingStudyMaterial) {
       exitStudyMaterialReview();
       return;
     }
 
-    if (sourcesCollapsed) {
-      sourcesRef.current?.expand();
+    startTransition();
+    const panel = sourcesRef.current;
+    if (panel?.isCollapsed()) {
+      panel.expand();
     } else {
-      sourcesRef.current?.collapse();
+      panel?.collapse();
     }
-  };
+  }, [isReviewingStudyMaterial, exitStudyMaterialReview, startTransition, sourcesRef]);
 
-  const toggleStudioCollapse = () => {
-    if (studioCollapsed) {
-      studioRef.current?.expand();
+  const toggleStudioCollapse = useCallback(() => {
+    startTransition();
+    const panel = studioRef.current;
+    if (panel?.isCollapsed()) {
+      panel.expand();
     } else {
-      studioRef.current?.collapse();
+      panel?.collapse();
     }
-  };
+  }, [startTransition, studioRef]);
 
   const handleSyncSources = () => {
     onSyncSources();
@@ -127,7 +143,10 @@ export function DesktopLayout({
           groupResizeBehavior="preserve-relative-size"
           panelRef={sourcesRef}
           onResize={handleSyncSources}
-          className="overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card"
+          className={cn(
+            "overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card",
+            isTransitioning && "transition-all duration-200 ease-out",
+          )}
         >
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             {selectedSourceId ? (
@@ -156,7 +175,10 @@ export function DesktopLayout({
           minSize={isReviewingStudyMaterial ? `${CHAT_PANEL_MIN_SIZE}px` : responsiveChatMinSize}
           groupResizeBehavior="preserve-relative-size"
           panelRef={chatRef}
-          className="overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card"
+          className={cn(
+            "overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card",
+            isTransitioning && "transition-all duration-200 ease-out",
+          )}
         >
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             <ChatPanelHeader notebookId={notebookId} />
@@ -178,7 +200,10 @@ export function DesktopLayout({
           disabled={isReviewingStudyMaterial}
           panelRef={studioRef}
           onResize={handleSyncStudio}
-          className="overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card"
+          className={cn(
+            "overflow-hidden shadow-sm dark:shadow-none rounded-panel border border-border/80 bg-card",
+            isTransitioning && "transition-all duration-200 ease-out",
+          )}
         >
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             {dialogs.selectedStudyMaterialId ? (
@@ -207,14 +232,12 @@ export function DesktopLayout({
                     onGenerate={dialogs.handleGenerate}
                   />
                 </ScrollArea>
-                {!studioCollapsed && (
-                  <div className="p-1.5 pt-0">
-                    <StudyMaterialsPanel
-                      notebookId={notebookId}
-                      onSelectMaterial={dialogs.setSelectedStudyMaterialId}
-                    />
-                  </div>
-                )}
+                <div className={cn("p-1.5 pt-0", studioCollapsed && "hidden")}>
+                  <StudyMaterialsPanel
+                    notebookId={notebookId}
+                    onSelectMaterial={dialogs.setSelectedStudyMaterialId}
+                  />
+                </div>
               </>
             )}
           </div>

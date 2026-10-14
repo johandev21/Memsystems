@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { StudyMaterialsTreeContainer } from "./ui/study-materials-tree-container";
 
 export interface StudyMaterialsPanelProps {
@@ -5,7 +6,10 @@ export interface StudyMaterialsPanelProps {
   onSelectMaterial: (materialId: string | null) => void;
 }
 
-export function StudyMaterialsPanel({ notebookId, onSelectMaterial }: StudyMaterialsPanelProps) {
+export const StudyMaterialsPanel = memo(function StudyMaterialsPanel({
+  notebookId,
+  onSelectMaterial,
+}: StudyMaterialsPanelProps) {
   return (
     <StudyMaterialsTreeContainer
       notebookId={notebookId}
@@ -13,4 +17,4 @@ export function StudyMaterialsPanel({ notebookId, onSelectMaterial }: StudyMater
       variant="desktop"
     />
   );
-}
+});

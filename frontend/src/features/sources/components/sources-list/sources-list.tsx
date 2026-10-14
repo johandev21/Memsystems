@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
@@ -52,7 +52,7 @@ export interface SourcesListProps {
   onFocusItem?: (id: string) => void;
 }
 
-export function SourcesList({
+export const SourcesList = memo(function SourcesList({
   sources,
   folders,
   openFolderIds = new Set(),
@@ -104,7 +104,7 @@ export function SourcesList({
   );
 
   const isVirtualized =
-    flatRows.length > TREE_VIRTUALIZATION_THRESHOLD && scrollElement !== undefined;
+    flatRows.length > TREE_VIRTUALIZATION_THRESHOLD && Boolean(scrollElement);
 
   // eslint-disable-next-line react/incompatible-library -- third-party virtualizer API
   const virtualizer = useVirtualizer({
@@ -192,7 +192,7 @@ export function SourcesList({
       >
         <div
           data-slot="sources-tree-virtual-window"
-          className={cn("w-full relative min-w-full", "h-(--virtual-total)")}
+          className="w-full relative min-w-full h-(--virtual-total)"
           style={{ "--virtual-total": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
@@ -228,5 +228,23 @@ export function SourcesList({
         <SourcesTreeBranch key={node.id} node={node} depth={0} {...branchProps} />
       ))}
     </div>
+  );
+}, areSourcesListPropsEqual);
+
+function areSourcesListPropsEqual(prev: SourcesListProps, next: SourcesListProps): boolean {
+  return (
+    prev.sources === next.sources &&
+    prev.folders === next.folders &&
+    prev.openFolderIds === next.openFolderIds &&
+    prev.editingItemId === next.editingItemId &&
+    prev.focusedItemId === next.focusedItemId &&
+    prev.treeHasFocus === next.treeHasFocus &&
+    prev.isPending === next.isPending &&
+    prev.isError === next.isError &&
+    prev.hasNoSources === next.hasNoSources &&
+    prev.deletingId === next.deletingId &&
+    prev.retryingId === next.retryingId &&
+    prev.cancellingId === next.cancellingId &&
+    prev.scrollElement === next.scrollElement
   );
 }

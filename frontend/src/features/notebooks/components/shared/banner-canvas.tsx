@@ -185,15 +185,17 @@ export function BannerTitleCard({
       onMouseDown={(event) => event.stopPropagation()}
     >
       {isEditing ? (
-        <IconPicker
-          value={draftIcon}
-          onChange={(value) => onDraftIconChange(value ?? "notebook")}
-          triggerVariant="minimal"
-        />
+        <div className="shrink-0">
+          <IconPicker
+            value={draftIcon}
+            onChange={(value) => onDraftIconChange(value ?? "notebook")}
+            triggerVariant="minimal"
+          />
+        </div>
       ) : (
         <NotebookIcon name={icon} className="size-10 shrink-0 text-foreground" />
       )}
-      <div className="flex min-w-0 flex-col gap-0.5 pr-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 pr-1">
         {isEditing ? (
           <Input
             value={draftTitle}

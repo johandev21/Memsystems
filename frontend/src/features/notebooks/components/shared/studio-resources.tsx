@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { CircleAlert, RefreshCw, X } from "lucide-react";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,7 +22,11 @@ export interface StudioResourcesProps {
   onGenerate: (kind: StudyMaterialKind) => void;
 }
 
-export function StudioResources({ notebookId, collapsed, onGenerate }: StudioResourcesProps) {
+export const StudioResources = memo(function StudioResources({
+  notebookId,
+  collapsed,
+  onGenerate,
+}: StudioResourcesProps) {
   const storeGenerations = useGenerationStore((s) => s.generations);
   const cancelBackgroundGeneration = useGenerationStore((s) => s.cancelBackgroundGeneration);
   const sourcesQuery = useQuery(sourcesQueryOptions(notebookId));
@@ -32,12 +37,18 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
   );
 
   if (collapsed) {
-    return <CollapsedResourceList activeGenerations={activeGenerations} onGenerate={onGenerate} />;
+    return (
+      <CollapsedResourceList
+        activeGenerations={activeGenerations}
+        totalSourceCount={totalSourceCount}
+        onGenerate={onGenerate}
+      />
+    );
   }
 
   return (
-    <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2">
-      <ResourceGrid onGenerate={onGenerate} />
+    <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2 @container">
+      <ResourceGrid totalSourceCount={totalSourceCount} onGenerate={onGenerate} />
       <ActiveGenerationList
         generations={activeGenerations}
         totalSourceCount={totalSourceCount}
@@ -45,13 +56,15 @@ export function StudioResources({ notebookId, collapsed, onGenerate }: StudioRes
       />
     </div>
   );
-}
+});
 
 function CollapsedResourceList({
   activeGenerations,
+  totalSourceCount,
   onGenerate,
 }: {
   activeGenerations: ReturnType<typeof useGenerationStore.getState>["generations"][string][];
+  totalSourceCount: number;
   onGenerate: (kind: StudyMaterialKind) => void;
 }) {
   return (
@@ -62,6 +75,7 @@ function CollapsedResourceList({
             key={resource.key}
             resource={resource}
             collapsed
+            totalSourceCount={totalSourceCount}
             isGenerating={activeGenerations.some((generation) => generation.kind === resource.kind)}
             onGenerate={onGenerate}
           />
@@ -71,11 +85,22 @@ function CollapsedResourceList({
   );
 }
 
-function ResourceGrid({ onGenerate }: { onGenerate: (kind: StudyMaterialKind) => void }) {
+function ResourceGrid({
+  totalSourceCount,
+  onGenerate,
+}: {
+  totalSourceCount: number;
+  onGenerate: (kind: StudyMaterialKind) => void;
+}) {
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+    <div className="grid grid-cols-1 @[220px]:grid-cols-2 gap-1.5 sm:gap-2">
       {RESOURCES.map((resource) => (
-        <ResourceButton key={resource.key} resource={resource} onGenerate={onGenerate} />
+        <ResourceButton
+          key={resource.key}
+          resource={resource}
+          totalSourceCount={totalSourceCount}
+          onGenerate={onGenerate}
+        />
       ))}
     </div>
   );
@@ -83,17 +108,19 @@ function ResourceGrid({ onGenerate }: { onGenerate: (kind: StudyMaterialKind) =>
 
 function ResourceButton({
   resource,
+  totalSourceCount = 1,
   onGenerate,
   collapsed = false,
   isGenerating = false,
 }: {
   resource: ResourceConfig;
+  totalSourceCount?: number;
   onGenerate: (kind: StudyMaterialKind) => void;
   collapsed?: boolean;
   isGenerating?: boolean;
 }) {
   const { t } = useTranslation("notebooks");
-  const disabled = !isInScope(resource.kind);
+  const disabled = !isInScope(resource.kind) || totalSourceCount === 0;
   const label = t(KIND_LABEL_KEYS[resource.kind]);
   if (collapsed) {
     return (

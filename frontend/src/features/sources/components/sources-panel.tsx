@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { ChevronsUpDown, FileText, Folder, FolderOpen, FolderPlus } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
@@ -50,13 +50,14 @@ import { SourcesList } from "./sources-list/sources-list";
 import { SourceIcon } from "./sources-list/source-icon";
 import { useSourceMutations } from "./sources-list/use-source-mutations";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import { cn } from "@/shared/utils/cn";
 import { useSourcesTreeMutations } from "../hooks/use-sources-tree-mutations";
 import { MobileSourcesView } from "./mobile/mobile-sources-view";
 import { SourcesPanelHeader } from "@/features/notebooks/components/notebook-workspace/sources-panel-header";
 
 const MOBILE_LAYOUT_QUERY = "(max-width: 1023px)";
 
-export function SourcesPanel({
+export const SourcesPanel = memo(function SourcesPanel({
   notebookId,
   collapsed,
   onSelectSource,
@@ -220,6 +221,19 @@ export function SourcesPanel({
     cancelMutation,
   } = useSourceMutations(notebookId);
 
+  const handleDelete = useCallback(
+    (source: Source) => setSourceToDelete({ id: source.id, title: source.title }),
+    [setSourceToDelete],
+  );
+  const handleRetry = useCallback(
+    (source: Source) => retryMutation.mutate(source.id),
+    [retryMutation],
+  );
+  const handleCancel = useCallback(
+    (source: Source) => cancelMutation.mutate(source.id),
+    [cancelMutation],
+  );
+
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const { treeHasFocus, registerTreeSurface, registerNode, focus } =
     useTreeFocusRegistry(setFocusedItemId);
@@ -306,20 +320,6 @@ export function SourcesPanel({
     );
   }
 
-  if (collapsed) {
-    return (
-      <div className="flex flex-col bg-panel-bg">
-        {showHeader && (
-          <SourcesPanelHeader
-            collapsed={true}
-            notebookId={notebookId}
-            onToggleCollapse={onToggleCollapse}
-          />
-        )}
-      </div>
-    );
-  }
-
   const hasNoSources =
     !isPending &&
     !isError &&
@@ -338,22 +338,23 @@ export function SourcesPanel({
       <div className="flex h-full min-w-0 flex-col bg-panel-bg">
         {showHeader && (
           <SourcesPanelHeader
-            collapsed={false}
+            collapsed={Boolean(collapsed)}
             notebookId={notebookId}
             onToggleCollapse={onToggleCollapse}
             canMove={canMove}
           />
         )}
 
-        <ContextMenu>
-          <ContextMenuTrigger
-            ref={setScrollElement}
-            data-slot="sources-panel-content"
-            className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
-          >
-            {pendingUploads.map((upload) => (
-              <PendingUploadRow key={upload.id} upload={upload} onCancel={cancelPendingUpload} />
-            ))}
+        <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col", collapsed && "hidden")}>
+          <ContextMenu>
+            <ContextMenuTrigger
+              ref={setScrollElement}
+              data-slot="sources-panel-content"
+              className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
+            >
+              {pendingUploads.map((upload) => (
+                <PendingUploadRow key={upload.id} upload={upload} onCancel={cancelPendingUpload} />
+              ))}
 
             <SourcesList
               sources={sources}
@@ -371,9 +372,9 @@ export function SourcesPanel({
               hasNoSources={hasNoSources}
               scrollElement={scrollElement}
               onSelectSource={onSelectSource}
-              onDelete={(source) => setSourceToDelete({ id: source.id, title: source.title })}
-              onRetry={(source) => retryMutation.mutate(source.id)}
-              onCancel={(source) => cancelMutation.mutate(source.id)}
+              onDelete={handleDelete}
+              onRetry={handleRetry}
+              onCancel={handleCancel}
               deletingId={deleteMutation.isPending ? deleteMutation.variables : undefined}
               retryingId={retryMutation.isPending ? retryMutation.variables : undefined}
               cancellingId={cancelMutation.isPending ? cancelMutation.variables : undefined}
@@ -419,6 +420,7 @@ export function SourcesPanel({
             </div>
           </AddSourceDialog>
         </div>
+      </div>
 
         <ConfirmDeleteDialog
           open={sourceToDelete !== null}
@@ -445,7 +447,7 @@ export function SourcesPanel({
       </DragOverlay>
     </DndContext>
   );
-}
+});
 
 function SourcesDragPreview({
   itemId,
