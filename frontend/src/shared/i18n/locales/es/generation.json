@@ -20,27 +20,6 @@
     "title": "Este modelo no puede generar materiales de estudio",
     "unverifiedDescription": "No se pudieron verificar las capacidades de los modelos con el AI Gateway, así que la generación de materiales de estudio está bloqueada. Actualiza el catálogo en Ajustes y elige un modelo que admita salida estructurada."
   },
-  "caseStudy": {
-    "conceptsPlaceholder": "p. ej. Aplica marcos de triaje y compara eficiencia frente a equidad...",
-    "conceptsToApplyLabel": "Conceptos para aplicar",
-    "customQuestionAria": "Cantidad personalizada de preguntas",
-    "discussionQuestionsLabel": "1. Preguntas de debate",
-    "instructionsPlaceholder": "Describe los temas o áreas de enfoque que debe incluir este caso práctico...",
-    "perspective": {
-      "compare": {
-        "desc": "Contrasta los puntos de vista que respaldan las fuentes",
-        "title": "Comparar alternativas"
-      },
-      "single": {
-        "desc": "Un análisis enfocado",
-        "title": "Una sola perspectiva"
-      }
-    },
-    "perspectiveLabel": "2. Perspectiva",
-    "questionCount_one": "{{count}} pregunta",
-    "questionCount_many": "{{count}} preguntas",
-    "questionCount_other": "{{count}} preguntas"
-  },
   "dialog": {
     "close": "Cerrar",
     "gatewayDescription": "Se requiere una clave del Gateway de IA para generar materiales de estudio.",
@@ -94,14 +73,11 @@
     "sourcesLabel": "3. Fuentes de conocimiento"
   },
   "kinds": {
-    "case_study": "Caso práctico",
     "mind_map": "Mapa mental",
-    "practice_problems": "Problemas de práctica",
     "quiz": "Cuestionario",
     "roadmap": "Ruta de aprendizaje",
     "simple_flashcard": "Tarjetas",
-    "slides": "Diapositivas",
-    "study_guide": "Guía de estudio"
+    "slides": "Diapositivas"
   },
   "knowledge": {
     "defaultEmptySources": "No hay fuentes en el cuaderno. El material se generará con conocimientos generales.",
@@ -289,25 +265,6 @@
   "standard": {
     "briefLabel": "Instrucciones breves para {{kind}} (opcional)",
     "briefPlaceholder": "Describe los temas o áreas de enfoque que debe incluir {{kind}}..."
-  },
-  "studyGuide": {
-    "customSectionAria": "Cantidad personalizada de secciones",
-    "format": {
-      "detailed": {
-        "desc": "Explicaciones, ejemplos y conclusiones",
-        "title": "Detallada"
-      },
-      "revision": {
-        "desc": "Conceptos esenciales para un repaso rápido",
-        "title": "Hoja de repaso"
-      }
-    },
-    "formatLabel": "1. Formato",
-    "instructionsPlaceholder": "Describe los temas o áreas de enfoque que debe incluir esta guía de estudio...",
-    "sectionCount_one": "{{count}} sección",
-    "sectionCount_many": "{{count}} secciones",
-    "sectionCount_other": "{{count}} secciones",
-    "sectionsLabel": "2. Secciones"
   },
   "toasts": {
     "cancelled": "Generación cancelada",

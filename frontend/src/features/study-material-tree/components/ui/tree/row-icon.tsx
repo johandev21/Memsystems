@@ -1,11 +1,8 @@
 import {
-  BookOpen,
   Brain,
-  Briefcase,
   FileQuestion,
   Folder,
   FolderOpen,
-  ListChecks,
   Map as MapIcon,
   Network,
   Presentation,
@@ -21,12 +18,6 @@ export function getTreeIcon(node: TreeNode, isOpen: boolean): LucideIcon {
       return Brain;
     case "roadmap":
       return MapIcon;
-    case "study_guide":
-      return BookOpen;
-    case "practice_problems":
-      return ListChecks;
-    case "case_study":
-      return Briefcase;
     case "slides":
       return Presentation;
     case "mind_map":

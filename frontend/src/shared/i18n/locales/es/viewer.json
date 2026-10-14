@@ -1,35 +1,4 @@
 {
-  "caseStudy": {
-    "alternativePerspectives": "Perspectivas alternativas",
-    "assumptions": "Suposiciones",
-    "conceptsFromSources": "Conceptos de tus fuentes",
-    "confirmReset": "Confirmar restablecimiento",
-    "fictionalNotice": "Este escenario es ficticio. Las fuentes de apoyo se aplican al análisis.",
-    "focus": "Enfoque:",
-    "generatedFrom_one": "Generado a partir de {{count}} fuente del cuaderno.",
-    "generatedFrom_many": "Generado a partir de {{count}} fuentes del cuaderno.",
-    "generatedFrom_other": "Generado a partir de {{count}} fuentes del cuaderno.",
-    "hideAnalysis": "Ocultar análisis",
-    "hint": "Pista: {{hint}}",
-    "keyPoints": "Puntos clave",
-    "label": "Caso práctico",
-    "noSampleAnalysis": "No se incluyó un análisis de ejemplo para esta pregunta.",
-    "parseError": "No se pudo leer este caso práctico. Intenta volver a abrirlo o generar uno nuevo.",
-    "progressSaved": "El progreso se guarda en este dispositivo.",
-    "question": "Pregunta {{number}}",
-    "relevantFacts": "Hechos relevantes",
-    "resetConfirm": "¿Borrar todas las respuestas, selecciones de la lista y análisis revelados en este dispositivo?",
-    "resetProgress": "Restablecer progreso",
-    "responsePlaceholder": "Escribe tu análisis antes de revelar el razonamiento de ejemplo.",
-    "revealAnalysis": "Revelar análisis",
-    "sampleReasoning": "Razonamiento de ejemplo",
-    "scenarioAria": "Escenario del caso",
-    "selfAssessment": "Lista de autoevaluación",
-    "storageResetError": "No se pudo restablecer en este dispositivo, pero la sesión se borró de la memoria.",
-    "storageSaveError": "No se pudo guardar el progreso en este dispositivo. Tu sesión actual se conserva en memoria.",
-    "tradeoffs": "Compensaciones",
-    "yourResponse": "Tu respuesta"
-  },
   "common": {
     "cancel": "Cancelar",
     "close": "Cerrar",
@@ -69,24 +38,18 @@
     "returnToStudio": "Volver al resumen del Studio"
   },
   "kinds": {
-    "case_study": "Caso práctico",
     "mind_map": "Mapa mental",
-    "practice_problems": "Problemas de práctica",
     "quiz": "Cuestionario",
     "roadmap": "Ruta de aprendizaje",
     "simple_flashcard": "Tarjetas",
-    "slides": "Diapositivas",
-    "study_guide": "Guía de estudio"
+    "slides": "Diapositivas"
   },
   "kindsPlural": {
-    "case_study": "Casos prácticos",
     "mind_map": "Mapas mentales",
-    "practice_problems": "Problemas de práctica",
     "quiz": "Cuestionarios",
     "roadmap": "Rutas de aprendizaje",
     "simple_flashcard": "Tarjetas",
-    "slides": "Diapositivas",
-    "study_guide": "Guías de estudio"
+    "slides": "Diapositivas"
   },
   "mindMap": {
     "center": "Centrar el nodo seleccionado",
@@ -100,83 +63,6 @@
     },
     "zoomIn": "Acercar",
     "zoomOut": "Alejar"
-  },
-  "practice": {
-    "acceptableAlternatives": "Alternativas aceptables",
-    "areasForImprovement": "Áreas de mejora",
-    "attemptAria": "Tu intento",
-    "attemptPlaceholder": "Escribe tu solución, cálculos o razonamiento aquí...",
-    "challengeLocked": "Modo desafío: solución bloqueada",
-    "challengeNotice": "En el modo desafío, la solución de referencia se desbloquea cuando evalúas tu respuesta con IA.",
-    "constraints": "Restricciones",
-    "difficulty": {
-      "easy": "Calentamiento",
-      "hard": "Desafío",
-      "medium": "Estándar"
-    },
-    "discussInChat": "Comentar en el chat",
-    "discussTitle": "Comenta este problema en el chat del cuaderno",
-    "evaluate": "Evaluar respuesta",
-    "evaluatedWithAi": "Evaluado con IA",
-    "evaluateFailed": "No se pudo evaluar la respuesta",
-    "evaluating": "Evaluando con IA...",
-    "evaluation": {
-      "correct": "Correcto",
-      "needsRevision": "Necesita revisión",
-      "partiallyCorrect": "Parcialmente correcto"
-    },
-    "exitDialog": {
-      "description": "Tienes respuestas o evaluaciones en esta sesión. Si sales ahora, se perderá el progreso de la sesión.",
-      "leave": "Salir de todos modos",
-      "stay": "Quedarme y practicar",
-      "title": "¿Salir de la sesión de práctica?"
-    },
-    "explainStep": "Explicar este paso en el chat",
-    "explainStepTitle": "Pide a la IA en el chat que explique este paso",
-    "givens": "Datos",
-    "giveUp": "Rendirse y revelar la solución",
-    "goToProblem": "Ir al problema {{number}}",
-    "hideSolution": "Ocultar solución",
-    "hint": "Pista {{number}}",
-    "hints": "Pistas",
-    "hintsRevealed": "{{revealed}} de {{total}} pistas reveladas",
-    "keyStrengths": "Puntos fuertes",
-    "nextProblem": "Problema siguiente",
-    "parseError": "No se pudieron leer estos problemas de práctica. Intenta volver a abrirlos o generar un conjunto nuevo.",
-    "previousProblem": "Problema anterior",
-    "problem": "Problema {{number}}",
-    "problemOf": "Problema {{current}} de {{total}}",
-    "prompts": {
-      "constraints": "\nRestricciones:\n{{values}}",
-      "discuss": "Estoy trabajando en este problema de práctica y me gustaría comentarlo:\n\n**Problema:**\n{{problem}}\n{{givens}}{{constraints}}\n\n¿Puedes ayudarme a entender los conceptos clave y guiarme sobre cómo abordar la solución?",
-      "explainStep": "Estoy repasando los pasos desarrollados de este problema de práctica:\n\n**Problema:**\n{{problem}}\n\n**Paso {{number}}: {{title}}**\n{{explanation}}\n\n¿Puedes explicar este paso con más detalle, aclarar por qué se eligió este método y guiarme por el razonamiento?",
-      "givens": "\nDatos:\n{{values}}",
-      "socratic": "Estoy trabajando en este problema de práctica y me siento un poco atascado:\n\n**Problema:**\n{{problem}}\n\nSin revelar la respuesta completa ni los pasos resueltos, ¿podrías darme una pista socrática o una pregunta guía que me ayude a descubrir el siguiente paso por mí mismo?"
-    },
-    "reevaluate": "Volver a evaluar",
-    "referenceAnswer": "Respuesta de referencia",
-    "revealHint": "Revelar pista {{current}} de {{total}}",
-    "revealSolution": "Revelar solución completa",
-    "selectModel": "Selecciona un modelo para evaluar tu respuesta.",
-    "socraticButton": "Pedir pista socrática en el chat",
-    "socraticTitle": "Pide a la IA en el chat una pista socrática sin revelar la solución",
-    "solution": "Solución",
-    "solutionHidden": "La solución está oculta para darte tiempo de pensar y escribir tu propio intento.",
-    "sources": "Fuentes:",
-    "step": "Paso {{number}}: {{title}}",
-    "stepSources": "Fuentes del paso:",
-    "structuredOutput": {
-      "chooseModel": "Elegir un modelo",
-      "description": "{{name}} no admite salida estructurada, necesaria para la evaluación con IA. Elige un modelo que la admita para evaluar tu respuesta.",
-      "pickerTitle": "Elegir un modelo",
-      "refreshCatalog": "Actualizar el catálogo en Ajustes",
-      "searchPlaceholder": "Buscar modelos...",
-      "title": "Este modelo no puede evaluar respuestas",
-      "unverifiedDescription": "No se pudieron verificar las capacidades de los modelos con el AI Gateway, así que la evaluación está bloqueada. Actualiza el catálogo en Ajustes y elige un modelo que admita salida estructurada."
-    },
-    "verificationChecklist": "Lista de verificación",
-    "workedSteps": "Pasos desarrollados",
-    "yourAttempt": "Tu intento"
   },
   "quiz": {
     "answeredOf": "{{answered}} de {{total}} respondidas",
@@ -237,14 +123,11 @@
   },
   "skeleton": {
     "kind": {
-      "case_study": "Cargando caso práctico",
       "mind_map": "Cargando mapa mental",
-      "practice_problems": "Cargando problemas de práctica",
       "quiz": "Cargando cuestionario",
       "roadmap": "Cargando ruta de aprendizaje",
       "simple_flashcard": "Cargando tarjeta simple",
-      "slides": "Cargando diapositivas",
-      "study_guide": "Cargando guía de estudio"
+      "slides": "Cargando diapositivas"
     },
     "loadingDefault": "Cargando material de estudio",
     "loadingSr": "Cargando material de estudio…"
@@ -271,17 +154,6 @@
     "speakerNotes": "Notas del orador: {{notes}}",
     "studyInChat": "Estudiar esta diapositiva en el chat",
     "unavailableAlt": "Diapositiva {{number}} no disponible: {{title}}"
-  },
-  "studyGuide": {
-    "commonMisconceptions": "Errores comunes",
-    "contents": "Contenido",
-    "contentsAria": "Contenido de la guía de estudio",
-    "detailed": "Guía detallada",
-    "generatedExamples": "Ejemplos generados",
-    "keyConcepts": "Conceptos clave",
-    "parseError": "No se pudo leer esta guía de estudio. Intenta volver a abrirla o generar una nueva.",
-    "revision": "Hoja de repaso",
-    "takeaways": "Conclusiones clave"
   },
   "unsupportedMaterial": "Tipo de material no compatible"
 }

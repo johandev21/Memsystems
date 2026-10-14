@@ -120,7 +120,7 @@ describe('GenerationGroundingService long-source coverage', () => {
 
     const grounding = await service.ground({
       notebookId: seeded.notebookId,
-      kind: 'study_guide',
+      kind: 'quiz',
       // The brief names only the head topic; section passes still reach the
       // tail, which is the behavior under test.
       brief: 'Explain the first section of the mushroom guide',
@@ -289,7 +289,7 @@ describe('GenerationGroundingService reporting', () => {
 
     const grounding = await service.ground({
       notebookId: seeded.notebookId,
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'From the brief alone',
       sourceIds: [],
     });
@@ -402,7 +402,7 @@ describe('formatGroundedSourceText', () => {
     const service = buildGroundingService([LONG_SOURCE]);
     const grounding = await service.ground({
       notebookId: seeded.notebookId,
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Review the mushroom guide',
       sourceIds: [seeded.sourceIdByGoldenId.get('long')!],
     });

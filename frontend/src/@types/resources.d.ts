@@ -236,11 +236,6 @@ export default interface Resources {
         "problemCount": "Problem count must be between {{min}} and {{max}}.",
         "questionCount": "Question count must be between {{min}} and {{max}}.",
         "requestNotFound": "Generation request not found.",
-        "sourceOrBrief": {
-          "caseStudy": "Select a source or enter a brief for your case study.",
-          "practiceProblems": "Select a source or enter a brief for your practice problems.",
-          "studyGuide": "Select a source or enter a brief for your study guide."
-        },
         "sourcesUnavailable": "Selected sources are unavailable or have no readable content. Update your selection and retry."
       },
       "notebooks": {
@@ -395,16 +390,6 @@ export default interface Resources {
       },
       "studyMaterials": {
         "aiNotConfigured": "AI service is not configured",
-        "caseStudy": {
-          "analysisQuestionIdsUnique": "Case study analysis question IDs must be unique",
-          "invalidContent": "Invalid case study content",
-          "missingAnalysis": "Case study must include an analysis for each question",
-          "mustBeFictional": "Case study scenarios must be fictional",
-          "questionCountMismatch": "Case study question count does not match the request",
-          "questionIdsUnique": "Case study question IDs must be unique",
-          "sourceUnavailable": "Case study references an unselected or unavailable source",
-          "unknownQuestion": "Case study analysis references an unknown question"
-        },
         "contentMismatch": "Content does not match kind \"{{kind}}\"",
         "duplicateDeleted": "Cannot duplicate a deleted study material",
         "evaluation": {
@@ -427,23 +412,7 @@ export default interface Resources {
         "folderReparentCycle": "Cannot reparent folder under one of its descendants",
         "invalidKind": "Invalid study material kind: {{kind}}",
         "invalidModelOutput": "Invalid output format from model",
-        "notPracticeProblems": "Study material is not a practice problems set",
         "onlyQuizzesShuffled": "Only quizzes can be shuffled",
-        "practiceProblemNotFound": "Practice problem not found",
-        "practiceProblems": {
-          "countMismatch": "Practice problem count does not match the request",
-          "invalidContent": "Invalid practice problems content",
-          "problemIdsUnique": "Practice problem IDs must be unique",
-          "sourceUnavailable": "Practice problems reference an unselected or unavailable source",
-          "stepIdsUnique": "Worked step IDs must be unique within a problem"
-        },
-        "studyGuide": {
-          "countMismatch": "Study guide section count does not match the request",
-          "detailedRequiresExtras": "Detailed study guides require examples, misconceptions, and takeaways in each section",
-          "invalidContent": "Invalid study guide content",
-          "sectionIdsUnique": "Study guide section IDs must be unique",
-          "sourceUnavailable": "Study guide references an unselected or unavailable source"
-        },
         "studyMaterialNotFound": "Study material not found",
         "titleEmpty": "Title cannot be empty"
       },
@@ -512,26 +481,6 @@ export default interface Resources {
       "title": "This model can't generate study materials",
       "unverifiedDescription": "Model capabilities couldn't be verified with the AI Gateway, so study material generation is blocked. Refresh the catalog in Settings, then choose a model that supports structured output."
     },
-    "caseStudy": {
-      "conceptsPlaceholder": "e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives...",
-      "conceptsToApplyLabel": "Concepts to Apply",
-      "customQuestionAria": "Custom question count",
-      "discussionQuestionsLabel": "1. Discussion Questions",
-      "instructionsPlaceholder": "Describe what topics or focus areas to include in this case study...",
-      "perspective": {
-        "compare": {
-          "desc": "Contrast viewpoints sources support",
-          "title": "Compare alternatives"
-        },
-        "single": {
-          "desc": "One focused analysis",
-          "title": "Single lens"
-        }
-      },
-      "perspectiveLabel": "2. Perspective",
-      "questionCount_one": "{{count}} Question",
-      "questionCount_other": "{{count}} Questions"
-    },
     "dialog": {
       "close": "Close",
       "gatewayDescription": "An AI Gateway key is required to generate study materials.",
@@ -583,14 +532,11 @@ export default interface Resources {
       "sourcesLabel": "3. Knowledge Sources"
     },
     "kinds": {
-      "case_study": "Case Study",
       "mind_map": "Mind Map",
-      "practice_problems": "Practice Problems",
       "quiz": "Quiz",
       "roadmap": "Roadmap",
       "simple_flashcard": "Flashcards",
-      "slides": "Slides",
-      "study_guide": "Study Guide"
+      "slides": "Slides"
     },
     "knowledge": {
       "defaultEmptySources": "No sources in notebook. Material will generate using general knowledge.",
@@ -765,24 +711,6 @@ export default interface Resources {
     "standard": {
       "briefLabel": "Brief instructions for {{kind}} (optional)",
       "briefPlaceholder": "Describe what topics or focus areas to include in this {{kind}}..."
-    },
-    "studyGuide": {
-      "customSectionAria": "Custom section count",
-      "format": {
-        "detailed": {
-          "desc": "Explanations, examples & takeaways",
-          "title": "Detailed"
-        },
-        "revision": {
-          "desc": "Essential concepts for quick review",
-          "title": "Revision sheet"
-        }
-      },
-      "formatLabel": "1. Format",
-      "instructionsPlaceholder": "Describe what topics or focus areas to include in this study guide...",
-      "sectionCount_one": "{{count}} Section",
-      "sectionCount_other": "{{count}} Sections",
-      "sectionsLabel": "2. Sections"
     },
     "toasts": {
       "cancelled": "Generation cancelled",
@@ -979,14 +907,11 @@ export default interface Resources {
       "generationFailed": "Generation failed",
       "newMaterial": "New study material",
       "resources": {
-        "caseStudy": "Case Study",
         "flashcards": "Flashcards",
         "mindMap": "Mind Map",
-        "practiceProblems": "Practice Problems",
         "quiz": "Quiz",
         "roadmap": "Roadmap",
-        "slides": "Slides",
-        "studyGuide": "Study Guide"
+        "slides": "Slides"
       },
       "tooltipGenerating": "{{label}} (Generating...)"
     },
@@ -1545,36 +1470,6 @@ export default interface Resources {
     }
   },
   "viewer": {
-    "caseStudy": {
-      "alternativePerspectives": "Alternative Perspectives",
-      "assumptions": "Assumptions",
-      "conceptsFromSources": "Concepts From Your Sources",
-      "confirmReset": "Confirm Reset",
-      "fictionalNotice": "This scenario is fictional. Any supporting sources apply to the analysis.",
-      "focus": "Focus:",
-      "generatedFrom_one": "Generated from {{count}} notebook source.",
-      "generatedFrom_other": "Generated from {{count}} notebook sources.",
-      "hideAnalysis": "Hide Analysis",
-      "hint": "Hint: {{hint}}",
-      "keyPoints": "Key Points",
-      "label": "Case Study",
-      "noSampleAnalysis": "No sample analysis was included for this question.",
-      "parseError": "This case study could not be read. Try reopening it or generating a new case.",
-      "progressSaved": "Progress is saved on this device.",
-      "question": "Question {{number}}",
-      "relevantFacts": "Relevant Facts",
-      "resetConfirm": "Clear all responses, checklist selections, and revealed analyses on this device?",
-      "resetProgress": "Reset Progress",
-      "responsePlaceholder": "Write your analysis before revealing the sample reasoning.",
-      "revealAnalysis": "Reveal Analysis",
-      "sampleReasoning": "Sample Reasoning",
-      "scenarioAria": "Case scenario",
-      "selfAssessment": "Self-Assessment Checklist",
-      "storageResetError": "Reset failed on this device, but the session was cleared in memory.",
-      "storageSaveError": "Progress could not be saved on this device. Your current session is kept in memory.",
-      "tradeoffs": "Tradeoffs",
-      "yourResponse": "Your Response"
-    },
     "common": {
       "cancel": "Cancel",
       "close": "Close",
@@ -1614,24 +1509,18 @@ export default interface Resources {
       "returnToStudio": "Return to Studio overview"
     },
     "kinds": {
-      "case_study": "Case Study",
       "mind_map": "Mind Map",
-      "practice_problems": "Practice Problems",
       "quiz": "Quiz",
       "roadmap": "Roadmap",
       "simple_flashcard": "Flashcards",
-      "slides": "Slides",
-      "study_guide": "Study Guide"
+      "slides": "Slides"
     },
     "kindsPlural": {
-      "case_study": "Case Studies",
       "mind_map": "Mind Maps",
-      "practice_problems": "Practice Problems",
       "quiz": "Quizzes",
       "roadmap": "Roadmaps",
       "simple_flashcard": "Flashcards",
-      "slides": "Slides",
-      "study_guide": "Study Guides"
+      "slides": "Slides"
     },
     "mindMap": {
       "center": "Center selected node",
@@ -1645,83 +1534,6 @@ export default interface Resources {
       },
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out"
-    },
-    "practice": {
-      "acceptableAlternatives": "Acceptable Alternatives",
-      "areasForImprovement": "Areas for Improvement",
-      "attemptAria": "Your attempt",
-      "attemptPlaceholder": "Write your solution, calculations, or reasoning here...",
-      "challengeLocked": "Challenge Mode: Solution Locked",
-      "challengeNotice": "In Challenge mode, the reference solution unlocks once you evaluate your answer with AI.",
-      "constraints": "Constraints",
-      "difficulty": {
-        "easy": "Warmup",
-        "hard": "Challenge",
-        "medium": "Standard"
-      },
-      "discussInChat": "Discuss in Chat",
-      "discussTitle": "Discuss this problem in notebook chat",
-      "evaluate": "Evaluate answer",
-      "evaluateFailed": "Failed to evaluate answer",
-      "evaluatedWithAi": "Evaluated with AI",
-      "evaluating": "Evaluating with AI...",
-      "evaluation": {
-        "correct": "Correct",
-        "needsRevision": "Needs Revision",
-        "partiallyCorrect": "Partially Correct"
-      },
-      "exitDialog": {
-        "description": "You have answers or evaluations in this session. If you leave now, your session progress will be lost.",
-        "leave": "Leave Anyway",
-        "stay": "Stay and Practice",
-        "title": "Leave Practice Session?"
-      },
-      "explainStep": "Explain this step in Chat",
-      "explainStepTitle": "Ask AI in chat to explain this step",
-      "giveUp": "Give up and reveal solution",
-      "givens": "Givens",
-      "goToProblem": "Go to problem {{number}}",
-      "hideSolution": "Hide Solution",
-      "hint": "Hint {{number}}",
-      "hints": "Hints",
-      "hintsRevealed": "{{revealed}} of {{total}} hints revealed",
-      "keyStrengths": "Key Strengths",
-      "nextProblem": "Next problem",
-      "parseError": "These practice problems could not be read. Try reopening them or generating a new set.",
-      "previousProblem": "Previous problem",
-      "problem": "Problem {{number}}",
-      "problemOf": "Problem {{current}} of {{total}}",
-      "prompts": {
-        "constraints": "\nConstraints:\n{{values}}",
-        "discuss": "I'm working on this practice problem and would like to discuss it:\n\n**Problem:**\n{{problem}}\n{{givens}}{{constraints}}\n\nCan you help me understand the core concepts and guide me on how to approach solving it?",
-        "explainStep": "I'm reviewing the worked steps for this practice problem:\n\n**Problem:**\n{{problem}}\n\n**Step {{number}}: {{title}}**\n{{explanation}}\n\nCan you explain this step in more detail, clarify why this method was chosen, and walk me through the reasoning?",
-        "givens": "\nGivens:\n{{values}}",
-        "socratic": "I'm working on this practice problem and I'm feeling a bit stuck:\n\n**Problem:**\n{{problem}}\n\nWithout giving away the complete answer or worked steps, could you give me a Socratic hint or guiding question to help me figure out the next step myself?"
-      },
-      "reevaluate": "Re-evaluate",
-      "referenceAnswer": "Reference Answer",
-      "revealHint": "Reveal hint {{current}} of {{total}}",
-      "revealSolution": "Reveal Full Solution",
-      "selectModel": "Select a model to evaluate your answer.",
-      "socraticButton": "Ask for Socratic Hint in Chat",
-      "socraticTitle": "Ask AI in chat for a Socratic hint without revealing the solution",
-      "solution": "Solution",
-      "solutionHidden": "The solution is hidden to give you time to think and write your own attempt.",
-      "sources": "Sources:",
-      "step": "Step {{number}}: {{title}}",
-      "stepSources": "Step Sources:",
-      "structuredOutput": {
-        "chooseModel": "Choose a Model",
-        "description": "{{name}} doesn't support structured output, which AI evaluation needs. Choose a model that supports it to evaluate your answer.",
-        "pickerTitle": "Choose a Model",
-        "refreshCatalog": "Refresh the catalog in Settings",
-        "searchPlaceholder": "Search models...",
-        "title": "This model can't evaluate answers",
-        "unverifiedDescription": "Model capabilities couldn't be verified with the AI Gateway, so evaluation is blocked. Refresh the catalog in Settings, then choose a model that supports structured output."
-      },
-      "verificationChecklist": "Verification Checklist",
-      "workedSteps": "Worked Steps",
-      "yourAttempt": "Your Attempt"
     },
     "quiz": {
       "answeredOf": "{{answered}} of {{total}} Answered",
@@ -1781,14 +1593,11 @@ export default interface Resources {
     },
     "skeleton": {
       "kind": {
-        "case_study": "Loading case study",
         "mind_map": "Loading mind map",
-        "practice_problems": "Loading practice problems",
         "quiz": "Loading quiz",
         "roadmap": "Loading roadmap",
         "simple_flashcard": "Loading simple flashcard",
-        "slides": "Loading slides",
-        "study_guide": "Loading study guide"
+        "slides": "Loading slides"
       },
       "loadingDefault": "Loading study material",
       "loadingSr": "Loading study material…"
@@ -1815,17 +1624,6 @@ export default interface Resources {
       "speakerNotes": "Speaker notes: {{notes}}",
       "studyInChat": "Study this slide in chat",
       "unavailableAlt": "Slide {{number}} unavailable: {{title}}"
-    },
-    "studyGuide": {
-      "commonMisconceptions": "Common Misconceptions",
-      "contents": "Contents",
-      "contentsAria": "Study guide contents",
-      "detailed": "Detailed Guide",
-      "generatedExamples": "Generated Examples",
-      "keyConcepts": "Key Concepts",
-      "parseError": "This study guide could not be read. Try reopening it or generating a new guide.",
-      "revision": "Revision Sheet",
-      "takeaways": "Takeaways"
     },
     "unsupportedMaterial": "Unsupported material type"
   }

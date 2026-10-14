@@ -1,10 +1,7 @@
 import type { ParseKeys } from "i18next";
 import {
-  BookOpen,
   Brain,
-  Briefcase,
   HelpCircle,
-  ListChecks,
   type LucideIcon,
   Map as MapIcon,
   Network,
@@ -18,9 +15,6 @@ export const KIND_LABEL_KEYS = {
   roadmap: "studio.resources.roadmap",
   mind_map: "studio.resources.mindMap",
   slides: "studio.resources.slides",
-  study_guide: "studio.resources.studyGuide",
-  practice_problems: "studio.resources.practiceProblems",
-  case_study: "studio.resources.caseStudy",
 } as const satisfies Record<StudyMaterialKind, ParseKeys<"notebooks">>;
 
 export type ResourceConfig = {
@@ -31,12 +25,6 @@ export type ResourceConfig = {
 };
 
 export const RESOURCES: ResourceConfig[] = [
-  {
-    key: "studyGuide",
-    kind: "study_guide",
-    icon: BookOpen,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
   {
     key: "quiz",
     kind: "quiz",
@@ -62,21 +50,9 @@ export const RESOURCES: ResourceConfig[] = [
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
   {
-    key: "practiceProblems",
-    kind: "practice_problems",
-    icon: ListChecks,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
     key: "slides",
     kind: "slides",
     icon: Presentation,
-    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
-  },
-  {
-    key: "caseStudy",
-    kind: "case_study",
-    icon: Briefcase,
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
 ];
@@ -88,8 +64,5 @@ export function isInScope(kind: StudyMaterialKind): boolean {
     "roadmap",
     "mind_map",
     "slides",
-    "study_guide",
-    "practice_problems",
-    "case_study",
   ].includes(kind);
 }

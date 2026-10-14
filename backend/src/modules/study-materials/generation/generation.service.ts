@@ -25,9 +25,6 @@ const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
   roadmap: 'openai/gpt-5.6-sol',
   mind_map: 'openai/gpt-5.6-sol',
   slides: 'openai/gpt-5.6-sol',
-  study_guide: 'openai/gpt-5.6-sol',
-  practice_problems: 'openai/gpt-5.6-sol',
-  case_study: 'openai/gpt-5.6-sol',
 };
 
 @Injectable()
@@ -111,67 +108,6 @@ export class GenerationService {
         'Selected sources are unavailable or have no readable content. Update your selection and retry.',
         { messageKey: 'errors.generation.sourcesUnavailable' },
       );
-    }
-
-    const sourceCount = grounding.sources.length;
-
-    const requiresSourceOrBrief = groundingMode !== 'free';
-
-    if (input.kind === 'study_guide') {
-      if (sourceCount === 0 && !input.brief.trim() && requiresSourceOrBrief) {
-        throw new BadRequestError(
-          'Select a source or enter a brief for your study guide.',
-          { messageKey: 'errors.generation.sourceOrBrief.studyGuide' },
-        );
-      }
-    }
-
-    if (input.kind === 'practice_problems') {
-      const problemCount =
-        input.practiceProblemsOptions?.problemCount ?? input.questionCount;
-      if (
-        problemCount != null &&
-        problemCount !== 0 &&
-        (problemCount < 0 || problemCount > 30)
-      ) {
-        throw new BadRequestError(
-          'Problem count must be between {{min}} and {{max}}.',
-          {
-            messageKey: 'errors.generation.problemCount',
-            params: { min: 1, max: 30 },
-          },
-        );
-      }
-      if (sourceCount === 0 && !input.brief.trim() && requiresSourceOrBrief) {
-        throw new BadRequestError(
-          'Select a source or enter a brief for your practice problems.',
-          { messageKey: 'errors.generation.sourceOrBrief.practiceProblems' },
-        );
-      }
-    }
-
-    if (input.kind === 'case_study') {
-      const questionCount =
-        input.caseStudyOptions?.questionCount ?? input.questionCount;
-      if (
-        questionCount != null &&
-        questionCount !== 0 &&
-        (questionCount < 0 || questionCount > 10)
-      ) {
-        throw new BadRequestError(
-          'Question count must be between {{min}} and {{max}}.',
-          {
-            messageKey: 'errors.generation.questionCount',
-            params: { min: 1, max: 10 },
-          },
-        );
-      }
-      if (sourceCount === 0 && !input.brief.trim() && requiresSourceOrBrief) {
-        throw new BadRequestError(
-          'Select a source or enter a brief for your case study.',
-          { messageKey: 'errors.generation.sourceOrBrief.caseStudy' },
-        );
-      }
     }
 
     const requestId = await this.requestManager.create(notebookId, {

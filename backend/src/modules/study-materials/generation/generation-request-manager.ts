@@ -8,15 +8,9 @@ import { DEFAULT_GROUNDING_MODE } from '../../notebooks/grounding-mode';
 import { NotFoundError } from '../../../common/errors/domain-error';
 import { DRIZZLE } from '../../database/database.module';
 import { StudyMaterialKind } from '../content/shapes';
-import type { StudyGuideGenerationOptions } from '../content/study-guide-content';
-import type { PracticeProblemsGenerationOptions } from '../content/practice-problems-content';
-import type { CaseStudyGenerationOptions } from '../content/case-study-content';
 
 export interface StartGenerationInput {
   kind: StudyMaterialKind;
-  studyGuideOptions?: StudyGuideGenerationOptions;
-  practiceProblemsOptions?: PracticeProblemsGenerationOptions;
-  caseStudyOptions?: CaseStudyGenerationOptions;
   brief: string;
   sourceIds: string[];
   folderId?: string | null;

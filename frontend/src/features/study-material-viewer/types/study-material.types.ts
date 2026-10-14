@@ -3,10 +3,7 @@ export type StudyMaterialKind =
   | "simple_flashcard"
   | "roadmap"
   | "mind_map"
-  | "slides"
-  | "study_guide"
-  | "practice_problems"
-  | "case_study";
+  | "slides";
 
 export interface StudyMaterialDTO {
   id: string;

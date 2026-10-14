@@ -177,14 +177,11 @@
     "generationFailed": "Generation failed",
     "newMaterial": "New study material",
     "resources": {
-      "caseStudy": "Case Study",
       "flashcards": "Flashcards",
       "mindMap": "Mind Map",
-      "practiceProblems": "Practice Problems",
       "quiz": "Quiz",
       "roadmap": "Roadmap",
-      "slides": "Slides",
-      "studyGuide": "Study Guide"
+      "slides": "Slides"
     },
     "tooltipGenerating": "{{label}} (Generating...)"
   },

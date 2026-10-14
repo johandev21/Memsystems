@@ -56,11 +56,6 @@
       "problemCount": "La cantidad de problemas debe estar entre {{min}} y {{max}}.",
       "questionCount": "La cantidad de preguntas debe estar entre {{min}} y {{max}}.",
       "requestNotFound": "Solicitud de generación no encontrada.",
-      "sourceOrBrief": {
-        "caseStudy": "Selecciona una fuente o escribe un resumen para tu caso de estudio.",
-        "practiceProblems": "Selecciona una fuente o escribe un resumen para tus problemas de práctica.",
-        "studyGuide": "Selecciona una fuente o escribe un resumen para tu guía de estudio."
-      },
       "sourcesUnavailable": "Las fuentes seleccionadas no están disponibles o no tienen contenido legible. Actualiza tu selección e inténtalo de nuevo."
     },
     "notebooks": {
@@ -215,16 +210,6 @@
     },
     "studyMaterials": {
       "aiNotConfigured": "El servicio de IA no está configurado",
-      "caseStudy": {
-        "analysisQuestionIdsUnique": "Los IDs de las preguntas del análisis del caso de estudio deben ser únicos",
-        "invalidContent": "Contenido de caso de estudio inválido",
-        "missingAnalysis": "El caso de estudio debe incluir un análisis para cada pregunta",
-        "mustBeFictional": "Los escenarios del caso de estudio deben ser ficticios",
-        "questionCountMismatch": "La cantidad de preguntas del caso de estudio no coincide con la solicitud",
-        "questionIdsUnique": "Los IDs de las preguntas del caso de estudio deben ser únicos",
-        "sourceUnavailable": "El caso de estudio hace referencia a una fuente no seleccionada o no disponible",
-        "unknownQuestion": "El análisis del caso de estudio hace referencia a una pregunta desconocida"
-      },
       "contentMismatch": "El contenido no coincide con el tipo \"{{kind}}\"",
       "duplicateDeleted": "No se puede duplicar un material de estudio eliminado",
       "evaluation": {
@@ -247,23 +232,7 @@
       "folderReparentCycle": "No se puede mover una carpeta dentro de uno de sus descendientes",
       "invalidKind": "Tipo de material de estudio inválido: {{kind}}",
       "invalidModelOutput": "Formato de salida inválido del modelo",
-      "notPracticeProblems": "El material de estudio no es un conjunto de problemas de práctica",
       "onlyQuizzesShuffled": "Solo se pueden mezclar los cuestionarios",
-      "practiceProblemNotFound": "Problema de práctica no encontrado",
-      "practiceProblems": {
-        "countMismatch": "La cantidad de problemas de práctica no coincide con la solicitud",
-        "invalidContent": "Contenido de problemas de práctica inválido",
-        "problemIdsUnique": "Los IDs de los problemas de práctica deben ser únicos",
-        "sourceUnavailable": "Los problemas de práctica hacen referencia a una fuente no seleccionada o no disponible",
-        "stepIdsUnique": "Los IDs de los pasos deben ser únicos dentro de un problema"
-      },
-      "studyGuide": {
-        "countMismatch": "La cantidad de secciones de la guía de estudio no coincide con la solicitud",
-        "detailedRequiresExtras": "Las guías de estudio detalladas requieren ejemplos, conceptos erróneos y conclusiones en cada sección",
-        "invalidContent": "Contenido de guía de estudio inválido",
-        "sectionIdsUnique": "Los IDs de las secciones de la guía de estudio deben ser únicos",
-        "sourceUnavailable": "La guía de estudio hace referencia a una fuente no seleccionada o no disponible"
-      },
       "studyMaterialNotFound": "Material de estudio no encontrado",
       "titleEmpty": "El título no puede estar vacío"
     },

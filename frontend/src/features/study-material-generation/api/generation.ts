@@ -1,7 +1,3 @@
-import type {
-  StudyGuideGenerationOptions,
-  CaseStudyGenerationOptions,
-} from "@/features/study-material-viewer";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 import { getApiUrl } from "@/shared/api";
 
@@ -26,17 +22,6 @@ export interface SlidesGenerationOptions {
   detailLevel: "basic" | "detailed" | "auto";
 }
 
-export interface PracticeProblemsGenerationOptions {
-  problemCount: number;
-  difficulty: "easy" | "medium" | "hard" | "auto";
-}
-
-export interface CaseStudyGenerationOptionsInput {
-  questionCount: number;
-  focus: string;
-  comparePerspectives: "auto" | "single" | "compare";
-}
-
 export interface StartGenerationInput {
   kind: StudyMaterialKind;
   brief: string;
@@ -48,9 +33,6 @@ export interface StartGenerationInput {
   difficulty?: "easy" | "medium" | "hard" | "auto";
   roadmapOptions?: RoadmapGenerationOptions;
   mindMapOptions?: MindMapGenerationOptions;
-  studyGuideOptions?: StudyGuideGenerationOptions;
-  practiceProblemsOptions?: PracticeProblemsGenerationOptions;
-  caseStudyOptions?: CaseStudyGenerationOptions | CaseStudyGenerationOptionsInput;
   slidesOptions?: SlidesGenerationOptions;
   language?: string;
 }

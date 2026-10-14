@@ -20,26 +20,6 @@
     "title": "This model can't generate study materials",
     "unverifiedDescription": "Model capabilities couldn't be verified with the AI Gateway, so study material generation is blocked. Refresh the catalog in Settings, then choose a model that supports structured output."
   },
-  "caseStudy": {
-    "conceptsPlaceholder": "e.g. Apply triage frameworks and compare efficiency vs. fairness perspectives...",
-    "conceptsToApplyLabel": "Concepts to Apply",
-    "customQuestionAria": "Custom question count",
-    "discussionQuestionsLabel": "1. Discussion Questions",
-    "instructionsPlaceholder": "Describe what topics or focus areas to include in this case study...",
-    "perspective": {
-      "compare": {
-        "desc": "Contrast viewpoints sources support",
-        "title": "Compare alternatives"
-      },
-      "single": {
-        "desc": "One focused analysis",
-        "title": "Single lens"
-      }
-    },
-    "perspectiveLabel": "2. Perspective",
-    "questionCount_one": "{{count}} Question",
-    "questionCount_other": "{{count}} Questions"
-  },
   "dialog": {
     "close": "Close",
     "gatewayDescription": "An AI Gateway key is required to generate study materials.",
@@ -91,14 +71,11 @@
     "sourcesLabel": "3. Knowledge Sources"
   },
   "kinds": {
-    "case_study": "Case Study",
     "mind_map": "Mind Map",
-    "practice_problems": "Practice Problems",
     "quiz": "Quiz",
     "roadmap": "Roadmap",
     "simple_flashcard": "Flashcards",
-    "slides": "Slides",
-    "study_guide": "Study Guide"
+    "slides": "Slides"
   },
   "knowledge": {
     "defaultEmptySources": "No sources in notebook. Material will generate using general knowledge.",
@@ -273,24 +250,6 @@
   "standard": {
     "briefLabel": "Brief instructions for {{kind}} (optional)",
     "briefPlaceholder": "Describe what topics or focus areas to include in this {{kind}}..."
-  },
-  "studyGuide": {
-    "customSectionAria": "Custom section count",
-    "format": {
-      "detailed": {
-        "desc": "Explanations, examples & takeaways",
-        "title": "Detailed"
-      },
-      "revision": {
-        "desc": "Essential concepts for quick review",
-        "title": "Revision sheet"
-      }
-    },
-    "formatLabel": "1. Format",
-    "instructionsPlaceholder": "Describe what topics or focus areas to include in this study guide...",
-    "sectionCount_one": "{{count}} Section",
-    "sectionCount_other": "{{count}} Sections",
-    "sectionsLabel": "2. Sections"
   },
   "toasts": {
     "cancelled": "Generation cancelled",

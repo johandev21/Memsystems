@@ -33,8 +33,6 @@ import {
   shuffleQuizOptions,
   validateContent,
 } from '../content/shapes';
-import { PracticeProblemsContent } from '../content/practice-problems-content';
-import { CaseStudyContent } from '../content/case-study-content';
 import {
   extractJson,
   generateTitle,
@@ -42,12 +40,6 @@ import {
   repairJsonText,
 } from '../content/content-normalizer';
 import { withSlidePreviews } from '../slides/slides-preview';
-import {
-  StudyGuideContent,
-  prepareGeneratedStudyGuide,
-} from '../content/study-guide-content';
-import { prepareGeneratedPracticeProblems } from '../content/practice-problems-content';
-import { prepareGeneratedCaseStudy } from '../content/case-study-content';
 import {
   GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD,
   GENERAL_KNOWLEDGE_SUPPLEMENT_LABEL,
@@ -91,7 +83,7 @@ export class StreamHandler {
       citationDirective(hasEvidence) +
       groundingDirective(input.groundingMode, hasEvidence);
     const formatted = formatGroundedSourceText(grounding, {
-      includeSourceId: kindReferencesSources(input.kind),
+      includeSourceId: false,
     });
     if (
       formatted.droppedBlocks > 0 ||
@@ -107,9 +99,6 @@ export class StreamHandler {
       roadmapOptions: input.roadmapOptions,
       mindMapOptions: input.mindMapOptions,
       slidesOptions: input.slidesOptions,
-      studyGuideOptions: input.studyGuideOptions,
-      practiceProblemsOptions: input.practiceProblemsOptions,
-      caseStudyOptions: input.caseStudyOptions,
     });
     const schema = this.getContentSchema(input.kind);
     const options = buildOptions(input);
@@ -421,30 +410,10 @@ export class StreamHandler {
     validated: unknown,
     grounding: Pick<GenerationGrounding, 'sources' | 'evidence'>,
   ): Record<string, unknown> {
-    const allowedIds = grounding.sources.map((source) => source.id);
     const storable: Record<string, unknown> =
-      input.kind === 'study_guide'
-        ? prepareGeneratedStudyGuide(
-            validated,
-            allowedIds,
-            input.studyGuideOptions,
-          )
-        : input.kind === 'practice_problems'
-          ? prepareGeneratedPracticeProblems(validated, allowedIds, {
-              ...input.practiceProblemsOptions,
-              questionCount: input.questionCount,
-              difficulty:
-                input.difficulty ?? input.practiceProblemsOptions?.difficulty,
-            })
-          : input.kind === 'case_study'
-            ? prepareGeneratedCaseStudy(validated, allowedIds, {
-                ...input.caseStudyOptions,
-                questionCount:
-                  input.caseStudyOptions?.questionCount ?? input.questionCount,
-              })
-            : input.kind === 'slides'
-              ? withSlidePreviews(validated as Record<string, unknown>)
-              : (validated as Record<string, unknown>);
+      input.kind === 'slides'
+        ? withSlidePreviews(validated as Record<string, unknown>)
+        : (validated as Record<string, unknown>);
     const withCitations = attachGenerationCitations(
       storable,
       extractGenerationCitations(storable, grounding.evidence),
@@ -460,9 +429,6 @@ export class StreamHandler {
       roadmap: RoadmapContent,
       mind_map: MindMapContent,
       slides: SlidesContent,
-      study_guide: StudyGuideContent,
-      practice_problems: PracticeProblemsContent,
-      case_study: CaseStudyContent,
     };
     return schemas[kind];
   }
@@ -472,14 +438,6 @@ function isAbortError(error: unknown): boolean {
   return (
     error instanceof Error &&
     (error.name === 'AbortError' || error.name === 'ResponseAborted')
-  );
-}
-
-function kindReferencesSources(kind: StudyMaterialKind): boolean {
-  return (
-    kind === 'study_guide' ||
-    kind === 'practice_problems' ||
-    kind === 'case_study'
   );
 }
 
@@ -529,12 +487,6 @@ function baseFallbackSchemaHint(kind: StudyMaterialKind): string {
       return `{"title", "rootId", "nodes": [{"id", "label", "color": "#rrggbb", "position": {"x", "y"}}], "edges": [{"id", "sourceId", "targetId", "label", "directed"}]}. Example: {"title": "Sample Map", "rootId": "n1", "nodes": [{"id": "n1", "label": "Root", "color": "#64748b", "position": {"x": 0, "y": 0}}], "edges": []}`;
     case 'slides':
       return `{"schemaVersion": 2, "title", "design": {"background", "surface", "primary", "secondary", "text", "muted" hex colors}, "slides": [{"id", "role": "content", "title", "elements": []}]}. Example: {"schemaVersion": 2, "title": "Sample Deck", "design": {"background": "#0F172A", "surface": "#1E293B", "primary": "#38BDF8", "secondary": "#818CF8", "text": "#F8FAFC", "muted": "#94A3B8"}, "slides": [{"id": "s1", "role": "content", "title": "Intro", "elements": []}]}`;
-    case 'study_guide':
-      return `{"title", "overview", "learningObjectives": [string], "sections": [{"id", "title", "explanation", "keyConcepts": [string]}]}. Example: {"title": "Sample Guide", "overview": "Basics.", "learningObjectives": ["Understand X"], "sections": [{"id": "s1", "title": "X", "explanation": "X means...", "keyConcepts": ["X"]}]}`;
-    case 'practice_problems':
-      return `{"title", "problems": [{"id", "prompt", "steps": [{"id", "title", "explanation"}], "answer"}]}. Example: {"title": "Sample Problems", "difficulty": "medium", "problems": [{"id": "p1", "prompt": "Solve 2x=4.", "steps": [{"id": "p1-s1", "title": "Divide", "explanation": "Divide both sides by 2."}], "answer": "x=2"}]}`;
-    case 'case_study':
-      return `{"title", "learningObjectives": [string], "scenario": {"title", "setting", "narrative"}, "questions": [{"id", "prompt"}]}. Example: {"title": "Sample Case", "learningObjectives": ["Analyze X"], "scenario": {"title": "Scenario", "setting": "A clinic.", "narrative": "A patient..."}, "questions": [{"id": "c1", "prompt": "What would you do?"}]}`;
     default:
       return `A JSON object with a "title" string field. Example: {"title": "Sample"}`;
   }
@@ -565,27 +517,6 @@ function buildOptions(input: StreamInput): Record<string, unknown> | null {
     case 'mind_map': {
       if (input.mindMapOptions == null) return null;
       return input.mindMapOptions;
-    }
-    case 'study_guide':
-      return {
-        format: input.studyGuideOptions?.format ?? 'auto',
-        sectionCount: input.studyGuideOptions?.sectionCount ?? 0,
-      };
-    case 'practice_problems': {
-      const problemCount =
-        input.practiceProblemsOptions?.problemCount ?? input.questionCount ?? 0;
-      const difficulty =
-        input.practiceProblemsOptions?.difficulty ?? input.difficulty ?? 'auto';
-      return { problemCount, difficulty };
-    }
-    case 'case_study': {
-      return {
-        questionCount:
-          input.caseStudyOptions?.questionCount ?? input.questionCount ?? 0,
-        focus: input.caseStudyOptions?.focus ?? '',
-        comparePerspectives:
-          input.caseStudyOptions?.comparePerspectives ?? 'auto',
-      };
     }
     case 'slides': {
       if (input.slidesOptions == null) return null;

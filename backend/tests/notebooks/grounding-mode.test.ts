@@ -386,7 +386,7 @@ describe('Generation grounding mode override', () => {
   it('falls back to the notebook mode and persists it on the request', async () => {
     const { service, requestManager } = generationSetup('moderate');
     await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
     });
@@ -399,7 +399,7 @@ describe('Generation grounding mode override', () => {
   it('prefers the per-request override', async () => {
     const { service, requestManager } = generationSetup('strict');
     await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
       groundingMode: 'free',

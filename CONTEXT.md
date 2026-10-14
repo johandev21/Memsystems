@@ -90,7 +90,7 @@ An artifact generated from sources. Each study material has exactly one kind.
 _Avoid_: resource, content, artifact
 
 **Kind**:
-One of the eight fixed study material types: quiz, simple flashcard, roadmap, mind map, slides, study guide, practice problems, or case study.
+One of the five fixed study material types: quiz, simple flashcard, roadmap, mind map, or slides.
 _Avoid_: type, category
 
 **Flashcards**:

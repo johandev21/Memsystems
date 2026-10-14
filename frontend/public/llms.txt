@@ -1,6 +1,6 @@
 # Memsystems
 
-> Memsystems is a notebook workspace for research and study: it brings web pages, PDFs, documents, and other sources together with an AI assistant that can answer questions with citations, and generate study materials such as study guides, quizzes, flashcards, roadmaps, mind maps, practice problems, slides, and case studies.
+> Memsystems is a notebook workspace for research and study: it brings web pages, PDFs, documents, and other sources together with an AI assistant that can answer questions with citations, and generate study materials such as quizzes, flashcards, roadmaps, mind maps, and slides.
 
 Memsystems is a client-side web application. Human users navigate it through its routes; the workspace layout on each route is a three-pane arrangement (sources, chat, studio). The app exposes WebMCP tools so that AI agents can operate core flows programmatically.
 

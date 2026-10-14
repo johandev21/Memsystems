@@ -65,9 +65,6 @@ export function GenerateBriefDialog({
     roadmapOptions,
     mindMapOptions,
     slidesOptions,
-    studyGuideOptions,
-    practiceProblemsOptions,
-    caseStudyOptions,
   } = value;
   const { model: selectedModel, setModel } = useModelPersistence(notebookId);
   const groundingMode = useNotebookGroundingMode(notebookId);
@@ -98,9 +95,6 @@ export function GenerateBriefDialog({
         mindMapOptions,
         slidesOptions:
           kind === "slides" ? (slidesOptions ?? DEFAULT_SLIDES_OPTIONS) : slidesOptions,
-        studyGuideOptions,
-        practiceProblemsOptions,
-        caseStudyOptions,
       },
       queryClient,
       onComplete,
@@ -302,11 +296,6 @@ function getInitialBriefState(kind?: StudyMaterialKind | null): BriefFormData {
           }
         : undefined,
     slidesOptions: kind === "slides" ? { ...DEFAULT_SLIDES_OPTIONS } : undefined,
-    studyGuideOptions: kind === "study_guide" ? { format: "detailed", sectionCount: 6 } : undefined,
-    practiceProblemsOptions:
-      kind === "practice_problems" ? { problemCount: 6, difficulty: "medium" } : undefined,
-    caseStudyOptions:
-      kind === "case_study" ? { questionCount: 4, focus: "", comparePerspectives: "single" } : undefined,
   };
 }
 

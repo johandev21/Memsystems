@@ -140,7 +140,7 @@ function setup() {
 }
 
 const baseInput: StartGenerationInput = {
-  kind: 'study_guide',
+  kind: 'quiz',
   brief: '',
   sourceIds: [],
 };
@@ -219,107 +219,6 @@ describe('GenerationService message keys', () => {
     });
   });
 
-  it('keys the study guide brief requirement', async () => {
-    const { service } = setup();
-
-    await expect(
-      service.generate('notebook-1', baseInput),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.sourceOrBrief.studyGuide',
-      code: 'bad_request',
-    });
-  });
-
-  it('keys the practice problem count with params', async () => {
-    const { service } = setup();
-
-    await expect(
-      service.generate('notebook-1', {
-        ...baseInput,
-        kind: 'practice_problems',
-        brief: 'Cell biology',
-        questionCount: 31,
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.problemCount',
-      code: 'bad_request',
-      params: { min: 1, max: 30 },
-    });
-  });
-
-  it('keys the practice problems brief requirement', async () => {
-    const { service } = setup();
-
-    await expect(
-      service.generate('notebook-1', {
-        ...baseInput,
-        kind: 'practice_problems',
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.sourceOrBrief.practiceProblems',
-      code: 'bad_request',
-    });
-  });
-
-  it('keys the case study question count with params', async () => {
-    const { service } = setup();
-
-    await expect(
-      service.generate('notebook-1', {
-        ...baseInput,
-        kind: 'case_study',
-        brief: 'A case',
-        questionCount: 11,
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.questionCount',
-      code: 'bad_request',
-      params: { min: 1, max: 10 },
-    });
-  });
-
-  it('treats a count of 0 as auto and still rejects negative counts', async () => {
-    const { service, requestManager } = setup();
-
-    await service.generate('notebook-1', {
-      ...baseInput,
-      kind: 'practice_problems',
-      brief: 'Cell biology',
-      questionCount: 0,
-    });
-    await service.generate('notebook-1', {
-      ...baseInput,
-      kind: 'case_study',
-      brief: 'A case',
-      questionCount: 0,
-    });
-    expect(requestManager.create).toHaveBeenCalledTimes(2);
-
-    await expect(
-      service.generate('notebook-1', {
-        ...baseInput,
-        kind: 'practice_problems',
-        brief: 'Cell biology',
-        questionCount: -1,
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.problemCount',
-      code: 'bad_request',
-    });
-
-    await expect(
-      service.generate('notebook-1', {
-        ...baseInput,
-        kind: 'case_study',
-        brief: 'A case',
-        questionCount: -1,
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.questionCount',
-      code: 'bad_request',
-    });
-  });
-
   it('keys a missing generation request', async () => {
     const { service } = setup();
 
@@ -367,7 +266,7 @@ describe('GenerationService structured-output gate', () => {
 
     await expect(
       service.generate('notebook-1', {
-        kind: 'study_guide',
+        kind: 'quiz',
         brief: 'Cell biology',
         sourceIds: [],
         model: 'zai/glm-5-turbo',
@@ -419,7 +318,7 @@ describe('GenerationService structured-output gate', () => {
     const { service, aiService, requestManager, streamHandler } = setup();
 
     const { requestId } = await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
       model: 'openai/gpt-5.6-sol',
@@ -511,7 +410,7 @@ describe('GenerationService retrieval grounding', () => {
     const { service, ground, recordTrace, streamHandler } = setup();
 
     await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
     });

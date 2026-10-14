@@ -1,23 +1,10 @@
 import { z } from 'zod';
-import { StudyGuideContent, validateStudyGuide } from './study-guide-content';
-import {
-  PracticeProblemsContent,
-  validatePracticeProblems,
-} from './practice-problems-content';
-import { CaseStudyContent, validateCaseStudy } from './case-study-content';
 import { GenerationCitationsSchema } from '../generation/generation-citations';
 import { GeneralKnowledgeSupplementSchema } from '../generation/generation-supplement';
 import { BadRequestError } from '../../../common/errors/domain-error';
 
 export type StudyMaterialKind =
-  | 'quiz'
-  | 'simple_flashcard'
-  | 'roadmap'
-  | 'mind_map'
-  | 'slides'
-  | 'study_guide'
-  | 'practice_problems'
-  | 'case_study';
+  'quiz' | 'simple_flashcard' | 'roadmap' | 'mind_map' | 'slides';
 
 export const QuizQuestionOption = z.object({
   id: z.string(),
@@ -40,6 +27,7 @@ export const QuizContent = z.object({
   generalKnowledgeSupplement: GeneralKnowledgeSupplementSchema,
   citations: GenerationCitationsSchema,
 });
+export type QuizContentType = z.infer<typeof QuizContent>;
 
 export const SimpleFlashcardContent = z.preprocess(
   (val) => {
@@ -156,9 +144,6 @@ const contentSchemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
   roadmap: RoadmapContent,
   mind_map: MindMapContent,
   slides: SlidesContent,
-  study_guide: StudyGuideContent,
-  practice_problems: PracticeProblemsContent,
-  case_study: CaseStudyContent,
 };
 
 export function validateContent(kind: string, content: unknown) {
@@ -168,9 +153,6 @@ export function validateContent(kind: string, content: unknown) {
       params: { kind },
     });
   }
-  if (kind === 'study_guide') return validateStudyGuide(content);
-  if (kind === 'practice_problems') return validatePracticeProblems(content);
-  if (kind === 'case_study') return validateCaseStudy(content);
   if (kind === 'slides') {
     const resolved = resolveSlideDeck(content);
     const result = SlideDeckSchema.safeParse(resolved);

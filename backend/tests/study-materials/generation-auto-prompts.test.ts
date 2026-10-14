@@ -36,26 +36,6 @@ const autoCases: Array<{ kind: StudyMaterialKind; options: PromptOptions }> = [
     },
   },
   {
-    kind: 'study_guide',
-    options: { studyGuideOptions: { format: 'auto', sectionCount: 0 } },
-  },
-  {
-    kind: 'practice_problems',
-    options: {
-      practiceProblemsOptions: { problemCount: 0, difficulty: 'auto' },
-    },
-  },
-  {
-    kind: 'case_study',
-    options: {
-      caseStudyOptions: {
-        questionCount: 0,
-        focus: '',
-        comparePerspectives: 'auto',
-      },
-    },
-  },
-  {
     kind: 'slides',
     options: {
       slidesOptions: { slideCount: 0, theme: 'auto', detailLevel: 'auto' },
@@ -140,65 +120,6 @@ describe('auto generation prompts', () => {
     expect(prompt).not.toContain('Decide whether color grouping clarifies');
   });
 
-  it('study guide: auto format asks the model to set the top-level format and count suggests 3-12', () => {
-    const prompt = promptFor('study_guide', {
-      studyGuideOptions: { format: 'auto', sectionCount: 0 },
-    });
-    expect(prompt).toContain('Choose the format');
-    expect(prompt).toContain('"detailed"');
-    expect(prompt).toContain('"revision"');
-    expect(prompt).toContain('top-level "format"');
-    expect(prompt).toContain('Decide how many sections');
-    expect(prompt).toContain('3-12');
-  });
-
-  it('practice problems: auto count suggests 3-12 and auto difficulty asks the model to choose', () => {
-    const prompt = promptFor('practice_problems', {
-      practiceProblemsOptions: { problemCount: 0, difficulty: 'auto' },
-    });
-    expect(prompt).toContain('Decide how many problems');
-    expect(prompt).toContain('3-12');
-    expect(prompt).toContain('Choose the difficulty level');
-  });
-
-  it('case study: auto count suggests 3-6 and auto perspectives ask whether contrast adds value', () => {
-    const prompt = promptFor('case_study', {
-      caseStudyOptions: {
-        questionCount: 0,
-        focus: '',
-        comparePerspectives: 'auto',
-      },
-    });
-    expect(prompt).toContain('Decide how many discussion questions');
-    expect(prompt).toContain('3-6');
-    expect(prompt).toContain(
-      'Decide whether contrasting perspectives add value',
-    );
-    expect(prompt).toContain('never manufacture opposing views');
-  });
-
-  it('case study: single focuses the analysis and compare asks for supported contrast', () => {
-    const single = promptFor('case_study', {
-      caseStudyOptions: {
-        questionCount: 3,
-        focus: '',
-        comparePerspectives: 'single',
-      },
-    });
-    expect(single).toContain('one focused analysis');
-    expect(single).toContain('never manufacture opposing views');
-
-    const compare = promptFor('case_study', {
-      caseStudyOptions: {
-        questionCount: 3,
-        focus: '',
-        comparePerspectives: 'compare',
-      },
-    });
-    expect(compare).toContain('Compare contrasting perspectives');
-    expect(compare).toContain('never manufacture opposing views');
-  });
-
   it('slides: auto count suggests 6-12, auto theme picks a preset, auto detail asks the model to choose', () => {
     const prompt = promptFor('slides', {
       slidesOptions: { slideCount: 0, theme: 'auto', detailLevel: 'auto' },
@@ -230,11 +151,5 @@ describe('auto generation prompts', () => {
     });
     expect(quiz).toContain('Generate EXACTLY 12 questions.');
     expect(quiz).toContain('Target difficulty level: hard');
-
-    const practice = promptFor('practice_problems', {
-      practiceProblemsOptions: { problemCount: 5, difficulty: 'easy' },
-    });
-    expect(practice).toContain('Create EXACTLY 5 problems.');
-    expect(practice).toContain('Target difficulty: easy');
   });
 });

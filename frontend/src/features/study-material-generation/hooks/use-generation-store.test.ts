@@ -11,11 +11,11 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
 vi.mock("@/features/study-material-viewer", () => ({
-  KIND_LABELS: { case_study: "Case Study" },
+  KIND_LABELS: { quiz: "Quiz" },
 }));
 
 const input = {
-  kind: "case_study" as const,
+  kind: "quiz" as const,
   brief: "Apply philosophical reasoning",
   sourceIds: ["source-1"],
   folderId: null,

@@ -413,10 +413,7 @@ export interface GoldenGeneration {
     | 'simple_flashcard'
     | 'roadmap'
     | 'mind_map'
-    | 'slides'
-    | 'study_guide'
-    | 'practice_problems'
-    | 'case_study';
+    | 'slides';
   brief: string;
   /** Golden source ids, in selection order. */
   sourceIds: string[];
@@ -569,8 +566,8 @@ export const GOLDEN_GENERATION_SOURCES: GoldenSource[] = [
 export const GOLDEN_GENERATIONS: GoldenGeneration[] = [
   {
     id: 'g-long-source-guide',
-    kind: 'study_guide',
-    brief: 'Create a study guide covering the mushroom field guide',
+    kind: 'quiz',
+    brief: 'Create a quiz covering the mushroom field guide',
     sourceIds: ['mushroom-guide'],
     // Every section of the long source, including the two tail sections that
     // sit past the sixteenth chunk.

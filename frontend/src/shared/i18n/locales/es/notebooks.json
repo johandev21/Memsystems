@@ -179,14 +179,11 @@
     "generationFailed": "La generación falló",
     "newMaterial": "Nuevo material de estudio",
     "resources": {
-      "caseStudy": "Caso práctico",
       "flashcards": "Tarjetas",
       "mindMap": "Mapa mental",
-      "practiceProblems": "Problemas de práctica",
       "quiz": "Cuestionario",
       "roadmap": "Ruta de aprendizaje",
-      "slides": "Diapositivas",
-      "studyGuide": "Guía de estudio"
+      "slides": "Diapositivas"
     },
     "tooltipGenerating": "{{label}} (Generando...)"
   },

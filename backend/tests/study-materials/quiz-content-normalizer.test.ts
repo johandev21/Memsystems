@@ -132,7 +132,7 @@ describe('generateTitle Bloom Objective naming', () => {
 
   it('converts raw kebab-case or snake_case titles to Title Case', () => {
     expect(
-      generateTitle('case_study', { title: 'clinic-triage-case-study' }),
+      generateTitle('quiz', { title: 'clinic-triage-quiz' }),
     ).toBe('Clinic Triage');
     expect(
       generateTitle('mind_map', { title: 'operating_systems_mind_map' }),

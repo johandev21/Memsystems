@@ -256,22 +256,6 @@ const groundedQuiz = {
 // ---------------------------------------------------------------------------
 
 describe('generation grounding modes: service gates', () => {
-  it('strict keeps the study guide source-or-brief gate', async () => {
-    const { service, requestManager } = setupGeneration();
-
-    await expect(
-      service.generate('notebook-1', {
-        kind: 'study_guide',
-        brief: '',
-        sourceIds: [],
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.sourceOrBrief.studyGuide',
-      code: 'bad_request',
-    });
-    expect(requestManager.create).not.toHaveBeenCalled();
-  });
-
   it('strict refuses selected-but-unavailable sources', async () => {
     const { service, ground } = setupGeneration();
     ground.mockResolvedValue(
@@ -292,23 +276,6 @@ describe('generation grounding modes: service gates', () => {
       messageKey: 'errors.generation.sourcesUnavailable',
       code: 'bad_request',
     });
-  });
-
-  it('moderate keeps strict gates: source-or-brief still rejects', async () => {
-    const { service, requestManager } = setupGeneration();
-
-    await expect(
-      service.generate('notebook-1', {
-        kind: 'study_guide',
-        brief: '',
-        sourceIds: [],
-        groundingMode: 'moderate',
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.sourceOrBrief.studyGuide',
-      code: 'bad_request',
-    });
-    expect(requestManager.create).not.toHaveBeenCalled();
   });
 
   it('moderate refuses selected-but-unavailable sources like strict', async () => {
@@ -338,7 +305,7 @@ describe('generation grounding modes: service gates', () => {
     const { service, requestManager, streamHandler } = setupGeneration();
 
     await service.generate('notebook-1', {
-      kind: 'practice_problems',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
       groundingMode: 'free',
@@ -346,25 +313,6 @@ describe('generation grounding modes: service gates', () => {
 
     expect(requestManager.create).toHaveBeenCalledTimes(1);
     expect(streamHandler.createStream).toHaveBeenCalledTimes(1);
-  });
-
-  it('free skips the source-or-brief gates even with an empty brief', async () => {
-    const { service, requestManager } = setupGeneration();
-
-    for (const kind of [
-      'study_guide',
-      'practice_problems',
-      'case_study',
-    ] as const) {
-      await service.generate('notebook-1', {
-        kind,
-        brief: '',
-        sourceIds: [],
-        groundingMode: 'free',
-      } as StartGenerationInput);
-    }
-
-    expect(requestManager.create).toHaveBeenCalledTimes(3);
   });
 
   it('free still refuses selected-but-unavailable sources', async () => {
@@ -389,23 +337,6 @@ describe('generation grounding modes: service gates', () => {
       code: 'bad_request',
     });
   });
-
-  it('free still enforces the problem count bounds', async () => {
-    const { service } = setupGeneration();
-
-    await expect(
-      service.generate('notebook-1', {
-        kind: 'practice_problems',
-        brief: 'Cell biology',
-        sourceIds: [],
-        questionCount: 31,
-        groundingMode: 'free',
-      }),
-    ).rejects.toMatchObject({
-      messageKey: 'errors.generation.problemCount',
-      code: 'bad_request',
-    });
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -417,7 +348,7 @@ describe('generation grounding modes: persistence', () => {
     const { service, requestManager } = setupGeneration();
 
     await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
     });
@@ -432,7 +363,7 @@ describe('generation grounding modes: persistence', () => {
     const { service, requestManager } = setupGeneration();
 
     await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
       groundingMode: 'moderate',
@@ -461,7 +392,7 @@ describe('generation grounding modes: persistence', () => {
     notebooksService.getGroundingMode.mockResolvedValue('free');
 
     await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
     });
@@ -510,7 +441,7 @@ describe('generation grounding modes: persistence', () => {
     );
 
     await service.generate('notebook-1', {
-      kind: 'study_guide',
+      kind: 'quiz',
       brief: 'Cell biology',
       sourceIds: [],
       groundingMode: 'moderate',

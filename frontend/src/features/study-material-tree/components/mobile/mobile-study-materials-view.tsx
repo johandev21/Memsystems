@@ -334,7 +334,7 @@ function StudyMaterialsEmptyState({ inFolder }: { inFolder: boolean }) {
       <p className="max-w-xs text-xs text-muted-foreground">
         {inFolder
           ? t("tree.emptyFolderDescription", "Move materials here or tap + to generate new ones.")
-          : t("tree.mobileEmptyDescription", "Tap + to generate a quiz, flashcards, or study guide.")}
+          : t("tree.mobileEmptyDescription", "Tap + to generate a quiz, flashcards, or slides.")}
       </p>
     </div>
   );

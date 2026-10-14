@@ -12,13 +12,6 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
-import { StudyGuideOptions } from './content/study-guide-content';
-import {
-  EvaluateProblemRequestSchema,
-  type EvaluateProblemRequest,
-  PracticeProblemsOptions,
-} from './content/practice-problems-content';
-import { CaseStudyOptions } from './content/case-study-content';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { GenerationService } from './generation/generation.service';
 import { StudyMaterialKind } from './content/shapes';
@@ -27,16 +20,7 @@ import { StudyMaterialService } from './study-material.service';
 import { TrashService } from './trash.service';
 
 const createStudyMaterialSchema = z.object({
-  kind: z.enum([
-    'quiz',
-    'simple_flashcard',
-    'roadmap',
-    'mind_map',
-    'slides',
-    'study_guide',
-    'practice_problems',
-    'case_study',
-  ]),
+  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
   title: z.string().min(1, 'Title is required').max(200),
   content: z.unknown(),
   folderId: z.string().optional(),
@@ -62,16 +46,7 @@ const updateFolderSchema = z.object({
 });
 
 export const generateRequestSchema = z.object({
-  kind: z.enum([
-    'quiz',
-    'simple_flashcard',
-    'roadmap',
-    'mind_map',
-    'slides',
-    'study_guide',
-    'practice_problems',
-    'case_study',
-  ]),
+  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
   brief: z.string().default(''),
   sourceIds: z.array(z.string()).default([]),
   folderId: z.string().nullable().optional(),
@@ -94,9 +69,6 @@ export const generateRequestSchema = z.object({
       detailLevel: z.enum(['basic', 'detailed', 'auto']),
     })
     .optional(),
-  studyGuideOptions: StudyGuideOptions.optional(),
-  practiceProblemsOptions: PracticeProblemsOptions.optional(),
-  caseStudyOptions: CaseStudyOptions.optional(),
   language: z.string().min(1).max(35).optional(),
   slidesOptions: z
     .object({
@@ -210,15 +182,6 @@ export class StudyMaterialsController {
   @Post('study-materials/:id/duplicate')
   async duplicateStudyMaterial(@Param('id') id: string) {
     return this.studyMaterialService.duplicate(id);
-  }
-
-  @Post('study-materials/:id/evaluate-problem')
-  @UsePipes(new ZodValidationPipe(EvaluateProblemRequestSchema))
-  async evaluateProblem(
-    @Param('id') id: string,
-    @Body() body: EvaluateProblemRequest,
-  ) {
-    return this.studyMaterialService.evaluatePracticeProblem(id, body);
   }
 
   @Get('notebooks/:notebookId/folders')

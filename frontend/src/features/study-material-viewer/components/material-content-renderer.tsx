@@ -8,14 +8,11 @@ import { useTranslation } from "react-i18next";
 import { stripCitationMarkersFromContent } from "@/shared/citations/citation";
 import type { MindMapContentType } from "../shapes/mind-map";
 import type { StudyMaterialDTO } from "../types";
-import { CaseStudyView } from "./CaseStudyView";
 import { FlashcardView } from "./FlashcardView";
 import { MindMapView } from "./MindMapView";
-import { PracticeProblemsView } from "./PracticeProblemsView";
 import { QuizView } from "./QuizView";
 import { RoadmapView } from "./RoadmapView";
 import { SlidesView } from "./SlidesView";
-import { StudyGuideView } from "./StudyGuideView";
 
 export interface MaterialContentRendererProps {
   material: StudyMaterialDTO;
@@ -28,11 +25,11 @@ export interface MaterialContentRendererProps {
 
 export function MaterialContentRenderer({
   material,
-  forceFullscreen,
-  handleClose,
-  setIsFullscreen,
-  beforeCloseRef,
-  onClose,
+  forceFullscreen: _forceFullscreen,
+  handleClose: _handleClose,
+  setIsFullscreen: _setIsFullscreen,
+  beforeCloseRef: _beforeCloseRef,
+  onClose: _onClose,
 }: MaterialContentRendererProps) {
   const { t } = useTranslation("viewer");
 
@@ -40,48 +37,6 @@ export function MaterialContentRenderer({
 
   let view: React.ReactNode;
   switch (material.kind) {
-    case "case_study":
-      view = (
-        <CaseStudyView
-          materialId={material.id}
-          content={content}
-          notebookId={material.notebookId}
-          onOpenSource={() => {
-            if (forceFullscreen) handleClose();
-            else setIsFullscreen(false);
-          }}
-        />
-      );
-      break;
-    case "practice_problems":
-      view = (
-        <PracticeProblemsView
-          materialId={material.id}
-          content={content}
-          notebookId={material.notebookId}
-          onClose={onClose}
-          registerBeforeClose={(fn) => {
-            beforeCloseRef.current = fn;
-          }}
-          onOpenSource={() => {
-            if (forceFullscreen) handleClose();
-            else setIsFullscreen(false);
-          }}
-        />
-      );
-      break;
-    case "study_guide":
-      view = (
-        <StudyGuideView
-          content={content}
-          notebookId={material.notebookId}
-          onOpenSource={() => {
-            if (forceFullscreen) onClose();
-            else setIsFullscreen(false);
-          }}
-        />
-      );
-      break;
     case "quiz":
       view = <QuizView content={content as QuizEditorContentType} />;
       break;

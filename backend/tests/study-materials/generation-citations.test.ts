@@ -138,28 +138,34 @@ describe('content schemas keep citations', () => {
     expect(normalized.citations).toHaveLength(1);
   });
 
-  it('retains citations through study guide validation', () => {
+  it('retains citations through roadmap validation', () => {
     const stored = attachGenerationCitations(
       {
-        title: 'guide',
-        overview: 'Overview',
-        learningObjectives: ['Understand energy'],
-        sections: [
+        title: 'Roadmap',
+        description: 'Mitochondria [ref:R1].',
+        phases: [
           {
-            id: 's1',
-            title: 'Energy',
-            explanation: 'Mitochondria [ref:R1].',
-            keyConcepts: ['ATP'],
-            examples: [],
-            sourceIds: ['source-1'],
+            id: 'p1',
+            title: 'Basics',
+            description: '',
+            color: '#64748b',
+            order: 0,
+            topics: [
+              {
+                id: 't1',
+                title: 'Topic',
+                description: '',
+                estimatedMinutes: 30,
+                order: 0,
+              },
+            ],
           },
         ],
-        sourceIds: ['source-1'],
       },
       extractGenerationCitations('Mitochondria [ref:R1].', evidence),
     );
 
-    const validated = validateContent('study_guide', stored) as {
+    const validated = validateContent('roadmap', stored) as {
       citations: { chunkId: string | null }[];
     };
     expect(validated.citations).toHaveLength(1);

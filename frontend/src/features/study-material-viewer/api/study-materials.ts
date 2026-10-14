@@ -1,22 +1,11 @@
 import {
-  type ApiErrorResponse,
   apiDelete,
   apiPatch,
   apiPost,
-  createApiErrorMessage,
   createQueryOptions,
   fetchApi,
-  resolveApiErrorMessage,
 } from "@/shared/api";
-import { isStructuredOutputMessageKey } from "@/features/ai";
 import type { StudyMaterialDTO, CreateStudyMaterialInput } from "../types";
-import type { ProblemEvaluationResult } from "../shapes/practice-problems";
-
-export interface EvaluateProblemInput {
-  problemId: string;
-  studentAnswer: string;
-  modelId: string;
-}
 
 export interface UpdateStudyMaterialInput {
   title?: string;
@@ -73,27 +62,4 @@ export const downloadSlidesPptx = async (materialId: string, filename: string) =
   anchor.click();
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-};
-
-export const evaluatePracticeProblem = async (
-  materialId: string,
-  input: EvaluateProblemInput,
-): Promise<ProblemEvaluationResult> => {
-  const res = await fetchApi(`/api/study-materials/${materialId}/evaluate-problem`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  const payload: unknown = await res.json().catch(() => ({}));
-  const errorData = payload as ApiErrorResponse;
-  if (!res.ok) {
-    const messageKey = isStructuredOutputMessageKey(errorData.error)
-      ? errorData.error
-      : isStructuredOutputMessageKey(errorData.messageKey)
-        ? errorData.messageKey
-        : null;
-    if (messageKey) throw new Error(messageKey);
-    throw new Error(resolveApiErrorMessage(errorData, createApiErrorMessage(res)));
-  }
-  return payload as ProblemEvaluationResult;
 };

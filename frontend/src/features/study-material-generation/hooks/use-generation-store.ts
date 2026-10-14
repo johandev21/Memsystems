@@ -1,7 +1,3 @@
-import type {
-  StudyGuideGenerationOptions,
-  CaseStudyGenerationOptions,
-} from "@/features/study-material-viewer";
 import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { create } from "zustand";
@@ -11,7 +7,6 @@ import type {
   RoadmapGenerationOptions,
   MindMapGenerationOptions,
   SlidesGenerationOptions,
-  PracticeProblemsGenerationOptions,
 } from "../api/generation";
 import { classifyChatError, isStructuredOutputUnsupportedError } from "@/features/ai";
 import i18n from "@/shared/i18n";
@@ -47,9 +42,6 @@ interface GenerationState {
       difficulty?: "easy" | "medium" | "hard" | "auto";
       roadmapOptions?: RoadmapGenerationOptions;
       mindMapOptions?: MindMapGenerationOptions;
-      studyGuideOptions?: StudyGuideGenerationOptions;
-      practiceProblemsOptions?: PracticeProblemsGenerationOptions;
-      caseStudyOptions?: CaseStudyGenerationOptions;
       slidesOptions?: SlidesGenerationOptions;
       language?: string;
       groundingMode?: "strict" | "moderate" | "free";

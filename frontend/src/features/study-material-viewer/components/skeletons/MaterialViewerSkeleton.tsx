@@ -1,10 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import type { StudyMaterialKind } from "../../types";
-import { CaseStudySkeleton } from "./CaseStudySkeleton";
 import { FlashcardSkeleton } from "./FlashcardSkeleton";
 import { MindMapSkeleton } from "./MindMapSkeleton";
-import { PracticeProblemsSkeleton } from "./PracticeProblemsSkeleton";
 import { QuizSkeleton } from "./QuizSkeleton";
 import { RoadmapSkeleton } from "./RoadmapSkeleton";
 import { SlidesSkeleton } from "./SlidesSkeleton";
@@ -53,8 +51,6 @@ const SKELETON_COMPONENTS: Partial<Record<StudyMaterialKind, React.ComponentType
   slides: SlidesSkeleton,
   roadmap: RoadmapSkeleton,
   mind_map: MindMapSkeleton,
-  practice_problems: PracticeProblemsSkeleton,
-  case_study: CaseStudySkeleton,
 };
 
 function KindSkeleton({ kind }: { kind?: StudyMaterialKind | null }) {
@@ -81,15 +77,6 @@ export function MaterialViewerSkeleton({ kind }: MaterialViewerSkeletonProps) {
       break;
     case "mind_map":
       label = t("skeleton.kind.mind_map");
-      break;
-    case "practice_problems":
-      label = t("skeleton.kind.practice_problems");
-      break;
-    case "case_study":
-      label = t("skeleton.kind.case_study");
-      break;
-    case "study_guide":
-      label = t("skeleton.kind.study_guide");
       break;
     default:
       label = t("skeleton.loadingDefault");

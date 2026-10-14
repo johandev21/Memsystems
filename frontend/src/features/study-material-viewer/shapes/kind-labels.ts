@@ -1,4 +1,4 @@
-﻿import i18n from "@/shared/i18n";
+import i18n from "@/shared/i18n";
 import type { StudyMaterialKind } from "../types";
 
 export const KIND_LABELS: Record<StudyMaterialKind, string> = {
@@ -7,9 +7,6 @@ export const KIND_LABELS: Record<StudyMaterialKind, string> = {
   roadmap: "Roadmap",
   mind_map: "Mind Map",
   slides: "Slides",
-  study_guide: "Study Guide",
-  practice_problems: "Practice Problems",
-  case_study: "Case Study",
 };
 
 export const KIND_PLURAL_LABELS: Record<StudyMaterialKind, string> = {
@@ -18,9 +15,6 @@ export const KIND_PLURAL_LABELS: Record<StudyMaterialKind, string> = {
   roadmap: "Roadmaps",
   mind_map: "Mind Maps",
   slides: "Slides",
-  study_guide: "Study Guides",
-  practice_problems: "Practice Problems",
-  case_study: "Case Studies",
 };
 
 export function getKindLabel(kind: StudyMaterialKind): string {
@@ -35,12 +29,6 @@ export function getKindLabel(kind: StudyMaterialKind): string {
       return i18n.t("kinds.mind_map", { ns: "viewer" });
     case "slides":
       return i18n.t("kinds.slides", { ns: "viewer" });
-    case "study_guide":
-      return i18n.t("kinds.study_guide", { ns: "viewer" });
-    case "practice_problems":
-      return i18n.t("kinds.practice_problems", { ns: "viewer" });
-    case "case_study":
-      return i18n.t("kinds.case_study", { ns: "viewer" });
     default:
       return KIND_LABELS[kind] ?? kind;
   }
@@ -58,12 +46,6 @@ export function getKindPluralLabel(kind: StudyMaterialKind): string {
       return i18n.t("kindsPlural.mind_map", { ns: "viewer" });
     case "slides":
       return i18n.t("kindsPlural.slides", { ns: "viewer" });
-    case "study_guide":
-      return i18n.t("kindsPlural.study_guide", { ns: "viewer" });
-    case "practice_problems":
-      return i18n.t("kindsPlural.practice_problems", { ns: "viewer" });
-    case "case_study":
-      return i18n.t("kindsPlural.case_study", { ns: "viewer" });
     default:
       return KIND_PLURAL_LABELS[kind] ?? kind;
   }

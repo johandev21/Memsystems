@@ -56,11 +56,6 @@
       "problemCount": "Problem count must be between {{min}} and {{max}}.",
       "questionCount": "Question count must be between {{min}} and {{max}}.",
       "requestNotFound": "Generation request not found.",
-      "sourceOrBrief": {
-        "caseStudy": "Select a source or enter a brief for your case study.",
-        "practiceProblems": "Select a source or enter a brief for your practice problems.",
-        "studyGuide": "Select a source or enter a brief for your study guide."
-      },
       "sourcesUnavailable": "Selected sources are unavailable or have no readable content. Update your selection and retry."
     },
     "notebooks": {
@@ -215,16 +210,6 @@
     },
     "studyMaterials": {
       "aiNotConfigured": "AI service is not configured",
-      "caseStudy": {
-        "analysisQuestionIdsUnique": "Case study analysis question IDs must be unique",
-        "invalidContent": "Invalid case study content",
-        "missingAnalysis": "Case study must include an analysis for each question",
-        "mustBeFictional": "Case study scenarios must be fictional",
-        "questionCountMismatch": "Case study question count does not match the request",
-        "questionIdsUnique": "Case study question IDs must be unique",
-        "sourceUnavailable": "Case study references an unselected or unavailable source",
-        "unknownQuestion": "Case study analysis references an unknown question"
-      },
       "contentMismatch": "Content does not match kind \"{{kind}}\"",
       "duplicateDeleted": "Cannot duplicate a deleted study material",
       "evaluation": {
@@ -247,23 +232,7 @@
       "folderReparentCycle": "Cannot reparent folder under one of its descendants",
       "invalidKind": "Invalid study material kind: {{kind}}",
       "invalidModelOutput": "Invalid output format from model",
-      "notPracticeProblems": "Study material is not a practice problems set",
       "onlyQuizzesShuffled": "Only quizzes can be shuffled",
-      "practiceProblemNotFound": "Practice problem not found",
-      "practiceProblems": {
-        "countMismatch": "Practice problem count does not match the request",
-        "invalidContent": "Invalid practice problems content",
-        "problemIdsUnique": "Practice problem IDs must be unique",
-        "sourceUnavailable": "Practice problems reference an unselected or unavailable source",
-        "stepIdsUnique": "Worked step IDs must be unique within a problem"
-      },
-      "studyGuide": {
-        "countMismatch": "Study guide section count does not match the request",
-        "detailedRequiresExtras": "Detailed study guides require examples, misconceptions, and takeaways in each section",
-        "invalidContent": "Invalid study guide content",
-        "sectionIdsUnique": "Study guide section IDs must be unique",
-        "sourceUnavailable": "Study guide references an unselected or unavailable source"
-      },
       "studyMaterialNotFound": "Study material not found",
       "titleEmpty": "Title cannot be empty"
     },
