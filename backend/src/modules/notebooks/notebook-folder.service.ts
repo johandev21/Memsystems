@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { notebookFolders, notebooks } from '../../database/schema';
@@ -25,6 +25,7 @@ export interface NotebookFolderResponse {
   id: string;
   name: string;
   parentId: string | null;
+  deletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +41,7 @@ export class NotebookFolderService {
     return this.db
       .select()
       .from(notebookFolders)
+      .where(isNull(notebookFolders.deletedAt))
       .orderBy(asc(notebookFolders.name));
   }
 
@@ -102,18 +104,121 @@ export class NotebookFolderService {
 
   async delete(folderId: string): Promise<NotebookFolderResponse> {
     const folder = await this.fetchFolder(folderId);
-    await this.db.transaction(async (tx) => {
-      await tx
-        .update(notebookFolders)
-        .set({ parentId: folder.parentId })
-        .where(eq(notebookFolders.parentId, folderId));
-      await tx
+    const descendantFolderIds = await this.getDescendantFolderIds(folderId);
+    const now = new Date();
+    const doDelete = async (executor: typeof this.db) => {
+      await executor
         .update(notebooks)
-        .set({ folderId: folder.parentId })
-        .where(eq(notebooks.folderId, folderId));
-      await tx.delete(notebookFolders).where(eq(notebookFolders.id, folderId));
-    });
-    return folder;
+        .set({ deletedAt: now })
+        .where(
+          and(
+            inArray(notebooks.folderId, descendantFolderIds),
+            isNull(notebooks.deletedAt),
+          ),
+        );
+      await executor
+        .update(notebookFolders)
+        .set({ deletedAt: now })
+        .where(inArray(notebookFolders.id, descendantFolderIds));
+    };
+
+    const maybeTx = (
+      this.db as unknown as {
+        transaction?: (
+          cb: (tx: typeof this.db) => Promise<void>,
+        ) => Promise<void>;
+      }
+    ).transaction;
+
+    if (maybeTx) {
+      await maybeTx.call(this.db, async (tx: typeof this.db) => {
+        await doDelete(tx);
+      });
+    } else {
+      await doDelete(this.db);
+    }
+
+    return { ...folder, deletedAt: now };
+  }
+
+  async restore(folderId: string): Promise<NotebookFolderResponse> {
+    const folder = await this.fetchFolder(folderId, true);
+    if (!folder.deletedAt) {
+      return folder;
+    }
+    const descendantFolderIds = await this.getDescendantFolderIds(
+      folderId,
+      true,
+    );
+    let targetParentId = folder.parentId;
+    if (targetParentId) {
+      targetParentId = await this.findAliveAncestor(targetParentId);
+    }
+    await this.db
+      .update(notebooks)
+      .set({ deletedAt: null })
+      .where(inArray(notebooks.folderId, descendantFolderIds));
+    await this.db
+      .update(notebookFolders)
+      .set({ deletedAt: null })
+      .where(inArray(notebookFolders.id, descendantFolderIds));
+    const [restored] = await this.db
+      .update(notebookFolders)
+      .set({ deletedAt: null, parentId: targetParentId })
+      .where(eq(notebookFolders.id, folderId))
+      .returning();
+    return restored;
+  }
+
+  private async findAliveAncestor(folderId: string): Promise<string | null> {
+    let currentId: string | null = folderId;
+    while (currentId) {
+      const [folder] = await this.db
+        .select({
+          id: notebookFolders.id,
+          parentId: notebookFolders.parentId,
+          deletedAt: notebookFolders.deletedAt,
+        })
+        .from(notebookFolders)
+        .where(eq(notebookFolders.id, currentId));
+      if (!folder) return null;
+      if (!folder.deletedAt) return folder.id;
+      currentId = folder.parentId;
+    }
+    return null;
+  }
+
+  private async getDescendantFolderIds(
+    folderId: string,
+    includeDeleted = false,
+  ): Promise<string[]> {
+    const allFolders = await this.db
+      .select({
+        id: notebookFolders.id,
+        parentId: notebookFolders.parentId,
+      })
+      .from(notebookFolders)
+      .where(includeDeleted ? undefined : isNull(notebookFolders.deletedAt));
+
+    const childMap = new Map<string, string[]>();
+    for (const f of allFolders) {
+      if (f.parentId) {
+        const arr = childMap.get(f.parentId) ?? [];
+        arr.push(f.id);
+        childMap.set(f.parentId, arr);
+      }
+    }
+
+    const ids: string[] = [folderId];
+    const stack = [folderId];
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      for (const child of childMap.get(cur) ?? []) {
+        ids.push(child);
+        stack.push(child);
+      }
+    }
+    return ids;
   }
 
   private normalizeName(rawName: string): string {
@@ -126,13 +231,16 @@ export class NotebookFolderService {
     return name.slice(0, MAX_FOLDER_NAME_LENGTH);
   }
 
-  private async fetchFolder(folderId: string): Promise<NotebookFolderResponse> {
+  private async fetchFolder(
+    folderId: string,
+    allowDeleted = false,
+  ): Promise<NotebookFolderResponse> {
     const [folder] = await this.db
       .select()
       .from(notebookFolders)
       .where(eq(notebookFolders.id, folderId))
       .limit(1);
-    if (!folder) {
+    if (!folder || (!allowDeleted && folder.deletedAt)) {
       throw new NotFoundError('Folder', {
         messageKey: 'errors.library.folderNotFound',
       });
@@ -144,7 +252,12 @@ export class NotebookFolderService {
     const [folder] = await this.db
       .select({ id: notebookFolders.id })
       .from(notebookFolders)
-      .where(eq(notebookFolders.id, folderId))
+      .where(
+        and(
+          eq(notebookFolders.id, folderId),
+          isNull(notebookFolders.deletedAt),
+        ),
+      )
       .limit(1);
     if (!folder) {
       throw new NotFoundError('Folder', {
@@ -162,7 +275,8 @@ export class NotebookFolderService {
         id: notebookFolders.id,
         parentId: notebookFolders.parentId,
       })
-      .from(notebookFolders);
+      .from(notebookFolders)
+      .where(isNull(notebookFolders.deletedAt));
     const parentById = new Map(
       allFolders.map((folder) => [folder.id, folder.parentId]),
     );

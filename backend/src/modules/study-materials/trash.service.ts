@@ -1,11 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNotNull } from 'drizzle-orm';
+import { Cron } from '@nestjs/schedule';
+import { and, desc, eq, inArray, isNotNull, lt } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { studyMaterialFolders, studyMaterials } from '../../database/schema';
+import {
+  notebookFolders,
+  notebooks,
+  sourceFolders,
+  sources,
+  studyMaterialFolders,
+  studyMaterials,
+} from '../../database/schema';
 import { NotFoundError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
+import { StorageService } from '../storage/storage.service';
 
 export interface TrashItem {
   id: string;
@@ -15,13 +24,82 @@ export interface TrashItem {
   kind?: string;
 }
 
+const RETENTION_DAYS = 30;
+
 @Injectable()
 export class TrashService {
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly notebooksService: NotebooksService,
+    private readonly storageService: StorageService,
   ) {}
+
+  @Cron('0 0 * * *')
+  async purgeExpired(retentionDays = RETENTION_DAYS) {
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+
+    const expiredSources = await this.db
+      .select({ id: sources.id, s3Key: sources.s3Key })
+      .from(sources)
+      .where(lt(sources.deletedAt, cutoff));
+    await Promise.all(
+      expiredSources
+        .map((s) => s.s3Key)
+        .filter((key): key is string => Boolean(key))
+        .map((key) => this.storageService.deleteObject(key).catch(() => {})),
+    );
+    if (expiredSources.length > 0) {
+      await this.db.delete(sources).where(
+        inArray(
+          sources.id,
+          expiredSources.map((s) => s.id),
+        ),
+      );
+    }
+
+    const expiredNotebooks = await this.db
+      .select({
+        id: notebooks.id,
+        banner: notebooks.banner,
+        bannerVariants: notebooks.bannerVariants,
+      })
+      .from(notebooks)
+      .where(lt(notebooks.deletedAt, cutoff));
+    const bannerKeys = expiredNotebooks.flatMap((nb) => [
+      nb.banner,
+      nb.bannerVariants?.w240,
+      nb.bannerVariants?.w480,
+      nb.bannerVariants?.w960,
+      nb.bannerVariants?.w1920,
+    ]);
+    await Promise.all(
+      bannerKeys
+        .filter((key): key is string => Boolean(key))
+        .map((key) => this.storageService.deleteObject(key).catch(() => {})),
+    );
+    if (expiredNotebooks.length > 0) {
+      await this.db.delete(notebooks).where(
+        inArray(
+          notebooks.id,
+          expiredNotebooks.map((nb) => nb.id),
+        ),
+      );
+    }
+
+    await this.db
+      .delete(studyMaterials)
+      .where(lt(studyMaterials.deletedAt, cutoff));
+    await this.db
+      .delete(studyMaterialFolders)
+      .where(lt(studyMaterialFolders.deletedAt, cutoff));
+    await this.db
+      .delete(sourceFolders)
+      .where(lt(sourceFolders.deletedAt, cutoff));
+    await this.db
+      .delete(notebookFolders)
+      .where(lt(notebookFolders.deletedAt, cutoff));
+  }
 
   async list(notebookId: string) {
     await this.notebooksService.assertNotebookOwner(notebookId);

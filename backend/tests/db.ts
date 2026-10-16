@@ -223,6 +223,30 @@ export async function ensureTestDatabase(): Promise<void> {
     await pgClient.query(
       'CREATE INDEX IF NOT EXISTS "sources_folder_id_idx" ON "sources" ("folder_id")',
     );
+    await pgClient.query(
+      'ALTER TABLE "notebook_folders" ADD COLUMN IF NOT EXISTS "deleted_at" timestamp',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "notebook_folders_deleted_at_idx" ON "notebook_folders" ("deleted_at")',
+    );
+    await pgClient.query(
+      'ALTER TABLE "notebooks" ADD COLUMN IF NOT EXISTS "deleted_at" timestamp',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "notebooks_deleted_at_idx" ON "notebooks" ("deleted_at")',
+    );
+    await pgClient.query(
+      'ALTER TABLE "source_folders" ADD COLUMN IF NOT EXISTS "deleted_at" timestamp',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "source_folders_deleted_at_idx" ON "source_folders" ("deleted_at")',
+    );
+    await pgClient.query(
+      'ALTER TABLE "sources" ADD COLUMN IF NOT EXISTS "deleted_at" timestamp',
+    );
+    await pgClient.query(
+      'CREATE INDEX IF NOT EXISTS "sources_deleted_at_idx" ON "sources" ("deleted_at")',
+    );
   } finally {
     await pgClient.end();
   }

@@ -78,7 +78,7 @@ describe('NotebookFolderService (library folders)', () => {
     expect(updated.parentId).toBe(modern.id);
   });
 
-  it('deletes a folder and re-parents its child folders and notebooks', async () => {
+  it('cascade soft-deletes a folder, its child folders, and notebooks, and can restore them', async () => {
     const parent = await folderService.create({ name: 'Parent' });
     const target = await folderService.create({
       name: 'Target',
@@ -90,22 +90,41 @@ describe('NotebookFolderService (library folders)', () => {
     });
     const notebook = await notebooksService.create({
       title: 'Filed notebook',
-      folderId: target.id,
+      folderId: childFolder.id,
     });
 
     await folderService.delete(target.id);
 
     const listed = await folderService.list();
     expect(listed.some((folder) => folder.id === target.id)).toBe(false);
+    expect(listed.some((folder) => folder.id === childFolder.id)).toBe(false);
+
+    const listedNotebooks = await notebooksService.list();
     expect(
-      listed.find((folder) => folder.id === childFolder.id)?.parentId,
-    ).toBe(parent.id);
+      (listedNotebooks as { id: string }[]).some((nb) => nb.id === notebook.id),
+    ).toBe(false);
 
     const [row] = await db
-      .select({ folderId: notebooks.folderId })
+      .select({
+        folderId: notebooks.folderId,
+        deletedAt: notebooks.deletedAt,
+      })
       .from(notebooks)
       .where(eq(notebooks.id, notebook.id));
-    expect(row.folderId).toBe(parent.id);
+    expect(row.folderId).toBe(childFolder.id);
+    expect(row.deletedAt).not.toBeNull();
+
+    await folderService.restore(target.id);
+
+    const restoredFolders = await folderService.list();
+    expect(restoredFolders.some((folder) => folder.id === target.id)).toBe(
+      true,
+    );
+    expect(restoredFolders.some((folder) => folder.id === childFolder.id)).toBe(
+      true,
+    );
+    const restoredNotebook = await notebooksService.get(notebook.id);
+    expect(restoredNotebook.folderId).toBe(childFolder.id);
   });
 
   it('files notebooks and moves them between folders', async () => {

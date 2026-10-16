@@ -165,6 +165,7 @@ export const notebookFolders = pgTable(
       (): AnyPgColumn => notebookFolders.id,
       { onDelete: 'cascade' },
     ),
+    deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -174,6 +175,7 @@ export const notebookFolders = pgTable(
   (table) => [
     index('notebook_folders_parent_id_idx').on(table.parentId),
     index('notebook_folders_name_idx').on(table.name),
+    index('notebook_folders_deleted_at_idx').on(table.deletedAt),
   ],
 );
 
@@ -203,13 +205,17 @@ export const notebooks = pgTable(
     groundingMode: groundingModeEnum('grounding_mode')
       .default('strict')
       .notNull(),
+    deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index('notebooks_folder_id_idx').on(table.folderId)],
+  (table) => [
+    index('notebooks_folder_id_idx').on(table.folderId),
+    index('notebooks_deleted_at_idx').on(table.deletedAt),
+  ],
 );
 
 export const sourceFolders = pgTable(
@@ -225,6 +231,7 @@ export const sourceFolders = pgTable(
       onDelete: 'cascade',
     }),
     name: varchar('name', { length: 200 }).notNull(),
+    deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -234,6 +241,7 @@ export const sourceFolders = pgTable(
   (table) => [
     index('source_folders_notebook_id_idx').on(table.notebookId),
     index('source_folders_parent_id_idx').on(table.parentId),
+    index('source_folders_deleted_at_idx').on(table.deletedAt),
   ],
 );
 
@@ -282,6 +290,7 @@ export const sources = pgTable(
       (): AnyPgColumn => sourceFolders.id,
       { onDelete: 'set null' },
     ),
+    deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
@@ -291,6 +300,7 @@ export const sources = pgTable(
     index('sources_modality_idx').on(table.modality),
     index('sources_processing_status_idx').on(table.processingStatus),
     index('sources_content_hash_idx').on(table.contentHash),
+    index('sources_deleted_at_idx').on(table.deletedAt),
   ],
 );
 

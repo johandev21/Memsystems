@@ -98,6 +98,7 @@
     "moving": "Moviendo {{name}}",
     "notebook": "cuaderno",
     "removeFolder": "Eliminar carpeta",
+    "removeFolderConfirm": "Al eliminar “{{name}}” también se eliminarán todas las subcarpetas y cuadernos que contiene. Se eliminarán permanentemente después de 30 días.",
     "removeNotebook": "Eliminar cuaderno",
     "removeNotebookConfirm": "¿Eliminar permanentemente “{{title}}” y todo su contenido? Esta acción no se puede deshacer.",
     "rename": "Renombrar",

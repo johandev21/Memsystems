@@ -20,7 +20,8 @@
     "untitledFolder": "Carpeta sin título"
   },
   "deleteDialog": {
-    "description": "¿Eliminar “{{name}}”?",
+    "description": "¿Eliminar “{{name}}”? Se eliminará permanentemente después de 30 días.",
+    "folderDescription": "Al eliminar “{{name}}” también se eliminarán todas las subcarpetas y elementos que contiene. Se eliminarán permanentemente después de 30 días.",
     "folderTitle": "Eliminar carpeta",
     "materialTitle": "Eliminar material de estudio",
     "prototypeDescription": "¿Eliminar “{{name}}” de este prototipo en memoria?"

@@ -220,6 +220,15 @@ export const SourcesPanel = memo(function SourcesPanel({
     retryMutation,
     cancelMutation,
   } = useSourceMutations(notebookId);
+  const [folderToDelete, setFolderToDelete] = useState<SourceFolder | null>(null);
+
+  const requestDeleteFolder = useCallback(
+    (folderId: string) => {
+      const folder = folders?.find((f) => f.id === folderId);
+      if (folder) setFolderToDelete(folder);
+    },
+    [folders],
+  );
 
   const handleDelete = useCallback(
     (source: Source) => setSourceToDelete({ id: source.id, title: source.title }),
@@ -257,12 +266,12 @@ export const SourcesPanel = memo(function SourcesPanel({
   const requestDeleteKbd = useCallback(
     (node: (typeof visibleItems)[number]) => {
       if (node.type === "folder") {
-        handleDeleteFolder(node.id);
+        requestDeleteFolder(node.id);
       } else if (node.source) {
         setSourceToDelete({ id: node.source.id, title: node.source.title });
       }
     },
-    [handleDeleteFolder, setSourceToDelete],
+    [requestDeleteFolder, setSourceToDelete],
   );
 
   const { handleKeyDown } = useTreeKeyboardNav({
@@ -382,7 +391,7 @@ export const SourcesPanel = memo(function SourcesPanel({
               onBeginRename={handleBeginRename}
               onRenameCommit={handleRenameCommit}
               onRenameCancel={handleRenameCancel}
-              onDeleteFolder={handleDeleteFolder}
+              onDeleteFolder={requestDeleteFolder}
               onRetryLoad={handleRetryLoad}
               focusedItemId={focusedItemId}
               treeHasFocus={treeHasFocus}
@@ -433,6 +442,18 @@ export const SourcesPanel = memo(function SourcesPanel({
             setSourceToDelete(null);
           }}
           isLoading={deleteMutation.isPending}
+        />
+
+        <ConfirmDeleteDialog
+          open={folderToDelete !== null}
+          onOpenChange={(open) => !open && setFolderToDelete(null)}
+          title={t("tree:deleteDialog.folderTitle", "Delete folder")}
+          description={t("tree:deleteDialog.folderDescription", { name: folderToDelete?.name ?? "" })}
+          onConfirm={() => {
+            if (!folderToDelete) return;
+            handleDeleteFolder(folderToDelete.id);
+            setFolderToDelete(null);
+          }}
         />
       </div>
 

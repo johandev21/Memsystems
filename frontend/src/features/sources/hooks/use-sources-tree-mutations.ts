@@ -159,9 +159,7 @@ export function useSourcesTreeMutations({
         if (previousSources) {
           queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
             if (!old) return old;
-            return old.map((s) =>
-              s.folderId && deletedIds.has(s.folderId) ? { ...s, folderId: null } : s,
-            );
+            return old.filter((s) => !(s.folderId && deletedIds.has(s.folderId)));
           });
         }
       }

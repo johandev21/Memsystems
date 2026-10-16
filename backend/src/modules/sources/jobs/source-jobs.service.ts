@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../../database/schema';
 import { appSettings, sources } from '../../../database/schema';
@@ -196,7 +196,11 @@ export class SourceJobsService {
         processingStatus: sources.processingStatus,
       })
       .from(sources)
-      .where(notebookId ? eq(sources.notebookId, notebookId) : undefined);
+      .where(
+        notebookId
+          ? and(eq(sources.notebookId, notebookId), isNull(sources.deletedAt))
+          : isNull(sources.deletedAt),
+      );
     return rows.filter((row) => row.processingStatus !== 'degraded');
   }
 

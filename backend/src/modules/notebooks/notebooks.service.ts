@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { notebookFolders, notebooks } from '../../database/schema';
@@ -132,7 +132,7 @@ export class NotebooksService {
     const [notebook] = await this.db
       .select({ id: notebooks.id })
       .from(notebooks)
-      .where(eq(notebooks.id, notebookId))
+      .where(and(eq(notebooks.id, notebookId), isNull(notebooks.deletedAt)))
       .limit(1);
     if (!notebook) {
       throw new NotFoundError('Notebook', {
@@ -145,7 +145,7 @@ export class NotebooksService {
     const [notebook] = await this.db
       .select({ groundingMode: notebooks.groundingMode })
       .from(notebooks)
-      .where(eq(notebooks.id, notebookId))
+      .where(and(eq(notebooks.id, notebookId), isNull(notebooks.deletedAt)))
       .limit(1);
     if (!notebook) {
       throw new NotFoundError('Notebook', {
@@ -172,6 +172,7 @@ export class NotebooksService {
   async list(filter?: { limit?: number; offset?: number; search?: string }) {
     if (filter?.limit !== undefined || filter?.search !== undefined) {
       const conditions = [
+        isNull(notebooks.deletedAt),
         ...(filter.search
           ? [
               or(
@@ -181,7 +182,7 @@ export class NotebooksService {
             ]
           : []),
       ];
-      const where = conditions.length > 0 ? and(...conditions) : undefined;
+      const where = and(...conditions);
       const [{ count }] = await this.db
         .select({ count: sql<number>`count(*)` })
         .from(notebooks)
@@ -206,6 +207,7 @@ export class NotebooksService {
     const rows = await this.db
       .select()
       .from(notebooks)
+      .where(isNull(notebooks.deletedAt))
       .orderBy(desc(notebooks.updatedAt));
 
     return Promise.all(rows.map((nb) => this.formatNotebook(nb)));
@@ -215,7 +217,7 @@ export class NotebooksService {
     const [row] = await this.db
       .select()
       .from(notebooks)
-      .where(eq(notebooks.id, id));
+      .where(and(eq(notebooks.id, id), isNull(notebooks.deletedAt)));
     if (!row) {
       throw new NotFoundError('Notebook', {
         messageKey: 'errors.notebooks.notebook.notFound',
@@ -273,7 +275,7 @@ export class NotebooksService {
     const [row] = await this.db
       .update(notebooks)
       .set(updates)
-      .where(eq(notebooks.id, id))
+      .where(and(eq(notebooks.id, id), isNull(notebooks.deletedAt)))
       .returning();
     if (!row) {
       throw new NotFoundError('Notebook', {
@@ -298,7 +300,7 @@ export class NotebooksService {
     const [row] = await this.db
       .select()
       .from(notebooks)
-      .where(eq(notebooks.id, id));
+      .where(and(eq(notebooks.id, id), isNull(notebooks.deletedAt)));
     if (!row) {
       throw new NotFoundError('Notebook', {
         messageKey: 'errors.notebooks.notebook.notFound',
@@ -450,7 +452,12 @@ export class NotebooksService {
     const [folder] = await this.db
       .select({ id: notebookFolders.id })
       .from(notebookFolders)
-      .where(eq(notebookFolders.id, folderId))
+      .where(
+        and(
+          eq(notebookFolders.id, folderId),
+          isNull(notebookFolders.deletedAt),
+        ),
+      )
       .limit(1);
     if (!folder) {
       throw new NotFoundError('Folder', {

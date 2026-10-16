@@ -321,7 +321,7 @@ describe("optimistic updates and rollbacks", () => {
     expect(detail?.title).toBe("New title");
   });
 
-  it("re-parents folder children and notebooks when deleting optimistically", async () => {
+  it("removes descendant folders and notebooks when deleting a folder optimistically", async () => {
     const client = createQueryClient();
     seedLibrary(client, {
       folders: [
@@ -329,7 +329,11 @@ describe("optimistic updates and rollbacks", () => {
         folder("target", "Target", "parent"),
         folder("child", "Child", "target"),
       ],
-      notebooks: [notebook("n1", "Filed", "target")],
+      notebooks: [
+        notebook("n1", "Filed in target", "target"),
+        notebook("n2", "Filed in child", "child"),
+        notebook("n3", "Filed in parent", "parent"),
+      ],
     });
     (deleteLibraryFolder as Mock).mockResolvedValue(undefined);
 
@@ -342,9 +346,8 @@ describe("optimistic updates and rollbacks", () => {
     });
 
     const data = readLibrary(client);
-    expect(data.folders.some((item) => item.id === "target")).toBe(false);
-    expect(data.folders.find((item) => item.id === "child")?.parentId).toBe("parent");
-    expect(data.notebooks.find((item) => item.id === "n1")?.folderId).toBe("parent");
+    expect(data.folders.map((item) => item.id)).toEqual(["parent"]);
+    expect(data.notebooks.map((item) => item.id)).toEqual(["n3"]);
   });
 
   it("removes a deleted notebook from the cache and detail queries", async () => {

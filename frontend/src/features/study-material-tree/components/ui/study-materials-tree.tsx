@@ -301,7 +301,9 @@ function DeleteTreeItemDialog({
       description={
         isPrototype
           ? t("deleteDialog.prototypeDescription", { name: pending?.name ?? "" })
-          : t("deleteDialog.description", { name: pending?.name ?? "" })
+          : pending?.type === "folder"
+            ? t("deleteDialog.folderDescription", { name: pending.name })
+            : t("deleteDialog.description", { name: pending?.name ?? "" })
       }
       onConfirm={controller.confirmDelete}
     />

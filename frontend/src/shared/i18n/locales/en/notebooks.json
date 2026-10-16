@@ -97,6 +97,7 @@
     "moving": "Moving {{name}}",
     "notebook": "notebook",
     "removeFolder": "Remove Folder",
+    "removeFolderConfirm": "Deleting “{{name}}” will also delete all subfolders and notebooks inside it. They will be permanently deleted after 30 days.",
     "removeNotebook": "Delete Notebook",
     "removeNotebookConfirm": "Permanently delete “{{title}}” and all of its contents? This cannot be undone.",
     "rename": "Rename",

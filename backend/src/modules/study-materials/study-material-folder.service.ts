@@ -118,25 +118,17 @@ export class StudyMaterialFolderService {
     }
     const descendantFolderIds = await this.getDescendantFolderIds(folder);
 
-    const activeMaterials = await this.db
-      .select({ id: studyMaterials.id })
-      .from(studyMaterials)
-      .where(
-        and(
-          inArray(studyMaterials.folderId, descendantFolderIds),
-          isNull(studyMaterials.deletedAt),
-        ),
-      );
-
-    if (activeMaterials.length > 0) {
-      throw new BadRequestError(
-        'Cannot delete folder: please delete all study materials inside first',
-        { messageKey: 'errors.studyMaterials.folderDeleteHasMaterials' },
-      );
-    }
-
     const now = new Date();
     const doDelete = async (executor: typeof this.db) => {
+      await executor
+        .update(studyMaterials)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            inArray(studyMaterials.folderId, descendantFolderIds),
+            isNull(studyMaterials.deletedAt),
+          ),
+        );
       await executor
         .update(studyMaterialFolders)
         .set({ deletedAt: now })
@@ -160,13 +152,17 @@ export class StudyMaterialFolderService {
     return { ...folder, deletedAt: now };
   }
 
-  private async getDescendantFolderIds(folder: {
-    id: string;
-    notebookId: string;
-  }): Promise<string[]>;
+  private async getDescendantFolderIds(
+    folder: {
+      id: string;
+      notebookId: string;
+    },
+    includeDeleted?: boolean,
+  ): Promise<string[]>;
   private async getDescendantFolderIds(parentId: string): Promise<string[]>;
   private async getDescendantFolderIds(
     arg: string | { id: string; notebookId: string },
+    includeDeleted = false,
   ): Promise<string[]> {
     const folderId = typeof arg === 'string' ? arg : arg.id;
     const notebookId = typeof arg === 'string' ? null : arg.notebookId;
@@ -179,10 +175,12 @@ export class StudyMaterialFolderService {
         })
         .from(studyMaterialFolders)
         .where(
-          and(
-            eq(studyMaterialFolders.notebookId, notebookId),
-            isNull(studyMaterialFolders.deletedAt),
-          ),
+          includeDeleted
+            ? eq(studyMaterialFolders.notebookId, notebookId)
+            : and(
+                eq(studyMaterialFolders.notebookId, notebookId),
+                isNull(studyMaterialFolders.deletedAt),
+              ),
         );
       const childMap = new Map<string, string[]>();
       for (const f of allFolders) {
@@ -228,30 +226,43 @@ export class StudyMaterialFolderService {
     if (!folder.deletedAt) {
       return folder;
     }
-    const [restored] = await this.db
+    const descendantFolderIds = await this.getDescendantFolderIds(folder, true);
+    let targetParentId = folder.parentId;
+    if (targetParentId) {
+      targetParentId = await this.findAliveAncestor(targetParentId);
+    }
+    await this.db
+      .update(studyMaterials)
+      .set({ deletedAt: null })
+      .where(inArray(studyMaterials.folderId, descendantFolderIds));
+    await this.db
       .update(studyMaterialFolders)
       .set({ deletedAt: null })
+      .where(inArray(studyMaterialFolders.id, descendantFolderIds));
+    const [restored] = await this.db
+      .update(studyMaterialFolders)
+      .set({ deletedAt: null, parentId: targetParentId })
       .where(eq(studyMaterialFolders.id, folderId))
       .returning();
     return restored;
   }
 
-  private async softDeleteSubtree(parentId: string, deletedAt: Date) {
-    await this.db
-      .update(studyMaterialFolders)
-      .set({ deletedAt })
-      .where(eq(studyMaterialFolders.parentId, parentId));
-    await this.db
-      .update(studyMaterialFolders)
-      .set({ deletedAt })
-      .where(eq(studyMaterialFolders.id, parentId));
-    const children = await this.db
-      .select({ id: studyMaterialFolders.id })
-      .from(studyMaterialFolders)
-      .where(eq(studyMaterialFolders.parentId, parentId));
-    await Promise.all(
-      children.map((child) => this.softDeleteSubtree(child.id, deletedAt)),
-    );
+  private async findAliveAncestor(folderId: string): Promise<string | null> {
+    let currentId: string | null = folderId;
+    while (currentId) {
+      const [folder] = await this.db
+        .select({
+          id: studyMaterialFolders.id,
+          parentId: studyMaterialFolders.parentId,
+          deletedAt: studyMaterialFolders.deletedAt,
+        })
+        .from(studyMaterialFolders)
+        .where(eq(studyMaterialFolders.id, currentId));
+      if (!folder) return null;
+      if (!folder.deletedAt) return folder.id;
+      currentId = folder.parentId;
+    }
+    return null;
   }
 
   private async wouldCreateCycle(

@@ -704,12 +704,13 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       expect(parsedBody.title).toBe("Updated Source Title");
     });
 
-    it("deletes a folder and reparents direct sources to root", async () => {
+    it("shows confirmation dialog before deleting a folder and its nested sources", async () => {
       const folders: SourceFolder[] = [
         makeFolder({ id: "f-del", name: "Folder To Delete" }),
       ];
       const sources: Source[] = [
         makeSource({ id: "s-in-del", title: "Nested Source Doc", folderId: "f-del" }),
+        makeSource({ id: "s-root", title: "Root Source Doc", folderId: null }),
       ];
 
       const deleteSpy = vi.fn();
@@ -723,7 +724,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           if (init?.method === "DELETE") {
             deleteSpy();
             currentFolders = [];
-            currentSources = currentSources.map((s) => ({ ...s, folderId: null }));
+            currentSources = currentSources.filter((s) => s.folderId !== "f-del");
             return new Response("{}", { status: 200 });
           }
         }
@@ -755,14 +756,22 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       const deleteMenuItem = await screen.findByRole("menuitem", { name: /Delete/i });
       await user.click(deleteMenuItem);
 
+      // Confirmation dialog is shown first; deleteSpy has not been called yet
+      expect(deleteSpy).not.toHaveBeenCalled();
+      expect(await screen.findByText(/permanently deleted after 30 days/i)).not.toBeNull();
+
+      const confirmButton = screen.getByRole("button", { name: /^Delete$/i });
+      await user.click(confirmButton);
+
       await waitFor(() => {
         expect(deleteSpy).toHaveBeenCalledTimes(1);
       });
 
-      // Optimistic update: folder is removed from DOM, source persists and remains visible!
+      // Optimistic update: folder and nested source are removed, root source remains
       await waitFor(() => {
         expect(screen.queryByText("Folder To Delete")).toBeNull();
-        expect(screen.getByText("Nested Source Doc")).not.toBeNull();
+        expect(screen.queryByText("Nested Source Doc")).toBeNull();
+        expect(screen.getByText("Root Source Doc")).not.toBeNull();
       });
     });
 

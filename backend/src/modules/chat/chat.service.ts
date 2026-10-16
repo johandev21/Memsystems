@@ -5,7 +5,7 @@ import {
   createUIMessageStreamResponse,
   streamText,
 } from 'ai';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
@@ -159,6 +159,7 @@ export class ChatService {
           and(
             eq(sources.notebookId, notebookId),
             inArray(sources.id, allCitedIds),
+            isNull(sources.deletedAt),
           ),
         );
       for (const src of sourceRows) {
@@ -701,6 +702,7 @@ export class ChatService {
         and(
           eq(sources.notebookId, notebookId),
           eq(sources.processingStatus, 'degraded'),
+          isNull(sources.deletedAt),
         ),
       );
 

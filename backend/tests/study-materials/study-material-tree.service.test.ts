@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { StudyMaterialFolderService } from '../../src/modules/study-materials/study-material-folder.service';
 import { StudyMaterialService } from '../../src/modules/study-materials/study-material.service';
+import { TrashService } from '../../src/modules/study-materials/trash.service';
 import { NotebooksService } from '../../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../../src/modules/storage/storage.service';
 import { seedNotebook, seedStudyMaterial } from '../fixtures';
 import { db } from '../db';
-import { studyMaterialFolders } from '../../src/database/schema';
+import {
+  studyMaterialFolders,
+  studyMaterials,
+} from '../../src/database/schema';
 import { eq } from 'drizzle-orm';
 
 describe('Study Materials Tree — folder creation and rename (backend)', () => {
@@ -22,6 +26,11 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
     notebooksService,
   );
   const materialService = new StudyMaterialService(db as any, notebooksService);
+  const trashService = new TrashService(
+    db as any,
+    notebooksService,
+    storageService,
+  );
 
   it('creates root folder with server ID and Untitled folder name', async () => {
     const notebook = await seedNotebook();
@@ -84,7 +93,7 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
 
   it('rejects rename for unknown folder', async () => {
     const notebook = await seedNotebook();
-    const folder = await folderService.create(notebook.id, {
+    await folderService.create(notebook.id, {
       name: 'Secret',
     });
 
@@ -151,7 +160,7 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
 
   it('rejects material rename for unknown material', async () => {
     const notebook = await seedNotebook();
-    const material = await seedStudyMaterial(notebook.id, {
+    await seedStudyMaterial(notebook.id, {
       kind: 'quiz',
       title: 'Secret',
     });
@@ -159,5 +168,55 @@ describe('Study Materials Tree — folder creation and rename (backend)', () => 
     await expect(
       materialService.update('non-existent-material-id', { title: 'Hacked' }),
     ).rejects.toThrow();
+  });
+
+  it('cascade soft-deletes a non-empty folder and its materials, restores them, and purges items older than 30 days', async () => {
+    const notebook = await seedNotebook();
+    const parent = await folderService.create(notebook.id, { name: 'Parent' });
+    const child = await folderService.create(notebook.id, {
+      name: 'Child',
+      parentId: parent.id,
+    });
+    const material = await seedStudyMaterial(notebook.id, {
+      kind: 'quiz',
+      title: 'Nested Quiz',
+      folderId: child.id,
+    });
+
+    await folderService.delete(parent.id);
+
+    expect(await folderService.list(notebook.id)).toHaveLength(0);
+    expect(await materialService.list(notebook.id)).toHaveLength(0);
+
+    // Restore recovers folder subtree and study material
+    await folderService.restore(parent.id);
+    expect(await folderService.list(notebook.id)).toHaveLength(2);
+    expect(await materialService.list(notebook.id)).toHaveLength(1);
+
+    // Delete again and backdate deletedAt > 30 days to verify purgeExpired
+    await folderService.delete(parent.id);
+    const thirtyOneDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    await db
+      .update(studyMaterials)
+      .set({ deletedAt: thirtyOneDaysAgo })
+      .where(eq(studyMaterials.id, material.id));
+    await db
+      .update(studyMaterialFolders)
+      .set({ deletedAt: thirtyOneDaysAgo })
+      .where(eq(studyMaterialFolders.id, child.id));
+
+    await trashService.purgeExpired(30);
+
+    const [purgedMaterial] = await db
+      .select()
+      .from(studyMaterials)
+      .where(eq(studyMaterials.id, material.id));
+    expect(purgedMaterial).toBeUndefined();
+
+    const [recentParentFolder] = await db
+      .select()
+      .from(studyMaterialFolders)
+      .where(eq(studyMaterialFolders.id, parent.id));
+    expect(recentParentFolder).toBeDefined();
   });
 });

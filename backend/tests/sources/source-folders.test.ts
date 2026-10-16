@@ -226,8 +226,8 @@ describe('Source Folders (backend)', () => {
     });
   });
 
-  describe('delete & reparenting', () => {
-    it('deleting a folder reparents direct sources to root and deletes descendant folders', async () => {
+  describe('delete & restore', () => {
+    it('deleting a folder cascade soft-deletes descendant folders and sources inside them, and restores them', async () => {
       const notebook = await seedNotebook();
       const parent = await folderService.create(notebook.id, {
         name: 'Parent',
@@ -260,34 +260,41 @@ describe('Source Folders (backend)', () => {
 
       await folderService.delete(parent.id);
 
-      // Parent and child folders are deleted
-      const remainingFolders = await db
+      // Parent and child folders are hidden from active list, but soft-deleted in DB
+      const activeFolders = await folderService.list(notebook.id);
+      expect(activeFolders).toHaveLength(0);
+
+      const dbFolders = await db
         .select()
         .from(sourceFolders)
         .where(inArray(sourceFolders.id, [parent.id, child.id]));
-      expect(remainingFolders).toHaveLength(0);
+      expect(dbFolders).toHaveLength(2);
+      expect(dbFolders.every((f) => f.deletedAt !== null)).toBe(true);
 
-      // Sources still exist, and direct/descendant sources have folderId: null (reparented to root)
-      const [reparentedParentSource] = await db
+      // Sources inside deleted folders are soft-deleted and hidden from active list
+      const activeSources = await sourcesService.list(notebook.id);
+      expect(activeSources.map((s) => s.id)).toEqual([sourceAtRoot.id]);
+
+      const [deletedParentSource] = await db
         .select()
         .from(sources)
         .where(eq(sources.id, sourceInParent.id));
-      expect(reparentedParentSource).toBeDefined();
-      expect(reparentedParentSource.folderId).toBeNull();
+      expect(deletedParentSource.deletedAt).not.toBeNull();
+      expect(deletedParentSource.folderId).toBe(parent.id);
 
-      const [reparentedChildSource] = await db
+      const [deletedChildSource] = await db
         .select()
         .from(sources)
         .where(eq(sources.id, sourceInChild.id));
-      expect(reparentedChildSource).toBeDefined();
-      expect(reparentedChildSource.folderId).toBeNull();
+      expect(deletedChildSource.deletedAt).not.toBeNull();
+      expect(deletedChildSource.folderId).toBe(child.id);
 
-      const [rootSource] = await db
-        .select()
-        .from(sources)
-        .where(eq(sources.id, sourceAtRoot.id));
-      expect(rootSource).toBeDefined();
-      expect(rootSource.folderId).toBeNull();
+      // Restore recovers the folder hierarchy and sources
+      await folderService.restore(parent.id);
+      const restoredFolders = await folderService.list(notebook.id);
+      expect(restoredFolders).toHaveLength(2);
+      const restoredSources = await sourcesService.list(notebook.id);
+      expect(restoredSources).toHaveLength(3);
     });
   });
 

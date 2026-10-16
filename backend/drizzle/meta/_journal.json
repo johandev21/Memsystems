@@ -155,6 +155,13 @@
       "when": 1790500000000,
       "tag": "0021_remove_study_guide_practice_problems_case_study",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790600000000,
+      "tag": "0022_soft_delete_folders",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../../database/schema';
 import { sourceChunks, sources } from '../../../database/schema';
@@ -99,6 +99,7 @@ export class GenerationGroundingService {
         and(
           eq(sources.notebookId, request.notebookId),
           inArray(sources.id, selectedIds),
+          isNull(sources.deletedAt),
         ),
       );
     const sourceById = new Map(sourceRows.map((row) => [row.id, row]));

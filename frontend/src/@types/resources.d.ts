@@ -827,6 +827,7 @@ export default interface Resources {
       "moving": "Moving {{name}}",
       "notebook": "notebook",
       "removeFolder": "Remove Folder",
+      "removeFolderConfirm": "Deleting “{{name}}” will also delete all subfolders and notebooks inside it. They will be permanently deleted after 30 days.",
       "removeNotebook": "Delete Notebook",
       "removeNotebookConfirm": "Permanently delete “{{title}}” and all of its contents? This cannot be undone.",
       "rename": "Rename",
@@ -1406,7 +1407,8 @@ export default interface Resources {
       "untitledFolder": "Untitled folder"
     },
     "deleteDialog": {
-      "description": "Delete \"{{name}}\"?",
+      "description": "Delete \"{{name}}\"? It will be permanently deleted after 30 days.",
+      "folderDescription": "Deleting \"{{name}}\" will also delete all subfolders and items inside it. They will be permanently deleted after 30 days.",
       "folderTitle": "Delete folder",
       "materialTitle": "Delete study material",
       "prototypeDescription": "Delete \"{{name}}\" from this in-memory prototype?"

@@ -169,6 +169,13 @@ export async function executeDeleteItem(
         return old.filter((f) => !descendantSet.has(f.id));
       },
     );
+    ctx.queryClient.setQueryData<StudyMaterialDTO[]>(
+      ["study-materials", ctx.notebookId],
+      (old) => {
+        if (!old) return old;
+        return old.filter((m) => !(m.folderId && descendantSet.has(m.folderId)));
+      },
+    );
     try {
       await deleteFolder(id);
       void ctx.refetchTree();

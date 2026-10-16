@@ -23,7 +23,7 @@ import { toLibraryNotebook } from "../model/adapters";
 import type { LibrarySortKey } from "../model/library-sort";
 import type { LibrarySearch } from "../model/search-params";
 import { clampTitle } from "../model/title";
-import type { Draft, LibraryNotebook } from "../model/types";
+import type { Draft, LibraryFolder, LibraryNotebook } from "../model/types";
 import { CreateMenu } from "./create-menu";
 import { FolderLibrary } from "./folder-library";
 import { LibraryGridSkeleton } from "./library-skeleton";
@@ -46,6 +46,7 @@ export function NotebookLibrary() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [pendingDelete, setPendingDelete] = useState<LibraryNotebook | null>(null);
+  const [pendingFolderDelete, setPendingFolderDelete] = useState<LibraryFolder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const folders = useMemo(() => data?.folders ?? [], [data]);
@@ -206,8 +207,17 @@ export function NotebookLibrary() {
     });
   };
 
-  const removeFolder = (id: string) => {
-    const parentId = folders.find((folder) => folder.id === id)?.parentId ?? null;
+  const requestRemoveFolder = (id: string) => {
+    const folder = folders.find((item) => item.id === id);
+    if (folder) setPendingFolderDelete(folder);
+  };
+
+  const confirmRemoveFolder = async () => {
+    if (!pendingFolderDelete) return;
+    const { id, parentId } = pendingFolderDelete;
+    setIsDeleting(true);
+    if (draft?.id === id) setDraft(null);
+    setSelectedKey((current) => (current === `folder:${id}` ? null : current));
     if (activeFolderId === id) {
       void navigate({
         to: "/",
@@ -218,7 +228,9 @@ export function NotebookLibrary() {
         replace: true,
       });
     }
-    void mutations.deleteFolder(id);
+    await mutations.deleteFolder(id);
+    setIsDeleting(false);
+    setPendingFolderDelete(null);
   };
 
   const requestRemoveNotebook = (id: string) => {
@@ -289,7 +301,7 @@ export function NotebookLibrary() {
             onSelectItem={setSelectedKey}
             onOpenFolder={openFolder}
             onRenameFolder={(id, name) => void mutations.updateFolder(id, { name })}
-            onRemoveFolder={removeFolder}
+            onRemoveFolder={requestRemoveFolder}
             onRemoveNotebook={requestRemoveNotebook}
             onOpenNotebook={openNotebook}
             onUpdateNotebook={(id, patch) => void mutations.updateNotebook(id, patch)}
@@ -323,6 +335,16 @@ export function NotebookLibrary() {
         description={t("library.removeNotebookConfirm", { title: pendingDelete?.title ?? "" })}
         isLoading={isDeleting}
         onConfirm={() => void confirmRemoveNotebook()}
+      />
+      <ConfirmDeleteDialog
+        open={pendingFolderDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setPendingFolderDelete(null);
+        }}
+        title={t("library.removeFolder")}
+        description={t("library.removeFolderConfirm", { name: pendingFolderDelete?.name ?? "" })}
+        isLoading={isDeleting}
+        onConfirm={() => void confirmRemoveFolder()}
       />
     </div>
   );

@@ -144,15 +144,25 @@ export function useLibraryMutations() {
     onMutate: (id: string) => {
       const previous = queryClient.getQueryData<LibraryData>(libraryQueryOptions.queryKey);
       void queryClient.cancelQueries({ queryKey: libraryQueryOptions.queryKey });
-      const parentId = previous?.folders.find((folder) => folder.id === id)?.parentId ?? null;
-      patchLibrary(queryClient, (current) => ({
-        folders: current.folders
-          .filter((folder) => folder.id !== id)
-          .map((folder) => (folder.parentId === id ? { ...folder, parentId } : folder)),
-        notebooks: current.notebooks.map((notebook) =>
-          notebook.folderId === id ? { ...notebook, folderId: parentId } : notebook,
-        ),
-      }));
+      patchLibrary(queryClient, (current) => {
+        const deletedIds = new Set<string>([id]);
+        let added = true;
+        while (added) {
+          added = false;
+          for (const folder of current.folders) {
+            if (folder.parentId && deletedIds.has(folder.parentId) && !deletedIds.has(folder.id)) {
+              deletedIds.add(folder.id);
+              added = true;
+            }
+          }
+        }
+        return {
+          folders: current.folders.filter((folder) => !deletedIds.has(folder.id)),
+          notebooks: current.notebooks.filter(
+            (notebook) => !(notebook.folderId && deletedIds.has(notebook.folderId)),
+          ),
+        };
+      });
       return { previous };
     },
     onError: (_error, _variables, context) => {

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { asc, and, count, desc, eq } from 'drizzle-orm';
+import { asc, and, count, desc, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
@@ -192,7 +192,7 @@ export class SourcesService {
         createdAt: sources.createdAt,
       })
       .from(sources)
-      .where(eq(sources.notebookId, notebookId))
+      .where(and(eq(sources.notebookId, notebookId), isNull(sources.deletedAt)))
       .orderBy(desc(sources.createdAt));
   }
 
@@ -310,7 +310,9 @@ export class SourcesService {
     const [row] = await this.db
       .select({ value: count() })
       .from(sources)
-      .where(eq(sources.notebookId, notebookId));
+      .where(
+        and(eq(sources.notebookId, notebookId), isNull(sources.deletedAt)),
+      );
     return row?.value ?? 0;
   }
 
@@ -319,7 +321,9 @@ export class SourcesService {
     const rows = await this.db
       .select({ url: sources.url })
       .from(sources)
-      .where(eq(sources.notebookId, notebookId));
+      .where(
+        and(eq(sources.notebookId, notebookId), isNull(sources.deletedAt)),
+      );
     return rows.map((r) => r.url).filter((url): url is string => url !== null);
   }
 
@@ -558,11 +562,19 @@ export class SourcesService {
 
     if (folderId !== null) {
       const [folder] = await this.db
-        .select({ id: sourceFolders.id, notebookId: sourceFolders.notebookId })
+        .select({
+          id: sourceFolders.id,
+          notebookId: sourceFolders.notebookId,
+          deletedAt: sourceFolders.deletedAt,
+        })
         .from(sourceFolders)
         .where(eq(sourceFolders.id, folderId));
 
-      if (!folder || folder.notebookId !== source.notebookId) {
+      if (
+        !folder ||
+        folder.deletedAt ||
+        folder.notebookId !== source.notebookId
+      ) {
         throw new NotFoundError('SourceFolder', {
           messageKey: 'errors.sources.folder.notFound',
         });
@@ -803,7 +815,7 @@ export class SourcesService {
     const [source] = await this.db
       .select()
       .from(sources)
-      .where(eq(sources.id, id));
+      .where(and(eq(sources.id, id), isNull(sources.deletedAt)));
     if (!source) {
       throw new NotFoundError('Source', {
         messageKey: 'errors.sources.source.notFound',

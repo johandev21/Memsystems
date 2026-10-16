@@ -268,7 +268,7 @@ function FolderDeleteConfirmation({
       open={folder !== null}
       onOpenChange={(open) => !open && onClose()}
       title={t("deleteDialog.folderTitle", "Delete folder")}
-      description={t("deleteDialog.description", { name: folder?.name ?? "" })}
+      description={t("deleteDialog.folderDescription", { name: folder?.name ?? "" })}
       onConfirm={() => {
         if (folder) onConfirm(folder.id);
         onClose();

@@ -280,7 +280,11 @@ function ItemDeleteConfirmation({
           ? t("deleteDialog.folderTitle", "Delete folder")
           : t("deleteDialog.materialTitle", "Delete study material")
       }
-      description={t("deleteDialog.description", { name: item?.name ?? "" })}
+      description={
+        item?.type === "folder"
+          ? t("deleteDialog.folderDescription", { name: item.name })
+          : t("deleteDialog.description", { name: item?.name ?? "" })
+      }
       onConfirm={onConfirm}
     />
   );

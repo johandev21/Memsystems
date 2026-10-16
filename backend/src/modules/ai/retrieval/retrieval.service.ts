@@ -746,6 +746,7 @@ export class RetrievalService {
             ${leg.join ?? sql``}
             WHERE sc.notebook_id = ${search.notebookId}
               AND s.processing_status <> 'degraded'
+              AND s.deleted_at IS NULL
               ${leg.predicate ?? sql``}
               ${sourceFilter}
           ) ranked
@@ -765,6 +766,7 @@ export class RetrievalService {
         ${leg.join ?? sql``}
         WHERE sc.notebook_id = ${search.notebookId}
           AND s.processing_status <> 'degraded'
+          AND s.deleted_at IS NULL
           ${leg.predicate ?? sql``}
         ORDER BY ${leg.rank}, sc.id
         LIMIT ${search.depth}
