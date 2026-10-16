@@ -1,9 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { notebookFolders, notebooks } from '../../database/schema';
+import {
+  notebookFolders,
+  notebooks,
+  sourceFolders,
+  sources,
+  studyMaterialFolders,
+  studyMaterials,
+} from '../../database/schema';
 import type { GroundingMode } from '../../database/schema';
 import { DEFAULT_GROUNDING_MODE, isGroundingMode } from './grounding-mode';
 import {
@@ -11,6 +18,7 @@ import {
   NotFoundError,
 } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
+import { JobQueueService } from '../jobs/job-queue.service';
 import { StorageService } from '../storage/storage.service';
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -126,6 +134,7 @@ export class NotebooksService {
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly storageService: StorageService,
+    @Optional() private readonly jobQueue?: JobQueueService,
   ) {}
 
   async assertNotebookOwner(notebookId: string): Promise<void> {
@@ -306,12 +315,88 @@ export class NotebooksService {
         messageKey: 'errors.notebooks.notebook.notFound',
       });
     }
-    if (row.banner) {
-      await this.storageService.deleteObject(row.banner).catch(() => {});
+
+    const now = new Date();
+
+    // Find sources to cancel their jobs
+    const notebookSources = await this.db
+      .select({ id: sources.id })
+      .from(sources)
+      .where(and(eq(sources.notebookId, id), isNull(sources.deletedAt)));
+
+    if (this.jobQueue) {
+      for (const s of notebookSources) {
+        await this.jobQueue.cancelByGroup(`source:${s.id}`).catch(() => {});
+        await this.jobQueue
+          .cancelByGroup(`source:${s.id}:processing`)
+          .catch(() => {});
+      }
     }
-    await this.deleteBannerVariantObjects(row.bannerVariants);
-    await this.db.delete(notebooks).where(eq(notebooks.id, id));
-    return toResponse(row);
+
+    const doSoftDelete = async (executor: typeof this.db) => {
+      // 1. Soft-delete study materials
+      await executor
+        .update(studyMaterials)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(studyMaterials.notebookId, id),
+            isNull(studyMaterials.deletedAt),
+          ),
+        );
+
+      // 2. Soft-delete study material folders
+      await executor
+        .update(studyMaterialFolders)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(studyMaterialFolders.notebookId, id),
+            isNull(studyMaterialFolders.deletedAt),
+          ),
+        );
+
+      // 3. Soft-delete sources
+      await executor
+        .update(sources)
+        .set({ deletedAt: now })
+        .where(and(eq(sources.notebookId, id), isNull(sources.deletedAt)));
+
+      // 4. Soft-delete source folders
+      await executor
+        .update(sourceFolders)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(sourceFolders.notebookId, id),
+            isNull(sourceFolders.deletedAt),
+          ),
+        );
+
+      // 5. Soft-delete notebook itself
+      await executor
+        .update(notebooks)
+        .set({ deletedAt: now })
+        .where(eq(notebooks.id, id));
+    };
+
+    const maybeTx = (
+      this.db as unknown as {
+        transaction?: (
+          cb: (tx: typeof this.db) => Promise<void>,
+        ) => Promise<void>;
+      }
+    ).transaction;
+
+    if (maybeTx) {
+      await maybeTx.call(this.db, async (tx: typeof this.db) => {
+        await doSoftDelete(tx);
+      });
+    } else {
+      await doSoftDelete(this.db);
+    }
+
+    return toResponse({ ...row, deletedAt: now });
   }
 
   async removeBanner(notebookId: string) {

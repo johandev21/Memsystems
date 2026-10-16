@@ -539,13 +539,12 @@ export class SourcesService {
   }
 
   async delete(id: string) {
-    const source = await this.fetchOwned(id);
-    if (source.kind === 'file' && source.s3Key) {
-      await this.storageService.deleteObject(source.s3Key).catch(() => {});
-    }
+    await this.fetchOwned(id);
     await this.sourceJobsService.cancelForSource(id);
+    const now = new Date();
     const [deleted] = await this.db
-      .delete(sources)
+      .update(sources)
+      .set({ deletedAt: now })
       .where(eq(sources.id, id))
       .returning();
     return deleted;

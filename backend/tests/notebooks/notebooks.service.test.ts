@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
+import * as appSchema from '../../src/database/schema';
 import { NotebooksService } from '../../src/modules/notebooks/notebooks.service';
 import { StorageService } from '../../src/modules/storage/storage.service';
-import { seedNotebook } from '../fixtures';
+import {
+  seedNotebook,
+  seedSource,
+  seedSourceFolder,
+  seedStudyMaterial,
+  seedStudyMaterialFolder,
+} from '../fixtures';
 import { db } from '../db';
 
 describe('NotebooksService Integration Tests', () => {
@@ -46,13 +54,68 @@ describe('NotebooksService Integration Tests', () => {
     expect(updated.icon).toBe('notebook');
   });
 
-  it('should delete a notebook', async () => {
-    const notebook = await seedNotebook({ title: 'To Delete' });
+  it('should soft-delete a notebook and cascade to its folders and contents', async () => {
+    const notebook = await seedNotebook({ title: 'To Soft Delete' });
 
-    await notebooksService.delete(notebook.id);
+    // Seed child source folder & source
+    const srcFolder = await seedSourceFolder(notebook.id, {
+      name: 'Source Folder',
+    });
+    const src = await seedSource(notebook.id, {
+      title: 'Source Item',
+      folderId: srcFolder.id,
+    });
 
+    // Seed child study material folder & study material
+    const smFolder = await seedStudyMaterialFolder(notebook.id, {
+      name: 'SM Folder',
+    });
+    const sm = await seedStudyMaterial(notebook.id, {
+      kind: 'quiz',
+      title: 'Quiz Item',
+      folderId: smFolder.id,
+    });
+
+    // Delete notebook
+    const deletedRes = await notebooksService.delete(notebook.id);
+    expect(deletedRes.id).toBe(notebook.id);
+
+    // Notebook get and list should exclude it
     await expect(notebooksService.get(notebook.id)).rejects.toThrow(
       'Notebook not found',
     );
+    const list = await notebooksService.list();
+    expect(list).toEqual([]);
+
+    // Check database rows for soft-delete timestamps
+    const [nbRow] = await db
+      .select()
+      .from(appSchema.notebooks)
+      .where(eq(appSchema.notebooks.id, notebook.id));
+    expect(nbRow.deletedAt).toBeInstanceOf(Date);
+
+    const [srcFolderRow] = await db
+      .select()
+      .from(appSchema.sourceFolders)
+      .where(eq(appSchema.sourceFolders.id, srcFolder.id));
+    expect(srcFolderRow.deletedAt).toBeInstanceOf(Date);
+
+    const [srcRow] = await db
+      .select()
+      .from(appSchema.sources)
+      .where(eq(appSchema.sources.id, src.id));
+    expect(srcRow.deletedAt).toBeInstanceOf(Date);
+
+    const [smFolderRow] = await db
+      .select()
+      .from(appSchema.studyMaterialFolders)
+      .where(eq(appSchema.studyMaterialFolders.id, smFolder.id));
+    expect(smFolderRow.deletedAt).toBeInstanceOf(Date);
+
+    const [smRow] = await db
+      .select()
+      .from(appSchema.studyMaterials)
+      .where(eq(appSchema.studyMaterials.id, sm.id));
+    expect(smRow.deletedAt).toBeInstanceOf(Date);
   });
 });

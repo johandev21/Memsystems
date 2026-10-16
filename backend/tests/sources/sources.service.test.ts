@@ -26,13 +26,15 @@ function mockStorageService() {
     contentLength: 1024,
     metadata: {},
   });
+  vi.spyOn(s, 'deleteObject').mockResolvedValue(undefined as any);
   return s;
 }
 
 function createSourcesService(
-  overrides: { acquisition?: any; jobs?: any } = {},
+  overrides: { acquisition?: any; jobs?: any; storage?: any } = {},
 ) {
-  const notebooksService = new NotebooksService(db, mockStorageService());
+  const storage = overrides.storage ?? mockStorageService();
+  const notebooksService = new NotebooksService(db, storage);
   const acquisition = overrides.acquisition ?? {
     acquireUrl: vi.fn(),
     acquireFile: vi.fn(),
@@ -54,7 +56,7 @@ function createSourcesService(
   const service = new SourcesService(
     db,
     notebooksService,
-    mockStorageService(),
+    storage,
     acquisition,
     jobs,
     new SourceExtractionService(),
@@ -244,23 +246,32 @@ describe.sequential('SourcesService', () => {
     expect(jobs.enqueue).toHaveBeenCalledWith(row.id);
   });
 
-  it('delete removes the source and cancels indexing', async () => {
-    const { service, jobs } = createSourcesService();
+  it('delete soft-deletes the source, cancels indexing, and preserves S3 object', async () => {
+    const storage = mockStorageService();
+    const { service, jobs } = createSourcesService({ storage });
     const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
-      kind: 'text',
+      kind: 'file',
       title: 'Doomed',
       rawText: 'content',
+      s3Key: 'sources/test.pdf',
     });
 
     await service.delete(source.id);
     expect(jobs.cancelForSource).toHaveBeenCalledWith(source.id);
+    expect(storage.deleteObject).not.toHaveBeenCalled();
 
-    const rows = await db
+    const [row] = await db
       .select()
       .from(sources)
       .where(eq(sources.id, source.id));
-    expect(rows).toHaveLength(0);
+    expect(row).toBeDefined();
+    expect(row.deletedAt).toBeInstanceOf(Date);
+
+    // List and get should now exclude it
+    const list = await service.list(notebook.id);
+    expect(list).toHaveLength(0);
+    await expect(service.get(source.id)).rejects.toThrow('Source not found');
   });
 
   it('reindex enqueues a fresh job for an owned source', async () => {

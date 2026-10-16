@@ -3,6 +3,7 @@ import {
   notebooks,
   sourceFolders,
   sources,
+  studyMaterialFolders,
   studyMaterials,
 } from '../src/database/schema';
 import { db } from './db';
@@ -99,6 +100,28 @@ export async function seedSourceFolder(
 ) {
   const [row] = await db
     .insert(sourceFolders)
+    .values({
+      id: input.id ?? createId(),
+      notebookId,
+      name: input.name,
+      parentId: input.parentId ?? null,
+      createdAt: input.createdAt ?? new Date(),
+    })
+    .returning();
+  return row;
+}
+
+export async function seedStudyMaterialFolder(
+  notebookId: string,
+  input: {
+    id?: string;
+    name: string;
+    parentId?: string | null;
+    createdAt?: Date;
+  },
+) {
+  const [row] = await db
+    .insert(studyMaterialFolders)
     .values({
       id: input.id ?? createId(),
       notebookId,
