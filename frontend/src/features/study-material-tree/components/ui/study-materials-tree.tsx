@@ -262,11 +262,13 @@ export function StudyMaterialsTree({
               {isSearchOpen && (
                 <div className="border-b border-border/60 bg-panel-header-bg/50 px-2 py-1.5">
                   <TreeSearchBar
-                    query={searchQuery ?? ""}
-                    onQueryChange={onSearchChange ?? (() => {})}
-                    matchCount={matchCount}
-                    placeholder="Search study materials..."
+                    value={searchQuery ?? ""}
+                    onChange={onSearchChange ?? (() => {})}
+                    onClear={() => onSearchChange?.("")}
                     onClose={onToggleSearch}
+                    matchCount={matchCount}
+                    isSearching={Boolean(searchQuery && searchQuery.trim().length > 0)}
+                    placeholder="Search study materials..."
                   />
                 </div>
               )}
@@ -313,7 +315,7 @@ export function StudyMaterialsTree({
         folders={folderPickerOptions}
         title="Move study materials"
         description={`Move ${selectedIds?.size ?? 0} selected materials to:`}
-        onSelectFolder={async (targetFolderId) => {
+        onConfirm={async (targetFolderId) => {
           if (selectedIds && onBatchMove) {
             await onBatchMove(Array.from(selectedIds), targetFolderId);
           }
@@ -342,28 +344,27 @@ function TreeContent({ isPrototype }: { isPrototype: boolean }) {
   const controller = useTreeControllerContext();
   const isSearching = Boolean(controller.searchQuery && controller.searchQuery.trim().length > 0);
 
-  if (controller.tree.length === 0) {
-    if (isSearching) {
-      return (
-        <EmptyState
-          data-slot="study-materials-tree-search-empty-state"
-          className="h-full py-6"
-          icon={<Search className="size-5 text-muted-foreground" />}
-          title="No study materials found"
-          description={`No materials match "${controller.searchQuery}"`}
-        />
-      );
-    }
-    return <TreeEmptyState isPrototype={isPrototype} />;
-  }
-
   return (
     <ContextMenu>
       <TreeRootMenu />
       <ContextMenuTrigger className="block h-full">
-        <ScrollArea className="h-full">
-          <TreeBranchList />
-        </ScrollArea>
+        {controller.tree.length === 0 ? (
+          isSearching ? (
+            <EmptyState
+              data-slot="study-materials-tree-search-empty-state"
+              className="h-full py-6"
+              icon={<Search className="size-5 text-muted-foreground" />}
+              title="No study materials found"
+              description={`No materials match "${controller.searchQuery}"`}
+            />
+          ) : (
+            <TreeEmptyState isPrototype={isPrototype} />
+          )
+        ) : (
+          <ScrollArea className="h-full">
+            <TreeBranchList />
+          </ScrollArea>
+        )}
       </ContextMenuTrigger>
     </ContextMenu>
   );

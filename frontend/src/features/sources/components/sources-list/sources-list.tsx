@@ -50,6 +50,14 @@ export interface SourcesListProps {
   registerTreeSurface?: (el: HTMLDivElement | null) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLElement>, node: SourcesTreeNode) => void;
   onFocusItem?: (id: string) => void;
+  isMultiselectMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleItemSelect?: (id: string) => void;
+  onToggleFolderSelect?: (descendantIds: string[]) => void;
+  isFolderSelected?: (descendantIds: string[]) => boolean | "indeterminate";
+  searchQuery?: string;
+  isItemVisible?: (itemId: string, folderId?: string | null) => boolean;
+  isFolderVisible?: (folderId: string) => boolean;
 }
 
 export const SourcesList = memo(function SourcesList({
@@ -86,6 +94,14 @@ export const SourcesList = memo(function SourcesList({
   registerTreeSurface,
   onKeyDown,
   onFocusItem,
+  isMultiselectMode = false,
+  selectedIds,
+  onToggleItemSelect,
+  onToggleFolderSelect,
+  isFolderSelected,
+  searchQuery,
+  isItemVisible,
+  isFolderVisible,
 }: SourcesListProps) {
   const { t } = useTranslation("sources");
 
@@ -98,9 +114,35 @@ export const SourcesList = memo(function SourcesList({
     [folders, sources],
   );
 
+  const filteredTree = useMemo(() => {
+    if (!searchQuery) return tree;
+
+    const filterNodes = (nodes: readonly SourcesTreeNode[]): SourcesTreeNode[] => {
+      const result: SourcesTreeNode[] = [];
+      for (const node of nodes) {
+        if (node.type === "folder") {
+          if (isFolderVisible ? isFolderVisible(node.id) : true) {
+            const filteredChildren = filterNodes(node.children);
+            result.push({
+              ...node,
+              children: filteredChildren,
+            });
+          }
+        } else if (node.type === "source" && node.source) {
+          if (isItemVisible ? isItemVisible(node.source.id, node.source.folderId) : true) {
+            result.push(node);
+          }
+        }
+      }
+      return result;
+    };
+
+    return filterNodes(tree);
+  }, [tree, searchQuery, isFolderVisible, isItemVisible]);
+
   const flatRows = useMemo(
-    () => flattenVisibleTreeWithDepth(tree, openFolderIds),
-    [tree, openFolderIds],
+    () => flattenVisibleTreeWithDepth(filteredTree, openFolderIds),
+    [filteredTree, openFolderIds],
   );
 
   const isVirtualized =
@@ -152,6 +194,15 @@ export const SourcesList = memo(function SourcesList({
     );
   }
 
+  if (Boolean(searchQuery) && filteredTree.length === 0) {
+    return (
+      <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">No matching sources</p>
+        <p className="mt-1">Try another search term.</p>
+      </div>
+    );
+  }
+
   const branchProps = {
     allFolders: folders,
     openFolderIds,
@@ -179,6 +230,12 @@ export const SourcesList = memo(function SourcesList({
     registerNode,
     onKeyDown,
     onFocusItem,
+    isMultiselectMode,
+    selectedIds,
+    onToggleItemSelect,
+    onToggleFolderSelect,
+    isFolderSelected,
+    searchQuery,
   };
 
   if (isVirtualized) {
@@ -224,7 +281,7 @@ export const SourcesList = memo(function SourcesList({
       data-size="sm"
       className={cn(treeVariants({ size: "sm" }), "flex flex-col gap-0.5")}
     >
-      {tree.map((node) => (
+      {filteredTree.map((node) => (
         <SourcesTreeBranch key={node.id} node={node} depth={0} {...branchProps} />
       ))}
     </div>
@@ -245,6 +302,9 @@ function areSourcesListPropsEqual(prev: SourcesListProps, next: SourcesListProps
     prev.deletingId === next.deletingId &&
     prev.retryingId === next.retryingId &&
     prev.cancellingId === next.cancellingId &&
-    prev.scrollElement === next.scrollElement
+    prev.scrollElement === next.scrollElement &&
+    prev.isMultiselectMode === next.isMultiselectMode &&
+    prev.selectedIds === next.selectedIds &&
+    prev.searchQuery === next.searchQuery
   );
 }

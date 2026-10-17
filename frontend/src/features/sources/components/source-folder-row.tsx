@@ -20,7 +20,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
+import { Checkbox } from "@/components/ui/checkbox";
+import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
 import type { SourceFolder } from "../types/source-folder.types";
 
 export interface SourceFolderRowProps {
@@ -47,6 +48,11 @@ export interface SourceFolderRowProps {
   registerNode?: (id: string, el: HTMLElement | null) => void;
   onFocus?: () => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => void;
+  isMultiselectMode?: boolean;
+  isSelected?: boolean | "indeterminate";
+  onToggleSelect?: () => void;
+  searchQuery?: string;
+  bundledIds?: readonly string[];
 }
 
 export function SourceFolderRow({
@@ -73,6 +79,11 @@ export function SourceFolderRow({
   registerNode,
   onFocus,
   onKeyDown,
+  isMultiselectMode = false,
+  isSelected = false,
+  onToggleSelect,
+  searchQuery,
+  bundledIds,
 }: SourceFolderRowProps) {
   const { t } = useTranslation(["tree", "sources"]);
 
@@ -98,6 +109,7 @@ export function SourceFolderRow({
     dragType: "sources-tree-item",
     folderDropType: "sources-tree-folder",
     hoverOpenDelayMs: 550,
+    bundledIds,
   });
 
   const validTargetFolders = (allFolders ?? []).filter((f) =>
@@ -153,6 +165,16 @@ export function SourceFolderRow({
         }
       }}
     >
+      {isMultiselectMode && (
+        <Checkbox
+          checked={isSelected === true}
+          indeterminate={isSelected === "indeterminate"}
+          onCheckedChange={() => onToggleSelect?.()}
+          onClick={(e) => e.stopPropagation()}
+          className="mr-1.5 shrink-0"
+          aria-label={`Select ${folder.name}`}
+        />
+      )}
       {isOpen ? (
         <FolderOpen className="size-(--tree-icon-size) shrink-0" strokeWidth={1.7} />
       ) : (
@@ -167,9 +189,11 @@ export function SourceFolderRow({
           size="sm"
         />
       ) : (
-        <span className="min-w-0 flex-1 truncate leading-none" title={folder.name}>
-          {folder.name}
-        </span>
+        <HighlightMatch
+          text={folder.name}
+          query={searchQuery}
+          className="min-w-0 flex-1 truncate leading-none"
+        />
       )}
     </div>
   );

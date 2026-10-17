@@ -17,6 +17,7 @@ export interface TreePendingDelete<TType extends string = string> {
 export interface TreeDragData<TDragType extends string = string> {
   readonly type: TDragType;
   readonly itemId: string;
+  readonly bundledIds?: readonly string[];
 }
 
 export type TreeDropData<

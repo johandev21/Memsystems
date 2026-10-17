@@ -127,8 +127,8 @@ function TreeLoadedContent({
         isPanelExpanded={isPanelExpanded}
         onPanelToggle={onPanelToggle}
         contentHeight={variant ?? "standalone"}
-        searchQuery={search.query}
-        onSearchChange={search.setQuery}
+        searchQuery={search.searchQuery}
+        onSearchChange={search.setSearchQuery}
         matchCount={search.matchCount}
         isItemVisible={search.isItemVisible}
         isFolderVisible={search.isFolderVisible}
@@ -221,8 +221,8 @@ export function StudyMaterialsTreeContainer({
   });
 
   useEffect(() => {
-    if (!isSearchOpen && search.query) {
-      search.setQuery("");
+    if (!isSearchOpen && search.searchQuery) {
+      search.setSearchQuery("");
     }
   }, [isSearchOpen, search]);
 

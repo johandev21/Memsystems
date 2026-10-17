@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { CheckSquare, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -14,6 +14,10 @@ export interface SourcesPanelHeaderProps {
   notebookId: string;
   onToggleCollapse?: () => void;
   canMove?: (draggedItemId: string, targetFolderId: string | null) => boolean;
+  isSearchOpen?: boolean;
+  onToggleSearch?: () => void;
+  isMultiselectMode?: boolean;
+  onToggleMultiselect?: () => void;
 }
 
 export function SourcesPanelHeader({
@@ -21,6 +25,10 @@ export function SourcesPanelHeader({
   notebookId,
   onToggleCollapse,
   canMove,
+  isSearchOpen,
+  onToggleSearch,
+  isMultiselectMode,
+  onToggleMultiselect,
 }: SourcesPanelHeaderProps) {
   const { t } = useTranslation("notebooks");
 
@@ -46,25 +54,71 @@ export function SourcesPanelHeader({
       </h2>
       <div className="flex items-center gap-0.5">
         {!collapsed && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <AddSourceDialog notebookId={notebookId}>
-                  <button
-                    type="button"
-                    className={cn(
-                      buttonVariants({ variant: "ghost", size: "icon" }),
-                      "h-7 w-7 cursor-pointer active:scale-97 transition-transform touch-manipulation",
-                    )}
-                    aria-label={t("panels.addSource")}
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </AddSourceDialog>
-              }
-            />
-            <TooltipContent>{t("panels.addSource")}</TooltipContent>
-          </Tooltip>
+          <>
+            {onToggleSearch && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-7 w-7 cursor-pointer active:scale-97 transition-transform touch-manipulation",
+                        isSearchOpen && "bg-accent text-accent-foreground font-semibold",
+                      )}
+                      aria-label="Search sources"
+                      onClick={onToggleSearch}
+                    >
+                      <Search className="size-4" />
+                    </Button>
+                  }
+                />
+                <TooltipContent>Search sources</TooltipContent>
+              </Tooltip>
+            )}
+
+            {onToggleMultiselect && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-7 w-7 cursor-pointer active:scale-97 transition-transform touch-manipulation",
+                        isMultiselectMode && "bg-accent text-accent-foreground font-semibold",
+                      )}
+                      aria-label="Select multiple sources"
+                      onClick={onToggleMultiselect}
+                    >
+                      <CheckSquare className="size-4" />
+                    </Button>
+                  }
+                />
+                <TooltipContent>Select multiple</TooltipContent>
+              </Tooltip>
+            )}
+
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <AddSourceDialog notebookId={notebookId}>
+                    <button
+                      type="button"
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "icon" }),
+                        "h-7 w-7 cursor-pointer active:scale-97 transition-transform touch-manipulation",
+                      )}
+                      aria-label={t("panels.addSource")}
+                    >
+                      <Plus className="size-4" />
+                    </button>
+                  </AddSourceDialog>
+                }
+              />
+              <TooltipContent>{t("panels.addSource")}</TooltipContent>
+            </Tooltip>
+          </>
         )}
         {onToggleCollapse && (
           <Button
