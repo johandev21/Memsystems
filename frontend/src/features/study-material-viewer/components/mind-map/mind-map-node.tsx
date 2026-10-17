@@ -18,14 +18,12 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
 
   return (
     <div
-      style={data.item.color ? ({ "--node-color": data.item.color } as React.CSSProperties) : undefined}
       className={cn(
-        "group relative min-w-37.5 max-w-47.5 sm:min-w-47.5 sm:max-w-57.5 rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200",
+        "group relative min-w-37.5 max-w-47.5 sm:min-w-47.5 sm:max-w-57.5 rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200 shadow-2xs",
         isRoot &&
-          "min-w-42.5 sm:min-w-52.5 rounded-full border-surface-border bg-surface-3 text-text-primary",
-        data.selected && !isRoot && "bg-surface-3 border-surface-border",
+          "min-w-42.5 sm:min-w-52.5 rounded-xl border-surface-border-strong bg-surface-3 font-semibold shadow-xs",
+        data.selected && !isRoot && "bg-surface-3 border-surface-border-strong ring-1 ring-surface-border-strong shadow-xs",
         !data.selected && !isRoot && "hover:bg-surface-3 hover:border-surface-border",
-        data.item.color && "border-l-4 border-l-(--node-color)",
       )}
     >
       <Handle
@@ -34,7 +32,12 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
         className="!h-1 !w-1 !border-0 !bg-transparent"
       />
       <div className="flex items-center gap-2">
-        <span className="text-xs sm:text-sm font-semibold leading-tight wrap-break-word">
+        <span
+          className={cn(
+            "text-xs sm:text-sm leading-tight wrap-break-word",
+            isRoot ? "font-bold text-text-primary" : "font-medium text-text-primary",
+          )}
+        >
           {data.item.label}
         </span>
       </div>
@@ -51,7 +54,7 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
             event.stopPropagation();
             data.onToggle(data.item.id);
           }}
-          className="absolute -right-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border border-surface-border-strong bg-surface-2 text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
+          className="absolute -right-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border border-surface-border-strong bg-surface-2 text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary cursor-pointer active:scale-95 touch-manipulation shadow-2xs"
         >
           <ChevronRight
             className={cn("size-3.5 transition-transform", data.expanded && "rotate-90")}

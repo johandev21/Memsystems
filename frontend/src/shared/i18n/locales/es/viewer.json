@@ -54,8 +54,10 @@
   "mindMap": {
     "center": "Centrar el nodo seleccionado",
     "collapse": "Contraer {{label}}",
+    "collapseAll": "Contraer todos los nodos",
     "empty": "Este mapa mental aún no tiene nodos conectados.",
     "expand": "Expandir {{label}}",
+    "expandAll": "Expandir todos los nodos",
     "hint": "Arrastra para desplazarte · Usa la rueda para hacer zoom · Haz clic en un nodo para explorar",
     "prompt": {
       "context": " del material de estudio \"{{title}}\"",

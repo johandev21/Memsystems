@@ -162,7 +162,6 @@ const mindMapTemplate: PromptTemplate = {
 All node labels MUST use natural Title Case capitalization with spaces.
 Generate nodes with clear labels and edges showing relationships.
 Most edges should be directed (from parent to child concept).
-Use optional colors to group related nodes.
 Identify the root node that represents the main topic.
 Return one JSON object with this exact shape:
 {"title":"Mapping Core Concepts","rootId":"root-node-id","nodes":[{"id":"root-node-id","label":"Main Topic","color":"#64748b","position":{"x":0,"y":0}},{"id":"child-node-id","label":"Related Concept","color":"#64748b","position":{"x":1,"y":0}}],"edges":[{"id":"edge-1","sourceId":"root-node-id","targetId":"child-node-id","label":"relates to","directed":true}]}.

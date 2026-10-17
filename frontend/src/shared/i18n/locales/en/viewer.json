@@ -54,8 +54,10 @@
   "mindMap": {
     "center": "Center selected node",
     "collapse": "Collapse {{label}}",
+    "collapseAll": "Collapse all nodes",
     "empty": "This mind map has no connected nodes yet.",
     "expand": "Expand {{label}}",
+    "expandAll": "Expand all nodes",
     "hint": "Drag to pan · Scroll to zoom · Click a node to explore",
     "prompt": {
       "context": " from the study material \"{{title}}\"",

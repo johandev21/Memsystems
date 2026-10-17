@@ -27,6 +27,7 @@ import type { StudyMaterialKind } from "@/features/study-material-viewer/types";
 import { useTranslation } from "react-i18next";
 import { kindLabelKey } from "../kind-label";
 import type { BriefFormData } from "./forms/types";
+import { DEFAULT_MIND_MAP_OPTIONS } from "./forms/mind-map-options";
 import { DEFAULT_ROADMAP_OPTIONS } from "./forms/roadmap-options";
 import { DEFAULT_SLIDES_OPTIONS } from "./forms/slides-theme-options";
 import { BriefForm } from "./BriefForm";
@@ -92,7 +93,8 @@ export function GenerateBriefDialog({
         difficulty,
         roadmapOptions:
           kind === "roadmap" ? (roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS) : roadmapOptions,
-        mindMapOptions,
+        mindMapOptions:
+          kind === "mind_map" ? (mindMapOptions ?? DEFAULT_MIND_MAP_OPTIONS) : mindMapOptions,
         slidesOptions:
           kind === "slides" ? (slidesOptions ?? DEFAULT_SLIDES_OPTIONS) : slidesOptions,
       },
@@ -185,7 +187,7 @@ export function GenerateBriefDialog({
           "bg-surface-1 border border-surface-border generate-material-dialog",
           "max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden",
           "min-w-0 [&>*]:min-w-0",
-          "sm:max-w-2xl sm:pb-6",
+          "sm:max-w-xl sm:pb-6",
         )}
       >
         <DialogHeader>
@@ -285,16 +287,7 @@ function getInitialBriefState(kind?: StudyMaterialKind | null): BriefFormData {
     questionCount: 10,
     difficulty: "medium",
     roadmapOptions: kind === "roadmap" ? { ...DEFAULT_ROADMAP_OPTIONS } : undefined,
-    mindMapOptions:
-      kind === "mind_map"
-        ? {
-            nodeCount: 20,
-            structure: "hierarchical",
-            colorGroups: true,
-            crossLinks: false,
-            detailLevel: "basic",
-          }
-        : undefined,
+    mindMapOptions: kind === "mind_map" ? { ...DEFAULT_MIND_MAP_OPTIONS } : undefined,
     slidesOptions: kind === "slides" ? { ...DEFAULT_SLIDES_OPTIONS } : undefined,
   };
 }

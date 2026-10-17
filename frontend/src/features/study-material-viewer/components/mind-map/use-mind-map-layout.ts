@@ -137,6 +137,30 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
     return () => window.clearTimeout(timeout);
   }, [fitView, graph.edges, graph.nodes, viewportFocus]);
 
+  const allBranchIds = useMemo(() => {
+    if (!root) return new Set<string>();
+    const branchIds = new Set<string>();
+    const collect = (item: MapItem) => {
+      if (item.children.length > 0) {
+        branchIds.add(item.id);
+        item.children.forEach(collect);
+      }
+    };
+    collect(root);
+    return branchIds;
+  }, [root]);
+
+  const expandAll = useCallback(() => {
+    setExpandedIds(new Set(allBranchIds));
+    window.setTimeout(() => fitView({ duration: 400, padding: 0.24 }), 50);
+  }, [allBranchIds, fitView]);
+
+  const collapseAll = useCallback(() => {
+    setExpandedIds(new Set(rootId ? [rootId] : []));
+    setSelectedId(rootId);
+    window.setTimeout(() => fitView({ duration: 400, padding: 0.24 }), 50);
+  }, [fitView, rootId]);
+
   const handleCenterSelected = () => {
     const node = nodes.find((candidate) => candidate.id === selectedId);
     if (node) {
@@ -156,5 +180,7 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
     handleCenterSelected,
     zoomIn: () => zoomIn({ duration: 300 }),
     zoomOut: () => zoomOut({ duration: 300 }),
+    expandAll,
+    collapseAll,
   };
 }

@@ -303,10 +303,6 @@ describe("GenerateBriefDialog", () => {
 
     await user.click(screen.getByRole("button", { name: /Next Step/i }));
 
-    await user.click(screen.getByRole("button", { name: /^Grouped colors/ }));
-
-    await user.click(screen.getByRole("button", { name: /Next Step/i }));
-
     const instructions = screen.getByPlaceholderText(
       "What should this map explain? Describe the topic, question, or connections...",
     );
@@ -328,7 +324,7 @@ describe("GenerateBriefDialog", () => {
         mindMapOptions: {
           nodeCount: 20,
           structure: "hierarchical",
-          colorGroups: true,
+          colorGroups: false,
           crossLinks: false,
           detailLevel: "basic",
         },

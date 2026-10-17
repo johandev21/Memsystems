@@ -1,9 +1,8 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefInstructionsStep } from "./brief-instructions-step";
 import {
-  BriefBackButton,
   BriefFieldLabel,
   BriefNextButton,
   BriefStep,
@@ -14,22 +13,16 @@ import {
 import { BriefWizardHeader } from "./brief-wizard-header";
 import { CountSelector } from "./count-selector";
 import { GenerationSourcePopover } from "./generation-source-popover";
+import {
+  CUSTOM_NODE_DEFAULT,
+  DEFAULT_MIND_MAP_OPTIONS,
+  MAX_NODE_COUNT,
+  NODE_PRESETS,
+} from "./mind-map-options";
 import type { BaseMaterialFormProps, MindMapOptions } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
-type GroupingId = "plain" | "grouped";
-
-const NODE_PRESETS = [10, 20, 30];
-const MAX_NODE_COUNT = 100;
-const CUSTOM_NODE_DEFAULT = 40;
-
-const DEFAULT_MIND_MAP_OPTIONS: MindMapOptions = {
-  nodeCount: 20,
-  structure: "hierarchical",
-  colorGroups: true,
-  crossLinks: false,
-  detailLevel: "basic",
-};
+const TOTAL_STEPS = 2;
 
 export function MindMapBriefForm({
   notebookId,
@@ -41,22 +34,19 @@ export function MindMapBriefForm({
 }: BaseMaterialFormProps) {
   const { t } = useTranslation("generation");
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
-    useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: 3 });
+    useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: TOTAL_STEPS });
 
   const currentOptions = value.mindMapOptions ?? DEFAULT_MIND_MAP_OPTIONS;
   const nodeCount = currentOptions.nodeCount || DEFAULT_MIND_MAP_OPTIONS.nodeCount;
   const rawDetailLevel = currentOptions.detailLevel as string;
   const detailLevel = (rawDetailLevel === "auto" ? "basic" : rawDetailLevel) as "basic" | "detailed";
-  const storedColorGroups = currentOptions.colorGroups as boolean | "auto";
-  const normalizedColorGroups = storedColorGroups === "auto" ? true : storedColorGroups;
-  const colorGroupsId: GroupingId = normalizedColorGroups ? "grouped" : "plain";
 
   const updateMindMapOptions = (patch: Partial<MindMapOptions>) => {
     onChange({
       mindMapOptions: {
         nodeCount: patch.nodeCount ?? nodeCount,
         structure: "hierarchical",
-        colorGroups: patch.colorGroups !== undefined ? patch.colorGroups : normalizedColorGroups,
+        colorGroups: false,
         crossLinks: false,
         detailLevel: patch.detailLevel ?? detailLevel,
       },
@@ -76,19 +66,6 @@ export function MindMapBriefForm({
     },
   ];
 
-  const groupingOptions = [
-    {
-      id: "plain" as const,
-      title: t("mindMap.colorGroups.plain.title"),
-      desc: t("mindMap.colorGroups.plain.desc"),
-    },
-    {
-      id: "grouped" as const,
-      title: t("mindMap.colorGroups.grouped.title"),
-      desc: t("mindMap.colorGroups.grouped.desc"),
-    },
-  ];
-
   const mapSizeLabel =
     nodeCount >= MAX_NODE_COUNT
       ? t("mindMap.nodeCountMax", { count: nodeCount, max: MAX_NODE_COUNT })
@@ -99,7 +76,7 @@ export function MindMapBriefForm({
       <BriefWizardHeader
         title={t("wizard.title", { kind: t("kinds.mind_map") })}
         step={step}
-        totalSteps={3}
+        totalSteps={TOTAL_STEPS}
         onStepChange={setStep}
       />
       {step === 1 ? (
@@ -124,30 +101,10 @@ export function MindMapBriefForm({
               value={detailLevel}
               onChange={(next) => updateMindMapOptions({ detailLevel: next })}
             />
-          </BriefStepFields>
-
-          <BriefStepFooter>
-            <BriefStepHint>{t("wizard.nextHintOptions")}</BriefStepHint>
-            <BriefNextButton onClick={() => setStep(2)}>
-              {t("actions.nextStep")}
-              <ArrowRight className="size-4" />
-            </BriefNextButton>
-          </BriefStepFooter>
-        </BriefStep>
-      ) : step === 2 ? (
-        <BriefStep>
-          <BriefStepFields>
-            <BriefChoiceField
-              columns={2}
-              label={t("mindMap.visualGroupingLabel")}
-              options={groupingOptions}
-              value={colorGroupsId}
-              onChange={(id) => updateMindMapOptions({ colorGroups: id === "grouped" })}
-            />
 
             <div className="flex flex-col gap-2">
               <BriefFieldLabel required={!hasInstructions}>
-                {t("fields.knowledgeSourcesStep4")}
+                {t("fields.knowledgeSourcesStep3")}
               </BriefFieldLabel>
               <GenerationSourcePopover
                 sources={sources}
@@ -159,12 +116,8 @@ export function MindMapBriefForm({
           </BriefStepFields>
 
           <BriefStepFooter>
-            <BriefBackButton onClick={() => setStep(1)}>
-              <ArrowLeft className="size-4" />
-              {t("actions.back")}
-            </BriefBackButton>
             <BriefStepHint>{t("wizard.nextHintInstructions")}</BriefStepHint>
-            <BriefNextButton onClick={() => setStep(3)}>
+            <BriefNextButton onClick={() => setStep(2)}>
               {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </BriefNextButton>
@@ -183,7 +136,7 @@ export function MindMapBriefForm({
           disabled={disabled}
           onBriefChange={(brief) => patchFormData({ brief })}
           onFolderIdChange={(folderId) => patchFormData({ folderId })}
-          onBack={() => setStep(2)}
+          onBack={() => setStep(1)}
           onSubmit={onSubmit}
         />
       )}
