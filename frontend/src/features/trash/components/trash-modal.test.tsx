@@ -237,6 +237,50 @@ describe("TrashModal", () => {
     }
   });
 
+  it("optimistically updates and invalidates library and folder queries upon restore", async () => {
+    setDesktopViewport(true);
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    vi.spyOn(trashApi, "fetchTrashPage").mockResolvedValue({
+      items: [
+        {
+          id: "folder-opt-1",
+          name: "Optimistic Folder",
+          kind: "notebook_folder",
+          subtypeLabel: "Folder",
+          daysRemaining: 20,
+          deletedAt: new Date().toISOString(),
+        },
+      ],
+      nextCursor: null,
+    });
+    vi.spyOn(trashApi, "restoreTrashItem").mockResolvedValue({
+      success: true,
+      id: "folder-opt-1",
+      kind: "notebook_folder",
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrashModal open={true} onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Optimistic Folder")).toBeTruthy();
+
+    const restoreBtn = screen.getByRole("button", { name: "Restore" });
+    await user.click(restoreBtn);
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["trash"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["library"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["source-folders"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["study-material-folders"] });
+  });
+
   it("renders mobile drawer when screen width is under 640px", async () => {
     setDesktopViewport(false);
     vi.spyOn(trashApi, "fetchTrashPage").mockResolvedValue({

@@ -175,17 +175,18 @@ export class SourceFolderService {
     if (targetParentId) {
       targetParentId = await this.findAliveAncestor(targetParentId);
     }
+    const now = new Date();
     await this.db
       .update(sources)
       .set({ deletedAt: null })
       .where(inArray(sources.folderId, descendantFolderIds));
     await this.db
       .update(sourceFolders)
-      .set({ deletedAt: null })
+      .set({ deletedAt: null, updatedAt: now })
       .where(inArray(sourceFolders.id, descendantFolderIds));
     const [restored] = await this.db
       .update(sourceFolders)
-      .set({ deletedAt: null, parentId: targetParentId })
+      .set({ deletedAt: null, parentId: targetParentId, updatedAt: now })
       .where(eq(sourceFolders.id, folderId))
       .returning();
     return restored;

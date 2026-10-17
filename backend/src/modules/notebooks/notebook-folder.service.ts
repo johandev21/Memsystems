@@ -154,17 +154,18 @@ export class NotebookFolderService {
     if (targetParentId) {
       targetParentId = await this.findAliveAncestor(targetParentId);
     }
+    const now = new Date();
     await this.db
       .update(notebooks)
-      .set({ deletedAt: null })
+      .set({ deletedAt: null, updatedAt: now })
       .where(inArray(notebooks.folderId, descendantFolderIds));
     await this.db
       .update(notebookFolders)
-      .set({ deletedAt: null })
+      .set({ deletedAt: null, updatedAt: now })
       .where(inArray(notebookFolders.id, descendantFolderIds));
     const [restored] = await this.db
       .update(notebookFolders)
-      .set({ deletedAt: null, parentId: targetParentId })
+      .set({ deletedAt: null, parentId: targetParentId, updatedAt: now })
       .where(eq(notebookFolders.id, folderId))
       .returning();
     return restored;

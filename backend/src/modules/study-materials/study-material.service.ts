@@ -160,9 +160,10 @@ export class StudyMaterialService {
     if (targetFolderId) {
       targetFolderId = await this.findAliveAncestor(targetFolderId);
     }
+    const now = new Date();
     const [restored] = await this.db
       .update(studyMaterials)
-      .set({ deletedAt: null, folderId: targetFolderId })
+      .set({ deletedAt: null, folderId: targetFolderId, updatedAt: now })
       .where(eq(studyMaterials.id, smId))
       .returning();
     return restored;

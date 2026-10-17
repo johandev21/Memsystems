@@ -185,11 +185,12 @@ export class TrashLedgerService {
             await this.findAliveNotebookFolderAncestor(targetFolderId);
         }
 
+        const now = new Date();
         const doRestore = async (executor: typeof this.db) => {
           // Restore notebook
           await executor
             .update(notebooks)
-            .set({ deletedAt: null, folderId: targetFolderId })
+            .set({ deletedAt: null, folderId: targetFolderId, updatedAt: now })
             .where(eq(notebooks.id, id));
           // Restore child sources
           await executor
@@ -199,17 +200,17 @@ export class TrashLedgerService {
           // Restore child source folders
           await executor
             .update(sourceFolders)
-            .set({ deletedAt: null })
+            .set({ deletedAt: null, updatedAt: now })
             .where(eq(sourceFolders.notebookId, id));
           // Restore child study materials
           await executor
             .update(studyMaterials)
-            .set({ deletedAt: null })
+            .set({ deletedAt: null, updatedAt: now })
             .where(eq(studyMaterials.notebookId, id));
           // Restore child study material folders
           await executor
             .update(studyMaterialFolders)
-            .set({ deletedAt: null })
+            .set({ deletedAt: null, updatedAt: now })
             .where(eq(studyMaterialFolders.notebookId, id));
         };
 

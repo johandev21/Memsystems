@@ -1,6 +1,12 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -28,6 +34,10 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  libraryQueryOptions,
+  type LibraryResponse,
+} from "@/features/notebook-library/api/library";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import {
   deleteForeverTrashItem,
@@ -35,6 +45,7 @@ import {
   fetchTrashPage,
   restoreTrashItem,
   type TrashItem,
+  type TrashPageResponse,
 } from "../api/trash";
 import { TrashItemIcon } from "./trash-item-icon";
 
@@ -82,29 +93,163 @@ export function TrashModal({
 
   const restoreMutation = useMutation({
     mutationFn: (item: TrashItem) => restoreTrashItem(item.kind, item.id),
-    onSuccess: () => {
+    onMutate: async (item) => {
+      await queryClient.cancelQueries({ queryKey: ["trash"] });
+      await queryClient.cancelQueries({ queryKey: libraryQueryOptions.queryKey });
+
+      const previousTrash = queryClient.getQueryData<InfiniteData<TrashPageResponse>>(["trash"]);
+      const previousLibrary = queryClient.getQueryData<LibraryResponse>(libraryQueryOptions.queryKey);
+
+      queryClient.setQueryData<InfiniteData<TrashPageResponse>>(["trash"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((i) => i.id !== item.id),
+          })),
+        };
+      });
+
+      const now = new Date().toISOString();
+      if (item.kind === "notebook_folder") {
+        queryClient.setQueryData<LibraryResponse>(libraryQueryOptions.queryKey, (current) => {
+          if (!current) return current;
+          if (current.folders.some((f) => f.id === item.id)) return current;
+          return {
+            ...current,
+            folders: [
+              ...current.folders,
+              {
+                id: item.id,
+                name: item.name,
+                parentId: null,
+                createdAt: item.deletedAt,
+                updatedAt: now,
+              },
+            ],
+          };
+        });
+      } else if (item.kind === "notebook") {
+        queryClient.setQueryData<LibraryResponse>(libraryQueryOptions.queryKey, (current) => {
+          if (!current) return current;
+          if (current.notebooks.some((nb) => nb.id === item.id)) return current;
+          return {
+            ...current,
+            notebooks: [
+              ...current.notebooks,
+              {
+                id: item.id,
+                title: item.name,
+                description: "",
+                icon: "notebook",
+                folderId: null,
+                banner: null,
+                bannerUrl: null,
+                bannerFocalPoint: null,
+                bannerVariants: { w240: null, w480: null, w960: null, w1920: null },
+                groundingMode: "strict" as const,
+                createdAt: item.deletedAt,
+                updatedAt: now,
+              },
+            ],
+          };
+        });
+      }
+
+      return { previousTrash, previousLibrary };
+    },
+    onError: (_err, item, context) => {
+      if (context?.previousTrash) {
+        queryClient.setQueryData(["trash"], context.previousTrash);
+      }
+      if (context?.previousLibrary) {
+        queryClient.setQueryData(libraryQueryOptions.queryKey, context.previousLibrary);
+      }
+      toast.error(`Failed to restore "${item.name}"`);
+    },
+    onSuccess: (_res, item) => {
+      toast.success(`Restored "${item.name}"`);
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["trash"] });
       void queryClient.invalidateQueries({ queryKey: ["library"] });
       void queryClient.invalidateQueries({ queryKey: ["notebooks"] });
+      void queryClient.invalidateQueries({ queryKey: ["source-folders"] });
       void queryClient.invalidateQueries({ queryKey: ["sources"] });
+      void queryClient.invalidateQueries({ queryKey: ["study-material-folders"] });
       void queryClient.invalidateQueries({ queryKey: ["study-materials"] });
     },
   });
 
   const deleteForeverMutation = useMutation({
     mutationFn: (item: TrashItem) => deleteForeverTrashItem(item.kind, item.id),
-    onSuccess: () => {
+    onMutate: async (item) => {
+      await queryClient.cancelQueries({ queryKey: ["trash"] });
+      const previousTrash = queryClient.getQueryData<InfiniteData<TrashPageResponse>>(["trash"]);
+
+      queryClient.setQueryData<InfiniteData<TrashPageResponse>>(["trash"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((i) => i.id !== item.id),
+          })),
+        };
+      });
+
+      return { previousTrash };
+    },
+    onError: (_err, item, context) => {
+      if (context?.previousTrash) {
+        queryClient.setQueryData(["trash"], context.previousTrash);
+      }
+      toast.error(`Failed to delete "${item.name}"`);
+    },
+    onSuccess: (_res, item) => {
+      toast.success(`Permanently deleted "${item.name}"`);
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["trash"] });
     },
   });
 
   const emptyTrashMutation = useMutation({
     mutationFn: () => emptyTrashApi(),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["trash"] });
+      const previousTrash = queryClient.getQueryData<InfiniteData<TrashPageResponse>>(["trash"]);
+
+      queryClient.setQueryData<InfiniteData<TrashPageResponse>>(["trash"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: [],
+          })),
+        };
+      });
+
+      return { previousTrash };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousTrash) {
+        queryClient.setQueryData(["trash"], context.previousTrash);
+      }
+      toast.error("Failed to empty trash");
+    },
     onSuccess: () => {
+      toast.success("Trash emptied");
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["trash"] });
       void queryClient.invalidateQueries({ queryKey: ["library"] });
       void queryClient.invalidateQueries({ queryKey: ["notebooks"] });
+      void queryClient.invalidateQueries({ queryKey: ["source-folders"] });
       void queryClient.invalidateQueries({ queryKey: ["sources"] });
+      void queryClient.invalidateQueries({ queryKey: ["study-material-folders"] });
       void queryClient.invalidateQueries({ queryKey: ["study-materials"] });
     },
   });
@@ -327,47 +472,19 @@ export function TrashModal({
                       <span className="w-12 text-right text-xs tabular-nums text-destructive">
                         {item.daysRemaining}d left
                       </span>
-                      <div className="flex items-center gap-0.5">
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRestore(item);
-                                }}
-                                aria-label="Restore"
-                                className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:scale-97 touch-manipulation"
-                              >
-                                <RotateCcw className="size-3.5 shrink-0" />
-                              </Button>
-                            }
-                          />
-                          <TooltipContent>Restore</TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPendingHardDelete(item);
-                                }}
-                                aria-label="Delete forever"
-                                className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-destructive active:scale-97 touch-manipulation"
-                              >
-                                <Trash2 className="size-3.5 shrink-0" />
-                              </Button>
-                            }
-                          />
-                          <TooltipContent>Delete forever</TooltipContent>
-                        </Tooltip>
-                      </div>
+                      <TrashRowActions
+                        item={item}
+                        isRestoring={
+                          restoreMutation.isPending &&
+                          restoreMutation.variables?.id === item.id
+                        }
+                        isDeleting={
+                          deleteForeverMutation.isPending &&
+                          deleteForeverMutation.variables?.id === item.id
+                        }
+                        onRestore={handleRestore}
+                        onDeleteForever={setPendingHardDelete}
+                      />
                     </div>
                   </CommandItem>
                 ))}
@@ -407,47 +524,19 @@ export function TrashModal({
                       <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
                         {item.daysRemaining}d left
                       </span>
-                      <div className="flex items-center gap-0.5">
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRestore(item);
-                                }}
-                                aria-label="Restore"
-                                className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:scale-97 touch-manipulation"
-                              >
-                                <RotateCcw className="size-3.5 shrink-0" />
-                              </Button>
-                            }
-                          />
-                          <TooltipContent>Restore</TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPendingHardDelete(item);
-                                }}
-                                aria-label="Delete forever"
-                                className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-destructive active:scale-97 touch-manipulation"
-                              >
-                                <Trash2 className="size-3.5 shrink-0" />
-                              </Button>
-                            }
-                          />
-                          <TooltipContent>Delete forever</TooltipContent>
-                        </Tooltip>
-                      </div>
+                      <TrashRowActions
+                        item={item}
+                        isRestoring={
+                          restoreMutation.isPending &&
+                          restoreMutation.variables?.id === item.id
+                        }
+                        isDeleting={
+                          deleteForeverMutation.isPending &&
+                          deleteForeverMutation.variables?.id === item.id
+                        }
+                        onRestore={handleRestore}
+                        onDeleteForever={setPendingHardDelete}
+                      />
                     </div>
                   </CommandItem>
                 ))}
@@ -510,5 +599,76 @@ export function TrashModal({
         }}
       />
     </>
+  );
+}
+
+interface TrashRowActionsProps {
+  item: TrashItem;
+  isRestoring: boolean;
+  isDeleting: boolean;
+  onRestore: (item: TrashItem) => void;
+  onDeleteForever: (item: TrashItem) => void;
+}
+
+function TrashRowActions({
+  item,
+  isRestoring,
+  isDeleting,
+  onRestore,
+  onDeleteForever,
+}: TrashRowActionsProps) {
+  const isPending = isRestoring || isDeleting;
+  return (
+    <div className="flex items-center gap-0.5">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRestore(item);
+              }}
+              aria-label="Restore"
+              className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:scale-97 touch-manipulation disabled:opacity-50"
+            >
+              {isRestoring ? (
+                <Spinner className="size-3.5 shrink-0" />
+              ) : (
+                <RotateCcw className="size-3.5 shrink-0" />
+              )}
+            </Button>
+          }
+        />
+        <TooltipContent>Restore</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteForever(item);
+              }}
+              aria-label="Delete forever"
+              className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-destructive active:scale-97 touch-manipulation disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <Spinner className="size-3.5 shrink-0" />
+              ) : (
+                <Trash2 className="size-3.5 shrink-0" />
+              )}
+            </Button>
+          }
+        />
+        <TooltipContent>Delete forever</TooltipContent>
+      </Tooltip>
+    </div>
   );
 }

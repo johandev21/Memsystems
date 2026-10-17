@@ -231,17 +231,18 @@ export class StudyMaterialFolderService {
     if (targetParentId) {
       targetParentId = await this.findAliveAncestor(targetParentId);
     }
+    const now = new Date();
     await this.db
       .update(studyMaterials)
-      .set({ deletedAt: null })
+      .set({ deletedAt: null, updatedAt: now })
       .where(inArray(studyMaterials.folderId, descendantFolderIds));
     await this.db
       .update(studyMaterialFolders)
-      .set({ deletedAt: null })
+      .set({ deletedAt: null, updatedAt: now })
       .where(inArray(studyMaterialFolders.id, descendantFolderIds));
     const [restored] = await this.db
       .update(studyMaterialFolders)
-      .set({ deletedAt: null, parentId: targetParentId })
+      .set({ deletedAt: null, parentId: targetParentId, updatedAt: now })
       .where(eq(studyMaterialFolders.id, folderId))
       .returning();
     return restored;
