@@ -161,6 +161,12 @@ describe("MobileSourcesView", () => {
     expect(newFolderOption).toBeTruthy();
 
     fireEvent.click(newFolderOption);
-    expect(handleCreateFolder).toHaveBeenCalledWith(null);
+
+    const input = screen.getByPlaceholderText(/folder name/i);
+    fireEvent.change(input, { target: { value: "Research" } });
+    const createBtn = screen.getByRole("button", { name: /^create$/i });
+    fireEvent.click(createBtn);
+
+    expect(handleCreateFolder).toHaveBeenCalledWith(null, "Research");
   });
 });

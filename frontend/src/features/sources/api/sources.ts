@@ -187,36 +187,3 @@ export async function updateSource(sourceId: string, input: { title?: string }):
   }
   return data as Source;
 }
-
-export async function batchMoveSources(
-  notebookId: string,
-  sourceIds: string[],
-  folderId: string | null,
-): Promise<Source[]> {
-  const response = await fetchApi(`/api/notebooks/${notebookId}/sources/batch-move`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sourceIds, folderId }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error ?? i18n.t("errors.moveFailed", { ns: "tree" }));
-  }
-  return data as Source[];
-}
-
-export async function batchDeleteSources(
-  notebookId: string,
-  sourceIds: string[],
-): Promise<Source[]> {
-  const response = await fetchApi(`/api/notebooks/${notebookId}/sources/batch-delete`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sourceIds }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error ?? i18n.t("errors.deleteFailed", { ns: "tree" }));
-  }
-  return data as Source[];
-}

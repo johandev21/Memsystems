@@ -8,8 +8,6 @@ export interface StudyMaterialsPanelProps {
   onToggleExpand?: () => void;
   isSearchOpen?: boolean;
   onToggleSearch?: () => void;
-  isMultiselectMode?: boolean;
-  onToggleMultiselect?: () => void;
 }
 
 export const StudyMaterialsPanel = memo(function StudyMaterialsPanel({
@@ -19,8 +17,6 @@ export const StudyMaterialsPanel = memo(function StudyMaterialsPanel({
   onToggleExpand,
   isSearchOpen,
   onToggleSearch,
-  isMultiselectMode,
-  onToggleMultiselect,
 }: StudyMaterialsPanelProps) {
   return (
     <StudyMaterialsTreeContainer
@@ -31,8 +27,6 @@ export const StudyMaterialsPanel = memo(function StudyMaterialsPanel({
       onPanelToggle={onToggleExpand}
       isSearchOpen={isSearchOpen}
       onToggleSearch={onToggleSearch}
-      isMultiselectMode={isMultiselectMode}
-      onToggleMultiselect={onToggleMultiselect}
     />
   );
 });

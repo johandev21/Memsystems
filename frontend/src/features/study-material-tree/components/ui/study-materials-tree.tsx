@@ -27,8 +27,6 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
-  TreeFloatingActionDock,
-  TreeFolderPickerDialog,
   TreeSearchBar,
 } from "@/components/ui/tree";
 import { ChevronsUpDown, Command, Folder, FolderOpen, FolderPlus, Search } from "lucide-react";
@@ -67,7 +65,7 @@ export interface ProductionStudyMaterialsTreeProps {
   isPanelExpanded?: boolean;
   onPanelToggle?: () => void;
   contentHeight?: "desktop" | "mobile" | "standalone";
-  // Search & Multiselect
+  // Search
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
   matchCount?: number;
@@ -75,15 +73,6 @@ export interface ProductionStudyMaterialsTreeProps {
   isFolderVisible?: (folderId: string) => boolean;
   isSearchOpen?: boolean;
   onToggleSearch?: () => void;
-  isMultiselectMode?: boolean;
-  onToggleMultiselect?: () => void;
-  selectedIds?: Set<string>;
-  onToggleItemSelect?: (id: string) => void;
-  onToggleFolderSelect?: (descendantIds: string[]) => void;
-  isFolderSelected?: (descendantIds: string[]) => boolean | "indeterminate";
-  onClearSelection?: () => void;
-  onBatchMove?: (materialIds: string[], targetFolderId: string | null) => Promise<void>;
-  onBatchDelete?: (materialIds: string[]) => Promise<void>;
 }
 
 export function StudyMaterialsTree({
@@ -109,15 +98,6 @@ export function StudyMaterialsTree({
   isFolderVisible,
   isSearchOpen,
   onToggleSearch,
-  isMultiselectMode,
-  onToggleMultiselect,
-  selectedIds,
-  onToggleItemSelect,
-  onToggleFolderSelect,
-  isFolderSelected,
-  onClearSelection,
-  onBatchMove,
-  onBatchDelete,
 }: ProductionStudyMaterialsTreeProps) {
   const [internalSelected, setInternalSelected] = useState<string | null>(
     defaultSelectedId !== undefined ? defaultSelectedId : null,
@@ -133,15 +113,6 @@ export function StudyMaterialsTree({
 
   const [lastAction, setLastAction] = useState("Ready");
   void lastAction;
-
-  const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
-  const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
-  const [activeDragBundleCount, setActiveDragBundleCount] = useState<number | undefined>();
-
-  const folderPickerOptions = useMemo(
-    () => folders.map((f) => ({ id: f.id, name: f.name, parentId: f.parentId })),
-    [folders],
-  );
 
   const effectiveState = useMemo<TreeState>(
     () => ({ folders: [...folders], materials: [...materials] }),
@@ -165,13 +136,6 @@ export function StudyMaterialsTree({
     isFolderVisible,
     isSearchOpen,
     onToggleSearch,
-    isMultiselectMode,
-    onToggleMultiselect,
-    selectedIds,
-    onToggleItemSelect,
-    onToggleFolderSelect,
-    isFolderSelected,
-    onBatchMove,
   });
 
   const sensors = useSensors(
@@ -190,7 +154,6 @@ export function StudyMaterialsTree({
     (event: DragStartEvent) => {
       const dragData = getTreeDragData(event.active.data.current);
       if (!dragData) return;
-      setActiveDragBundleCount(dragData.bundledIds?.length);
       controller.beginDrag(dragData.itemId, getItemName(effectiveState, dragData.itemId) ?? "item");
     },
     [controller, effectiveState],
@@ -200,24 +163,16 @@ export function StudyMaterialsTree({
     (event: DragEndEvent) => {
       const dragData = getTreeDragData(event.active.data.current);
       const dropData = getTreeDropData(event.over?.data.current);
-      setActiveDragBundleCount(undefined);
-
-      if (dragData?.bundledIds && dragData.bundledIds.length > 0 && onBatchMove) {
-        const targetFolderId = dropData ? (dropData.folderId as string | null) : null;
-        void onBatchMove(dragData.bundledIds as string[], targetFolderId);
-        return;
-      }
 
       void controller.endDrag(
         dragData?.itemId ?? null,
         dropData ? (dropData.folderId as string | null) : null,
       );
     },
-    [controller, onBatchMove],
+    [controller],
   );
 
   const handleDragCancel = useCallback(() => {
-    setActiveDragBundleCount(undefined);
     controller.cancelDrag();
   }, [controller]);
 
@@ -256,8 +211,6 @@ export function StudyMaterialsTree({
                 onPanelToggle={onPanelToggle}
                 isSearchOpen={isSearchOpen}
                 onToggleSearch={onToggleSearch}
-                isMultiselectMode={isMultiselectMode}
-                onToggleMultiselect={onToggleMultiselect}
               />
               {isSearchOpen && (
                 <div className="border-b border-border/60 bg-panel-header-bg/50 px-2 py-1.5">
@@ -290,52 +243,15 @@ export function StudyMaterialsTree({
                 <TreeContent isPrototype={isPrototype} />
               </CardContent>
             </Card>
-
-            {isMultiselectMode && selectedIds && selectedIds.size > 0 && (
-              <TreeFloatingActionDock
-                selectedCount={selectedIds.size}
-                itemTypeLabel="material"
-                onMove={() => setIsBatchMoveOpen(true)}
-                onDelete={() => setIsBatchDeleteConfirmOpen(true)}
-                onDismiss={onClearSelection ?? (() => {})}
-              />
-            )}
           </div>
           <DragOverlay dropAnimation={null}>
             {activeDragNode ? (
-              <DragPreview node={activeDragNode} bundleCount={activeDragBundleCount} />
+              <DragPreview node={activeDragNode} />
             ) : null}
           </DragOverlay>
         </TreeControllerProvider>
       </DndContext>
       <DeleteTreeItemDialog controller={controller} isPrototype={isPrototype} />
-      <TreeFolderPickerDialog
-        open={isBatchMoveOpen}
-        onOpenChange={setIsBatchMoveOpen}
-        folders={folderPickerOptions}
-        title="Move study materials"
-        description={`Move ${selectedIds?.size ?? 0} selected materials to:`}
-        onConfirm={async (targetFolderId) => {
-          if (selectedIds && onBatchMove) {
-            await onBatchMove(Array.from(selectedIds), targetFolderId);
-          }
-          setIsBatchMoveOpen(false);
-          onClearSelection?.();
-        }}
-      />
-      <ConfirmDeleteDialog
-        open={isBatchDeleteConfirmOpen}
-        onOpenChange={setIsBatchDeleteConfirmOpen}
-        title="Delete study materials"
-        description={`Are you sure you want to delete ${selectedIds?.size ?? 0} selected study materials? This action cannot be undone.`}
-        onConfirm={async () => {
-          if (selectedIds && onBatchDelete) {
-            await onBatchDelete(Array.from(selectedIds));
-          }
-          setIsBatchDeleteConfirmOpen(false);
-          onClearSelection?.();
-        }}
-      />
     </TooltipProvider>
   );
 }

@@ -16,10 +16,9 @@ import { studyMaterialsTreeVariants } from "./variants";
 
 type DragPreviewProps = {
   node: TreeNode;
-  bundleCount?: number;
 };
 
-export function DragPreview({ node, bundleCount }: DragPreviewProps) {
+export function DragPreview({ node }: DragPreviewProps) {
   const controller = useTreeControllerContext();
   return (
     <div
@@ -35,11 +34,6 @@ export function DragPreview({ node, bundleCount }: DragPreviewProps) {
         strokeWidth: 1.7,
       })}
       <span className="truncate leading-none">{node.name}</span>
-      {bundleCount !== undefined && bundleCount > 1 && (
-        <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
-          +{bundleCount - 1}
-        </span>
-      )}
     </div>
   );
 }

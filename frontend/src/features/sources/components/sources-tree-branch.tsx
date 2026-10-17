@@ -34,26 +34,7 @@ export interface SourcesTreeBranchProps {
   registerNode?: (id: string, el: HTMLElement | null) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLElement>, node: SourcesTreeNode) => void;
   onFocusItem?: (id: string) => void;
-  isMultiselectMode?: boolean;
-  selectedIds?: Set<string>;
-  onToggleItemSelect?: (id: string) => void;
-  onToggleFolderSelect?: (descendantIds: string[]) => void;
-  isFolderSelected?: (descendantIds: string[]) => boolean | "indeterminate";
   searchQuery?: string;
-}
-
-function getDescendantSourceIds(node: SourcesTreeNode): string[] {
-  const ids: string[] = [];
-  const walk = (n: SourcesTreeNode) => {
-    if (n.type === "source" && n.source) {
-      ids.push(n.source.id);
-    }
-    for (const child of n.children) {
-      walk(child);
-    }
-  };
-  walk(node);
-  return ids;
 }
 
 export function SourcesTreeNodeRow({
@@ -85,20 +66,10 @@ export function SourcesTreeNodeRow({
   registerNode,
   onKeyDown,
   onFocusItem,
-  isMultiselectMode = false,
-  selectedIds,
-  onToggleItemSelect,
-  onToggleFolderSelect,
-  isFolderSelected,
   searchQuery,
 }: SourcesTreeBranchProps) {
   if (node.type === "source" && node.source) {
     const sourceId = node.source.id;
-    const isSelected = selectedIds?.has(sourceId) ?? false;
-    const bundledIds =
-      isMultiselectMode && isSelected && selectedIds
-        ? Array.from(selectedIds)
-        : undefined;
 
     return (
       <SourceRow
@@ -124,11 +95,7 @@ export function SourcesTreeNodeRow({
         registerNode={registerNode}
         onFocusRow={onFocusItem ? () => onFocusItem(sourceId) : undefined}
         onKeyDown={(e) => onKeyDown?.(e, node)}
-        isMultiselectMode={isMultiselectMode}
-        isSelected={isSelected}
-        onToggleSelect={onToggleItemSelect ? () => onToggleItemSelect(sourceId) : undefined}
         searchQuery={searchQuery}
-        bundledIds={bundledIds}
       />
     );
   }
@@ -142,13 +109,6 @@ export function SourcesTreeNodeRow({
     notebookId: "",
     updatedAt: node.createdAt,
   };
-
-  const descendantIds = getDescendantSourceIds(node);
-  const folderSelectionState = isFolderSelected ? isFolderSelected(descendantIds) : false;
-  const folderBundledIds =
-    isMultiselectMode && selectedIds && selectedIds.size > 0
-      ? Array.from(selectedIds)
-      : undefined;
 
   return (
     <SourceFolderRow
@@ -175,13 +135,7 @@ export function SourcesTreeNodeRow({
       registerNode={registerNode}
       onFocus={onFocusItem ? () => onFocusItem(folder.id) : undefined}
       onKeyDown={(e) => onKeyDown?.(e, node)}
-      isMultiselectMode={isMultiselectMode}
-      isSelected={folderSelectionState}
-      onToggleSelect={
-        onToggleFolderSelect ? () => onToggleFolderSelect(descendantIds) : undefined
-      }
       searchQuery={searchQuery}
-      bundledIds={folderBundledIds}
     />
   );
 }

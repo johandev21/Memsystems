@@ -35,21 +35,6 @@ const moveStudyMaterialSchema = z.object({
   folderId: z.string().nullable(),
 });
 
-const batchMoveStudyMaterialsSchema = z.object({
-  materialIds: z
-    .array(z.string().min(1))
-    .min(1, 'At least one materialId is required')
-    .max(500, 'Up to 500 study materials allowed per batch'),
-  folderId: z.string().nullable(),
-});
-
-const batchDeleteStudyMaterialsSchema = z.object({
-  materialIds: z
-    .array(z.string().min(1))
-    .min(1, 'At least one materialId is required')
-    .max(500, 'Up to 500 study materials allowed per batch'),
-});
-
 const createFolderSchema = z.object({
   name: z.string().min(1, 'Folder name is required').max(200),
   parentId: z.string().optional(),
@@ -131,28 +116,6 @@ export class StudyMaterialsController {
     @Body() body: z.infer<typeof createStudyMaterialSchema>,
   ) {
     return this.studyMaterialService.create(notebookId, body);
-  }
-
-  @Patch('notebooks/:notebookId/study-materials/batch-move')
-  @UsePipes(new ZodValidationPipe(batchMoveStudyMaterialsSchema))
-  async batchMoveStudyMaterials(
-    @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof batchMoveStudyMaterialsSchema>,
-  ) {
-    return this.studyMaterialService.batchMove(
-      notebookId,
-      body.materialIds,
-      body.folderId,
-    );
-  }
-
-  @Post('notebooks/:notebookId/study-materials/batch-delete')
-  @UsePipes(new ZodValidationPipe(batchDeleteStudyMaterialsSchema))
-  async batchDeleteStudyMaterials(
-    @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof batchDeleteStudyMaterialsSchema>,
-  ) {
-    return this.studyMaterialService.batchDelete(notebookId, body.materialIds);
   }
 
   @Get('study-materials/:id')
