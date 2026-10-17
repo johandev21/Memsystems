@@ -52,6 +52,21 @@ const moveSourceSchema = z.object({
   folderId: z.string().nullable(),
 });
 
+const batchMoveSourcesSchema = z.object({
+  sourceIds: z
+    .array(z.string().min(1))
+    .min(1, 'At least one sourceId is required')
+    .max(500, 'Up to 500 sources allowed per batch'),
+  folderId: z.string().nullable(),
+});
+
+const batchDeleteSourcesSchema = z.object({
+  sourceIds: z
+    .array(z.string().min(1))
+    .min(1, 'At least one sourceId is required')
+    .max(500, 'Up to 500 sources allowed per batch'),
+});
+
 const webSearchSchema = z.object({
   query: z.string().min(1, 'Query is required').max(500),
 });
@@ -81,6 +96,28 @@ export class SourcesController {
   @Get('notebooks/:notebookId/sources')
   async listSources(@Param('notebookId') notebookId: string) {
     return this.sourcesService.list(notebookId);
+  }
+
+  @Patch('notebooks/:notebookId/sources/batch-move')
+  @UsePipes(new ZodValidationPipe(batchMoveSourcesSchema))
+  async batchMoveSources(
+    @Param('notebookId') notebookId: string,
+    @Body() body: z.infer<typeof batchMoveSourcesSchema>,
+  ) {
+    return this.sourcesService.batchMove(
+      notebookId,
+      body.sourceIds,
+      body.folderId,
+    );
+  }
+
+  @Post('notebooks/:notebookId/sources/batch-delete')
+  @UsePipes(new ZodValidationPipe(batchDeleteSourcesSchema))
+  async batchDeleteSources(
+    @Param('notebookId') notebookId: string,
+    @Body() body: z.infer<typeof batchDeleteSourcesSchema>,
+  ) {
+    return this.sourcesService.batchDelete(notebookId, body.sourceIds);
   }
 
   @Post('notebooks/:notebookId/sources/text')

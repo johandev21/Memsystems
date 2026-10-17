@@ -34,6 +34,8 @@ function MindMapFlow(props: MindMapViewProps) {
     handleCenterSelected,
     zoomIn,
     zoomOut,
+    expandAll,
+    collapseAll,
   } = useMindMapLayout(props);
 
   if (!root) {
@@ -71,6 +73,8 @@ function MindMapFlow(props: MindMapViewProps) {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onCenter={handleCenterSelected}
+        onExpandAll={expandAll}
+        onCollapseAll={collapseAll}
       />
 
       <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-surface-border-subtle bg-surface-2 px-3 py-2 text-xs text-text-faint sm:flex">

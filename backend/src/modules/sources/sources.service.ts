@@ -1,6 +1,6 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { asc, and, count, desc, eq, isNull } from 'drizzle-orm';
+import { asc, and, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
@@ -550,6 +550,34 @@ export class SourcesService {
     return deleted;
   }
 
+  async batchDelete(notebookId: string, sourceIds: string[]) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    if (!sourceIds || sourceIds.length === 0) return [];
+
+    const targetSources = await this.db
+      .select({ id: sources.id, kind: sources.kind, s3Key: sources.s3Key })
+      .from(sources)
+      .where(
+        and(eq(sources.notebookId, notebookId), inArray(sources.id, sourceIds)),
+      );
+
+    for (const source of targetSources) {
+      if (source.kind === 'file' && source.s3Key) {
+        await this.storageService.deleteObject(source.s3Key).catch(() => {});
+      }
+      await this.sourceJobsService.cancelForSource(source.id);
+    }
+
+    const deleted = await this.db
+      .delete(sources)
+      .where(
+        and(eq(sources.notebookId, notebookId), inArray(sources.id, sourceIds)),
+      )
+      .returning();
+
+    return deleted;
+  }
+
   async move(id: string, folderId: string | null) {
     const source = await this.fetchOwned(id);
 
@@ -586,6 +614,45 @@ export class SourcesService {
         folderId,
       })
       .where(eq(sources.id, id))
+      .returning();
+
+    return updated;
+  }
+
+  async batchMove(
+    notebookId: string,
+    sourceIds: string[],
+    folderId: string | null,
+  ) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    if (!sourceIds || sourceIds.length === 0) return [];
+
+    if (folderId !== null) {
+      const [folder] = await this.db
+        .select({ id: sourceFolders.id, notebookId: sourceFolders.notebookId })
+        .from(sourceFolders)
+        .where(
+          and(
+            eq(sourceFolders.id, folderId),
+            eq(sourceFolders.notebookId, notebookId),
+          ),
+        );
+
+      if (!folder) {
+        throw new NotFoundError('SourceFolder', {
+          messageKey: 'errors.sources.folder.notFound',
+        });
+      }
+    }
+
+    const updated = await this.db
+      .update(sources)
+      .set({
+        folderId,
+      })
+      .where(
+        and(eq(sources.notebookId, notebookId), inArray(sources.id, sourceIds)),
+      )
       .returning();
 
     return updated;

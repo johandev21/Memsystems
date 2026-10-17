@@ -22,7 +22,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
+import { Checkbox } from "@/components/ui/checkbox";
+import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import type { Source } from "../../api/sources";
 import type { SourceFolder } from "../../types/source-folder.types";
@@ -60,6 +61,11 @@ export interface SourceRowProps {
   registerNode?: (id: string, el: HTMLElement | null) => void;
   onFocusRow?: () => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => void;
+  isMultiselectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  searchQuery?: string;
+  bundledIds?: readonly string[];
 }
 
 export function SourceRow({
@@ -85,6 +91,11 @@ export function SourceRow({
   registerNode,
   onFocusRow,
   onKeyDown,
+  isMultiselectMode = false,
+  isSelected = false,
+  onToggleSelect,
+  searchQuery,
+  bundledIds,
 }: SourceRowProps) {
   const { t } = useTranslation(["sources", "tree"]);
   const status = sourceProcessingStatus(source);
@@ -117,6 +128,7 @@ export function SourceRow({
     folderDropIdPrefix: "tree-folder:",
     dragType: "sources-tree-item",
     folderDropType: "sources-tree-folder",
+    bundledIds,
   });
 
   const validTargetFolders = (allFolders ?? []).filter((f) =>
@@ -167,7 +179,11 @@ export function SourceRow({
           ? undefined
           : (e) => {
               (e.currentTarget as HTMLElement).focus();
-              onClick();
+              if (isMultiselectMode) {
+                onToggleSelect?.();
+              } else {
+                onClick();
+              }
             }
       }
       onKeyDown={(e) => {
@@ -175,6 +191,15 @@ export function SourceRow({
         onKeyDown?.(e);
       }}
     >
+      {isMultiselectMode && (
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onToggleSelect?.()}
+          onClick={(e) => e.stopPropagation()}
+          className="mr-1.5 shrink-0"
+          aria-label={`Select ${source.title}`}
+        />
+      )}
       {active ? (
         <Loader2 className="size-(--tree-icon-size) shrink-0 animate-spin text-primary" />
       ) : failed ? (
@@ -193,9 +218,11 @@ export function SourceRow({
           size="sm"
         />
       ) : (
-        <span className="min-w-0 flex-1 truncate leading-none" title={source.title}>
-          {source.title}
-        </span>
+        <HighlightMatch
+          text={source.title}
+          query={searchQuery}
+          className="min-w-0 flex-1 truncate leading-none"
+        />
       )}
       {statusText && (
         <span className="max-w-20 sm:max-w-24 shrink-0 truncate text-xs opacity-75">

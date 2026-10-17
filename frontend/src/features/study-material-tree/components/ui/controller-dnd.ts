@@ -11,6 +11,7 @@ export const FOLDER_DROP_ID_PREFIX = "study-materials-folder:";
 export type TreeDragData = {
   type: "study-material-tree-item";
   itemId: string;
+  bundledIds?: readonly string[];
 };
 
 export type TreeDropData =

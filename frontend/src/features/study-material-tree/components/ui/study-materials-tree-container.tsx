@@ -1,8 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { foldersQueryOptions } from "../../api/folders";
 import { studyMaterialsQueryOptions } from "@/features/study-material-viewer/api";
+import { batchDeleteStudyMaterials, batchMoveStudyMaterials } from "../../api";
+import { useTreeMultiselect, useTreeSearch } from "@/components/ui/tree";
 import { StudyMaterialsTree, type StudyMaterialsTreeSize } from "./study-materials-tree";
 import { StudyMaterialsTreeSkeleton } from "./study-materials-tree-skeleton";
 import { StudyMaterialsTreeError } from "./study-materials-tree-error";
@@ -10,6 +12,7 @@ import { usePersistentExpandedFolders } from "../model/use-expanded";
 import { useProductionTreeAdapter } from "../model/production-adapter";
 import type { TreeCommandExecutor } from "../model/commands";
 import { MobileStudyMaterialsView } from "../mobile/mobile-study-materials-view";
+import { cn } from "@/shared/utils/cn";
 
 export interface StudyMaterialsTreeContainerProps {
   notebookId: string;
@@ -18,6 +21,12 @@ export interface StudyMaterialsTreeContainerProps {
   size?: StudyMaterialsTreeSize;
   className?: string;
   variant?: "desktop" | "mobile" | "standalone";
+  isPanelExpanded?: boolean;
+  onPanelToggle?: () => void;
+  isSearchOpen?: boolean;
+  onToggleSearch?: () => void;
+  isMultiselectMode?: boolean;
+  onToggleMultiselect?: () => void;
 }
 
 function useStudyMaterialsTreeData(notebookId: string) {
@@ -71,6 +80,14 @@ interface TreeLoadedContentProps {
   isPanelExpanded: boolean;
   onPanelToggle: () => void;
   variant?: StudyMaterialsTreeContainerProps["variant"];
+  search: ReturnType<typeof useTreeSearch>;
+  multiselect: ReturnType<typeof useTreeMultiselect>;
+  isSearchOpen: boolean;
+  onToggleSearch: () => void;
+  isMultiselectMode: boolean;
+  onToggleMultiselect: () => void;
+  onBatchMove: (materialIds: string[], targetFolderId: string | null) => Promise<void>;
+  onBatchDelete: (materialIds: string[]) => Promise<void>;
 }
 
 function TreeLoadedContent({
@@ -84,9 +101,20 @@ function TreeLoadedContent({
   isPanelExpanded,
   onPanelToggle,
   variant,
+  search,
+  multiselect,
+  isSearchOpen,
+  onToggleSearch,
+  isMultiselectMode,
+  onToggleMultiselect,
+  onBatchMove,
+  onBatchDelete,
 }: TreeLoadedContentProps) {
   return (
-    <div data-slot="study-materials-tree-container" className={className}>
+    <div
+      data-slot="study-materials-tree-container"
+      className={cn(isPanelExpanded && "h-full flex flex-col min-h-0", className)}
+    >
       {data.isFetching && data.hasData && <TreeUpdatingIndicator />}
       <StudyMaterialsTree
         folders={data.folders}
@@ -99,6 +127,22 @@ function TreeLoadedContent({
         isPanelExpanded={isPanelExpanded}
         onPanelToggle={onPanelToggle}
         contentHeight={variant ?? "standalone"}
+        searchQuery={search.searchQuery}
+        onSearchChange={search.setSearchQuery}
+        matchCount={search.matchCount}
+        isItemVisible={search.isItemVisible}
+        isFolderVisible={search.isFolderVisible}
+        isSearchOpen={isSearchOpen}
+        onToggleSearch={onToggleSearch}
+        isMultiselectMode={isMultiselectMode}
+        onToggleMultiselect={onToggleMultiselect}
+        selectedIds={multiselect.selectedIds}
+        onToggleItemSelect={multiselect.toggleItem}
+        onToggleFolderSelect={multiselect.toggleFolder}
+        isFolderSelected={multiselect.isFolderSelected}
+        onClearSelection={multiselect.clearSelection}
+        onBatchMove={onBatchMove}
+        onBatchDelete={onBatchDelete}
       />
       {data.isError && data.hasData && <TreeRefreshError onRetry={data.handleRetry} />}
     </div>
@@ -112,10 +156,144 @@ export function StudyMaterialsTreeContainer({
   size = "sm",
   className,
   variant = "standalone",
+  isPanelExpanded: controlledIsPanelExpanded,
+  onPanelToggle: onControlledPanelToggle,
+  isSearchOpen: controlledIsSearchOpen,
+  onToggleSearch: onControlledToggleSearch,
+  isMultiselectMode: controlledIsMultiselectMode,
+  onToggleMultiselect: onControlledToggleMultiselect,
 }: StudyMaterialsTreeContainerProps) {
   const data = useStudyMaterialsTreeData(notebookId);
   const [expandedIds, setExpandedIds] = usePersistentExpandedFolders(notebookId, data.folders);
-  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
+  const [internalPanelExpanded, setInternalPanelExpanded] = useState(false);
+  const [internalIsSearchOpen, setInternalIsSearchOpen] = useState(false);
+  const [internalIsMultiselectMode, setInternalIsMultiselectMode] = useState(false);
+
+  const isPanelExpanded =
+    controlledIsPanelExpanded !== undefined
+      ? controlledIsPanelExpanded
+      : internalPanelExpanded;
+  const handlePanelToggle =
+    onControlledPanelToggle ?? (() => setInternalPanelExpanded((v) => !v));
+
+  const isSearchOpen =
+    controlledIsSearchOpen !== undefined ? controlledIsSearchOpen : internalIsSearchOpen;
+  const isMultiselectMode =
+    controlledIsMultiselectMode !== undefined
+      ? controlledIsMultiselectMode
+      : internalIsMultiselectMode;
+
+  const handleToggleSearch = useCallback(() => {
+    if (onControlledToggleSearch) {
+      onControlledToggleSearch();
+    } else {
+      setInternalIsSearchOpen((prev) => !prev);
+    }
+  }, [onControlledToggleSearch]);
+
+  const handleToggleMultiselect = useCallback(() => {
+    if (onControlledToggleMultiselect) {
+      onControlledToggleMultiselect();
+    } else {
+      setInternalIsMultiselectMode((prev) => !prev);
+    }
+  }, [onControlledToggleMultiselect]);
+
+  const search = useTreeSearch({
+    items: useMemo(
+      () =>
+        data.materials.map((m) => ({
+          id: m.id,
+          name: m.title,
+          folderId: m.folderId,
+        })),
+      [data.materials],
+    ),
+    folders: useMemo(
+      () =>
+        data.folders.map((f) => ({
+          id: f.id,
+          name: f.name,
+          parentId: f.parentId,
+        })),
+      [data.folders],
+    ),
+  });
+
+  useEffect(() => {
+    if (!isSearchOpen && search.searchQuery) {
+      search.setSearchQuery("");
+    }
+  }, [isSearchOpen, search]);
+
+  const multiselect = useTreeMultiselect();
+
+  useEffect(() => {
+    if (!isMultiselectMode && multiselect.selectedCount > 0) {
+      multiselect.clearSelection();
+    }
+  }, [isMultiselectMode, multiselect]);
+
+  const effectiveExpandedIds = useMemo(() => {
+    if (!search.isSearching) return expandedIds;
+    return new Set([...expandedIds, ...search.expandedFolderIds]);
+  }, [expandedIds, search.isSearching, search.expandedFolderIds]);
+
+  const queryClient = useQueryClient();
+
+  const batchMoveMutation = useMutation({
+    mutationFn: async ({
+      materialIds,
+      folderId,
+    }: {
+      materialIds: string[];
+      folderId: string | null;
+    }) => {
+      await batchMoveStudyMaterials(notebookId, materialIds, folderId);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: studyMaterialsQueryOptions(notebookId).queryKey,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: foldersQueryOptions(notebookId).queryKey,
+      });
+      multiselect.clearSelection();
+    },
+  });
+
+  const handleBatchMove = useCallback(
+    async (materialIds: string[], targetFolderId: string | null) => {
+      await batchMoveMutation.mutateAsync({
+        materialIds,
+        folderId: targetFolderId,
+      });
+    },
+    [batchMoveMutation],
+  );
+
+  const batchDeleteMutation = useMutation({
+    mutationFn: async (materialIds: string[]) => {
+      await batchDeleteStudyMaterials(notebookId, materialIds);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: studyMaterialsQueryOptions(notebookId).queryKey,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: foldersQueryOptions(notebookId).queryKey,
+      });
+      multiselect.clearSelection();
+    },
+  });
+
+  const handleBatchDelete = useCallback(
+    async (materialIds: string[]) => {
+      await batchDeleteMutation.mutateAsync(materialIds);
+    },
+    [batchDeleteMutation],
+  );
+
   const productionExecute = useProductionTreeAdapter(notebookId);
   const effectiveOnCommand = onCommand ?? productionExecute;
 
@@ -140,7 +318,11 @@ export function StudyMaterialsTreeContainer({
   }
 
   if (data.isInitialLoading && !data.hasData) {
-    return <StudyMaterialsTreeSkeleton className={className} />;
+    return (
+      <StudyMaterialsTreeSkeleton
+        className={cn(isPanelExpanded && "h-full", className)}
+      />
+    );
   }
 
   if (data.isError && !data.hasData) {
@@ -160,11 +342,19 @@ export function StudyMaterialsTreeContainer({
       onMaterialActivate={onMaterialActivate}
       effectiveOnCommand={effectiveOnCommand}
       size={size}
-      expandedIds={expandedIds}
+      expandedIds={effectiveExpandedIds}
       setExpandedIds={setExpandedIds}
       isPanelExpanded={isPanelExpanded}
-      onPanelToggle={() => setIsPanelExpanded((v) => !v)}
+      onPanelToggle={handlePanelToggle}
       variant={variant}
+      search={search}
+      multiselect={multiselect}
+      isSearchOpen={isSearchOpen}
+      onToggleSearch={handleToggleSearch}
+      isMultiselectMode={isMultiselectMode}
+      onToggleMultiselect={handleToggleMultiselect}
+      onBatchMove={handleBatchMove}
+      onBatchDelete={handleBatchDelete}
     />
   );
 }

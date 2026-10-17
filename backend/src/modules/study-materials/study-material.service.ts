@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import { studyMaterialFolders, studyMaterials } from '../../database/schema';
@@ -151,6 +151,25 @@ export class StudyMaterialService {
     return deleted;
   }
 
+  async batchDelete(notebookId: string, materialIds: string[]) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    if (!materialIds || materialIds.length === 0) return [];
+
+    const deleted = await this.db
+      .update(studyMaterials)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(studyMaterials.notebookId, notebookId),
+          inArray(studyMaterials.id, materialIds),
+          isNull(studyMaterials.deletedAt),
+        ),
+      )
+      .returning();
+
+    return deleted;
+  }
+
   async restore(smId: string) {
     const sm = await this.fetchOwned(smId);
     if (!sm.deletedAt) {
@@ -200,6 +219,33 @@ export class StudyMaterialService {
       .set({ folderId: input.folderId })
       .where(eq(studyMaterials.id, smId))
       .returning();
+    return moved;
+  }
+
+  async batchMove(
+    notebookId: string,
+    materialIds: string[],
+    folderId: string | null,
+  ) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    if (!materialIds || materialIds.length === 0) return [];
+
+    if (folderId !== null) {
+      await this.assertFolderOwned(notebookId, folderId);
+    }
+
+    const moved = await this.db
+      .update(studyMaterials)
+      .set({ folderId })
+      .where(
+        and(
+          eq(studyMaterials.notebookId, notebookId),
+          inArray(studyMaterials.id, materialIds),
+          isNull(studyMaterials.deletedAt),
+        ),
+      )
+      .returning();
+
     return moved;
   }
 
