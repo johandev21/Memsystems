@@ -32,12 +32,7 @@ export async function updateNotebook(
   updates: Partial<
     Pick<
       Notebook,
-      | 'title'
-      | 'description'
-      | 'icon'
-      | 'folderId'
-      | 'bannerFocalPoint'
-      | 'groundingMode'
+      "title" | "description" | "icon" | "folderId" | "bannerFocalPoint" | "groundingMode"
     >
   >,
 ): Promise<Notebook> {
@@ -75,4 +70,30 @@ export async function uploadNotebookBanner(
 export async function deleteNotebookBanner(id: string): Promise<void> {
   const res = await fetchApi(`/api/notebooks/${id}/banner`, { method: "DELETE" });
   if (!res.ok) throw new Error(`Failed to remove banner (${res.status})`);
+}
+
+export async function exportNotebook(id: string, fallbackTitle?: string): Promise<void> {
+  const res = await fetchApi(`/api/notebooks/${id}/export`);
+  if (!res.ok) throw new Error(`Failed to export notebook (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+
+  const contentDisposition = res.headers.get("content-disposition");
+  let filename = fallbackTitle
+    ? `${fallbackTitle.trim().replace(/[^\p{L}\p{N}_-]+/gu, "-") || "notebook"}.memsys`
+    : "notebook.memsys";
+
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/);
+    const extracted = match?.[1] ? decodeURIComponent(match[1]) : match?.[2];
+    if (extracted) filename = extracted;
+  }
+
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

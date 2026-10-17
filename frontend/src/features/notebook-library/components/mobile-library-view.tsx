@@ -35,6 +35,7 @@ export interface MobileLibraryViewProps {
   onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
   emptyState: { title: string; description: string };
   onOpenTrash?: () => void;
+  onExportNotebook?: (id: string, title: string) => void;
 }
 
 export function MobileLibraryView({
@@ -56,6 +57,7 @@ export function MobileLibraryView({
   onCreateNotebookNamed,
   emptyState,
   onOpenTrash,
+  onExportNotebook,
 }: MobileLibraryViewProps) {
   const { t } = useTranslation("notebooks");
   const activeFolder = folders.find((folder) => folder.id === activeFolderId);
@@ -69,6 +71,7 @@ export function MobileLibraryView({
     onUpdateNotebook,
     onCreateFolderNamed,
     onCreateNotebookNamed,
+    onExportNotebook,
   });
 
   return (
@@ -105,6 +108,7 @@ export function MobileLibraryView({
         onStartRename={actions.startRename}
         onStartMove={() => actions.setIsMoveOpen(true)}
         onDelete={actions.deleteItem}
+        onExport={actions.exportActiveItem}
       />
 
       <MobileRenameDrawer

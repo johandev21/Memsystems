@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
+import { exportNotebook } from "@/features/notebooks/api";
 import { libraryQueryOptions } from "../api/library";
 import { folderPath } from "../model/folder-hierarchy";
 import { useLibraryInteractions } from "../hooks/use-library-interactions";
@@ -268,6 +270,20 @@ export function NotebookLibrary() {
     }
   };
 
+  const handleExportNotebook = async (id: string, title: string) => {
+    try {
+      toast.loading(t("settings.exporting", "Exporting notebook…"), { id: `export-${id}` });
+      await exportNotebook(id, title);
+      toast.success(t("settings.exportSuccess", "Notebook exported successfully"), {
+        id: `export-${id}`,
+      });
+    } catch {
+      toast.error(t("settings.exportFailed", "Failed to export notebook"), {
+        id: `export-${id}`,
+      });
+    }
+  };
+
   return (
     <div className="notebook-library flex flex-col w-full">
       <LibraryHero onCreateNotebook={beginCreateNotebook} onCreateFolder={beginCreateFolder} />
@@ -312,6 +328,7 @@ export function NotebookLibrary() {
             onCreateNotebook={beginCreateNotebook}
             onCreateFolderNamed={handleCreateFolderMobile}
             onCreateNotebookNamed={handleCreateNotebookMobile}
+            onExportNotebook={handleExportNotebook}
           />
         </LibraryContent>
         <DragOverlay dropAnimation={null}>

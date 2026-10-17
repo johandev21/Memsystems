@@ -7,14 +7,17 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFiles,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BadRequestError } from '../../common/errors/domain-error';
+import { NotebookExportService } from './notebook-export.service';
 import { NotebooksService } from './notebooks.service';
 
 const createNotebookSchema = z.object({
@@ -48,7 +51,10 @@ const updateNotebookSchema = z.object({
 
 @Controller('notebooks')
 export class NotebooksController {
-  constructor(private readonly notebooksService: NotebooksService) {}
+  constructor(
+    private readonly notebooksService: NotebooksService,
+    private readonly notebookExportService: NotebookExportService,
+  ) {}
 
   @Get()
   async list(
@@ -74,6 +80,11 @@ export class NotebooksController {
   @Get(':id')
   async get(@Param('id') id: string) {
     return this.notebooksService.get(id);
+  }
+
+  @Get(':id/export')
+  async export(@Param('id') id: string, @Res() res: Response) {
+    return this.notebookExportService.exportNotebook(id, res);
   }
 
   @Patch(':id')

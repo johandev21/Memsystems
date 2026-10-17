@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
   ChevronRight,
+  Download,
   Eraser,
   MoreVertical,
   Pencil,
@@ -32,16 +33,14 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { cn } from "@/shared/utils/cn";
-import { deleteNotebook, notebookQueryOptions, updateNotebook } from "../api/notebooks";
 import {
-  CLEAR_NOTEBOOK_CHAT_EVENT,
-  EDIT_NOTEBOOK_EVENT,
-} from "./dialogs/notebook-settings-dialog";
-import {
-  GROUNDING_MODES,
-  resolveGroundingMode,
-  type GroundingMode,
-} from "../model/grounding-mode";
+  deleteNotebook,
+  exportNotebook,
+  notebookQueryOptions,
+  updateNotebook,
+} from "../api/notebooks";
+import { CLEAR_NOTEBOOK_CHAT_EVENT, EDIT_NOTEBOOK_EVENT } from "./dialogs/notebook-settings-dialog";
+import { GROUNDING_MODES, resolveGroundingMode, type GroundingMode } from "../model/grounding-mode";
 
 export interface MobileNotebookMenuDrawerProps {
   notebookId: string;
@@ -96,6 +95,20 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
 
   const handleEdit = () => dispatchNotebookAction(EDIT_NOTEBOOK_EVENT);
   const handleClearChat = () => dispatchNotebookAction(CLEAR_NOTEBOOK_CHAT_EVENT);
+  const handleExport = async () => {
+    setOpen(false);
+    try {
+      toast.loading(t("settings.exporting", "Exporting notebook…"), { id: `export-${notebookId}` });
+      await exportNotebook(notebookId, notebook?.title);
+      toast.success(t("settings.exportSuccess", "Notebook exported successfully"), {
+        id: `export-${notebookId}`,
+      });
+    } catch {
+      toast.error(t("settings.exportFailed", "Failed to export notebook"), {
+        id: `export-${notebookId}`,
+      });
+    }
+  };
 
   const handleOpenDelete = () => {
     setOpen(false);
@@ -140,9 +153,7 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
             <DrawerTitle className="text-base font-semibold truncate">
               {notebook?.title ?? t("settings.title")}
             </DrawerTitle>
-            <DrawerDescription className="text-xs">
-              {t("settings.description")}
-            </DrawerDescription>
+            <DrawerDescription className="text-xs">{t("settings.description")}</DrawerDescription>
           </DrawerHeader>
 
           <div className="flex flex-col gap-1 py-2">
@@ -177,6 +188,15 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
             >
               <Eraser className="size-4 text-muted-foreground shrink-0" />
               <span>{t("settings.clearChat")}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExport}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted active:scale-97 transition-transform transition-colors touch-manipulation cursor-pointer"
+            >
+              <Download className="size-4 text-muted-foreground shrink-0" />
+              <span>{t("settings.export", "Export notebook")}</span>
             </button>
 
             <button
@@ -230,9 +250,7 @@ export function MobileNotebookMenuDrawer({ notebookId }: MobileNotebookMenuDrawe
                       {t(`groundingMode.descriptions.${mode}`)}
                     </span>
                   </div>
-                  {isSelected && (
-                    <Check className="size-4.5 shrink-0 text-primary" />
-                  )}
+                  {isSelected && <Check className="size-4.5 shrink-0 text-primary" />}
                 </button>
               );
             })}

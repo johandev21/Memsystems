@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Eraser, Pencil, Settings, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Download, Eraser, Pencil, Settings, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -14,7 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteNotebook, notebookQueryOptions, updateNotebook } from "../../api/notebooks";
+import {
+  deleteNotebook,
+  exportNotebook,
+  notebookQueryOptions,
+  updateNotebook,
+} from "../../api/notebooks";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,7 +35,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GROUNDING_MODES, resolveGroundingMode, type GroundingMode } from "../../model/grounding-mode";
+import {
+  GROUNDING_MODES,
+  resolveGroundingMode,
+  type GroundingMode,
+} from "../../model/grounding-mode";
 
 export const EDIT_NOTEBOOK_EVENT = "edit-notebook";
 export const CLEAR_NOTEBOOK_CHAT_EVENT = "clear-notebook-chat";
@@ -75,6 +84,20 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
 
   const handleEdit = () => dispatchNotebookAction(EDIT_NOTEBOOK_EVENT);
   const handleClearChat = () => dispatchNotebookAction(CLEAR_NOTEBOOK_CHAT_EVENT);
+  const handleExport = async () => {
+    setOpen(false);
+    try {
+      toast.loading(t("settings.exporting", "Exporting notebook…"), { id: `export-${notebookId}` });
+      await exportNotebook(notebookId, notebook?.title);
+      toast.success(t("settings.exportSuccess", "Notebook exported successfully"), {
+        id: `export-${notebookId}`,
+      });
+    } catch {
+      toast.error(t("settings.exportFailed", "Failed to export notebook"), {
+        id: `export-${notebookId}`,
+      });
+    }
+  };
   const handleOpenDelete = () => {
     setOpen(false);
     setDeleteDialogOpen(true);
@@ -167,6 +190,10 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
             <DropdownMenuItem onClick={handleClearChat} className="cursor-pointer">
               <Eraser />
               <span>{t("settings.clearChat")}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExport} className="cursor-pointer">
+              <Download />
+              <span>{t("settings.export", "Export notebook")}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
