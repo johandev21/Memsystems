@@ -18,8 +18,8 @@ const folders: FolderDTO[] = [
 ];
 const materials: StudyMaterialDTO[] = [];
 
-describe("StudyMaterialsTree RowMenu shortcuts", () => {
-  it("renders Lucide icon shortcuts instead of emojis on right-click", async () => {
+describe("StudyMaterialsTree RowMenu", () => {
+  it("renders clean menu items without visual shortcut badges on right-click", async () => {
     render(
       <StudyMaterialsTree
         folders={folders}
@@ -41,26 +41,50 @@ describe("StudyMaterialsTree RowMenu shortcuts", () => {
     const newFolderItem = await screen.findByRole("menuitem", { name: /New folder/i });
     expect(newFolderItem).toBeTruthy();
 
-    // Verify button/kbd is removed
+    // Verify shortcuts are NOT displayed visually in menu items
     expect(newFolderItem.querySelector("kbd")).toBeNull();
-
-    // Verify Command icon exists with size-4 and accessible sr-only text
-    const commandSvg = newFolderItem.querySelector("svg.lucide-command");
-    expect(commandSvg).toBeTruthy();
-    expect(commandSvg?.getAttribute("class")).toContain("size-4");
+    expect(newFolderItem.querySelector('[data-slot="context-menu-shortcut"]')).toBeNull();
+    expect(newFolderItem.querySelector("svg.lucide-command")).toBeNull();
     expect(newFolderItem.textContent).not.toContain("⌘");
-    expect(newFolderItem.textContent).toContain("N");
-    expect(newFolderItem.textContent).toContain("Command N");
 
-    // Verify Delete item has no button/kbd and renders Delete icon with size-5 and sr-only Backspace
     const deleteItem = screen.getByRole("menuitem", { name: /Delete/i });
     expect(deleteItem).toBeTruthy();
     expect(deleteItem.querySelector("kbd")).toBeNull();
-
-    const deleteSvg = deleteItem.querySelector("svg.lucide-delete");
-    expect(deleteSvg).toBeTruthy();
-    expect(deleteSvg?.getAttribute("class")).toContain("size-5");
+    expect(deleteItem.querySelector('[data-slot="context-menu-shortcut"]')).toBeNull();
+    expect(deleteItem.querySelector("svg.lucide-delete")).toBeNull();
     expect(deleteItem.textContent).not.toContain("⌫");
-    expect(deleteItem.textContent).toContain("Backspace");
+    expect(deleteItem.textContent).not.toContain("Backspace");
+  });
+
+  it("handles keyboard shortcuts (F2, Delete, Backspace) when row is focused", async () => {
+    const handleCommand = vi.fn().mockResolvedValue({ success: true });
+    render(
+      <StudyMaterialsTree
+        folders={folders}
+        materials={materials}
+        selectedId={null}
+        onSelectedChange={vi.fn()}
+        onCommand={handleCommand}
+      />,
+    );
+
+    const folderNode = screen.getByText("Documents");
+    const row = folderNode.closest('[role="treeitem"]') as HTMLElement;
+    expect(row).toBeTruthy();
+
+    // Focus the row
+    row.focus();
+
+    // F2 triggers rename input
+    fireEvent.keyDown(row, { key: "F2" });
+    const renameInput = screen.getByRole("textbox");
+    expect(renameInput).toBeTruthy();
+    fireEvent.keyDown(renameInput, { key: "Escape" });
+
+    // Delete or Backspace opens delete confirmation dialog
+    fireEvent.keyDown(row, { key: "Backspace" });
+    const deleteDialog = await screen.findByRole("alertdialog");
+    expect(deleteDialog).toBeTruthy();
+    expect(deleteDialog.textContent).toContain("Delete folder");
   });
 });

@@ -9,6 +9,8 @@ export interface UseTreeKeyboardNavOptions {
   focus: (id: string) => void;
   activate: (node: TreeNode) => void;
   beginRename: (id: string) => void;
+  requestDelete?: (node: TreeNode) => void;
+  createFolder?: (parentId: string | null) => void;
 }
 
 export function useTreeKeyboardNav(options: UseTreeKeyboardNavOptions) {

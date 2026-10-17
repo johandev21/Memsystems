@@ -51,7 +51,7 @@ export function TreeHeader({
           isPanelExpanded
             ? "min-h-11 p-1.5 bg-panel-header-bg !rounded-none"
             : "min-h-(--tree-header-min-height) gap-2 bg-panel-header-bg px-2.5 !rounded-t-2xl",
-          isOver && isValidRootTarget && "bg-accent",
+          isOver && isValidRootTarget && "bg-accent/80 ring-2 ring-primary/40",
         )}
       >
         <div className="flex min-w-0 items-center gap-1.5">
@@ -63,11 +63,6 @@ export function TreeHeader({
           >
             {t("header.title")}
           </span>
-          {controller.activeDragItemId && (
-            <span className="text-xs text-muted-foreground">
-              {isOver && isValidRootTarget ? t("header.dropToRoot") : t("header.dragToFolder")}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-0.5">
           {onToggleSearch && (

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   ContextMenu,
@@ -188,7 +188,8 @@ export function FolderCard({
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={beginRename}>
-          {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
+          <Pencil />
+          {t("library.rename")}
         </ContextMenuItem>
         <ContextMenuItem variant="destructive" onClick={onRemove}>
           <Trash2 />
@@ -368,7 +369,8 @@ export function NotebookCard({
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={beginRename}>
-          {t("library.rename")} <span className="ml-auto text-xs text-muted-foreground">F2</span>
+          <Pencil />
+          {t("library.rename")}
         </ContextMenuItem>
         <ContextMenuItem variant="destructive" onClick={onRemove}>
           <Trash2 />

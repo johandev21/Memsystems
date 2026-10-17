@@ -6,7 +6,6 @@ import {
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -29,7 +28,7 @@ import {
 import {
   TreeSearchBar,
 } from "@/components/ui/tree";
-import { ChevronsUpDown, Command, Folder, FolderOpen, FolderPlus, Search } from "lucide-react";
+import { ChevronsUpDown, Folder, FolderOpen, FolderPlus, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TreeCommandExecutor } from "../model/commands";
@@ -213,7 +212,7 @@ export function StudyMaterialsTree({
                 onToggleSearch={onToggleSearch}
               />
               {isSearchOpen && (
-                <div className="border-b border-border/60 bg-panel-header-bg/50 px-2 py-1.5">
+                <div className="px-2 pt-2">
                   <TreeSearchBar
                     value={searchQuery ?? ""}
                     onChange={onSearchChange ?? (() => {})}
@@ -290,15 +289,10 @@ function TreeRootMenu() {
   const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
   return (
-    <ContextMenuContent className="min-w-56">
+    <ContextMenuContent className="min-w-48">
       <ContextMenuGroup>
         <ContextMenuItem onClick={() => controller.createFolder(null)}>
           <FolderPlus /> {t("actions.newFolder")}
-          <ContextMenuShortcut className="flex items-center gap-1 tracking-normal font-sans text-xs text-muted-foreground group-focus/context-menu-item:text-accent-foreground">
-            <Command className="size-4 shrink-0" aria-hidden="true" />
-            <span className="font-sans font-medium">N</span>
-            <span className="sr-only">Command N</span>
-          </ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuGroup>
       <ContextMenuSeparator />
@@ -322,7 +316,7 @@ function TreeBranchList() {
       data-slot="study-materials-tree-content"
       role="tree"
       aria-label={t("tree.ariaLabel")}
-      className="min-h-full min-w-0 py-1"
+      className="flex min-h-full min-w-0 flex-col gap-0.5 p-2"
     >
       {tree.map((node) => (
         <Branch key={node.id} node={node} depth={0} />

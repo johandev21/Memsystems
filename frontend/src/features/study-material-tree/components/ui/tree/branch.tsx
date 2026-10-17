@@ -17,11 +17,15 @@ export function Branch({ node, depth }: BranchProps) {
   const isOpen = controller.isFolderOpen(node.id);
 
   return (
-    <div data-slot="study-materials-tree-branch" data-size={controller.size}>
+    <div
+      data-slot="study-materials-tree-branch"
+      data-size={controller.size}
+      className="flex flex-col gap-0.5"
+    >
       <Row node={node} depth={depth} />
       {isOpen && node.children.length > 0 && (
         <div
-          className="relative"
+          className="relative flex flex-col gap-0.5"
           data-slot="study-materials-tree-branch-children"
           data-size={controller.size}
         >

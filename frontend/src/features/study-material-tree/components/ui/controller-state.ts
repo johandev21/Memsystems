@@ -330,6 +330,8 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     focus,
     activate,
     beginRename: mutations.beginRename,
+    requestDelete: mutations.requestDelete,
+    createFolder: (parentId: string | null) => void mutations.createFolderInternal(parentId),
   });
 
   return {

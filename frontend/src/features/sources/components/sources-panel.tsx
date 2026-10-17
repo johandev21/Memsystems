@@ -308,6 +308,7 @@ export const SourcesPanel = memo(function SourcesPanel({
     activate,
     beginRename: handleBeginRename,
     requestDelete: requestDeleteKbd,
+    createFolder: handleCreateFolder,
   });
 
   if (isMobileLayout) {

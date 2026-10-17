@@ -3,13 +3,10 @@ import {
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuShortcut,
 } from "@/components/ui/context-menu";
 import {
-  Command,
+  ChevronsUpDown,
   Copy,
-  Delete,
-  Folder,
   FolderInput,
   FolderOpen,
   FolderPlus,
@@ -30,7 +27,7 @@ export function RowMenu({ node }: RowMenuProps) {
   const isFolder = node.type === "folder";
 
   return (
-    <ContextMenuContent data-slot="study-materials-tree-row-menu" className="min-w-56">
+    <ContextMenuContent data-slot="study-materials-tree-row-menu" className="min-w-48">
       <ContextMenuGroup>
         {isFolder && (
           <ContextMenuItem
@@ -39,11 +36,6 @@ export function RowMenu({ node }: RowMenuProps) {
           >
             <FolderPlus />
             {t("actions.newFolder")}
-            <ContextMenuShortcut className="flex items-center gap-1 tracking-normal font-sans text-xs text-muted-foreground group-focus/context-menu-item:text-accent-foreground">
-              <Command className="size-4 shrink-0" aria-hidden="true" />
-              <span className="font-sans font-medium">N</span>
-              <span className="sr-only">Command N</span>
-            </ContextMenuShortcut>
           </ContextMenuItem>
         )}
         <ContextMenuItem
@@ -52,10 +44,6 @@ export function RowMenu({ node }: RowMenuProps) {
         >
           <Pencil />
           {t("actions.rename")}
-          <ContextMenuShortcut className="tracking-normal font-sans text-xs text-muted-foreground group-focus/context-menu-item:text-accent-foreground">
-            <span className="font-sans font-medium">F2</span>
-            <span className="sr-only">F2</span>
-          </ContextMenuShortcut>
         </ContextMenuItem>
         {node.type === "material" && (
           <ContextMenuItem
@@ -90,7 +78,7 @@ export function RowMenu({ node }: RowMenuProps) {
               data-slot="study-materials-tree-row-menu-item"
               onClick={controller.collapseAll}
             >
-              <Folder />
+              <ChevronsUpDown />
               {t("actions.collapseAll")}
             </ContextMenuItem>
           </>
@@ -105,10 +93,6 @@ export function RowMenu({ node }: RowMenuProps) {
         >
           <Trash2 />
           {t("actions.delete")}
-          <ContextMenuShortcut className="flex items-center tracking-normal text-destructive/75 group-focus/context-menu-item:text-destructive">
-            <Delete className="size-5 shrink-0" aria-hidden="true" />
-            <span className="sr-only">Backspace</span>
-          </ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuGroup>
     </ContextMenuContent>

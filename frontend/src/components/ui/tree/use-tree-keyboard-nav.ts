@@ -11,6 +11,7 @@ export interface UseTreeKeyboardNavOptions<TNode extends BaseTreeNode = BaseTree
   activate: (node: TNode) => void;
   beginRename: (id: string) => void;
   requestDelete?: (node: TNode) => void;
+  createFolder?: (parentId: string | null) => void;
 }
 
 export function useTreeKeyboardNav<TNode extends BaseTreeNode = BaseTreeNode>({
@@ -22,6 +23,7 @@ export function useTreeKeyboardNav<TNode extends BaseTreeNode = BaseTreeNode>({
   activate,
   beginRename,
   requestDelete,
+  createFolder,
 }: UseTreeKeyboardNavOptions<TNode>) {
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, node: TNode) => {
@@ -76,15 +78,24 @@ export function useTreeKeyboardNav<TNode extends BaseTreeNode = BaseTreeNode>({
         activate(node);
         return;
       }
+      if ((event.metaKey || event.ctrlKey) && (event.key === "n" || event.key === "N")) {
+        if (createFolder) {
+          event.preventDefault();
+          const targetParentId = node.type === "folder" ? node.id : (node.parentId ?? null);
+          createFolder(targetParentId);
+          return;
+        }
+      }
       if (event.key === "F2") {
         event.preventDefault();
         beginRename(node.id);
         return;
       }
-      if (event.key === "Delete") {
+      if (event.key === "Delete" || event.key === "Backspace") {
         if (requestDelete) {
           event.preventDefault();
           requestDelete(node);
+          return;
         }
       }
     },
@@ -92,6 +103,7 @@ export function useTreeKeyboardNav<TNode extends BaseTreeNode = BaseTreeNode>({
       activeDragItemId,
       activate,
       beginRename,
+      createFolder,
       focus,
       openFolderIds,
       requestDelete,
