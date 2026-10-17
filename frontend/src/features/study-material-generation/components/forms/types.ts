@@ -15,7 +15,7 @@ export interface MindMapOptions {
 
 export interface SlidesOptions {
   slideCount: number;
-  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm";
+  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm" | "auto";
   detailLevel: "basic" | "detailed";
 }
 

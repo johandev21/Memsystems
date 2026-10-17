@@ -75,10 +75,10 @@ export const DETAIL_OPTIONS = [
 
 export const DEFAULT_SLIDES_OPTIONS: {
   slideCount: number;
-  theme: Exclude<SlidesThemeOption, "accent">;
+  theme: Exclude<SlidesThemeOption, "accent"> | "auto";
   detailLevel: SlidesDetailLevel;
 } = {
   slideCount: 8,
-  theme: "light",
+  theme: "auto",
   detailLevel: "basic",
 };

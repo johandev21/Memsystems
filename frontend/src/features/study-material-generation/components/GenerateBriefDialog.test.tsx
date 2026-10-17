@@ -334,7 +334,7 @@ describe("GenerateBriefDialog", () => {
     );
   });
 
-  it("walks the slides wizard across three steps and submits with design options", async () => {
+  it("walks the slides wizard across two steps and submits with auto theme and options", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     const onComplete = vi.fn();
@@ -354,22 +354,15 @@ describe("GenerateBriefDialog", () => {
 
     expect(screen.getByText("Generate Slides")).toBeTruthy();
     expect(screen.getByText("Slides Setup")).toBeTruthy();
-    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
-    // Design step is visible first; the submit action lives on the last step.
-    expect(screen.getByRole("button", { name: "Dark" })).toBeTruthy();
+    expect(screen.getByText("Step 1 of 2")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Generate" })).toBeNull();
 
-    // Choose custom options for the slides wizard.
+    // Choose options on Step 1: count and detail level (theme is auto-decided by LLM)
     await user.click(screen.getByRole("button", { name: "8" }));
-    await user.click(screen.getByRole("button", { name: "Dark" }));
-
-    await user.click(screen.getByRole("button", { name: /Next Step/i }));
-    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
-
     await user.click(screen.getByRole("button", { name: /^Detailed/ }));
 
     await user.click(screen.getByRole("button", { name: /Next Step/i }));
-    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 2")).toBeTruthy();
 
     const instructions = screen.getByPlaceholderText(
       "What should this deck explain? Describe the topic, audience, or narrative arc...",
@@ -391,7 +384,7 @@ describe("GenerateBriefDialog", () => {
         model: "openai/gpt-5.6-sol",
         slidesOptions: {
           slideCount: 8,
-          theme: "dark",
+          theme: "auto",
           detailLevel: "detailed",
         },
       }),

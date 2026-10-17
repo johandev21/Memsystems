@@ -1,11 +1,8 @@
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/shared/utils/cn";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BriefChoiceField } from "./brief-choice-field";
 import { BriefInstructionsStep } from "./brief-instructions-step";
 import {
-  BriefBackButton,
   BriefFieldLabel,
   BriefNextButton,
   BriefStep,
@@ -17,15 +14,15 @@ import { BriefWizardHeader } from "./brief-wizard-header";
 import { CountSelector } from "./count-selector";
 import { GenerationSourcePopover } from "./generation-source-popover";
 import {
+  DEFAULT_SLIDES_OPTIONS,
   DETAIL_OPTIONS,
   MAX_SLIDE_COUNT,
   SLIDE_PRESETS,
-  THEME_OPTIONS,
-  normalizeTheme,
 } from "./slides-theme-options";
 import type { BaseMaterialFormProps, SlidesOptions } from "./types";
 import { useBriefWizard } from "./use-brief-wizard";
 
+const TOTAL_STEPS = 2;
 const CUSTOM_SLIDE_DEFAULT = 15;
 
 export function SlidesBriefForm({
@@ -38,24 +35,20 @@ export function SlidesBriefForm({
 }: BaseMaterialFormProps) {
   const { t } = useTranslation("generation");
   const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
-    useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: 3 });
+    useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: TOTAL_STEPS });
 
-  const slideCount = value.slidesOptions?.slideCount || 8;
-  const theme = normalizeTheme(value.slidesOptions?.theme);
-  const rawDetail = value.slidesOptions?.detailLevel as string | undefined;
-  const detailLevel = (rawDetail === "auto" || rawDetail === undefined ? "basic" : rawDetail) as
-    | "basic"
-    | "detailed";
+  const currentOptions = value.slidesOptions ?? DEFAULT_SLIDES_OPTIONS;
+  const slideCount = currentOptions.slideCount || DEFAULT_SLIDES_OPTIONS.slideCount;
+  const rawDetail = currentOptions.detailLevel as string | undefined;
+  const detailLevel = (rawDetail === "auto" || !rawDetail
+    ? DEFAULT_SLIDES_OPTIONS.detailLevel
+    : rawDetail) as "basic" | "detailed";
 
-  const updateSlidesOptions = (patch: {
-    slideCount?: number;
-    theme?: SlidesOptions["theme"];
-    detailLevel?: SlidesOptions["detailLevel"];
-  }) => {
+  const updateSlidesOptions = (patch: Partial<SlidesOptions>) => {
     onChange({
       slidesOptions: {
         slideCount: patch.slideCount ?? slideCount,
-        theme: patch.theme ?? theme,
+        theme: patch.theme ?? currentOptions.theme ?? "auto",
         detailLevel: patch.detailLevel ?? detailLevel,
       },
     });
@@ -65,9 +58,6 @@ export function SlidesBriefForm({
     slideCount >= MAX_SLIDE_COUNT
       ? t("slides.countMax", { count: slideCount, max: MAX_SLIDE_COUNT })
       : t("slides.count", { count: slideCount });
-
-  const themeOption = THEME_OPTIONS.find((opt) => opt.id === theme);
-  const themeDescription = themeOption ? t(themeOption.descKey) : null;
 
   const detailOptions = [
     ...DETAIL_OPTIONS.map((opt) => ({
@@ -82,7 +72,7 @@ export function SlidesBriefForm({
       <BriefWizardHeader
         title={t("wizard.title", { kind: t("kinds.slides") })}
         step={step}
-        totalSteps={3}
+        totalSteps={TOTAL_STEPS}
         onStepChange={setStep}
       />
       {step === 1 ? (
@@ -100,88 +90,9 @@ export function SlidesBriefForm({
               onValueChange={(next) => updateSlidesOptions({ slideCount: next })}
             />
 
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <BriefFieldLabel>
-                  {t("slides.visualThemeLabel")}
-                </BriefFieldLabel>
-                <span className="text-xs font-medium text-text-tertiary">{themeDescription}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-                <TooltipProvider delay={200}>
-                  {THEME_OPTIONS.map((opt) => {
-                    const selected = theme === opt.id;
-                    return (
-                      <Tooltip key={opt.id}>
-                        <TooltipTrigger
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => updateSlidesOptions({ theme: opt.id })}
-                          className={cn(
-                            "cursor-pointer rounded-2xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation active:scale-97",
-                            selected
-                              ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                              : "border-surface-border-subtle bg-surface-2 text-text-tertiary hover:bg-surface-3",
-                            "flex flex-col items-center gap-1.5 p-2 transition-all",
-                            selected ? "font-semibold" : "font-medium",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "relative block h-7 w-full overflow-hidden rounded-md border bg-(--swatch-bg)",
-                              selected ? "border-(--swatch-accent)" : "border-transparent",
-                            )}
-                            style={
-                              {
-                                "--swatch-bg": opt.swatch.bg,
-                                "--swatch-accent": opt.swatch.accent,
-                                "--swatch-text": opt.swatch.text,
-                                "--swatch-surface": opt.swatch.surface,
-                              } as React.CSSProperties
-                            }
-                          >
-                            <span className="absolute inset-x-0 top-0 block h-0.75 bg-(--swatch-accent)" />
-                            <span className="absolute left-1 top-1.5 block h-0.75 w-3/5 rounded-full bg-(--swatch-text)" />
-                            <span className="absolute left-1 top-2.75 block h-0.5 w-2/5 rounded-full opacity-70 bg-(--swatch-text)" />
-                            <span className="absolute bottom-0.75 left-1 flex gap-0.5">
-                              <span className="block size-1.5 rounded-xs border border-(--swatch-accent) bg-(--swatch-surface)" />
-                              <span className="block size-1.5 rounded-full bg-(--swatch-accent)" />
-                            </span>
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate text-center text-sm font-semibold">
-                              {t(opt.titleKey)}
-                            </span>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {t("slides.themeTooltip", {
-                            title: t(opt.titleKey),
-                            desc: t(opt.descKey),
-                          })}
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </TooltipProvider>
-              </div>
-            </div>
-          </BriefStepFields>
-
-          <BriefStepFooter>
-            <BriefStepHint>{t("wizard.nextHintOptions")}</BriefStepHint>
-            <BriefNextButton onClick={() => setStep(2)}>
-              {t("actions.nextStep")}
-              <ArrowRight className="size-4" />
-            </BriefNextButton>
-          </BriefStepFooter>
-        </BriefStep>
-      ) : step === 2 ? (
-        <BriefStep>
-          <BriefStepFields>
             <BriefChoiceField
               columns={2}
-              label={t("fields.detailLevelStep3")}
+              label={t("fields.detailLevelStep2")}
               options={detailOptions}
               value={detailLevel}
               onChange={(next) => updateSlidesOptions({ detailLevel: next })}
@@ -189,7 +100,7 @@ export function SlidesBriefForm({
 
             <div className="flex flex-col gap-2">
               <BriefFieldLabel required={!hasInstructions}>
-                {t("fields.knowledgeSourcesStep4")}
+                {t("fields.knowledgeSourcesStep3")}
               </BriefFieldLabel>
               <GenerationSourcePopover
                 sources={sources}
@@ -201,12 +112,8 @@ export function SlidesBriefForm({
           </BriefStepFields>
 
           <BriefStepFooter>
-            <BriefBackButton onClick={() => setStep(1)}>
-              <ArrowLeft className="size-4" />
-              {t("actions.back")}
-            </BriefBackButton>
             <BriefStepHint>{t("wizard.nextHintInstructions")}</BriefStepHint>
-            <BriefNextButton onClick={() => setStep(3)}>
+            <BriefNextButton onClick={() => setStep(2)}>
               {t("actions.nextStep")}
               <ArrowRight className="size-4" />
             </BriefNextButton>
@@ -225,7 +132,7 @@ export function SlidesBriefForm({
           disabled={disabled}
           onBriefChange={(brief) => patchFormData({ brief })}
           onFolderIdChange={(folderId) => patchFormData({ folderId })}
-          onBack={() => setStep(2)}
+          onBack={() => setStep(1)}
           onSubmit={onSubmit}
         />
       )}
