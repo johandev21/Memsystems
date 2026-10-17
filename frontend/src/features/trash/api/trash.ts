@@ -35,3 +35,39 @@ export async function fetchTrashPage(cursor?: string, limit = 30): Promise<Trash
   }
   return res.json() as Promise<TrashPageResponse>;
 }
+
+export async function restoreTrashItem(
+  kind: TrashKind,
+  id: string,
+): Promise<{ success: boolean; id: string; kind: TrashKind }> {
+  const res = await fetchApi(`/api/trash/${kind}/${id}/restore`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to restore item from trash");
+  }
+  return res.json() as Promise<{ success: boolean; id: string; kind: TrashKind }>;
+}
+
+export async function deleteForeverTrashItem(
+  kind: TrashKind,
+  id: string,
+): Promise<{ success: boolean; id: string; kind: TrashKind }> {
+  const res = await fetchApi(`/api/trash/${kind}/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to permanently delete item");
+  }
+  return res.json() as Promise<{ success: boolean; id: string; kind: TrashKind }>;
+}
+
+export async function emptyTrashApi(): Promise<{ success: boolean; purged: boolean }> {
+  const res = await fetchApi("/api/trash", {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to empty trash");
+  }
+  return res.json() as Promise<{ success: boolean; purged: boolean }>;
+}

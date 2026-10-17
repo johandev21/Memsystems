@@ -34,8 +34,7 @@ export interface MobileLibraryViewProps {
   onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
   onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
   emptyState: { title: string; description: string };
-  view?: "library" | "trash";
-  onViewChange?: (view: "library" | "trash") => void;
+  onOpenTrash?: () => void;
 }
 
 export function MobileLibraryView({
@@ -56,8 +55,7 @@ export function MobileLibraryView({
   onCreateFolderNamed,
   onCreateNotebookNamed,
   emptyState,
-  view = "library",
-  onViewChange,
+  onOpenTrash,
 }: MobileLibraryViewProps) {
   const { t } = useTranslation("notebooks");
   const activeFolder = folders.find((folder) => folder.id === activeFolderId);
@@ -82,8 +80,7 @@ export function MobileLibraryView({
         sortOptions={sortOptions}
         onSortChange={onSortChange}
         onOpenFolder={onOpenFolder}
-        view={view}
-        onViewChange={onViewChange}
+        onOpenTrash={onOpenTrash}
       />
 
       {items.length === 0 ? (

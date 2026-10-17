@@ -13,7 +13,14 @@ import {
 import { db } from '../db';
 
 describe('TrashLedgerService Integration Tests', () => {
-  const service = new TrashLedgerService(db as any);
+  const service = new TrashLedgerService(
+    db as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
+  );
 
   it('aggregates top-level soft-deleted roots across all 6 tables and filters out cascaded children', async () => {
     // 1. Alive notebook with its own contents
@@ -114,5 +121,175 @@ describe('TrashLedgerService Integration Tests', () => {
     for (const id of page2Ids) {
       expect(page1Ids).not.toContain(id);
     }
+  });
+
+  it('restores a notebook and its cascaded contents, and re-roots if parent folder is deleted', async () => {
+    // 1. Deleted folder
+    const deletedFolder = await seedNotebookFolder({ name: 'Old Folder' });
+    await db
+      .update(appSchema.notebookFolders)
+      .set({ deletedAt: new Date() })
+      .where(eq(appSchema.notebookFolders.id, deletedFolder.id));
+
+    // 2. Notebook inside deleted folder, cascaded contents
+    const nb = await seedNotebook({ title: 'My Notebook', folderId: deletedFolder.id });
+    const src = await seedSource(nb.id, { title: 'Source 1' });
+    const sm = await seedStudyMaterial(nb.id, { kind: 'quiz', title: 'Quiz 1' });
+
+    // Soft delete notebook and children
+    const now = new Date();
+    await db.update(appSchema.notebooks).set({ deletedAt: now }).where(eq(appSchema.notebooks.id, nb.id));
+    await db.update(appSchema.sources).set({ deletedAt: now }).where(eq(appSchema.sources.id, src.id));
+    await db.update(appSchema.studyMaterials).set({ deletedAt: now }).where(eq(appSchema.studyMaterials.id, sm.id));
+
+    // Call restore
+    const result = await service.restore('notebook', nb.id);
+    expect(result.success).toBe(true);
+
+    // Verify notebook is restored and re-rooted (folderId = null since parent folder is deleted)
+    const [restoredNb] = await db.select().from(appSchema.notebooks).where(eq(appSchema.notebooks.id, nb.id));
+    expect(restoredNb.deletedAt).toBeNull();
+    expect(restoredNb.folderId).toBeNull();
+
+    // Verify cascaded sources & study materials are restored
+    const [restoredSrc] = await db.select().from(appSchema.sources).where(eq(appSchema.sources.id, src.id));
+    expect(restoredSrc.deletedAt).toBeNull();
+
+    const [restoredSm] = await db.select().from(appSchema.studyMaterials).where(eq(appSchema.studyMaterials.id, sm.id));
+    expect(restoredSm.deletedAt).toBeNull();
+  });
+
+  it('restores a source and re-roots to null if its parent source folder was deleted', async () => {
+    const nb = await seedNotebook({ title: 'Active Notebook' });
+    const folder = await seedSourceFolder(nb.id, { name: 'Source Folder' });
+    const src = await seedSource(nb.id, { title: 'Child Source', folderId: folder.id });
+
+    // Delete folder and source
+    const now = new Date();
+    await db.update(appSchema.sourceFolders).set({ deletedAt: now }).where(eq(appSchema.sourceFolders.id, folder.id));
+    await db.update(appSchema.sources).set({ deletedAt: now }).where(eq(appSchema.sources.id, src.id));
+
+    const result = await service.restore('source', src.id);
+    expect(result.success).toBe(true);
+
+    const [restoredSrc] = await db.select().from(appSchema.sources).where(eq(appSchema.sources.id, src.id));
+    expect(restoredSrc.deletedAt).toBeNull();
+    expect(restoredSrc.folderId).toBeNull();
+  });
+
+  it('permanently deletes a source, calls storageService.deleteObject and cancels job queue', async () => {
+    const nb = await seedNotebook({ title: 'Active Notebook' });
+    const src = await seedSource(nb.id, { title: 'File Source', s3Key: 'sources/test-file.pdf' });
+
+    let deletedS3Key: string | null = null;
+    let cancelledJobGroup: string | null = null;
+
+    const mockStorage = {
+      deleteObject: async (key: string) => {
+        deletedS3Key = key;
+      },
+    };
+    const mockJobs = {
+      cancelByGroup: async (group: string) => {
+        cancelledJobGroup = group;
+      },
+    };
+
+    const customService = new TrashLedgerService(
+      db as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      mockStorage as any,
+      mockJobs as any,
+    );
+
+    const result = await customService.deleteForever('source', src.id);
+    expect(result.success).toBe(true);
+
+    expect(deletedS3Key).toBe('sources/test-file.pdf');
+    expect(cancelledJobGroup).toBe(`source:${src.id}:processing`);
+
+    const [dbSrc] = await db.select().from(appSchema.sources).where(eq(appSchema.sources.id, src.id));
+    expect(dbSrc).toBeUndefined();
+  });
+
+  it('permanently deletes a notebook and cleans up banner and source files', async () => {
+    const nb = await seedNotebook({ title: 'Banner Notebook', banner: 'banners/banner.png' });
+    const src = await seedSource(nb.id, { title: 'Child File', s3Key: 'sources/child.pdf' });
+
+    const deletedKeys: string[] = [];
+    const mockStorage = {
+      deleteObject: async (key: string) => {
+        deletedKeys.push(key);
+      },
+    };
+
+    const customService = new TrashLedgerService(
+      db as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      mockStorage as any,
+      undefined,
+    );
+
+    const result = await customService.deleteForever('notebook', nb.id);
+    expect(result.success).toBe(true);
+
+    expect(deletedKeys).toContain('banners/banner.png');
+    expect(deletedKeys).toContain('sources/child.pdf');
+
+    const [dbNb] = await db.select().from(appSchema.notebooks).where(eq(appSchema.notebooks.id, nb.id));
+    expect(dbNb).toBeUndefined();
+    const [dbSrc] = await db.select().from(appSchema.sources).where(eq(appSchema.sources.id, src.id));
+    expect(dbSrc).toBeUndefined();
+  });
+
+  it('emptyTrash deletes all soft-deleted records across all tables and purges S3 objects', async () => {
+    const nb = await seedNotebook({ title: 'Purged Notebook', banner: 'banners/purged.png' });
+    const src = await seedSource(nb.id, { title: 'Purged Source', s3Key: 'sources/purged.pdf' });
+    const sm = await seedStudyMaterial(nb.id, { kind: 'quiz', title: 'Purged Quiz' });
+    const folder = await seedNotebookFolder({ name: 'Purged Folder' });
+
+    const now = new Date();
+    await db.update(appSchema.notebooks).set({ deletedAt: now }).where(eq(appSchema.notebooks.id, nb.id));
+    await db.update(appSchema.sources).set({ deletedAt: now }).where(eq(appSchema.sources.id, src.id));
+    await db.update(appSchema.studyMaterials).set({ deletedAt: now }).where(eq(appSchema.studyMaterials.id, sm.id));
+    await db.update(appSchema.notebookFolders).set({ deletedAt: now }).where(eq(appSchema.notebookFolders.id, folder.id));
+
+    const deletedKeys: string[] = [];
+    const mockStorage = {
+      deleteObject: async (key: string) => {
+        deletedKeys.push(key);
+      },
+    };
+
+    const customService = new TrashLedgerService(
+      db as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      mockStorage as any,
+      undefined,
+    );
+
+    const result = await customService.emptyTrash();
+    expect(result.success).toBe(true);
+
+    expect(deletedKeys).toContain('banners/purged.png');
+    expect(deletedKeys).toContain('sources/purged.pdf');
+
+    const [dbNb] = await db.select().from(appSchema.notebooks).where(eq(appSchema.notebooks.id, nb.id));
+    expect(dbNb).toBeUndefined();
+    const [dbSrc] = await db.select().from(appSchema.sources).where(eq(appSchema.sources.id, src.id));
+    expect(dbSrc).toBeUndefined();
+    const [dbSm] = await db.select().from(appSchema.studyMaterials).where(eq(appSchema.studyMaterials.id, sm.id));
+    expect(dbSm).toBeUndefined();
+    const [dbFolder] = await db.select().from(appSchema.notebookFolders).where(eq(appSchema.notebookFolders.id, folder.id));
+    expect(dbFolder).toBeUndefined();
   });
 });

@@ -34,8 +34,7 @@ export interface FolderLibraryProps {
   notebooks: LibraryNotebook[];
   activeFolderId: string | null;
   sortKey: LibrarySortKey;
-  view?: "library" | "trash";
-  onViewChange?: (view: "library" | "trash") => void;
+  onOpenTrash?: () => void;
   draftId: string | null;
   draftClientId: string | null;
   selectedKey: string | null;
@@ -60,8 +59,7 @@ export function FolderLibrary({
   notebooks,
   activeFolderId,
   sortKey,
-  view = "library",
-  onViewChange,
+  onOpenTrash,
   draftId,
   draftClientId,
   selectedKey,
@@ -157,8 +155,7 @@ export function FolderLibrary({
           onCreateFolderNamed={onCreateFolderNamed}
           onCreateNotebookNamed={onCreateNotebookNamed}
           emptyState={emptyState}
-          view={view}
-          onViewChange={onViewChange}
+          onOpenTrash={onOpenTrash}
         />
       </div>
 
@@ -173,17 +170,12 @@ export function FolderLibrary({
             {activeFolder?.name ?? t("library.library")}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            {onViewChange && (
+            {onOpenTrash && (
               <button
                 type="button"
-                onClick={() => onViewChange(view === "trash" ? "library" : "trash")}
+                onClick={onOpenTrash}
                 aria-label="Trash"
-                className={cn(
-                  "flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium cursor-pointer transition-colors active:scale-97 select-none touch-manipulation",
-                  view === "trash"
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
+                className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium cursor-pointer text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors active:scale-97 select-none touch-manipulation"
               >
                 <Trash2 className="size-3.5" />
                 <span>Trash</span>

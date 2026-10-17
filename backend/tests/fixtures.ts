@@ -10,7 +10,15 @@ import {
 import { db } from './db';
 
 export async function seedNotebook(
-  overrides: { id?: string; title?: string; description?: string } = {},
+  overrides: {
+    id?: string;
+    title?: string;
+    description?: string;
+    folderId?: string | null;
+    banner?: string | null;
+    bannerVariants?: any;
+    deletedAt?: Date | null;
+  } = {},
 ): Promise<{ id: string; title: string }> {
   const id = overrides.id ?? createId();
   const [row] = await db
@@ -19,6 +27,10 @@ export async function seedNotebook(
       id,
       title: overrides.title ?? 'Test Notebook',
       description: overrides.description ?? '',
+      folderId: overrides.folderId ?? null,
+      banner: overrides.banner ?? null,
+      bannerVariants: overrides.bannerVariants ?? null,
+      deletedAt: overrides.deletedAt ?? null,
     })
     .returning();
   return { id: row.id, title: row.title };

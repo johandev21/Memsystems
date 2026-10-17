@@ -4,13 +4,11 @@ import type { LibrarySortKey } from "./library-sort";
 export const librarySearchSchema = z.object({
   folderId: z.string().optional(),
   sort: z.enum(["name", "updatedAt", "createdAt"]).optional(),
-  view: z.enum(["library", "trash"]).optional(),
 });
 
 export type LibrarySearch = {
   folderId?: string;
   sort?: LibrarySortKey;
-  view?: "library" | "trash";
 };
 
 export function parseLibrarySearch(search: Record<string, unknown>): LibrarySearch {
@@ -19,6 +17,5 @@ export function parseLibrarySearch(search: Record<string, unknown>): LibrarySear
   return {
     ...(trimmed ? { folderId: trimmed } : {}),
     ...(parsed.sort ? { sort: parsed.sort } : {}),
-    ...(parsed.view ? { view: parsed.view } : {}),
   };
 }

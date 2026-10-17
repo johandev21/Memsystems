@@ -28,7 +28,7 @@ import { CreateMenu } from "./create-menu";
 import { FolderLibrary } from "./folder-library";
 import { LibraryGridSkeleton } from "./library-skeleton";
 import { FolderPreview, NotebookPreview } from "./library-cards";
-import { TrashLedgerView } from "@/features/trash/components/trash-ledger-view";
+import { TrashModal } from "@/features/trash/components/trash-modal";
 
 const libraryCollisionDetection: CollisionDetection = (args) =>
   args.pointerCoordinates ? pointerWithin(args) : closestCenter(args);
@@ -41,7 +41,6 @@ export function NotebookLibrary() {
   const search = useSearch({ strict: false }) as LibrarySearch | undefined;
   const rawFolderId = search?.folderId ?? null;
   const sortKey: LibrarySortKey = search?.sort ?? "name";
-  const view = search?.view ?? "library";
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery(libraryQueryOptions);
   const mutations = useLibraryMutations();
@@ -50,6 +49,7 @@ export function NotebookLibrary() {
   const [pendingDelete, setPendingDelete] = useState<LibraryNotebook | null>(null);
   const [pendingFolderDelete, setPendingFolderDelete] = useState<LibraryFolder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
 
   const folders = useMemo(() => data?.folders ?? [], [data]);
   const notebooks = useMemo(() => (data?.notebooks ?? []).map(toLibraryNotebook), [data]);
@@ -209,17 +209,6 @@ export function NotebookLibrary() {
     });
   };
 
-  const handleViewChange = (nextView: "library" | "trash") => {
-    void navigate({
-      to: "/",
-      search: (prev: Record<string, unknown>) => ({
-        ...prev,
-        view: nextView === "library" ? undefined : nextView,
-      }),
-      replace: true,
-    });
-  };
-
   const requestRemoveFolder = (id: string) => {
     const folder = folders.find((item) => item.id === id);
     if (folder) setPendingFolderDelete(folder);
@@ -300,35 +289,30 @@ export function NotebookLibrary() {
           isRefetching={isRefetching}
           onRetry={() => void refetch()}
         >
-          {view === "trash" ? (
-            <TrashLedgerView />
-          ) : (
-            <FolderLibrary
-              folders={folders}
-              notebooks={notebooks}
-              activeFolderId={activeFolderId}
-              sortKey={sortKey}
-              view={view}
-              onViewChange={handleViewChange}
-              onSortChange={handleSortChange}
-              draftId={draft?.id ?? null}
-              draftClientId={draft?.clientId ?? null}
-              selectedKey={selectedKey ?? draftKey}
-              onCommitDraft={commitDraft}
-              onCancelDraft={cancelDraft}
-              onSelectItem={setSelectedKey}
-              onOpenFolder={openFolder}
-              onRenameFolder={(id, name) => void mutations.updateFolder(id, { name })}
-              onRemoveFolder={requestRemoveFolder}
-              onRemoveNotebook={requestRemoveNotebook}
-              onOpenNotebook={openNotebook}
-              onUpdateNotebook={(id, patch) => void mutations.updateNotebook(id, patch)}
-              onCreateFolder={beginCreateFolder}
-              onCreateNotebook={beginCreateNotebook}
-              onCreateFolderNamed={handleCreateFolderMobile}
-              onCreateNotebookNamed={handleCreateNotebookMobile}
-            />
-          )}
+          <FolderLibrary
+            folders={folders}
+            notebooks={notebooks}
+            activeFolderId={activeFolderId}
+            sortKey={sortKey}
+            onOpenTrash={() => setTrashOpen(true)}
+            onSortChange={handleSortChange}
+            draftId={draft?.id ?? null}
+            draftClientId={draft?.clientId ?? null}
+            selectedKey={selectedKey ?? draftKey}
+            onCommitDraft={commitDraft}
+            onCancelDraft={cancelDraft}
+            onSelectItem={setSelectedKey}
+            onOpenFolder={openFolder}
+            onRenameFolder={(id, name) => void mutations.updateFolder(id, { name })}
+            onRemoveFolder={requestRemoveFolder}
+            onRemoveNotebook={requestRemoveNotebook}
+            onOpenNotebook={openNotebook}
+            onUpdateNotebook={(id, patch) => void mutations.updateNotebook(id, patch)}
+            onCreateFolder={beginCreateFolder}
+            onCreateNotebook={beginCreateNotebook}
+            onCreateFolderNamed={handleCreateFolderMobile}
+            onCreateNotebookNamed={handleCreateNotebookMobile}
+          />
         </LibraryContent>
         <DragOverlay dropAnimation={null}>
           {interaction.draggedNotebook ? (
@@ -365,6 +349,7 @@ export function NotebookLibrary() {
         isLoading={isDeleting}
         onConfirm={() => void confirmRemoveFolder()}
       />
+      <TrashModal open={trashOpen} onOpenChange={setTrashOpen} />
     </div>
   );
 }

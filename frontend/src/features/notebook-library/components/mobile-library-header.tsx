@@ -1,6 +1,5 @@
 import { ChevronLeft, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/shared/utils/cn";
 import type { LibrarySortKey } from "../model/library-sort";
 import type { LibraryFolder } from "../model/types";
 
@@ -11,16 +10,14 @@ export interface MobileLibraryHeaderProps {
   sortOptions?: { value: LibrarySortKey; label: string; description: string }[];
   onSortChange?: (sortKey: LibrarySortKey) => void;
   onOpenFolder: (id: string | null) => void;
-  view?: "library" | "trash";
-  onViewChange?: (view: "library" | "trash") => void;
+  onOpenTrash?: () => void;
 }
 
 export function MobileLibraryHeader({
   activeFolder,
   parentFolder,
   onOpenFolder,
-  view = "library",
-  onViewChange,
+  onOpenTrash,
 }: MobileLibraryHeaderProps) {
   const { t } = useTranslation("notebooks");
 
@@ -47,17 +44,12 @@ export function MobileLibraryHeader({
         >
           {activeFolder ? activeFolder.name : t("library.library")}
         </h1>
-        {onViewChange && (
+        {onOpenTrash && (
           <button
             type="button"
-            onClick={() => onViewChange(view === "trash" ? "library" : "trash")}
+            onClick={onOpenTrash}
             aria-label="Trash"
-            className={cn(
-              "flex items-center gap-1.5 h-7 px-2 rounded-lg text-xs font-medium cursor-pointer transition-colors active:scale-97 select-none touch-manipulation shrink-0",
-              view === "trash"
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-            )}
+            className="flex items-center gap-1.5 h-7 px-2 rounded-lg text-xs font-medium cursor-pointer text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors active:scale-97 select-none touch-manipulation shrink-0"
           >
             <Trash2 className="size-3.5" />
             <span>Trash</span>
