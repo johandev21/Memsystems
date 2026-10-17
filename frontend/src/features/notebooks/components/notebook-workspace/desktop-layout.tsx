@@ -258,10 +258,6 @@ export function DesktopLayout({
                 <StudioPanelHeader
                   collapsed={false}
                   onToggleCollapse={toggleStudioCollapse}
-                  isSearchOpen={studioSearchOpen}
-                  onToggleSearch={() => setStudioSearchOpen((v) => !v)}
-                  isMultiselectMode={studioMultiselectMode}
-                  onToggleMultiselect={() => setStudioMultiselectMode((v) => !v)}
                 />
                 <ScrollArea className="flex-1">
                   <StudioResources
