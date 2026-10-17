@@ -67,7 +67,14 @@ export function DesktopLayout({
   const panelGroupApiRef = useRef<GroupImperativeHandle>(null);
   const responsiveChatMinSize = useResponsiveChatMinimum(panelGroupRef);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isStudyMaterialsExpanded, setIsStudyMaterialsExpanded] = useState(false);
+  const [studioSearchOpen, setStudioSearchOpen] = useState(false);
+  const [studioMultiselectMode, setStudioMultiselectMode] = useState(false);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggleStudyMaterialsExpand = useCallback(() => {
+    setIsStudyMaterialsExpanded((prev) => !prev);
+  }, []);
 
   const startTransition = useCallback(() => {
     setIsTransitioning(true);
@@ -219,23 +226,48 @@ export function DesktopLayout({
                   }
                 }}
               />
-            ) : (
+            ) : studioCollapsed ? (
               <>
                 <StudioPanelHeader
-                  collapsed={studioCollapsed}
+                  collapsed={true}
                   onToggleCollapse={toggleStudioCollapse}
                 />
                 <ScrollArea className="flex-1">
                   <StudioResources
                     notebookId={notebookId}
-                    collapsed={studioCollapsed}
+                    collapsed={true}
                     onGenerate={dialogs.handleGenerate}
                   />
                 </ScrollArea>
-                <div className={cn("p-1.5 pt-0", studioCollapsed && "hidden")}>
+              </>
+            ) : isStudyMaterialsExpanded ? (
+              <div className="flex flex-col h-full min-h-0 min-w-0">
+                <StudyMaterialsPanel
+                  notebookId={notebookId}
+                  onSelectMaterial={dialogs.setSelectedStudyMaterialId}
+                  isExpanded={true}
+                  onToggleExpand={toggleStudyMaterialsExpand}
+                />
+              </div>
+            ) : (
+              <>
+                <StudioPanelHeader
+                  collapsed={false}
+                  onToggleCollapse={toggleStudioCollapse}
+                />
+                <ScrollArea className="flex-1">
+                  <StudioResources
+                    notebookId={notebookId}
+                    collapsed={false}
+                    onGenerate={dialogs.handleGenerate}
+                  />
+                </ScrollArea>
+                <div className="p-1.5 pt-0">
                   <StudyMaterialsPanel
                     notebookId={notebookId}
                     onSelectMaterial={dialogs.setSelectedStudyMaterialId}
+                    isExpanded={false}
+                    onToggleExpand={toggleStudyMaterialsExpand}
                   />
                 </div>
               </>
