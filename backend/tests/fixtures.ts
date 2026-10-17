@@ -1,5 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 import {
+  notebookFolders,
   notebooks,
   sourceFolders,
   sources,
@@ -21,6 +22,26 @@ export async function seedNotebook(
     })
     .returning();
   return { id: row.id, title: row.title };
+}
+
+export async function seedNotebookFolder(
+  input: {
+    id?: string;
+    name: string;
+    parentId?: string | null;
+    createdAt?: Date;
+  },
+) {
+  const [row] = await db
+    .insert(notebookFolders)
+    .values({
+      id: input.id ?? createId(),
+      name: input.name,
+      parentId: input.parentId ?? null,
+      createdAt: input.createdAt ?? new Date(),
+    })
+    .returning();
+  return row;
 }
 
 export async function seedSource(

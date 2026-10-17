@@ -10,6 +10,7 @@ import { NotebooksModule } from './modules/notebooks/notebooks.module';
 import { SourcesModule } from './modules/sources/sources.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { StudyMaterialsModule } from './modules/study-materials/study-materials.module';
+import { TrashModule } from './modules/trash/trash.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { StudyMaterialsModule } from './modules/study-materials/study-materials.
     SourcesModule,
     ChatModule,
     StudyMaterialsModule,
+    TrashModule,
   ],
   controllers: [AppController],
   providers: [AppService],

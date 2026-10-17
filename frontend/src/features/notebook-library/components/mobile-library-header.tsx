@@ -1,5 +1,6 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/shared/utils/cn";
 import type { LibrarySortKey } from "../model/library-sort";
 import type { LibraryFolder } from "../model/types";
 
@@ -10,12 +11,16 @@ export interface MobileLibraryHeaderProps {
   sortOptions?: { value: LibrarySortKey; label: string; description: string }[];
   onSortChange?: (sortKey: LibrarySortKey) => void;
   onOpenFolder: (id: string | null) => void;
+  view?: "library" | "trash";
+  onViewChange?: (view: "library" | "trash") => void;
 }
 
 export function MobileLibraryHeader({
   activeFolder,
   parentFolder,
   onOpenFolder,
+  view = "library",
+  onViewChange,
 }: MobileLibraryHeaderProps) {
   const { t } = useTranslation("notebooks");
 
@@ -35,12 +40,30 @@ export function MobileLibraryHeader({
         </button>
       )}
 
-      <h1
-        dir="auto"
-        className="text-base font-medium leading-snug text-foreground min-w-0 line-clamp-2 break-words [overflow-wrap:anywhere]"
-      >
-        {activeFolder ? activeFolder.name : t("library.library")}
-      </h1>
+      <div className="flex items-center justify-between gap-3 min-w-0">
+        <h1
+          dir="auto"
+          className="text-base font-medium leading-snug text-foreground min-w-0 line-clamp-2 break-words [overflow-wrap:anywhere]"
+        >
+          {activeFolder ? activeFolder.name : t("library.library")}
+        </h1>
+        {onViewChange && (
+          <button
+            type="button"
+            onClick={() => onViewChange(view === "trash" ? "library" : "trash")}
+            aria-label="Trash"
+            className={cn(
+              "flex items-center gap-1.5 h-7 px-2 rounded-lg text-xs font-medium cursor-pointer transition-colors active:scale-97 select-none touch-manipulation shrink-0",
+              view === "trash"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            )}
+          >
+            <Trash2 className="size-3.5" />
+            <span>Trash</span>
+          </button>
+        )}
+      </div>
     </header>
   );
 }
