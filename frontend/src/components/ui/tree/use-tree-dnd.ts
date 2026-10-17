@@ -28,7 +28,6 @@ export function getTreeDragData(data: unknown): TreeDragData | null {
     ? {
         type: candidate.type,
         itemId: candidate.itemId,
-        bundledIds: Array.isArray(candidate.bundledIds) ? candidate.bundledIds : undefined,
       }
     : null;
 }
@@ -59,7 +58,6 @@ export interface UseTreeRowDragDropOptions {
   dragType?: string;
   folderDropType?: string;
   hoverOpenDelayMs?: number;
-  bundledIds?: readonly string[];
 }
 
 export function useTreeRowDragDrop({
@@ -77,7 +75,6 @@ export function useTreeRowDragDrop({
   dragType = DEFAULT_DRAG_TYPE,
   folderDropType = DEFAULT_FOLDER_DROP_TYPE,
   hoverOpenDelayMs = 550,
-  bundledIds,
 }: UseTreeRowDragDropOptions) {
   const detectedIsCoarse = useIsCoarsePointer();
   const isCoarse = customIsCoarse !== undefined ? customIsCoarse : detectedIsCoarse;
@@ -92,7 +89,6 @@ export function useTreeRowDragDrop({
     data: {
       type: dragType,
       itemId: nodeId,
-      bundledIds,
     },
     disabled: isRenaming || isPendingMove,
   });

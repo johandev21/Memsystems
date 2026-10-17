@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   DndContext,
   DragOverlay,
@@ -13,7 +13,6 @@ import {
 import { ChevronsUpDown, FileText, Folder, FolderOpen, FolderPlus } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   ContextMenu,
@@ -27,20 +26,14 @@ import {
   flattenVisibleTree,
   getTreeDragData,
   getTreeDropData,
-  type TreeDragData,
-  TreeFloatingActionDock,
-  TreeFolderPickerDialog,
   TreeSearchBar,
   usePersistentExpandedFolders,
   useTreeFocusRegistry,
   useTreeKeyboardNav,
-  useTreeMultiselect,
   useTreeSearch,
 } from "@/components/ui/tree";
 import {
   type Source,
-  batchDeleteSources,
-  batchMoveSources,
   sourcesQueryOptions,
 } from "../api/sources";
 import {
@@ -203,53 +196,10 @@ export const SourcesPanel = memo(function SourcesPanel({
     ),
   });
 
-  const multiselect = useTreeMultiselect();
-
   const effectiveOpenFolderIds = useMemo(() => {
     if (!search.isSearching) return expandedIds;
     return new Set([...expandedIds, ...search.expandedFolderIds]);
   }, [expandedIds, search.isSearching, search.expandedFolderIds]);
-
-  const queryClient = useQueryClient();
-
-  const [isBatchMoveDialogOpen, setIsBatchMoveDialogOpen] = useState(false);
-  const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState(false);
-
-  const batchMoveMutation = useMutation({
-    mutationFn: async ({
-      sourceIds,
-      folderId,
-    }: {
-      sourceIds: string[];
-      folderId: string | null;
-    }) => {
-      return batchMoveSources(notebookId, sourceIds, folderId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-      multiselect.clearSelection();
-      setIsBatchMoveDialogOpen(false);
-      toast.success(t("sources:toasts.sourcesMoved", "Sources moved successfully"));
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || t("tree:errors.moveFailed", "Failed to move sources"));
-    },
-  });
-
-  const batchDeleteMutation = useMutation({
-    mutationFn: async (sourceIds: string[]) => {
-      return batchDeleteSources(notebookId, sourceIds);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
-      multiselect.clearSelection();
-      setIsBatchDeleteDialogOpen(false);
-      toast.success(t("sources:toasts.sourcesDeleted", "Sources deleted successfully"));
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || t("tree:errors.deleteFailed", "Failed to delete sources"));
-    },
-  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -257,13 +207,11 @@ export const SourcesPanel = memo(function SourcesPanel({
   );
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [activeDragData, setActiveDragData] = useState<TreeDragData | null>(null);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const dragData = getTreeDragData(event.active.data.current);
     if (dragData) {
       setActiveDragId(dragData.itemId);
-      setActiveDragData(dragData);
     }
   }, []);
 
@@ -272,26 +220,15 @@ export const SourcesPanel = memo(function SourcesPanel({
       const dragData = getTreeDragData(event.active.data.current);
       const dropData = getTreeDropData(event.over?.data.current);
       setActiveDragId(null);
-      setActiveDragData(null);
       if (!dragData || !dropData) return;
 
-      const targetFolderId = dropData.folderId;
-
-      if (dragData.bundledIds && dragData.bundledIds.length > 0) {
-        batchMoveMutation.mutate({
-          sourceIds: Array.from(dragData.bundledIds),
-          folderId: targetFolderId,
-        });
-      } else {
-        handleMove(dragData.itemId, targetFolderId);
-      }
+      handleMove(dragData.itemId, dropData.folderId);
     },
-    [handleMove, batchMoveMutation],
+    [handleMove],
   );
 
   const handleDragCancel = useCallback(() => {
     setActiveDragId(null);
-    setActiveDragData(null);
   }, []);
 
   const allPendingUploads = useUploadStore((state) => state.pendingUploads);
@@ -441,8 +378,6 @@ export const SourcesPanel = memo(function SourcesPanel({
             canMove={canMove}
             isSearchOpen={search.isSearchOpen}
             onToggleSearch={search.toggleSearch}
-            isMultiselectMode={multiselect.isMultiselectMode}
-            onToggleMultiselect={multiselect.toggleMultiselectMode}
           />
         )}
 
@@ -505,11 +440,6 @@ export const SourcesPanel = memo(function SourcesPanel({
               registerTreeSurface={registerTreeSurface}
               onKeyDown={handleKeyDown}
               onFocusItem={setFocusedItemId}
-              isMultiselectMode={multiselect.isMultiselectMode}
-              selectedIds={multiselect.selectedIds}
-              onToggleItemSelect={multiselect.toggleItem}
-              onToggleFolderSelect={multiselect.toggleFolder}
-              isFolderSelected={multiselect.isFolderSelected}
               searchQuery={search.isSearching ? search.searchQuery : ""}
               isItemVisible={search.isItemVisible}
               isFolderVisible={search.isFolderVisible}
@@ -545,43 +475,6 @@ export const SourcesPanel = memo(function SourcesPanel({
         </div>
       </div>
 
-        {multiselect.isMultiselectMode && multiselect.selectedCount > 0 && (
-          <TreeFloatingActionDock
-            selectedCount={multiselect.selectedCount}
-            itemTypeLabel="source"
-            onMove={() => setIsBatchMoveDialogOpen(true)}
-            onDelete={() => setIsBatchDeleteDialogOpen(true)}
-            onDismiss={multiselect.clearSelection}
-            isMoving={batchMoveMutation.isPending}
-            isDeleting={batchDeleteMutation.isPending}
-          />
-        )}
-
-        <TreeFolderPickerDialog
-          open={isBatchMoveDialogOpen}
-          onOpenChange={setIsBatchMoveDialogOpen}
-          title={`Move ${multiselect.selectedCount} ${multiselect.selectedCount === 1 ? "source" : "sources"}`}
-          folders={folders ?? []}
-          onConfirm={(targetFolderId) => {
-            batchMoveMutation.mutate({
-              sourceIds: Array.from(multiselect.selectedIds),
-              folderId: targetFolderId,
-            });
-          }}
-          isLoading={batchMoveMutation.isPending}
-        />
-
-        <ConfirmDeleteDialog
-          open={isBatchDeleteDialogOpen}
-          onOpenChange={setIsBatchDeleteDialogOpen}
-          title={`Delete ${multiselect.selectedCount} ${multiselect.selectedCount === 1 ? "source" : "sources"}?`}
-          description={`Are you sure you want to delete ${multiselect.selectedCount} selected ${multiselect.selectedCount === 1 ? "source" : "sources"}? This action cannot be undone.`}
-          onConfirm={() => {
-            batchDeleteMutation.mutate(Array.from(multiselect.selectedIds));
-          }}
-          isLoading={batchDeleteMutation.isPending}
-        />
-
         <ConfirmDeleteDialog
           open={sourceToDelete !== null}
           onOpenChange={(open) => !open && setSourceToDelete(null)}
@@ -614,7 +507,6 @@ export const SourcesPanel = memo(function SourcesPanel({
             itemId={activeDragId}
             sources={sources ?? []}
             folders={folders ?? []}
-            bundleCount={activeDragData?.bundledIds ? activeDragData.bundledIds.length : 0}
           />
         ) : null}
       </DragOverlay>
@@ -626,12 +518,10 @@ function SourcesDragPreview({
   itemId,
   sources,
   folders,
-  bundleCount = 0,
 }: {
   itemId: string;
   sources: readonly Source[];
   folders: readonly SourceFolder[];
-  bundleCount?: number;
 }) {
   const folder = folders.find((f) => f.id === itemId);
   const source = sources.find((s) => s.id === itemId);
@@ -648,11 +538,6 @@ function SourcesDragPreview({
         <FileText className="size-4 shrink-0 text-muted-foreground" />
       )}
       <span className="max-w-48 truncate">{name}</span>
-      {bundleCount > 1 && (
-        <span className="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground shadow-sm">
-          +{bundleCount - 1}
-        </span>
-      )}
     </div>
   );
 }

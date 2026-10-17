@@ -22,7 +22,6 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import type { Source } from "../../api/sources";
@@ -61,11 +60,7 @@ export interface SourceRowProps {
   registerNode?: (id: string, el: HTMLElement | null) => void;
   onFocusRow?: () => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => void;
-  isMultiselectMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: () => void;
   searchQuery?: string;
-  bundledIds?: readonly string[];
 }
 
 export function SourceRow({
@@ -91,11 +86,7 @@ export function SourceRow({
   registerNode,
   onFocusRow,
   onKeyDown,
-  isMultiselectMode = false,
-  isSelected = false,
-  onToggleSelect,
   searchQuery,
-  bundledIds,
 }: SourceRowProps) {
   const { t } = useTranslation(["sources", "tree"]);
   const status = sourceProcessingStatus(source);
@@ -128,7 +119,6 @@ export function SourceRow({
     folderDropIdPrefix: "tree-folder:",
     dragType: "sources-tree-item",
     folderDropType: "sources-tree-folder",
-    bundledIds,
   });
 
   const validTargetFolders = (allFolders ?? []).filter((f) =>
@@ -179,11 +169,7 @@ export function SourceRow({
           ? undefined
           : (e) => {
               (e.currentTarget as HTMLElement).focus();
-              if (isMultiselectMode) {
-                onToggleSelect?.();
-              } else {
-                onClick();
-              }
+              onClick();
             }
       }
       onKeyDown={(e) => {
@@ -191,15 +177,6 @@ export function SourceRow({
         onKeyDown?.(e);
       }}
     >
-      {isMultiselectMode && (
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={() => onToggleSelect?.()}
-          onClick={(e) => e.stopPropagation()}
-          className="mr-1.5 shrink-0"
-          aria-label={`Select ${source.title}`}
-        />
-      )}
       {active ? (
         <Loader2 className="size-(--tree-icon-size) shrink-0 animate-spin text-primary" />
       ) : failed ? (

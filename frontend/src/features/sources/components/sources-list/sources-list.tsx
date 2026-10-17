@@ -50,11 +50,6 @@ export interface SourcesListProps {
   registerTreeSurface?: (el: HTMLDivElement | null) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLElement>, node: SourcesTreeNode) => void;
   onFocusItem?: (id: string) => void;
-  isMultiselectMode?: boolean;
-  selectedIds?: Set<string>;
-  onToggleItemSelect?: (id: string) => void;
-  onToggleFolderSelect?: (descendantIds: string[]) => void;
-  isFolderSelected?: (descendantIds: string[]) => boolean | "indeterminate";
   searchQuery?: string;
   isItemVisible?: (itemId: string, folderId?: string | null) => boolean;
   isFolderVisible?: (folderId: string) => boolean;
@@ -94,11 +89,6 @@ export const SourcesList = memo(function SourcesList({
   registerTreeSurface,
   onKeyDown,
   onFocusItem,
-  isMultiselectMode = false,
-  selectedIds,
-  onToggleItemSelect,
-  onToggleFolderSelect,
-  isFolderSelected,
   searchQuery,
   isItemVisible,
   isFolderVisible,
@@ -230,11 +220,6 @@ export const SourcesList = memo(function SourcesList({
     registerNode,
     onKeyDown,
     onFocusItem,
-    isMultiselectMode,
-    selectedIds,
-    onToggleItemSelect,
-    onToggleFolderSelect,
-    isFolderSelected,
     searchQuery,
   };
 
@@ -303,8 +288,6 @@ function areSourcesListPropsEqual(prev: SourcesListProps, next: SourcesListProps
     prev.retryingId === next.retryingId &&
     prev.cancellingId === next.cancellingId &&
     prev.scrollElement === next.scrollElement &&
-    prev.isMultiselectMode === next.isMultiselectMode &&
-    prev.selectedIds === next.selectedIds &&
     prev.searchQuery === next.searchQuery
   );
 }

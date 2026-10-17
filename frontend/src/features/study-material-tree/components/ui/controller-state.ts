@@ -38,15 +38,8 @@ type ControllerParams = {
   searchQuery?: string;
   isItemVisible?: (itemId: string, folderId?: string | null) => boolean;
   isFolderVisible?: (folderId: string) => boolean;
-  isMultiselectMode?: boolean;
-  selectedIds?: Set<string>;
-  onToggleItemSelect?: (id: string) => void;
-  onToggleFolderSelect?: (descendantIds: string[]) => void;
-  isFolderSelected?: (descendantIds: string[]) => boolean | "indeterminate";
   isSearchOpen?: boolean;
   onToggleSearch?: () => void;
-  onToggleMultiselect?: () => void;
-  onBatchMove?: (materialIds: string[], targetFolderId: string | null) => Promise<void>;
 };
 
 export type TreeControllerState = {
@@ -92,13 +85,6 @@ export type TreeController = TreeControllerState & {
   searchQuery?: string;
   isSearchOpen?: boolean;
   onToggleSearch?: () => void;
-  isMultiselectMode?: boolean;
-  onToggleMultiselect?: () => void;
-  selectedIds?: Set<string>;
-  onToggleItemSelect?: (id: string) => void;
-  onToggleFolderSelect?: (descendantIds: string[]) => void;
-  isFolderSelected?: (descendantIds: string[]) => boolean | "indeterminate";
-  onBatchMove?: (materialIds: string[], targetFolderId: string | null) => Promise<void>;
 };
 
 export const TreeContext = createContext<TreeController | null>(null);
@@ -127,13 +113,6 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     isFolderVisible,
     isSearchOpen,
     onToggleSearch,
-    isMultiselectMode,
-    onToggleMultiselect,
-    selectedIds,
-    onToggleItemSelect,
-    onToggleFolderSelect,
-    isFolderSelected,
-    onBatchMove,
   } = params;
 
   const effectiveState = useMemo<TreeState>(
@@ -393,12 +372,5 @@ export function useStudyMaterialsTreeController(params: ControllerParams): TreeC
     searchQuery,
     isSearchOpen,
     onToggleSearch,
-    isMultiselectMode,
-    onToggleMultiselect,
-    selectedIds,
-    onToggleItemSelect,
-    onToggleFolderSelect,
-    isFolderSelected,
-    onBatchMove,
   } as TreeController & { registerTreeSurface: (el: HTMLDivElement | null) => void };
 }

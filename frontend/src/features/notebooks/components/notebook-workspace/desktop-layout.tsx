@@ -69,7 +69,6 @@ export function DesktopLayout({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isStudyMaterialsExpanded, setIsStudyMaterialsExpanded] = useState(false);
   const [studioSearchOpen, setStudioSearchOpen] = useState(false);
-  const [studioMultiselectMode, setStudioMultiselectMode] = useState(false);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleStudyMaterialsExpand = useCallback(() => {
@@ -249,8 +248,6 @@ export function DesktopLayout({
                   onToggleExpand={toggleStudyMaterialsExpand}
                   isSearchOpen={studioSearchOpen}
                   onToggleSearch={() => setStudioSearchOpen((v) => !v)}
-                  isMultiselectMode={studioMultiselectMode}
-                  onToggleMultiselect={() => setStudioMultiselectMode((v) => !v)}
                 />
               </div>
             ) : (
@@ -274,8 +271,6 @@ export function DesktopLayout({
                     onToggleExpand={toggleStudyMaterialsExpand}
                     isSearchOpen={studioSearchOpen}
                     onToggleSearch={() => setStudioSearchOpen((v) => !v)}
-                    isMultiselectMode={studioMultiselectMode}
-                    onToggleMultiselect={() => setStudioMultiselectMode((v) => !v)}
                   />
                 </div>
               </>

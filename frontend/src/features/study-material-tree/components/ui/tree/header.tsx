@@ -3,7 +3,7 @@ import { CardHeader } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/shared/utils/cn";
 import { useDroppable } from "@dnd-kit/core";
-import { CheckSquare, Maximize2, Minimize2, Search } from "lucide-react";
+import { Maximize2, Minimize2, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getTreeDragData, ROOT_DROP_ID, useTreeControllerContext } from "../controller-state";
 
@@ -12,8 +12,6 @@ export interface TreeHeaderProps {
   onPanelToggle?: () => void;
   isSearchOpen?: boolean;
   onToggleSearch?: () => void;
-  isMultiselectMode?: boolean;
-  onToggleMultiselect?: () => void;
 }
 
 export function TreeHeader({
@@ -21,15 +19,11 @@ export function TreeHeader({
   onPanelToggle,
   isSearchOpen: controlledIsSearchOpen,
   onToggleSearch: controlledOnToggleSearch,
-  isMultiselectMode: controlledIsMultiselectMode,
-  onToggleMultiselect: controlledOnToggleMultiselect,
 }: TreeHeaderProps) {
   const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
   const isSearchOpen = controlledIsSearchOpen ?? controller.isSearchOpen;
   const onToggleSearch = controlledOnToggleSearch ?? controller.onToggleSearch;
-  const isMultiselectMode = controlledIsMultiselectMode ?? controller.isMultiselectMode;
-  const onToggleMultiselect = controlledOnToggleMultiselect ?? controller.onToggleMultiselect;
 
   const { active, isOver, setNodeRef } = useDroppable({
     id: ROOT_DROP_ID,
@@ -99,28 +93,6 @@ export function TreeHeader({
             </Tooltip>
           )}
 
-          {onToggleMultiselect && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "cursor-pointer active:scale-97 transition-transform touch-manipulation",
-                      isPanelExpanded ? "h-7 w-7" : "size-6",
-                      isMultiselectMode && "bg-accent text-accent-foreground font-semibold",
-                    )}
-                    aria-label="Select multiple study materials"
-                    onClick={onToggleMultiselect}
-                  >
-                    <CheckSquare className={isPanelExpanded ? "size-4" : "size-3.5"} />
-                  </Button>
-                }
-              />
-              <TooltipContent>Select multiple</TooltipContent>
-            </Tooltip>
-          )}
 
           {onPanelToggle && (
             <Button

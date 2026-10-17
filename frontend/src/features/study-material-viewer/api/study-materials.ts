@@ -48,25 +48,6 @@ export const moveStudyMaterial = (materialId: string, folderId: string | null) =
     { folderId },
   );
 
-export const batchMoveStudyMaterials = (
-  notebookId: string,
-  materialIds: string[],
-  folderId: string | null,
-) =>
-  apiPatch<{ materialIds: string[]; folderId: string | null }, StudyMaterialDTO[]>(
-    `/api/notebooks/${notebookId}/study-materials/batch-move`,
-    { materialIds, folderId },
-  );
-
-export const batchDeleteStudyMaterials = (
-  notebookId: string,
-  materialIds: string[],
-) =>
-  apiPost<{ materialIds: string[] }, StudyMaterialDTO[]>(
-    `/api/notebooks/${notebookId}/study-materials/batch-delete`,
-    { materialIds },
-  );
-
 export const downloadSlidesPptx = async (materialId: string, filename: string) => {
   const res = await fetchApi(`/api/study-materials/${materialId}/export`);
   if (!res.ok) {

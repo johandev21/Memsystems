@@ -1,4 +1,3 @@
-import { Checkbox } from "@/components/ui/checkbox";
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { cn } from "@/shared/utils/cn";
 import {
@@ -8,7 +7,7 @@ import {
   useTreeRowDragDrop,
 } from "@/components/ui/tree";
 import { GripVertical } from "lucide-react";
-import { createElement, useMemo } from "react";
+import { createElement } from "react";
 import { useTranslation } from "react-i18next";
 import { getCommandPendingKey } from "../../model/commands";
 import type { TreeNode } from "../../model/tree";
@@ -50,20 +49,6 @@ function useTreeRowPendingCommands(nodeId: string, pendingKeys: Set<string>) {
   };
 }
 
-function getDescendantMaterialIds(node: TreeNode): string[] {
-  const ids: string[] = [];
-  const walk = (n: TreeNode) => {
-    if (n.type !== "folder") {
-      ids.push(n.id);
-    }
-    for (const child of n.children) {
-      walk(child);
-    }
-  };
-  walk(node);
-  return ids;
-}
-
 export function Row({ node, depth }: RowProps) {
   const controller = useTreeControllerContext();
   const isFolder = node.type === "folder";
@@ -76,26 +61,6 @@ export function Row({ node, depth }: RowProps) {
   const pendingMoveForDrag = controller.pendingKeys.has(
     getCommandPendingKey({ type: "moveItem", id: node.id, targetFolderId: null }),
   );
-
-  const descendantMaterialIds = useMemo(
-    () => (isFolder ? getDescendantMaterialIds(node) : []),
-    [isFolder, node],
-  );
-
-  const folderSelectionState =
-    isFolder && controller.isFolderSelected
-      ? controller.isFolderSelected(descendantMaterialIds)
-      : false;
-
-  const isItemSelected = !isFolder && Boolean(controller.selectedIds?.has(node.id));
-
-  const bundledIds =
-    controller.isMultiselectMode &&
-    controller.selectedIds &&
-    controller.selectedIds.size > 0 &&
-    (isItemSelected || (isFolder && descendantMaterialIds.some((id) => controller.selectedIds?.has(id))))
-      ? Array.from(controller.selectedIds)
-      : undefined;
 
   const {
     isDragging,
@@ -119,7 +84,6 @@ export function Row({ node, depth }: RowProps) {
     folderDropIdPrefix: FOLDER_DROP_ID_PREFIX,
     dragType: "study-material-tree-item",
     folderDropType: "study-materials-folder",
-    bundledIds,
   });
 
   const pending = useTreeRowPendingCommands(node.id, controller.pendingKeys);
@@ -171,42 +135,17 @@ export function Row({ node, depth }: RowProps) {
         const target = event.target as HTMLElement;
         if (
           target.closest('[data-slot="study-materials-tree-drag-handle"]') ||
-          target.closest('[data-slot="study-materials-tree-row-actions"]') ||
-          target.closest('[data-slot="checkbox"]')
+          target.closest('[data-slot="study-materials-tree-row-actions"]')
         ) {
           return;
         }
         event.currentTarget.focus();
-        if (controller.isMultiselectMode) {
-          if (isFolder) {
-            controller.onToggleFolderSelect?.(descendantMaterialIds);
-          } else {
-            controller.onToggleItemSelect?.(node.id);
-          }
-          return;
-        }
         controller.activate(node);
       }}
       onContextMenu={() => controller.select(node)}
       onFocus={() => controller.select(node)}
       onKeyDown={(event) => controller.handleKeyDown(event, node)}
     >
-      {controller.isMultiselectMode && (
-        <Checkbox
-          checked={isFolder ? folderSelectionState === true : isItemSelected}
-          indeterminate={isFolder && folderSelectionState === "indeterminate"}
-          onCheckedChange={() => {
-            if (isFolder) {
-              controller.onToggleFolderSelect?.(descendantMaterialIds);
-            } else {
-              controller.onToggleItemSelect?.(node.id);
-            }
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="mr-1.5 shrink-0"
-          aria-label={`Select ${node.name}`}
-        />
-      )}
       <TreeRowDragHandle
         visible={!isRenaming}
         disabled={pendingMoveForDrag}

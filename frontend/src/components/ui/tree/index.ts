@@ -12,8 +12,5 @@ export * from "./use-tree-controller";
 export * from "./tree-context";
 export * from "./tree-provider";
 export * from "./use-tree-search";
-export * from "./use-tree-multiselect";
 export * from "./highlight-match";
 export * from "./tree-search-bar";
-export * from "./tree-floating-action-dock";
-export * from "./tree-folder-picker-dialog";
