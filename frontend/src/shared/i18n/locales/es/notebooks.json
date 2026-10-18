@@ -66,7 +66,9 @@
       "newNotebook": "Nuevo cuaderno",
       "notebookPlaceholder": "Título del cuaderno",
       "notebook": "Cuaderno",
-      "notebookDescription": "Empezar un cuaderno en blanco"
+      "notebookDescription": "Empezar un cuaderno en blanco",
+      "importNotebook": "Importar cuaderno",
+      "importNotebookDescription": "Subir un paquete .memsys de libreta"
     },
     "dnd": {
       "dragCancel": "Se canceló el movimiento de {{name}}.",
@@ -120,7 +122,10 @@
       "folderUpdateFailed": "No se pudo actualizar la carpeta",
       "notebookCreateFailed": "No se pudo crear el cuaderno",
       "notebookRemoveFailed": "No se pudo eliminar el cuaderno",
-      "notebookUpdateFailed": "No se pudo actualizar el cuaderno"
+      "notebookUpdateFailed": "No se pudo actualizar el cuaderno",
+      "importing": "Importando cuaderno…",
+      "importSuccess": "Cuaderno importado exitosamente",
+      "importFailed": "No se pudo importar el cuaderno"
     },
     "untitledFolder": "Carpeta sin título",
     "untitledNotebook": "Cuaderno sin título"

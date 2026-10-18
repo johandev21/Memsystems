@@ -792,6 +792,8 @@ export default interface Resources {
         "folder": "Folder",
         "folderDescription": "Group notebooks together",
         "folderPlaceholder": "Folder name",
+        "importNotebook": "Import notebook",
+        "importNotebookDescription": "Upload a .memsys notebook bundle",
         "label": "Create new",
         "newFolder": "New folder",
         "newNotebook": "New notebook",
@@ -847,6 +849,9 @@ export default interface Resources {
         "folderCreateFailed": "Failed to create folder",
         "folderRemoveFailed": "Failed to remove folder",
         "folderUpdateFailed": "Failed to update folder",
+        "importFailed": "Failed to import notebook",
+        "importSuccess": "Notebook imported successfully",
+        "importing": "Importing notebook…",
         "notebookCreateFailed": "Failed to create notebook",
         "notebookRemoveFailed": "Failed to delete notebook",
         "notebookUpdateFailed": "Failed to update notebook"

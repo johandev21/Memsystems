@@ -56,6 +56,7 @@ export interface FolderLibraryProps {
   onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
   onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
   onExportNotebook?: (id: string, title: string) => void;
+  onImportNotebook?: () => void;
 }
 
 export function FolderLibrary({
@@ -82,6 +83,7 @@ export function FolderLibrary({
   onCreateFolderNamed,
   onCreateNotebookNamed,
   onExportNotebook,
+  onImportNotebook,
 }: FolderLibraryProps) {
   const { t, i18n } = useTranslation("notebooks");
   const locale = i18n.resolvedLanguage;
@@ -162,6 +164,7 @@ export function FolderLibrary({
           emptyState={emptyState}
           onOpenTrash={onOpenTrash}
           onExportNotebook={onExportNotebook}
+          onImportNotebook={onImportNotebook}
         />
       </div>
 

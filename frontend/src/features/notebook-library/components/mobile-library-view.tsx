@@ -36,6 +36,7 @@ export interface MobileLibraryViewProps {
   emptyState: { title: string; description: string };
   onOpenTrash?: () => void;
   onExportNotebook?: (id: string, title: string) => void;
+  onImportNotebook?: () => void;
 }
 
 export function MobileLibraryView({
@@ -58,6 +59,7 @@ export function MobileLibraryView({
   emptyState,
   onOpenTrash,
   onExportNotebook,
+  onImportNotebook,
 }: MobileLibraryViewProps) {
   const { t } = useTranslation("notebooks");
   const activeFolder = folders.find((folder) => folder.id === activeFolderId);
@@ -137,6 +139,7 @@ export function MobileLibraryView({
         onCreateFolder={
           onCreateFolderNamed ? actions.startCreateFolder : onCreateFolder
         }
+        onImportNotebook={onImportNotebook}
       />
 
       <MobileCreatePromptDrawer

@@ -87,4 +87,26 @@ describe("MobileCreateDrawer", () => {
     expect(handleOpenChange).toHaveBeenCalledWith(false);
     expect(handleCreateFolder).toHaveBeenCalledTimes(1);
   });
+
+  it("calls onImportNotebook and closes drawer on tap", async () => {
+    const user = userEvent.setup();
+    const handleOpenChange = vi.fn();
+    const handleImportNotebook = vi.fn();
+
+    render(
+      <MobileCreateDrawer
+        isOpen={true}
+        onOpenChange={handleOpenChange}
+        onCreateNotebook={vi.fn()}
+        onCreateFolder={vi.fn()}
+        onImportNotebook={handleImportNotebook}
+      />,
+    );
+
+    const importOption = screen.getByRole("button", { name: /^import notebook\b/i });
+    await user.click(importOption);
+
+    expect(handleOpenChange).toHaveBeenCalledWith(false);
+    expect(handleImportNotebook).toHaveBeenCalledTimes(1);
+  });
 });

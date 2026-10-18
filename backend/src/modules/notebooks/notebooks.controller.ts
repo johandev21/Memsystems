@@ -8,16 +8,21 @@ import {
   Post,
   Query,
   Res,
+  UploadedFile,
   UploadedFiles,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { NotebookExportService } from './notebook-export.service';
+import { NotebookImportService } from './notebook-import.service';
 import { NotebooksService } from './notebooks.service';
 
 const createNotebookSchema = z.object({
@@ -54,6 +59,7 @@ export class NotebooksController {
   constructor(
     private readonly notebooksService: NotebooksService,
     private readonly notebookExportService: NotebookExportService,
+    private readonly notebookImportService: NotebookImportService,
   ) {}
 
   @Get()
@@ -75,6 +81,22 @@ export class NotebooksController {
   @UsePipes(new ZodValidationPipe(createNotebookSchema))
   async create(@Body() body: z.infer<typeof createNotebookSchema>) {
     return this.notebooksService.create(body);
+  }
+
+  @Post('import')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 100 * 1024 * 1024 } }),
+  )
+  async import(
+    @UploadedFile() file?: Express.Multer.File,
+    @Body('folderId') folderId?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestError('File is required', {
+        messageKey: 'errors.notebooks.import.fileRequired',
+      });
+    }
+    return this.notebookImportService.importNotebook(file.buffer, folderId);
   }
 
   @Get(':id')

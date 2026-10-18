@@ -1,4 +1,4 @@
-import { FolderPlus, NotebookPen, Plus } from "lucide-react";
+import { FolderPlus, NotebookPen, Plus, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,11 @@ import {
 export function CreateMenu({
   onCreateNotebook,
   onCreateFolder,
+  onImportNotebook,
 }: {
   onCreateNotebook: () => void;
   onCreateFolder: () => void;
+  onImportNotebook?: () => void;
 }) {
   const { t } = useTranslation("notebooks");
   return (
@@ -58,6 +60,20 @@ export function CreateMenu({
               </span>
             </span>
           </DropdownMenuItem>
+          {onImportNotebook && (
+            <DropdownMenuItem
+              className="cursor-pointer items-start gap-3 rounded-xl px-2 py-2"
+              onClick={onImportNotebook}
+            >
+              <Upload className="mt-0.5 size-6 shrink-0" />
+              <span className="flex flex-col gap-0.5">
+                <span className="font-medium">{t("library.create.importNotebook")}</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("library.create.importNotebookDescription")}
+                </span>
+              </span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

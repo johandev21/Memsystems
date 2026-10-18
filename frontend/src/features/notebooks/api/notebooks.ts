@@ -97,3 +97,21 @@ export async function exportNotebook(id: string, fallbackTitle?: string): Promis
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export async function importNotebook(file: File, folderId?: string | null): Promise<Notebook> {
+  const body = new FormData();
+  body.append("file", file);
+  if (folderId) {
+    body.append("folderId", folderId);
+  }
+  const res = await fetchApi("/api/notebooks/import", {
+    method: "POST",
+    body,
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(data.message || `Failed to import notebook (${res.status})`);
+  }
+  return res.json();
+}
+
