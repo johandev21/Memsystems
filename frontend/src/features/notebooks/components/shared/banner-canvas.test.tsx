@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { BannerCanvas, BannerEditToolbar } from "./banner-canvas";
 
@@ -97,4 +97,86 @@ describe("BannerEditToolbar", () => {
     // Icon button retains size-7 variant styling
     expect(editBtn.className).toContain("size-7");
   });
+
+  it("keeps BannerImage visible without flickering when presigned URL parameters change", () => {
+    const { container, rerender } = render(
+      <BannerCanvas
+        containerRef={{ current: null }}
+        isEditing={false}
+        visibleBannerUrl="https://example.com/banner.jpg?X-Amz-Signature=token1"
+        visibleFocalPoint={{ x: 0.5, y: 0.5 }}
+        imageError={false}
+        onImageError={vi.fn()}
+        focalPointDrag={{
+          containerRef: { current: null },
+          handleMouseDown: vi.fn(),
+          handleMouseMove: vi.fn(),
+          stopDragging: vi.fn(),
+          handleTouchStart: vi.fn(),
+          handleTouchMove: vi.fn(),
+          isDragging: false,
+        }}
+        onKeyDown={vi.fn()}
+        isSaving={false}
+        onOpenImageDialog={vi.fn()}
+        onRemoveBanner={vi.fn()}
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+        onBeginEditing={vi.fn()}
+        draftTitle="Title"
+        onDraftTitleChange={vi.fn()}
+        formattedDate="Oct 14, 2026"
+        draftIcon="notebook"
+        onDraftIconChange={vi.fn()}
+        title="Title"
+        isUntitled={false}
+      />,
+    );
+
+    const img = container.querySelector("img") as HTMLImageElement;
+    expect(img).toBeTruthy();
+    // Trigger onLoad on the image
+    fireEvent.load(img);
+    expect(img.className).toContain("opacity-100");
+
+    // Re-render with new presigned token
+    rerender(
+      <BannerCanvas
+        containerRef={{ current: null }}
+        isEditing={false}
+        visibleBannerUrl="https://example.com/banner.jpg?X-Amz-Signature=token2"
+        visibleFocalPoint={{ x: 0.5, y: 0.5 }}
+        imageError={false}
+        onImageError={vi.fn()}
+        focalPointDrag={{
+          containerRef: { current: null },
+          handleMouseDown: vi.fn(),
+          handleMouseMove: vi.fn(),
+          stopDragging: vi.fn(),
+          handleTouchStart: vi.fn(),
+          handleTouchMove: vi.fn(),
+          isDragging: false,
+        }}
+        onKeyDown={vi.fn()}
+        isSaving={false}
+        onOpenImageDialog={vi.fn()}
+        onRemoveBanner={vi.fn()}
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+        onBeginEditing={vi.fn()}
+        draftTitle="Title"
+        onDraftTitleChange={vi.fn()}
+        formattedDate="Oct 14, 2026"
+        draftIcon="notebook"
+        onDraftIconChange={vi.fn()}
+        title="Title"
+        isUntitled={false}
+      />,
+    );
+
+    const updatedImg = container.querySelector("img") as HTMLImageElement;
+    expect(updatedImg.className).toContain("opacity-100");
+    expect(updatedImg.className).not.toContain("opacity-0");
+  });
 });
+

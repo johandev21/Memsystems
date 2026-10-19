@@ -8,7 +8,6 @@ export type NotebooksPage = NotebooksResponse;
 export const notebookQueryOptions = (id: string) =>
   createQueryOptions<Notebook>(["notebooks", id], `/api/notebooks/${id}`, {
     staleTime: 30_000,
-    refetchOnMount: "always",
   });
 
 export function deleteNotebook(id: string): Promise<void> {

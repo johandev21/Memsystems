@@ -36,6 +36,17 @@ export interface BannerCanvasProps {
   isUntitled: boolean;
 }
 
+function getBannerKey(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url, "http://localhost").pathname;
+  } catch {
+    return url.split("?")[0];
+  }
+}
+
+const loadedBannerKeys = new Set<string>();
+
 export function BannerImage({
   visibleBannerUrl,
   visibleBannerVariants,
@@ -49,8 +60,13 @@ export function BannerImage({
   imageError: boolean;
   onImageError: () => void;
 }) {
-  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
-  const isLoaded = loadedUrl === visibleBannerUrl;
+  const bannerKey = getBannerKey(visibleBannerUrl);
+  const [loadedKey, setLoadedKey] = useState<string | null>(() => {
+    return bannerKey && loadedBannerKeys.has(bannerKey) ? bannerKey : null;
+  });
+  const isLoaded = Boolean(
+    bannerKey && (loadedKey === bannerKey || loadedBannerKeys.has(bannerKey)),
+  );
 
   if (visibleBannerUrl && !imageError) {
     return (
@@ -72,9 +88,17 @@ export function BannerImage({
         fetchPriority="high"
         decoding="async"
         ref={(element) => {
-          if (element?.complete && element.naturalWidth > 0) setLoadedUrl(visibleBannerUrl);
+          if (element?.complete && element.naturalWidth > 0 && bannerKey) {
+            loadedBannerKeys.add(bannerKey);
+            setLoadedKey(bannerKey);
+          }
         }}
-        onLoad={() => setLoadedUrl(visibleBannerUrl)}
+        onLoad={() => {
+          if (bannerKey) {
+            loadedBannerKeys.add(bannerKey);
+            setLoadedKey(bannerKey);
+          }
+        }}
         onError={onImageError}
       />
     );
