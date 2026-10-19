@@ -68,7 +68,7 @@
       "notebook": "Notebook",
       "notebookDescription": "Start a blank notebook",
       "importNotebook": "Import notebook",
-      "importNotebookDescription": "Upload a .memsys notebook bundle"
+      "importNotebookDescription": "Upload a .memsys bundle"
     },
     "dnd": {
       "dragCancel": "Moving {{name}} was cancelled.",

@@ -68,7 +68,7 @@
       "notebook": "Cuaderno",
       "notebookDescription": "Empezar un cuaderno en blanco",
       "importNotebook": "Importar cuaderno",
-      "importNotebookDescription": "Subir un paquete .memsys de libreta"
+      "importNotebookDescription": "Subir un archivo .memsys"
     },
     "dnd": {
       "dragCancel": "Se canceló el movimiento de {{name}}.",

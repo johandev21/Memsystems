@@ -6,7 +6,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -33,9 +32,8 @@ export function CreateMenu({
           </Button>
         }
       />
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>{t("library.create.label")}</DropdownMenuLabel>
           <DropdownMenuItem
             className="cursor-pointer items-start gap-3 rounded-xl px-2 py-2"
             onClick={onCreateNotebook}
