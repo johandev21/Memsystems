@@ -34,7 +34,6 @@ export interface MobileLibraryViewProps {
   onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
   onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
   emptyState: { title: string; description: string };
-  onOpenTrash?: () => void;
 }
 
 export function MobileLibraryView({
@@ -55,7 +54,6 @@ export function MobileLibraryView({
   onCreateFolderNamed,
   onCreateNotebookNamed,
   emptyState,
-  onOpenTrash,
 }: MobileLibraryViewProps) {
   const { t } = useTranslation("notebooks");
   const activeFolder = folders.find((folder) => folder.id === activeFolderId);
@@ -80,7 +78,6 @@ export function MobileLibraryView({
         sortOptions={sortOptions}
         onSortChange={onSortChange}
         onOpenFolder={onOpenFolder}
-        onOpenTrash={onOpenTrash}
       />
 
       {items.length === 0 ? (
@@ -127,12 +124,8 @@ export function MobileLibraryView({
       <MobileCreateDrawer
         isOpen={actions.isCreateOpen}
         onOpenChange={actions.setIsCreateOpen}
-        onCreateNotebook={
-          onCreateNotebookNamed ? actions.startCreateNotebook : onCreateNotebook
-        }
-        onCreateFolder={
-          onCreateFolderNamed ? actions.startCreateFolder : onCreateFolder
-        }
+        onCreateNotebook={onCreateNotebookNamed ? actions.startCreateNotebook : onCreateNotebook}
+        onCreateFolder={onCreateFolderNamed ? actions.startCreateFolder : onCreateFolder}
       />
 
       <MobileCreatePromptDrawer
@@ -209,4 +202,3 @@ function MobileLibraryItemList({
     </div>
   );
 }
-

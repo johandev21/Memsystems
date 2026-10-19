@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import i18n from "i18next";
 import { TrashModal } from "./trash-modal";
 import * as trashApi from "../api/trash";
 
@@ -11,16 +12,19 @@ describe("TrashModal", () => {
   });
 
   const setDesktopViewport = (isDesktop: boolean) => {
-    vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
-      matches: isDesktop,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    } as unknown as MediaQueryList));
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          matches: isDesktop,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }) as unknown as MediaQueryList,
+    );
   };
 
   const renderWithClient = (ui: React.ReactElement) => {
@@ -187,7 +191,9 @@ describe("TrashModal", () => {
     const deleteBtn = screen.getByRole("button", { name: "Delete forever" });
     await user.click(deleteBtn);
 
-    expect(await screen.findByText('Permanently delete "Item To Delete"? This cannot be undone.')).toBeTruthy();
+    expect(
+      await screen.findByText('Permanently delete "Item To Delete"? This cannot be undone.'),
+    ).toBeTruthy();
 
     const confirmBtn = screen.getByRole("button", { name: "Delete" });
     await user.click(confirmBtn);
@@ -292,5 +298,27 @@ describe("TrashModal", () => {
 
     expect(await screen.findByText("Trash is empty")).toBeTruthy();
     expect(document.querySelector('[data-slot="drawer-content"]')).toBeTruthy();
+  });
+
+  it("renders Spanish translations when language is set to es", async () => {
+    setDesktopViewport(true);
+    await i18n.changeLanguage("es");
+    vi.spyOn(trashApi, "fetchTrashPage").mockResolvedValue({
+      items: [],
+      nextCursor: null,
+    });
+
+    renderWithClient(<TrashModal open={true} onOpenChange={vi.fn()} />);
+
+    expect(await screen.findByText("La papelera está vacía")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Buscar elementos eliminados...")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Las carpetas, cuadernos, fuentes y materiales de estudio eliminados permanecen recuperables aquí durante 30 días.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText("Los elementos se eliminan permanentemente después de 30 días.").length,
+    ).toBeGreaterThanOrEqual(1);
   });
 });

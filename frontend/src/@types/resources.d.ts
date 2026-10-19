@@ -943,6 +943,34 @@ export default interface Resources {
     },
     "page": {
       "title": "Settings"
+    },
+    "trash": {
+      "action": "Open Trash",
+      "cardDescription": "View, restore, or permanently delete items.",
+      "description": "Items in trash are automatically deleted forever after 30 days.",
+      "modal": {
+        "confirmDeleteDescription": "Permanently delete \"{{name}}\"? This cannot be undone.",
+        "confirmDeleteTitle": "Delete Forever",
+        "daysRemaining": "{{count}}d left",
+        "deleteForever": "Delete forever",
+        "emptyDescription": "Deleted folders, notebooks, sources, and study materials stay recoverable here for 30 days.",
+        "emptyFailedToast": "Failed to empty trash",
+        "emptySuccessToast": "Trash emptied",
+        "emptyTitle": "Trash is empty",
+        "expiringSoonHeading": "Expiring Within 7 Days",
+        "holdToEmpty": "Hold to Empty",
+        "holdToEmptyAria": "Hold to Empty Trash",
+        "itemFallback": "Item",
+        "loadFailedDescription": "An error occurred while fetching deleted items.",
+        "loadFailedTitle": "Failed to load trash",
+        "noResults": "No deleted items found matching \"{{query}}\"",
+        "recentlyDeletedHeading": "Recently Deleted",
+        "restore": "Restore",
+        "searchPlaceholder": "Search deleted items...",
+        "subtitle": "Items are permanently deleted after 30 days.",
+        "title": "Trash"
+      },
+      "title": "Trash"
     }
   },
   "sourceRenderers": {

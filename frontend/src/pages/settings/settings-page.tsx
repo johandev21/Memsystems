@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components/layout";
-import { AppearanceCard, LanguageCard, MobileSettingsView } from "@/features/settings";
+import { AppearanceCard, LanguageCard, MobileSettingsView, TrashCard } from "@/features/settings";
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
@@ -44,6 +44,18 @@ export function SettingsPage() {
               </p>
             </div>
             <LanguageCard />
+          </section>
+
+          <section className="mt-12" aria-labelledby="trash-heading">
+            <div className="mb-6">
+              <h2 id="trash-heading" className="text-base font-semibold tracking-tight">
+                {t("trash.title")}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {t("trash.description")}
+              </p>
+            </div>
+            <TrashCard />
           </section>
         </main>
       </div>

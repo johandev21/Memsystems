@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,10 +35,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  libraryQueryOptions,
-  type LibraryResponse,
-} from "@/features/notebook-library/api/library";
+import { libraryQueryOptions, type LibraryResponse } from "@/features/notebook-library/api/library";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import {
   deleteForeverTrashItem,
@@ -66,6 +64,7 @@ export function TrashModal({
   onDeleteForever,
   onEmptyTrash,
 }: TrashModalProps) {
+  const { t } = useTranslation("settings");
   const isDesktop = useMediaQuery("(min-width: 640px)");
   const queryClient = useQueryClient();
 
@@ -75,21 +74,15 @@ export function TrashModal({
   const holdTimerRef = useRef<number | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ["trash"],
-    queryFn: ({ pageParam }) => fetchTrashPage(pageParam, 30),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    staleTime: 10_000,
-    enabled: open,
-  });
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ["trash"],
+      queryFn: ({ pageParam }) => fetchTrashPage(pageParam, 30),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      staleTime: 10_000,
+      enabled: open,
+    });
 
   const restoreMutation = useMutation({
     mutationFn: (item: TrashItem) => restoreTrashItem(item.kind, item.id),
@@ -98,7 +91,9 @@ export function TrashModal({
       await queryClient.cancelQueries({ queryKey: libraryQueryOptions.queryKey });
 
       const previousTrash = queryClient.getQueryData<InfiniteData<TrashPageResponse>>(["trash"]);
-      const previousLibrary = queryClient.getQueryData<LibraryResponse>(libraryQueryOptions.queryKey);
+      const previousLibrary = queryClient.getQueryData<LibraryResponse>(
+        libraryQueryOptions.queryKey,
+      );
 
       queryClient.setQueryData<InfiniteData<TrashPageResponse>>(["trash"], (old) => {
         if (!old) return old;
@@ -238,10 +233,10 @@ export function TrashModal({
       if (context?.previousTrash) {
         queryClient.setQueryData(["trash"], context.previousTrash);
       }
-      toast.error("Failed to empty trash");
+      toast.error(t("trash.modal.emptyFailedToast"));
     },
     onSuccess: () => {
-      toast.success("Trash emptied");
+      toast.success(t("trash.modal.emptySuccessToast"));
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["trash"] });
@@ -278,10 +273,7 @@ export function TrashModal({
     }
   };
 
-  const allItems = useMemo(
-    () => data?.pages.flatMap((page) => page.items) ?? [],
-    [data],
-  );
+  const allItems = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return allItems;
@@ -359,11 +351,9 @@ export function TrashModal({
     <div className="flex items-center justify-between gap-3 min-w-0 pr-10">
       <div className="min-w-0 flex-1">
         <h2 className="text-base font-semibold leading-none tracking-tight text-foreground">
-          Trash
+          {t("trash.modal.title")}
         </h2>
-        <p className="mt-1 text-xs text-muted-foreground truncate">
-          Items are permanently deleted after 30 days.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground truncate">{t("trash.modal.subtitle")}</p>
       </div>
 
       {allItems.length > 0 && (
@@ -384,19 +374,19 @@ export function TrashModal({
               cancelHoldEmpty();
             }
           }}
-          aria-label="Hold to Empty Trash"
+          aria-label={t("trash.modal.holdToEmptyAria")}
           className="hold-delete-btn shrink-0 cursor-pointer rounded-lg bg-muted px-2.5 py-1.5 text-xs font-medium text-foreground select-none touch-manipulation"
         >
           <span className="flex items-center gap-1.5">
             <Trash2 className="size-3 text-muted-foreground" />
-            <span>Hold to Empty</span>
+            <span>{t("trash.modal.holdToEmpty")}</span>
           </span>
           <span
             aria-hidden="true"
             className="hold-delete-overlay rounded-lg bg-destructive px-2.5 py-1.5 text-xs font-medium text-destructive-foreground"
           >
             <Trash2 className="size-3" />
-            <span>Hold to Empty</span>
+            <span>{t("trash.modal.holdToEmpty")}</span>
           </span>
         </button>
       )}
@@ -409,7 +399,7 @@ export function TrashModal({
       className="flex size-full flex-col overflow-hidden bg-transparent"
     >
       <CommandInput
-        placeholder="Search deleted items..."
+        placeholder={t("trash.modal.searchPlaceholder")}
         value={searchQuery}
         onValueChange={setSearchQuery}
         className="h-10 text-xs"
@@ -422,26 +412,26 @@ export function TrashModal({
         ) : isError ? (
           <EmptyState
             icon={<Trash2 className="size-5 text-muted-foreground" />}
-            title="Failed to load trash"
-            description="An error occurred while fetching deleted items."
+            title={t("trash.modal.loadFailedTitle")}
+            description={t("trash.modal.loadFailedDescription")}
             className="py-10"
           />
         ) : allItems.length === 0 ? (
           <EmptyState
             icon={<Trash2 className="size-5 text-muted-foreground" />}
-            title="Trash is empty"
-            description="Deleted folders, notebooks, sources, and study materials stay recoverable here for 30 days."
+            title={t("trash.modal.emptyTitle")}
+            description={t("trash.modal.emptyDescription")}
             className="py-10"
           />
         ) : filteredItems.length === 0 ? (
           <CommandEmpty className="py-8 text-center text-xs text-muted-foreground">
-            No deleted items found matching &quot;{searchQuery}&quot;
+            {t("trash.modal.noResults", { query: searchQuery })}
           </CommandEmpty>
         ) : (
           <div className="flex flex-col gap-3">
             {expiringSoon.length > 0 && (
               <CommandGroup
-                heading="Expiring Within 7 Days"
+                heading={t("trash.modal.expiringSoonHeading")}
                 className="[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted-foreground"
               >
                 {expiringSoon.map((item) => (
@@ -463,20 +453,19 @@ export function TrashModal({
                         </p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {item.notebookTitle ? `${item.notebookTitle} · ` : ""}
-                          {item.subtypeLabel ?? "Item"}
+                          {item.subtypeLabel ?? t("trash.modal.itemFallback")}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="w-12 text-right text-xs tabular-nums text-destructive">
-                        {item.daysRemaining}d left
+                        {t("trash.modal.daysRemaining", { count: item.daysRemaining })}
                       </span>
                       <TrashRowActions
                         item={item}
                         isRestoring={
-                          restoreMutation.isPending &&
-                          restoreMutation.variables?.id === item.id
+                          restoreMutation.isPending && restoreMutation.variables?.id === item.id
                         }
                         isDeleting={
                           deleteForeverMutation.isPending &&
@@ -493,7 +482,7 @@ export function TrashModal({
 
             {recentlyDeleted.length > 0 && (
               <CommandGroup
-                heading="Recently Deleted"
+                heading={t("trash.modal.recentlyDeletedHeading")}
                 className="[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted-foreground"
               >
                 {recentlyDeleted.map((item) => (
@@ -515,20 +504,19 @@ export function TrashModal({
                         </p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {item.notebookTitle ? `${item.notebookTitle} · ` : ""}
-                          {item.subtypeLabel ?? "Item"}
+                          {item.subtypeLabel ?? t("trash.modal.itemFallback")}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
-                        {item.daysRemaining}d left
+                        {t("trash.modal.daysRemaining", { count: item.daysRemaining })}
                       </span>
                       <TrashRowActions
                         item={item}
                         isRestoring={
-                          restoreMutation.isPending &&
-                          restoreMutation.variables?.id === item.id
+                          restoreMutation.isPending && restoreMutation.variables?.id === item.id
                         }
                         isDeleting={
                           deleteForeverMutation.isPending &&
@@ -557,15 +545,10 @@ export function TrashModal({
     <>
       {isDesktop ? (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent
-            showCloseButton={true}
-            className="sm:max-w-2xl gap-0 p-0 overflow-hidden"
-          >
+          <DialogContent showCloseButton={true} className="sm:max-w-2xl gap-0 p-0 overflow-hidden">
             <DialogHeader className="p-4 pb-3 border-b border-border/50">
-              <DialogTitle className="sr-only">Trash</DialogTitle>
-              <DialogDescription className="sr-only">
-                Items are permanently deleted after 30 days.
-              </DialogDescription>
+              <DialogTitle className="sr-only">{t("trash.modal.title")}</DialogTitle>
+              <DialogDescription className="sr-only">{t("trash.modal.subtitle")}</DialogDescription>
               {headerContent}
             </DialogHeader>
             {bodyContent}
@@ -575,10 +558,8 @@ export function TrashModal({
         <Drawer open={open} onOpenChange={onOpenChange}>
           <DrawerContent className="p-0 max-h-[85vh] overflow-hidden">
             <DrawerHeader className="p-4 pb-3 border-b border-border/50 text-left">
-              <DrawerTitle className="sr-only">Trash</DrawerTitle>
-              <DrawerDescription className="sr-only">
-                Items are permanently deleted after 30 days.
-              </DrawerDescription>
+              <DrawerTitle className="sr-only">{t("trash.modal.title")}</DrawerTitle>
+              <DrawerDescription className="sr-only">{t("trash.modal.subtitle")}</DrawerDescription>
               {headerContent}
             </DrawerHeader>
             {bodyContent}
@@ -589,8 +570,10 @@ export function TrashModal({
       <ConfirmDeleteDialog
         open={pendingHardDelete !== null}
         onOpenChange={(openConfirm) => !openConfirm && setPendingHardDelete(null)}
-        title="Delete Forever"
-        description={`Permanently delete "${pendingHardDelete?.name ?? ""}"? This cannot be undone.`}
+        title={t("trash.modal.confirmDeleteTitle")}
+        description={t("trash.modal.confirmDeleteDescription", {
+          name: pendingHardDelete?.name ?? "",
+        })}
         onConfirm={() => {
           if (pendingHardDelete) {
             handleDeleteForever(pendingHardDelete);
@@ -617,6 +600,7 @@ function TrashRowActions({
   onRestore,
   onDeleteForever,
 }: TrashRowActionsProps) {
+  const { t } = useTranslation("settings");
   const isPending = isRestoring || isDeleting;
   return (
     <div className="flex items-center gap-0.5">
@@ -631,7 +615,7 @@ function TrashRowActions({
                 e.stopPropagation();
                 onRestore(item);
               }}
-              aria-label="Restore"
+              aria-label={t("trash.modal.restore")}
               className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:scale-97 touch-manipulation disabled:opacity-50"
             >
               {isRestoring ? (
@@ -642,7 +626,7 @@ function TrashRowActions({
             </Button>
           }
         />
-        <TooltipContent>Restore</TooltipContent>
+        <TooltipContent>{t("trash.modal.restore")}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -656,7 +640,7 @@ function TrashRowActions({
                 e.stopPropagation();
                 onDeleteForever(item);
               }}
-              aria-label="Delete forever"
+              aria-label={t("trash.modal.deleteForever")}
               className="size-6.5 cursor-pointer rounded-md text-muted-foreground hover:bg-muted hover:text-destructive active:scale-97 touch-manipulation disabled:opacity-50"
             >
               {isDeleting ? (
@@ -667,7 +651,7 @@ function TrashRowActions({
             </Button>
           }
         />
-        <TooltipContent>Delete forever</TooltipContent>
+        <TooltipContent>{t("trash.modal.deleteForever")}</TooltipContent>
       </Tooltip>
     </div>
   );

@@ -28,7 +28,6 @@ import { CreateMenu } from "./create-menu";
 import { FolderLibrary } from "./folder-library";
 import { LibraryGridSkeleton } from "./library-skeleton";
 import { FolderPreview, NotebookPreview } from "./library-cards";
-import { TrashModal } from "@/features/trash/components/trash-modal";
 
 const libraryCollisionDetection: CollisionDetection = (args) =>
   args.pointerCoordinates ? pointerWithin(args) : closestCenter(args);
@@ -49,7 +48,6 @@ export function NotebookLibrary() {
   const [pendingDelete, setPendingDelete] = useState<LibraryNotebook | null>(null);
   const [pendingFolderDelete, setPendingFolderDelete] = useState<LibraryFolder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [trashOpen, setTrashOpen] = useState(false);
 
   const folders = useMemo(() => data?.folders ?? [], [data]);
   const notebooks = useMemo(() => (data?.notebooks ?? []).map(toLibraryNotebook), [data]);
@@ -294,7 +292,6 @@ export function NotebookLibrary() {
             notebooks={notebooks}
             activeFolderId={activeFolderId}
             sortKey={sortKey}
-            onOpenTrash={() => setTrashOpen(true)}
             onSortChange={handleSortChange}
             draftId={draft?.id ?? null}
             draftClientId={draft?.clientId ?? null}
@@ -349,7 +346,6 @@ export function NotebookLibrary() {
         isLoading={isDeleting}
         onConfirm={() => void confirmRemoveFolder()}
       />
-      <TrashModal open={trashOpen} onOpenChange={setTrashOpen} />
     </div>
   );
 }

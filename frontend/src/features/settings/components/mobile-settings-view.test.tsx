@@ -1,6 +1,7 @@
 import "@/shared/i18n/i18n";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "i18next";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,7 +19,14 @@ vi.mock("next-themes", () => ({
 }));
 
 function renderWithProviders(ui: ReactNode) {
-  return render(<PaletteProvider>{ui}</PaletteProvider>);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <PaletteProvider>{ui}</PaletteProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe("MobileSettingsView", () => {
@@ -72,5 +80,19 @@ describe("MobileSettingsView", () => {
     await waitFor(() => {
       expect(document.documentElement.lang).toBe("es");
     });
+  });
+
+  it("renders trash card and opens trash modal on click", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MobileSettingsView />);
+
+    expect(screen.getByRole("heading", { name: "Trash" })).toBeDefined();
+
+    const trashButton = screen.getByRole("button", { name: "Open Trash" });
+    expect(trashButton).toBeDefined();
+
+    await user.click(trashButton);
+
+    expect(await screen.findByPlaceholderText("Search deleted items...")).toBeDefined();
   });
 });

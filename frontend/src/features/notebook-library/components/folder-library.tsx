@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowUpDown, ChevronRight, MoreHorizontal, NotebookText, Trash2 } from "lucide-react";
+import { ArrowUpDown, ChevronRight, MoreHorizontal, NotebookText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/shared/utils/cn";
@@ -34,7 +34,6 @@ export interface FolderLibraryProps {
   notebooks: LibraryNotebook[];
   activeFolderId: string | null;
   sortKey: LibrarySortKey;
-  onOpenTrash?: () => void;
   draftId: string | null;
   draftClientId: string | null;
   selectedKey: string | null;
@@ -47,7 +46,10 @@ export interface FolderLibraryProps {
   onRemoveFolder: (id: string) => void;
   onRemoveNotebook: (id: string) => void;
   onOpenNotebook: (id: string) => void;
-  onUpdateNotebook: (id: string, patch: { title?: string; description?: string; folderId?: string | null }) => void;
+  onUpdateNotebook: (
+    id: string,
+    patch: { title?: string; description?: string; folderId?: string | null },
+  ) => void;
   onCreateFolder?: () => void;
   onCreateNotebook?: () => void;
   onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
@@ -59,7 +61,6 @@ export function FolderLibrary({
   notebooks,
   activeFolderId,
   sortKey,
-  onOpenTrash,
   draftId,
   draftClientId,
   selectedKey,
@@ -155,7 +156,6 @@ export function FolderLibrary({
           onCreateFolderNamed={onCreateFolderNamed}
           onCreateNotebookNamed={onCreateNotebookNamed}
           emptyState={emptyState}
-          onOpenTrash={onOpenTrash}
         />
       </div>
 
@@ -170,17 +170,6 @@ export function FolderLibrary({
             {activeFolder?.name ?? t("library.library")}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            {onOpenTrash && (
-              <button
-                type="button"
-                onClick={onOpenTrash}
-                aria-label="Trash"
-                className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium cursor-pointer text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors active:scale-97 select-none touch-manipulation"
-              >
-                <Trash2 className="size-3.5" />
-                <span>Trash</span>
-              </button>
-            )}
             <Select
               items={sortOptions}
               value={sortKey}
@@ -385,7 +374,9 @@ function Breadcrumb({
                   className="cursor-pointer truncate text-sm"
                   title={folder.name}
                 >
-                  <span className="truncate" dir="auto">{folder.name}</span>
+                  <span className="truncate" dir="auto">
+                    {folder.name}
+                  </span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -430,7 +421,10 @@ function BreadcrumbTarget({
       aria-current="page"
       data-drop-target={isOver ? "valid" : undefined}
       dir="auto"
-      className={cn("min-w-0 max-w-44 sm:max-w-64 truncate rounded-md text-foreground font-medium", highlightClass)}
+      className={cn(
+        "min-w-0 max-w-44 sm:max-w-64 truncate rounded-md text-foreground font-medium",
+        highlightClass,
+      )}
       title={label}
     >
       {label}

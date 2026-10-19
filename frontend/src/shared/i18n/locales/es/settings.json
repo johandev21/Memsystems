@@ -9,6 +9,33 @@
   },
   "page": {
     "title": "Ajustes"
+  },
+  "trash": {
+    "action": "Abrir papelera",
+    "cardDescription": "Ver, restaurar o eliminar permanentemente elementos.",
+    "description": "Los elementos en la papelera se eliminan automáticamente después de 30 días.",
+    "modal": {
+      "confirmDeleteDescription": "¿Eliminar permanentemente \"{{name}}\"? Esta acción no se puede deshacer.",
+      "confirmDeleteTitle": "Eliminar permanentemente",
+      "daysRemaining": "Quedan {{count}} d",
+      "deleteForever": "Eliminar permanentemente",
+      "emptyDescription": "Las carpetas, cuadernos, fuentes y materiales de estudio eliminados permanecen recuperables aquí durante 30 días.",
+      "emptyFailedToast": "Error al vaciar la papelera",
+      "emptySuccessToast": "Papelera vaciada",
+      "emptyTitle": "La papelera está vacía",
+      "expiringSoonHeading": "Por expirar en 7 días",
+      "holdToEmpty": "Mantén para vaciar",
+      "holdToEmptyAria": "Mantén presionado para vaciar la papelera",
+      "itemFallback": "Elemento",
+      "loadFailedDescription": "Ocurrió un error al obtener los elementos eliminados.",
+      "loadFailedTitle": "Error al cargar la papelera",
+      "noResults": "No se encontraron elementos eliminados que coincidan con \"{{query}}\"",
+      "recentlyDeletedHeading": "Eliminados recientemente",
+      "restore": "Restaurar",
+      "searchPlaceholder": "Buscar elementos eliminados...",
+      "subtitle": "Los elementos se eliminan permanentemente después de 30 días.",
+      "title": "Papelera"
+    },
+    "title": "Papelera"
   }
 }
-

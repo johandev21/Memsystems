@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { MobileLanguageSelector } from "@/features/language";
 import { MobileSchemeSelector, MobileThemeGrid } from "@/features/theme";
 import { MobileSettingsHeader } from "./mobile-settings-header";
+import { TrashCard } from "./trash-card";
 
 export function MobileSettingsView() {
   const { t } = useTranslation(["settings", "theme"]);
@@ -31,9 +32,7 @@ export function MobileSettingsView() {
         </div>
 
         <div className="space-y-2">
-          <span className="text-xs font-medium text-muted-foreground">
-            {t("theme:grid.title")}
-          </span>
+          <span className="text-xs font-medium text-muted-foreground">{t("theme:grid.title")}</span>
           <MobileThemeGrid />
         </div>
       </section>
@@ -52,6 +51,20 @@ export function MobileSettingsView() {
         </div>
 
         <MobileLanguageSelector />
+      </section>
+
+      <section aria-labelledby="mobile-trash-heading" className="space-y-4">
+        <div>
+          <h2
+            id="mobile-trash-heading"
+            className="text-base font-semibold tracking-tight text-foreground"
+          >
+            {t("settings:trash.title")}
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t("settings:trash.description")}</p>
+        </div>
+
+        <TrashCard />
       </section>
     </div>
   );

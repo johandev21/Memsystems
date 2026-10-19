@@ -1,4 +1,4 @@
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { LibrarySortKey } from "../model/library-sort";
 import type { LibraryFolder } from "../model/types";
@@ -10,14 +10,12 @@ export interface MobileLibraryHeaderProps {
   sortOptions?: { value: LibrarySortKey; label: string; description: string }[];
   onSortChange?: (sortKey: LibrarySortKey) => void;
   onOpenFolder: (id: string | null) => void;
-  onOpenTrash?: () => void;
 }
 
 export function MobileLibraryHeader({
   activeFolder,
   parentFolder,
   onOpenFolder,
-  onOpenTrash,
 }: MobileLibraryHeaderProps) {
   const { t } = useTranslation("notebooks");
 
@@ -44,19 +42,7 @@ export function MobileLibraryHeader({
         >
           {activeFolder ? activeFolder.name : t("library.library")}
         </h1>
-        {onOpenTrash && (
-          <button
-            type="button"
-            onClick={onOpenTrash}
-            aria-label="Trash"
-            className="flex items-center gap-1.5 h-7 px-2 rounded-lg text-xs font-medium cursor-pointer text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors active:scale-97 select-none touch-manipulation shrink-0"
-          >
-            <Trash2 className="size-3.5" />
-            <span>Trash</span>
-          </button>
-        )}
       </div>
     </header>
   );
 }
-
