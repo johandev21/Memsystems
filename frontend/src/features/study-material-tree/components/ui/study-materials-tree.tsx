@@ -98,6 +98,7 @@ export function StudyMaterialsTree({
   isSearchOpen,
   onToggleSearch,
 }: ProductionStudyMaterialsTreeProps) {
+  const { t } = useTranslation("tree");
   const [internalSelected, setInternalSelected] = useState<string | null>(
     defaultSelectedId !== undefined ? defaultSelectedId : null,
   );
@@ -220,7 +221,7 @@ export function StudyMaterialsTree({
                     onClose={onToggleSearch}
                     matchCount={matchCount}
                     isSearching={Boolean(searchQuery && searchQuery.trim().length > 0)}
-                    placeholder="Search study materials..."
+                    placeholder={t("search.placeholder")}
                   />
                 </div>
               )}
@@ -256,6 +257,7 @@ export function StudyMaterialsTree({
 }
 
 function TreeContent({ isPrototype }: { isPrototype: boolean }) {
+  const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
   const isSearching = Boolean(controller.searchQuery && controller.searchQuery.trim().length > 0);
 
@@ -269,8 +271,8 @@ function TreeContent({ isPrototype }: { isPrototype: boolean }) {
               data-slot="study-materials-tree-search-empty-state"
               className="h-full py-6"
               icon={<Search className="size-5 text-muted-foreground" />}
-              title="No study materials found"
-              description={`No materials match "${controller.searchQuery}"`}
+              title={t("search.emptyTitle")}
+              description={t("search.emptyDescription", { query: controller.searchQuery ?? "" })}
             />
           ) : (
             <TreeEmptyState isPrototype={isPrototype} />

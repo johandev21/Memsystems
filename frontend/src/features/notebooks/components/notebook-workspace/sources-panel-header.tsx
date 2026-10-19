@@ -62,14 +62,14 @@ export function SourcesPanelHeader({
                         "h-7 w-7 cursor-pointer active:scale-97 transition-transform touch-manipulation",
                         isSearchOpen && "bg-accent text-accent-foreground font-semibold",
                       )}
-                      aria-label="Search sources"
+                      aria-label={t("panels.searchSources")}
                       onClick={onToggleSearch}
                     >
                       <Search className="size-4" />
                     </Button>
                   }
                 />
-                <TooltipContent>Search sources</TooltipContent>
+                <TooltipContent>{t("panels.searchSources")}</TooltipContent>
               </Tooltip>
             )}
 

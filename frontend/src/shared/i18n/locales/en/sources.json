@@ -50,7 +50,8 @@
   "panel": {
     "addSourcesPrompt": "Add sources (PDF, Web, Text) to inform your AI study assistant",
     "deleteDescription": "Are you sure you want to delete \"{{title}}\"?",
-    "deleteTitle": "Delete Source"
+    "deleteTitle": "Delete Source",
+    "searchPlaceholder": "Search sources..."
   },
   "panels": {
     "sources": "Sources"
@@ -125,6 +126,8 @@
     "emptyDescription": "Add material to ground your chats and study materials.",
     "emptyTitle": "No sources yet",
     "failedToLoad": "Failed to load sources",
+    "noMatches": "No matching sources",
+    "noMatchesDescription": "Try another search term.",
     "retry": "Retry"
   },
   "states": {

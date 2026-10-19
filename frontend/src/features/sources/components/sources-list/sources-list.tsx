@@ -187,8 +187,8 @@ export const SourcesList = memo(function SourcesList({
   if (Boolean(searchQuery) && filteredTree.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
-        <p className="font-medium text-foreground">No matching sources</p>
-        <p className="mt-1">Try another search term.</p>
+        <p className="font-medium text-foreground">{t("sourcesList.noMatches")}</p>
+        <p className="mt-1">{t("sourcesList.noMatchesDescription")}</p>
       </div>
     );
   }

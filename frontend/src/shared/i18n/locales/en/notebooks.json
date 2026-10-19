@@ -147,7 +147,8 @@
     "newFolder": "New folder",
     "sections": "Notebook sections",
     "sources": "Sources",
-    "studio": "Studio"
+    "studio": "Studio",
+    "searchSources": "Search sources"
   },
   "resources": {
     "basedOnBrief": "based on brief",

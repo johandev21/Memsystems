@@ -50,7 +50,8 @@
   "panel": {
     "addSourcesPrompt": "Añade fuentes (PDF, web, texto) para nutrir a tu asistente de estudio con IA",
     "deleteDescription": "¿Seguro que quieres eliminar “{{title}}”?",
-    "deleteTitle": "Eliminar fuente"
+    "deleteTitle": "Eliminar fuente",
+    "searchPlaceholder": "Buscar fuentes..."
   },
   "panels": {
     "sources": "Fuentes"
@@ -125,6 +126,8 @@
     "emptyDescription": "Añade material para fundamentar tus chats y materiales de estudio.",
     "emptyTitle": "Aún no hay fuentes",
     "failedToLoad": "No se pudieron cargar las fuentes",
+    "noMatches": "No hay fuentes coincidentes",
+    "noMatchesDescription": "Prueba con otro término de búsqueda.",
     "retry": "Reintentar"
   },
   "states": {

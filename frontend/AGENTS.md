@@ -13,5 +13,6 @@ Mobile changes must preserve the desktop (`sm:` and up) layout and visual design
 
 ## Testing & i18n
 
+- **No hardcoded UI copy**: Never hardcode user-facing strings (placeholders, tooltips, `aria-label`, buttons). Always register translation keys in both `locales/en/` and `locales/es/`, use `useTranslation()`, and run `pnpm --filter frontend i18n:types`.
 - `src/test/setup.ts` preloads all English i18n namespaces so components do not suspend on `useTranslation` during synchronous queries. Preserve this preload.
 - For test patterns and troubleshooting (`<body><div /></div>` or raw translation keys), read [../docs/testing.md](../docs/testing.md).

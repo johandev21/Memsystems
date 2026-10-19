@@ -148,7 +148,8 @@
     "newFolder": "Nueva carpeta",
     "sections": "Secciones del cuaderno",
     "sources": "Fuentes",
-    "studio": "Estudio"
+    "studio": "Estudio",
+    "searchSources": "Buscar fuentes"
   },
   "resources": {
     "basedOnBrief": "basado en el resumen",

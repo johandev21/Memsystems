@@ -793,7 +793,7 @@ export default interface Resources {
         "folderDescription": "Group notebooks together",
         "folderPlaceholder": "Folder name",
         "importNotebook": "Import notebook",
-        "importNotebookDescription": "Upload a .memsys notebook bundle",
+        "importNotebookDescription": "Upload a .memsys bundle",
         "label": "Create new",
         "newFolder": "New folder",
         "newNotebook": "New notebook",
@@ -875,6 +875,7 @@ export default interface Resources {
       "expandSources": "Expand sources",
       "expandStudio": "Expand studio",
       "newFolder": "New folder",
+      "searchSources": "Search sources",
       "sections": "Notebook sections",
       "sources": "Sources",
       "studio": "Studio"
@@ -1180,7 +1181,8 @@ export default interface Resources {
     "panel": {
       "addSourcesPrompt": "Add sources (PDF, Web, Text) to inform your AI study assistant",
       "deleteDescription": "Are you sure you want to delete \"{{title}}\"?",
-      "deleteTitle": "Delete Source"
+      "deleteTitle": "Delete Source",
+      "searchPlaceholder": "Search sources..."
     },
     "panels": {
       "sources": "Sources"
@@ -1255,6 +1257,8 @@ export default interface Resources {
       "emptyDescription": "Add material to ground your chats and study materials.",
       "emptyTitle": "No sources yet",
       "failedToLoad": "Failed to load sources",
+      "noMatches": "No matching sources",
+      "noMatchesDescription": "Try another search term.",
       "retry": "Retry"
     },
     "states": {
@@ -1479,6 +1483,7 @@ export default interface Resources {
       "expandAllFolders": "Expand all folders",
       "expandPanel": "Expand study materials",
       "newFolder": "New folder",
+      "search": "Search study materials",
       "title": "Study Materials"
     },
     "lastAction": {
@@ -1496,6 +1501,16 @@ export default interface Resources {
       "actionsFor": "Actions for {{name}}",
       "dragHandle": "Drag to move",
       "itemName": "Item name"
+    },
+    "search": {
+      "clear": "Clear search",
+      "close": "Close search",
+      "defaultPlaceholder": "Search...",
+      "emptyDescription": "No materials match \"{{query}}\"",
+      "emptyTitle": "No study materials found",
+      "match_one": "{{count}} match",
+      "match_other": "{{count}} matches",
+      "placeholder": "Search study materials..."
     },
     "tree": {
       "ariaLabel": "Study materials",

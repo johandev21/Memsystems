@@ -54,7 +54,18 @@
     "expandAllFolders": "Expand all folders",
     "expandPanel": "Expand study materials",
     "newFolder": "New folder",
+    "search": "Search study materials",
     "title": "Study Materials"
+  },
+  "search": {
+    "clear": "Clear search",
+    "close": "Close search",
+    "defaultPlaceholder": "Search...",
+    "emptyDescription": "No materials match \"{{query}}\"",
+    "emptyTitle": "No study materials found",
+    "match_one": "{{count}} match",
+    "match_other": "{{count}} matches",
+    "placeholder": "Search study materials..."
   },
   "lastAction": {
     "created": "Created {{name}}.",

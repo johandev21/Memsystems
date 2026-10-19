@@ -77,14 +77,14 @@ export function TreeHeader({
                       isPanelExpanded ? "h-7 w-7" : "size-6",
                       isSearchOpen && "bg-accent text-accent-foreground font-semibold",
                     )}
-                    aria-label="Search study materials"
+                    aria-label={t("header.search")}
                     onClick={onToggleSearch}
                   >
                     <Search className={isPanelExpanded ? "size-4" : "size-3.5"} />
                   </Button>
                 }
               />
-              <TooltipContent>Search study materials</TooltipContent>
+              <TooltipContent>{t("header.search")}</TooltipContent>
             </Tooltip>
           )}
 

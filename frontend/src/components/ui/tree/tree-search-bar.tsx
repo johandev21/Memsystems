@@ -1,5 +1,6 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 
 export interface TreeSearchBarProps {
@@ -19,12 +20,14 @@ export function TreeSearchBar({
   onChange,
   onClear,
   onClose,
-  placeholder = "Search...",
+  placeholder,
   matchCount,
   isSearching = false,
   className,
   autoFocus = true,
 }: TreeSearchBarProps) {
+  const { t } = useTranslation("tree");
+  const effectivePlaceholder = placeholder ?? t("search.defaultPlaceholder");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,12 +61,12 @@ export function TreeSearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         className="min-w-0 flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
       />
       {isSearching && matchCount !== undefined && (
         <span className="shrink-0 rounded-xs bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
-          {matchCount} {matchCount === 1 ? "match" : "matches"}
+          {t("search.match", { count: matchCount })}
         </span>
       )}
       {value.length > 0 ? (
@@ -71,7 +74,7 @@ export function TreeSearchBar({
           type="button"
           onClick={onClear}
           className="flex size-4 shrink-0 items-center justify-center rounded-xs text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-transform"
-          aria-label="Clear search"
+          aria-label={t("search.clear")}
         >
           <X className="size-3" />
         </button>
@@ -80,7 +83,7 @@ export function TreeSearchBar({
           type="button"
           onClick={onClose}
           className="flex size-4 shrink-0 items-center justify-center rounded-xs text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-transform"
-          aria-label="Close search"
+          aria-label={t("search.close")}
         >
           <X className="size-3" />
         </button>

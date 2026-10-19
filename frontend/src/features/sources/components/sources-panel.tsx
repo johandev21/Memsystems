@@ -391,7 +391,7 @@ export const SourcesPanel = memo(function SourcesPanel({
               onClose={search.toggleSearch}
               matchCount={search.matchCount}
               isSearching={search.isSearching}
-              placeholder="Search sources..."
+              placeholder={t("panel.searchPlaceholder")}
             />
           </div>
         )}

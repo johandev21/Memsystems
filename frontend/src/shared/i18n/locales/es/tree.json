@@ -54,7 +54,18 @@
     "expandAllFolders": "Expandir todas las carpetas",
     "expandPanel": "Expandir materiales de estudio",
     "newFolder": "Nueva carpeta",
+    "search": "Buscar materiales de estudio",
     "title": "Materiales de estudio"
+  },
+  "search": {
+    "clear": "Borrar búsqueda",
+    "close": "Cerrar búsqueda",
+    "defaultPlaceholder": "Buscar…",
+    "emptyDescription": "No hay materiales que coincidan con «{{query}}»",
+    "emptyTitle": "No se encontraron materiales de estudio",
+    "match_one": "{{count}} coincidencia",
+    "match_other": "{{count}} coincidencias",
+    "placeholder": "Buscar materiales de estudio..."
   },
   "lastAction": {
     "created": "Se creó {{name}}.",
