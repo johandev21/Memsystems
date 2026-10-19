@@ -1,12 +1,82 @@
 import { AppHeader } from "@/components/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SUPPORTED_LANGUAGES } from "@/features/language/utils/languages";
+import { THEMES } from "@/features/theme/utils/themes";
 
-function SettingsSectionSkeleton() {
+const SCHEME_OPTION_COUNT = 3;
+
+function SchemeSelectorSkeleton() {
   return (
-    <div className="flex flex-col gap-5" aria-hidden="true">
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-5 w-full max-w-2xl" />
-      <Skeleton className="h-10 w-full max-w-md rounded-xl" />
+    <div className="space-y-3">
+      <Skeleton className="h-6 w-28" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {Array.from({ length: SCHEME_OPTION_COUNT }).map((_, i) => (
+          <div
+            key={i}
+            className="flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5"
+          >
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <div className="flex h-6 items-center gap-1.5 px-0.5">
+              <Skeleton className="size-3.5 shrink-0 rounded-xs" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ThemeGridSkeleton() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-6 w-20" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {THEMES.map((theme) => (
+          <div
+            key={theme.id}
+            className="flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5"
+          >
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <div className="flex h-11 flex-col justify-center gap-1.5 px-0.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3.5 w-44 max-w-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LanguageSelectorSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {SUPPORTED_LANGUAGES.map((lang) => (
+        <div
+          key={lang.code}
+          className="flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5"
+        >
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <div className="flex h-6 items-center px-0.5">
+            <Skeleton className="h-4 w-20" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrashCardSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5">
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <div className="flex h-11 flex-col justify-center gap-1.5 px-0.5">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-3.5 w-48 max-w-full" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -32,8 +102,8 @@ function MobileSettingsSkeleton() {
         <div className="space-y-2">
           <Skeleton className="h-3.5 w-16 rounded-md" />
           <div className="grid grid-cols-2 gap-2">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-11 w-full rounded-xl" />
+            {THEMES.map((theme) => (
+              <Skeleton key={theme.id} className="h-11 w-full rounded-xl" />
             ))}
           </div>
         </div>
@@ -45,6 +115,14 @@ function MobileSettingsSkeleton() {
           <Skeleton className="h-3.5 w-44 rounded-md" />
         </div>
         <Skeleton className="h-10 w-full rounded-2xl" />
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Skeleton className="h-5 w-16 rounded-md" />
+          <Skeleton className="h-3.5 w-52 rounded-md" />
+        </div>
+        <TrashCardSkeleton />
       </div>
     </div>
   );
@@ -61,20 +139,34 @@ export function SettingsPageSkeleton() {
         <AppHeader />
         <main className="w-full mx-auto max-w-260 px-3 sm:px-6 lg:px-8 pb-16 pt-6 sm:pt-10 lg:pt-14">
           <header className="mb-10" aria-hidden="true">
-            <Skeleton className="h-10 w-44" />
+            <Skeleton className="h-9 sm:h-10 w-44" />
           </header>
 
           <section aria-hidden="true">
-            <SettingsSectionSkeleton />
+            <div className="mb-6">
+              <Skeleton className="h-6 w-28" />
+              <Skeleton className="mt-1 h-6 w-72 max-w-full" />
+            </div>
+            <div className="space-y-8">
+              <SchemeSelectorSkeleton />
+              <ThemeGridSkeleton />
+            </div>
           </section>
+
           <section className="mt-12" aria-hidden="true">
-            <SettingsSectionSkeleton />
+            <div className="mb-6">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="mt-1 h-6 w-64 max-w-full" />
+            </div>
+            <LanguageSelectorSkeleton />
           </section>
+
           <section className="mt-12" aria-hidden="true">
-            <SettingsSectionSkeleton />
-          </section>
-          <section className="mt-12" aria-hidden="true">
-            <SettingsSectionSkeleton />
+            <div className="mb-6">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="mt-1 h-6 w-80 max-w-full" />
+            </div>
+            <TrashCardSkeleton />
           </section>
         </main>
       </div>
