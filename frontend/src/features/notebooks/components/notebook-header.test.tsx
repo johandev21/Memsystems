@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import { NotebookHeader } from "./notebook-header";
-import * as notebookApi from "../api/notebooks";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: any) => <a {...props}>{children}</a>,
@@ -22,7 +21,7 @@ vi.mock("./mobile-notebook-menu-drawer", () => ({
 
 vi.mock("@/components/layout", () => ({
   Logo: () => <div>Logo</div>,
-  SettingsLink: () => <div>SettingsLink</div>,
+  SettingsLink: () => <div data-testid="settings-link">SettingsLink</div>,
 }));
 
 function wrapper() {
@@ -39,18 +38,11 @@ describe("NotebookHeader", () => {
     await i18n.loadNamespaces(["notebooks"]);
   });
 
-  it("renders export button and calls exportNotebook on click", async () => {
-    const exportSpy = vi.spyOn(notebookApi, "exportNotebook").mockResolvedValue();
-
+  it("renders notebook title and settings link without the export button", () => {
     render(<NotebookHeader id="nb-test" />, { wrapper: wrapper() });
 
-    const exportBtn = screen.getByRole("button", { name: /export notebook/i });
-    expect(exportBtn).toBeDefined();
-
-    fireEvent.click(exportBtn);
-
-    await waitFor(() => {
-      expect(exportSpy).toHaveBeenCalledWith("nb-test", undefined);
-    });
+    expect(screen.getByText("Notebook Title")).toBeDefined();
+    expect(screen.getByTestId("settings-link")).toBeDefined();
+    expect(screen.queryByRole("button", { name: /export notebook/i })).toBeNull();
   });
 });

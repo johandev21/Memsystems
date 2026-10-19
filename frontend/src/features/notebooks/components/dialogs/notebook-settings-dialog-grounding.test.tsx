@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import { NotebookSettingsDialog } from "./notebook-settings-dialog";
+import * as notebookApi from "../../api/notebooks";
 
 function notebook(groundingMode?: string) {
   return {
@@ -86,6 +87,23 @@ describe("NotebookSettingsDialog grounding mode", () => {
     });
     await waitFor(() => {
       expect(freeRadio.getAttribute("aria-checked")).toBe("true");
+    });
+  });
+
+  it("renders export notebook menu item and calls exportNotebook on click", async () => {
+    const user = userEvent.setup();
+    const exportSpy = vi.spyOn(notebookApi, "exportNotebook").mockResolvedValue();
+
+    render(<NotebookSettingsDialog notebookId="nb-1" />, { wrapper: wrapper() });
+
+    await user.click(screen.getByRole("button", { name: "Notebook settings" }));
+    const exportItem = await screen.findByRole("menuitem", { name: /export notebook/i });
+    expect(exportItem).toBeDefined();
+
+    await user.click(exportItem);
+
+    await waitFor(() => {
+      expect(exportSpy).toHaveBeenCalledWith("nb-1", "Notebook");
     });
   });
 });
