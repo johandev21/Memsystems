@@ -216,6 +216,17 @@ export class NotebookImportService {
       });
     }
 
+    if (
+      !notebookData.title ||
+      typeof notebookData.title !== 'string' ||
+      !notebookData.title.trim()
+    ) {
+      throw new BadRequestError(
+        'Invalid .memsys file: missing or invalid title in notebook.json',
+        { messageKey: 'errors.notebooks.import.missingTitle' },
+      );
+    }
+
     // 4. Read collection structures (defaulting to empty arrays if omitted)
     const readJsonEntry = async <T>(path: string, fallback: T): Promise<T> => {
       const entry = zip.file(path);
