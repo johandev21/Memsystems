@@ -62,7 +62,7 @@ describe("GroundingModePicker", () => {
     render(<GroundingModePicker variant="full" value="free" onChange={vi.fn()} />);
 
     expect(
-      screen.getByRole("radiogroup", { name: "Modo de fundamentación" }),
+      screen.getByRole("radiogroup", { name: /fundamentación/i }),
     ).toBeTruthy();
     expect(screen.getByText("Responde solo desde las fuentes")).toBeTruthy();
     expect(

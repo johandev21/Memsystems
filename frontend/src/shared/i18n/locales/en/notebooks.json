@@ -66,7 +66,9 @@
       "newNotebook": "New notebook",
       "notebookPlaceholder": "Notebook title",
       "notebook": "Notebook",
-      "notebookDescription": "Start a blank notebook"
+      "notebookDescription": "Start a blank notebook",
+      "importNotebook": "Import notebook",
+      "importNotebookDescription": "Upload a .memsys bundle"
     },
     "dnd": {
       "dragCancel": "Moving {{name}} was cancelled.",
@@ -101,6 +103,7 @@
     "removeNotebook": "Delete Notebook",
     "removeNotebookConfirm": "Permanently delete “{{title}}” and all of its contents? This cannot be undone.",
     "rename": "Rename",
+    "exportNotebook": "Export Notebook",
     "retry": "Retry",
     "selectDestinationFolder": "Select destination folder",
     "sort": {
@@ -118,7 +121,10 @@
       "folderUpdateFailed": "Failed to update folder",
       "notebookCreateFailed": "Failed to create notebook",
       "notebookRemoveFailed": "Failed to delete notebook",
-      "notebookUpdateFailed": "Failed to update notebook"
+      "notebookUpdateFailed": "Failed to update notebook",
+      "importing": "Importing notebook…",
+      "importSuccess": "Notebook imported successfully",
+      "importFailed": "Failed to import notebook"
     },
     "untitledFolder": "Untitled folder",
     "untitledNotebook": "Untitled notebook"
@@ -161,6 +167,10 @@
     "deleting": "Deleting…",
     "description": "Edit or manage this notebook.",
     "edit": "Edit notebook",
+    "export": "Export notebook",
+    "exporting": "Exporting notebook…",
+    "exportFailed": "Failed to export notebook",
+    "exportSuccess": "Notebook exported successfully",
     "groundingModeFailed": "Failed to update grounding mode",
     "groundingModeUpdated": "Grounding mode updated",
     "thisNotebook": "this notebook",

@@ -33,4 +33,19 @@ describe("CreateMenu", () => {
     expect(onCreateFolder).toHaveBeenCalledTimes(1);
     expect(onCreateNotebook).not.toHaveBeenCalled();
   });
+
+  it("triggers onImportNotebook from the menu", async () => {
+    const user = userEvent.setup();
+    const onImportNotebook = vi.fn();
+    render(
+      <CreateMenu
+        onCreateNotebook={vi.fn()}
+        onCreateFolder={vi.fn()}
+        onImportNotebook={onImportNotebook}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(await screen.findByRole("menuitem", { name: /Import notebook/ }));
+    expect(onImportNotebook).toHaveBeenCalledTimes(1);
+  });
 });

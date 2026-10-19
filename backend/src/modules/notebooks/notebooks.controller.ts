@@ -7,14 +7,22 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  UploadedFile,
   UploadedFiles,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BadRequestError } from '../../common/errors/domain-error';
+import { NotebookExportService } from './notebook-export.service';
+import { NotebookImportService } from './notebook-import.service';
 import { NotebooksService } from './notebooks.service';
 
 const createNotebookSchema = z.object({
@@ -48,7 +56,11 @@ const updateNotebookSchema = z.object({
 
 @Controller('notebooks')
 export class NotebooksController {
-  constructor(private readonly notebooksService: NotebooksService) {}
+  constructor(
+    private readonly notebooksService: NotebooksService,
+    private readonly notebookExportService: NotebookExportService,
+    private readonly notebookImportService: NotebookImportService,
+  ) {}
 
   @Get()
   async list(
@@ -71,9 +83,30 @@ export class NotebooksController {
     return this.notebooksService.create(body);
   }
 
+  @Post('import')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 100 * 1024 * 1024 } }),
+  )
+  async import(
+    @UploadedFile() file?: Express.Multer.File,
+    @Body('folderId') folderId?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestError('File is required', {
+        messageKey: 'errors.notebooks.import.fileRequired',
+      });
+    }
+    return this.notebookImportService.importNotebook(file.buffer, folderId);
+  }
+
   @Get(':id')
   async get(@Param('id') id: string) {
     return this.notebooksService.get(id);
+  }
+
+  @Get(':id/export')
+  async export(@Param('id') id: string, @Res() res: Response) {
+    return this.notebookExportService.exportNotebook(id, res);
   }
 
   @Patch(':id')

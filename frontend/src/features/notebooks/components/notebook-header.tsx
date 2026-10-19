@@ -27,7 +27,7 @@ export function NotebookHeader({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="shrink-0">
+      <div className="shrink-0 flex items-center gap-1">
         <div className="hidden sm:block">
           <SettingsLink />
         </div>

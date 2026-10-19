@@ -1,4 +1,4 @@
-import { FolderPlus, NotebookPen, Plus } from "lucide-react";
+import { FolderPlus, NotebookPen, Plus, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Drawer,
@@ -12,6 +12,7 @@ export interface MobileCreateDrawerProps {
   onOpenChange: (open: boolean) => void;
   onCreateNotebook?: () => void;
   onCreateFolder?: () => void;
+  onImportNotebook?: () => void;
 }
 
 export function MobileCreateDrawer({
@@ -19,10 +20,11 @@ export function MobileCreateDrawer({
   onOpenChange,
   onCreateNotebook,
   onCreateFolder,
+  onImportNotebook,
 }: MobileCreateDrawerProps) {
   const { t } = useTranslation("notebooks");
 
-  if (!onCreateNotebook && !onCreateFolder) return null;
+  if (!onCreateNotebook && !onCreateFolder && !onImportNotebook) return null;
 
   return (
     <>
@@ -84,6 +86,28 @@ export function MobileCreateDrawer({
                   </span>
                   <span className="text-xs text-muted-foreground truncate">
                     {t("library.create.folderDescription")}
+                  </span>
+                </div>
+              </button>
+            )}
+
+            {onImportNotebook && (
+              <button
+                type="button"
+                data-slot="mobile-create-import"
+                onClick={() => {
+                  onOpenChange(false);
+                  onImportNotebook();
+                }}
+                className="flex w-full items-center gap-3.5 rounded-xl px-3.5 py-3 text-left transition-colors hover:bg-muted active:scale-98 touch-manipulation cursor-pointer select-none"
+              >
+                <Upload className="size-5 shrink-0 text-muted-foreground" />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-medium text-foreground">
+                    {t("library.create.importNotebook")}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {t("library.create.importNotebookDescription")}
                   </span>
                 </div>
               </button>

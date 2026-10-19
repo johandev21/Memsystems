@@ -11,6 +11,7 @@ export interface UseMobileLibraryActionsOptions {
   ) => void;
   onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
   onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
+  onExportNotebook?: (id: string, title: string) => void;
 }
 
 export function useMobileLibraryActions({
@@ -20,6 +21,7 @@ export function useMobileLibraryActions({
   onUpdateNotebook,
   onCreateFolderNamed,
   onCreateNotebookNamed,
+  onExportNotebook,
 }: UseMobileLibraryActionsOptions) {
   const [activeItem, setActiveItem] = useState<LibraryItem | null>(null);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
@@ -75,6 +77,12 @@ export function useMobileLibraryActions({
     setActiveItem(null);
   };
 
+  const exportActiveItem = () => {
+    if (!activeItem || activeItem.kind !== "notebook") return;
+    onExportNotebook?.(activeItem.notebook.id, activeItem.notebook.title);
+    setActiveItem(null);
+  };
+
   const startCreateFolder = () => {
     setIsCreateOpen(false);
     setIsCreateFolderOpen(true);
@@ -120,6 +128,7 @@ export function useMobileLibraryActions({
     isMoveOpen,
     setIsMoveOpen,
     moveNotebook,
+    exportActiveItem,
     deleteItem,
     isCreateOpen,
     setIsCreateOpen,

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
+import { Download, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   ContextMenu,
@@ -98,6 +98,7 @@ export type NotebookCardProps = {
   onCancelEdit?: () => void;
   onDismissEdit?: (name: string) => void;
   onRemove: () => void;
+  onExport?: () => void;
 };
 export type NotebookPreviewProps = {
   notebook: { title: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
@@ -274,11 +275,7 @@ function NotebookArtwork({
           hideLabel={hideTitle}
         />
       ) : (
-        <EmptyNotebookArtwork
-          title={notebook.title}
-          titleSlot={titleSlot}
-          hideLabel={hideTitle}
-        />
+        <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} hideLabel={hideTitle} />
       )}
     </span>
   );
@@ -294,6 +291,7 @@ export function NotebookCard({
   onCancelEdit,
   onDismissEdit,
   onRemove,
+  onExport,
 }: NotebookCardProps) {
   const { t } = useTranslation("notebooks");
   const queryClient = useQueryClient();
@@ -372,6 +370,12 @@ export function NotebookCard({
           <Pencil />
           {t("library.rename")}
         </ContextMenuItem>
+        {onExport && (
+          <ContextMenuItem onClick={onExport}>
+            <Download />
+            {t("library.exportNotebook")}
+          </ContextMenuItem>
+        )}
         <ContextMenuItem variant="destructive" onClick={onRemove}>
           <Trash2 />
           {t("library.removeNotebook")}

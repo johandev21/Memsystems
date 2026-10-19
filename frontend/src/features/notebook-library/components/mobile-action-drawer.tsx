@@ -1,4 +1,4 @@
-import { FolderInput, Pencil, Trash2 } from "lucide-react";
+import { Download, FolderInput, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Drawer,
@@ -16,6 +16,7 @@ export interface MobileActionDrawerProps {
   onStartRename: () => void;
   onStartMove: () => void;
   onDelete: () => void;
+  onExport?: () => void;
 }
 
 export function MobileActionDrawer({
@@ -25,6 +26,7 @@ export function MobileActionDrawer({
   onStartRename,
   onStartMove,
   onDelete,
+  onExport,
 }: MobileActionDrawerProps) {
   const { t } = useTranslation("notebooks");
   if (!item) return null;
@@ -65,6 +67,17 @@ export function MobileActionDrawer({
             >
               <FolderInput className="size-4 text-muted-foreground" />
               <span>{t("library.moveToFolder", "Move to folder")}</span>
+            </button>
+          )}
+
+          {item.kind === "notebook" && onExport && (
+            <button
+              type="button"
+              onClick={onExport}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-95 transition-transform transition-colors touch-manipulation cursor-pointer"
+            >
+              <Download className="size-4 text-muted-foreground" />
+              <span>{t("library.exportNotebook", "Export Notebook")}</span>
             </button>
           )}
 

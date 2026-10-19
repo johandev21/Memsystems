@@ -150,6 +150,22 @@ describe("MobileLibraryView", () => {
     expect(onUpdateNotebook).toHaveBeenCalledWith("notebook-1", { folderId: "folder-2" });
   });
 
+  it("opens action drawer and triggers export notebook callback", async () => {
+    const user = userEvent.setup();
+    const onExportNotebook = vi.fn();
+    renderWithProviders(<MobileLibraryView {...defaultProps} onExportNotebook={onExportNotebook} />);
+
+    // Open action drawer
+    const actionBtn = screen.getByRole("button", { name: "Actions for Republic" });
+    await user.click(actionBtn);
+
+    // Click Export notebook
+    const exportBtn = screen.getByRole("button", { name: "Export Notebook" });
+    await user.click(exportBtn);
+
+    expect(onExportNotebook).toHaveBeenCalledWith("notebook-1", "Republic");
+  });
+
   it("triggers creation sheet from floating action button", async () => {
     const user = userEvent.setup();
     const onCreateNotebook = vi.fn();

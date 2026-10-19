@@ -54,6 +54,8 @@ export interface FolderLibraryProps {
   onCreateNotebook?: () => void;
   onCreateFolderNamed?: (name: string) => void | Promise<unknown>;
   onCreateNotebookNamed?: (title: string) => void | Promise<unknown>;
+  onExportNotebook?: (id: string, title: string) => void;
+  onImportNotebook?: () => void;
 }
 
 export function FolderLibrary({
@@ -78,6 +80,8 @@ export function FolderLibrary({
   onCreateNotebook,
   onCreateFolderNamed,
   onCreateNotebookNamed,
+  onExportNotebook,
+  onImportNotebook,
 }: FolderLibraryProps) {
   const { t, i18n } = useTranslation("notebooks");
   const locale = i18n.resolvedLanguage;
@@ -156,6 +160,8 @@ export function FolderLibrary({
           onCreateFolderNamed={onCreateFolderNamed}
           onCreateNotebookNamed={onCreateNotebookNamed}
           emptyState={emptyState}
+          onExportNotebook={onExportNotebook}
+          onImportNotebook={onImportNotebook}
         />
       </div>
 
@@ -209,6 +215,7 @@ export function FolderLibrary({
           onRemoveNotebook={onRemoveNotebook}
           onOpenNotebook={onOpenNotebook}
           onUpdateNotebook={onUpdateNotebook}
+          onExportNotebook={onExportNotebook}
         />
       </div>
     </div>
@@ -232,6 +239,7 @@ function LibraryGrid({
   onRemoveNotebook,
   onOpenNotebook,
   onUpdateNotebook,
+  onExportNotebook,
 }: {
   items: LibraryItem[];
   folderNotebooks: Map<string, LibraryNotebook[]>;
@@ -249,6 +257,7 @@ function LibraryGrid({
   onRemoveNotebook: FolderLibraryProps["onRemoveNotebook"];
   onOpenNotebook: FolderLibraryProps["onOpenNotebook"];
   onUpdateNotebook: FolderLibraryProps["onUpdateNotebook"];
+  onExportNotebook?: FolderLibraryProps["onExportNotebook"];
 }) {
   const { setNodeRef } = useDroppable({
     id: `library:${destinationFolderId ?? "root"}`,
@@ -331,6 +340,11 @@ function LibraryGrid({
             onCancelEdit={item.notebook.id === draftId ? onCancelDraft : undefined}
             onDismissEdit={item.notebook.id === draftId ? onCommitDraft : undefined}
             onRemove={() => onRemoveNotebook(item.notebook.id)}
+            onExport={
+              onExportNotebook
+                ? () => onExportNotebook(item.notebook.id, item.notebook.title)
+                : undefined
+            }
           />
         ),
       )}

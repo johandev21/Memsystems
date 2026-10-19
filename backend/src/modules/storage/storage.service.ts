@@ -9,7 +9,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { once } from 'node:events';
 import { dirname, resolve, sep } from 'node:path';
@@ -207,6 +207,34 @@ export class StorageService {
     );
     if (!response.Body) throw new Error(`S3 object not found: ${key}`);
     return Buffer.from(await response.Body.transformToByteArray());
+  }
+
+  async objectExists(key: string): Promise<boolean> {
+    try {
+      if (this.isLocalStorage()) {
+        const path = this.safeJoin(key);
+        await stat(path);
+        return true;
+      }
+      await this.s3Client!.send(
+        new HeadObjectCommand({ Bucket: this.s3Bucket!, Key: key }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async getObjectStream(key: string): Promise<Readable> {
+    if (this.isLocalStorage()) {
+      const path = this.safeJoin(key);
+      return createReadStream(path);
+    }
+    const response = await this.s3Client!.send(
+      new GetObjectCommand({ Bucket: this.s3Bucket!, Key: key }),
+    );
+    if (!response.Body) throw new Error(`S3 object not found: ${key}`);
+    return response.Body as Readable;
   }
 
   async presignDownload(

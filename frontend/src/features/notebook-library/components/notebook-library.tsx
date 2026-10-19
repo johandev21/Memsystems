@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   closestCenter,
   DndContext,
@@ -7,7 +7,7 @@ import {
   type Announcements,
   type CollisionDetection,
 } from "@dnd-kit/core";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { CloudOff, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
+import { exportNotebook, importNotebook } from "@/features/notebooks/api";
 import { libraryQueryOptions } from "../api/library";
 import { folderPath } from "../model/folder-hierarchy";
 import { useLibraryInteractions } from "../hooks/use-library-interactions";
@@ -37,6 +39,8 @@ type LibraryDragData = { kind?: string; folderId?: string | null; notebookId?: s
 export function NotebookLibrary() {
   const { t } = useTranslation("notebooks");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const importInputRef = useRef<HTMLInputElement>(null);
   const search = useSearch({ strict: false }) as LibrarySearch | undefined;
   const rawFolderId = search?.folderId ?? null;
   const sortKey: LibrarySortKey = search?.sort ?? "name";
@@ -266,9 +270,64 @@ export function NotebookLibrary() {
     }
   };
 
+  const handleExportNotebook = async (id: string, title: string) => {
+    try {
+      toast.loading(t("settings.exporting", "Exporting notebook…"), { id: `export-${id}` });
+      await exportNotebook(id, title);
+      toast.success(t("settings.exportSuccess", "Notebook exported successfully"), {
+        id: `export-${id}`,
+      });
+    } catch {
+      toast.error(t("settings.exportFailed", "Failed to export notebook"), {
+        id: `export-${id}`,
+      });
+    }
+  };
+
+  const handleTriggerImport = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const toastId = toast.loading(t("library.toasts.importing", "Importing notebook…"));
+    try {
+      const imported = await importNotebook(file, activeFolderId);
+      toast.success(t("library.toasts.importSuccess", "Notebook imported successfully"), {
+        id: toastId,
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
+        queryClient.invalidateQueries({ queryKey: ["folders"] }),
+        queryClient.invalidateQueries({ queryKey: ["library"] }),
+      ]);
+      void navigate({ to: "/notebooks/$notebookId", params: { notebookId: imported.id } });
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("library.toasts.importFailed", "Failed to import notebook");
+      toast.error(msg, { id: toastId });
+    }
+  };
+
   return (
     <div className="notebook-library flex flex-col w-full">
-      <LibraryHero onCreateNotebook={beginCreateNotebook} onCreateFolder={beginCreateFolder} />
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".memsys,application/zip"
+        className="hidden"
+        onChange={(e) => void handleImportFileChange(e)}
+      />
+      <LibraryHero
+        onCreateNotebook={beginCreateNotebook}
+        onCreateFolder={beginCreateFolder}
+        onImportNotebook={handleTriggerImport}
+      />
       <DndContext
         sensors={interaction.sensors}
         collisionDetection={libraryCollisionDetection}
@@ -309,6 +368,8 @@ export function NotebookLibrary() {
             onCreateNotebook={beginCreateNotebook}
             onCreateFolderNamed={handleCreateFolderMobile}
             onCreateNotebookNamed={handleCreateNotebookMobile}
+            onExportNotebook={handleExportNotebook}
+            onImportNotebook={handleTriggerImport}
           />
         </LibraryContent>
         <DragOverlay dropAnimation={null}>
@@ -353,9 +414,11 @@ export function NotebookLibrary() {
 function LibraryHero({
   onCreateNotebook,
   onCreateFolder,
+  onImportNotebook,
 }: {
   onCreateNotebook: () => void;
   onCreateFolder: () => void;
+  onImportNotebook?: () => void;
 }) {
   const { t } = useTranslation("notebooks");
   return (
@@ -366,7 +429,11 @@ function LibraryHero({
         </h1>
         <p className="text-sm text-muted-foreground">{t("library.heroSubtitle")}</p>
       </div>
-      <CreateMenu onCreateNotebook={onCreateNotebook} onCreateFolder={onCreateFolder} />
+      <CreateMenu
+        onCreateNotebook={onCreateNotebook}
+        onCreateFolder={onCreateFolder}
+        onImportNotebook={onImportNotebook}
+      />
     </section>
   );
 }

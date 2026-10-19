@@ -66,7 +66,9 @@
       "newNotebook": "Nuevo cuaderno",
       "notebookPlaceholder": "Título del cuaderno",
       "notebook": "Cuaderno",
-      "notebookDescription": "Empezar un cuaderno en blanco"
+      "notebookDescription": "Empezar un cuaderno en blanco",
+      "importNotebook": "Importar cuaderno",
+      "importNotebookDescription": "Subir un archivo .memsys"
     },
     "dnd": {
       "dragCancel": "Se canceló el movimiento de {{name}}.",
@@ -102,6 +104,7 @@
     "removeNotebook": "Eliminar cuaderno",
     "removeNotebookConfirm": "¿Eliminar permanentemente “{{title}}” y todo su contenido? Esta acción no se puede deshacer.",
     "rename": "Renombrar",
+    "exportNotebook": "Exportar cuaderno",
     "retry": "Reintentar",
     "selectDestinationFolder": "Seleccionar carpeta de destino",
     "sort": {
@@ -119,7 +122,10 @@
       "folderUpdateFailed": "No se pudo actualizar la carpeta",
       "notebookCreateFailed": "No se pudo crear el cuaderno",
       "notebookRemoveFailed": "No se pudo eliminar el cuaderno",
-      "notebookUpdateFailed": "No se pudo actualizar el cuaderno"
+      "notebookUpdateFailed": "No se pudo actualizar el cuaderno",
+      "importing": "Importando cuaderno…",
+      "importSuccess": "Cuaderno importado exitosamente",
+      "importFailed": "No se pudo importar el cuaderno"
     },
     "untitledFolder": "Carpeta sin título",
     "untitledNotebook": "Cuaderno sin título"
@@ -163,6 +169,10 @@
     "deleting": "Eliminando…",
     "description": "Edita o gestiona este cuaderno.",
     "edit": "Editar cuaderno",
+    "export": "Exportar cuaderno",
+    "exporting": "Exportando cuaderno…",
+    "exportFailed": "No se pudo exportar el cuaderno",
+    "exportSuccess": "Cuaderno exportado exitosamente",
     "groundingModeFailed": "No se pudo actualizar el modo de fundamentación",
     "groundingModeUpdated": "Modo de fundamentación actualizado",
     "thisNotebook": "este cuaderno",
