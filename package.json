@@ -24,6 +24,7 @@
     "docker:prod:ps": "node scripts/docker.mjs prod ps",
     "docker:prod:migrate": "node scripts/docker.mjs prod migrate",
     "docker:prod:reset": "node scripts/docker.mjs prod reset",
+    "openapi:check": "pnpm --filter backend run openapi:check",
     "agent:create": "node scripts/agent-env.mjs create",
     "agent:destroy": "node scripts/agent-env.mjs destroy",
     "agent:list": "node scripts/agent-env.mjs list",

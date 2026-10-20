@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { PendingActionsIndicator } from "@/features/settings/components/pending-actions-indicator";
 import { Logo } from "./logo";
 import { SettingsLink } from "./settings-link";
 
@@ -12,7 +13,10 @@ export function AppHeader() {
             Memsystems
           </span>
         </Link>
-        <SettingsLink />
+        <div className="flex items-center gap-1">
+          <PendingActionsIndicator />
+          <SettingsLink />
+        </div>
       </div>
     </header>
   );

@@ -1,6 +1,7 @@
 export type { GroundingMode } from "../model/grounding-mode";
 export { DEFAULT_GROUNDING_MODE } from "../model/grounding-mode";
 import type { GroundingMode } from "../model/grounding-mode";
+import type { AgentAccessLevel } from "@/shared/types/agent-access";
 
 export interface NotebookBannerVariants {
   w240: string | null;
@@ -20,6 +21,10 @@ export interface Notebook {
   bannerVariants: NotebookBannerVariants | null;
   bannerFocalPoint: { x: number; y: number } | null;
   groundingMode?: GroundingMode;
+  /** Resolved agent access: the override, or the workspace default. */
+  agentAccess?: AgentAccessLevel;
+  /** Null when the notebook inherits the workspace default. */
+  agentAccessOverride?: AgentAccessLevel | null;
   createdAt: string;
   updatedAt: string;
 }

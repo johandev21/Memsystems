@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { MobileLanguageSelector } from "@/features/language";
 import { MobileSchemeSelector, MobileThemeGrid } from "@/features/theme";
+import { AgentAccessCard } from "./agent-access-card";
 import { MobileSettingsHeader } from "./mobile-settings-header";
 import { TrashCard } from "./trash-card";
 
@@ -65,6 +66,22 @@ export function MobileSettingsView() {
         </div>
 
         <TrashCard />
+      </section>
+
+      <section aria-labelledby="mobile-agent-access-heading" className="space-y-4">
+        <div>
+          <h2
+            id="mobile-agent-access-heading"
+            className="text-base font-semibold tracking-tight text-foreground"
+          >
+            {t("settings:agentAccess.title")}
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t("settings:agentAccess.description")}
+          </p>
+        </div>
+
+        <AgentAccessCard />
       </section>
     </div>
   );

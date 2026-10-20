@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Download, Eraser, Pencil, Settings, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Bot, Download, Eraser, Pencil, Settings, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -35,11 +35,14 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { AgentAccessLevel } from "@/shared/types/agent-access";
 import {
   GROUNDING_MODES,
   resolveGroundingMode,
   type GroundingMode,
 } from "../../model/grounding-mode";
+
+const AGENT_ACCESS_LEVELS: AgentAccessLevel[] = ["on", "read_only", "off"];
 
 export const EDIT_NOTEBOOK_EVENT = "edit-notebook";
 export const CLEAR_NOTEBOOK_CHAT_EVENT = "clear-notebook-chat";
@@ -55,10 +58,13 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingMode, setIsSavingMode] = useState(false);
+  const [isSavingAgentAccess, setIsSavingAgentAccess] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const groundingMode = resolveGroundingMode(undefined, notebook?.groundingMode);
+  const agentAccess = notebook?.agentAccess ?? "on";
+  const agentAccessOverride = notebook?.agentAccessOverride ?? "inherit";
 
   const handleGroundingModeChange = async (mode: GroundingMode) => {
     if (mode === groundingMode || isSavingMode) return;
@@ -74,6 +80,25 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
       toast.error(t("settings.groundingModeFailed"));
     } finally {
       setIsSavingMode(false);
+    }
+  };
+
+  const handleAgentAccessChange = async (value: string) => {
+    if (isSavingAgentAccess) return;
+    const next = value === "inherit" ? null : (value as AgentAccessLevel);
+    if (next === (notebook?.agentAccessOverride ?? null)) return;
+    setIsSavingAgentAccess(true);
+    try {
+      await updateNotebook(notebookId, { agentAccess: next });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["notebooks", notebookId] }),
+        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
+      ]);
+      toast.success(t("settings.agentAccess.updated"));
+    } catch {
+      toast.error(t("settings.agentAccess.updateFailed"));
+    } finally {
+      setIsSavingAgentAccess(false);
     }
   };
 
@@ -177,6 +202,55 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
                         </span>
                         <span className="text-xs text-muted-foreground font-normal leading-snug whitespace-normal">
                           {t(`groundingMode.descriptions.${mode}`)}
+                        </span>
+                      </div>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="cursor-pointer whitespace-nowrap [&>svg:last-child]:ml-0">
+                <Bot />
+                <span>{t("settings.agentAccess.label")}</span>
+                <span className="ml-auto mr-1 text-xs text-muted-foreground font-normal">
+                  {t(`settings.agentAccess.values.${agentAccess}`)}
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-72 p-1">
+                <DropdownMenuRadioGroup
+                  value={agentAccessOverride}
+                  onValueChange={handleAgentAccessChange}
+                >
+                  <DropdownMenuRadioItem
+                    value="inherit"
+                    disabled={isSavingAgentAccess}
+                    className="cursor-pointer items-start py-2 pr-8 [&_[data-slot=dropdown-menu-radio-item-indicator]]:top-2.5"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-foreground">
+                        {t("settings.agentAccess.inherit", {
+                          level: t(`settings.agentAccess.values.${agentAccess}`),
+                        })}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-normal leading-snug whitespace-normal">
+                        {t("settings.agentAccess.descriptions.inherit")}
+                      </span>
+                    </div>
+                  </DropdownMenuRadioItem>
+                  {AGENT_ACCESS_LEVELS.map((level) => (
+                    <DropdownMenuRadioItem
+                      key={level}
+                      value={level}
+                      disabled={isSavingAgentAccess}
+                      className="cursor-pointer items-start py-2 pr-8 [&_[data-slot=dropdown-menu-radio-item-indicator]]:top-2.5"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-foreground">
+                          {t(`settings.agentAccess.values.${level}`)}
+                        </span>
+                        <span className="text-xs text-muted-foreground font-normal leading-snug whitespace-normal">
+                          {t(`settings.agentAccess.descriptions.${level}`)}
                         </span>
                       </div>
                     </DropdownMenuRadioItem>

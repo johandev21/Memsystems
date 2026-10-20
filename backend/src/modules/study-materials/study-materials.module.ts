@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AgentRateLimitModule } from '../agent-access/agent-rate-limit.module';
 import { NotebooksModule } from '../notebooks/notebooks.module';
 import { GenerationGroundingService } from './generation/generation-grounding';
 import { GenerationRequestManager } from './generation/generation-request-manager';
@@ -12,7 +13,7 @@ import { StudyMaterialsController } from './study-materials.controller';
 import { TrashService } from './trash.service';
 
 @Module({
-  imports: [NotebooksModule],
+  imports: [NotebooksModule, AgentRateLimitModule],
   controllers: [StudyMaterialsController],
   providers: [
     StudyMaterialService,

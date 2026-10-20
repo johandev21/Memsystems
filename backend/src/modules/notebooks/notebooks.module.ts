@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AgentSettingsModule } from '../agent-access/agent-settings.module';
 import { LibraryController } from './library.controller';
 import { NotebookExportService } from './notebook-export.service';
 import { NotebookImportService } from './notebook-import.service';
@@ -7,6 +8,7 @@ import { NotebooksController } from './notebooks.controller';
 import { NotebooksService } from './notebooks.service';
 
 @Module({
+  imports: [AgentSettingsModule],
   controllers: [NotebooksController, LibraryController],
   providers: [
     NotebooksService,

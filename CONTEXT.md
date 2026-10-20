@@ -191,6 +191,32 @@ _Avoid_: excerpt, snippet (the excerpt is the stored text; the span is the passa
 The post-generation check that links a claim the model left unmarked to the Evidence passage that best supports it.
 _Avoid_: auto-citation, inferred citation
 
+### Agent access
+
+**Agent Access**:
+The part of Settings that controls what agent harnesses may do in a notebook and which Agent Keys exist. It is local-only and disabled per notebook when set to Off.
+_Avoid_: API access, integrations, MCP settings
+
+**Agent Key**:
+A named bearer credential for one agent harness. It is shown once when created, stored only as a hash, and can be revoked.
+_Avoid_: API key, token, client secret
+
+**MCP Endpoint**:
+The local Streamable HTTP endpoint at `/api/mcp` that exposes notebooks, sources, chat, and study materials to agent harnesses authenticated with an Agent Key.
+_Avoid_: server URL, API endpoint, integration
+
+**Pending Agent Action**:
+A destructive agent request waiting for the user's approval because the client could not ask directly or the Agent Access setting requires a review. It expires if left unresolved.
+_Avoid_: approval queue, job, confirmation
+
+**Agent Audit Log**:
+The record of every agent tool call: the tool, redacted arguments, result status, Agent Key, and time. It is kept for a limited retention period.
+_Avoid_: activity log, history, telemetry
+
+**Agent Tool Call**:
+One MCP tool invocation recorded in the Agent Audit Log.
+_Avoid_: request, invocation, MCP call
+
 ### Settings and appearance
 
 **Palette**:

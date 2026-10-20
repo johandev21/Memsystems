@@ -1,4 +1,10 @@
 import { Controller, Get, Logger, Query } from '@nestjs/common';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { FirecrawlCrawlerService } from './firecrawl-crawler.service';
 
 const DEFAULT_FIRECRAWL_API_URL = 'https://api.firecrawl.dev';
@@ -38,6 +44,7 @@ function asNumber(value: unknown): number | undefined {
     : undefined;
 }
 
+@ApiTags('Health')
 @Controller('health')
 export class CrawlerController {
   private readonly logger = new Logger(CrawlerController.name);
@@ -45,6 +52,47 @@ export class CrawlerController {
   constructor(private readonly crawler: FirecrawlCrawlerService) {}
 
   @Get('crawler')
+  @ApiOperation({
+    summary: 'Get Crawler health',
+    description:
+      'Checks the Web Search crawler provider configuration, reachability, authentication, and remaining credits.',
+  })
+  @ApiQuery({
+    name: 'probe',
+    required: false,
+    description:
+      'Set to `true` to run a live scrape probe through the crawler.',
+  })
+  @ApiOkResponse({
+    description: 'Crawler health.',
+    schema: {
+      type: 'object',
+      properties: {
+        provider: { type: 'string' },
+        apiUrlRedacted: { type: 'string' },
+        apiKeyConfigured: { type: 'boolean' },
+        reachable: { type: 'boolean' },
+        latencyMs: { type: 'number' },
+        authValid: { type: 'boolean' },
+        credits: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            used: { type: 'number' },
+            remaining: { type: 'number' },
+          },
+        },
+        probe: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            latencyMs: { type: 'number' },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
   async getCrawlerHealth(
     @Query('probe') probe?: string,
   ): Promise<CrawlerHealth> {
