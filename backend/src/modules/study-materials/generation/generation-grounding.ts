@@ -510,35 +510,137 @@ export function emptyGrounding(): GenerationGrounding {
 // Boilerplate & Stub Chunk Filtering (Ticket 01)
 // ---------------------------------------------------------------------------
 
-const BOILERPLATE_HEADING_PATTERNS: { key: string; pattern: RegExp }[] = [
-  { key: 'table of contents', pattern: /^(?:table of )?contents$|^toc$/i },
-  { key: 'preface', pattern: /^preface$|^foreword$/i },
-  { key: 'acknowledgments', pattern: /^acknowledgm?ents$/i },
+export function stripDiacritics(text: string): string {
+  return text.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+}
+
+const BOILERPLATE_HEADING_PATTERNS: { keys: string[]; pattern: RegExp }[] = [
   {
-    key: 'copyright',
-    pattern: /^copyright(?:\s+notice|\s+page)?$|^colophon$|^imprint$/i,
+    keys: [
+      'table of contents',
+      'contents',
+      'tabla de contenido',
+      'tabla de contenidos',
+      'indice general',
+      'sumario',
+    ],
+    pattern:
+      /^(?:table of )?contents$|^toc$|^(?:tabla de )?contenidos?$|^indice general$|^sumario$/i,
   },
-  { key: 'index', pattern: /^(?:subject\s+|author\s+)?index$/i },
   {
-    key: 'bibliography',
-    pattern: /^bibliography$|^works\s+cited$|^further\s+reading$/i,
+    keys: [
+      'preface',
+      'foreword',
+      'prefacio',
+      'prologo',
+      'nota preliminar',
+      'palabras preliminares',
+    ],
+    pattern:
+      /^preface$|^foreword$|^prefacio$|^prologo$|^nota preliminar$|^palabras preliminares$/i,
   },
-  { key: 'references', pattern: /^(?:list\s+of\s+)?references$/i },
   {
-    key: 'about the author',
-    pattern: /^about\s+the\s+authors?$|^biographical\s+note$/i,
+    keys: [
+      'acknowledgments',
+      'acknowledgements',
+      'agradecimientos',
+      'reconocimientos',
+    ],
+    pattern: /^acknowledgm?ents$|^agradecimientos?$|^reconocimientos?$/i,
   },
-  { key: 'glossary', pattern: /^glossary$/i },
-  { key: 'dedication', pattern: /^dedication$|^epigraph$/i },
-  { key: 'front matter', pattern: /^front\s+matter$|^back\s+matter$/i },
+  {
+    keys: [
+      'copyright',
+      'colophon',
+      'imprint',
+      'derechos de autor',
+      'creditos',
+      'aviso legal',
+      'colofon',
+    ],
+    pattern:
+      /^copyright(?:\s+notice|\s+page)?$|^colophon$|^imprint$|^derechos(?:\s+de\s+autor|\s+reservados)?$|^creditos$|^aviso\s+legal$|^colofon$/i,
+  },
+  {
+    keys: [
+      'index',
+      'subject index',
+      'author index',
+      'indice',
+      'indice analitico',
+      'indice tematico',
+      'indice alfabetico',
+      'indice de materias',
+      'indice onomastico',
+    ],
+    pattern:
+      /^(?:subject\s+|author\s+)?index$|^indice(?:\s+(?:analitico|tematico|alfabetico|de\s+materias|onomastico|de\s+autores))?$/i,
+  },
+  {
+    keys: [
+      'bibliography',
+      'works cited',
+      'further reading',
+      'bibliografia',
+      'obras citadas',
+      'lecturas recomendadas',
+      'lecturas adicionales',
+    ],
+    pattern:
+      /^bibliography$|^works\s+cited$|^further\s+reading$|^bibliografia(?:\s+recomendada|\s+general)?$|^obras\s+citadas$|^lecturas\s+(?:recomendadas|adicionales|complementarias)$/i,
+  },
+  {
+    keys: [
+      'references',
+      'list of references',
+      'referencias',
+      'lista de referencias',
+      'fuentes bibliograficas',
+      'referencias bibliograficas',
+    ],
+    pattern:
+      /^(?:list\s+of\s+)?references$|^(?:lista\s+de\s+)?referencias(?:\s+bibliograficas)?$|^fuentes\s+bibliograficas$/i,
+  },
+  {
+    keys: [
+      'about the author',
+      'about the authors',
+      'biographical note',
+      'sobre el autor',
+      'sobre los autores',
+      'acerca del autor',
+      'acerca de los autores',
+      'nota biografica',
+      'biografia del autor',
+    ],
+    pattern:
+      /^about\s+the\s+authors?$|^biographical\s+note$|^(?:sobre|acerca\s+de(?:l)?)\s+(?:el\s+|la\s+|los\s+|las\s+)?autor(?:a|es|as)?$|^nota\s+biografica$|^biografia\s+de(?:l)?\s+(?:los\s+)?autor(?:es)?$/i,
+  },
+  {
+    keys: ['glossary', 'glosario'],
+    pattern: /^glossary$|^glosario(?:\s+de\s+terminos)?$/i,
+  },
+  {
+    keys: ['dedication', 'epigraph', 'dedicatoria', 'epigrafe'],
+    pattern: /^dedication$|^epigraph$|^dedicatoria$|^epigrafe$/i,
+  },
+  {
+    keys: [
+      'front matter',
+      'back matter',
+      'preliminares',
+      'paginas preliminares',
+    ],
+    pattern: /^front\s+matter$|^back\s+matter$|^(?:paginas\s+)?preliminares$/i,
+  },
 ];
 
 function normalizeHeadingSegment(segment: string): string {
-  return segment
+  return stripDiacritics(segment)
     .toLowerCase()
     .replace(/^[\s\d.:()-]+/, '')
     .replace(
-      /^(?:part|chapter|section|appendix|unit|module)\s+[\d\w.:()-]+\s*/i,
+      /^(?:part|parte|chapter|capitulo|cap|section|seccion|sec|appendix|apendice|anexo|unit|unidad|module|modulo)\s+[\d\w.:()-]+\s*/i,
       '',
     )
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
@@ -551,12 +653,14 @@ export function isBoilerplateHeadingPath(
   brief = '',
 ): boolean {
   if (!headingPath || headingPath.length === 0) return false;
-  const normalizedBrief = brief
+  const normalizedBrief = stripDiacritics(brief)
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  const briefTokens = new Set(tokenize(brief));
+  const briefTokens = new Set(
+    tokenize(brief).map((token) => stripDiacritics(token)),
+  );
 
   for (const segment of headingPath) {
     const normalized = normalizeHeadingSegment(segment);
@@ -567,7 +671,8 @@ export function isBoilerplateHeadingPath(
       const segmentTokens = tokenize(normalized);
       const explicitlyRequested =
         (normalizedBrief.length > 0 && normalizedBrief.includes(normalized)) ||
-        (normalizedBrief.length > 0 && normalizedBrief.includes(entry.key)) ||
+        (normalizedBrief.length > 0 &&
+          entry.keys.some((key) => normalizedBrief.includes(key))) ||
         (segmentTokens.length > 0 &&
           segmentTokens.every((token) => briefTokens.has(token)));
       if (!explicitlyRequested) {
@@ -728,6 +833,7 @@ export function allocateSourceChunkBudgets(
 // ---------------------------------------------------------------------------
 
 const GENERIC_SURVEY_WORDS = new Set([
+  // English function words, determiners & modifiers
   'a',
   'an',
   'the',
@@ -783,6 +889,8 @@ const GENERIC_SURVEY_WORDS = new Set([
   'brief',
   'short',
   'quick',
+  'please',
+  // English study & generation verbs
   'create',
   'make',
   'generate',
@@ -817,6 +925,7 @@ const GENERIC_SURVEY_WORDS = new Set([
   'synthesize',
   'synthesise',
   'explain',
+  // English container & Study Material Kind nouns
   'everything',
   'anything',
   'material',
@@ -841,6 +950,8 @@ const GENERIC_SURVEY_WORDS = new Set([
   'chapters',
   'part',
   'parts',
+  'section',
+  'sections',
   'unit',
   'units',
   'module',
@@ -876,10 +987,278 @@ const GENERIC_SURVEY_WORDS = new Set([
   'slide',
   'presentation',
   'simple',
+  // Spanish function words, determiners & modifiers (diacritic-stripped)
+  'el',
+  'la',
+  'los',
+  'las',
+  'un',
+  'una',
+  'unos',
+  'unas',
+  'al',
+  'del',
+  'y',
+  'e',
+  'o',
+  'u',
+  'de',
+  'en',
+  'con',
+  'por',
+  'para',
+  'sobre',
+  'acerca',
+  'entre',
+  'hacia',
+  'desde',
+  'hasta',
+  'sin',
+  'segun',
+  'como',
+  'mas',
+  'muy',
+  'este',
+  'esta',
+  'estos',
+  'estas',
+  'ese',
+  'esa',
+  'esos',
+  'esas',
+  'mi',
+  'mis',
+  'tu',
+  'tus',
+  'su',
+  'sus',
+  'nuestro',
+  'nuestra',
+  'nuestros',
+  'nuestras',
+  'nos',
+  'lo',
+  'le',
+  'les',
+  'se',
+  'que',
+  'cual',
+  'cuales',
+  'son',
+  'ser',
+  'sea',
+  'sean',
+  'todo',
+  'toda',
+  'todos',
+  'todas',
+  'cada',
+  'entero',
+  'entera',
+  'enteros',
+  'enteras',
+  'completo',
+  'completa',
+  'completos',
+  'completas',
+  'total',
+  'generales',
+  'global',
+  'amplio',
+  'amplia',
+  'principal',
+  'principales',
+  'clave',
+  'claves',
+  'importante',
+  'importantes',
+  'esencial',
+  'esenciales',
+  'fundamental',
+  'fundamentales',
+  'basico',
+  'basica',
+  'basicos',
+  'basicas',
+  'detallado',
+  'detallada',
+  'breve',
+  'corto',
+  'corta',
+  'rapido',
+  'rapida',
+  'favor',
+  // Spanish study & generation verbs
+  'crear',
+  'crea',
+  'creame',
+  'hacer',
+  'haz',
+  'hazme',
+  'haga',
+  'generar',
+  'genera',
+  'generame',
+  'construir',
+  'construye',
+  'escribir',
+  'escribe',
+  'dar',
+  'da',
+  'dame',
+  'preparar',
+  'prepara',
+  'preparame',
+  'producir',
+  'produce',
+  'disenar',
+  'disena',
+  'armar',
+  'arma',
+  'elaborar',
+  'elabora',
+  'revisar',
+  'revisa',
+  'repasar',
+  'repasa',
+  'repaso',
+  'resumir',
+  'resume',
+  'resumen',
+  'resumenes',
+  'sintetizar',
+  'sintetiza',
+  'sintesis',
+  'panorama',
+  'vista',
+  'cubrir',
+  'cubre',
+  'cubriendo',
+  'cubierto',
+  'abarcar',
+  'abarca',
+  'abarcando',
+  'estudiar',
+  'estudia',
+  'estudio',
+  'aprender',
+  'aprende',
+  'aprendizaje',
+  'probar',
+  'prueba',
+  'evaluar',
+  'evalua',
+  'evaluacion',
+  'practicar',
+  'practica',
+  'explicar',
+  'explica',
+  'explicacion',
+  'esquema',
+  'esquematizar',
+  'recapitular',
+  'recapitulacion',
+  'quiero',
+  'necesito',
+  'puedes',
+  'podrias',
+  // Spanish container & Study Material Kind nouns (diacritic-stripped)
+  'algo',
+  'nada',
+  'materiales',
+  'fuente',
+  'fuentes',
+  'contenido',
+  'contenidos',
+  'texto',
+  'textos',
+  'libro',
+  'libros',
+  'guia',
+  'guias',
+  'manuales',
+  'nota',
+  'notas',
+  'apunte',
+  'apuntes',
+  'clase',
+  'clases',
+  'leccion',
+  'lecciones',
+  'conferencia',
+  'conferencias',
+  'documento',
+  'documentos',
+  'articulo',
+  'articulos',
+  'ensayo',
+  'capitulo',
+  'capitulos',
+  'parte',
+  'partes',
+  'seccion',
+  'secciones',
+  'unidad',
+  'unidades',
+  'modulo',
+  'modulos',
+  'tema',
+  'temas',
+  'topico',
+  'topicos',
+  'concepto',
+  'conceptos',
+  'materia',
+  'materias',
+  'asignatura',
+  'curso',
+  'cursos',
+  'cuaderno',
+  'cuadernos',
+  'lectura',
+  'lecturas',
+  'folleto',
+  'programa',
+  'temario',
+  'transcripcion',
+  'cuestionario',
+  'cuestionarios',
+  'examen',
+  'examenes',
+  'tests',
+  'pregunta',
+  'preguntas',
+  'tarjeta',
+  'tarjetas',
+  'ficha',
+  'fichas',
+  'mazo',
+  'baraja',
+  'memorizacion',
+  'didactica',
+  'didacticas',
+  'ruta',
+  'rutas',
+  'hoja',
+  'mapa',
+  'mapas',
+  'mental',
+  'mentales',
+  'conceptual',
+  'conceptuales',
+  'diapositiva',
+  'diapositivas',
+  'presentacion',
+  'presentaciones',
+  'sencillo',
+  'sencilla',
+  'sencillos',
+  'sencillas',
+  'simples',
 ]);
 
 const EXPLICIT_SECTION_LOCATOR_REGEX =
-  /\b(?:(?:part|chapter|chap|ch|section|sec|experiment|exp|unit|module|lecture|appendix|phase)\s*(?:\d+|[ivxlcdm]+)\b|(?:first|second|third|fourth|fifth|last|final)\s+(?:section|chapter|part|unit|experiment|module)\b)/i;
+  /\b(?:(?:part|parte|chapter|chap|ch|capitulo|cap|section|sec|seccion|experiment|exp|experimento|unit|unidad|module|mod|modulo|lecture|clase|leccion|appendix|apendice|anexo|phase|fase|etapa)\s*(?:\d+|[ivxlcdm]+)\b|(?:first|second|third|fourth|fifth|last|final|primer|primero|primera|segundo|segunda|tercer|tercero|tercera|cuarto|cuarta|quinto|quinta|ultimo|ultima)\s+(?:section|seccion|chapter|capitulo|part|parte|unit|unidad|experiment|experimento|module|modulo|lecture|clase|leccion)\b)/i;
 
 export function classifyBriefIntent(input: {
   brief: string;
@@ -890,17 +1269,20 @@ export function classifyBriefIntent(input: {
   const trimmed = input.brief.trim();
   if (!trimmed) return 'broad-survey';
 
+  const normalizedBrief = stripDiacritics(trimmed).toLowerCase();
   const normalizedKind = input.kind.replaceAll('_', ' ').toLowerCase();
-  if (trimmed.toLowerCase() === normalizedKind) {
+  if (normalizedBrief === normalizedKind) {
     return 'broad-survey';
   }
 
-  // If the Brief explicitly names a boilerplate section (like Preface, Index, Bibliography),
+  // If the Brief explicitly names a boilerplate section (like Preface/Prefacio, Index/Índice, Bibliography/Bibliografía),
   // treat it as a focused brief targeting that section.
   for (const entry of BOILERPLATE_HEADING_PATTERNS) {
     if (
-      new RegExp(`\\b${entry.key.replace(/\s+/g, '\\s+')}\\b`, 'i').test(
-        trimmed,
+      entry.keys.some((key) =>
+        new RegExp(`\\b${key.replace(/\s+/g, '\\s+')}\\b`, 'i').test(
+          normalizedBrief,
+        ),
       )
     ) {
       return 'focused-brief';
@@ -908,15 +1290,17 @@ export function classifyBriefIntent(input: {
   }
 
   // If the Brief contains an explicit section/chapter number or ordinal locator
-  // (e.g., "Chapter 4", "Part 3", "first section"), classify as focused-brief.
-  if (EXPLICIT_SECTION_LOCATOR_REGEX.test(trimmed)) {
+  // (e.g., "Chapter 4", "Capítulo 4", "Part 3", "Parte 3", "first section", " primera sección "), classify as focused-brief.
+  if (EXPLICIT_SECTION_LOCATOR_REGEX.test(normalizedBrief)) {
     return 'focused-brief';
   }
 
   const titleTokens = new Set(
-    (input.sourceTitles ?? []).flatMap((title) => tokenize(title)),
+    (input.sourceTitles ?? []).flatMap((title) =>
+      tokenize(title).map((token) => stripDiacritics(token)),
+    ),
   );
-  const briefTokens = tokenize(trimmed);
+  const briefTokens = tokenize(trimmed).map((token) => stripDiacritics(token));
   const specificTokens = briefTokens.filter(
     (token) => !GENERIC_SURVEY_WORDS.has(token) && !titleTokens.has(token),
   );
@@ -1107,7 +1491,55 @@ const SECTION_MATCH_STOP_WORDS = new Set([
   'specifically',
   'particular',
   'especially',
+  'enfocate',
+  'enfocado',
+  'enfocada',
+  'enfocar',
+  'centrate',
+  'centrado',
+  'centrada',
+  'centrar',
+  'solo',
+  'solamente',
+  'unicamente',
+  'especificamente',
+  'particularmente',
+  'especialmente',
 ]);
+
+const STRUCTURAL_LABEL_ALIASES: Record<string, string> = {
+  part: '(?:part|parte)',
+  chapter: '(?:chapter|chap|ch|capitulo|cap)',
+  section: '(?:section|sec|seccion)',
+  experiment: '(?:experiment|exp|experimento)',
+  unit: '(?:unit|unidad)',
+  module: '(?:module|mod|modulo)',
+  lecture: '(?:lecture|clase|leccion)',
+  appendix: '(?:appendix|apendice|anexo)',
+  phase: '(?:phase|fase|etapa)',
+};
+
+function canonicalizeStructuralLabel(raw: string): string {
+  const clean = stripDiacritics(raw).toLowerCase();
+  if (clean.startsWith('chap') || clean === 'ch' || clean.startsWith('cap')) {
+    return 'chapter';
+  }
+  if (clean.startsWith('part')) return 'part';
+  if (clean.startsWith('sec')) return 'section';
+  if (clean.startsWith('exp')) return 'experiment';
+  if (clean.startsWith('uni')) return 'unit';
+  if (clean.startsWith('mod')) return 'module';
+  if (clean === 'lecture' || clean === 'clase' || clean === 'leccion') {
+    return 'lecture';
+  }
+  if (clean === 'appendix' || clean === 'apendice' || clean === 'anexo') {
+    return 'appendix';
+  }
+  if (clean === 'phase' || clean === 'fase' || clean === 'etapa') {
+    return 'phase';
+  }
+  return clean;
+}
 
 export function matchSectionsForBrief(
   brief: string,
@@ -1119,29 +1551,25 @@ export function matchSectionsForBrief(
   );
   if (nonEmptySections.length <= 1) return [];
 
-  const lowerBrief = brief.toLowerCase();
-  const titleTokens = new Set(tokenize(sourceTitle));
-  const briefTokens = tokenize(brief).filter(
-    (token) => !SECTION_MATCH_STOP_WORDS.has(token) && !titleTokens.has(token),
+  const lowerBrief = stripDiacritics(brief).toLowerCase();
+  const titleTokens = new Set(
+    tokenize(sourceTitle).map((token) => stripDiacritics(token)),
   );
+  const briefTokens = tokenize(brief)
+    .map((token) => stripDiacritics(token))
+    .filter(
+      (token) =>
+        !SECTION_MATCH_STOP_WORDS.has(token) && !titleTokens.has(token),
+    );
   const briefTokenSet = new Set(briefTokens);
 
-  // Explicit structural references such as "Part 3", "Chapter 4", "Experiment 7"
+  // Explicit structural references such as "Part 3", "Parte 3", "Chapter 4", "Capítulo 4", "Experiment 7"
   const structuralRefs: { label: string; value: string }[] = [];
   const structRegex =
-    /\b(part|chapter|chap|ch|section|sec|experiment|exp|unit|module|lecture|appendix|phase)\s*(\d+|[ivxlcdm]+)\b/gi;
-  for (const match of brief.matchAll(structRegex)) {
-    const rawLabel = match[1].toLowerCase();
-    const canonicalLabel =
-      rawLabel.startsWith('chap') || rawLabel === 'ch'
-        ? 'chapter'
-        : rawLabel.startsWith('sec')
-          ? 'section'
-          : rawLabel.startsWith('exp')
-            ? 'experiment'
-            : rawLabel;
+    /\b(part|parte|chapter|chap|ch|capitulo|cap|section|sec|seccion|experiment|exp|experimento|unit|unidad|module|mod|modulo|lecture|clase|leccion|appendix|apendice|anexo|phase|fase|etapa)\s*(\d+|[ivxlcdm]+)\b/gi;
+  for (const match of lowerBrief.matchAll(structRegex)) {
     structuralRefs.push({
-      label: canonicalLabel,
+      label: canonicalizeStructuralLabel(match[1]),
       value: match[2].toLowerCase(),
     });
   }
@@ -1153,12 +1581,17 @@ export function matchSectionsForBrief(
   }[] = [];
 
   for (const section of nonEmptySections) {
-    const joinedLower = section.headingPath.join(' ').toLowerCase();
-    const headingTokens = tokenize(joinedLower);
+    const joinedLower = stripDiacritics(
+      section.headingPath.join(' '),
+    ).toLowerCase();
+    const headingTokens = tokenize(joinedLower).map((token) =>
+      stripDiacritics(token),
+    );
 
     let structuralHits = 0;
     for (const ref of structuralRefs) {
-      const refRegex = new RegExp(`\\b${ref.label}\\s*${ref.value}\\b`, 'i');
+      const labelPattern = STRUCTURAL_LABEL_ALIASES[ref.label] ?? ref.label;
+      const refRegex = new RegExp(`\\b${labelPattern}\\s*${ref.value}\\b`, 'i');
       if (refRegex.test(joinedLower)) {
         structuralHits += 1;
       }
@@ -1188,7 +1621,7 @@ export function matchSectionsForBrief(
       }
     }
 
-    // Check explicit boilerplate section requests (e.g. "Preface", "Bibliography")
+    // Check explicit boilerplate section requests (e.g. "Preface"/"Prefacio", "Bibliography"/"Bibliografía")
     for (const segment of section.headingPath) {
       const norm = normalizeHeadingSegment(segment);
       if (norm.length >= 4 && lowerBrief.includes(norm)) {
@@ -1254,7 +1687,10 @@ function planFocusedPasses(input: {
   // PostgreSQL headingPaths / chunkIndexRange filters rather than concatenating
   // truncated headings into the query string.
   const requestsMultiSectionWalk =
-    sections.length > 1 && /\b(?:sections?|chapters?|parts?)\b/i.test(brief);
+    sections.length > 1 &&
+    /\b(?:sections?|secciones|seccion|chapters?|capitulos?|parts?|partes)\b/i.test(
+      stripDiacritics(brief),
+    );
 
   if (requestsMultiSectionWalk) {
     const passCount = Math.max(1, Math.min(sections.length, maxPasses, budget));
@@ -1546,13 +1982,15 @@ export function trimChunkForFocusedBrief(
   if (sentences.length <= 1) return content;
 
   const briefTokens = new Set(
-    tokenize(brief).filter((token) => !GENERIC_SURVEY_WORDS.has(token)),
+    tokenize(brief)
+      .map((token) => stripDiacritics(token))
+      .filter((token) => !GENERIC_SURVEY_WORDS.has(token)),
   );
   const scores = sentences.map((sentence) => {
     if (briefTokens.size === 0) return 0;
     let hits = 0;
     for (const token of tokenize(sentence)) {
-      if (briefTokens.has(token)) hits += 1;
+      if (briefTokens.has(stripDiacritics(token))) hits += 1;
     }
     return hits;
   });

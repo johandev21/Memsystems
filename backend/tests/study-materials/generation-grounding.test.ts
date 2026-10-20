@@ -801,6 +801,97 @@ describe('Ticket 04: Evidence deduplication, overlap stripping & compact prompt 
     expect(returnedIds).toContain(seeded.chunkIdByGoldenId.get('dup-3'));
     expect(returnedIds).not.toContain(seeded.chunkIdByGoldenId.get('dup-2'));
   });
+
+  it('supports Spanish generic survey briefs, boilerplate headings, and diacritic-insensitive chapter targeting', async () => {
+    const spanishSource: GoldenSource = {
+      id: 'es-book',
+      title: 'Manual de Micología Clínica',
+      kind: 'file',
+      processingStatus: 'ready',
+      chunks: [
+        {
+          id: 'es-toc',
+          headingPath: ['Tabla de contenido'],
+          text: 'Tabla de contenido: Prefacio p. 1, Capítulo 1 Morfología p. 10, Capítulo 2 Amatoxinas p. 40, Bibliografía p. 90, Índice analítico p. 95.',
+        },
+        {
+          id: 'es-prefacio',
+          headingPath: ['Prefacio'],
+          text: 'Este prefacio describe la historia del manual escrito por el equipo docente durante diez años de trabajo de campo.',
+        },
+        {
+          id: 'es-cap-1',
+          headingPath: ['Capítulo 1', 'Morfología de las laminillas'],
+          text: 'Las laminillas bajo el sombrero liberan esporas microscópicas y su inserción al estípite permite diferenciar géneros comestibles y tóxicos en el bosque.',
+        },
+        {
+          id: 'es-cap-2',
+          headingPath: ['Capítulo 2', 'Toxicología de las amatoxinas'],
+          text: 'Las amatoxinas de Amanita phalloides inhiben la ARN polimerasa II en los hepatocitos, deteniendo la síntesis proteica y causando necrosis hepática aguda.',
+        },
+        {
+          id: 'es-bib',
+          headingPath: ['Bibliografía'],
+          text: 'Referencias bibliográficas: García (2021) Micología médica avanzada, Editorial Universitaria, páginas 100 a 240.',
+        },
+        {
+          id: 'es-indice',
+          headingPath: ['Índice analítico'],
+          text: 'Índice alfabético: amatoxina 40, espora 12, hepatocito 42, laminilla 10, polimerasa 41.',
+        },
+      ],
+    };
+
+    const seeded = await seed([spanishSource]);
+    const onEmbed = vi.fn();
+    const service = buildGroundingService([spanishSource], { onEmbed });
+    const sourceId = seeded.sourceIdByGoldenId.get('es-book')!;
+
+    // 1. Spanish generic survey brief -> broad-survey (0 API calls) + excludes Spanish boilerplate
+    const broad = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief:
+        'Resume todo el libro y crea un cuestionario de todos los capítulos',
+      sourceIds: [sourceId],
+    });
+    expect(onEmbed).not.toHaveBeenCalled();
+    expect(broad.traces).toHaveLength(0);
+    const broadHeadings = broad.evidence.map((e) =>
+      (e.sectionPath ?? []).join(' > '),
+    );
+    expect(broadHeadings).toEqual([
+      'Capítulo 1 > Morfología de las laminillas',
+      'Capítulo 2 > Toxicología de las amatoxinas',
+    ]);
+
+    // 2. Explicit Spanish boilerplate request -> includes Prefacio & Bibliografía
+    const explicitBoilerplate = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'simple_flashcard',
+      brief: 'Hazme preguntas sobre el prefacio y la bibliografia',
+      sourceIds: [sourceId],
+    });
+    const boilerplateHeadings = explicitBoilerplate.evidence.map((e) =>
+      (e.sectionPath ?? []).join(' > '),
+    );
+    expect(boilerplateHeadings).toContain('Prefacio');
+    expect(boilerplateHeadings).toContain('Bibliografía');
+
+    // 3. Diacritic-insensitive Spanish chapter targeting ("Capitulo 2" -> "Capítulo 2")
+    const targeted = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: 'Enfocate solo en el Capitulo 2 y las amatoxinas',
+      sourceIds: [sourceId],
+    });
+    const targetedHeadings = new Set(
+      targeted.evidence.map((e) => (e.sectionPath ?? []).join(' > ')),
+    );
+    expect([...targetedHeadings]).toEqual([
+      'Capítulo 2 > Toxicología de las amatoxinas',
+    ]);
+  });
 });
 
 describe('formatGroundedSourceText', () => {
