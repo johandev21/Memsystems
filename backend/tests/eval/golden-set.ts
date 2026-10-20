@@ -408,12 +408,7 @@ export const GOLDEN_QUERIES: GoldenQuery[] = [
  */
 export interface GoldenGeneration {
   id: string;
-  kind:
-    | 'quiz'
-    | 'simple_flashcard'
-    | 'roadmap'
-    | 'mind_map'
-    | 'slides';
+  kind: 'quiz' | 'simple_flashcard' | 'roadmap' | 'mind_map' | 'slides';
   brief: string;
   /** Golden source ids, in selection order. */
   sourceIds: string[];
@@ -561,6 +556,74 @@ export const GOLDEN_GENERATION_SOURCES: GoldenSource[] = [
       },
     ],
   },
+  {
+    id: 'flat-lecture-transcript',
+    title: 'Distributed Consensus Lecture Transcript',
+    kind: 'text',
+    processingStatus: 'ready',
+    chunks: Array.from({ length: 24 }, (_, index) => {
+      const band = index < 8 ? 'Opening' : index < 16 ? 'Middle' : 'Closing';
+      const topic =
+        index < 8
+          ? 'state machine replication and asynchronous network partitions'
+          : index < 16
+            ? 'randomized leader election timeouts and monotonically increasing term numbers'
+            : 'log compaction snapshots and joint consensus cluster membership reconfiguration';
+      return {
+        id: `flat-lecture-${index}`,
+        headingPath: [],
+        text: `Lecture segment ${index + 1} (${band} band): In this part of the distributed systems transcript we examine ${topic}. Nodes exchange RPC messages and persist their state to stable storage before acknowledging client commands so safety invariants hold across crashes.`,
+      };
+    }),
+  },
+  {
+    id: 'systems-textbook-boilerplate',
+    title: 'Operating Systems Handbook',
+    kind: 'file',
+    processingStatus: 'ready',
+    chunks: [
+      {
+        id: 'os-toc',
+        headingPath: ['Table of Contents'],
+        text: 'Table of Contents: Chapter 1 Process Scheduling page 1. Chapter 2 Virtual Memory page 42. Chapter 3 File Systems page 88. Bibliography page 140. Index page 148.',
+      },
+      {
+        id: 'os-preface',
+        headingPath: ['Preface'],
+        text: 'Preface: This handbook grew out of an undergraduate systems course taught over ten semesters and summarizes the core abstractions of modern operating system kernels.',
+      },
+      {
+        id: 'os-ack',
+        headingPath: ['Acknowledgments'],
+        text: 'Acknowledgments: The authors thank the teaching assistants, reviewers, and students who proofread early drafts of the manuscript and laboratory exercises.',
+      },
+      {
+        id: 'os-ch1-scheduling',
+        headingPath: ['Chapter 1', 'Process Scheduling'],
+        text: 'Process scheduling multiplexes CPU cores across runnable threads. Multi-level feedback queues balance interactive responsiveness against batch turnaround time by aging starved jobs and demoting compute-bound quanta.',
+      },
+      {
+        id: 'os-ch2-vm',
+        headingPath: ['Chapter 2', 'Virtual Memory'],
+        text: 'Virtual memory isolates address spaces using hierarchical page tables and translation lookaside buffers. On a TLB miss, the hardware page walker consults page directory entries and raises a page fault if the frame is not resident.',
+      },
+      {
+        id: 'os-ch3-fs',
+        headingPath: ['Chapter 3', 'File Systems'],
+        text: 'Journaling file systems preserve metadata consistency across power loss by writing intent records to a circular write-ahead log before checkpointing modified inode and bitmap blocks to their home locations on disk.',
+      },
+      {
+        id: 'os-bibliography',
+        headingPath: ['Bibliography'],
+        text: 'Bibliography: Arpaci-Dusseau, Operating Systems: Three Easy Pieces, 2018. Tanenbaum and Bos, Modern Operating Systems, 4th Edition, Pearson, 2014.',
+      },
+      {
+        id: 'os-index',
+        headingPath: ['Index'],
+        text: 'Index: address space 42, bitmap 91, context switch 12, inode 89, page fault 48, page table 44, scheduling quantum 15, translation lookaside buffer 46, write-ahead log 94.',
+      },
+    ],
+  },
 ];
 
 export const GOLDEN_GENERATIONS: GoldenGeneration[] = [
@@ -590,5 +653,50 @@ export const GOLDEN_GENERATIONS: GoldenGeneration[] = [
     // The tail section of the long source and the only section of the
     // last-selected source.
     expectedSections: ['Part 4 > Cultivation Basics', 'Notebook'],
+  },
+  {
+    id: 'g-empty-brief-multi-chapter',
+    kind: 'roadmap',
+    brief: '',
+    sourceIds: ['mushroom-guide'],
+    expectedSections: [
+      'Part 1 > Cap Identification',
+      'Part 1 > Gill Structure',
+      'Part 2 > Spore Prints',
+      'Part 2 > Habitat and Season',
+      'Part 3 > Edible Species',
+      'Part 3 > Toxic Lookalikes',
+      'Part 4 > Preservation',
+      'Part 4 > Cultivation Basics',
+    ],
+  },
+  {
+    id: 'g-headingless-long-source',
+    kind: 'simple_flashcard',
+    brief: '',
+    sourceIds: ['flat-lecture-transcript'],
+    expectedSections: [
+      'Stratum 1 (Opening)',
+      'Stratum 2 (Middle)',
+      'Stratum 3 (Closing)',
+    ],
+  },
+  {
+    id: 'g-boilerplate-filtered-source',
+    kind: 'mind_map',
+    brief: 'Summarize the operating systems handbook',
+    sourceIds: ['systems-textbook-boilerplate'],
+    expectedSections: [
+      'Chapter 1 > Process Scheduling',
+      'Chapter 2 > Virtual Memory',
+      'Chapter 3 > File Systems',
+    ],
+  },
+  {
+    id: 'g-section-targeted-brief',
+    kind: 'quiz',
+    brief: 'Focus on Part 3 Toxic Lookalikes and death cap amatoxins',
+    sourceIds: ['mushroom-guide'],
+    expectedSections: ['Part 3 > Toxic Lookalikes'],
   },
 ];

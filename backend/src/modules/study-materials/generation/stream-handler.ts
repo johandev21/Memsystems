@@ -84,6 +84,7 @@ export class StreamHandler {
       groundingDirective(input.groundingMode, hasEvidence);
     const formatted = formatGroundedSourceText(grounding, {
       includeSourceId: false,
+      kind: input.kind,
     });
     if (
       formatted.droppedBlocks > 0 ||
