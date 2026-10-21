@@ -98,6 +98,19 @@ describe("MarkdownRenderer live block-memoized streaming", () => {
     expect(pRenderCounts[1]).toBe(initialBlock1Renders);
     // Block 2 was trailing and streamed, so it rendered on the updates
     expect(pRenderCounts[2]).toBeGreaterThan(initialBlock1Renders);
+
+    // Stream completes (isStreaming flips to false)
+    rerender(
+      <MarkdownRenderer
+        isStreaming={false}
+        components={{ p: CustomP }}
+      >
+        {"Block 1 paragraph.\n\nBlock 2 is being streamed."}
+      </MarkdownRenderer>
+    );
+
+    // Block 1 STILL must not have re-rendered when stream finished!
+    expect(pRenderCounts[1]).toBe(initialBlock1Renders);
   });
 
   it("renders unclosed code fence without flicker and defers syntax highlighting until closed", () => {

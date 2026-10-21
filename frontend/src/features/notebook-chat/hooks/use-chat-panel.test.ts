@@ -407,4 +407,28 @@ describe("useChatPanel initial anchor", () => {
 
     expect(result.current.anchorMessageId).toBe("user-3");
   });
+
+  it("preserves anchor on active user message even after chatHistory refetches with that message", () => {
+    // Initial mount with user-1 in history
+    mocks.chatHistory = [createMessage({ id: "user-1", role: "user", content: "Old question" })];
+    mocks.chatState.messages = [
+      { id: "user-1", role: "user", parts: [{ type: "text", text: "Old question" }] },
+      { id: "user-2", role: "user", parts: [{ type: "text", text: "Active question" }] },
+    ];
+
+    const { result, rerender } = renderHook(() => useChatPanel("notebook-1"));
+    expect(result.current.anchorMessageId).toBe("user-2");
+
+    // LLM completes, and refetchQueries returns history that now includes user-2
+    mocks.chatHistory = [
+      createMessage({ id: "user-1", role: "user", content: "Old question" }),
+      createMessage({ id: "user-2", role: "user", content: "Active question" }),
+      createMessage({ id: "asst-2", role: "assistant", content: "Answer to active question" }),
+    ];
+
+    rerender();
+
+    // The anchor MUST NOT be dropped abruptly upon history arrival!
+    expect(result.current.anchorMessageId).toBe("user-2");
+  });
 });

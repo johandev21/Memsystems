@@ -73,8 +73,8 @@ export const MemoizedMarkdownBlock = memo(
     }, [content, isTrailing, isStreaming]);
 
     const contextValue = useMemo(
-      () => ({ isFenceUnclosed, isStreaming }),
-      [isFenceUnclosed, isStreaming],
+      () => ({ isFenceUnclosed, isStreaming: isTrailing ? isStreaming : false }),
+      [isFenceUnclosed, isTrailing, isStreaming],
     );
 
     return (
@@ -89,14 +89,20 @@ export const MemoizedMarkdownBlock = memo(
       </MarkdownBlockContext.Provider>
     );
   },
-  (prevProps, nextProps) =>
-    prevProps.content === nextProps.content &&
-    prevProps.isTrailing === nextProps.isTrailing &&
-    prevProps.isStreaming === nextProps.isStreaming &&
-    shallowEqual(
+  (prevProps, nextProps) => {
+    if (prevProps.content !== nextProps.content) return false;
+    if (prevProps.isTrailing !== nextProps.isTrailing) return false;
+    if (
+      (prevProps.isTrailing || nextProps.isTrailing) &&
+      prevProps.isStreaming !== nextProps.isStreaming
+    ) {
+      return false;
+    }
+    return shallowEqual(
       prevProps.components as Record<string, unknown>,
       nextProps.components as Record<string, unknown>,
-    ),
+    );
+  },
 );
 
 MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";

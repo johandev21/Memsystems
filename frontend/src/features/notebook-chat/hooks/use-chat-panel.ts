@@ -28,6 +28,27 @@ export interface SendChatPromptDetail {
   chatNavigationRetry?: boolean;
 }
 
+function areMessagesEquivalent(a: UIMessage[], b: UIMessage[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const msgA = a[i];
+    const msgB = b[i];
+    if (msgA.id !== msgB.id || msgA.role !== msgB.role) return false;
+    const partsA = msgA.parts ?? [];
+    const partsB = msgB.parts ?? [];
+    if (partsA.length !== partsB.length) return false;
+    for (let j = 0; j < partsA.length; j++) {
+      const pA = partsA[j] as { type: string; text?: string };
+      const pB = partsB[j] as { type: string; text?: string };
+      if (pA.type !== pB.type) return false;
+      if (pA.type === "text" && pA.text !== pB.text) return false;
+      if (pA.type === "reasoning" && pA.text !== pB.text) return false;
+    }
+  }
+  return true;
+}
+
 export function formatChatMessages(history?: ChatMessageDTO[]): UIMessage[] {
   if (!history) return [];
   const seenIds = new Set<string>();
@@ -195,30 +216,33 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     if (!chatHistory) return;
     if (status === "streaming" || status === "submitted") return;
     if (abortedMessagesRef.current) return;
+    if (areMessagesEquivalent(messages, formattedMessages)) return;
     startTransition(() => {
       setMessages(formattedMessages);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formattedMessages, status, setMessages]);
+  }, [formattedMessages, status, messages, setMessages]);
 
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;
 
   const [clearedAnchorId, setClearedAnchorId] = useState<string | null>(null);
 
-  const hydratedMessageIds = useMemo(
-    () => new Set((chatHistory ?? []).map((message) => message.id)),
-    [chatHistory],
-  );
+  const initialHydratedIdsRef = useRef<Set<string> | null>(null);
+  if (initialHydratedIdsRef.current === null && chatHistory) {
+    initialHydratedIdsRef.current = new Set(chatHistory.map((message) => message.id));
+  }
+
   const rawAnchorMessageId = useMemo(() => {
+    const initialIds = initialHydratedIdsRef.current;
     for (let i = messages.length - 1; i >= 0; i--) {
       const message = messages[i];
       if (message?.role === "user") {
-        return hydratedMessageIds.has(message.id) ? null : message.id;
+        return initialIds?.has(message.id) ? null : message.id;
       }
     }
     return null;
-  }, [messages, hydratedMessageIds]);
+  }, [messages]);
 
   const anchorMessageId =
     rawAnchorMessageId && rawAnchorMessageId !== clearedAnchorId
