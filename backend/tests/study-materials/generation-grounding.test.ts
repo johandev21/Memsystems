@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_FUSION_K,
   RetrievalService,
@@ -6,6 +6,7 @@ import {
 import type { RetrievedChunk } from '../../src/modules/ai/retrieval/retrieval.service';
 import {
   GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
+  GENERATION_KIND_BUDGETS,
   GENERATION_MAX_PROMPT_SOURCE_CHARS,
   GENERATION_MAX_RETRIEVAL_PASSES,
   GENERATION_MAX_SECTION_PASSES_PER_SOURCE,
@@ -14,11 +15,15 @@ import {
   type GenerationGrounding,
   type GroundedSource,
 } from '../../src/modules/study-materials/generation/generation-grounding';
+import {
+  attachGenerationCitations,
+  extractGenerationCitations,
+} from '../../src/modules/study-materials/generation/generation-citations';
 import { DeterministicEmbedder } from '../eval/deterministic-embedder';
 import { DeterministicReranker } from '../eval/deterministic-reranker';
 import { contextualText, seedGoldenCorpus } from '../eval/seed-corpus';
 import { db } from '../db';
-import type { GoldenChunk, GoldenSource } from '../eval/golden-set';
+import type { GoldenSource } from '../eval/golden-set';
 
 /**
  * Eight sections of three chunks each, ordered by chunk position. The first
@@ -68,15 +73,26 @@ const SECOND_SOURCE = longSource('second', 'Laboratory Manual', [
   'notebook',
 ]);
 
-function buildGroundingService(sources: GoldenSource[]) {
+function buildGroundingService(
+  sources: GoldenSource[],
+  hooks?: {
+    onEmbed?: (text: string) => void;
+    onRerank?: () => void;
+    onUnderstand?: () => void;
+  },
+) {
   const corpus = sources.flatMap((source) =>
     source.chunks.map((chunk) => contextualText(source, chunk)),
   );
   const embedder = new DeterministicEmbedder(corpus);
+  const reranker = new DeterministicReranker(corpus);
   const retrieval = new RetrievalService(
     db as never,
     {
-      embedQuery: async (text: string) => embedder.embed(text),
+      embedQuery: async (text: string) => {
+        hooks?.onEmbed?.(text);
+        return embedder.embed(text);
+      },
       queryEmbeddingModel: () => 'eval-deterministic-embedder',
     } as never,
     { relevanceFloor: 0 },
@@ -87,7 +103,12 @@ function buildGroundingService(sources: GoldenSource[]) {
       threshold: 0,
       topK: GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
     },
-    new DeterministicReranker(corpus) as never,
+    {
+      rerank: async (input: Parameters<typeof reranker.rerank>[0]) => {
+        hooks?.onRerank?.();
+        return reranker.rerank(input);
+      },
+    } as never,
     {
       enabled: true,
       fusionK: DEFAULT_FUSION_K,
@@ -96,6 +117,20 @@ function buildGroundingService(sources: GoldenSource[]) {
       denseCandidateDepth: 8,
       lexicalCandidateDepth: 8,
     },
+    hooks?.onUnderstand
+      ? ({
+          understand: async (input: { message: string }) => {
+            hooks.onUnderstand?.();
+            return {
+              queries: [input.message],
+              hypotheticalAnswer: null,
+              applied: false,
+              inputTokens: 0,
+              outputTokens: 0,
+            };
+          },
+        } as never)
+      : undefined,
   );
   return new GenerationGroundingService(db as never, retrieval);
 }
@@ -130,7 +165,7 @@ describe('GenerationGroundingService long-source coverage', () => {
     expect(grounding.sources).toHaveLength(1);
     const source = grounding.sources[0];
     expect(source.chunks.length).toBeLessThanOrEqual(
-      GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
+      GENERATION_KIND_BUDGETS.quiz.maxTotalChunksSingleSource,
     );
     // Every one of the eight sections contributes evidence.
     expect([...sectionsOf(source.chunks)].sort()).toEqual([
@@ -203,7 +238,6 @@ describe('GenerationGroundingService multi-source coverage', () => {
     expect(longSections.has('7')).toBe(true);
     const secondSections = sectionsOf(grounding.sources[0].chunks);
     expect(secondSections.has('4')).toBe(true);
-    // The shared pass budget is split across the selected sources.
     expect(grounding.traces.length).toBeLessThanOrEqual(
       GENERATION_MAX_RETRIEVAL_PASSES,
     );
@@ -219,7 +253,7 @@ describe('GenerationGroundingService multi-source coverage', () => {
     const grounding = await service.ground({
       notebookId: seeded.notebookId,
       kind: 'quiz',
-      brief: 'Review everything',
+      brief: 'Focus on molecular synthesis mechanisms',
       sourceIds: sources.map((source) =>
         seeded.sourceIdByGoldenId.get(source.id)!,
       ),
@@ -301,6 +335,562 @@ describe('GenerationGroundingService reporting', () => {
       degradedSources: [],
       traces: [],
     });
+  });
+});
+
+describe('Ticket 01: Adaptive Evidence budget & boilerplate filtering', () => {
+  const BOILERPLATE_BOOK: GoldenSource = {
+    id: 'bp-book',
+    title: 'Systems Architecture Textbook',
+    kind: 'file',
+    processingStatus: 'ready',
+    chunks: [
+      {
+        id: 'bp-toc',
+        headingPath: ['Table of Contents'],
+        text: 'Table of Contents: Chapter 1 Pipeline Hazards ........................ 1. Chapter 2 Cache Coherence ........................ 45. References ........................ 190. Index ........................ 205.',
+      },
+      {
+        id: 'bp-preface',
+        headingPath: ['Preface'],
+        text: 'Preface: This textbook was written for third-year computer engineering students studying processor microarchitecture and memory hierarchies.',
+      },
+      {
+        id: 'bp-ack',
+        headingPath: ['Acknowledgments'],
+        text: 'Acknowledgments: We thank all the faculty members and graduate teaching assistants who reviewed the problem sets and laboratory assignments.',
+      },
+      {
+        id: 'bp-copyright',
+        headingPath: ['Copyright'],
+        text: 'Copyright 2026 University Press. All rights reserved. No part of this publication may be reproduced without prior written permission.',
+      },
+      {
+        id: 'bp-ch1-stub',
+        headingPath: ['Chapter 1', 'Pipeline Hazards'],
+        text: 'Short stub.',
+      },
+      {
+        id: 'bp-ch1-main',
+        headingPath: ['Chapter 1', 'Pipeline Hazards'],
+        text: 'Pipeline hazards occur when an instruction cannot execute in the designated clock cycle. Data hazards arise from read-after-write dependencies, while control hazards stem from conditional branches that alter the program counter before target resolution.',
+      },
+      {
+        id: 'bp-ch2-main',
+        headingPath: ['Chapter 2', 'Cache Coherence'],
+        text: 'Cache coherence protocols such as MESI maintain a consistent view of shared memory across multicore processors by tracking Modified, Exclusive, Shared, and Invalid cache line states over the interconnect bus.',
+      },
+      {
+        id: 'bp-refs',
+        headingPath: ['References'],
+        text: 'References: Hennessy and Patterson, Computer Architecture: A Quantitative Approach, 6th Edition. Sorin et al., A Primer on Memory Consistency and Cache Coherence.',
+      },
+      {
+        id: 'bp-bib',
+        headingPath: ['Bibliography'],
+        text: 'Bibliography: Paterson, D. and Hennessy, J., Computer Organization and Design: The Hardware/Software Interface, Morgan Kaufmann.',
+      },
+      {
+        id: 'bp-index',
+        headingPath: ['Index'],
+        text: 'Index: branch prediction 18, cache line 52, forwarding path 24, invalidation broadcast 61, pipeline stall 14, snooping bus 58.',
+      },
+    ],
+  };
+
+  it('excludes boilerplate sections and short stub chunks when the Brief does not mention them', async () => {
+    const seeded = await seed([BOILERPLATE_BOOK]);
+    const service = buildGroundingService([BOILERPLATE_BOOK]);
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: '',
+      sourceIds: [seeded.sourceIdByGoldenId.get('bp-book')!],
+    });
+
+    const returnedIds = grounding.evidence.map((item) => item.chunkId);
+    expect(returnedIds).toEqual([
+      seeded.chunkIdByGoldenId.get('bp-ch1-main'),
+      seeded.chunkIdByGoldenId.get('bp-ch2-main'),
+    ]);
+  });
+
+  it('includes boilerplate sections when the Brief explicitly asks for them', async () => {
+    const seeded = await seed([BOILERPLATE_BOOK]);
+    const service = buildGroundingService([BOILERPLATE_BOOK]);
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: 'Quiz me on the Preface and Bibliography',
+      sourceIds: [seeded.sourceIdByGoldenId.get('bp-book')!],
+    });
+
+    const returnedIds = new Set(grounding.evidence.map((item) => item.chunkId));
+    expect(returnedIds.has(seeded.chunkIdByGoldenId.get('bp-preface')!)).toBe(
+      true,
+    );
+    expect(returnedIds.has(seeded.chunkIdByGoldenId.get('bp-bib')!)).toBe(true);
+    expect(returnedIds.has(seeded.chunkIdByGoldenId.get('bp-index')!)).toBe(
+      false,
+    );
+  });
+
+  it('falls back to available chunks on a tiny Source whose only chunk is short or under a boilerplate heading', async () => {
+    const tinyBoilerplateSource: GoldenSource = {
+      id: 'tiny-preface',
+      title: 'Quick Note',
+      kind: 'text',
+      processingStatus: 'ready',
+      chunks: [
+        {
+          id: 'tiny-chunk-1',
+          headingPath: ['Preface'],
+          text: 'Short preface note only.',
+        },
+      ],
+    };
+    const seeded = await seed([tinyBoilerplateSource]);
+    const service = buildGroundingService([tinyBoilerplateSource]);
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'simple_flashcard',
+      brief: '',
+      sourceIds: [seeded.sourceIdByGoldenId.get('tiny-preface')!],
+    });
+
+    expect(grounding.unavailableSources).toEqual([]);
+    expect(grounding.sources).toHaveLength(1);
+    expect(grounding.evidence).toHaveLength(1);
+    expect(grounding.evidence[0].chunkId).toBe(
+      seeded.chunkIdByGoldenId.get('tiny-chunk-1'),
+    );
+  });
+
+  it('enforces Kind-specific Evidence chunk ceilings and prompt character budgets', async () => {
+    const seeded = await seed([LONG_SOURCE]);
+    const service = buildGroundingService([LONG_SOURCE]);
+    const sourceId = seeded.sourceIdByGoldenId.get('long')!;
+
+    for (const kind of [
+      'mind_map',
+      'roadmap',
+      'simple_flashcard',
+      'slides',
+      'quiz',
+    ] as const) {
+      const grounding = await service.ground({
+        notebookId: seeded.notebookId,
+        kind,
+        brief: '',
+        sourceIds: [sourceId],
+      });
+      const expectedBudget = GENERATION_KIND_BUDGETS[kind];
+      expect(grounding.evidence.length).toBe(
+        expectedBudget.maxTotalChunksSingleSource,
+      );
+
+      // Verify prompt character ceiling is enforced for the Kind
+      const bloatedGrounding: GenerationGrounding = {
+        ...grounding,
+        sources: grounding.sources.map((src) => ({
+          ...src,
+          promptChunks: src.promptChunks.map((ch) => ({
+            ...ch,
+            content: `${ch.content} ${'extra padding words '.repeat(200)}`,
+          })),
+        })),
+      };
+      const formatted = formatGroundedSourceText(bloatedGrounding, { kind });
+      expect(formatted.text.length).toBeLessThanOrEqual(
+        expectedBudget.maxPromptChars,
+      );
+    }
+  });
+
+  it('allocates chunks proportionally across a large book and a single-chunk note while guaranteeing >= 1 chunk per source', async () => {
+    const singleNote: GoldenSource = {
+      id: 'tiny-note',
+      title: 'Exam Formula Sheet',
+      kind: 'text',
+      processingStatus: 'ready',
+      chunks: [
+        {
+          id: 'tiny-note-c0',
+          headingPath: ['Formulas'],
+          text: 'Key formula sheet: Snell law relates angles of incidence and refraction across optical media boundaries with differing refractive indices.',
+        },
+      ],
+    };
+    const seeded = await seed([LONG_SOURCE, singleNote]);
+    const service = buildGroundingService([LONG_SOURCE, singleNote]);
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'simple_flashcard',
+      brief: '',
+      sourceIds: [
+        seeded.sourceIdByGoldenId.get('long')!,
+        seeded.sourceIdByGoldenId.get('tiny-note')!,
+      ],
+    });
+
+    expect(grounding.sources).toHaveLength(2);
+    const bookChunks = grounding.sources[0].chunks;
+    const noteChunks = grounding.sources[1].chunks;
+    expect(noteChunks).toHaveLength(1);
+    expect(bookChunks.length).toBe(
+      GENERATION_KIND_BUDGETS.simple_flashcard.maxTotalChunksMultiSource - 1,
+    );
+  });
+});
+
+describe('Ticket 02: Zero-Brief and broad-survey stratified SQL sampling', () => {
+  it('samples a 45-chapter book evenly from first chapter to last chapter with zero embedding or reranker calls', async () => {
+    const fortyFiveChapterBook: GoldenSource = {
+      id: 'book-45',
+      title: 'Comprehensive Physiology Textbook',
+      kind: 'file',
+      processingStatus: 'ready',
+      chunks: Array.from({ length: 45 }, (_, chapterIdx) => ({
+        id: `book-45-ch-${chapterIdx + 1}`,
+        headingPath: [
+          `Chapter ${chapterIdx + 1}`,
+          `Physiology Topic ${chapterIdx + 1} with Extended Descriptive Heading Title`,
+        ],
+        text: `Chapter ${chapterIdx + 1} instructional content: homeostatic regulation mechanism number ${chapterIdx + 1} coordinates cellular signaling pathways, membrane transport proteins, and feedback loops across organ systems in quantitative detail.`,
+      })),
+    };
+
+    const onEmbed = vi.fn();
+    const onRerank = vi.fn();
+    const onUnderstand = vi.fn();
+    const seeded = await seed([fortyFiveChapterBook]);
+    const service = buildGroundingService([fortyFiveChapterBook], {
+      onEmbed,
+      onRerank,
+      onUnderstand,
+    });
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: '',
+      sourceIds: [seeded.sourceIdByGoldenId.get('book-45')!],
+    });
+
+    expect(grounding.traces).toEqual([]);
+    expect(onEmbed).not.toHaveBeenCalled();
+    expect(onRerank).not.toHaveBeenCalled();
+    expect(onUnderstand).not.toHaveBeenCalled();
+
+    const chunks = grounding.sources[0].chunks;
+    expect(chunks).toHaveLength(
+      GENERATION_KIND_BUDGETS.quiz.maxTotalChunksSingleSource,
+    );
+    // First chapter (index 0) and final chapter (index 44) are both represented,
+    // along with middle chapters past the 300-character heading cutoff.
+    const indices = chunks.map((c) => c.chunkIndex);
+    expect(indices[0]).toBe(0);
+    expect(indices[indices.length - 1]).toBe(44);
+    expect(indices.some((idx) => idx >= 15 && idx <= 30)).toBe(true);
+  });
+
+  it('partitions a headingless long Source (headingPath = []) by chunkIndex ranges across beginning, middle, and end', async () => {
+    const flatBook: GoldenSource = {
+      id: 'flat-book',
+      title: 'Unstructured Scanned Lecture',
+      kind: 'file',
+      processingStatus: 'ready',
+      chunks: Array.from({ length: 30 }, (_, index) => ({
+        id: `flat-c-${index}`,
+        headingPath: [],
+        text: `Transcript paragraph ${index + 1}: thermodynamics lecture discussion covering entropy production, reversible Carnot engines, and Boltzmann statistical mechanics at step ${index + 1} of the derivation.`,
+      })),
+    };
+
+    const onEmbed = vi.fn();
+    const seeded = await seed([flatBook]);
+    const service = buildGroundingService([flatBook], { onEmbed });
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'roadmap',
+      brief: 'Summarize the lecture',
+      sourceIds: [seeded.sourceIdByGoldenId.get('flat-book')!],
+    });
+
+    expect(grounding.traces).toEqual([]);
+    expect(onEmbed).not.toHaveBeenCalled();
+
+    const chunks = grounding.sources[0].chunks;
+    expect(chunks).toHaveLength(
+      GENERATION_KIND_BUDGETS.roadmap.maxTotalChunksSingleSource,
+    );
+    const indices = chunks.map((c) => c.chunkIndex);
+    // Beginning, middle, and end of the 30-chunk flat source are all sampled
+    expect(indices.some((i) => i < 5)).toBe(true);
+    expect(indices.some((i) => i >= 12 && i <= 18)).toBe(true);
+    expect(indices.some((i) => i >= 25)).toBe(true);
+  });
+});
+
+describe('Ticket 03: Brief-driven section targeting and heading-scoped retrieval', () => {
+  it('scopes retrieval strictly to matching sections when the Brief names a specific part or chapter', async () => {
+    const seeded = await seed([LONG_SOURCE]);
+    const service = buildGroundingService([LONG_SOURCE]);
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: 'Focus on Part 6 toxin notes',
+      sourceIds: [seeded.sourceIdByGoldenId.get('long')!],
+    });
+
+    expect(grounding.traces).toHaveLength(1);
+    const chunks = grounding.sources[0].chunks;
+    expect(chunks.length).toBeGreaterThan(0);
+    expect(
+      chunks.every(
+        (chunk) => chunk.sectionPath.join(' > ') === 'Part 6 > toxin notes',
+      ),
+    ).toBe(true);
+  });
+
+  it('runs a single focused retrieval pass per Source and skips Query Understanding on a specific concept Brief', async () => {
+    const onUnderstand = vi.fn();
+    const seeded = await seed([LONG_SOURCE, SECOND_SOURCE]);
+    const service = buildGroundingService([LONG_SOURCE, SECOND_SOURCE], {
+      onUnderstand,
+    });
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: 'Explain mycelium colonization and acid titration endpoints',
+      sourceIds: [
+        seeded.sourceIdByGoldenId.get('long')!,
+        seeded.sourceIdByGoldenId.get('second')!,
+      ],
+    });
+
+    // 1 pass per source = 2 traces total (instead of 16 passes), and 0 Query Understanding calls
+    expect(grounding.traces).toHaveLength(2);
+    expect(onUnderstand).not.toHaveBeenCalled();
+    expect(grounding.sources).toHaveLength(2);
+  });
+});
+
+describe('Ticket 04: Evidence deduplication, overlap stripping & compact prompt formatting', () => {
+  it('strips overlapping boundary sentences when adjacent chunks from the same Source Version are selected', () => {
+    const overlapSentence =
+      'Oxidative phosphorylation establishes a proton motive force across the inner mitochondrial membrane.';
+    const first: RetrievedChunk = {
+      chunkId: 'c-0',
+      chunkIndex: 0,
+      sourceId: 'src-1',
+      title: 'Cell Bio',
+      content: `Source: "Cell Bio"\nGlycolysis oxidizes glucose to pyruvate in the cytosol. ${overlapSentence}`,
+      score: 1,
+      url: null,
+      kind: 'text',
+      sourceVersionId: 'ver-1',
+      locator: null,
+      sectionPath: ['Chapter 1', 'Bioenergetics'],
+    };
+    const second: RetrievedChunk = {
+      chunkId: 'c-1',
+      chunkIndex: 1,
+      sourceId: 'src-1',
+      title: 'Cell Bio',
+      content: `Source: "Cell Bio"\n${overlapSentence}\n\nATP synthase then uses this proton gradient to phosphorylate ADP into ATP.`,
+      score: 1,
+      url: null,
+      kind: 'text',
+      sourceVersionId: 'ver-1',
+      locator: null,
+      sectionPath: ['Chapter 1', 'Bioenergetics'],
+    };
+
+    const grounding: GenerationGrounding = {
+      sources: [
+        {
+          id: 'src-1',
+          title: 'Cell Bio',
+          kind: 'text',
+          url: null,
+          chunks: [first, second],
+          promptChunks: [first, second],
+        },
+      ],
+      evidence: [
+        { ...first, citationKey: 'R1', rank: 1 },
+        { ...second, citationKey: 'R2', rank: 2 },
+      ],
+      unavailableSources: [],
+      degradedSources: [],
+      traces: [],
+    };
+
+    const formatted = formatGroundedSourceText(grounding);
+    const occurrences = formatted.text.split(overlapSentence).length - 1;
+    expect(occurrences).toBe(1);
+    expect(formatted.text).toContain(
+      'ATP synthase then uses this proton gradient to phosphorylate ADP into ATP.',
+    );
+
+    // Consecutive blocks in the same section share a single Section header
+    const sectionHeaderCount =
+      formatted.text.split('Section: Chapter 1 > Bioenergetics').length - 1;
+    expect(sectionHeaderCount).toBe(1);
+    expect(formatted.text).toContain('[Evidence R1]');
+    expect(formatted.text).toContain('[Evidence R2]');
+    expect(formatted.renderedChunkIds).toEqual(['c-0', 'c-1']);
+
+    // Citations still resolve accurately for both chunks
+    const citations = attachGenerationCitations(
+      { title: 'Bio Quiz' },
+      extractGenerationCitations(
+        'Proton gradient [ref:R1] drives ATP synthase [ref:R2].',
+        grounding.evidence,
+      ),
+    ).citations;
+    expect(citations.map((c) => c.citationKey)).toEqual(['R1', 'R2']);
+  });
+
+  it('collapses near-duplicate chunks (Jaccard >= 0.85) so every Evidence slot contributes distinct facts', async () => {
+    const duplicateHeavySource: GoldenSource = {
+      id: 'dup-src',
+      title: 'Duplicate Lecture Notes',
+      kind: 'text',
+      processingStatus: 'ready',
+      chunks: [
+        {
+          id: 'dup-1',
+          headingPath: ['Section 1'],
+          text: 'The sodium potassium pump actively transports three sodium ions out of the cell and two potassium ions into the cell per molecule of ATP hydrolyzed against their electrochemical gradients.',
+        },
+        {
+          id: 'dup-2',
+          headingPath: ['Section 1'],
+          text: 'The sodium potassium pump actively transports three sodium ions out of the cell and two potassium ions into the cell per molecule of ATP hydrolyzed against their gradients.',
+        },
+        {
+          id: 'dup-3',
+          headingPath: ['Section 1'],
+          text: 'Action potentials propagate along myelinated axons via saltatory conduction, jumping between Nodes of Ranvier where voltage-gated sodium channels are densely clustered.',
+        },
+      ],
+    };
+
+    const seeded = await seed([duplicateHeavySource]);
+    const service = buildGroundingService([duplicateHeavySource]);
+
+    const grounding = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: '',
+      sourceIds: [seeded.sourceIdByGoldenId.get('dup-src')!],
+    });
+
+    const returnedIds = grounding.evidence.map((item) => item.chunkId);
+    // dup-2 is a near-duplicate of dup-1 (Jaccard > 0.85) and is collapsed
+    expect(returnedIds).toContain(seeded.chunkIdByGoldenId.get('dup-1'));
+    expect(returnedIds).toContain(seeded.chunkIdByGoldenId.get('dup-3'));
+    expect(returnedIds).not.toContain(seeded.chunkIdByGoldenId.get('dup-2'));
+  });
+
+  it('supports Spanish generic survey briefs, boilerplate headings, and diacritic-insensitive chapter targeting', async () => {
+    const spanishSource: GoldenSource = {
+      id: 'es-book',
+      title: 'Manual de Micología Clínica',
+      kind: 'file',
+      processingStatus: 'ready',
+      chunks: [
+        {
+          id: 'es-toc',
+          headingPath: ['Tabla de contenido'],
+          text: 'Tabla de contenido: Prefacio p. 1, Capítulo 1 Morfología p. 10, Capítulo 2 Amatoxinas p. 40, Bibliografía p. 90, Índice analítico p. 95.',
+        },
+        {
+          id: 'es-prefacio',
+          headingPath: ['Prefacio'],
+          text: 'Este prefacio describe la historia del manual escrito por el equipo docente durante diez años de trabajo de campo.',
+        },
+        {
+          id: 'es-cap-1',
+          headingPath: ['Capítulo 1', 'Morfología de las laminillas'],
+          text: 'Las laminillas bajo el sombrero liberan esporas microscópicas y su inserción al estípite permite diferenciar géneros comestibles y tóxicos en el bosque.',
+        },
+        {
+          id: 'es-cap-2',
+          headingPath: ['Capítulo 2', 'Toxicología de las amatoxinas'],
+          text: 'Las amatoxinas de Amanita phalloides inhiben la ARN polimerasa II en los hepatocitos, deteniendo la síntesis proteica y causando necrosis hepática aguda.',
+        },
+        {
+          id: 'es-bib',
+          headingPath: ['Bibliografía'],
+          text: 'Referencias bibliográficas: García (2021) Micología médica avanzada, Editorial Universitaria, páginas 100 a 240.',
+        },
+        {
+          id: 'es-indice',
+          headingPath: ['Índice analítico'],
+          text: 'Índice alfabético: amatoxina 40, espora 12, hepatocito 42, laminilla 10, polimerasa 41.',
+        },
+      ],
+    };
+
+    const seeded = await seed([spanishSource]);
+    const onEmbed = vi.fn();
+    const service = buildGroundingService([spanishSource], { onEmbed });
+    const sourceId = seeded.sourceIdByGoldenId.get('es-book')!;
+
+    // 1. Spanish generic survey brief -> broad-survey (0 API calls) + excludes Spanish boilerplate
+    const broad = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief:
+        'Resume todo el libro y crea un cuestionario de todos los capítulos',
+      sourceIds: [sourceId],
+    });
+    expect(onEmbed).not.toHaveBeenCalled();
+    expect(broad.traces).toHaveLength(0);
+    const broadHeadings = broad.evidence.map((e) =>
+      (e.sectionPath ?? []).join(' > '),
+    );
+    expect(broadHeadings).toEqual([
+      'Capítulo 1 > Morfología de las laminillas',
+      'Capítulo 2 > Toxicología de las amatoxinas',
+    ]);
+
+    // 2. Explicit Spanish boilerplate request -> includes Prefacio & Bibliografía
+    const explicitBoilerplate = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'simple_flashcard',
+      brief: 'Hazme preguntas sobre el prefacio y la bibliografia',
+      sourceIds: [sourceId],
+    });
+    const boilerplateHeadings = explicitBoilerplate.evidence.map((e) =>
+      (e.sectionPath ?? []).join(' > '),
+    );
+    expect(boilerplateHeadings).toContain('Prefacio');
+    expect(boilerplateHeadings).toContain('Bibliografía');
+
+    // 3. Diacritic-insensitive Spanish chapter targeting ("Capitulo 2" -> "Capítulo 2")
+    const targeted = await service.ground({
+      notebookId: seeded.notebookId,
+      kind: 'quiz',
+      brief: 'Enfocate solo en el Capitulo 2 y las amatoxinas',
+      sourceIds: [sourceId],
+    });
+    const targetedHeadings = new Set(
+      targeted.evidence.map((e) => (e.sectionPath ?? []).join(' > ')),
+    );
+    expect([...targetedHeadings]).toEqual([
+      'Capítulo 2 > Toxicología de las amatoxinas',
+    ]);
   });
 });
 

@@ -105,6 +105,11 @@ export interface RetrievalOutcome extends RetrievalResult {
   trace: RetrievalTrace;
 }
 
+export interface RetrievalChunkIndexRange {
+  minChunkIndex: number;
+  maxChunkIndex: number;
+}
+
 export interface RetrievalRequest {
   notebookId: string;
   query: string;
@@ -114,6 +119,10 @@ export interface RetrievalRequest {
   relevanceFloor?: number;
   rerankThreshold?: number;
   tokenBudget?: number;
+  skipQueryUnderstanding?: boolean;
+  headingPaths?: string[][];
+  chunkIndexRange?: RetrievalChunkIndexRange;
+  excludeChunkIds?: string[];
 }
 
 export interface RetrievalRelevanceConfig {
@@ -354,15 +363,17 @@ export class RetrievalService {
       });
     }
 
-    const understanding = this.queryUnderstanding
-      ? await this.queryUnderstanding.understand({
-          message: request.query,
-          history: request.history,
-        })
-      : passthroughUnderstanding(request.query);
+    const understanding =
+      !request.skipQueryUnderstanding && this.queryUnderstanding
+        ? await this.queryUnderstanding.understand({
+            message: request.query,
+            history: request.history,
+          })
+        : passthroughUnderstanding(request.query);
     const queries = understanding.queries;
     const rewrite = traceRewrite(understanding, request.query);
     const fusion = buildFusion(queries.length);
+    const scopeFilter = buildScopeFilter(request);
 
     const legRuns = await Promise.all(
       queries.map(async (query, variant) => {
@@ -377,6 +388,7 @@ export class RetrievalService {
             queryEmbedding,
             denseDepth,
             policy.sourceIds,
+            scopeFilter,
           ),
           this.hybridConfig.enabled
             ? this.searchLexical(
@@ -385,6 +397,7 @@ export class RetrievalService {
                 queryEmbedding,
                 lexicalDepth,
                 policy.sourceIds,
+                scopeFilter,
               )
             : Promise.resolve<RetrievalChunkRow[]>([]),
         ]);
@@ -660,10 +673,11 @@ export class RetrievalService {
     embedding: number[],
     depth: number,
     sourceIds: string[] | null,
+    scopeFilter?: SQL | null,
   ): Promise<RetrievalChunkRow[]> {
     const vectorLiteral = `[${embedding.join(',')}]`;
     return this.runLegSearch(
-      { notebookId, depth, sourceIds },
+      { notebookId, depth, sourceIds, scopeFilter },
       {
         projection: sql`
           ${chunkColumns()},
@@ -680,10 +694,11 @@ export class RetrievalService {
     embedding: number[],
     depth: number,
     sourceIds: string[] | null,
+    scopeFilter?: SQL | null,
   ): Promise<RetrievalChunkRow[]> {
     const vectorLiteral = `[${embedding.join(',')}]`;
     return this.runLegSearch(
-      { notebookId, depth, sourceIds },
+      { notebookId, depth, sourceIds, scopeFilter },
       {
         cte: sql`
           WITH lexemes AS (
@@ -714,7 +729,12 @@ export class RetrievalService {
   }
 
   private async runLegSearch(
-    search: { notebookId: string; depth: number; sourceIds: string[] | null },
+    search: {
+      notebookId: string;
+      depth: number;
+      sourceIds: string[] | null;
+      scopeFilter?: SQL | null;
+    },
     leg: {
       cte?: SQL;
       join?: SQL;
@@ -749,6 +769,7 @@ export class RetrievalService {
               AND s.deleted_at IS NULL
               ${leg.predicate ?? sql``}
               ${sourceFilter}
+              ${search.scopeFilter ?? sql``}
           ) ranked
           WHERE ranked.source_rank <= ${search.depth}
           ORDER BY ranked.score DESC, ranked.chunk_id
@@ -768,12 +789,39 @@ export class RetrievalService {
           AND s.processing_status <> 'degraded'
           AND s.deleted_at IS NULL
           ${leg.predicate ?? sql``}
+          ${search.scopeFilter ?? sql``}
         ORDER BY ${leg.rank}, sc.id
         LIMIT ${search.depth}
       `,
     );
     return result.rows as unknown as RetrievalChunkRow[];
   }
+}
+
+function buildScopeFilter(request: RetrievalRequest): SQL | null {
+  const filters: SQL[] = [];
+  if (request.headingPaths && request.headingPaths.length > 0) {
+    filters.push(
+      sql`AND sc.heading_path IN (${sql.join(
+        request.headingPaths.map((path) => sql`${JSON.stringify(path)}::jsonb`),
+        sql`, `,
+      )})`,
+    );
+  }
+  if (request.chunkIndexRange) {
+    filters.push(
+      sql`AND sc.chunk_index >= ${request.chunkIndexRange.minChunkIndex} AND sc.chunk_index <= ${request.chunkIndexRange.maxChunkIndex}`,
+    );
+  }
+  if (request.excludeChunkIds && request.excludeChunkIds.length > 0) {
+    filters.push(
+      sql`AND sc.id NOT IN (${sql.join(
+        request.excludeChunkIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`,
+    );
+  }
+  return filters.length > 0 ? sql.join(filters, sql` `) : null;
 }
 
 function chunkColumns(): SQL {
