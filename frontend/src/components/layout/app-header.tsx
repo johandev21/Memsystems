@@ -12,7 +12,9 @@ export function AppHeader() {
             Memsystems
           </span>
         </Link>
-        <SettingsLink />
+        <div className="flex items-center gap-1">
+          <SettingsLink />
+        </div>
       </div>
     </header>
   );

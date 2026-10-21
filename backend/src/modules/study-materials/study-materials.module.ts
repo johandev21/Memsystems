@@ -4,7 +4,6 @@ import { GenerationGroundingService } from './generation/generation-grounding';
 import { GenerationRequestManager } from './generation/generation-request-manager';
 import { GenerationService } from './generation/generation.service';
 import { SlidesBuilderService } from './slides/slides-builder.service';
-
 import { StreamHandler } from './generation/stream-handler';
 import { StudyMaterialFolderService } from './study-material-folder.service';
 import { StudyMaterialService } from './study-material.service';

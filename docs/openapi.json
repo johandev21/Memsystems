@@ -1,0 +1,4210 @@
+{
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/dev-storage/{key}": {
+      "get": {
+        "description": "Serves a local storage object signed by the dev storage adapter. Used for local development and tests only.",
+        "operationId": "DevStorageController_getDevStorageFile",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "Storage key of the object.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expires",
+            "required": true,
+            "in": "query",
+            "description": "Signed link expiry timestamp.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sig",
+            "required": true,
+            "in": "query",
+            "description": "Signed link signature.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "required": false,
+            "in": "query",
+            "description": "When set, the response is served as a download with this filename.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stored object bytes.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Download local storage object",
+        "tags": [
+          "Storage"
+        ]
+      }
+    },
+    "/api/ai/models": {
+      "get": {
+        "description": "Lists the Model catalog reported by the Gateway, plus the sync status of the local catalog.",
+        "operationId": "AiController_listModels",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Model catalog and sync status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "lastSyncAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "capabilitiesVerified": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List Models",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/ai/models/refresh": {
+      "post": {
+        "description": "Re-reads the Model catalog from the Gateway and returns the Gateway connection snapshot.",
+        "operationId": "AiController_refreshModels",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Updated Gateway connection snapshot."
+          }
+        },
+        "summary": "Refresh Models",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/ai/credits": {
+      "get": {
+        "description": "Returns the Gateway credit balance and total usage.",
+        "operationId": "AiController_getCredits",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Gateway credit usage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "balance": {
+                      "type": "number"
+                    },
+                    "totalUsed": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Gateway credits",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/ai/connection": {
+      "get": {
+        "description": "Returns the current Gateway connection status and configured Model.",
+        "operationId": "AiController_getConnectionStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Gateway connection snapshot."
+          }
+        },
+        "summary": "Get Gateway connection",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/ai/embedding-connection": {
+      "get": {
+        "description": "Returns whether the Voyage AI Embeddings Connection is configured, and which embedding Model it uses.",
+        "operationId": "AiController_getEmbeddingConnection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Embeddings Connection status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hasKey": {
+                      "type": "boolean"
+                    },
+                    "model": {
+                      "type": "string"
+                    },
+                    "dimensions": {
+                      "type": "integer",
+                      "enum": [
+                        1024
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Embeddings Connection",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/notebooks": {
+      "get": {
+        "description": "Lists Notebooks in the workspace, newest first, with optional pagination and title search.",
+        "operationId": "NotebooksController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive title search.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notebook summaries."
+          }
+        },
+        "summary": "List Notebooks",
+        "tags": [
+          "Notebooks"
+        ]
+      },
+      "post": {
+        "description": "Creates a Notebook and optionally places it in a Library Folder with an Agent Access override.",
+        "operationId": "NotebooksController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNotebookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Notebook."
+          }
+        },
+        "summary": "Create Notebook",
+        "tags": [
+          "Notebooks"
+        ]
+      }
+    },
+    "/api/notebooks/import": {
+      "post": {
+        "description": "Imports a previously exported Notebook archive into the Library.",
+        "operationId": "NotebooksController_import",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "folderId": {
+                    "type": "string",
+                    "description": "Library Folder that should contain the imported Notebook."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The imported Notebook."
+          }
+        },
+        "summary": "Import Notebook",
+        "tags": [
+          "Notebooks"
+        ]
+      }
+    },
+    "/api/notebooks/{id}": {
+      "get": {
+        "description": "Returns one Notebook with its Library Folder, grounding settings, resolved Agent Access, and banner metadata.",
+        "operationId": "NotebooksController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Notebook."
+          }
+        },
+        "summary": "Get Notebook",
+        "tags": [
+          "Notebooks"
+        ]
+      },
+      "patch": {
+        "description": "Updates Notebook metadata, Library Folder placement, grounding mode, Agent Access, or the banner focal point.",
+        "operationId": "NotebooksController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotebookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated Notebook."
+          }
+        },
+        "summary": "Update Notebook",
+        "tags": [
+          "Notebooks"
+        ]
+      },
+      "delete": {
+        "description": "Soft-deletes the Notebook and its contents. Restore it from Trash while it is still there.",
+        "operationId": "NotebooksController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted Notebook."
+          }
+        },
+        "summary": "Delete Notebook",
+        "tags": [
+          "Notebooks"
+        ]
+      }
+    },
+    "/api/notebooks/{id}/export": {
+      "get": {
+        "description": "Downloads a portable archive of the Notebook, its Sources, and its Study Materials.",
+        "operationId": "NotebooksController_export",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notebook archive.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Export Notebook",
+        "tags": [
+          "Notebooks"
+        ]
+      }
+    },
+    "/api/notebooks/{id}/banner": {
+      "post": {
+        "description": "Uploads a Banner image and optional pre-rendered size variants, with an optional focal point.",
+        "operationId": "NotebooksController_uploadBanner",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "variant240": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "variant480": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "variant960": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "variant1920": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "focalPoint": {
+                    "type": "string",
+                    "description": "JSON object with numeric `x` and `y` in the range 0–1."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The Notebook with its updated Banner."
+          }
+        },
+        "summary": "Upload Notebook banner",
+        "tags": [
+          "Notebooks"
+        ]
+      },
+      "delete": {
+        "description": "Removes the Banner and its stored variants from the Notebook.",
+        "operationId": "NotebooksController_removeBanner",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Notebook without a Banner."
+          }
+        },
+        "summary": "Remove Notebook banner",
+        "tags": [
+          "Notebooks"
+        ]
+      }
+    },
+    "/api/library": {
+      "get": {
+        "description": "Returns the Library Folder tree and every Notebook it contains.",
+        "operationId": "LibraryController_getLibrary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Library folders and notebooks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "folders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "notebooks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Library",
+        "tags": [
+          "Library"
+        ]
+      }
+    },
+    "/api/library/folders": {
+      "post": {
+        "description": "Creates a Library Folder, optionally inside another Library Folder.",
+        "operationId": "LibraryController_createFolder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLibraryFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Library Folder."
+          }
+        },
+        "summary": "Create Library Folder",
+        "tags": [
+          "Library"
+        ]
+      }
+    },
+    "/api/library/folders/{id}": {
+      "patch": {
+        "description": "Renames a Library Folder or moves it to another parent.",
+        "operationId": "LibraryController_updateFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Library Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLibraryFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated Library Folder."
+          }
+        },
+        "summary": "Update Library Folder",
+        "tags": [
+          "Library"
+        ]
+      },
+      "delete": {
+        "description": "Soft-deletes a Library Folder. Contained Notebooks are handled according to the folder delete rules.",
+        "operationId": "LibraryController_deleteFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Library Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted Library Folder."
+          }
+        },
+        "summary": "Delete Library Folder",
+        "tags": [
+          "Library"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources": {
+      "get": {
+        "description": "Lists the Sources in a Notebook with their processing state.",
+        "operationId": "SourcesController_listSources",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sources in the Notebook."
+          }
+        },
+        "summary": "List Sources",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/text": {
+      "post": {
+        "description": "Ingests plain text as a Source. The text is segmented, embedded, and indexed for retrieval.",
+        "operationId": "SourcesController_createTextSource",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTextSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Source."
+          }
+        },
+        "summary": "Add text Source",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/url": {
+      "post": {
+        "description": "Ingests a URL as a Source, including optional captions or transcripts supplied by the client.",
+        "operationId": "SourcesController_createUrlSource",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUrlSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Source."
+          }
+        },
+        "summary": "Add URL Source",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/file": {
+      "post": {
+        "description": "Uploads a file as a Source. Extraction, transcription, and indexing run in the background.",
+        "operationId": "SourcesController_createFileSource",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Optional Source title; defaults to the filename."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Source."
+          }
+        },
+        "summary": "Add file Source",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}": {
+      "get": {
+        "description": "Returns one Source with its versions, segments, and processing state.",
+        "operationId": "SourcesController_getSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Source."
+          }
+        },
+        "summary": "Get Source",
+        "tags": [
+          "Sources"
+        ]
+      },
+      "delete": {
+        "description": "Soft-deletes the Source and removes it from retrieval. Restore it from Trash while it is still there.",
+        "operationId": "SourcesController_deleteSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted Source."
+          }
+        },
+        "summary": "Delete Source",
+        "tags": [
+          "Sources"
+        ]
+      },
+      "patch": {
+        "description": "Renames the Source.",
+        "operationId": "SourcesController_updateSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated Source."
+          }
+        },
+        "summary": "Update Source",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}/reindex": {
+      "post": {
+        "description": "Re-chunks, re-embeds, and reindexes one Source for retrieval.",
+        "operationId": "SourcesController_reindexSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The Source after reindexing."
+          }
+        },
+        "summary": "Reindex Source",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}/retry": {
+      "post": {
+        "description": "Retries ingestion for a Source that failed to process.",
+        "operationId": "SourcesController_retrySource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The retried Source."
+          }
+        },
+        "summary": "Retry Source processing",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}/cancel": {
+      "post": {
+        "description": "Cancels an in-flight processing stage for the Source.",
+        "operationId": "SourcesController_cancelSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Processing cancelled."
+          }
+        },
+        "summary": "Cancel Source processing",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}/move": {
+      "patch": {
+        "description": "Moves the Source into a Source Folder, or to the root.",
+        "operationId": "SourcesController_moveSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The moved Source."
+          }
+        },
+        "summary": "Move Source",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}/download": {
+      "get": {
+        "description": "Returns a short-lived download link for the Source file, when the Source has one.",
+        "operationId": "SourcesController_downloadSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Download information for the Source."
+          }
+        },
+        "summary": "Get Source download link",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}/speakers": {
+      "patch": {
+        "description": "Replaces raw transcript speaker labels with display names for the Source.",
+        "operationId": "SourcesController_updateSpeakerLabels",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSpeakerLabelsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated Source."
+          }
+        },
+        "summary": "Update speaker labels",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/{id}/transcript": {
+      "post": {
+        "description": "Attaches a transcript to the Source as a new Source Version and reindexes it.",
+        "operationId": "SourcesController_addTranscript",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTranscriptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The Source with the new transcript version."
+          }
+        },
+        "summary": "Add Source transcript",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/reindex": {
+      "post": {
+        "description": "Re-chunks and re-embeds every Source in the Notebook for retrieval.",
+        "operationId": "SourcesController_reindexNotebook",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reindexing started."
+          }
+        },
+        "summary": "Reindex Notebook Sources",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/sources/reembed-all": {
+      "post": {
+        "description": "Re-embeds every Source chunk in the workspace with the current Embeddings Connection.",
+        "operationId": "SourcesController_reembedAllSources",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Re-embedding started."
+          }
+        },
+        "summary": "Re-embed all Sources",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/reindex-all": {
+      "post": {
+        "description": "Alias of `reindex` that reindexes every Source in the Notebook.",
+        "operationId": "SourcesController_reindexAllSources",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reindexing started."
+          }
+        },
+        "summary": "Reindex all Notebook Sources",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/web-search": {
+      "post": {
+        "description": "Enqueues a Web Search for candidate Sources for the Notebook.",
+        "operationId": "SourcesController_webSearch",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebSearchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The queued Web Search job."
+          }
+        },
+        "summary": "Start Web Search",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/web-search/latest": {
+      "get": {
+        "description": "Returns the most recent Web Search job for the Notebook, including its candidates.",
+        "operationId": "SourcesController_latestWebSearchJob",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The latest Web Search job, or null."
+          }
+        },
+        "summary": "Get latest Web Search",
+        "tags": [
+          "Sources"
+        ]
+      },
+      "delete": {
+        "description": "Dismisses the latest Web Search job for the Notebook.",
+        "operationId": "SourcesController_dismissWebSearchJob",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Web Search dismissed."
+          }
+        },
+        "summary": "Dismiss Web Search",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/web-search/import": {
+      "post": {
+        "description": "Imports selected Web Search candidates into the Notebook as Sources.",
+        "operationId": "SourcesController_webSearchImport",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportWebSearchResultsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The imported Sources."
+          }
+        },
+        "summary": "Import Web Search results",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/source-folders": {
+      "get": {
+        "description": "Lists the Source Folder tree for the Notebook.",
+        "operationId": "SourceFoldersController_listSourceFolders",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source Folders in the Notebook."
+          }
+        },
+        "summary": "List Source Folders",
+        "tags": [
+          "Sources"
+        ]
+      },
+      "post": {
+        "description": "Creates a Source Folder inside the Notebook, optionally with a parent folder.",
+        "operationId": "SourceFoldersController_createSourceFolder",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSourceFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Source Folder."
+          }
+        },
+        "summary": "Create Source Folder",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/source-folders/{id}": {
+      "patch": {
+        "description": "Renames a Source Folder or changes its parent.",
+        "operationId": "SourceFoldersController_updateSourceFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSourceFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated Source Folder."
+          }
+        },
+        "summary": "Update Source Folder",
+        "tags": [
+          "Sources"
+        ]
+      },
+      "delete": {
+        "description": "Deletes a Source Folder. Its Sources move back to the root.",
+        "operationId": "SourceFoldersController_deleteSourceFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Source Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted Source Folder."
+          }
+        },
+        "summary": "Delete Source Folder",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/source-uploads": {
+      "post": {
+        "description": "Creates a short-lived Upload Intent that authorizes one direct file upload for the Notebook.",
+        "operationId": "SourceUploadsController_createTarget",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUploadTargetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The Upload Intent and upload target."
+          }
+        },
+        "summary": "Create Upload Intent",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/source-uploads/{token}": {
+      "put": {
+        "description": "Streams the file bytes to the upload target named by the Upload Intent token.",
+        "operationId": "SourceUploadsController_uploadLocal",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "Upload Intent token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Raw file bytes.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload accepted."
+          }
+        },
+        "summary": "Upload file to Upload Intent",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/source-uploads/{token}/finalize": {
+      "post": {
+        "description": "Consumes the uploaded file, creates the Source, and starts ingestion. The Upload Intent is single-use.",
+        "operationId": "SourceUploadsController_finalize",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "Upload Intent token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalizeUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Source."
+          }
+        },
+        "summary": "Finalize file upload",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{id}/chat": {
+      "get": {
+        "description": "Returns the persisted Chat messages for the Notebook, including Citations on assistant messages.",
+        "operationId": "ChatController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat messages for the Notebook."
+          }
+        },
+        "summary": "List Chat messages",
+        "tags": [
+          "Chat"
+        ]
+      },
+      "post": {
+        "description": "Starts a Chat Turn. The reply is grounded in the Notebook Sources and streamed as AI SDK UI message frames. Citations appear inline as keys such as `[ref:R1]`; the final `finish` frame lists the cited Sources and citation check counts.",
+        "operationId": "ChatController_sendMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Server-sent event stream of Chat UI message frames.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatUiStreamFrame"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Send Chat message",
+        "tags": [
+          "Chat"
+        ]
+      },
+      "delete": {
+        "description": "Deletes every Chat message in the Notebook.",
+        "operationId": "ChatController_clearMessages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat cleared.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Clear Chat",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/study-materials": {
+      "get": {
+        "description": "Lists Study Materials in a Notebook, optionally filtered by Study Material Folder or Kind.",
+        "operationId": "StudyMaterialsController_listStudyMaterials",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "folderId",
+            "required": false,
+            "in": "query",
+            "description": "Study Material Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "description": "Study Material Kind.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study Materials in the Notebook."
+          }
+        },
+        "summary": "List Study Materials",
+        "tags": [
+          "Study Materials"
+        ]
+      },
+      "post": {
+        "description": "Creates a Study Material from a complete content object without running a Generation.",
+        "operationId": "StudyMaterialsController_createStudyMaterial",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudyMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Study Material."
+          }
+        },
+        "summary": "Create Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/study-materials/{id}": {
+      "get": {
+        "description": "Returns one Study Material with its Kind-specific content and Citations.",
+        "operationId": "StudyMaterialsController_getStudyMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Study Material."
+          }
+        },
+        "summary": "Get Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      },
+      "patch": {
+        "description": "Updates the title or content of a Study Material.",
+        "operationId": "StudyMaterialsController_updateStudyMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudyMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated Study Material."
+          }
+        },
+        "summary": "Update Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      },
+      "delete": {
+        "description": "Moves the Study Material to Trash. Restore it from Trash while it is still there.",
+        "operationId": "StudyMaterialsController_deleteStudyMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted Study Material."
+          }
+        },
+        "summary": "Delete Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/study-materials/{id}/export": {
+      "get": {
+        "description": "Builds and downloads a PowerPoint file for a slides Study Material.",
+        "operationId": "StudyMaterialsController_exportSlides",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PowerPoint file.",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Export slides",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/study-materials/{id}/restore": {
+      "post": {
+        "description": "Restores the Study Material from Trash.",
+        "operationId": "StudyMaterialsController_restoreStudyMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The restored Study Material."
+          }
+        },
+        "summary": "Restore Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/study-materials/{id}/permanent": {
+      "delete": {
+        "description": "Permanently deletes the Study Material. This cannot be undone.",
+        "operationId": "StudyMaterialsController_permanentDeleteStudyMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study Material permanently deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Permanently delete Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/study-materials/{id}/shuffle": {
+      "post": {
+        "description": "Shuffles the answer options of a quiz Study Material and returns it.",
+        "operationId": "StudyMaterialsController_shuffleQuiz",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The shuffled quiz."
+          }
+        },
+        "summary": "Shuffle quiz",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/study-materials/{id}/move": {
+      "patch": {
+        "description": "Moves the Study Material into a Study Material Folder, or to the notebook root.",
+        "operationId": "StudyMaterialsController_moveStudyMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveStudyMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The moved Study Material."
+          }
+        },
+        "summary": "Move Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/study-materials/{id}/duplicate": {
+      "post": {
+        "description": "Creates a copy of the Study Material in the same folder.",
+        "operationId": "StudyMaterialsController_duplicateStudyMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The duplicated Study Material."
+          }
+        },
+        "summary": "Duplicate Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/folders": {
+      "get": {
+        "description": "Lists the Study Material Folder tree for the Notebook.",
+        "operationId": "StudyMaterialsController_listFolders",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study Material Folders."
+          }
+        },
+        "summary": "List Study Material Folders",
+        "tags": [
+          "Study Materials"
+        ]
+      },
+      "post": {
+        "description": "Creates a Study Material Folder inside the Notebook, optionally with a parent folder.",
+        "operationId": "StudyMaterialsController_createFolder",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudyMaterialFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created Study Material Folder."
+          }
+        },
+        "summary": "Create Study Material Folder",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/folders/{id}": {
+      "patch": {
+        "description": "Renames a Study Material Folder or changes its parent.",
+        "operationId": "StudyMaterialsController_updateFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudyMaterialFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated Study Material Folder."
+          }
+        },
+        "summary": "Update Study Material Folder",
+        "tags": [
+          "Study Materials"
+        ]
+      },
+      "delete": {
+        "description": "Moves the Study Material Folder and its contents to Trash.",
+        "operationId": "StudyMaterialsController_deleteFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted Study Material Folder."
+          }
+        },
+        "summary": "Delete Study Material Folder",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/folders/{id}/restore": {
+      "post": {
+        "description": "Restores the Study Material Folder from Trash.",
+        "operationId": "StudyMaterialsController_restoreFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The restored Study Material Folder."
+          }
+        },
+        "summary": "Restore Study Material Folder",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/trash": {
+      "get": {
+        "description": "Lists the soft-deleted Study Materials and Study Material Folders in the Notebook.",
+        "operationId": "StudyMaterialsController_listTrash",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trash contents for the Notebook."
+          }
+        },
+        "summary": "List Trash",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/trash/study-materials/{id}": {
+      "delete": {
+        "description": "Permanently deletes one Study Material from Trash. This cannot be undone.",
+        "operationId": "StudyMaterialsController_hardDeleteTrashMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study Material permanently deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Permanently delete trashed Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/trash/folders/{id}": {
+      "delete": {
+        "description": "Permanently deletes one Study Material Folder from Trash. This cannot be undone.",
+        "operationId": "StudyMaterialsController_hardDeleteTrashFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Study Material Folder id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study Material Folder permanently deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Permanently delete trashed Study Material Folder",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/notebooks/{id}/generate": {
+      "post": {
+        "description": "Starts a Generation from a Brief and the selected Sources. Writes newline-delimited JSON: zero or more partial content frames, then exactly one terminal `done` or `error` frame. The response also carries the Generation Request id in `X-Generation-Request-Id`; use it to cancel the Generation.",
+        "operationId": "StudyMaterialsController_generate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateStudyMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "NDJSON stream of Generation frames. Partial content frames are followed by one terminal `done` or `error` frame.",
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationStreamFrame"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Generation failed before the stream started. Matches `GenerationFailureResponse`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationFailureResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Generate Study Material",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/notebooks/{id}/generation-requests/{requestId}/cancel": {
+      "post": {
+        "description": "Cancels an in-flight Generation using its Generation Request id.",
+        "operationId": "StudyMaterialsController_cancelGeneration",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "description": "Generation Request id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Generation cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cancel Generation",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
+    "/api/trash": {
+      "get": {
+        "description": "Lists soft-deleted Notebooks, Library Folders, Sources, Source Folders, Study Materials, and Study Material Folders, newest first.",
+        "operationId": "TrashController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Pagination cursor from a previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of Trash entries."
+          }
+        },
+        "summary": "List Trash",
+        "tags": [
+          "Trash"
+        ]
+      },
+      "delete": {
+        "description": "Permanently deletes every item in Trash. This cannot be undone.",
+        "operationId": "TrashController_emptyTrash",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Trash emptied."
+          }
+        },
+        "summary": "Empty Trash",
+        "tags": [
+          "Trash"
+        ]
+      }
+    },
+    "/api/trash/{kind}/{id}/restore": {
+      "post": {
+        "description": "Restores one soft-deleted item from Trash.",
+        "operationId": "TrashController_restore",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "description": "Trash entry kind.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "notebook_folder",
+                "notebook",
+                "source_folder",
+                "source",
+                "study_material_folder",
+                "study_material"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id of the trashed item.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The restored item."
+          }
+        },
+        "summary": "Restore Trash entry",
+        "tags": [
+          "Trash"
+        ]
+      }
+    },
+    "/api/trash/{kind}/{id}": {
+      "delete": {
+        "description": "Permanently deletes one item from Trash. This cannot be undone.",
+        "operationId": "TrashController_deleteForever",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "description": "Trash entry kind.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "notebook_folder",
+                "notebook",
+                "source_folder",
+                "source",
+                "study_material_folder",
+                "study_material"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id of the trashed item.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The permanently deleted item."
+          }
+        },
+        "summary": "Permanently delete Trash entry",
+        "tags": [
+          "Trash"
+        ]
+      }
+    },
+    "/api": {
+      "get": {
+        "description": "Returns the greeting served by the Memsystems API. Useful as a liveness check.",
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API greeting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "API root",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/health/crawler": {
+      "get": {
+        "description": "Checks the Web Search crawler provider configuration, reachability, authentication, and remaining credits.",
+        "operationId": "CrawlerController_getCrawlerHealth",
+        "parameters": [
+          {
+            "name": "probe",
+            "required": false,
+            "in": "query",
+            "description": "Set to `true` to run a live scrape probe through the crawler.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Crawler health.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "apiUrlRedacted": {
+                      "type": "string"
+                    },
+                    "apiKeyConfigured": {
+                      "type": "boolean"
+                    },
+                    "reachable": {
+                      "type": "boolean"
+                    },
+                    "latencyMs": {
+                      "type": "number"
+                    },
+                    "authValid": {
+                      "type": "boolean"
+                    },
+                    "credits": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "number"
+                        },
+                        "used": {
+                          "type": "number"
+                        },
+                        "remaining": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "probe": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean"
+                        },
+                        "latencyMs": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Crawler health",
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Memsystems API",
+    "description": "Memsystems is a single-user study workspace. A Notebook owns Sources, Chat, and Study Materials.\n\nSources are text, URLs, or files ingested into a Notebook. Chat answers with Citations to the Evidence retrieved from those Sources. Study Material Generation streams a new Study Material from a Brief and the selected Sources.\n\nDirect API access is available for local automation and agents without authentication.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "GroundingMode": {
+        "type": "string",
+        "enum": [
+          "strict",
+          "moderate",
+          "free"
+        ],
+        "description": "How tightly the AI must stay grounded in the notebook sources: strict, moderate, or free."
+      },
+      "CreateNotebookDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Title of the notebook."
+          },
+          "description": {
+            "description": "Optional short description of the notebook.",
+            "type": "string",
+            "maxLength": 500
+          },
+          "icon": {
+            "description": "Optional icon identifier.",
+            "type": "string",
+            "maxLength": 50
+          },
+          "folderId": {
+            "description": "Library folder that should contain the notebook.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "groundingMode": {
+            "$ref": "#/components/schemas/GroundingMode"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateNotebookDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "New notebook title.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "description": "New description, or null to clear it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "icon": {
+            "description": "New icon identifier, or null to clear it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "folderId": {
+            "description": "Library folder to move the notebook into, or null for the root.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "groundingMode": {
+            "$ref": "#/components/schemas/GroundingMode"
+          },
+          "bannerFocalPoint": {
+            "description": "Focal point of the notebook banner, or null to reset it.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CreateLibraryFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Name of the library folder."
+          },
+          "parentId": {
+            "description": "Parent library folder, or null for the library root.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateLibraryFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "New folder name.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "parentId": {
+            "description": "New parent library folder, or null for the library root.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CreateTextSourceDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Title of the source."
+          },
+          "rawText": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain text content to ingest as a source."
+          }
+        },
+        "required": [
+          "title",
+          "rawText"
+        ]
+      },
+      "CreateUrlSourceDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "URL or provider identifier of the source to ingest."
+          },
+          "title": {
+            "description": "Optional source title.",
+            "type": "string",
+            "maxLength": 500
+          },
+          "oauthToken": {
+            "description": "Optional OAuth token for providers that require one.",
+            "type": "string",
+            "maxLength": 2048
+          },
+          "captionText": {
+            "description": "Optional caption or transcript text supplied by the client.",
+            "type": "string",
+            "maxLength": 1048576
+          },
+          "captionFormat": {
+            "description": "Format of the supplied caption text.",
+            "type": "string",
+            "enum": [
+              "vtt",
+              "srt",
+              "json3",
+              "xml",
+              "plain",
+              "auto"
+            ]
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "UpdateSourceDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "New source title.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "MoveSourceDto": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Source folder to move the source into, or null for the root."
+          }
+        },
+        "required": [
+          "folderId"
+        ]
+      },
+      "UpdateSpeakerLabelsDto": {
+        "type": "object",
+        "properties": {
+          "speakerMap": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Map of raw speaker labels to display names."
+          }
+        },
+        "required": [
+          "speakerMap"
+        ]
+      },
+      "AddTranscriptDto": {
+        "type": "object",
+        "properties": {
+          "transcriptText": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcript text to attach to the source as a new source version."
+          }
+        },
+        "required": [
+          "transcriptText"
+        ]
+      },
+      "WebSearchDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Web Search query used to discover candidate sources."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "ImportWebSearchResultsDto": {
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Candidate URL."
+                },
+                "title": {
+                  "description": "Candidate title.",
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "description": {
+                  "description": "Candidate description from the web search result.",
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "url"
+              ]
+            },
+            "description": "Web Search candidates to import as sources."
+          },
+          "query": {
+            "description": "Original Web Search query, recorded with the import.",
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "candidates"
+        ]
+      },
+      "CreateSourceFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Name of the source folder."
+          },
+          "parentId": {
+            "description": "Parent source folder, or null for the notebook root.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateSourceFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "New source folder name.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "parentId": {
+            "description": "New parent source folder, or null for the notebook root.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CreateUploadTargetDto": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Original filename of the file to upload."
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "MIME type of the file to upload."
+          },
+          "size": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "File size in bytes."
+          },
+          "sha256": {
+            "description": "Optional SHA-256 checksum of the file, as 64 hex characters.",
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "filename",
+          "contentType",
+          "size"
+        ]
+      },
+      "FinalizeUploadDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "Optional title for the resulting source.",
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "ChatRequestDto": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "assistant",
+                    "system"
+                  ]
+                },
+                "parts": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "text"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "streaming",
+                              "done"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "text"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "reasoning"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "streaming",
+                              "done"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "text"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "file"
+                          },
+                          "mediaType": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "filename": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "mediaType",
+                          "url"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "metadata": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "role",
+                "parts"
+              ]
+            },
+            "description": "Chat messages for the turn, oldest first."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Model identifier selected for the Chat."
+          },
+          "message": {
+            "description": "Optional message being sent in this request.",
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "assistant",
+                  "system"
+                ]
+              },
+              "parts": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "text"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "streaming",
+                            "done"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "text"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "reasoning"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "streaming",
+                            "done"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "text"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "file"
+                        },
+                        "mediaType": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "filename": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "mediaType",
+                        "url"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metadata": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "role",
+              "parts"
+            ]
+          },
+          "regenerateMessageId": {
+            "description": "Assistant message to regenerate, when retrying a reply.",
+            "type": "string"
+          },
+          "language": {
+            "description": "Base Language code used for the reply.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35
+          },
+          "groundingMode": {
+            "$ref": "#/components/schemas/GroundingMode"
+          }
+        },
+        "required": [
+          "messages",
+          "model"
+        ]
+      },
+      "StudyMaterialKind": {
+        "type": "string",
+        "enum": [
+          "quiz",
+          "simple_flashcard",
+          "roadmap",
+          "mind_map",
+          "slides"
+        ],
+        "description": "The kind of study material: quiz, simple flashcard, roadmap, mind map, or slides."
+      },
+      "CreateStudyMaterialDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/StudyMaterialKind"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Title of the study material."
+          },
+          "content": {
+            "description": "Kind-specific study material content object."
+          },
+          "folderId": {
+            "description": "Study Material Folder that should contain the material.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "content"
+        ]
+      },
+      "UpdateStudyMaterialDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "New study material title.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "content": {
+            "description": "Replacement kind-specific study material content."
+          }
+        }
+      },
+      "MoveStudyMaterialDto": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Study Material Folder to move the material into, or null for the notebook root."
+          }
+        },
+        "required": [
+          "folderId"
+        ]
+      },
+      "CreateStudyMaterialFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Name of the study material folder."
+          },
+          "parentId": {
+            "description": "Parent study material folder.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateStudyMaterialFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "New study material folder name.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "parentId": {
+            "description": "New parent study material folder, or null for the notebook root.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "GenerateStudyMaterialDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/StudyMaterialKind"
+          },
+          "brief": {
+            "default": "",
+            "description": "Brief with the instructions and options for the Generation.",
+            "type": "string"
+          },
+          "sourceIds": {
+            "default": [],
+            "description": "Sources selected as Evidence for the Generation.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "folderId": {
+            "description": "Study Material Folder that should contain the result.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "description": "Model identifier; defaults to the model chosen for the Kind.",
+            "type": "string"
+          },
+          "questionCount": {
+            "description": "Requested number of quiz questions or flashcards.",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "difficulty": {
+            "description": "Requested difficulty for quiz or flashcard Generation.",
+            "type": "string",
+            "enum": [
+              "easy",
+              "medium",
+              "hard",
+              "auto"
+            ]
+          },
+          "groundingMode": {
+            "$ref": "#/components/schemas/GroundingMode"
+          },
+          "roadmapOptions": {
+            "description": "Roadmap-specific Generation options.",
+            "type": "object",
+            "properties": {
+              "phaseCount": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 50
+              },
+              "detailLevel": {
+                "type": "string",
+                "enum": [
+                  "basic",
+                  "detailed",
+                  "auto"
+                ]
+              }
+            },
+            "required": [
+              "phaseCount",
+              "detailLevel"
+            ]
+          },
+          "mindMapOptions": {
+            "description": "Mind map-specific Generation options.",
+            "type": "object",
+            "properties": {
+              "nodeCount": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "structure": {
+                "type": "string",
+                "enum": [
+                  "radial",
+                  "hierarchical",
+                  "organic"
+                ]
+              },
+              "colorGroups": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "auto"
+                    ]
+                  }
+                ]
+              },
+              "crossLinks": {
+                "type": "boolean"
+              },
+              "detailLevel": {
+                "type": "string",
+                "enum": [
+                  "basic",
+                  "detailed",
+                  "auto"
+                ]
+              }
+            },
+            "required": [
+              "nodeCount",
+              "structure",
+              "colorGroups",
+              "crossLinks",
+              "detailLevel"
+            ]
+          },
+          "language": {
+            "description": "Base Language code used for the material.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35
+          },
+          "slidesOptions": {
+            "description": "Slides-specific Generation options.",
+            "type": "object",
+            "properties": {
+              "slideCount": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 20
+              },
+              "theme": {
+                "type": "string",
+                "enum": [
+                  "dark",
+                  "light",
+                  "accent",
+                  "editorial",
+                  "academic",
+                  "technical",
+                  "warm",
+                  "auto"
+                ]
+              },
+              "detailLevel": {
+                "type": "string",
+                "enum": [
+                  "basic",
+                  "detailed",
+                  "auto"
+                ]
+              }
+            },
+            "required": [
+              "slideCount",
+              "theme",
+              "detailLevel"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "GenerationPartialFrame": {
+        "type": "object",
+        "description": "A partial Study Material content object. Fields appear as the model produces them, so any subset of the kind-specific content shape may be present and strings may be incomplete. The frame is a partial of the quiz, flashcard, roadmap, mind map, or slides content shape selected by `kind`.",
+        "additionalProperties": true,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "phases": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "rootId": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "design": {
+            "type": "object"
+          },
+          "slides": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "generalKnowledgeSupplement": {
+            "type": "string",
+            "description": "Present only for moderate grounding; context that goes beyond the sources."
+          }
+        }
+      },
+      "GenerationDoneFrame": {
+        "type": "object",
+        "description": "Terminal frame. The Study Material has been persisted and the Generation is complete.",
+        "required": [
+          "done",
+          "requestId",
+          "materialId"
+        ],
+        "properties": {
+          "done": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Generation Request id, also sent as X-Generation-Request-Id."
+          },
+          "materialId": {
+            "type": "string",
+            "description": "Id of the created Study Material."
+          },
+          "grounding": {
+            "type": "object",
+            "description": "Grounding diagnostics for the Generation.",
+            "properties": {
+              "droppedBlocks": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "truncatedSourceIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "GenerationErrorFrame": {
+        "type": "object",
+        "description": "Terminal frame written after the stream has started. The client should surface `error` and stop reading.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Client-safe error message."
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Generation Request id, when one was created."
+          }
+        }
+      },
+      "GenerationFailureResponse": {
+        "type": "object",
+        "description": "JSON error returned before any NDJSON frame was written (for example when the selected Sources are unavailable).",
+        "required": [
+          "error",
+          "code"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "generation_failed"
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "GenerationStreamFrame": {
+        "type": "object",
+        "description": "One NDJSON line from `POST /api/notebooks/{id}/generate`. Lines are emitted as partial Study Material content, followed by exactly one terminal `done` or `error` frame.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/GenerationPartialFrame"
+          },
+          {
+            "$ref": "#/components/schemas/GenerationDoneFrame"
+          },
+          {
+            "$ref": "#/components/schemas/GenerationErrorFrame"
+          }
+        ]
+      },
+      "ChatCitationCheck": {
+        "type": "object",
+        "description": "Summary of Citation verification for the completed reply.",
+        "properties": {
+          "resolved": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of Citation keys that matched Evidence."
+          },
+          "attributed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of claims linked by Nearest-Evidence Attribution."
+          },
+          "dropped": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of unresolvable Citation keys that were dropped."
+          }
+        }
+      },
+      "ChatCitedSource": {
+        "type": "object",
+        "description": "One Source passage cited by the assistant reply.",
+        "required": [
+          "sourceId",
+          "citationKey",
+          "number"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "integer"
+          },
+          "citationKey": {
+            "type": "string",
+            "description": "Citation key used in the reply text, such as R1."
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "chunkId": {
+            "type": "string",
+            "nullable": true
+          },
+          "chunkIndex": {
+            "type": "integer",
+            "nullable": true
+          },
+          "sourceVersionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "locator": {
+            "type": "object",
+            "nullable": true,
+            "description": "Kind-specific locator inside the Source.",
+            "additionalProperties": true
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Display number of the Citation."
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "quote": {
+            "type": "string",
+            "nullable": true,
+            "description": "Supporting Span quoted from the Source Chunk."
+          },
+          "attribution": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "nearest"
+            ],
+            "description": "Whether the Citation was written by the model or linked by Nearest-Evidence Attribution."
+          },
+          "sectionPath": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "context": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ChatMessageMetadata": {
+        "type": "object",
+        "description": "Metadata attached to the `start`/`finish` frames and persisted with the assistant message. Citation fields are populated on `finish`.",
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "groundingMode": {
+            "type": "string",
+            "enum": [
+              "strict",
+              "moderate",
+              "free"
+            ]
+          },
+          "finishReason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalUsage": {
+            "type": "object",
+            "properties": {
+              "inputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalTokens": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "citedSources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatCitedSource"
+            }
+          },
+          "citationCheck": {
+            "$ref": "#/components/schemas/ChatCitationCheck"
+          }
+        }
+      },
+      "ChatUiStreamStartFrame": {
+        "type": "object",
+        "description": "First frame of a reply.",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "start"
+            ]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Persisted assistant message id."
+          },
+          "messageMetadata": {
+            "$ref": "#/components/schemas/ChatMessageMetadata"
+          }
+        }
+      },
+      "ChatUiStreamStartStepFrame": {
+        "type": "object",
+        "description": "Marks the start of one model step.",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "start-step"
+            ]
+          }
+        }
+      },
+      "ChatUiStreamReasoningStartFrame": {
+        "type": "object",
+        "description": "Starts a reasoning part.",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "reasoning-start"
+            ]
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamReasoningDeltaFrame": {
+        "type": "object",
+        "description": "Incremental reasoning text.",
+        "required": [
+          "type",
+          "id",
+          "delta"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "reasoning-delta"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "delta": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamReasoningEndFrame": {
+        "type": "object",
+        "description": "Ends a reasoning part.",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "reasoning-end"
+            ]
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamTextStartFrame": {
+        "type": "object",
+        "description": "Starts the assistant text part.",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text-start"
+            ]
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamTextDeltaFrame": {
+        "type": "object",
+        "description": "Incremental assistant text. Citations appear inline as `[ref:R1]` markers.",
+        "required": [
+          "type",
+          "id",
+          "delta"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text-delta"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "delta": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamTextEndFrame": {
+        "type": "object",
+        "description": "Ends the assistant text part.",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text-end"
+            ]
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamFinishStepFrame": {
+        "type": "object",
+        "description": "Marks the end of one model step.",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "finish-step"
+            ]
+          }
+        }
+      },
+      "ChatUiStreamFinishFrame": {
+        "type": "object",
+        "description": "Terminal frame. `messageMetadata.citedSources` lists the Citations for this reply.",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "finish"
+            ]
+          },
+          "finishReason": {
+            "type": "string"
+          },
+          "messageMetadata": {
+            "$ref": "#/components/schemas/ChatMessageMetadata"
+          }
+        }
+      },
+      "ChatUiStreamAbortFrame": {
+        "type": "object",
+        "description": "The reply was aborted, for example because the client disconnected.",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "abort"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamErrorFrame": {
+        "type": "object",
+        "description": "A client-safe error. The stream may continue after this frame.",
+        "required": [
+          "type",
+          "errorText"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "errorText": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamMessageMetadataFrame": {
+        "type": "object",
+        "description": "Replaces or attaches metadata to the current assistant message.",
+        "required": [
+          "type",
+          "messageMetadata"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "message-metadata"
+            ]
+          },
+          "messageMetadata": {
+            "$ref": "#/components/schemas/ChatMessageMetadata"
+          }
+        }
+      },
+      "ChatUiStreamSourceUrlFrame": {
+        "type": "object",
+        "description": "A URL Source referenced by the reply.",
+        "required": [
+          "type",
+          "sourceId",
+          "url"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "source-url"
+            ]
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamSourceDocumentFrame": {
+        "type": "object",
+        "description": "A document Source referenced by the reply.",
+        "required": [
+          "type",
+          "sourceId",
+          "mediaType",
+          "title"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "source-document"
+            ]
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatUiStreamFrame": {
+        "type": "object",
+        "description": "One server-sent event. Each `data:` line contains one of the listed frames; the stream ends with `data: [DONE]`. Consumers normally pass the stream to the AI SDK client, which assembles the frames into an assistant message.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ChatUiStreamStartFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamStartStepFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamReasoningStartFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamReasoningDeltaFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamReasoningEndFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamTextStartFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamTextDeltaFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamTextEndFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamFinishStepFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamFinishFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamAbortFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamErrorFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamMessageMetadataFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamSourceUrlFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ChatUiStreamSourceDocumentFrame"
+          }
+        ]
+      }
+    }
+  }
+}

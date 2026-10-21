@@ -10,66 +10,31 @@ import {
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { z } from 'zod';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { SourcesService } from './sources.service';
 import { WebSearchJobsService } from './acquisition/web-search-jobs.service';
 import { WebSearchService } from './acquisition/web-search.service';
+import { CreateTextSourceDto } from './dto/create-text-source.dto';
+import { CreateUrlSourceDto } from './dto/create-url-source.dto';
+import { UpdateSpeakerLabelsDto } from './dto/update-speaker-labels.dto';
+import { AddTranscriptDto } from './dto/add-transcript.dto';
+import { UpdateSourceDto } from './dto/update-source.dto';
+import { MoveSourceDto } from './dto/move-source.dto';
+import { WebSearchDto } from './dto/web-search.dto';
+import { ImportWebSearchResultsDto } from './dto/import-web-search-results.dto';
 
-const textSourceSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(500),
-  rawText: z.string().min(1, 'rawText is required'),
-});
-
-const urlSourceSchema = z.object({
-  url: z.string().min(1, 'URL or identifier is required').max(2048),
-  title: z.string().max(500).optional(),
-  oauthToken: z.string().max(2048).optional(),
-  captionText: z
-    .string()
-    .max(1024 * 1024)
-    .optional(),
-  captionFormat: z
-    .enum(['vtt', 'srt', 'json3', 'xml', 'plain', 'auto'])
-    .optional(),
-});
-
-const updateSpeakerLabelsSchema = z.object({
-  speakerMap: z.record(z.string().min(1), z.string().min(1)),
-});
-
-const addTranscriptSchema = z.object({
-  transcriptText: z.string().min(1, 'Transcript text is required'),
-});
-
-const updateSourceSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(500).optional(),
-});
-
-const moveSourceSchema = z.object({
-  folderId: z.string().nullable(),
-});
-
-const webSearchSchema = z.object({
-  query: z.string().min(1, 'Query is required').max(500),
-});
-
-const webSearchImportCandidateSchema = z.object({
-  url: z.string().url('Must be a valid URL'),
-  title: z.string().max(500).optional(),
-  description: z.string().max(500).nullable().optional(),
-});
-
-const webSearchImportSchema = z.object({
-  candidates: z
-    .array(webSearchImportCandidateSchema)
-    .min(1, 'At least one candidate is required')
-    .max(50, 'Up to 50 candidates allowed per import'),
-  query: z.string().max(500).optional(),
-});
-
+@ApiTags('Sources')
 @Controller()
 export class SourcesController {
   constructor(
@@ -79,29 +44,72 @@ export class SourcesController {
   ) {}
 
   @Get('notebooks/:notebookId/sources')
+  @ApiOperation({
+    summary: 'List Sources',
+    description: 'Lists the Sources in a Notebook with their processing state.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'Sources in the Notebook.' })
   async listSources(@Param('notebookId') notebookId: string) {
     return this.sourcesService.list(notebookId);
   }
 
   @Post('notebooks/:notebookId/sources/text')
-  @UsePipes(new ZodValidationPipe(textSourceSchema))
+  @ApiOperation({
+    summary: 'Add text Source',
+    description:
+      'Ingests plain text as a Source. The text is segmented, embedded, and indexed for retrieval.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiBody({ type: CreateTextSourceDto })
+  @ApiCreatedResponse({ description: 'The created Source.' })
+  @UsePipes(new ZodValidationPipe(CreateTextSourceDto.schema))
   async createTextSource(
     @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof textSourceSchema>,
+    @Body() body: CreateTextSourceDto,
   ) {
     return this.sourcesService.createText(notebookId, body);
   }
 
   @Post('notebooks/:notebookId/sources/url')
-  @UsePipes(new ZodValidationPipe(urlSourceSchema))
+  @ApiOperation({
+    summary: 'Add URL Source',
+    description:
+      'Ingests a URL as a Source, including optional captions or transcripts supplied by the client.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiBody({ type: CreateUrlSourceDto })
+  @ApiCreatedResponse({ description: 'The created Source.' })
+  @UsePipes(new ZodValidationPipe(CreateUrlSourceDto.schema))
   async createUrlSource(
     @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof urlSourceSchema>,
+    @Body() body: CreateUrlSourceDto,
   ) {
     return this.sourcesService.createUrl(notebookId, body);
   }
 
   @Post('notebooks/:notebookId/sources/file')
+  @ApiOperation({
+    summary: 'Add file Source',
+    description:
+      'Uploads a file as a Source. Extraction, transcription, and indexing run in the background.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        title: {
+          type: 'string',
+          description: 'Optional Source title; defaults to the filename.',
+        },
+      },
+    },
+  })
+  @ApiCreatedResponse({ description: 'The created Source.' })
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
   )
@@ -125,110 +133,222 @@ export class SourcesController {
   }
 
   @Get('sources/:id')
+  @ApiOperation({
+    summary: 'Get Source',
+    description:
+      'Returns one Source with its versions, segments, and processing state.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiOkResponse({ description: 'The Source.' })
   async getSource(@Param('id') id: string) {
     return this.sourcesService.get(id);
   }
 
   @Post('sources/:id/reindex')
+  @ApiOperation({
+    summary: 'Reindex Source',
+    description:
+      'Re-chunks, re-embeds, and reindexes one Source for retrieval.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiCreatedResponse({ description: 'The Source after reindexing.' })
   async reindexSource(@Param('id') id: string) {
     return this.sourcesService.reindex(id);
   }
 
   @Post('sources/:id/retry')
+  @ApiOperation({
+    summary: 'Retry Source processing',
+    description: 'Retries ingestion for a Source that failed to process.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiCreatedResponse({ description: 'The retried Source.' })
   async retrySource(@Param('id') id: string) {
     return this.sourcesService.retry(id);
   }
 
   @Post('sources/:id/cancel')
+  @ApiOperation({
+    summary: 'Cancel Source processing',
+    description: 'Cancels an in-flight processing stage for the Source.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiCreatedResponse({ description: 'Processing cancelled.' })
   async cancelSource(@Param('id') id: string) {
     await this.sourcesService.cancel(id);
   }
 
   @Delete('sources/:id')
+  @ApiOperation({
+    summary: 'Delete Source',
+    description:
+      'Soft-deletes the Source and removes it from retrieval. Restore it from Trash while it is still there.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiOkResponse({ description: 'The deleted Source.' })
   async deleteSource(@Param('id') id: string) {
     return this.sourcesService.delete(id);
   }
 
   @Patch('sources/:id')
-  @UsePipes(new ZodValidationPipe(updateSourceSchema))
-  async updateSource(
-    @Param('id') id: string,
-    @Body() body: z.infer<typeof updateSourceSchema>,
-  ) {
+  @ApiOperation({
+    summary: 'Update Source',
+    description: 'Renames the Source.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiBody({ type: UpdateSourceDto })
+  @ApiOkResponse({ description: 'The updated Source.' })
+  @UsePipes(new ZodValidationPipe(UpdateSourceDto.schema))
+  async updateSource(@Param('id') id: string, @Body() body: UpdateSourceDto) {
     return this.sourcesService.update(id, body);
   }
 
   @Patch('sources/:id/move')
-  @UsePipes(new ZodValidationPipe(moveSourceSchema))
-  async moveSource(
-    @Param('id') id: string,
-    @Body() body: z.infer<typeof moveSourceSchema>,
-  ) {
+  @ApiOperation({
+    summary: 'Move Source',
+    description: 'Moves the Source into a Source Folder, or to the root.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiBody({ type: MoveSourceDto })
+  @ApiOkResponse({ description: 'The moved Source.' })
+  @UsePipes(new ZodValidationPipe(MoveSourceDto.schema))
+  async moveSource(@Param('id') id: string, @Body() body: MoveSourceDto) {
     return this.sourcesService.move(id, body.folderId);
   }
 
   @Get('sources/:id/download')
+  @ApiOperation({
+    summary: 'Get Source download link',
+    description:
+      'Returns a short-lived download link for the Source file, when the Source has one.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiOkResponse({ description: 'Download information for the Source.' })
   async downloadSource(@Param('id') id: string) {
     return this.sourcesService.getDownload(id);
   }
 
   @Patch('sources/:id/speakers')
-  @UsePipes(new ZodValidationPipe(updateSpeakerLabelsSchema))
+  @ApiOperation({
+    summary: 'Update speaker labels',
+    description:
+      'Replaces raw transcript speaker labels with display names for the Source.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiBody({ type: UpdateSpeakerLabelsDto })
+  @ApiOkResponse({ description: 'The updated Source.' })
+  @UsePipes(new ZodValidationPipe(UpdateSpeakerLabelsDto.schema))
   async updateSpeakerLabels(
     @Param('id') id: string,
-    @Body() body: z.infer<typeof updateSpeakerLabelsSchema>,
+    @Body() body: UpdateSpeakerLabelsDto,
   ) {
     return this.sourcesService.updateSpeakerLabels(id, body.speakerMap);
   }
 
   @Post('sources/:id/transcript')
-  @UsePipes(new ZodValidationPipe(addTranscriptSchema))
-  async addTranscript(
-    @Param('id') id: string,
-    @Body() body: z.infer<typeof addTranscriptSchema>,
-  ) {
+  @ApiOperation({
+    summary: 'Add Source transcript',
+    description:
+      'Attaches a transcript to the Source as a new Source Version and reindexes it.',
+  })
+  @ApiParam({ name: 'id', description: 'Source id.' })
+  @ApiBody({ type: AddTranscriptDto })
+  @ApiCreatedResponse({
+    description: 'The Source with the new transcript version.',
+  })
+  @UsePipes(new ZodValidationPipe(AddTranscriptDto.schema))
+  async addTranscript(@Param('id') id: string, @Body() body: AddTranscriptDto) {
     return this.sourcesService.addTranscript(id, body.transcriptText);
   }
 
   @Post('notebooks/:notebookId/sources/reindex')
+  @ApiOperation({
+    summary: 'Reindex Notebook Sources',
+    description:
+      'Re-chunks and re-embeds every Source in the Notebook for retrieval.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiCreatedResponse({ description: 'Reindexing started.' })
   async reindexNotebook(@Param('notebookId') notebookId: string) {
     return this.sourcesService.reindexNotebook(notebookId);
   }
 
   @Post('sources/reembed-all')
+  @ApiOperation({
+    summary: 'Re-embed all Sources',
+    description:
+      'Re-embeds every Source chunk in the workspace with the current Embeddings Connection.',
+  })
+  @ApiCreatedResponse({ description: 'Re-embedding started.' })
   async reembedAllSources() {
     return this.sourcesService.reembedAll();
   }
 
   @Post('notebooks/:notebookId/sources/reindex-all')
+  @ApiOperation({
+    summary: 'Reindex all Notebook Sources',
+    description:
+      'Alias of `reindex` that reindexes every Source in the Notebook.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiCreatedResponse({ description: 'Reindexing started.' })
   async reindexAllSources(@Param('notebookId') notebookId: string) {
     return this.sourcesService.reindexNotebook(notebookId);
   }
 
   @Post('notebooks/:notebookId/sources/web-search')
-  @UsePipes(new ZodValidationPipe(webSearchSchema))
+  @ApiOperation({
+    summary: 'Start Web Search',
+    description:
+      'Enqueues a Web Search for candidate Sources for the Notebook.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiBody({ type: WebSearchDto })
+  @ApiCreatedResponse({ description: 'The queued Web Search job.' })
+  @UsePipes(new ZodValidationPipe(WebSearchDto.schema))
   async webSearch(
     @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof webSearchSchema>,
+    @Body() body: WebSearchDto,
   ) {
     return this.webSearchJobsService.enqueue(notebookId, body);
   }
 
   @Get('notebooks/:notebookId/sources/web-search/latest')
+  @ApiOperation({
+    summary: 'Get latest Web Search',
+    description:
+      'Returns the most recent Web Search job for the Notebook, including its candidates.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'The latest Web Search job, or null.' })
   async latestWebSearchJob(@Param('notebookId') notebookId: string) {
     return this.webSearchJobsService.latest(notebookId);
   }
 
   @Delete('notebooks/:notebookId/sources/web-search/latest')
+  @ApiOperation({
+    summary: 'Dismiss Web Search',
+    description: 'Dismisses the latest Web Search job for the Notebook.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'Web Search dismissed.' })
   async dismissWebSearchJob(@Param('notebookId') notebookId: string) {
     await this.webSearchJobsService.dismiss(notebookId);
   }
 
   @Post('notebooks/:notebookId/sources/web-search/import')
-  @UsePipes(new ZodValidationPipe(webSearchImportSchema))
+  @ApiOperation({
+    summary: 'Import Web Search results',
+    description:
+      'Imports selected Web Search candidates into the Notebook as Sources.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiBody({ type: ImportWebSearchResultsDto })
+  @ApiCreatedResponse({ description: 'The imported Sources.' })
+  @UsePipes(new ZodValidationPipe(ImportWebSearchResultsDto.schema))
   async webSearchImport(
     @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof webSearchImportSchema>,
+    @Body() body: ImportWebSearchResultsDto,
   ) {
     return this.webSearchService.import(notebookId, {
       candidates: body.candidates,

@@ -10,84 +10,34 @@ import {
   Res,
   UsePipes,
 } from '@nestjs/common';
+import {
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
-import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { GenerationService } from './generation/generation.service';
 import { StudyMaterialKind } from './content/shapes';
 import { StudyMaterialFolderService } from './study-material-folder.service';
 import { StudyMaterialService } from './study-material.service';
 import { TrashService } from './trash.service';
+import { CreateStudyMaterialDto } from './dto/create-study-material.dto';
+import { UpdateStudyMaterialDto } from './dto/update-study-material.dto';
+import { MoveStudyMaterialDto } from './dto/move-study-material.dto';
+import { CreateStudyMaterialFolderDto } from './dto/create-study-material-folder.dto';
+import { UpdateStudyMaterialFolderDto } from './dto/update-study-material-folder.dto';
+import { GenerateStudyMaterialDto } from './dto/generate-study-material.dto';
 
-const createStudyMaterialSchema = z.object({
-  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
-  title: z.string().min(1, 'Title is required').max(200),
-  content: z.unknown(),
-  folderId: z.string().optional(),
-});
+export { generateRequestSchema } from './dto/generate-study-material.dto';
 
-const updateStudyMaterialSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  content: z.unknown().optional(),
-});
-
-const moveStudyMaterialSchema = z.object({
-  folderId: z.string().nullable(),
-});
-
-const createFolderSchema = z.object({
-  name: z.string().min(1, 'Folder name is required').max(200),
-  parentId: z.string().optional(),
-});
-
-const updateFolderSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  parentId: z.string().nullable().optional(),
-});
-
-export const generateRequestSchema = z.object({
-  kind: z.enum(['quiz', 'simple_flashcard', 'roadmap', 'mind_map', 'slides']),
-  brief: z.string().default(''),
-  sourceIds: z.array(z.string()).default([]),
-  folderId: z.string().nullable().optional(),
-  model: z.string().optional(),
-  questionCount: z.number().min(0).max(50).optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard', 'auto']).optional(),
-  groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
-  roadmapOptions: z
-    .object({
-      phaseCount: z.number().min(0).max(50),
-      detailLevel: z.enum(['basic', 'detailed', 'auto']),
-    })
-    .optional(),
-  mindMapOptions: z
-    .object({
-      nodeCount: z.number().min(0).max(100),
-      structure: z.enum(['radial', 'hierarchical', 'organic']),
-      colorGroups: z.union([z.boolean(), z.enum(['auto'])]),
-      crossLinks: z.boolean(),
-      detailLevel: z.enum(['basic', 'detailed', 'auto']),
-    })
-    .optional(),
-  language: z.string().min(1).max(35).optional(),
-  slidesOptions: z
-    .object({
-      slideCount: z.number().min(0).max(20),
-      theme: z.enum([
-        'dark',
-        'light',
-        'accent',
-        'editorial',
-        'academic',
-        'technical',
-        'warm',
-        'auto',
-      ]),
-      detailLevel: z.enum(['basic', 'detailed', 'auto']),
-    })
-    .optional(),
-});
-
+@ApiTags('Study Materials')
 @Controller()
 export class StudyMaterialsController {
   constructor(
@@ -98,6 +48,23 @@ export class StudyMaterialsController {
   ) {}
 
   @Get('notebooks/:notebookId/study-materials')
+  @ApiOperation({
+    summary: 'List Study Materials',
+    description:
+      'Lists Study Materials in a Notebook, optionally filtered by Study Material Folder or Kind.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiQuery({
+    name: 'folderId',
+    required: false,
+    description: 'Study Material Folder id.',
+  })
+  @ApiQuery({
+    name: 'kind',
+    required: false,
+    description: 'Study Material Kind.',
+  })
+  @ApiOkResponse({ description: 'Study Materials in the Notebook.' })
   async listStudyMaterials(
     @Param('notebookId') notebookId: string,
     @Query('folderId') folderId?: string,
@@ -110,20 +77,53 @@ export class StudyMaterialsController {
   }
 
   @Post('notebooks/:notebookId/study-materials')
-  @UsePipes(new ZodValidationPipe(createStudyMaterialSchema))
+  @ApiOperation({
+    summary: 'Create Study Material',
+    description:
+      'Creates a Study Material from a complete content object without running a Generation.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiBody({ type: CreateStudyMaterialDto })
+  @ApiCreatedResponse({ description: 'The created Study Material.' })
+  @UsePipes(new ZodValidationPipe(CreateStudyMaterialDto.schema))
   async createStudyMaterial(
     @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof createStudyMaterialSchema>,
+    @Body() body: CreateStudyMaterialDto,
   ) {
     return this.studyMaterialService.create(notebookId, body);
   }
 
   @Get('study-materials/:id')
+  @ApiOperation({
+    summary: 'Get Study Material',
+    description:
+      'Returns one Study Material with its Kind-specific content and Citations.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiOkResponse({ description: 'The Study Material.' })
   async getStudyMaterial(@Param('id') id: string) {
     return this.studyMaterialService.get(id);
   }
 
   @Get('study-materials/:id/export')
+  @ApiOperation({
+    summary: 'Export slides',
+    description:
+      'Builds and downloads a PowerPoint file for a slides Study Material.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiProduces(
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  )
+  @ApiOkResponse({
+    description: 'PowerPoint file.',
+    content: {
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        {
+          schema: { type: 'string', format: 'binary' },
+        },
+    },
+  })
   async exportSlides(@Param('id') id: string, @Res() res: Response) {
     const { title, buffer } =
       await this.studyMaterialService.buildSlidesPptx(id);
@@ -141,104 +141,252 @@ export class StudyMaterialsController {
   }
 
   @Patch('study-materials/:id')
-  @UsePipes(new ZodValidationPipe(updateStudyMaterialSchema))
+  @ApiOperation({
+    summary: 'Update Study Material',
+    description: 'Updates the title or content of a Study Material.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiBody({ type: UpdateStudyMaterialDto })
+  @ApiOkResponse({ description: 'The updated Study Material.' })
+  @UsePipes(new ZodValidationPipe(UpdateStudyMaterialDto.schema))
   async updateStudyMaterial(
     @Param('id') id: string,
-    @Body() body: z.infer<typeof updateStudyMaterialSchema>,
+    @Body() body: UpdateStudyMaterialDto,
   ) {
     return this.studyMaterialService.update(id, body);
   }
 
   @Delete('study-materials/:id')
+  @ApiOperation({
+    summary: 'Delete Study Material',
+    description:
+      'Moves the Study Material to Trash. Restore it from Trash while it is still there.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiOkResponse({ description: 'The deleted Study Material.' })
   async deleteStudyMaterial(@Param('id') id: string) {
     return this.studyMaterialService.delete(id);
   }
 
   @Post('study-materials/:id/restore')
+  @ApiOperation({
+    summary: 'Restore Study Material',
+    description: 'Restores the Study Material from Trash.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiCreatedResponse({ description: 'The restored Study Material.' })
   async restoreStudyMaterial(@Param('id') id: string) {
     return this.studyMaterialService.restore(id);
   }
 
   @Delete('study-materials/:id/permanent')
+  @ApiOperation({
+    summary: 'Permanently delete Study Material',
+    description:
+      'Permanently deletes the Study Material. This cannot be undone.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiOkResponse({
+    description: 'Study Material permanently deleted.',
+    schema: {
+      type: 'object',
+      properties: { success: { type: 'boolean' } },
+    },
+  })
   async permanentDeleteStudyMaterial(@Param('id') id: string) {
     await this.studyMaterialService.permanentDelete(id);
     return { success: true };
   }
 
   @Post('study-materials/:id/shuffle')
+  @ApiOperation({
+    summary: 'Shuffle quiz',
+    description:
+      'Shuffles the answer options of a quiz Study Material and returns it.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiCreatedResponse({ description: 'The shuffled quiz.' })
   async shuffleQuiz(@Param('id') id: string) {
     return this.studyMaterialService.shuffle(id);
   }
 
   @Patch('study-materials/:id/move')
-  @UsePipes(new ZodValidationPipe(moveStudyMaterialSchema))
+  @ApiOperation({
+    summary: 'Move Study Material',
+    description:
+      'Moves the Study Material into a Study Material Folder, or to the notebook root.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiBody({ type: MoveStudyMaterialDto })
+  @ApiOkResponse({ description: 'The moved Study Material.' })
+  @UsePipes(new ZodValidationPipe(MoveStudyMaterialDto.schema))
   async moveStudyMaterial(
     @Param('id') id: string,
-    @Body() body: z.infer<typeof moveStudyMaterialSchema>,
+    @Body() body: MoveStudyMaterialDto,
   ) {
     return this.studyMaterialService.move(id, body);
   }
 
   @Post('study-materials/:id/duplicate')
+  @ApiOperation({
+    summary: 'Duplicate Study Material',
+    description: 'Creates a copy of the Study Material in the same folder.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiCreatedResponse({ description: 'The duplicated Study Material.' })
   async duplicateStudyMaterial(@Param('id') id: string) {
     return this.studyMaterialService.duplicate(id);
   }
 
   @Get('notebooks/:notebookId/folders')
+  @ApiOperation({
+    summary: 'List Study Material Folders',
+    description: 'Lists the Study Material Folder tree for the Notebook.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'Study Material Folders.' })
   async listFolders(@Param('notebookId') notebookId: string) {
     return this.folderService.list(notebookId);
   }
 
   @Post('notebooks/:notebookId/folders')
-  @UsePipes(new ZodValidationPipe(createFolderSchema))
+  @ApiOperation({
+    summary: 'Create Study Material Folder',
+    description:
+      'Creates a Study Material Folder inside the Notebook, optionally with a parent folder.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiBody({ type: CreateStudyMaterialFolderDto })
+  @ApiCreatedResponse({ description: 'The created Study Material Folder.' })
+  @UsePipes(new ZodValidationPipe(CreateStudyMaterialFolderDto.schema))
   async createFolder(
     @Param('notebookId') notebookId: string,
-    @Body() body: z.infer<typeof createFolderSchema>,
+    @Body() body: CreateStudyMaterialFolderDto,
   ) {
     return this.folderService.create(notebookId, body);
   }
 
   @Patch('folders/:id')
-  @UsePipes(new ZodValidationPipe(updateFolderSchema))
+  @ApiOperation({
+    summary: 'Update Study Material Folder',
+    description: 'Renames a Study Material Folder or changes its parent.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material Folder id.' })
+  @ApiBody({ type: UpdateStudyMaterialFolderDto })
+  @ApiOkResponse({ description: 'The updated Study Material Folder.' })
+  @UsePipes(new ZodValidationPipe(UpdateStudyMaterialFolderDto.schema))
   async updateFolder(
     @Param('id') id: string,
-    @Body() body: z.infer<typeof updateFolderSchema>,
+    @Body() body: UpdateStudyMaterialFolderDto,
   ) {
     return this.folderService.update(id, body);
   }
 
   @Delete('folders/:id')
+  @ApiOperation({
+    summary: 'Delete Study Material Folder',
+    description: 'Moves the Study Material Folder and its contents to Trash.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material Folder id.' })
+  @ApiOkResponse({ description: 'The deleted Study Material Folder.' })
   async deleteFolder(@Param('id') id: string) {
     return this.folderService.delete(id);
   }
 
   @Post('folders/:id/restore')
+  @ApiOperation({
+    summary: 'Restore Study Material Folder',
+    description: 'Restores the Study Material Folder from Trash.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material Folder id.' })
+  @ApiCreatedResponse({ description: 'The restored Study Material Folder.' })
   async restoreFolder(@Param('id') id: string) {
     return this.folderService.restore(id);
   }
 
   @Get('notebooks/:notebookId/trash')
+  @ApiOperation({
+    summary: 'List Trash',
+    description:
+      'Lists the soft-deleted Study Materials and Study Material Folders in the Notebook.',
+  })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'Trash contents for the Notebook.' })
   async listTrash(@Param('notebookId') notebookId: string) {
     return this.trashService.list(notebookId);
   }
 
   @Delete('trash/study-materials/:id')
+  @ApiOperation({
+    summary: 'Permanently delete trashed Study Material',
+    description:
+      'Permanently deletes one Study Material from Trash. This cannot be undone.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material id.' })
+  @ApiOkResponse({
+    description: 'Study Material permanently deleted.',
+    schema: {
+      type: 'object',
+      properties: { success: { type: 'boolean' } },
+    },
+  })
   async hardDeleteTrashMaterial(@Param('id') id: string) {
     await this.trashService.hardDeleteStudyMaterial(id);
     return { success: true };
   }
 
   @Delete('trash/folders/:id')
+  @ApiOperation({
+    summary: 'Permanently delete trashed Study Material Folder',
+    description:
+      'Permanently deletes one Study Material Folder from Trash. This cannot be undone.',
+  })
+  @ApiParam({ name: 'id', description: 'Study Material Folder id.' })
+  @ApiOkResponse({
+    description: 'Study Material Folder permanently deleted.',
+    schema: {
+      type: 'object',
+      properties: { success: { type: 'boolean' } },
+    },
+  })
   async hardDeleteTrashFolder(@Param('id') id: string) {
     await this.trashService.hardDeleteFolder(id);
     return { success: true };
   }
 
   @Post('notebooks/:id/generate')
-  @UsePipes(new ZodValidationPipe(generateRequestSchema))
+  @ApiOperation({
+    summary: 'Generate Study Material',
+    description:
+      'Starts a Generation from a Brief and the selected Sources. Writes newline-delimited JSON: zero or more partial content frames, then exactly one terminal `done` or `error` frame. The response also carries the Generation Request id in `X-Generation-Request-Id`; use it to cancel the Generation.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiBody({ type: GenerateStudyMaterialDto })
+  @ApiProduces('application/x-ndjson')
+  @ApiResponse({
+    status: 201,
+    description:
+      'NDJSON stream of Generation frames. Partial content frames are followed by one terminal `done` or `error` frame.',
+    content: {
+      'application/x-ndjson': {
+        schema: { $ref: '#/components/schemas/GenerationStreamFrame' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description:
+      'Generation failed before the stream started. Matches `GenerationFailureResponse`.',
+    content: {
+      'application/json': {
+        schema: { $ref: '#/components/schemas/GenerationFailureResponse' },
+      },
+    },
+  })
+  @UsePipes(new ZodValidationPipe(GenerateStudyMaterialDto.schema))
   async generate(
     @Param('id') notebookId: string,
-    @Body() body: z.infer<typeof generateRequestSchema>,
+    @Body() body: GenerateStudyMaterialDto,
     @Res() res: Response,
   ) {
     const generationController = new AbortController();
@@ -323,6 +471,20 @@ export class StudyMaterialsController {
   }
 
   @Post('notebooks/:id/generation-requests/:requestId/cancel')
+  @ApiOperation({
+    summary: 'Cancel Generation',
+    description:
+      'Cancels an in-flight Generation using its Generation Request id.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiParam({ name: 'requestId', description: 'Generation Request id.' })
+  @ApiCreatedResponse({
+    description: 'Generation cancelled.',
+    schema: {
+      type: 'object',
+      properties: { success: { type: 'boolean' } },
+    },
+  })
   async cancelGeneration(@Param('requestId') requestId: string) {
     await this.generationService.cancel(requestId);
     return { success: true };

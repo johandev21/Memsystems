@@ -244,6 +244,7 @@ docs/       Documentación técnica del proyecto
 
 - [Glosario](CONTEXT.md)
 - [Pruebas](docs/testing.md)
+- [Documentación de la API REST](docs/agent-api.md)
 
 ## Estado del proyecto
 
