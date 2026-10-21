@@ -1,5 +1,6 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import {
@@ -34,7 +35,7 @@ function assistantMessage(id: string, text: string): UIMessage {
 }
 
 type RenderOptions = Partial<
-  Pick<ChatMessageListProps, "showPendingIndicator" | "pendingLabel" | "anchorMessageId" | "error">
+  Pick<ChatMessageListProps, "showPendingIndicator" | "pendingLabel" | "anchorMessageId" | "error" | "onContinue" | "isLoading">
 >;
 
 function buildChatTree(messages: UIMessage[], options: RenderOptions = {}) {
@@ -52,6 +53,8 @@ function buildChatTree(messages: UIMessage[], options: RenderOptions = {}) {
               error={options.error}
               onCopy={vi.fn()}
               onRegenerate={vi.fn()}
+              onContinue={options.onContinue}
+              isLoading={options.isLoading}
             />
           </MessageScrollerContent>
         </MessageScrollerViewport>
@@ -262,5 +265,57 @@ describe("ChatMessageList pending indicator", () => {
     );
 
     expect(container.querySelector('[data-message-id="thinking-indicator"]')).toBeNull();
+  });
+});
+describe("ChatMessageList continue action", () => {
+  it("renders Continue button only on the last assistant message when cancelled", async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "Turn 1 question"),
+      {
+        ...assistantMessage("msg-asst-1", "Turn 1 answer"),
+        metadata: { finishReason: "cancelled" },
+      },
+      userMessage("msg-user-2", "Turn 2 question"),
+      {
+        ...assistantMessage("msg-asst-2", "Turn 2 answer"),
+        metadata: { finishReason: "cancelled" },
+      },
+    ];
+
+    renderChatMessageList(messages, { onContinue });
+
+    const continueButtons = screen.getAllByRole("button", { name: "Continue" });
+    expect(continueButtons).toHaveLength(1);
+
+    await user.click(continueButtons[0]);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render Continue button on the last assistant message if not cancelled", () => {
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "Turn 1 question"),
+      {
+        ...assistantMessage("msg-asst-1", "Turn 1 answer"),
+        metadata: { finishReason: "stop" },
+      },
+    ];
+
+    renderChatMessageList(messages);
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+  });
+
+  it("does not render Continue button when isLoading is true", () => {
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "Turn 1 question"),
+      {
+        ...assistantMessage("msg-asst-1", "Turn 1 answer"),
+        metadata: { finishReason: "cancelled" },
+      },
+    ];
+
+    renderChatMessageList(messages, { isLoading: true });
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
   });
 });

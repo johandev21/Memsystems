@@ -1,4 +1,8 @@
 {
+  "actions": {
+    "continue": "Continuar",
+    "continuePrompt": "Continúa desde donde te quedaste"
+  },
   "announcement": {
     "openingChat": "Abriendo el chat.",
     "openingChatFor": "Abriendo el chat para {{concept}}."
@@ -97,10 +101,13 @@
     "assistant": "Asistente",
     "user": "Tú"
   },
+  "status": {
+    "stopped": "Detenido"
+  },
   "transcript": {
     "ariaLabel": "Transcripción del chat"
   },
   "userMessage": {
     "attachedImageAlt": "Imagen adjunta"
   }
-}
+}

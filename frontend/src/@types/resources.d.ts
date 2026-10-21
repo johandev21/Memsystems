@@ -84,6 +84,10 @@ export default interface Resources {
     }
   },
   "chat": {
+    "actions": {
+      "continue": "Continue",
+      "continuePrompt": "Continue from where you stopped"
+    },
     "announcement": {
       "openingChat": "Opening chat.",
       "openingChatFor": "Opening chat for {{concept}}."
@@ -181,6 +185,9 @@ export default interface Resources {
     "sender": {
       "assistant": "Assistant",
       "user": "You"
+    },
+    "status": {
+      "stopped": "Stopped"
     },
     "transcript": {
       "ariaLabel": "Chat transcript"

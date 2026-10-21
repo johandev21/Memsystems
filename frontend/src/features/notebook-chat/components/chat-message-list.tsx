@@ -19,6 +19,8 @@ export interface ChatMessageListProps {
   error?: Error | null;
   onCopy: (text: string) => void;
   onRegenerate: () => void;
+  onContinue?: () => void;
+  isLoading?: boolean;
 }
 
 export function ChatMessageList({
@@ -30,6 +32,8 @@ export function ChatMessageList({
   error,
   onCopy,
   onRegenerate,
+  onContinue,
+  isLoading = false,
 }: ChatMessageListProps) {
   const { t } = useTranslation("chat");
   const turns = useMemo(() => groupMessagesIntoTurns(messages), [messages]);
@@ -65,6 +69,8 @@ export function ChatMessageList({
                 onCopy={onCopy}
                 onRegenerate={onRegenerate}
                 showRegenerate={isLast}
+                onContinue={onContinue}
+                showContinue={isLast && !isLoading}
               />
             </div>
           </MessageScrollerItem>

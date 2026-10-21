@@ -13,6 +13,7 @@ import {
 import type { CitedSourceDTO } from "../api/chat";
 import { noEvidenceMetadataOf } from "../types/no-evidence.types";
 import { getReferenceKeyFromHref, prepareReferenceMessage } from "../types/message-reference.types";
+import { isMessageCancelled } from "../types/chat-turn.types";
 import { CitationChipRow, CitationHoverCard } from "@/shared/citations/citation-hover-card";
 import { NoEvidencePanel } from "./no-evidence-message";
 import { AssistantActionToolbar } from "./assistant-action-toolbar";
@@ -30,6 +31,8 @@ export interface AssistantMessageProps {
   onCopy: (text: string) => void;
   onRegenerate: () => void;
   showRegenerate?: boolean;
+  onContinue?: () => void;
+  showContinue?: boolean;
 }
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
@@ -66,6 +69,8 @@ export function AssistantMessage({
   onCopy,
   onRegenerate,
   showRegenerate = true,
+  onContinue,
+  showContinue = false,
 }: AssistantMessageProps) {
   const { t } = useTranslation("chat");
   const versionList = useMemo(() => {
@@ -102,8 +107,9 @@ export function AssistantMessage({
   }, [activeMessage, citedSourcesMap, citedSources]);
 
   const content = useAssistantMessageContent(activeMessage, activeCitations);
+  const isCancelled = isMessageCancelled(activeMessage?.metadata);
 
-  if (!activeMessage || content.isEmpty) return <EmptyAssistantMessage />;
+  if (!activeMessage || (content.isEmpty && !isCancelled)) return <EmptyAssistantMessage />;
 
   const hasMultipleVersions = versionList.length > 1;
 
@@ -126,6 +132,9 @@ export function AssistantMessage({
             {!content.isStreaming && <CitationChipRow references={content.remainingReferences} />}
           </>
         )}
+        {isCancelled && !content.isStreaming && (
+          <p className="text-xs text-text-tertiary select-none">{t("status.stopped")}</p>
+        )}
       </MessageContent>
 
       {!content.isStreaming && (
@@ -140,6 +149,8 @@ export function AssistantMessage({
           onCopy={handleCopy}
           onRegenerate={onRegenerate}
           showRegenerate={showRegenerate}
+          onContinue={onContinue}
+          showContinue={Boolean(showContinue && isCancelled)}
           isStreaming={content.isStreaming}
           copied={copied}
         />

@@ -52,6 +52,10 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
     chatAnnouncement,
   } = useChatPanel(notebookId, panelRef);
 
+  const handleContinue = useCallback(() => {
+    handleSubmit(t("actions.continuePrompt"));
+  }, [handleSubmit, t]);
+
   const [responseAnnouncement, setResponseAnnouncement] = useState<string | null>(null);
   const prevStatusRef = useRef(status);
 
@@ -157,6 +161,7 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
             error={error}
             onCopy={handleCopy}
             onRegenerate={handleRegenerate}
+            onContinue={handleContinue}
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-floating-control select-none px-2">
             <div className="relative mx-auto w-full max-w-4xl">
@@ -217,6 +222,7 @@ interface ChatContentProps {
   error: ReturnType<typeof useChatPanel>["error"];
   onCopy: (content: string) => void;
   onRegenerate: () => void;
+  onContinue: () => void;
 }
 
 function ChatContent({
@@ -230,6 +236,7 @@ function ChatContent({
   error,
   onCopy,
   onRegenerate,
+  onContinue,
 }: ChatContentProps) {
   const { t } = useTranslation("chat");
   const {
@@ -308,6 +315,8 @@ function ChatContent({
           error={error}
           onCopy={onCopy}
           onRegenerate={onRegenerate}
+          onContinue={onContinue}
+          isLoading={isLoading}
         />
       )}
     </ConversationContent>

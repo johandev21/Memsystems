@@ -296,3 +296,115 @@ describe("AssistantMessage reasoning streaming", () => {
     expect(container.textContent).not.toContain("Thinking...");
   });
 });
+describe("AssistantMessage stopped state and continue action", () => {
+  it("shows the Stopped label when finishReason is cancelled", () => {
+    const message: UIMessage = {
+      id: "assistant-stopped-1",
+      role: "assistant",
+      parts: [{ type: "text", text: "This response was cut off" }],
+      metadata: { finishReason: "cancelled" },
+    };
+
+    render(
+      <AssistantMessage
+        message={message}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Stopped")).toBeTruthy();
+  });
+
+  it("does not show the Stopped label when finishReason is stop", () => {
+    const message: UIMessage = {
+      id: "assistant-complete-1",
+      role: "assistant",
+      parts: [{ type: "text", text: "This response completed successfully." }],
+      metadata: { finishReason: "stop" },
+    };
+
+    render(
+      <AssistantMessage
+        message={message}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Stopped")).toBeNull();
+  });
+
+  it("renders Continue button when cancelled and showContinue is true, and triggers onContinue", async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+    const message: UIMessage = {
+      id: "assistant-stopped-1",
+      role: "assistant",
+      parts: [{ type: "text", text: "This response was cut off" }],
+      metadata: { finishReason: "cancelled" },
+    };
+
+    render(
+      <AssistantMessage
+        message={message}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showContinue={true}
+        onContinue={onContinue}
+      />,
+    );
+
+    const continueBtn = screen.getByRole("button", { name: "Continue" });
+    expect(continueBtn).toBeTruthy();
+    await user.click(continueBtn);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render Continue button when showContinue is false even if cancelled", () => {
+    const message: UIMessage = {
+      id: "assistant-stopped-1",
+      role: "assistant",
+      parts: [{ type: "text", text: "This response was cut off" }],
+      metadata: { finishReason: "cancelled" },
+    };
+
+    render(
+      <AssistantMessage
+        message={message}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showContinue={false}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+  });
+
+  it("does not render Continue button when finishReason is not cancelled even if showContinue is true", () => {
+    const message: UIMessage = {
+      id: "assistant-complete-1",
+      role: "assistant",
+      parts: [{ type: "text", text: "This response completed normally." }],
+      metadata: { finishReason: "stop" },
+    };
+
+    render(
+      <AssistantMessage
+        message={message}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showContinue={true}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+  });
+});

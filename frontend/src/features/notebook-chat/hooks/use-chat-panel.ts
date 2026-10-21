@@ -134,7 +134,21 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     messages: initialMessages,
     onFinish: async ({ isAbort, isError, messages: finishedMessages }) => {
       if (isAbort) {
-        abortedMessagesRef.current = finishedMessages;
+        const markedMessages = finishedMessages.map((msg, idx) =>
+          idx === finishedMessages.length - 1 && msg.role === "assistant"
+            ? {
+                ...msg,
+                metadata: {
+                  ...(typeof msg.metadata === "object" && msg.metadata !== null
+                    ? msg.metadata
+                    : {}),
+                  finishReason: "cancelled",
+                },
+              }
+            : msg,
+        );
+        setMessages(markedMessages);
+        abortedMessagesRef.current = markedMessages;
         await queryClient.refetchQueries({
           queryKey: ["chat", notebookId, "messages"],
         });
