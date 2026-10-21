@@ -113,9 +113,25 @@ async function createGroundingHarness() {
         where: vi.fn(() => {
           const rows = Promise.resolve(degradedRowsState.rows);
           return {
-            orderBy: vi
-              .fn()
-              .mockImplementation(() => Promise.resolve(historyRowsState.rows)),
+            orderBy: vi.fn().mockImplementation((orderCol) => {
+              const rows = [...historyRowsState.rows];
+              const isDesc = Boolean(
+                orderCol?.queryChunks?.some((c) =>
+                  c?.value?.some((v) => typeof v === 'string' && v.includes('desc')),
+                ),
+              );
+              rows.sort((a, b) => {
+                const at = a.createdAt ? new Date(a.createdAt as string | number | Date).getTime() : 0;
+                const bt = b.createdAt ? new Date(b.createdAt as string | number | Date).getTime() : 0;
+                return isDesc ? bt - at : at - bt;
+              });
+              const promise = Promise.resolve(rows);
+              return Object.assign(promise, {
+                limit: vi.fn().mockImplementation((lim) =>
+                  Promise.resolve(rows.slice(0, lim)),
+                ),
+              });
+            }),
             then: rows.then.bind(rows),
           };
         }),

@@ -50,6 +50,7 @@ const chatRequestSchema = z.object({
   messages: z.array(messageSchema).min(1),
   model: z.string().min(1),
   message: messageSchema.optional(),
+  /** @deprecated Unused. Kept for backwards compatibility with existing clients. */
   regenerateMessageId: z.string().optional(),
   language: z.string().min(1).max(35).optional(),
   groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),

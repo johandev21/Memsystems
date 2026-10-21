@@ -181,7 +181,8 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     if (status === "streaming" || status === "submitted") return;
     if (abortedMessagesRef.current) return;
     setMessages(formattedMessages);
-  }, [chatHistory, formattedMessages, status, setMessages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formattedMessages, status, setMessages]);
 
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;

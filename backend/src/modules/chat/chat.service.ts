@@ -5,7 +5,7 @@ import {
   createUIMessageStreamResponse,
   streamText,
 } from 'ai';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
@@ -50,7 +50,33 @@ import {
   type NoEvidenceContext,
 } from './chat-no-evidence';
 
-const MAX_HISTORY_MESSAGES = 6;
+export const MAX_HISTORY_MESSAGES = 6;
+export const HISTORY_FETCH_LIMIT = 30;
+
+export function stripCitationKeys(text?: string | null): string {
+  if (!text) return '';
+  return text
+    .replace(/`?\[ref:R\d+\]`?/gi, '')
+    .replace(/[ \t]+([.,;:!?])/g, '$1')
+    .replace(/ {2,}/g, ' ')
+    .replace(/[ \t]+$/gm, '')
+    .trim();
+}
+
+export function deduplicateHistoryMessages<T extends { role: string }>(
+  messages: T[],
+): T[] {
+  const result: T[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const current = messages[i];
+    const next = messages[i + 1];
+    if (current.role === 'assistant' && next && next.role === 'assistant') {
+      continue;
+    }
+    result.push(current);
+  }
+  return result;
+}
 
 const SYSTEM_PROMPT = `You are a knowledgeable tutor and research assistant. Help the user master their topics of interest using the provided source passages or your general knowledge.
 
@@ -106,6 +132,7 @@ export interface SendInput {
   content: string;
   parts?: Record<string, unknown>[];
   messageId?: string;
+  /** @deprecated Unused. Kept for backwards compatibility with existing callers. */
   regenerateMessageId?: string;
   model: string;
   abortSignal?: AbortSignal;
@@ -421,7 +448,7 @@ export class ChatService {
     const selectedModel = provider
       .listModels?.()
       .find((candidate) => candidate.id === modelId);
-    void selectedModel;
+
     const model = provider.createModel(modelId);
     const requestOptions = this.aiService.getGatewayRequestOptions();
 
@@ -470,7 +497,8 @@ export class ChatService {
 
       return {
         role: m.role,
-        content: m.content,
+        content:
+          m.role === 'assistant' ? stripCitationKeys(m.content) : m.content,
       };
     });
 
@@ -780,21 +808,47 @@ export class ChatService {
     await this.retrievalTraceService.clearChatTraces(notebookId);
   }
 
-  private async getRecentHistory(
+  async getRecentHistory(
     notebookId: string,
-    limit: number,
+    limit: number = MAX_HISTORY_MESSAGES,
     excludeMessageId?: string,
   ) {
+    const fetchLimit = Math.max(limit * 4, HISTORY_FETCH_LIMIT);
+    const whereConditions = [eq(notebookChatMessages.notebookId, notebookId)];
+    if (excludeMessageId) {
+      whereConditions.push(ne(notebookChatMessages.id, excludeMessageId));
+    }
+
     const rows = await this.db
       .select()
       .from(notebookChatMessages)
-      .where(eq(notebookChatMessages.notebookId, notebookId))
-      .orderBy(asc(notebookChatMessages.createdAt));
+      .where(
+        whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions[0],
+      )
+      .orderBy(desc(notebookChatMessages.createdAt))
+      .limit(fetchLimit);
 
-    const filtered = excludeMessageId
-      ? rows.filter((r) => r.id !== excludeMessageId)
-      : rows;
+    const chronological = [...rows].reverse();
+    const deduplicated = deduplicateHistoryMessages(chronological);
+    const windowed = deduplicated.slice(-limit);
 
-    return filtered.slice(-limit);
+    return windowed.map((msg) => {
+      if (msg.role !== 'assistant') return msg;
+      const cleanContent = stripCitationKeys(msg.content);
+      const cleanParts = Array.isArray(msg.parts)
+        ? msg.parts.map((part) =>
+            part.type === 'text' && typeof part.text === 'string'
+              ? { ...part, text: stripCitationKeys(part.text) }
+              : part,
+          )
+        : msg.parts;
+      return {
+        ...msg,
+        content: cleanContent,
+        parts: cleanParts,
+      };
+    });
   }
 }
