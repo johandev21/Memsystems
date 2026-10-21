@@ -29,6 +29,7 @@
     "title": "Clear Chat History"
   },
   "composer": {
+    "attachFiles": "Attach files",
     "attachmentAlt": "Attachment",
     "attachPhoto": "Attach photo",
     "imageAlt": "Image",
@@ -38,7 +39,9 @@
     "searchPlaceholder": "Search models...",
     "selectModelTitle": "Select Model",
     "sendMessage": "Send message",
-    "stopResponse": "Stop response"
+    "stopResponse": "Stop response",
+    "unsupportedAttachment": "This model does not support file attachments",
+    "unsupportedImage": "This model does not support image attachments"
   },
   "empty": {
     "blankCanvas": "Start with a blank canvas",

@@ -29,6 +29,7 @@
     "title": "Borrar el historial del chat"
   },
   "composer": {
+    "attachFiles": "Adjuntar archivos",
     "attachmentAlt": "Archivo adjunto",
     "attachPhoto": "Adjuntar foto",
     "imageAlt": "Imagen",
@@ -38,7 +39,9 @@
     "searchPlaceholder": "Buscar modelos...",
     "selectModelTitle": "Seleccionar modelo",
     "sendMessage": "Enviar mensaje",
-    "stopResponse": "Detener respuesta"
+    "stopResponse": "Detener respuesta",
+    "unsupportedAttachment": "Este modelo no admite archivos adjuntos",
+    "unsupportedImage": "Este modelo no admite imágenes"
   },
   "empty": {
     "blankCanvas": "Empieza con un lienzo en blanco",

@@ -114,6 +114,7 @@ export default interface Resources {
       "title": "Clear Chat History"
     },
     "composer": {
+      "attachFiles": "Attach files",
       "attachPhoto": "Attach photo",
       "attachmentAlt": "Attachment",
       "imageAlt": "Image",
@@ -123,7 +124,9 @@ export default interface Resources {
       "searchPlaceholder": "Search models...",
       "selectModelTitle": "Select Model",
       "sendMessage": "Send message",
-      "stopResponse": "Stop response"
+      "stopResponse": "Stop response",
+      "unsupportedAttachment": "This model does not support file attachments",
+      "unsupportedImage": "This model does not support image attachments"
     },
     "empty": {
       "blankCanvas": "Start with a blank canvas",

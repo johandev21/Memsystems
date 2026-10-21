@@ -647,6 +647,90 @@ describe('ChatService streaming lifecycle', () => {
     expect(mocks.streamText).not.toHaveBeenCalled();
   });
 
+  it('handles non-image file parts in user messages', async () => {
+    await service.sendMessage('notebook-1', {
+      content: 'Summarize this PDF',
+      parts: [
+        {
+          type: 'file',
+          mediaType: 'application/pdf',
+          url: 'https://example.com/doc.pdf',
+          filename: 'doc.pdf',
+        },
+        { type: 'text', text: 'Summarize this PDF' },
+      ],
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(mocks.streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: expect.arrayContaining([
+              { type: 'text', text: 'Summarize this PDF' },
+              {
+                type: 'file',
+                data: 'https://example.com/doc.pdf',
+                mediaType: 'application/pdf',
+                filename: 'doc.pdf',
+              },
+            ]),
+          }),
+        ]),
+      }),
+    );
+    expect(requireCapability).toHaveBeenCalledWith(
+      expect.anything(),
+      'openai/gpt-5.6-sol',
+      'fileInput',
+      'file attachments',
+    );
+  });
+
+  it('rejects unsupported file input before starting the model stream', async () => {
+    requireCapability.mockImplementation(
+      (_provider: unknown, _modelId: string, capability: string) => {
+        if (capability === 'fileInput') {
+          throw new CapabilityUnsupportedError(
+            "DeepSeek R1 doesn't support file attachments. Switch to a model that supports file attachments and try again.",
+          );
+        }
+      },
+    );
+
+    await expect(
+      service.sendMessage('notebook-1', {
+        content: 'Explain this document',
+        parts: [
+          {
+            type: 'file',
+            mediaType: 'application/pdf',
+            url: 'https://example.com/doc.pdf',
+          },
+        ],
+        model: 'deepseek/deepseek-r1',
+      }),
+    ).rejects.toThrow(/doesn't support file attachments/);
+    expect(mocks.streamText).not.toHaveBeenCalled();
+  });
+
+  it('rejects file attachments without valid mediaType', async () => {
+    await expect(
+      service.sendMessage('notebook-1', {
+        content: 'Check this file',
+        parts: [
+          {
+            type: 'file',
+            url: 'https://example.com/unknown',
+          },
+        ],
+        model: 'openai/gpt-5.6-sol',
+      }),
+    ).rejects.toThrow(/mediaType is required/);
+    expect(mocks.streamText).not.toHaveBeenCalled();
+  });
+
   it('requests gateway options without any fallback model chain', async () => {
     const aiService = (service as any).aiService as {
       getGatewayRequestOptions: ReturnType<typeof vi.fn>;
@@ -789,6 +873,45 @@ describe('ChatService streaming lifecycle', () => {
             role: 'user',
             content: [
               { type: 'image', image: 'data:image/png;base64,iVBORw0KGgo=' },
+            ],
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it('sends file-only input without embedding an empty retrieval query', async () => {
+    await expect(
+      service.sendMessage('notebook-1', {
+        content: '',
+        parts: [
+          {
+            type: 'file',
+            mediaType: 'application/pdf',
+            url: 'https://example.com/paper.pdf',
+            filename: 'paper.pdf',
+          },
+        ],
+        model: 'openai/gpt-5.6-sol',
+      }),
+    ).resolves.toMatchObject({ userMessageId: expect.any(String) });
+
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(
+      insertedValues.find((values) => values.role === 'user'),
+    ).toMatchObject({ content: '', parts: [{ type: 'file' }] });
+    expect(mocks.streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: [
+              {
+                type: 'file',
+                data: 'https://example.com/paper.pdf',
+                mediaType: 'application/pdf',
+                filename: 'paper.pdf',
+              },
             ],
           }),
         ]),

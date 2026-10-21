@@ -7,6 +7,7 @@ import {
 } from 'ai';
 import { and, asc, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { BadRequestError } from '../../common/errors/domain-error';
 import * as appSchema from '../../database/schema';
 import {
   notebookChatMessages,
@@ -417,6 +418,18 @@ export class ChatService {
     const modelId = input.model;
     const provider = await this.aiService.getProviderForModel(modelId);
     const submittedParts = input.parts ?? [];
+    for (const part of submittedParts) {
+      if (part.type === 'file') {
+        if (!part.mediaType || typeof part.mediaType !== 'string') {
+          throw new BadRequestError(
+            'Invalid file attachment: mediaType is required',
+            {
+              messageKey: 'errors.chat.attachment.unsupported',
+            },
+          );
+        }
+      }
+    }
     const hasImageInput = submittedParts.some(
       (part) =>
         part.type === 'file' &&
@@ -426,8 +439,8 @@ export class ChatService {
     const hasFileInput = submittedParts.some(
       (part) =>
         part.type === 'file' &&
-        (typeof part.mediaType !== 'string' ||
-          !part.mediaType.startsWith('image/')),
+        typeof part.mediaType === 'string' &&
+        !part.mediaType.startsWith('image/'),
     );
     if (hasImageInput) {
       this.aiService.requireCapability(
@@ -466,14 +479,15 @@ export class ChatService {
           text?: string;
           mediaType?: string;
           url?: string;
+          filename?: string;
         }>) || [];
-      const hasImage = parts.some(
-        (p) => p.type === 'file' && p.mediaType?.startsWith('image/'),
-      );
+      const hasFiles = parts.some((p) => p.type === 'file');
 
-      if (m.role === 'user' && hasImage) {
+      if (m.role === 'user' && hasFiles) {
         const contentParts: Array<
-          { type: 'text'; text: string } | { type: 'image'; image: string }
+          | { type: 'text'; text: string }
+          | { type: 'image'; image: string }
+          | { type: 'file'; data: string; mediaType: string; filename?: string }
         > = [];
         for (const p of parts) {
           if (p.type === 'text' && p.text) {
@@ -484,7 +498,22 @@ export class ChatService {
             p.mediaType?.startsWith('image/')
           ) {
             contentParts.push({ type: 'image', image: p.url });
+          } else if (
+            p.type === 'file' &&
+            p.url &&
+            p.mediaType &&
+            !p.mediaType.startsWith('image/')
+          ) {
+            contentParts.push({
+              type: 'file',
+              data: p.url,
+              mediaType: p.mediaType,
+              ...(p.filename ? { filename: p.filename } : {}),
+            });
           }
+        }
+        if (!parts.some((p) => p.type === 'text') && m.content?.trim()) {
+          contentParts.push({ type: 'text', text: m.content });
         }
         if (contentParts.length === 0) {
           contentParts.push({ type: 'text', text: m.content });
