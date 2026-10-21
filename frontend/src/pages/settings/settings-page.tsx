@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components/layout";
 import {
-  AgentAccessCard,
   AppearanceCard,
   LanguageCard,
   MobileSettingsView,
@@ -62,18 +61,6 @@ export function SettingsPage() {
               </p>
             </div>
             <TrashCard />
-          </section>
-
-          <section className="mt-12" aria-labelledby="agent-access-heading">
-            <div className="mb-6">
-              <h2 id="agent-access-heading" className="text-base font-semibold tracking-tight">
-                {t("agentAccess.title")}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                {t("agentAccess.description")}
-              </p>
-            </div>
-            <AgentAccessCard />
           </section>
         </main>
       </div>

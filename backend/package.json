@@ -21,6 +21,8 @@
     "test:watch": "vitest",
     "test:db:setup": "ts-node tests/ensure-test-db.ts",
     "openapi:export": "ts-node --transpile-only scripts/export-openapi.ts",
+    "openapi:check": "ts-node --transpile-only scripts/export-openapi.ts --check",
+    "openapi:export": "ts-node --transpile-only scripts/export-openapi.ts",
     "openapi:check": "ts-node --transpile-only scripts/export-openapi.ts --check"
   },
   "dependencies": {

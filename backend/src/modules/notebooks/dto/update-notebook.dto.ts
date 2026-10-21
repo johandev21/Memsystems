@@ -1,7 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { groundingModeSchema } from '../../../common/dto/shared-schemas';
-import { agentAccessLevelSchema } from '../../agent-access/dto/agent-access.schemas';
 
 export const updateNotebookSchema = z.object({
   title: z
@@ -30,12 +29,6 @@ export const updateNotebookSchema = z.object({
       'Library folder to move the notebook into, or null for the root.',
     ),
   groundingMode: groundingModeSchema.optional(),
-  agentAccess: agentAccessLevelSchema
-    .nullable()
-    .optional()
-    .describe(
-      'Agent access override for this Notebook, or null to inherit the workspace default.',
-    ),
   bannerFocalPoint: z
     .object({
       x: z.number().min(0).max(1),

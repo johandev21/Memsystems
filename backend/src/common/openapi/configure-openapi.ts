@@ -27,21 +27,11 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         '',
         'Sources are text, URLs, or files ingested into a Notebook. Chat answers with Citations to the Evidence retrieved from those Sources. Study Material Generation streams a new Study Material from a Brief and the selected Sources.',
         '',
-        'Agent access uses a bearer Agent Key. The `agentKey` security scheme documents that header; endpoints that accept it are added by the Agent Access feature.',
+        'Direct API access is available for local automation and agents without authentication.',
       ].join('\n'),
     )
     .setVersion('1.0.0')
     .setOpenAPIVersion('3.1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'Agent Key',
-        description:
-          'Agent Key created in Settings. Send it as `Authorization: Bearer <agentKey>`.',
-      },
-      'agentKey',
-    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
@@ -71,7 +61,6 @@ export function configureOpenApi(app: INestApplication): OpenAPIObject {
     jsonDocumentUrl: OPENAPI_JSON_PATH,
     swaggerOptions: {
       displayRequestDuration: true,
-      persistAuthorization: true,
     },
   });
 

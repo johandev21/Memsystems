@@ -6,7 +6,6 @@ import {
   Param,
   Post,
   Res,
-  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import {
@@ -21,10 +20,6 @@ import {
 import type { Response } from 'express';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import {
-  AgentRateLimit,
-  AgentRateLimitGuard,
-} from '../agent-access/agent-rate-limit.guard';
 import { ChatService } from './chat.service';
 import { ChatRequestDto } from './dto/chat-request.dto';
 
@@ -63,8 +58,6 @@ export class ChatController {
       },
     },
   })
-  @UseGuards(AgentRateLimitGuard)
-  @AgentRateLimit('chat')
   @UsePipes(new ZodValidationPipe(ChatRequestDto.schema))
   async sendMessage(
     @Param('id') notebookId: string,

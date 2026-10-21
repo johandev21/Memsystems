@@ -11,12 +11,7 @@ import {
   studyMaterialFolders,
   studyMaterials,
 } from '../../database/schema';
-import type { AgentAccessLevel, GroundingMode } from '../../database/schema';
-import {
-  AgentSettingsService,
-  DEFAULT_AGENT_ACCESS_SETTINGS,
-} from '../agent-access/agent-settings.service';
-import { resolveAgentAccess } from './agent-access';
+import type { GroundingMode } from '../../database/schema';
 import { DEFAULT_GROUNDING_MODE, isGroundingMode } from './grounding-mode';
 import {
   BadRequestError,
@@ -59,7 +54,6 @@ export interface CreateNotebookInput {
   icon?: string;
   folderId?: string | null;
   groundingMode?: GroundingMode;
-  agentAccess?: AgentAccessLevel | null;
 }
 
 export interface UpdateNotebookInput {
@@ -69,7 +63,6 @@ export interface UpdateNotebookInput {
   folderId?: string | null;
   bannerFocalPoint?: { x: number; y: number } | null;
   groundingMode?: GroundingMode;
-  agentAccess?: AgentAccessLevel | null;
 }
 
 export interface NotebookResponse {
@@ -83,10 +76,6 @@ export interface NotebookResponse {
   bannerVariants: BannerVariantUrls | null;
   bannerFocalPoint: { x: number; y: number } | null;
   groundingMode: GroundingMode;
-  /** Resolved access level: the Notebook override or the workspace default. */
-  agentAccess: AgentAccessLevel;
-  /** The Notebook-level override, or null when it inherits the default. */
-  agentAccessOverride: AgentAccessLevel | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,11 +86,7 @@ export interface BannerUploadResponse {
   bannerUrl: string;
 }
 
-function toResponse(
-  nb: typeof notebooks.$inferSelect,
-  notebookDefault: AgentAccessLevel,
-): NotebookResponse {
-  const agentAccessOverride = nb.agentAccess ?? null;
+function toResponse(nb: typeof notebooks.$inferSelect): NotebookResponse {
   return {
     id: nb.id,
     title: nb.title,
@@ -115,8 +100,6 @@ function toResponse(
     groundingMode: isGroundingMode(nb.groundingMode)
       ? nb.groundingMode
       : DEFAULT_GROUNDING_MODE,
-    agentAccess: resolveAgentAccess(agentAccessOverride, notebookDefault),
-    agentAccessOverride,
     createdAt: nb.createdAt,
     updatedAt: nb.updatedAt,
   };
@@ -152,7 +135,6 @@ export class NotebooksService {
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly storageService: StorageService,
     @Optional() private readonly jobQueue?: JobQueueService,
-    @Optional() private readonly agentSettings?: AgentSettingsService,
   ) {}
 
   async assertNotebookOwner(notebookId: string): Promise<void> {
@@ -184,34 +166,8 @@ export class NotebooksService {
       : DEFAULT_GROUNDING_MODE;
   }
 
-  /**
-   * Resolves the access level MCP tools must enforce for one Notebook.
-   * A Notebook override wins; otherwise the workspace default applies.
-   */
-  async getAgentAccess(notebookId: string): Promise<AgentAccessLevel> {
-    const [notebook] = await this.db
-      .select({ agentAccess: notebooks.agentAccess })
-      .from(notebooks)
-      .where(and(eq(notebooks.id, notebookId), isNull(notebooks.deletedAt)))
-      .limit(1);
-    if (!notebook) {
-      throw new NotFoundError('Notebook', {
-        messageKey: 'errors.notebooks.notebook.notFound',
-      });
-    }
-    return resolveAgentAccess(
-      notebook.agentAccess,
-      await this.getAgentAccessDefault(),
-    );
-  }
-
-  async formatNotebook(
-    nb: typeof notebooks.$inferSelect,
-    notebookDefault?: AgentAccessLevel,
-  ) {
-    const resolvedDefault =
-      notebookDefault ?? (await this.getAgentAccessDefault());
-    const res = toResponse(nb, resolvedDefault);
+  async formatNotebook(nb: typeof notebooks.$inferSelect) {
+    const res = toResponse(nb);
     res.bannerUrl = nb.banner
       ? await this.storageService.presignDownload(nb.banner, BANNER_PRESIGN_TTL)
       : null;
@@ -223,7 +179,6 @@ export class NotebooksService {
   }
 
   async list(filter?: { limit?: number; offset?: number; search?: string }) {
-    const notebookDefault = await this.getAgentAccessDefault();
     if (filter?.limit !== undefined || filter?.search !== undefined) {
       const conditions = [
         isNull(notebooks.deletedAt),
@@ -252,7 +207,7 @@ export class NotebooksService {
         .offset(filter.offset ?? 0);
 
       const notebooksRes = await Promise.all(
-        rows.map((row) => this.formatNotebook(row, notebookDefault)),
+        rows.map((row) => this.formatNotebook(row)),
       );
 
       return { notebooks: notebooksRes, total };
@@ -264,9 +219,7 @@ export class NotebooksService {
       .where(isNull(notebooks.deletedAt))
       .orderBy(desc(notebooks.updatedAt));
 
-    return Promise.all(
-      rows.map((nb) => this.formatNotebook(nb, notebookDefault)),
-    );
+    return Promise.all(rows.map((nb) => this.formatNotebook(nb)));
   }
 
   async get(id: string) {
@@ -295,10 +248,9 @@ export class NotebooksService {
         icon: input.icon?.trim().slice(0, 50) ?? 'notebook',
         folderId,
         groundingMode: input.groundingMode ?? DEFAULT_GROUNDING_MODE,
-        agentAccess: input.agentAccess ?? null,
       })
       .returning();
-    return this.formatNotebook(row);
+    return toResponse(row);
   }
 
   async update(id: string, input: UpdateNotebookInput) {
@@ -326,9 +278,6 @@ export class NotebooksService {
     if (input.groundingMode !== undefined) {
       updates.groundingMode = input.groundingMode;
     }
-    if (input.agentAccess !== undefined) {
-      updates.agentAccess = input.agentAccess;
-    }
     if (Object.keys(updates).length === 0) {
       return this.get(id);
     }
@@ -342,7 +291,18 @@ export class NotebooksService {
         messageKey: 'errors.notebooks.notebook.notFound',
       });
     }
-    return this.formatNotebook(row);
+    const res = toResponse(row);
+    res.bannerUrl = row.banner
+      ? await this.storageService.presignDownload(
+          row.banner,
+          BANNER_PRESIGN_TTL,
+        )
+      : null;
+    res.bannerVariants = await presignBannerVariants(
+      this.storageService,
+      row.bannerVariants,
+    );
+    return res;
   }
 
   async delete(id: string) {
@@ -436,10 +396,7 @@ export class NotebooksService {
       await doSoftDelete(this.db);
     }
 
-    return toResponse(
-      { ...row, deletedAt: now },
-      await this.getAgentAccessDefault(),
-    );
+    return toResponse({ ...row, deletedAt: now });
   }
 
   async removeBanner(notebookId: string) {
@@ -466,7 +423,7 @@ export class NotebooksService {
       .where(eq(notebooks.id, notebookId))
       .returning();
 
-    const res = toResponse(row, await this.getAgentAccessDefault());
+    const res = toResponse(row);
     res.bannerUrl = null;
     return res;
   }
@@ -564,7 +521,7 @@ export class NotebooksService {
       .where(eq(notebooks.id, notebookId))
       .returning();
 
-    const res = toResponse(row, await this.getAgentAccessDefault());
+    const res = toResponse(row);
     res.bannerUrl = await this.storageService.presignDownload(
       key,
       BANNER_PRESIGN_TTL,
@@ -574,14 +531,6 @@ export class NotebooksService {
       variantKeys,
     );
     return res;
-  }
-
-  private async getAgentAccessDefault(): Promise<AgentAccessLevel> {
-    if (!this.agentSettings) {
-      return DEFAULT_AGENT_ACCESS_SETTINGS.notebookDefault;
-    }
-    const settings = await this.agentSettings.get();
-    return settings.notebookDefault;
   }
 
   private async assertFolderExists(folderId: string): Promise<void> {

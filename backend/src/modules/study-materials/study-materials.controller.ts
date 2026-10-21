@@ -8,7 +8,6 @@ import {
   Post,
   Query,
   Res,
-  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import {
@@ -24,10 +23,6 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import {
-  AgentRateLimit,
-  AgentRateLimitGuard,
-} from '../agent-access/agent-rate-limit.guard';
 import { GenerationService } from './generation/generation.service';
 import { StudyMaterialKind } from './content/shapes';
 import { StudyMaterialFolderService } from './study-material-folder.service';
@@ -388,8 +383,6 @@ export class StudyMaterialsController {
       },
     },
   })
-  @UseGuards(AgentRateLimitGuard)
-  @AgentRateLimit('generate')
   @UsePipes(new ZodValidationPipe(GenerateStudyMaterialDto.schema))
   async generate(
     @Param('id') notebookId: string,

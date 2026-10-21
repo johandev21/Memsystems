@@ -1,5 +1,4 @@
 import { fetchApi, apiDelete, createQueryOptions } from "@/shared/api";
-import type { AgentAccessLevel } from "@/shared/types/agent-access";
 import type { Notebook, NotebooksResponse } from "../types";
 import type { BannerVariantWidth } from "../utils/banner-variants";
 
@@ -34,7 +33,7 @@ export async function updateNotebook(
       Notebook,
       "title" | "description" | "icon" | "folderId" | "bannerFocalPoint" | "groundingMode"
     >
-  > & { agentAccess?: AgentAccessLevel | null },
+  >,
 ): Promise<Notebook> {
   const res = await fetchApi(`/api/notebooks/${id}`, {
     method: "PATCH",
@@ -114,4 +113,3 @@ export async function importNotebook(file: File, folderId?: string | null): Prom
   }
   return res.json();
 }
-
