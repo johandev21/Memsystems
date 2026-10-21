@@ -1,5 +1,6 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Message,
   MessageContent,
@@ -66,6 +67,7 @@ export function AssistantMessage({
   onRegenerate,
   showRegenerate = true,
 }: AssistantMessageProps) {
+  const { t } = useTranslation("chat");
   const versionList = useMemo(() => {
     if (versions && versions.length > 0) return versions;
     if (message) return [message];
@@ -113,6 +115,7 @@ export function AssistantMessage({
 
   return (
     <Message from="assistant">
+      <span className="sr-only">{t("sender.assistant")}</span>
       <MessageContent>
         {content.noEvidence ? (
           <NoEvidencePanel metadata={content.noEvidence} />
@@ -238,8 +241,10 @@ function AssistantResponses({
 }
 
 function EmptyAssistantMessage() {
+  const { t } = useTranslation("chat");
   return (
     <Message from="assistant">
+      <span className="sr-only">{t("sender.assistant")}</span>
       <MessageContent>
         <MessageResponse> </MessageResponse>
       </MessageContent>

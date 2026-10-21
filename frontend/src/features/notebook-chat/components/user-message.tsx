@@ -29,6 +29,7 @@ export function UserMessage({ message }: UserMessageProps) {
 
   return (
     <Message from="user">
+      <span className="sr-only">{t("sender.user")}</span>
       <MessageContent className="px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3 break-words [overflow-wrap:anywhere]">
         {fileParts.map((file, index) => {
           if (file.mediaType?.startsWith("image/")) {

@@ -88,6 +88,10 @@ export default interface Resources {
       "openingChat": "Opening chat.",
       "openingChatFor": "Opening chat for {{concept}}."
     },
+    "announcements": {
+      "responding": "Responding",
+      "responseComplete": "Response complete"
+    },
     "assistant": {
       "branchPage": "{{current}} of {{total}}",
       "copied": "Copied!",
@@ -173,6 +177,13 @@ export default interface Resources {
       "referencesAria": "References",
       "sourceUnavailable": "Source unavailable",
       "triggerAria": "Reference {{number}}: {{title}}"
+    },
+    "sender": {
+      "assistant": "Assistant",
+      "user": "You"
+    },
+    "transcript": {
+      "ariaLabel": "Chat transcript"
     },
     "userMessage": {
       "attachedImageAlt": "Attached image"

@@ -7,7 +7,7 @@ import {
 } from "@/features/ai";
 import { NotebookBanner } from "@/features/notebooks/components/shared/notebook-banner";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks/components/dialogs/notebook-settings-dialog";
-import { useCallback, useEffect, useLayoutEffect, memo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, memo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
@@ -51,6 +51,28 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
     stop,
     chatAnnouncement,
   } = useChatPanel(notebookId, panelRef);
+
+  const [responseAnnouncement, setResponseAnnouncement] = useState<string | null>(null);
+  const prevStatusRef = useRef(status);
+
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    if (prevStatus === status) return;
+    prevStatusRef.current = status;
+
+    const isGenerating = status === "submitted" || status === "streaming";
+    const wasGenerating = prevStatus === "submitted" || prevStatus === "streaming";
+
+    if (!wasGenerating && isGenerating) {
+      setResponseAnnouncement(t("announcements.responding"));
+    } else if (wasGenerating && status === "ready") {
+      setResponseAnnouncement(t("announcements.responseComplete"));
+      const timer = window.setTimeout(() => {
+        setResponseAnnouncement(null);
+      }, 4000);
+      return () => window.clearTimeout(timer);
+    }
+  }, [status, t]);
 
   useComposerHeight(conversationWrapperRef, composerWrapperRef);
 
@@ -98,6 +120,9 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
     <div ref={panelRef} className="flex flex-1 h-full w-full flex-col min-h-0">
       <div aria-live="polite" className="sr-only">
         {chatAnnouncement}
+      </div>
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {responseAnnouncement}
       </div>
       <div
         ref={conversationWrapperRef}
@@ -206,6 +231,7 @@ function ChatContent({
   onCopy,
   onRegenerate,
 }: ChatContentProps) {
+  const { t } = useTranslation("chat");
   const {
     isUntitled,
     showBannerAsUntitled,
@@ -217,7 +243,10 @@ function ChatContent({
   const showHistorySkeleton = isHistoryPending && !hasMessages;
   return (
     <ConversationContent
-      className="mx-auto w-full max-w-4xl pb-32 pb-(--composer-pad)"
+      role="log"
+      aria-label={t("transcript.ariaLabel")}
+      tabIndex={0}
+      className="mx-auto w-full max-w-4xl pb-32 pb-(--composer-pad) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
       aria-busy={isLoading}
       style={
         { "--composer-pad": "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties

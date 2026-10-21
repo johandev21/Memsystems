@@ -3,6 +3,10 @@
     "openingChat": "Abriendo el chat.",
     "openingChatFor": "Abriendo el chat para {{concept}}."
   },
+  "announcements": {
+    "responding": "Respondiendo",
+    "responseComplete": "Respuesta completa"
+  },
   "assistant": {
     "branchPage": "{{current}} de {{total}}",
     "copied": "¡Copiado!",
@@ -89,7 +93,14 @@
     "sourceUnavailable": "Fuente no disponible",
     "triggerAria": "Referencia {{number}}: {{title}}"
   },
+  "sender": {
+    "assistant": "Asistente",
+    "user": "Tú"
+  },
+  "transcript": {
+    "ariaLabel": "Transcripción del chat"
+  },
   "userMessage": {
     "attachedImageAlt": "Imagen adjunta"
   }
-}
+}
