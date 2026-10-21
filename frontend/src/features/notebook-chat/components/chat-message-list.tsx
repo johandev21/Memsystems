@@ -64,6 +64,7 @@ export function ChatMessageList({
           <MessageScrollerItem key={turn.id} messageId={turn.id}>
             <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
               <AssistantMessage
+                isLast={isLast}
                 versions={turn.versions}
                 citedSourcesMap={citedSourcesMap}
                 onCopy={onCopy}

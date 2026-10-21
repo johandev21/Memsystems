@@ -709,6 +709,12 @@ export class ChatService {
         generateMessageId: () => assistantMessageId,
         sendReasoning: true,
         messageMetadata: ({ part }) => {
+          if (part.type === 'start') {
+            return {
+              modelId,
+              citedSources: citationEvidence,
+            };
+          }
           if (part.type === 'finish') {
             const verification = verifyCitations(
               streamedText,

@@ -34,6 +34,7 @@ export interface AssistantMessageProps {
   showRegenerate?: boolean;
   onContinue?: () => void;
   showContinue?: boolean;
+  isLast?: boolean;
 }
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
@@ -72,6 +73,7 @@ export function AssistantMessage({
   showRegenerate = true,
   onContinue,
   showContinue = false,
+  isLast,
 }: AssistantMessageProps) {
   const { t } = useTranslation("chat");
   const versionList = useMemo(() => {
@@ -123,7 +125,7 @@ export function AssistantMessage({
   return (
     <Message
       className={cn(
-        !content.isStreaming && "[content-visibility:auto] [contain-intrinsic-size:auto_100px]",
+        !isLast && "[content-visibility:auto] [contain-intrinsic-size:auto_100px]",
       )}
       from="assistant"
     >
@@ -176,16 +178,24 @@ function useAssistantMessageContent(
   const isReasoningStreaming = hasStreamingReasoning && !hasStreamingText;
   const reasoningText = getReasoningText(parts);
   const textParts = parts.filter(isTextPart);
-  const referencesByKey = useMemo(
-    () => new Map(citedSources.map((source) => [source.citationKey.toUpperCase(), source])),
+  const citationFingerprint = useMemo(
+    () => citedSources.map((s) => `${s.id}:${s.citationKey}:${s.title}`).join("|"),
     [citedSources],
   );
+  const referencesByKey = useMemo(
+    () => new Map(citedSources.map((source) => [source.citationKey.toUpperCase(), source])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [citationFingerprint],
+  );
+  const referencesByKeyRef = useRef(referencesByKey);
+  referencesByKeyRef.current = referencesByKey;
+
   const messageComponents = useMemo<MessageComponents>(
     () => ({
       a: ({ href, children, ...props }) => {
         const referenceKey = getReferenceKeyFromHref(href);
         if (referenceKey) {
-          const reference = referencesByKey.get(referenceKey.toUpperCase());
+          const reference = referencesByKeyRef.current.get(referenceKey.toUpperCase());
           if (reference) return <CitationHoverCard reference={reference}>{children}</CitationHoverCard>;
           return <span className="font-medium text-muted-foreground">{children}</span>;
         }
@@ -202,7 +212,7 @@ function useAssistantMessageContent(
         );
       },
     }),
-    [referencesByKey],
+    [],
   );
   const preparedParts = textParts.map((part) =>
     prepareReferenceMessage(part.text, citedSources, isStreaming),
