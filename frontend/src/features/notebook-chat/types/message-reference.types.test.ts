@@ -121,7 +121,7 @@ describe("prepareReferenceMessage", () => {
     );
   });
 
-  it("leaves real code blocks untouched while stripping link syntax when streaming", () => {
+  it("leaves real code blocks untouched and renders citation links when streaming", () => {
     const refs = [{ ...baseReference, citationKey: "R1", number: 1 }];
     expect(prepareReferenceMessage("```\n[ref:R1]\n```", refs, false).markdown).toBe(
       "```\n[ref:R1]\n```",
@@ -129,8 +129,8 @@ describe("prepareReferenceMessage", () => {
     expect(prepareReferenceMessage("Claim `const x = 1`.", refs, false).markdown).toBe(
       "Claim `const x = 1`.",
     );
-    expect(prepareReferenceMessage("Vitality [2](#reference-R2).", refs, true).markdown).toBe(
-      "Vitality.",
+    expect(prepareReferenceMessage("Vitality [ref:R1].", refs, true).markdown).toBe(
+      "Vitality [1](#reference-R1).",
     );
   });
 });

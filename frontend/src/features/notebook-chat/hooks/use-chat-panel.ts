@@ -2,7 +2,7 @@ import type { FileUIPart } from "ai";
 import { type UIMessage, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConnectionStatus } from "@/features/ai";
@@ -132,6 +132,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     id: notebookId,
     transport,
     messages: initialMessages,
+    experimental_throttle: 50,
     onFinish: async ({ isAbort, isError, messages: finishedMessages }) => {
       if (isAbort) {
         const markedMessages = finishedMessages.map((msg, idx) =>
@@ -194,7 +195,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     if (!chatHistory) return;
     if (status === "streaming" || status === "submitted") return;
     if (abortedMessagesRef.current) return;
-    setMessages(formattedMessages);
+    startTransition(() => {
+      setMessages(formattedMessages);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formattedMessages, status, setMessages]);
 

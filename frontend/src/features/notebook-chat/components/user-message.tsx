@@ -28,7 +28,7 @@ export function UserMessage({ message }: UserMessageProps) {
   const fileParts = message.parts.filter(isFilePart);
 
   return (
-    <Message from="user">
+    <Message className="[content-visibility:auto] [contain-intrinsic-size:auto_60px]" from="user">
       <span className="sr-only">{t("sender.user")}</span>
       <MessageContent className="px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3 break-words [overflow-wrap:anywhere]">
         {fileParts.map((file, index) => {

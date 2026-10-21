@@ -17,6 +17,7 @@ import { isMessageCancelled } from "../types/chat-turn.types";
 import { CitationChipRow, CitationHoverCard } from "@/shared/citations/citation-hover-card";
 import { NoEvidencePanel } from "./no-evidence-message";
 import { AssistantActionToolbar } from "./assistant-action-toolbar";
+import { cn } from "@/shared/utils/cn";
 
 export { AssistantVersionControls } from "./assistant-version-controls";
 export type { AssistantVersionControlsProps } from "./assistant-version-controls";
@@ -120,7 +121,12 @@ export function AssistantMessage({
   };
 
   return (
-    <Message from="assistant">
+    <Message
+      className={cn(
+        !content.isStreaming && "[content-visibility:auto] [contain-intrinsic-size:auto_100px]",
+      )}
+      from="assistant"
+    >
       <span className="sr-only">{t("sender.assistant")}</span>
       <MessageContent>
         {content.noEvidence ? (
@@ -240,9 +246,9 @@ function AssistantResponses({
   messageId: string;
   content: ReturnType<typeof useAssistantMessageContent>;
 }) {
-  return content.preparedParts.map((part) => (
+  return content.preparedParts.map((part, index) => (
     <MessageResponse
-      key={`${messageId}-${part.markdown}`}
+      key={`${messageId}-${index}`}
       components={content.messageComponents}
       isStreaming={content.isStreaming}
     >
@@ -254,7 +260,10 @@ function AssistantResponses({
 function EmptyAssistantMessage() {
   const { t } = useTranslation("chat");
   return (
-    <Message from="assistant">
+    <Message
+      className="[content-visibility:auto] [contain-intrinsic-size:auto_100px]"
+      from="assistant"
+    >
       <span className="sr-only">{t("sender.assistant")}</span>
       <MessageContent>
         <MessageResponse> </MessageResponse>

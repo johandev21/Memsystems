@@ -1,10 +1,22 @@
-import { type ComponentProps, type ReactNode, useMemo } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  memo,
+  useMemo,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import {
+  MarkdownBlockContext,
+  repairTrailingBlock,
+  splitMarkdownIntoBlocks,
+} from "./markdown-blocks";
+
+export type { MarkdownBlockContextValue } from "./markdown-blocks";
 
 export type MarkdownComponents = Components;
 
@@ -21,6 +33,73 @@ type RehypePlugins = NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlu
 
 const defaultRemarkPlugins: RemarkPlugins = [remarkGfm, remarkMath];
 const defaultRehypePlugins: RehypePlugins = [[rehypeSanitize, markdownSanitizeSchema], rehypeKatex];
+
+function shallowEqual<T extends Record<string, unknown> | undefined>(a: T, b: T): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+export interface MemoizedMarkdownBlockProps {
+  content: string;
+  index: number;
+  isTrailing: boolean;
+  isStreaming: boolean;
+  components?: MarkdownComponents;
+  remarkPlugins: RemarkPlugins;
+  rehypePlugins: RehypePlugins;
+}
+
+export const MemoizedMarkdownBlock = memo(
+  ({
+    content,
+    isTrailing,
+    isStreaming,
+    components,
+    remarkPlugins,
+    rehypePlugins,
+  }: MemoizedMarkdownBlockProps) => {
+    const { processed, isFenceUnclosed } = useMemo(() => {
+      if (isTrailing && isStreaming) {
+        return repairTrailingBlock(content);
+      }
+      return { processed: content, isFenceUnclosed: false };
+    }, [content, isTrailing, isStreaming]);
+
+    const contextValue = useMemo(
+      () => ({ isFenceUnclosed, isStreaming }),
+      [isFenceUnclosed, isStreaming],
+    );
+
+    return (
+      <MarkdownBlockContext.Provider value={contextValue}>
+        <ReactMarkdown
+          components={components}
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={rehypePlugins}
+        >
+          {processed}
+        </ReactMarkdown>
+      </MarkdownBlockContext.Provider>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.content === nextProps.content &&
+    prevProps.isTrailing === nextProps.isTrailing &&
+    prevProps.isStreaming === nextProps.isStreaming &&
+    shallowEqual(
+      prevProps.components as Record<string, unknown>,
+      nextProps.components as Record<string, unknown>,
+    ),
+);
+
+MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";
 
 export type MarkdownRendererProps = Omit<
   ComponentProps<typeof ReactMarkdown>,
@@ -54,32 +133,33 @@ export function MarkdownRenderer({
     [rehypePlugins],
   );
 
-  if (isStreaming) {
-    return (
-      <div className={className}>
-        <div className="whitespace-pre-wrap wrap-break-word">{children}</div>
-        {trailingContent}
-      </div>
-    );
+  const textContent =
+    typeof children === "string" ? children : children != null ? String(children) : "";
+
+  const blocks = useMemo(() => {
+    if (!textContent) return [];
+    return splitMarkdownIntoBlocks(textContent);
+  }, [textContent]);
+
+  if (!textContent && !trailingContent) {
+    return null;
   }
 
-  const markdown = (
-    <ReactMarkdown
-      {...props}
-      components={components}
-      remarkPlugins={effectiveRemarkPlugins}
-      rehypePlugins={effectiveRehypePlugins}
-    >
-      {children}
-    </ReactMarkdown>
-  );
-
-  return className || trailingContent ? (
-    <div className={className}>
-      {markdown}
+  return (
+    <div className={className} {...props}>
+      {blocks.map((block, index) => (
+        <MemoizedMarkdownBlock
+          key={index}
+          content={block}
+          index={index}
+          isTrailing={index === blocks.length - 1}
+          isStreaming={isStreaming}
+          components={components}
+          remarkPlugins={effectiveRemarkPlugins}
+          rehypePlugins={effectiveRehypePlugins}
+        />
+      ))}
       {trailingContent}
     </div>
-  ) : (
-    markdown
   );
 }
