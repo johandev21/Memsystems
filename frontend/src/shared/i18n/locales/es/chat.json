@@ -19,6 +19,9 @@
     "previousVersion": "Versión anterior",
     "regenerateResponse": "Regenerar respuesta"
   },
+  "branch": {
+    "selectFailed": "No se pudo cambiar a esa rama de la conversación"
+  },
   "clearHistory": {
     "cancel": "Cancelar",
     "cleared": "Historial del chat borrado",
@@ -67,7 +70,8 @@
     "visualRegion": "Región visual"
   },
   "message": {
-    "copiedToClipboard": "Copiado al portapapeles"
+    "copiedToClipboard": "Copiado al portapapeles",
+    "copyFailed": "No se pudo copiar al portapapeles"
   },
   "noEvidence": {
     "correctiveAction": "Corrección sugerida: importa la versión en archivo o pega el texto de la fuente, y vuelve a preguntar.",
@@ -112,5 +116,12 @@
   },
   "userMessage": {
     "attachedImageAlt": "Imagen adjunta"
+  },
+  "edit": {
+    "attachmentsUnchanged": "{{count}} archivo(s) adjunto(s) permanecerán en este mensaje.",
+    "cancel": "Cancelar",
+    "editMessage": "Editar mensaje",
+    "editorLabel": "Edita tu mensaje",
+    "send": "Enviar"
   }
 }

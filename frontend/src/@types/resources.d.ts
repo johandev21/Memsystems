@@ -104,6 +104,9 @@ export default interface Resources {
       "previousVersion": "Previous version",
       "regenerateResponse": "Regenerate response"
     },
+    "branch": {
+      "selectFailed": "Couldn't switch to that conversation branch"
+    },
     "clearHistory": {
       "cancel": "Cancel",
       "clearFailed": "Couldn't clear chat history",
@@ -127,6 +130,13 @@ export default interface Resources {
       "stopResponse": "Stop response",
       "unsupportedAttachment": "This model does not support file attachments",
       "unsupportedImage": "This model does not support image attachments"
+    },
+    "edit": {
+      "attachmentsUnchanged": "{{count}} attachment(s) will stay with this message.",
+      "cancel": "Cancel",
+      "editMessage": "Edit message",
+      "editorLabel": "Edit your message",
+      "send": "Send"
     },
     "empty": {
       "blankCanvas": "Start with a blank canvas",
@@ -152,7 +162,8 @@ export default interface Resources {
       "visualRegion": "Visual region"
     },
     "message": {
-      "copiedToClipboard": "Copied to clipboard"
+      "copiedToClipboard": "Copied to clipboard",
+      "copyFailed": "Couldn't copy to clipboard"
     },
     "noEvidence": {
       "correctiveAction": "Suggested fix: import the file version or paste the source text, then ask again.",

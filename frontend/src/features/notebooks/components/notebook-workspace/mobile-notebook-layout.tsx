@@ -83,7 +83,7 @@ export function MobileNotebookLayout({
         </TabsContent>
 
         <TabsContent value="chat" keepMounted className="flex-1 mt-0 min-h-0 data-[hidden]:hidden">
-          <ChatPanel notebookId={notebookId} />
+          <ChatPanel notebookId={notebookId} selectedSourceId={selectedSourceId} />
         </TabsContent>
 
         <TabsContent value="studio" keepMounted className="flex-1 mt-0 min-h-0 data-[hidden]:hidden">

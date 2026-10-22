@@ -189,7 +189,7 @@ export function DesktopLayout({
           <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
             <ChatPanelHeader notebookId={notebookId} />
             <div className="flex-1 flex flex-col min-h-0">
-              <ChatPanel key={notebookId} notebookId={notebookId} />
+              <ChatPanel key={notebookId} notebookId={notebookId} selectedSourceId={selectedSourceId} />
             </div>
           </div>
         </ResizablePanel>

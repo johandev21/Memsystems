@@ -29,12 +29,14 @@ export interface AssistantMessageProps {
   versions?: UIMessage[];
   citedSources?: CitedSourceDTO[];
   citedSourcesMap?: Map<string, CitedSourceDTO[]>;
-  onCopy: (text: string) => void;
+  onCopy: (text: string) => void | boolean | Promise<void | boolean>;
   onRegenerate: () => void;
   showRegenerate?: boolean;
   onContinue?: () => void;
   showContinue?: boolean;
   isLast?: boolean;
+  onSelectVersion?: (messageId: string) => void;
+  isInteractionDisabled?: boolean;
 }
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
@@ -74,6 +76,8 @@ export function AssistantMessage({
   onContinue,
   showContinue = false,
   isLast,
+  onSelectVersion,
+  isInteractionDisabled = false,
 }: AssistantMessageProps) {
   const { t } = useTranslation("chat");
   const versionList = useMemo(() => {
@@ -95,11 +99,13 @@ export function AssistantMessage({
     prevLengthRef.current = versionList.length;
   }, [versionList.length]);
 
+  const selectedBranchIndex = message ? versionList.findIndex((item) => item.id === message.id) : -1;
   const activeIndex = Math.min(
     Math.max(0, selectedVersionIndex),
     Math.max(0, versionList.length - 1),
   );
-  const activeMessage = versionList[activeIndex];
+  const resolvedIndex = selectedBranchIndex >= 0 ? selectedBranchIndex : activeIndex;
+  const activeMessage = versionList[resolvedIndex];
 
   const activeCitations = useMemo(() => {
     if (!activeMessage) return [];
@@ -116,8 +122,9 @@ export function AssistantMessage({
 
   const hasMultipleVersions = versionList.length > 1;
 
-  const handleCopy = () => {
-    onCopy(content.fullPlainText);
+  const handleCopy = async () => {
+    const succeeded = await onCopy(content.fullPlainText);
+    if (succeeded === false) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -145,21 +152,20 @@ export function AssistantMessage({
         )}
       </MessageContent>
 
-      {!content.isStreaming && (
+      {(
         <AssistantActionToolbar
           totalVersions={versionList.length}
-          activeIndex={activeIndex}
+          activeIndex={resolvedIndex}
           hasMultipleVersions={hasMultipleVersions}
-          onPreviousVersion={() => setSelectedVersionIndex((i) => Math.max(0, i - 1))}
-          onNextVersion={() =>
-            setSelectedVersionIndex((i) => Math.min(versionList.length - 1, i + 1))
-          }
+          onPreviousVersion={() => onSelectVersion ? onSelectVersion(versionList[Math.max(0, resolvedIndex - 1)].id) : setSelectedVersionIndex((i) => Math.max(0, i - 1))}
+          onNextVersion={() => onSelectVersion ? onSelectVersion(versionList[Math.min(versionList.length - 1, resolvedIndex + 1)].id) : setSelectedVersionIndex((i) => Math.min(versionList.length - 1, i + 1))}
+          versionsDisabled={isInteractionDisabled}
           onCopy={handleCopy}
           onRegenerate={onRegenerate}
           showRegenerate={showRegenerate}
           onContinue={onContinue}
           showContinue={Boolean(showContinue && isCancelled)}
-          isStreaming={content.isStreaming}
+          isStreaming={content.isStreaming || isInteractionDisabled}
           copied={copied}
         />
       )}

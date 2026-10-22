@@ -5,15 +5,18 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import { ChatPanel } from "./chat-panel";
+import { ChatSessionProvider } from "../context/chat-session";
 import type { useChatPanel } from "../hooks/use-chat-panel";
 
 type ChatPanelHookReturn = ReturnType<typeof useChatPanel>;
 
 let updateHookState: ((updater: (prev: ChatPanelHookReturn) => ChatPanelHookReturn) => void) | null = null;
 let currentHookState: ChatPanelHookReturn;
+let hookInvocationCount = 0;
 
 vi.mock("../hooks/use-chat-panel", () => ({
   useChatPanel: () => {
+    hookInvocationCount += 1;
     const [state, setState] = useState<ChatPanelHookReturn>(currentHookState);
     updateHookState = setState;
     return state;
@@ -49,9 +52,12 @@ function createDefaultHookState(): ChatPanelHookReturn {
     selectedModel: "openai/gpt-5.6-sol",
     handleModelChange: vi.fn(),
     messages: [] as UIMessage[],
+    selectedMessages: [] as UIMessage[],
+    allBranchMessages: [] as UIMessage[],
     citedSourcesMap: new Map(),
     status: "ready" as const,
     isLoading: false,
+    isBranchSelectionPending: false,
     isHistoryPending: false,
     error: undefined,
     messageCount: 0,
@@ -66,8 +72,10 @@ function createDefaultHookState(): ChatPanelHookReturn {
       isPending: false,
     } as unknown as ChatPanelHookReturn["clearHistoryMutation"],
     handleSubmit: vi.fn(),
+    handleEdit: vi.fn(),
     handleCopy: vi.fn(),
     handleRegenerate: vi.fn(),
+    handleSelectBranch: vi.fn(),
     composerTextareaRef: { current: null },
     stop: vi.fn(),
     chatAnnouncement: null,
@@ -95,6 +103,7 @@ describe("ChatPanel accessibility (Ticket #130)", () => {
     await i18n.changeLanguage("en");
     await i18n.loadNamespaces(["chat"]);
     currentHookState = createDefaultHookState();
+    hookInvocationCount = 0;
   });
 
   afterEach(() => {
@@ -246,6 +255,7 @@ describe("ChatPanel accessibility (Ticket #130)", () => {
       currentHookState = {
         ...currentHookState,
         messages: [userMsg, assistantMsg],
+        selectedMessages: [userMsg, assistantMsg],
         messageCount: 2,
       };
 
@@ -282,6 +292,7 @@ describe("ChatPanel accessibility (Ticket #130)", () => {
       currentHookState = {
         ...currentHookState,
         messages: [userMsg, assistantMsg],
+        selectedMessages: [userMsg, assistantMsg],
         messageCount: 2,
       };
 
@@ -293,5 +304,91 @@ describe("ChatPanel accessibility (Ticket #130)", () => {
       const assistantLabel = screen.getByText("Asistente");
       expect(assistantLabel.classList.contains("sr-only")).toBe(true);
     });
+  });
+});
+
+describe("shared responsive chat session", () => {
+  beforeEach(() => {
+    currentHookState = createDefaultHookState();
+    hookInvocationCount = 0;
+  });
+
+  it("keeps both mounted responsive presentations on one session", () => {
+    currentHookState = {
+      ...currentHookState,
+      status: "streaming",
+      isLoading: true,
+    };
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ChatSessionProvider notebookId="nb-1">
+          <>
+            <ChatPanel notebookId="nb-1" />
+            <ChatPanel notebookId="nb-1" />
+          </>
+        </ChatSessionProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(hookInvocationCount).toBe(1);
+    expect(screen.getAllByRole("log", { name: "Chat transcript" })).toHaveLength(2);
+
+    const userMessage: UIMessage = {
+      id: "streaming-user",
+      role: "user",
+      parts: [{ type: "text", text: "active stream transcript" }],
+    };
+    act(() => {
+      updateHookState?.((prev) => ({
+        ...prev,
+        messages: [userMessage],
+        selectedMessages: [userMessage],
+        allBranchMessages: [userMessage],
+        messageCount: 1,
+      }));
+    });
+
+    expect(screen.getAllByText("active stream transcript")).toHaveLength(2);
+  });
+
+  it("replaces the session when the notebook identity changes in place", () => {
+    const queryClient = new QueryClient();
+    const oldStop = currentHookState.stop;
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <ChatSessionProvider notebookId="nb-1">
+          <ChatPanel notebookId="nb-1" />
+        </ChatSessionProvider>
+      </QueryClientProvider>,
+    );
+    const oldMessage: UIMessage = {
+      id: "old-notebook-message",
+      role: "user",
+      parts: [{ type: "text", text: "old notebook transcript" }],
+    };
+    act(() => {
+      updateHookState?.((prev) => ({
+        ...prev,
+        messages: [oldMessage],
+        selectedMessages: [oldMessage],
+        allBranchMessages: [oldMessage],
+        messageCount: 1,
+      }));
+    });
+    expect(screen.getByText("old notebook transcript")).toBeTruthy();
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <ChatSessionProvider notebookId="nb-2">
+          <ChatPanel notebookId="nb-2" />
+        </ChatSessionProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(hookInvocationCount).toBeGreaterThan(1);
+    expect(oldStop).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("old notebook transcript")).toBeNull();
   });
 });
