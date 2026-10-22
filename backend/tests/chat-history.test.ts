@@ -126,8 +126,17 @@ async function createTestHarness(options: HarnessOptions = {}) {
       })),
     })),
     update: vi.fn(() => ({
-      set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn().mockResolvedValue([{ id: 'notebook-1' }]),
+          then: (resolve: (value: undefined) => unknown) =>
+            resolve(undefined),
+        })),
+      })),
     })),
+    transaction: vi.fn(async (run: (tx: unknown) => Promise<unknown>) =>
+      run(db),
+    ),
   };
 
   const provider = {

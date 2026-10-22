@@ -2,6 +2,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { sql } from 'drizzle-orm';
 import {
   AnyPgColumn,
+  boolean,
   customType,
   index,
   integer,
@@ -504,6 +505,10 @@ export const notebookChatMessages = pgTable(
       (): AnyPgColumn => notebookChatMessages.id,
       { onDelete: 'cascade' },
     ),
+    preferredChildId: varchar('preferred_child_id'),
+    preferredChildInitialized: boolean('preferred_child_initialized')
+      .default(false)
+      .notNull(),
     role: chatRoleEnum('role').notNull(),
     content: text('content').notNull(),
     reasoning: text('reasoning'),

@@ -176,6 +176,20 @@
       "when": 1790800000000,
       "tag": "0024_repair_chat_branches",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792670000000,
+      "tag": "0025_chat_branch_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792670100000,
+      "tag": "0026_chat_branch_stopped_endpoint",
+      "breakpoints": true
     }
   ]
 }

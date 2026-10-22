@@ -179,4 +179,70 @@ describe('chat branch migrations', () => {
     ]);
     expect(result.notebook.selected_chat_message_id).toBe('legacy-followup');
   });
+
+  it('initializes durable preferences from the selected path and stable defaults without rewiring the tree', async () => {
+    const migration = migrationSql('0025_chat_branch_preferences.sql');
+    const stoppedEndpointMigration = migrationSql(
+      '0026_chat_branch_stopped_endpoint.sql',
+    );
+    const result = await runRolledBackFixture('chat_0025_preferences_fixture', async (tx) => {
+      await tx.execute(sql.raw(`
+        CREATE TABLE notebooks (
+          id varchar PRIMARY KEY,
+          selected_chat_message_id varchar
+        );
+        CREATE TABLE notebook_chat_messages (
+          id varchar PRIMARY KEY,
+          notebook_id varchar NOT NULL REFERENCES notebooks(id),
+          parent_id varchar,
+          role varchar NOT NULL,
+          content text NOT NULL,
+          created_at timestamp NOT NULL
+        );
+        INSERT INTO notebooks VALUES ('preferences-notebook', 'nested-b');
+        INSERT INTO notebook_chat_messages VALUES
+          ('root-a', 'preferences-notebook', NULL, 'user', 'root A', '2026-01-01T00:00:00Z'),
+          ('root-b', 'preferences-notebook', NULL, 'user', 'root B', '2026-01-01T00:00:01Z'),
+          ('answer-a1', 'preferences-notebook', 'root-a', 'assistant', 'answer A1', '2026-01-01T00:00:02Z'),
+          ('answer-a2', 'preferences-notebook', 'root-a', 'assistant', 'answer A2', '2026-01-01T00:00:03Z'),
+          ('nested-a', 'preferences-notebook', 'answer-a1', 'user', 'nested A', '2026-01-01T00:00:04Z'),
+          ('nested-b', 'preferences-notebook', 'answer-a1', 'user', 'nested B', '2026-01-01T00:00:05Z'),
+          ('selected-answer', 'preferences-notebook', 'nested-b', 'assistant', 'selected answer', '2026-01-01T00:00:06Z');
+      `));
+      await tx.execute(sql.raw(migration));
+      await tx.execute(sql.raw(stoppedEndpointMigration));
+      const rows = await tx.execute(sql.raw(`
+        SELECT id, parent_id, preferred_child_id, preferred_child_initialized
+        FROM notebook_chat_messages ORDER BY created_at, id
+      `));
+      const notebook = await tx.execute(sql.raw(
+        `SELECT selected_chat_message_id FROM notebooks WHERE id = 'preferences-notebook'`,
+      ));
+      return { rows: rows.rows, notebook: notebook.rows[0] };
+    });
+
+    expect(result.rows.map(({ id, parent_id }: any) => ({ id, parentId: parent_id }))).toEqual([
+      { id: 'root-a', parentId: null },
+      { id: 'root-b', parentId: null },
+      { id: 'answer-a1', parentId: 'root-a' },
+      { id: 'answer-a2', parentId: 'root-a' },
+      { id: 'nested-a', parentId: 'answer-a1' },
+      { id: 'nested-b', parentId: 'answer-a1' },
+      { id: 'selected-answer', parentId: 'nested-b' },
+    ]);
+    expect(result.rows.map(({ id, preferred_child_id, preferred_child_initialized }: any) => ({
+      id,
+      preferredChildId: preferred_child_id,
+      initialized: preferred_child_initialized,
+    }))).toEqual([
+      { id: 'root-a', preferredChildId: 'answer-a1', initialized: true },
+      { id: 'root-b', preferredChildId: null, initialized: true },
+      { id: 'answer-a1', preferredChildId: 'nested-b', initialized: true },
+      { id: 'answer-a2', preferredChildId: null, initialized: true },
+      { id: 'nested-a', preferredChildId: null, initialized: true },
+      { id: 'nested-b', preferredChildId: null, initialized: true },
+      { id: 'selected-answer', preferredChildId: null, initialized: true },
+    ]);
+    expect(result.notebook.selected_chat_message_id).toBe('nested-b');
+  });
 });

@@ -92,6 +92,8 @@ async function createChatServiceHarness() {
   const degradedRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
   const historyRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
   const selectedMessageState: { id: string | null } = { id: null };
+  const selectionConflictState: { id: string | null } = { id: null };
+  const deletionState = { count: 0 };
 
   const db = {
     select: vi.fn(() => ({
@@ -152,15 +154,40 @@ async function createChatServiceHarness() {
       }),
     })),
     update: vi.fn(() => ({
-      set: vi.fn((values: Record<string, unknown>) => {
-        if (typeof values.selectedChatMessageId === 'string') {
-          selectedMessageState.id = values.selectedChatMessageId;
-        }
-        return { where: vi.fn().mockResolvedValue(undefined) };
-      }),
+      set: vi.fn((values: Record<string, unknown>) => ({
+        where: vi.fn(() => {
+          if (
+            !('updatedAt' in values) &&
+            typeof values.selectedChatMessageId === 'string'
+          ) {
+            selectedMessageState.id = values.selectedChatMessageId;
+          }
+          return {
+            returning: vi.fn(async () => {
+              if (selectionConflictState.id) {
+                selectedMessageState.id = selectionConflictState.id;
+                selectionConflictState.id = null;
+                return [];
+              }
+              if (typeof values.selectedChatMessageId === 'string') {
+                selectedMessageState.id = values.selectedChatMessageId;
+              }
+              return [{ id: 'notebook-1' }];
+            }),
+            then: (resolve: (value: undefined) => unknown) =>
+              resolve(undefined),
+          };
+        }),
+      })),
     })),
+    transaction: vi.fn(async (run: (tx: unknown) => Promise<unknown>) =>
+      run(db),
+    ),
     delete: vi.fn(() => ({
-      where: vi.fn().mockResolvedValue(undefined),
+      where: vi.fn(() => {
+        deletionState.count += 1;
+        return Promise.resolve(undefined);
+      }),
     })),
   };
   const provider = {
@@ -222,8 +249,14 @@ async function createChatServiceHarness() {
     set selectedMessageId(id: string | null) {
       selectedMessageState.id = id;
     },
+    set selectionConflictOnNextWrite(id: string | null) {
+      selectionConflictState.id = id;
+    },
     get selectedMessageId() {
       return selectedMessageState.id;
+    },
+    get deletedMessageCount() {
+      return deletionState.count;
     },
     set degradedSourceRows(rows: Record<string, unknown>[]) {
       degradedRowsState.rows = rows;
@@ -294,6 +327,89 @@ describe('ChatService streaming lifecycle', () => {
     });
   });
 
+  it('reads chat rows and their selected endpoint from one consistent snapshot', async () => {
+    let historyRows: Record<string, unknown>[] = [];
+    let selectedMessageId: string | null = null;
+    let committedConcurrentTurn = false;
+    const commitConcurrentTurn = () => {
+      if (committedConcurrentTurn) return;
+      committedConcurrentTurn = true;
+      historyRows = [
+        {
+          id: 'new-user',
+          notebookId: 'notebook-1',
+          parentId: null,
+          role: 'user',
+          content: 'Concurrent question',
+          parts: [{ type: 'text', text: 'Concurrent question' }],
+          createdAt: new Date('2026-08-22T10:00:00.000Z'),
+          citedSourceIds: null,
+        },
+      ];
+      selectedMessageId = 'new-user';
+    };
+    const db = {
+      select: vi.fn(() => ({
+        from: vi.fn((table: unknown) => {
+          let joined = false;
+          const builder = {
+            leftJoin: vi.fn(() => {
+              joined = true;
+              return builder;
+            }),
+            where: vi.fn(() => {
+              if (joined) {
+                return {
+                  orderBy: vi.fn(async () => {
+                    const snapshot = historyRows.length > 0
+                      ? historyRows.map((message) => ({
+                          message,
+                          selectedChatMessageId: selectedMessageId,
+                        }))
+                      : [{
+                          message: null,
+                          selectedChatMessageId: selectedMessageId,
+                        }];
+                    commitConcurrentTurn();
+                    return snapshot;
+                  }),
+                };
+              }
+              if (table === notebookChatMessages) {
+                return {
+                  orderBy: vi.fn(async () => {
+                    const snapshot = [...historyRows];
+                    commitConcurrentTurn();
+                    return snapshot;
+                  }),
+                };
+              }
+              return Promise.resolve([
+                { selectedChatMessageId: selectedMessageId },
+              ]);
+            }),
+          };
+          return builder;
+        }),
+      })),
+    };
+    const service = new ChatService(
+      db as never,
+      { assertNotebookOwner: vi.fn().mockResolvedValue(undefined) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(service.listMessages('notebook-1')).resolves.toMatchObject({
+      messages: [],
+      selectedMessageId: null,
+      selectedPathIds: [],
+    });
+    expect(db.select).toHaveBeenCalledTimes(1);
+  });
+
   it('treats an explicit null parent as a root even when a branch is selected', async () => {
     const harness = await createChatServiceHarness();
     harness.historyRows = [];
@@ -309,6 +425,37 @@ describe('ChatService streaming lifecycle', () => {
     expect(harness.insertedValues.find((row) => row.id === 'new-root-user'))
       .toEqual(expect.objectContaining({ parentId: null }));
     expect(harness.retrieve).toHaveBeenCalledWith(expect.objectContaining({ history: [] }));
+  });
+
+  it('does not start a stream when a concurrent branch switch wins selection', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      {
+        id: 'branch-a', role: 'user', content: 'Question A', parentId: null,
+        createdAt: new Date('2026-08-22T09:00:00.000Z'),
+      },
+      {
+        id: 'answer-a', role: 'assistant', content: 'Answer A', parentId: 'branch-a',
+        createdAt: new Date('2026-08-22T09:01:00.000Z'),
+      },
+      {
+        id: 'branch-b', role: 'user', content: 'Question B', parentId: null,
+        createdAt: new Date('2026-08-22T09:02:00.000Z'),
+      },
+    ];
+    harness.selectedMessageId = 'answer-a';
+    harness.selectionConflictOnNextWrite = 'branch-b';
+
+    await expect(harness.service.sendMessage('notebook-1', {
+      content: 'Follow up for A',
+      parentMessageId: 'answer-a',
+      model: 'openai/gpt-5.6-sol',
+    })).rejects.toThrow('Chat branch changed while starting the message');
+
+    expect(harness.selectedMessageId).toBe('branch-b');
+    expect(harness.retrieve).not.toHaveBeenCalled();
+    expect(mocks.streamText).not.toHaveBeenCalled();
+    expect(harness.deletedMessageCount).toBe(1);
   });
 
   it('retries a persisted user ID only when payload and branch intent match', async () => {
@@ -437,6 +584,77 @@ describe('ChatService streaming lifecycle', () => {
     await expect(harness.service.selectMessage('notebook-1', 'assistant-b'))
       .resolves.toBe('assistant-b');
     expect(harness.selectedMessageId).toBe('assistant-b');
+  });
+
+  it('continues from the exact endpoint selected for a nested question version', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      { id: 'root-user', role: 'user', content: 'Root question', parentId: null },
+      { id: 'root-answer', role: 'assistant', content: 'Root answer', parentId: 'root-user' },
+      {
+        id: 'version-user', role: 'user', content: 'Nested question', parentId: 'root-answer',
+        preferredChildId: 'answer-b', preferredChildInitialized: true,
+      },
+      { id: 'answer-a', role: 'assistant', content: 'Version A', parentId: 'version-user' },
+      { id: 'answer-b', role: 'assistant', content: 'Version B', parentId: 'version-user' },
+      { id: 'descendant-user', role: 'user', content: 'Descendant question', parentId: 'answer-b' },
+      { id: 'descendant-answer', role: 'assistant', content: 'Descendant answer', parentId: 'descendant-user' },
+    ].map((row, index) => ({
+      ...row,
+      createdAt: new Date(`2026-08-22T09:0${index}:00.000Z`),
+    }));
+
+    await expect(harness.service.selectMessage('notebook-1', 'version-user'))
+      .resolves.toBe('descendant-answer');
+    expect(harness.selectedMessageId).toBe('descendant-answer');
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Follow up on version B',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(harness.insertedValues.find((row) => row.content === 'Follow up on version B'))
+      .toEqual(expect.objectContaining({ parentId: 'descendant-answer' }));
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'Root question' },
+      { role: 'assistant', content: 'Root answer' },
+      { role: 'user', content: 'Nested question' },
+      { role: 'assistant', content: 'Version B' },
+      { role: 'user', content: 'Descendant question' },
+      { role: 'assistant', content: 'Descendant answer' },
+      { role: 'user', content: 'Follow up on version B' },
+    ]);
+  });
+
+  it('uses the selected user endpoint after stop for an explicit new send', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      { id: 'root-user', role: 'user', content: 'Root question', parentId: null },
+      { id: 'root-answer', role: 'assistant', content: 'Root answer', parentId: 'root-user' },
+      { id: 'stopped-user', role: 'user', content: 'Interrupted question', parentId: 'root-answer' },
+      { id: 'partial-answer', role: 'assistant', content: 'Partial response', parentId: 'stopped-user' },
+    ].map((row, index) => ({
+      ...row,
+      createdAt: new Date(`2026-08-22T09:0${index}:00.000Z`),
+    }));
+    harness.selectedMessageId = 'stopped-user';
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Next question after stopping',
+      parentMessageId: 'stopped-user',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(harness.insertedValues.find((row) => row.content === 'Next question after stopping'))
+      .toEqual(expect.objectContaining({ parentId: 'stopped-user' }));
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'Root question' },
+      { role: 'assistant', content: 'Root answer' },
+      { role: 'user', content: 'Interrupted question' },
+      { role: 'user', content: 'Next question after stopping' },
+    ]);
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages)
+      .not.toContainEqual({ role: 'assistant', content: 'Partial response' });
   });
 
   it('passes the recent turns to retrieval so follow-ups can be resolved', async () => {

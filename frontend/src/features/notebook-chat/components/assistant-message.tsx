@@ -81,9 +81,22 @@ export function AssistantMessage({
 }: AssistantMessageProps) {
   const { t } = useTranslation("chat");
   const versionList = useMemo(() => {
-    if (versions && versions.length > 0) return versions;
-    if (message) return [message];
-    return [];
+    const availableVersions = versions && versions.length > 0 ? versions : [];
+    if (!message) return availableVersions;
+
+    const activeIndex = availableVersions.findIndex((version) => version.id === message.id);
+    if (activeIndex < 0) return [...availableVersions, message];
+
+    return availableVersions.map((version, index) => index === activeIndex
+      ? {
+          ...version,
+          ...message,
+          metadata: {
+            ...(typeof version.metadata === "object" && version.metadata !== null ? version.metadata : {}),
+            ...(typeof message.metadata === "object" && message.metadata !== null ? message.metadata : {}),
+          },
+        }
+      : version);
   }, [versions, message]);
 
   const [selectedVersionIndex, setSelectedVersionIndex] = useState<number>(() =>

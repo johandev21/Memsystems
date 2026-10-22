@@ -233,7 +233,8 @@ function ChatPanelContent({
           input={input}
           onInputChange={setInput}
           onSubmit={handleSubmit}
-          isLoading={isLoading || isBranchSelectionPending}
+          isLoading={isLoading}
+          isDisabled={isBranchSelectionPending}
           onStop={stop}
           models={modelOptions}
           capabilitiesVerified={capabilitiesVerified}
@@ -387,6 +388,7 @@ interface ChatComposerAreaProps {
   onInputChange: (val: string) => void;
   onSubmit: ReturnType<typeof useChatPanel>["handleSubmit"];
   isLoading: boolean;
+  isDisabled: boolean;
   onStop: () => void;
   models: ReturnType<typeof useChatPanel>["modelOptions"];
   capabilitiesVerified: boolean;
@@ -406,6 +408,7 @@ function ChatComposerArea({
   onInputChange,
   onSubmit,
   isLoading,
+  isDisabled,
   onStop,
   models,
   capabilitiesVerified,
@@ -441,6 +444,7 @@ function ChatComposerArea({
             onInputChange={onInputChange}
             onSubmit={onSubmit}
             isLoading={isLoading}
+            isDisabled={isDisabled}
             onStop={onStop}
             models={models}
             capabilitiesVerified={capabilitiesVerified}

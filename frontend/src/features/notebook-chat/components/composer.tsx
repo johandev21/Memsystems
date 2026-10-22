@@ -30,6 +30,7 @@ export interface ComposerProps {
   onInputChange: (value: string) => void;
   onSubmit: (submission: { text: string; files?: FileUIPart[] } | string) => void;
   isLoading: boolean;
+  isDisabled?: boolean;
   onStop: () => void;
   models: ModelOption[];
   selectedModel: string;
@@ -42,6 +43,7 @@ interface ComposerInnerProps {
   input: string;
   onInputChange: (value: string) => void;
   isLoading: boolean;
+  isDisabled: boolean;
   onStop: () => void;
   models: ModelOption[];
   selectedModel: string;
@@ -55,6 +57,7 @@ function ComposerInner({
   input,
   onInputChange,
   isLoading,
+  isDisabled,
   onStop,
   models,
   selectedModel,
@@ -224,7 +227,7 @@ function ComposerInner({
         <PromptInputSubmit
           status={isLoading ? "streaming" : "ready"}
           onStop={onStop}
-          disabled={!hasInput && !hasFiles && !isLoading}
+          disabled={isDisabled || (!hasInput && !hasFiles && !isLoading)}
           tooltip={{
             content: isLoading ? t("composer.stopResponse") : t("composer.sendMessage"),
             shortcut: isLoading ? undefined : "Enter",
@@ -241,6 +244,7 @@ export function Composer({
   onInputChange,
   onSubmit,
   isLoading,
+  isDisabled = false,
   onStop,
   models,
   selectedModel,
@@ -286,6 +290,7 @@ export function Composer({
         input={input}
         onInputChange={onInputChange}
         isLoading={isLoading}
+        isDisabled={isDisabled}
         onStop={onStop}
         models={models}
         selectedModel={selectedModel}

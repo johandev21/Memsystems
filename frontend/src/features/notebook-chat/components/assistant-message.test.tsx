@@ -134,6 +134,39 @@ describe("AssistantMessage references", () => {
     expect(screen.getByText("2 of 2")).toBeTruthy();
     expect(screen.getByText("Second regenerated version answer.")).toBeTruthy();
   });
+
+  it("renders the active SDK message parts over stale cached parts for that version", () => {
+    const liveMessage: UIMessage = {
+      id: "assistant-v2",
+      role: "assistant",
+      parts: [{ type: "text", text: "Newest live response", state: "streaming" }],
+    };
+    const cachedVersions: UIMessage[] = [
+      {
+        id: "assistant-v1",
+        role: "assistant",
+        parts: [{ type: "text", text: "First answer" }],
+      },
+      {
+        id: "assistant-v2",
+        role: "assistant",
+        parts: [{ type: "text", text: "Old cached response" }],
+      },
+    ];
+
+    render(
+      <AssistantMessage
+        message={liveMessage}
+        versions={cachedVersions}
+        citedSources={[]}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Newest live response")).toBeTruthy();
+    expect(screen.queryByText("Old cached response")).toBeNull();
+  });
 });
 
 describe("AssistantMessage no-evidence state", () => {

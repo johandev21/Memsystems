@@ -78,6 +78,48 @@ export function transcriptBeforeEdit(messages: UIMessage[], messageId: string): 
   return index < 0 ? messages : messages.slice(0, index);
 }
 
+function latestAssistantReply(messages: UIMessage[]): UIMessage | undefined {
+  let lastUserIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index--) {
+    if (messages[index]?.role === "user") {
+      lastUserIndex = index;
+      break;
+    }
+  }
+  for (let index = messages.length - 1; index > lastUserIndex; index--) {
+    if (messages[index]?.role === "assistant") return messages[index];
+  }
+  return undefined;
+}
+
+function hasAssistantText(message: UIMessage): boolean {
+  return message.parts.some((part) => part.type === "text" && "text" in part && part.text.trim().length > 0);
+}
+
+function latestDurableEndpoint(messages: UIMessage[]): string | undefined {
+  const assistantReply = latestAssistantReply(messages);
+  if (assistantReply && hasAssistantText(assistantReply)) return assistantReply.id;
+  return [...messages].reverse().find((message) => message.role === "user")?.id;
+}
+
+function transcriptThroughMessage(messages: UIMessage[], messageId: string): UIMessage[] {
+  const messagesById = new Map(messages.map((message) => [message.id, message]));
+  const path: UIMessage[] = [];
+  const visitedIds = new Set<string>();
+  let current = messagesById.get(messageId);
+
+  while (current) {
+    if (visitedIds.has(current.id)) return [];
+    path.push(current);
+    visitedIds.add(current.id);
+    const parentId = (current.metadata as { parentId?: string | null } | undefined)?.parentId;
+    if (parentId && !messagesById.has(parentId)) return [];
+    current = parentId ? messagesById.get(parentId) : undefined;
+  }
+
+  return path.reverse();
+}
+
 export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTMLElement | null>, sourceIds?: string[]) {
   const { t } = useTranslation("chat");
   const { data: notebook } = useQuery(notebookQueryOptions(notebookId));
@@ -90,11 +132,6 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     ? EMPTY_SELECTED_PATH_IDS
     : historyData?.selectedPathIds ?? EMPTY_SELECTED_PATH_IDS;
   const selectedMessageIdOverrideRef = useRef<string | null | undefined>(undefined);
-  useEffect(() => {
-    if (selectedMessageIdOverrideRef.current === selectedMessageId) {
-      selectedMessageIdOverrideRef.current = undefined;
-    }
-  }, [selectedMessageId]);
   const isHistoryPending = chatHistoryQuery.isPending;
   const { data: connection } = useConnectionStatus();
 
@@ -127,6 +164,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   // A branch selection is asynchronous. Keep this in a ref as well as state so
   // two submit events in the same React batch cannot race the selection.
   const branchSelectionPendingRef = useRef(false);
+  const pendingBranchRestoreRef = useRef<string | null>(null);
   const [isBranchSelectionPending, setIsBranchSelectionPending] = useState(false);
 
   const transport = useMemo(() => {
@@ -180,13 +218,17 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     queryClient.invalidateQueries({ queryKey: ["notebooks", "all"] });
   }, [queryClient, notebookId]);
 
-  const { messages, sendMessage, regenerate, setMessages, status, stop, error } = useChat({
+  const { messages, sendMessage, regenerate, setMessages, status, stop, error, clearError } = useChat({
     id: notebookId,
     transport,
     messages: initialMessages,
     experimental_throttle: 50,
     onFinish: async ({ isAbort, isError, messages: finishedMessages }) => {
       if (isAbort) {
+        const latestEndpoint = latestDurableEndpoint(finishedMessages);
+        if (selectedMessageIdOverrideRef.current !== undefined && latestEndpoint) {
+          selectedMessageIdOverrideRef.current = latestEndpoint;
+        }
         const markedMessages = finishedMessages.map((msg, idx) =>
           idx === finishedMessages.length - 1 && msg.role === "assistant"
             ? {
@@ -210,6 +252,10 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
       abortedMessagesRef.current = null;
       if (!isError) {
+        const latestEndpoint = latestDurableEndpoint(finishedMessages);
+        if (selectedMessageIdOverrideRef.current !== undefined && latestEndpoint) {
+          selectedMessageIdOverrideRef.current = latestEndpoint;
+        }
         await queryClient.refetchQueries({
           queryKey: ["chat", notebookId, "messages"],
         });
@@ -255,6 +301,24 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     if (!chatHistory) return;
     if (status === "streaming" || status === "submitted") return;
     if (abortedMessagesRef.current) return;
+
+    const pendingEndpoint = pendingBranchRestoreRef.current;
+    if (pendingEndpoint) {
+      const restoredTranscript = transcriptThroughMessage(formattedMessages, pendingEndpoint);
+      if (restoredTranscript.length > 0) {
+        setMessages(restoredTranscript);
+        lastSyncedHistoryRef.current = {
+          messages: chatHistory,
+          selectedPathKey: selectedPathIds.join("\u0000"),
+        };
+        pendingBranchRestoreRef.current = null;
+        branchSelectionPendingRef.current = false;
+        setIsBranchSelectionPending(false);
+        clearError();
+      }
+      return;
+    }
+
     if (
       selectedMessageIdOverrideRef.current !== undefined &&
       selectedMessageIdOverrideRef.current !== selectedMessageId
@@ -267,7 +331,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     ) return;
     lastSyncedHistoryRef.current = { messages: chatHistory, selectedPathKey };
     setMessages(selectedHistoryMessages);
-  }, [chatHistory, selectedHistoryMessages, selectedMessageId, selectedPathIds, status, setMessages]);
+  }, [chatHistory, clearError, formattedMessages, selectedHistoryMessages, selectedMessageId, selectedPathIds, status, setMessages]);
 
   const isLoading = status === "submitted" || status === "streaming";
   const messageCount = messages.length;
@@ -311,7 +375,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       return selectedMessageIdOverrideRef.current;
     }
     const currentMessage = messages.at(-1);
-    return currentMessage?.role === "assistant" ? currentMessage.id : selectedMessageId;
+    return currentMessage?.role === "assistant" && hasAssistantText(currentMessage)
+      ? currentMessage.id
+      : selectedMessageId;
   }, [messages, selectedMessageId]);
 
   const clearHistoryMutation = useMutation({
@@ -449,7 +515,10 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
   const handleSelectBranch = useCallback(async (messageId: string) => {
     if (isLoading || branchSelectionPendingRef.current) return;
+    const previousTranscript = messages;
+    const previousEndpoint = getCurrentParentMessageId();
     abortedMessagesRef.current = null;
+    pendingBranchRestoreRef.current = null;
     branchSelectionPendingRef.current = true;
     setIsBranchSelectionPending(true);
     const panel = panelRef?.current;
@@ -468,17 +537,50 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       const selection = await selectChatBranch(notebookId, messageId);
       // Requests must follow the selected branch even before React has rendered
       // the query refetch result and rebuilt these callbacks.
-      selectedMessageIdOverrideRef.current = selection?.selectedMessageId ?? messageId;
+      const selectedMessageId = selection?.selectedMessageId ?? messageId;
+      selectedMessageIdOverrideRef.current = selectedMessageId;
+      const selectedTranscript = transcriptThroughMessage(formattedMessages, selectedMessageId);
+      if (selectedTranscript.length > 0) {
+        setMessages(selectedTranscript);
+      } else {
+        pendingBranchRestoreRef.current = selectedMessageId;
+      }
+      let historyRefetchFailed = false;
       try {
         await queryClient.refetchQueries({ queryKey: ["chat", notebookId, "messages"] });
       } catch {
+        historyRefetchFailed = true;
         toast.error(t("branch.selectFailed"));
+      }
+
+      const refreshedHistory = queryClient.getQueryData<ChatHistoryDTO | ChatMessageDTO[]>([
+        "chat", notebookId, "messages",
+      ]);
+      const refreshedMessages = Array.isArray(refreshedHistory)
+        ? formatChatMessages(refreshedHistory)
+        : formatChatMessages(refreshedHistory?.messages ?? chatHistory);
+      const refreshedTranscript = transcriptThroughMessage(refreshedMessages, selectedMessageId);
+      if (refreshedTranscript.length > 0) {
+        setMessages(refreshedTranscript);
+        pendingBranchRestoreRef.current = null;
+        clearError();
+      } else {
+        // The selection endpoint may remember a descendant that this client
+        // has not loaded yet. Keep the visible transcript and its matching
+        // parent together if history cannot provide that full ancestry.
+        selectedMessageIdOverrideRef.current = previousEndpoint;
+        setMessages(previousTranscript);
+        pendingBranchRestoreRef.current = null;
+        if (!historyRefetchFailed) toast.error(t("branch.selectFailed"));
       }
       if (beforeTop !== undefined) requestAnimationFrame(() => {
         const after = findMessageRow();
         if (after && viewport) viewport.scrollTop += after.getBoundingClientRect().top - beforeTop;
       });
     } catch {
+      selectedMessageIdOverrideRef.current = previousEndpoint;
+      setMessages(previousTranscript);
+      pendingBranchRestoreRef.current = null;
       toast.error(t("branch.selectFailed"));
       try {
         await queryClient.refetchQueries({ queryKey: ["chat", notebookId, "messages"] });
@@ -486,10 +588,12 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
         // Keep the failed selection local; the next explicit refetch can recover.
       }
     } finally {
-      branchSelectionPendingRef.current = false;
-      setIsBranchSelectionPending(false);
+      if (!pendingBranchRestoreRef.current) {
+        branchSelectionPendingRef.current = false;
+        setIsBranchSelectionPending(false);
+      }
     }
-  }, [isLoading, notebookId, panelRef, queryClient, setIsBranchSelectionPending, t]);
+  }, [chatHistory, clearError, formattedMessages, getCurrentParentMessageId, isLoading, messages, notebookId, panelRef, queryClient, setIsBranchSelectionPending, setMessages, t]);
 
   useEffect(() => {
     const handleSendPromptEvent = (e: Event) => {

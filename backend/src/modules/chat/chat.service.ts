@@ -145,6 +145,49 @@ export function buildMessagePath<
   return path;
 }
 
+type BranchMessage = {
+  id: string;
+  parentId: string | null;
+  preferredChildId?: string | null;
+  preferredChildInitialized?: boolean;
+  createdAt?: Date;
+};
+
+function buildRememberedMessagePath<T extends BranchMessage>(
+  rows: T[],
+  startId: string,
+): T[] {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const path: T[] = [];
+  const visited = new Set<string>();
+  let current = byId.get(startId);
+  if (!current) throw new BadRequestError('Unknown chat branch message');
+
+  while (current) {
+    if (visited.has(current.id)) {
+      throw new BadRequestError('Invalid cyclic chat branch');
+    }
+    visited.add(current.id);
+    path.push(current);
+    const children = rows
+      .filter((row) => row.parentId === current!.id)
+      .sort(
+        (a, b) =>
+          (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0) ||
+          a.id.localeCompare(b.id),
+      );
+    const preferredChild = children.find(
+      (row) => row.id === current!.preferredChildId,
+    );
+    current =
+      preferredChild ??
+      (current.preferredChildId || !current.preferredChildInitialized
+        ? children[0]
+        : undefined);
+  }
+  return path;
+}
+
 interface CitedSourceMeta {
   id: string;
   schemaVersion: number;
@@ -205,17 +248,22 @@ export class ChatService {
   async listMessages(notebookId: string): Promise<ChatHistoryResponse> {
     await this.notebooksService.assertNotebookOwner(notebookId);
 
-    const rows = await this.db
-      .select()
-      .from(notebookChatMessages)
-      .where(eq(notebookChatMessages.notebookId, notebookId))
-      .orderBy(asc(notebookChatMessages.createdAt));
-
-    const [notebook] = await this.db
-      .select({ selectedChatMessageId: notebooks.selectedChatMessageId })
+    const historySnapshot = await this.db
+      .select({
+        message: notebookChatMessages,
+        selectedChatMessageId: notebooks.selectedChatMessageId,
+      })
       .from(notebooks)
-      .where(eq(notebooks.id, notebookId));
-    const selectedMessageId = notebook?.selectedChatMessageId ?? null;
+      .leftJoin(
+        notebookChatMessages,
+        eq(notebookChatMessages.notebookId, notebooks.id),
+      )
+      .where(eq(notebooks.id, notebookId))
+      .orderBy(asc(notebookChatMessages.createdAt));
+    const rows = historySnapshot.flatMap((row) =>
+      row.message ? [row.message] : [],
+    );
+    const selectedMessageId = historySnapshot[0]?.selectedChatMessageId ?? null;
     const selectedPathIds = buildMessagePath(rows, selectedMessageId).map(
       (row) => row.id,
     );
@@ -417,6 +465,7 @@ export class ChatService {
         : selectedMessageId;
     let priorEndId: string | null;
     let existingUser: (typeof messageRows)[number] | undefined;
+    let insertedNewUser = false;
 
     if (input.regenerateMessageId) {
       const regenerateTarget = messageRows.find(
@@ -523,12 +572,14 @@ export class ChatService {
           notebookId,
           parentId,
           role: 'user',
+          preferredChildInitialized: true,
           content: input.content,
           parts: userParts,
           metadata: { modelId: input.model },
           groundingMode,
         })
         .returning();
+      insertedNewUser = true;
       userMessage = {
         id: inserted.id,
         role: 'user',
@@ -566,17 +617,70 @@ export class ChatService {
     // A failed or cancelled request still leaves this branch selected. The
     // assistant completion below advances selection only if this request is
     // still the active branch, so stale streams cannot steal a newer choice.
-    await this.db
-      .update(notebooks)
-      .set({ selectedChatMessageId: userMessage.id, updatedAt: new Date() })
-      .where(
-        and(
-          eq(notebooks.id, notebookId),
-          selectedMessageId
-            ? eq(notebooks.selectedChatMessageId, selectedMessageId)
-            : isNull(notebooks.selectedChatMessageId),
-        ),
+    const selectedBranch = await this.db.transaction(async (tx) => {
+      const selected = await tx
+        .update(notebooks)
+        .set({ selectedChatMessageId: userMessage.id, updatedAt: new Date() })
+        .where(
+          and(
+            eq(notebooks.id, notebookId),
+            selectedMessageId
+              ? eq(notebooks.selectedChatMessageId, selectedMessageId)
+              : isNull(notebooks.selectedChatMessageId),
+          ),
+        )
+        .returning({ id: notebooks.id });
+      if (selected.length > 0) {
+        const branchRows = insertedNewUser
+          ? [
+              ...messageRows,
+              { id: userMessage.id, parentId: userMessage.parentId },
+            ]
+          : messageRows;
+        const branchPath = buildMessagePath(branchRows, userMessage.id);
+        for (let index = 0; index < branchPath.length - 1; index += 1) {
+          await tx
+            .update(notebookChatMessages)
+            .set({
+              preferredChildId: branchPath[index + 1].id,
+              preferredChildInitialized: true,
+            })
+            .where(
+              and(
+                eq(notebookChatMessages.id, branchPath[index].id),
+                eq(notebookChatMessages.notebookId, notebookId),
+              ),
+            );
+        }
+      }
+      if (selected.length > 0 && existingUser && !insertedNewUser) {
+        await tx
+          .update(notebookChatMessages)
+          .set({ preferredChildId: null, preferredChildInitialized: true })
+          .where(
+            and(
+              eq(notebookChatMessages.id, userMessage.id),
+              eq(notebookChatMessages.notebookId, notebookId),
+            ),
+          );
+      }
+      return selected;
+    });
+    if (selectedBranch.length === 0) {
+      if (insertedNewUser) {
+        await this.db
+          .delete(notebookChatMessages)
+          .where(
+            and(
+              eq(notebookChatMessages.notebookId, notebookId),
+              eq(notebookChatMessages.id, userMessage.id),
+            ),
+          );
+      }
+      throw new BadRequestError(
+        'Chat branch changed while starting the message; reload the selected branch and retry',
       );
+    }
 
     const retrievalOutcome: RetrievalOutcome | null = userMessage.content.trim()
       ? await this.retrievalService.retrieve({
@@ -816,15 +920,32 @@ export class ChatService {
           citedSourceIds: citedEntries,
         });
         if (customMetadata?.finishReason !== 'cancelled') {
-          await this.db
-            .update(notebooks)
-            .set({ selectedChatMessageId: assistantMessageId })
-            .where(
-              and(
-                eq(notebooks.id, notebookId),
-                eq(notebooks.selectedChatMessageId, userMessage.id),
-              ),
-            );
+          await this.db.transaction(async (tx) => {
+            const selectedBranch = await tx
+              .update(notebooks)
+              .set({ selectedChatMessageId: assistantMessageId })
+              .where(
+                and(
+                  eq(notebooks.id, notebookId),
+                  eq(notebooks.selectedChatMessageId, userMessage.id),
+                ),
+              )
+              .returning({ id: notebooks.id });
+            if (selectedBranch.length > 0) {
+              await tx
+                .update(notebookChatMessages)
+                .set({
+                  preferredChildId: assistantMessageId,
+                  preferredChildInitialized: true,
+                })
+                .where(
+                  and(
+                    eq(notebookChatMessages.id, userMessage.id),
+                    eq(notebookChatMessages.notebookId, notebookId),
+                  ),
+                );
+            }
+          });
         }
       } catch (dbError) {
         this.logger.error('failed to persist assistant message', dbError);
@@ -1043,15 +1164,32 @@ export class ChatService {
         groundingMode,
         citedSourceIds: [],
       });
-      await this.db
-        .update(notebooks)
-        .set({ selectedChatMessageId: assistantMessageId })
-        .where(
-          and(
-            eq(notebooks.id, notebookId),
-            eq(notebooks.selectedChatMessageId, userMessage.id),
-          ),
-        );
+      await this.db.transaction(async (tx) => {
+        const selectedBranch = await tx
+          .update(notebooks)
+          .set({ selectedChatMessageId: assistantMessageId })
+          .where(
+            and(
+              eq(notebooks.id, notebookId),
+              eq(notebooks.selectedChatMessageId, userMessage.id),
+            ),
+          )
+          .returning({ id: notebooks.id });
+        if (selectedBranch.length > 0) {
+          await tx
+            .update(notebookChatMessages)
+            .set({
+              preferredChildId: assistantMessageId,
+              preferredChildInitialized: true,
+            })
+            .where(
+              and(
+                eq(notebookChatMessages.id, userMessage.id),
+                eq(notebookChatMessages.notebookId, notebookId),
+              ),
+            );
+        }
+      });
     } catch (dbError) {
       this.logger.error('failed to persist no-evidence reply', dbError);
     }
@@ -1090,38 +1228,61 @@ export class ChatService {
 
   async selectMessage(notebookId: string, messageId: string): Promise<string> {
     await this.notebooksService.assertNotebookOwner(notebookId);
-    const messageRows = await this.db
-      .select()
-      .from(notebookChatMessages)
-      .where(eq(notebookChatMessages.notebookId, notebookId));
-    if (!messageRows.some((row) => row.id === messageId)) {
-      throw new BadRequestError(
-        'Chat message does not belong to this notebook',
-      );
-    }
-    buildMessagePath(messageRows, messageId);
-    const selectedMessage = messageRows.find((row) => row.id === messageId)!;
-    // Selecting an alternate user turn should restore its answer as part of
-    // the visible path. Otherwise the path ends at the user node and makes a
-    // completed response appear to disappear when switching question versions.
-    const assistantReply =
-      selectedMessage.role === 'user'
-        ? messageRows
-            .filter(
-              (row) => row.parentId === messageId && row.role === 'assistant',
-            )
-            .sort(
-              (a, b) =>
-                b.createdAt.getTime() - a.createdAt.getTime() ||
-                b.id.localeCompare(a.id),
-            )[0]
-        : undefined;
-    const selectedEndpoint = assistantReply?.id ?? messageId;
-    await this.db
-      .update(notebooks)
-      .set({ selectedChatMessageId: selectedEndpoint })
-      .where(eq(notebooks.id, notebookId));
-    return selectedEndpoint;
+    return this.db.transaction(async (tx) => {
+      // This write acquires the notebook row lock. Branch choice edges and the
+      // selected endpoint are committed together while generation callbacks
+      // serialize on the same row.
+      const lockedNotebook = await tx
+        .update(notebooks)
+        .set({ updatedAt: new Date() })
+        .where(eq(notebooks.id, notebookId))
+        .returning({ id: notebooks.id });
+      if (lockedNotebook.length === 0) {
+        throw new BadRequestError('Notebook does not exist');
+      }
+      const messageRows = await tx
+        .select()
+        .from(notebookChatMessages)
+        .where(eq(notebookChatMessages.notebookId, notebookId));
+      if (!messageRows.some((row) => row.id === messageId)) {
+        throw new BadRequestError(
+          'Chat message does not belong to this notebook',
+        );
+      }
+      const pathToSelected = buildMessagePath(messageRows, messageId);
+      const updatedRows = [...messageRows];
+      for (let index = 0; index < pathToSelected.length - 1; index += 1) {
+        const parent = pathToSelected[index];
+        const child = pathToSelected[index + 1];
+        const parentIndex = updatedRows.findIndex(
+          (row) => row.id === parent.id,
+        );
+        updatedRows[parentIndex] = {
+          ...parent,
+          preferredChildId: child.id,
+          preferredChildInitialized: true,
+        };
+        await tx
+          .update(notebookChatMessages)
+          .set({
+            preferredChildId: child.id,
+            preferredChildInitialized: true,
+          })
+          .where(
+            and(
+              eq(notebookChatMessages.id, parent.id),
+              eq(notebookChatMessages.notebookId, notebookId),
+            ),
+          );
+      }
+      const restoredPath = buildRememberedMessagePath(updatedRows, messageId);
+      const selectedEndpoint = restoredPath.at(-1)?.id ?? messageId;
+      await tx
+        .update(notebooks)
+        .set({ selectedChatMessageId: selectedEndpoint })
+        .where(eq(notebooks.id, notebookId));
+      return selectedEndpoint;
+    });
   }
 
   private async validateSourceIds(

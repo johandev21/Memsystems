@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   sendMessage: vi.fn(),
   stop: vi.fn(),
   setMessages: vi.fn(),
+  clearError: vi.fn(),
   regenerate: vi.fn(),
   invalidateQueries: vi.fn(),
   refetchQueries: vi.fn(),
@@ -55,6 +56,7 @@ vi.mock("@ai-sdk/react", () => ({
       sendMessage: mocks.sendMessage,
       regenerate: mocks.regenerate,
       setMessages: mocks.setMessages,
+      clearError: mocks.clearError,
       status: mocks.chatState.status,
       stop: mocks.stop,
     };
@@ -72,6 +74,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
     useQueryClient: () => ({
       invalidateQueries: mocks.invalidateQueries,
       refetchQueries: mocks.refetchQueries,
+      getQueryData: () => mocks.chatHistory,
       setQueryData: mocks.setQueryData,
     }),
     useMutation: (options: unknown) => ({
@@ -872,9 +875,11 @@ describe("useChatPanel branch selection", () => {
   it("ignores stale history arriving before the selected branch history", async () => {
     mocks.selectBranch.mockResolvedValue({ selectedMessageId: "assistant-new" });
     const { result, rerender } = renderHook(() => useChatPanel("notebook-1"));
-    mocks.setMessages.mockClear();
-
     await act(async () => { await result.current.handleSelectBranch("assistant-new"); });
+    expect(mocks.setMessages).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "assistant-new" }),
+    ]);
+    mocks.setMessages.mockClear();
     const originalHistory = mocks.chatHistory as {
       messages: ChatMessageDTO[];
       selectedMessageId: string;

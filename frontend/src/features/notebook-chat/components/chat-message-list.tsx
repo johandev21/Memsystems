@@ -53,7 +53,7 @@ export function ChatMessageList({
         const animateStyle =
           delay > 0 ? ({ "--chat-delay": `${delay}ms` } as CSSProperties) : undefined;
         if (turn.type === "user") {
-          const parentId = (turn.message.metadata as { parentId?: string | null } | undefined)?.parentId ?? null;
+          const parentId = getParentMessageId(turn.message, allBranchMessages);
           const siblings = getSiblingMessages(allBranchMessages, "user", parentId);
           return (
             <MessageScrollerItem
@@ -69,7 +69,9 @@ export function ChatMessageList({
         }
 
         const activeAssistant = turn.versions.at(-1);
-        const assistantParentId = (activeAssistant?.metadata as { parentId?: string | null } | undefined)?.parentId ?? null;
+        const assistantParentId = activeAssistant
+          ? getParentMessageId(activeAssistant, allBranchMessages)
+          : null;
         const assistantSiblings = getSiblingMessages(allBranchMessages, "assistant", assistantParentId);
 
         return (
@@ -110,6 +112,14 @@ export function ChatMessageList({
       )}
     </>
   );
+}
+
+function getParentMessageId(message: UIMessage, allBranchMessages: UIMessage[]): string | null {
+  const persistedMessage = allBranchMessages.find((candidate) => candidate.id === message.id);
+  const metadata = (persistedMessage?.metadata ?? message.metadata) as
+    | { parentId?: string | null }
+    | undefined;
+  return metadata?.parentId ?? null;
 }
 
 function getSiblingMessages(

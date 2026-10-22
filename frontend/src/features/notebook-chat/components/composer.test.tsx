@@ -65,6 +65,7 @@ const unsupportedModels: ModelOption[] = [
 
 function ComposerHarness({
   isLoading = false,
+  isDisabled = false,
   onStop = vi.fn(),
   onSubmit = vi.fn(),
   onModelChange = vi.fn(),
@@ -73,6 +74,7 @@ function ComposerHarness({
   capabilitiesVerified = true,
 }: {
   isLoading?: boolean;
+  isDisabled?: boolean;
   onStop?: () => void;
   onSubmit?: (submission: { text: string; files?: unknown[] } | string) => void;
   onModelChange?: (model: string) => void;
@@ -89,6 +91,7 @@ function ComposerHarness({
       onInputChange={setInput}
       onSubmit={onSubmit}
       isLoading={isLoading}
+      isDisabled={isDisabled}
       onStop={onStop}
       models={modelList}
       selectedModel={selectedModel}
@@ -160,6 +163,18 @@ describe("Composer", () => {
     await user.click(stop);
 
     expect(onStop).toHaveBeenCalledOnce();
+  });
+
+  it("keeps submit disabled during branch selection without showing the stop state", async () => {
+    const user = userEvent.setup();
+    render(<ComposerHarness isDisabled />);
+
+    await user.type(screen.getByRole("textbox"), "Continue in this branch");
+
+    const composer = screen.getByRole("textbox").closest("form");
+    expect(composer?.getAttribute("data-composer-state")).toBe("ready");
+    expect(screen.queryByRole("button", { name: "Stop" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Submit" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("renders desktop dialog on desktop viewports", async () => {
