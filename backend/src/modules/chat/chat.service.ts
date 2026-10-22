@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { createId } from '@paralleldrive/cuid2';
+import { isDeepStrictEqual } from 'node:util';
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -108,6 +109,40 @@ export interface ChatMessage {
   citedSourceIds: CitedSourceEntry[] | null;
   citedSources: CitedSourceMeta[];
   createdAt: Date;
+  parentId: string | null;
+  siblingIndex: number;
+  siblingCount: number;
+  isOnSelectedPath: boolean;
+  isSelected: boolean;
+}
+
+export interface ChatHistoryResponse {
+  messages: ChatMessage[];
+  selectedMessageId: string | null;
+  selectedPathIds: string[];
+}
+
+export function buildMessagePath<
+  T extends { id: string; parentId: string | null },
+>(rows: T[], targetId: string | null): T[] {
+  if (!targetId) return [];
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const path: T[] = [];
+  const visited = new Set<string>();
+  let current = byId.get(targetId);
+  if (!current) throw new BadRequestError('Unknown chat branch message');
+  while (current) {
+    if (visited.has(current.id)) {
+      throw new BadRequestError('Invalid cyclic chat branch');
+    }
+    visited.add(current.id);
+    path.unshift(current);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
+    if (path[0].parentId && !current) {
+      throw new BadRequestError('Invalid chat branch parent');
+    }
+  }
+  return path;
 }
 
 interface CitedSourceMeta {
@@ -133,12 +168,24 @@ export interface SendInput {
   content: string;
   parts?: Record<string, unknown>[];
   messageId?: string;
-  /** @deprecated Unused. Kept for backwards compatibility with existing callers. */
+  parentMessageId?: string | null;
+  editMessageId?: string;
   regenerateMessageId?: string;
+  sourceIds?: string[];
   model: string;
   abortSignal?: AbortSignal;
   language?: string;
   groundingMode?: GroundingMode;
+}
+
+function comparableUserParts(
+  parts: Record<string, unknown>[] | null | undefined,
+): Record<string, unknown>[] {
+  return (parts ?? []).map((part) => {
+    const persistedPart = { ...part };
+    delete persistedPart.state;
+    return persistedPart;
+  });
 }
 
 @Injectable()
@@ -155,7 +202,7 @@ export class ChatService {
     private readonly retrievalTraceService: RetrievalTraceService,
   ) {}
 
-  async listMessages(notebookId: string): Promise<ChatMessage[]> {
+  async listMessages(notebookId: string): Promise<ChatHistoryResponse> {
     await this.notebooksService.assertNotebookOwner(notebookId);
 
     const rows = await this.db
@@ -163,6 +210,27 @@ export class ChatService {
       .from(notebookChatMessages)
       .where(eq(notebookChatMessages.notebookId, notebookId))
       .orderBy(asc(notebookChatMessages.createdAt));
+
+    const [notebook] = await this.db
+      .select({ selectedChatMessageId: notebooks.selectedChatMessageId })
+      .from(notebooks)
+      .where(eq(notebooks.id, notebookId));
+    const selectedMessageId = notebook?.selectedChatMessageId ?? null;
+    const selectedPathIds = buildMessagePath(rows, selectedMessageId).map(
+      (row) => row.id,
+    );
+    const childrenByParent = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const key = row.parentId ?? '';
+      childrenByParent.set(key, [...(childrenByParent.get(key) ?? []), row]);
+    }
+    for (const children of childrenByParent.values()) {
+      children.sort(
+        (a, b) =>
+          a.createdAt.getTime() - b.createdAt.getTime() ||
+          a.id.localeCompare(b.id),
+      );
+    }
 
     const allCitedIds = [
       ...new Set(
@@ -210,7 +278,7 @@ export class ChatService {
       }
     }
 
-    return rows.map((r) => {
+    const messages = rows.map((r) => {
       const rawEntries = (r.citedSourceIds ?? []) as StoredCitedSourceEntry[];
       const entries = rawEntries.map(normalizeStoredCitation);
       const citedSources: CitedSourceMeta[] = entries.map((e) => {
@@ -261,8 +329,16 @@ export class ChatService {
         citedSourceIds: entries,
         citedSources,
         createdAt: r.createdAt,
+        parentId: r.parentId,
+        siblingIndex: (childrenByParent.get(r.parentId ?? '') ?? []).findIndex(
+          (child) => child.id === r.id,
+        ),
+        siblingCount: (childrenByParent.get(r.parentId ?? '') ?? []).length,
+        isOnSelectedPath: selectedPathIds.includes(r.id),
+        isSelected: selectedMessageId === r.id,
       };
     });
+    return { messages, selectedMessageId, selectedPathIds };
   }
 
   extractUserMessageContent(
@@ -305,39 +381,147 @@ export class ChatService {
       content: string;
       parts: Record<string, unknown>[] | null;
       createdAt: Date;
+      parentId: string | null;
     };
+    const messageRows = await this.db
+      .select()
+      .from(notebookChatMessages)
+      .where(eq(notebookChatMessages.notebookId, notebookId))
+      .orderBy(asc(notebookChatMessages.createdAt));
+    const notebookRows = await this.db
+      .select({ selectedChatMessageId: notebooks.selectedChatMessageId })
+      .from(notebooks)
+      .where(eq(notebooks.id, notebookId));
+    const selectedMessageId = notebookRows[0]?.selectedChatMessageId ?? null;
 
-    const existingUserRows = input.messageId
-      ? await this.db
-          .select()
-          .from(notebookChatMessages)
-          .where(
-            and(
-              eq(notebookChatMessages.id, input.messageId),
-              eq(notebookChatMessages.notebookId, notebookId),
-            ),
-          )
-      : [];
+    // Client generated IDs are persisted for new and edited user messages so
+    // the streamed UI message and the durable branch node stay addressable by
+    // the same ID. Reject collisions before insertion (the PK remains the
+    // final guard against concurrent requests choosing the same ID).
+    if (input.editMessageId && input.messageId === input.editMessageId) {
+      throw new BadRequestError('Edited message must have a fresh ID');
+    }
+    if (input.editMessageId && input.messageId) {
+      const idRows = await this.db
+        .select({ id: notebookChatMessages.id })
+        .from(notebookChatMessages)
+        .where(eq(notebookChatMessages.id, input.messageId));
+      if (idRows.length > 0) {
+        throw new BadRequestError('Message ID is already in use');
+      }
+    }
 
-    if (existingUserRows.length > 0) {
-      userMessage = {
-        id: existingUserRows[0].id,
-        role: 'user',
-        content: existingUserRows[0].content,
-        parts: existingUserRows[0].parts,
-        createdAt: existingUserRows[0].createdAt,
-      };
+    let parentId: string | null =
+      input.parentMessageId !== undefined
+        ? input.parentMessageId
+        : selectedMessageId;
+    let priorEndId: string | null;
+    let existingUser: (typeof messageRows)[number] | undefined;
+
+    if (input.regenerateMessageId) {
+      const regenerateTarget = messageRows.find(
+        (row) => row.id === input.regenerateMessageId,
+      );
+      if (!regenerateTarget || regenerateTarget.role !== 'assistant') {
+        throw new BadRequestError(
+          'Regeneration target must be an assistant message',
+        );
+      }
+      existingUser = messageRows.find(
+        (row) => row.id === regenerateTarget.parentId && row.role === 'user',
+      );
+      if (!existingUser) {
+        throw new BadRequestError('Invalid regeneration branch');
+      }
+      parentId = existingUser.parentId;
+      priorEndId = existingUser.parentId;
+    } else if (input.editMessageId) {
+      existingUser = messageRows.find(
+        (row) => row.id === input.editMessageId && row.role === 'user',
+      );
+      if (!existingUser) {
+        throw new BadRequestError('Edit target must be a user message');
+      }
+      parentId = existingUser.parentId;
+      priorEndId = parentId;
     } else {
-      const userParts =
-        input.parts && input.parts.length > 0
+      priorEndId = parentId;
+      if (input.messageId) {
+        const suppliedMessage = messageRows.find(
+          (row) => row.id === input.messageId,
+        );
+        if (suppliedMessage && suppliedMessage.role !== 'user') {
+          throw new BadRequestError('Message ID must identify a user message');
+        }
+        existingUser = suppliedMessage;
+        if (!existingUser) {
+          const messageIdRows = await this.db
+            .select({ id: notebookChatMessages.id })
+            .from(notebookChatMessages)
+            .where(eq(notebookChatMessages.id, input.messageId));
+          if (messageIdRows.length > 0) {
+            throw new BadRequestError(
+              'Message ID does not belong to this notebook',
+            );
+          }
+        }
+      }
+    }
+
+    if (existingUser && !input.editMessageId && !input.regenerateMessageId) {
+      const sameContent = existingUser.content === input.content;
+      const sameParts = isDeepStrictEqual(
+        comparableUserParts(existingUser.parts),
+        comparableUserParts(input.parts),
+      );
+      // A retry after a failed/cancelled request sees the user node selected.
+      // An explicit parent is also accepted when it repeats the original
+      // request intent. Omitted parent is otherwise resolved from selection.
+      const sameParent =
+        input.parentMessageId !== undefined
+          ? input.parentMessageId === existingUser.parentId
+          : selectedMessageId === existingUser.id ||
+            selectedMessageId === existingUser.parentId;
+      if (!sameContent || !sameParts || !sameParent) {
+        throw new BadRequestError(
+          'Message ID already belongs to a different chat request',
+        );
+      }
+      parentId = existingUser.parentId;
+      priorEndId = existingUser.parentId;
+    }
+
+    if (parentId) {
+      const parent = messageRows.find((row) => row.id === parentId);
+      if (!parent) throw new BadRequestError('Unknown chat branch parent');
+    }
+    const priorHistory = buildMessagePath(messageRows, priorEndId).slice(
+      -MAX_HISTORY_MESSAGES,
+    );
+
+    if (input.regenerateMessageId) {
+      userMessage = {
+        id: existingUser!.id,
+        role: 'user',
+        content: existingUser!.content,
+        parts: existingUser!.parts,
+        createdAt: existingUser!.createdAt,
+        parentId: existingUser!.parentId,
+      };
+    } else if (input.editMessageId || !existingUser) {
+      const userParts = input.editMessageId
+        ? (existingUser!.parts ?? []).map((part) =>
+            part.type === 'text' ? { ...part, text: input.content } : part,
+          )
+        : input.parts && input.parts.length > 0
           ? input.parts
           : [{ type: 'text', text: input.content }];
-
       const [inserted] = await this.db
         .insert(notebookChatMessages)
         .values({
           id: input.messageId || createId(),
           notebookId,
+          parentId,
           role: 'user',
           content: input.content,
           parts: userParts,
@@ -345,34 +529,73 @@ export class ChatService {
           groundingMode,
         })
         .returning();
-
       userMessage = {
         id: inserted.id,
         role: 'user',
         content: inserted.content,
         parts: inserted.parts,
         createdAt: inserted.createdAt,
+        parentId,
       };
-
-      await this.db
-        .update(notebooks)
-        .set({ updatedAt: new Date() })
-        .where(eq(notebooks.id, notebookId));
+      priorEndId = parentId;
+      priorHistory.splice(
+        0,
+        priorHistory.length,
+        ...buildMessagePath(messageRows, priorEndId).slice(
+          -MAX_HISTORY_MESSAGES,
+        ),
+      );
+    } else {
+      userMessage = {
+        id: existingUser.id,
+        role: 'user',
+        content: existingUser.content,
+        parts: existingUser.parts,
+        createdAt: existingUser.createdAt,
+        parentId: existingUser.parentId,
+      };
+      priorHistory.splice(
+        0,
+        priorHistory.length,
+        ...buildMessagePath(messageRows, existingUser.parentId).slice(
+          -MAX_HISTORY_MESSAGES,
+        ),
+      );
     }
 
-    const priorHistory = await this.getRecentHistory(
-      notebookId,
-      MAX_HISTORY_MESSAGES,
-      userMessage.id,
-    );
+    // A failed or cancelled request still leaves this branch selected. The
+    // assistant completion below advances selection only if this request is
+    // still the active branch, so stale streams cannot steal a newer choice.
+    await this.db
+      .update(notebooks)
+      .set({ selectedChatMessageId: userMessage.id, updatedAt: new Date() })
+      .where(
+        and(
+          eq(notebooks.id, notebookId),
+          selectedMessageId
+            ? eq(notebooks.selectedChatMessageId, selectedMessageId)
+            : isNull(notebooks.selectedChatMessageId),
+        ),
+      );
 
-    const retrievalOutcome: RetrievalOutcome | null = input.content.trim()
+    const retrievalOutcome: RetrievalOutcome | null = userMessage.content.trim()
       ? await this.retrievalService.retrieve({
           notebookId,
-          query: input.content,
+          query: userMessage.content,
+          ...(input.sourceIds !== undefined
+            ? {
+                sourceIds: await this.validateSourceIds(
+                  notebookId,
+                  input.sourceIds,
+                ),
+              }
+            : {}),
           history: priorHistory.map((message) => ({
             role: message.role,
-            content: message.content,
+            content:
+              message.role === 'assistant'
+                ? stripCitationKeys(message.content)
+                : message.content,
           })),
         })
       : null;
@@ -583,6 +806,7 @@ export class ChatService {
         await this.db.insert(notebookChatMessages).values({
           id: assistantMessageId,
           notebookId,
+          parentId: userMessage.id,
           role: 'assistant',
           content: text,
           reasoning,
@@ -591,6 +815,17 @@ export class ChatService {
           groundingMode,
           citedSourceIds: citedEntries,
         });
+        if (customMetadata?.finishReason !== 'cancelled') {
+          await this.db
+            .update(notebooks)
+            .set({ selectedChatMessageId: assistantMessageId })
+            .where(
+              and(
+                eq(notebooks.id, notebookId),
+                eq(notebooks.selectedChatMessageId, userMessage.id),
+              ),
+            );
+        }
       } catch (dbError) {
         this.logger.error('failed to persist assistant message', dbError);
       }
@@ -799,6 +1034,7 @@ export class ChatService {
       await this.db.insert(notebookChatMessages).values({
         id: assistantMessageId,
         notebookId,
+        parentId: userMessage.id,
         role: 'assistant',
         content: text,
         reasoning: null,
@@ -807,6 +1043,15 @@ export class ChatService {
         groundingMode,
         citedSourceIds: [],
       });
+      await this.db
+        .update(notebooks)
+        .set({ selectedChatMessageId: assistantMessageId })
+        .where(
+          and(
+            eq(notebooks.id, notebookId),
+            eq(notebooks.selectedChatMessageId, userMessage.id),
+          ),
+        );
     } catch (dbError) {
       this.logger.error('failed to persist no-evidence reply', dbError);
     }
@@ -841,6 +1086,67 @@ export class ChatService {
       .delete(notebookChatMessages)
       .where(eq(notebookChatMessages.notebookId, notebookId));
     await this.retrievalTraceService.clearChatTraces(notebookId);
+  }
+
+  async selectMessage(notebookId: string, messageId: string): Promise<string> {
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    const messageRows = await this.db
+      .select()
+      .from(notebookChatMessages)
+      .where(eq(notebookChatMessages.notebookId, notebookId));
+    if (!messageRows.some((row) => row.id === messageId)) {
+      throw new BadRequestError(
+        'Chat message does not belong to this notebook',
+      );
+    }
+    buildMessagePath(messageRows, messageId);
+    const selectedMessage = messageRows.find((row) => row.id === messageId)!;
+    // Selecting an alternate user turn should restore its answer as part of
+    // the visible path. Otherwise the path ends at the user node and makes a
+    // completed response appear to disappear when switching question versions.
+    const assistantReply =
+      selectedMessage.role === 'user'
+        ? messageRows
+            .filter(
+              (row) => row.parentId === messageId && row.role === 'assistant',
+            )
+            .sort(
+              (a, b) =>
+                b.createdAt.getTime() - a.createdAt.getTime() ||
+                b.id.localeCompare(a.id),
+            )[0]
+        : undefined;
+    const selectedEndpoint = assistantReply?.id ?? messageId;
+    await this.db
+      .update(notebooks)
+      .set({ selectedChatMessageId: selectedEndpoint })
+      .where(eq(notebooks.id, notebookId));
+    return selectedEndpoint;
+  }
+
+  private async validateSourceIds(
+    notebookId: string,
+    sourceIds?: string[],
+  ): Promise<string[] | undefined> {
+    if (!sourceIds) return undefined;
+    const uniqueIds = [...new Set(sourceIds)];
+    if (uniqueIds.length === 0) return [];
+    const matchingSources = await this.db
+      .select({ id: sources.id })
+      .from(sources)
+      .where(
+        and(
+          eq(sources.notebookId, notebookId),
+          inArray(sources.id, uniqueIds),
+          isNull(sources.deletedAt),
+        ),
+      );
+    if (matchingSources.length !== uniqueIds.length) {
+      throw new BadRequestError(
+        'Selected sources must belong to this notebook',
+      );
+    }
+    return uniqueIds;
   }
 
   async getRecentHistory(

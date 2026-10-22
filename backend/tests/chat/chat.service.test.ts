@@ -7,6 +7,10 @@ import { RetrievalService } from '../../src/modules/ai/retrieval/retrieval.servi
 import { RetrievalTraceService } from '../../src/modules/ai/retrieval/retrieval-trace.service';
 import { ChatService } from '../../src/modules/chat/chat.service';
 import { DRIZZLE } from '../../src/modules/database/database.module';
+import {
+  notebooks,
+  notebookChatMessages,
+} from '../../src/database/schema';
 import { NotebooksService } from '../../src/modules/notebooks/notebooks.service';
 
 const mocks = vi.hoisted(() => ({
@@ -87,12 +91,21 @@ async function createChatServiceHarness() {
   const insertedValues: Record<string, unknown>[] = [];
   const degradedRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
   const historyRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
+  const selectedMessageState: { id: string | null } = { id: null };
 
   const db = {
     select: vi.fn(() => ({
-      from: vi.fn(() => ({
+      from: vi.fn((table) => ({
         where: vi.fn(() => {
-          const rows = Promise.resolve(degradedRowsState.rows);
+          if (table === notebooks) {
+            return Promise.resolve([
+              { selectedChatMessageId: selectedMessageState.id },
+            ]);
+          }
+          const selectedRows = table === notebookChatMessages
+            ? historyRowsState.rows
+            : degradedRowsState.rows;
+          const rows = Promise.resolve(selectedRows);
           return {
             orderBy: vi.fn().mockImplementation((orderCol) => {
               const rows = [...historyRowsState.rows];
@@ -139,7 +152,12 @@ async function createChatServiceHarness() {
       }),
     })),
     update: vi.fn(() => ({
-      set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+      set: vi.fn((values: Record<string, unknown>) => {
+        if (typeof values.selectedChatMessageId === 'string') {
+          selectedMessageState.id = values.selectedChatMessageId;
+        }
+        return { where: vi.fn().mockResolvedValue(undefined) };
+      }),
     })),
     delete: vi.fn(() => ({
       where: vi.fn().mockResolvedValue(undefined),
@@ -201,11 +219,34 @@ async function createChatServiceHarness() {
     get degradedSourceRows() {
       return degradedRowsState.rows;
     },
+    set selectedMessageId(id: string | null) {
+      selectedMessageState.id = id;
+    },
+    get selectedMessageId() {
+      return selectedMessageState.id;
+    },
     set degradedSourceRows(rows: Record<string, unknown>[]) {
       degradedRowsState.rows = rows;
     },
     set historyRows(rows: Record<string, unknown>[]) {
-      historyRowsState.rows = rows;
+      let previousId: string | null = null;
+      let lastUserId: string | null = null;
+      let previousRole: string | null = null;
+      historyRowsState.rows = rows.map((row) => {
+        const parentId =
+          row.parentId !== undefined
+            ? (row.parentId as string | null)
+            : row.role === 'user'
+              ? previousId
+              : previousRole === 'assistant'
+                ? lastUserId
+                : previousId;
+        if (row.role === 'user') lastUserId = row.id as string;
+        previousId = row.id as string;
+        previousRole = row.role as string;
+        return { ...row, parentId };
+      });
+      selectedMessageState.id = (historyRowsState.rows.at(-1)?.id as string) ?? null;
     },
   };
 }
@@ -251,6 +292,151 @@ describe('ChatService streaming lifecycle', () => {
       groundingMode: 'strict',
       trace: expect.objectContaining({ query: 'Explain Plato' }),
     });
+  });
+
+  it('treats an explicit null parent as a root even when a branch is selected', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [];
+    harness.selectedMessageId = 'selected-assistant';
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Who was Plato?',
+      model: 'openai/gpt-5.6-sol',
+      messageId: 'new-root-user',
+      parentMessageId: null,
+    });
+
+    expect(harness.insertedValues.find((row) => row.id === 'new-root-user'))
+      .toEqual(expect.objectContaining({ parentId: null }));
+    expect(harness.retrieve).toHaveBeenCalledWith(expect.objectContaining({ history: [] }));
+  });
+
+  it('retries a persisted user ID only when payload and branch intent match', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      {
+        id: 'prior-user', role: 'user', content: 'Earlier question',
+        parentId: null, parts: [{ type: 'text', text: 'Earlier question' }],
+        createdAt: new Date('2026-08-22T09:00:00.000Z'),
+      },
+      {
+        id: 'prior-answer', role: 'assistant', content: 'Earlier answer',
+        parentId: 'prior-user', parts: [{ type: 'text', text: 'Earlier answer' }],
+        createdAt: new Date('2026-08-22T09:01:00.000Z'),
+      },
+      {
+        id: 'retry-user', role: 'user', content: 'Retry this question',
+        parentId: 'prior-answer',
+        parts: [{ type: 'text', text: 'Retry this question', state: 'done' }],
+        createdAt: new Date('2026-08-22T09:02:00.000Z'),
+      },
+    ];
+    harness.selectedMessageId = 'retry-user';
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Retry this question',
+      parts: [{ type: 'text', text: 'Retry this question', state: 'streaming' }],
+      messageId: 'retry-user',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(harness.insertedValues.some((row) => row.id === 'retry-user')).toBe(false);
+    expect(harness.retrieve).toHaveBeenCalledWith(expect.objectContaining({
+      history: [
+        { role: 'user', content: 'Earlier question' },
+        { role: 'assistant', content: 'Earlier answer' },
+      ],
+    }));
+
+    await expect(harness.service.sendMessage('notebook-1', {
+      content: 'A different question',
+      parts: [{ type: 'text', text: 'A different question' }],
+      messageId: 'retry-user',
+      model: 'openai/gpt-5.6-sol',
+    })).rejects.toThrow('Message ID already belongs to a different chat request');
+
+    await expect(harness.service.sendMessage('notebook-1', {
+      content: 'Retry this question',
+      parts: [{ type: 'text', text: 'Retry this question' }],
+      messageId: 'retry-user',
+      parentMessageId: 'prior-user',
+      model: 'openai/gpt-5.6-sol',
+    })).rejects.toThrow('Message ID already belongs to a different chat request');
+  });
+
+  it('builds edit and regeneration context from the requested nested branch only', async () => {
+    const branchRows = [
+      { id: 'root-user', role: 'user', content: 'MARKER root user', parentId: null },
+      { id: 'root-answer', role: 'assistant', content: 'MARKER root answer', parentId: 'root-user' },
+      { id: 'question', role: 'user', content: 'MARKER original question', parentId: 'root-answer' },
+      { id: 'answer-a', role: 'assistant', content: 'MARKER answer A', parentId: 'question' },
+      { id: 'answer-b', role: 'assistant', content: 'MARKER answer B', parentId: 'question' },
+      { id: 'nested-user-b', role: 'user', content: 'MARKER nested user B', parentId: 'answer-b' },
+      { id: 'nested-answer-b', role: 'assistant', content: 'MARKER nested answer B', parentId: 'nested-user-b' },
+      { id: 'other-root', role: 'user', content: 'MARKER unrelated root', parentId: null },
+    ].map((row, index) => ({
+      ...row,
+      parts: [{ type: 'text', text: row.content }],
+      createdAt: new Date(`2026-08-22T09:0${index}:00.000Z`),
+    }));
+
+    const editHarness = await createChatServiceHarness();
+    editHarness.historyRows = branchRows;
+    editHarness.selectedMessageId = 'nested-answer-b';
+    await editHarness.service.sendMessage('notebook-1', {
+      content: 'MARKER edited question',
+      parts: [{ type: 'text', text: 'MARKER edited question' }],
+      editMessageId: 'question',
+      model: 'openai/gpt-5.6-sol',
+    });
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'MARKER root user' },
+      { role: 'assistant', content: 'MARKER root answer' },
+      { role: 'user', content: 'MARKER edited question' },
+    ]);
+
+    const regenerateHarness = await createChatServiceHarness();
+    regenerateHarness.historyRows = branchRows;
+    regenerateHarness.selectedMessageId = 'nested-answer-b';
+    await regenerateHarness.service.sendMessage('notebook-1', {
+      content: 'MARKER original question',
+      regenerateMessageId: 'answer-a',
+      model: 'openai/gpt-5.6-sol',
+    });
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'MARKER root user' },
+      { role: 'assistant', content: 'MARKER root answer' },
+      { role: 'user', content: 'MARKER original question' },
+    ]);
+  });
+
+  it('restores a completed reply when selecting its user-message branch', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      {
+        id: 'user-a', role: 'user', content: 'Question A', parentId: null,
+        createdAt: new Date('2026-08-22T09:00:00.000Z'),
+      },
+      {
+        id: 'assistant-a', role: 'assistant', content: 'Answer A', parentId: 'user-a',
+        createdAt: new Date('2026-08-22T09:01:00.000Z'),
+      },
+      {
+        id: 'user-b', role: 'user', content: 'Question B', parentId: null,
+        createdAt: new Date('2026-08-22T09:02:00.000Z'),
+      },
+      {
+        id: 'assistant-b', role: 'assistant', content: 'Answer B', parentId: 'user-b',
+        createdAt: new Date('2026-08-22T09:03:00.000Z'),
+      },
+    ];
+
+    await expect(harness.service.selectMessage('notebook-1', 'user-a'))
+      .resolves.toBe('assistant-a');
+    expect(harness.selectedMessageId).toBe('assistant-a');
+    await expect(harness.service.selectMessage('notebook-1', 'assistant-b'))
+      .resolves.toBe('assistant-b');
+    expect(harness.selectedMessageId).toBe('assistant-b');
   });
 
   it('passes the recent turns to retrieval so follow-ups can be resolved', async () => {

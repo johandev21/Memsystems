@@ -205,6 +205,10 @@ export const notebooks = pgTable(
     groundingMode: groundingModeEnum('grounding_mode')
       .default('strict')
       .notNull(),
+    selectedChatMessageId: varchar('selected_chat_message_id').references(
+      (): AnyPgColumn => notebookChatMessages.id,
+      { onDelete: 'set null' },
+    ),
     deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
@@ -496,6 +500,10 @@ export const notebookChatMessages = pgTable(
     notebookId: varchar('notebook_id')
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
+    parentId: varchar('parent_id').references(
+      (): AnyPgColumn => notebookChatMessages.id,
+      { onDelete: 'cascade' },
+    ),
     role: chatRoleEnum('role').notNull(),
     content: text('content').notNull(),
     reasoning: text('reasoning'),
@@ -530,6 +538,7 @@ export const notebookChatMessages = pgTable(
   (table) => [
     index('notebook_chat_messages_notebook_id_idx').on(table.notebookId),
     index('notebook_chat_messages_created_at_idx').on(table.createdAt),
+    index('notebook_chat_messages_parent_id_idx').on(table.parentId),
   ],
 );
 

@@ -54,7 +54,14 @@ const chatRequestSchema = z.object({
   regenerateMessageId: z.string().optional(),
   language: z.string().min(1).max(35).optional(),
   groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
+  // null explicitly selects the root for a new conversation. Omission keeps
+  // backwards compatibility by using the notebook's persisted selection.
+  parentMessageId: z.string().nullable().optional(),
+  editMessageId: z.string().optional(),
+  sourceIds: z.array(z.string().min(1)).max(100).optional(),
 });
+
+const selectMessageSchema = z.object({ messageId: z.string().min(1) });
 
 @Controller('notebooks/:id/chat')
 export class ChatController {
@@ -103,6 +110,9 @@ export class ChatController {
           content,
           parts: userParts,
           messageId: lastUserMessage?.id,
+          parentMessageId: body.parentMessageId,
+          editMessageId: body.editMessageId,
+          sourceIds: body.sourceIds,
           regenerateMessageId: body.regenerateMessageId,
           model: body.model,
           language: body.language,
@@ -136,6 +146,19 @@ export class ChatController {
       res.off('close', abortOnDisconnect);
       reader?.releaseLock();
     }
+  }
+
+  @Post('selection')
+  @UsePipes(new ZodValidationPipe(selectMessageSchema))
+  async selectMessage(
+    @Param('id') notebookId: string,
+    @Body() body: z.infer<typeof selectMessageSchema>,
+  ) {
+    const selectedMessageId = await this.chatService.selectMessage(
+      notebookId,
+      body.messageId,
+    );
+    return { selectedMessageId };
   }
 
   @Delete()

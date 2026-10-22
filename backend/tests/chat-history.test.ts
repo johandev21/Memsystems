@@ -4,6 +4,7 @@ import {
   ChatService,
   MAX_HISTORY_MESSAGES,
   HISTORY_FETCH_LIMIT,
+  buildMessagePath,
   deduplicateHistoryMessages,
   stripCitationKeys,
 } from '../src/modules/chat/chat.service';
@@ -13,6 +14,7 @@ import { AiService } from '../src/modules/ai/ai.service';
 import { ConnectionService } from '../src/modules/ai/connection.service';
 import { RetrievalService } from '../src/modules/ai/retrieval/retrieval.service';
 import { RetrievalTraceService } from '../src/modules/ai/retrieval/retrieval-trace.service';
+import { notebooks } from '../src/database/schema';
 
 const mocks = vi.hoisted(() => ({
   streamText: vi.fn(),
@@ -45,17 +47,43 @@ interface HarnessOptions {
   }>;
 }
 
+function addLegacyParents(
+  rows: NonNullable<HarnessOptions['historyRows']>,
+) {
+  let previousId: string | null = null;
+  let lastUserId: string | null = null;
+  let previousRole: string | null = null;
+  return rows.map((row) => {
+    const parentId =
+      row.parentId !== undefined
+        ? (row.parentId as string | null)
+        : row.role === 'user'
+          ? previousId
+          : previousRole === 'assistant'
+            ? lastUserId
+            : previousId;
+    if (row.role === 'user') lastUserId = row.id;
+    previousId = row.id;
+    previousRole = row.role;
+    return { ...row, parentId };
+  });
+}
+
 async function createTestHarness(options: HarnessOptions = {}) {
-  let historyRows = options.historyRows ? [...options.historyRows] : [];
+  let historyRows = addLegacyParents(options.historyRows ?? []);
   let capturedWhere: unknown = null;
   let capturedOrderBy: unknown = null;
   let capturedLimit: number | null = null;
+  let selectedMessageId: string | null = historyRows.at(-1)?.id ?? null;
 
   const db = {
     select: vi.fn(() => ({
-      from: vi.fn(() => ({
+      from: vi.fn((table) => ({
         where: vi.fn((whereClause: unknown) => {
           capturedWhere = whereClause;
+          if (table === notebooks) {
+            return Promise.resolve([{ selectedChatMessageId: selectedMessageId }]);
+          }
           return {
             orderBy: vi.fn((orderCol: unknown) => {
               capturedOrderBy = orderCol;
@@ -157,7 +185,8 @@ async function createTestHarness(options: HarnessOptions = {}) {
     db,
     retrieve,
     setHistoryRows: (rows: typeof historyRows) => {
-      historyRows = [...rows];
+      historyRows = addLegacyParents(rows);
+      selectedMessageId = historyRows.at(-1)?.id ?? null;
     },
     getCapturedWhere: () => capturedWhere,
     getCapturedOrderBy: () => capturedOrderBy,
@@ -166,6 +195,32 @@ async function createTestHarness(options: HarnessOptions = {}) {
 }
 
 describe('Chat History Assembly & Clean-up (Ticket #131)', () => {
+  describe('branch path assembly', () => {
+    it('follows only the selected node ancestry and keeps sibling edits out', () => {
+      const rows = [
+        { id: 'u1', parentId: null },
+        { id: 'a1', parentId: 'u1' },
+        { id: 'u2-old', parentId: 'a1' },
+        { id: 'a2-old', parentId: 'u2-old' },
+        { id: 'u2-edit', parentId: 'a1' },
+        { id: 'a2-edit', parentId: 'u2-edit' },
+      ];
+
+      expect(buildMessagePath(rows, 'a2-edit').map((row) => row.id)).toEqual([
+        'u1',
+        'a1',
+        'u2-edit',
+        'a2-edit',
+      ]);
+    });
+
+    it('rejects a selected node whose parent is outside the notebook rows', () => {
+      expect(() =>
+        buildMessagePath([{ id: 'a1', parentId: 'foreign-message' }], 'a1'),
+      ).toThrow('Invalid chat branch parent');
+    });
+  });
+
   describe('a) Version deduplication', () => {
     it('keeps only the latest assistant message per user turn in chronological order', () => {
       const messages = [

@@ -31,6 +31,7 @@ describe('ChatController streaming lifecycle', () => {
     { type: 'text', text: 'Explain Plato' },
   ]);
   const sendMessage = vi.fn();
+  const selectMessage = vi.fn();
   let controller: ChatController;
 
   beforeEach(async () => {
@@ -45,12 +46,49 @@ describe('ChatController streaming lifecycle', () => {
             extractUserMessageContent,
             extractUserMessageParts,
             sendMessage,
+            selectMessage,
           },
         },
       ],
     }).compile();
 
     controller = module.get(ChatController);
+  });
+
+  it('passes an explicit null root parent through to the chat service', async () => {
+    sendMessage.mockResolvedValue({
+      streamResponse: new Response(new ReadableStream<Uint8Array>({ start(c) { c.close(); } })),
+      userMessageId: 'root-user-1',
+    });
+
+    await controller.sendMessage(
+      'notebook-1',
+      {
+        model: 'deepseek/deepseek-v4.1-flash-1017',
+        messages: [
+          {
+            role: 'user',
+            parts: [{ type: 'text', text: 'Who was Plato?' }],
+          },
+        ],
+        parentMessageId: null,
+      },
+      new DisconnectingResponse() as unknown as ExpressResponse,
+    );
+
+    expect(sendMessage.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ parentMessageId: null }),
+    );
+  });
+
+  it('returns the assistant endpoint selected for a completed user branch', async () => {
+    selectMessage.mockResolvedValue('assistant-answer');
+
+    await expect(
+      controller.selectMessage('notebook-1', { messageId: 'user-branch' }),
+    ).resolves.toEqual({ selectedMessageId: 'assistant-answer' });
+
+    expect(selectMessage).toHaveBeenCalledWith('notebook-1', 'user-branch');
   });
 
   it('aborts generation when the client closes the streaming response', async () => {
