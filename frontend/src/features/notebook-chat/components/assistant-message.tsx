@@ -1,5 +1,6 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Message,
   MessageContent,
@@ -12,9 +13,11 @@ import {
 import type { CitedSourceDTO } from "../api/chat";
 import { noEvidenceMetadataOf } from "../types/no-evidence.types";
 import { getReferenceKeyFromHref, prepareReferenceMessage } from "../types/message-reference.types";
+import { isMessageCancelled } from "../types/chat-turn.types";
 import { CitationChipRow, CitationHoverCard } from "@/shared/citations/citation-hover-card";
 import { NoEvidencePanel } from "./no-evidence-message";
 import { AssistantActionToolbar } from "./assistant-action-toolbar";
+import { cn } from "@/shared/utils/cn";
 
 export { AssistantVersionControls } from "./assistant-version-controls";
 export type { AssistantVersionControlsProps } from "./assistant-version-controls";
@@ -26,9 +29,14 @@ export interface AssistantMessageProps {
   versions?: UIMessage[];
   citedSources?: CitedSourceDTO[];
   citedSourcesMap?: Map<string, CitedSourceDTO[]>;
-  onCopy: (text: string) => void;
+  onCopy: (text: string) => void | boolean | Promise<void | boolean>;
   onRegenerate: () => void;
   showRegenerate?: boolean;
+  onContinue?: () => void;
+  showContinue?: boolean;
+  isLast?: boolean;
+  onSelectVersion?: (messageId: string) => void;
+  isInteractionDisabled?: boolean;
 }
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
@@ -65,11 +73,30 @@ export function AssistantMessage({
   onCopy,
   onRegenerate,
   showRegenerate = true,
+  onContinue,
+  showContinue = false,
+  isLast,
+  onSelectVersion,
+  isInteractionDisabled = false,
 }: AssistantMessageProps) {
+  const { t } = useTranslation("chat");
   const versionList = useMemo(() => {
-    if (versions && versions.length > 0) return versions;
-    if (message) return [message];
-    return [];
+    const availableVersions = versions && versions.length > 0 ? versions : [];
+    if (!message) return availableVersions;
+
+    const activeIndex = availableVersions.findIndex((version) => version.id === message.id);
+    if (activeIndex < 0) return [...availableVersions, message];
+
+    return availableVersions.map((version, index) => index === activeIndex
+      ? {
+          ...version,
+          ...message,
+          metadata: {
+            ...(typeof version.metadata === "object" && version.metadata !== null ? version.metadata : {}),
+            ...(typeof message.metadata === "object" && message.metadata !== null ? message.metadata : {}),
+          },
+        }
+      : version);
   }, [versions, message]);
 
   const [selectedVersionIndex, setSelectedVersionIndex] = useState<number>(() =>
@@ -85,11 +112,13 @@ export function AssistantMessage({
     prevLengthRef.current = versionList.length;
   }, [versionList.length]);
 
+  const selectedBranchIndex = message ? versionList.findIndex((item) => item.id === message.id) : -1;
   const activeIndex = Math.min(
     Math.max(0, selectedVersionIndex),
     Math.max(0, versionList.length - 1),
   );
-  const activeMessage = versionList[activeIndex];
+  const resolvedIndex = selectedBranchIndex >= 0 ? selectedBranchIndex : activeIndex;
+  const activeMessage = versionList[resolvedIndex];
 
   const activeCitations = useMemo(() => {
     if (!activeMessage) return [];
@@ -100,19 +129,27 @@ export function AssistantMessage({
   }, [activeMessage, citedSourcesMap, citedSources]);
 
   const content = useAssistantMessageContent(activeMessage, activeCitations);
+  const isCancelled = isMessageCancelled(activeMessage?.metadata);
 
-  if (!activeMessage || content.isEmpty) return <EmptyAssistantMessage />;
+  if (!activeMessage || (content.isEmpty && !isCancelled)) return <EmptyAssistantMessage />;
 
   const hasMultipleVersions = versionList.length > 1;
 
-  const handleCopy = () => {
-    onCopy(content.fullPlainText);
+  const handleCopy = async () => {
+    const succeeded = await onCopy(content.fullPlainText);
+    if (succeeded === false) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <Message from="assistant">
+    <Message
+      className={cn(
+        !isLast && "[content-visibility:auto] [contain-intrinsic-size:auto_100px]",
+      )}
+      from="assistant"
+    >
+      <span className="sr-only">{t("sender.assistant")}</span>
       <MessageContent>
         {content.noEvidence ? (
           <NoEvidencePanel metadata={content.noEvidence} />
@@ -123,21 +160,25 @@ export function AssistantMessage({
             {!content.isStreaming && <CitationChipRow references={content.remainingReferences} />}
           </>
         )}
+        {isCancelled && !content.isStreaming && (
+          <p className="text-xs text-text-tertiary select-none">{t("status.stopped")}</p>
+        )}
       </MessageContent>
 
-      {!content.isStreaming && (
+      {(
         <AssistantActionToolbar
           totalVersions={versionList.length}
-          activeIndex={activeIndex}
+          activeIndex={resolvedIndex}
           hasMultipleVersions={hasMultipleVersions}
-          onPreviousVersion={() => setSelectedVersionIndex((i) => Math.max(0, i - 1))}
-          onNextVersion={() =>
-            setSelectedVersionIndex((i) => Math.min(versionList.length - 1, i + 1))
-          }
+          onPreviousVersion={() => onSelectVersion ? onSelectVersion(versionList[Math.max(0, resolvedIndex - 1)].id) : setSelectedVersionIndex((i) => Math.max(0, i - 1))}
+          onNextVersion={() => onSelectVersion ? onSelectVersion(versionList[Math.min(versionList.length - 1, resolvedIndex + 1)].id) : setSelectedVersionIndex((i) => Math.min(versionList.length - 1, i + 1))}
+          versionsDisabled={isInteractionDisabled}
           onCopy={handleCopy}
           onRegenerate={onRegenerate}
           showRegenerate={showRegenerate}
-          isStreaming={content.isStreaming}
+          onContinue={onContinue}
+          showContinue={Boolean(showContinue && isCancelled)}
+          isStreaming={content.isStreaming || isInteractionDisabled}
           copied={copied}
         />
       )}
@@ -156,16 +197,24 @@ function useAssistantMessageContent(
   const isReasoningStreaming = hasStreamingReasoning && !hasStreamingText;
   const reasoningText = getReasoningText(parts);
   const textParts = parts.filter(isTextPart);
-  const referencesByKey = useMemo(
-    () => new Map(citedSources.map((source) => [source.citationKey.toUpperCase(), source])),
+  const citationFingerprint = useMemo(
+    () => citedSources.map((s) => `${s.id}:${s.citationKey}:${s.title}`).join("|"),
     [citedSources],
   );
+  const referencesByKey = useMemo(
+    () => new Map(citedSources.map((source) => [source.citationKey.toUpperCase(), source])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [citationFingerprint],
+  );
+  const referencesByKeyRef = useRef(referencesByKey);
+  referencesByKeyRef.current = referencesByKey;
+
   const messageComponents = useMemo<MessageComponents>(
     () => ({
       a: ({ href, children, ...props }) => {
         const referenceKey = getReferenceKeyFromHref(href);
         if (referenceKey) {
-          const reference = referencesByKey.get(referenceKey.toUpperCase());
+          const reference = referencesByKeyRef.current.get(referenceKey.toUpperCase());
           if (reference) return <CitationHoverCard reference={reference}>{children}</CitationHoverCard>;
           return <span className="font-medium text-muted-foreground">{children}</span>;
         }
@@ -182,7 +231,7 @@ function useAssistantMessageContent(
         );
       },
     }),
-    [referencesByKey],
+    [],
   );
   const preparedParts = textParts.map((part) =>
     prepareReferenceMessage(part.text, citedSources, isStreaming),
@@ -226,9 +275,9 @@ function AssistantResponses({
   messageId: string;
   content: ReturnType<typeof useAssistantMessageContent>;
 }) {
-  return content.preparedParts.map((part) => (
+  return content.preparedParts.map((part, index) => (
     <MessageResponse
-      key={`${messageId}-${part.markdown}`}
+      key={`${messageId}-${index}`}
       components={content.messageComponents}
       isStreaming={content.isStreaming}
     >
@@ -238,8 +287,13 @@ function AssistantResponses({
 }
 
 function EmptyAssistantMessage() {
+  const { t } = useTranslation("chat");
   return (
-    <Message from="assistant">
+    <Message
+      className="[content-visibility:auto] [contain-intrinsic-size:auto_100px]"
+      from="assistant"
+    >
+      <span className="sr-only">{t("sender.assistant")}</span>
       <MessageContent>
         <MessageResponse> </MessageResponse>
       </MessageContent>

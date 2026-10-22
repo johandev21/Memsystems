@@ -3,7 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { ModelOption } from "@/features/ai";
+import { toast } from "sonner";
 import { Composer } from "./composer";
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+  },
+}));
 
 const models = [
   {
@@ -28,8 +37,35 @@ const mixedModels: ModelOption[] = [
   },
 ];
 
+const capableModels: ModelOption[] = [
+  {
+    id: "openai/gpt-5.6-luna",
+    displayName: "GPT-5.6 Luna",
+    supportsWebSearch: true,
+    capabilities: {
+      structuredOutput: true,
+      fileInput: true,
+      imageInput: true,
+    },
+  },
+];
+
+const unsupportedModels: ModelOption[] = [
+  {
+    id: "deepseek/deepseek-r1",
+    displayName: "DeepSeek R1",
+    supportsWebSearch: false,
+    capabilities: {
+      structuredOutput: true,
+      fileInput: false,
+      imageInput: false,
+    },
+  },
+];
+
 function ComposerHarness({
   isLoading = false,
+  isDisabled = false,
   onStop = vi.fn(),
   onSubmit = vi.fn(),
   onModelChange = vi.fn(),
@@ -38,6 +74,7 @@ function ComposerHarness({
   capabilitiesVerified = true,
 }: {
   isLoading?: boolean;
+  isDisabled?: boolean;
   onStop?: () => void;
   onSubmit?: (submission: { text: string; files?: unknown[] } | string) => void;
   onModelChange?: (model: string) => void;
@@ -54,6 +91,7 @@ function ComposerHarness({
       onInputChange={setInput}
       onSubmit={onSubmit}
       isLoading={isLoading}
+      isDisabled={isDisabled}
       onStop={onStop}
       models={modelList}
       selectedModel={selectedModel}
@@ -127,6 +165,18 @@ describe("Composer", () => {
     expect(onStop).toHaveBeenCalledOnce();
   });
 
+  it("keeps submit disabled during branch selection without showing the stop state", async () => {
+    const user = userEvent.setup();
+    render(<ComposerHarness isDisabled />);
+
+    await user.type(screen.getByRole("textbox"), "Continue in this branch");
+
+    const composer = screen.getByRole("textbox").closest("form");
+    expect(composer?.getAttribute("data-composer-state")).toBe("ready");
+    expect(screen.queryByRole("button", { name: "Stop" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Submit" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("renders desktop dialog on desktop viewports", async () => {
     const user = userEvent.setup();
     vi.spyOn(window, "matchMedia").mockReturnValue({
@@ -145,5 +195,104 @@ describe("Composer", () => {
     await user.click(screen.getByRole("button", { name: /GPT-5.6 Luna/ }));
     expect(await screen.findByRole("dialog")).toBeTruthy();
     expect(await screen.findByRole("option", { name: /GPT-5.6 Luna/ })).toBeTruthy();
+  });
+
+  it("renders a visible and keyboard-accessible attach button that opens the file dialog", async () => {
+    const user = userEvent.setup();
+    render(<ComposerHarness />);
+
+    const attachButton = screen.getByRole("button", { name: "Attach files" });
+    expect(attachButton).toBeTruthy();
+
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
+
+    attachButton.focus();
+    expect(document.activeElement).toBe(attachButton);
+
+    await user.click(attachButton);
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it("enables files-only submission and triggers onSubmit without text", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    const { container } = render(
+      <ComposerHarness
+        models={capableModels}
+        selectedModel="openai/gpt-5.6-luna"
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const submit = screen.getByRole("button", { name: "Submit" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).toBeTruthy();
+
+    const file = new File(["test file content"], "document.pdf", {
+      type: "application/pdf",
+    });
+
+    await user.upload(fileInput, file);
+
+    expect((submit as HTMLButtonElement).disabled).toBe(false);
+
+    await user.click(submit);
+
+    await vi.waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          files: expect.arrayContaining([
+            expect.objectContaining({ filename: "document.pdf" }),
+          ]),
+        }),
+      );
+    });
+  });
+
+  it("shows model capability warning/error when non-image attachment is added for unsupported model", async () => {
+    const user = userEvent.setup();
+    vi.clearAllMocks();
+
+    const { container } = render(
+      <ComposerHarness
+        models={unsupportedModels}
+        selectedModel="deepseek/deepseek-r1"
+      />,
+    );
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["test document"], "notes.txt", {
+      type: "text/plain",
+    });
+
+    await user.upload(fileInput, file);
+
+    expect(toast.error).toHaveBeenCalledWith("This model does not support file attachments");
+    expect(screen.getByRole("alert").textContent).toContain("This model does not support file attachments");
+  });
+
+  it("shows model capability warning/error when image attachment is added for unsupported model", async () => {
+    const user = userEvent.setup();
+    vi.clearAllMocks();
+
+    const { container } = render(
+      <ComposerHarness
+        models={unsupportedModels}
+        selectedModel="deepseek/deepseek-r1"
+      />,
+    );
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["fake image content"], "photo.png", {
+      type: "image/png",
+    });
+
+    await user.upload(fileInput, file);
+
+    expect(toast.error).toHaveBeenCalledWith("This model does not support image attachments");
+    expect(screen.getByRole("alert").textContent).toContain("This model does not support image attachments");
   });
 });

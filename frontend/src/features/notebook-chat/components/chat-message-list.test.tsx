@@ -1,5 +1,6 @@
 import type { UIMessage } from "@ai-sdk/react";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import {
@@ -34,7 +35,7 @@ function assistantMessage(id: string, text: string): UIMessage {
 }
 
 type RenderOptions = Partial<
-  Pick<ChatMessageListProps, "showPendingIndicator" | "pendingLabel" | "anchorMessageId" | "error">
+  Pick<ChatMessageListProps, "showPendingIndicator" | "pendingLabel" | "anchorMessageId" | "error" | "onContinue" | "isLoading" | "allBranchMessages" | "onSelectBranch">
 >;
 
 function buildChatTree(messages: UIMessage[], options: RenderOptions = {}) {
@@ -52,6 +53,10 @@ function buildChatTree(messages: UIMessage[], options: RenderOptions = {}) {
               error={options.error}
               onCopy={vi.fn()}
               onRegenerate={vi.fn()}
+              onContinue={options.onContinue}
+              isLoading={options.isLoading}
+              allBranchMessages={options.allBranchMessages}
+              onSelectBranch={options.onSelectBranch}
             />
           </MessageScrollerContent>
         </MessageScrollerViewport>
@@ -65,6 +70,36 @@ function renderChatMessageList(messages: UIMessage[], options: RenderOptions = {
 }
 
 describe("ChatMessageList scroll anchoring", () => {
+  it("uses persisted branch parents for live user messages without metadata", () => {
+    const liveUser: UIMessage = {
+      ...userMessage("user-b", "Current question"),
+    };
+    const allBranchMessages: UIMessage[] = [
+      { ...userMessage("user-a", "Earlier version"), metadata: { parentId: "assistant-parent", siblingIndex: 0 } },
+      { ...userMessage("user-b", "Cached current question"), metadata: { parentId: "assistant-parent", siblingIndex: 1 } },
+    ];
+
+    renderChatMessageList([liveUser], { allBranchMessages });
+
+    expect(screen.getByText("2 of 2")).toBeTruthy();
+  });
+
+  it("uses live assistant parts while getting version siblings from persisted branch metadata", () => {
+    const liveAssistant: UIMessage = {
+      ...assistantMessage("answer-b", "Newest live answer"),
+    };
+    const allBranchMessages: UIMessage[] = [
+      { ...assistantMessage("answer-a", "Earlier answer"), metadata: { parentId: "user-parent", siblingIndex: 0 } },
+      { ...assistantMessage("answer-b", "Old cached answer"), metadata: { parentId: "user-parent", siblingIndex: 1 } },
+    ];
+
+    renderChatMessageList([liveAssistant], { allBranchMessages });
+
+    expect(screen.getByText("2 of 2")).toBeTruthy();
+    expect(screen.getByText("Newest live answer")).toBeTruthy();
+    expect(screen.queryByText("Old cached answer")).toBeNull();
+  });
+
   it("offers general recovery guidance for capability errors", async () => {
     renderChatMessageList([userMessage("msg-user-1", "Search this")], {
       error: new Error("tool_choice did not match any supported type"),
@@ -231,6 +266,35 @@ describe("ChatMessageList scroll anchoring", () => {
     expect(container.textContent).toContain("2 of 2");
     expect(container.textContent).toContain("Regenerated response");
   });
+
+  it("routes user and assistant version controls to the matching nested branch IDs", async () => {
+    const user = userEvent.setup();
+    const onSelectBranch = vi.fn();
+    const activePath: UIMessage[] = [
+      { ...userMessage("root", "Root question"), metadata: { parentId: null } },
+      { ...assistantMessage("answer-root", "Root answer"), metadata: { parentId: "root" } },
+      { ...userMessage("user-current", "Current nested question"), metadata: { parentId: "answer-root" } },
+      { ...assistantMessage("answer-current", "Current nested answer"), metadata: { parentId: "user-current" } },
+    ];
+    const allBranchMessages: UIMessage[] = [
+      { ...userMessage("user-earlier", "Earlier question version"), metadata: { parentId: "answer-root", siblingIndex: 0 } },
+      { ...userMessage("user-current", "Current nested question"), metadata: { parentId: "answer-root", siblingIndex: 1 } },
+      { ...assistantMessage("answer-earlier", "Earlier answer version"), metadata: { parentId: "user-current", siblingIndex: 0 } },
+      { ...assistantMessage("answer-current", "Current nested answer"), metadata: { parentId: "user-current", siblingIndex: 1 } },
+      { ...assistantMessage("answer-later", "Later answer version"), metadata: { parentId: "user-current", siblingIndex: 2 } },
+    ];
+
+    renderChatMessageList(activePath, { allBranchMessages, onSelectBranch });
+
+    const previousVersionButtons = screen.getAllByRole("button", { name: "Previous version" });
+    const nextVersionButtons = screen.getAllByRole("button", { name: "Next version" });
+    expect(previousVersionButtons).toHaveLength(2);
+    expect(nextVersionButtons).toHaveLength(2);
+    await user.click(previousVersionButtons[0]!);
+    await user.click(nextVersionButtons[1]!);
+
+    expect(onSelectBranch.mock.calls).toEqual([["user-earlier"], ["answer-later"]]);
+  });
 });
 
 describe("ChatMessageList pending indicator", () => {
@@ -262,5 +326,57 @@ describe("ChatMessageList pending indicator", () => {
     );
 
     expect(container.querySelector('[data-message-id="thinking-indicator"]')).toBeNull();
+  });
+});
+describe("ChatMessageList continue action", () => {
+  it("renders Continue button only on the last assistant message when cancelled", async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "Turn 1 question"),
+      {
+        ...assistantMessage("msg-asst-1", "Turn 1 answer"),
+        metadata: { finishReason: "cancelled" },
+      },
+      userMessage("msg-user-2", "Turn 2 question"),
+      {
+        ...assistantMessage("msg-asst-2", "Turn 2 answer"),
+        metadata: { finishReason: "cancelled" },
+      },
+    ];
+
+    renderChatMessageList(messages, { onContinue });
+
+    const continueButtons = screen.getAllByRole("button", { name: "Continue" });
+    expect(continueButtons).toHaveLength(1);
+
+    await user.click(continueButtons[0]);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render Continue button on the last assistant message if not cancelled", () => {
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "Turn 1 question"),
+      {
+        ...assistantMessage("msg-asst-1", "Turn 1 answer"),
+        metadata: { finishReason: "stop" },
+      },
+    ];
+
+    renderChatMessageList(messages);
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+  });
+
+  it("does not render Continue button when isLoading is true", () => {
+    const messages: UIMessage[] = [
+      userMessage("msg-user-1", "Turn 1 question"),
+      {
+        ...assistantMessage("msg-asst-1", "Turn 1 answer"),
+        metadata: { finishReason: "cancelled" },
+      },
+    ];
+
+    renderChatMessageList(messages, { isLoading: true });
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
   });
 });

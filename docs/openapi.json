@@ -1616,6 +1616,54 @@
         ]
       }
     },
+    "/api/notebooks/{id}/chat/selection": {
+      "post": {
+        "description": "Sets the active conversation endpoint to the given message ID.",
+        "operationId": "ChatController_selectMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated selected message ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "selectedMessageId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Select conversation branch endpoint",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
     "/api/notebooks/{notebookId}/study-materials": {
       "get": {
         "description": "Lists Study Materials in a Notebook, optionally filtered by Study Material Folder or Kind.",
@@ -3243,11 +3291,48 @@
           },
           "groundingMode": {
             "$ref": "#/components/schemas/GroundingMode"
+          },
+          "parentMessageId": {
+            "description": "Parent message ID for conversation branching; null explicitly selects the root.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "editMessageId": {
+            "description": "Message ID to edit in place.",
+            "type": "string"
+          },
+          "sourceIds": {
+            "description": "Explicit source IDs to restrict grounding evidence to.",
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "required": [
           "messages",
           "model"
+        ]
+      },
+      "SelectMessageDto": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Message ID to set as active endpoint."
+          }
+        },
+        "required": [
+          "messageId"
         ]
       },
       "StudyMaterialKind": {

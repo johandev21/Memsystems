@@ -4,6 +4,22 @@ export type ChatTurn =
   | { type: "user"; id: string; message: UIMessage }
   | { type: "assistant"; id: string; versions: UIMessage[] };
 
+export function isMessageCancelled(metadata: unknown): boolean {
+  if (!metadata) return false;
+  if (typeof metadata === "string") {
+    try {
+      const parsed = JSON.parse(metadata);
+      return typeof parsed === "object" && parsed !== null && parsed.finishReason === "cancelled";
+    } catch {
+      return false;
+    }
+  }
+  if (typeof metadata === "object" && !Array.isArray(metadata)) {
+    return (metadata as { finishReason?: unknown }).finishReason === "cancelled";
+  }
+  return false;
+}
+
 export function groupMessagesIntoTurns(messages: UIMessage[]): ChatTurn[] {
   const turns: ChatTurn[] = [];
 

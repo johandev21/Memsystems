@@ -81,10 +81,11 @@ const LineSpan = ({
   </span>
 );
 
-type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
+export type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
+  highlight?: boolean;
 };
 
 interface CodeBlockContextType {
@@ -204,16 +205,18 @@ export const CodeBlockContent = ({
   code,
   language,
   showLineNumbers = false,
+  highlight = true,
 }: {
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
+  highlight?: boolean;
 }) => {
   const rawTokens = useMemo(() => createRawTokens(code), [code]);
 
   const syncTokens = useMemo(
-    () => highlightCode(code, language) ?? rawTokens,
-    [code, language, rawTokens],
+    () => highlight ? highlightCode(code, language) ?? rawTokens : rawTokens,
+    [code, language, rawTokens, highlight],
   );
 
   const asyncKey = `${language}\0${code}`;
@@ -223,6 +226,7 @@ export const CodeBlockContent = ({
   }));
 
   useEffect(() => {
+    if (!highlight) return;
     let cancelled = false;
 
     highlightCode(code, language, (result) => {
@@ -234,9 +238,9 @@ export const CodeBlockContent = ({
     return () => {
       cancelled = true;
     };
-  }, [asyncKey, code, language]);
+  }, [asyncKey, code, language, highlight]);
 
-  const tokenized = asyncState.key === asyncKey ? asyncState.tokens ?? syncTokens : syncTokens;
+  const tokenized = !highlight ? rawTokens : asyncState.key === asyncKey ? asyncState.tokens ?? syncTokens : syncTokens;
 
   return (
     <div className="relative overflow-auto">
@@ -249,6 +253,7 @@ export const CodeBlock = ({
   code,
   language,
   showLineNumbers = false,
+  highlight = true,
   className,
   children,
   ...props
@@ -259,7 +264,7 @@ export const CodeBlock = ({
     <CodeBlockContext.Provider value={contextValue}>
       <CodeBlockContainer className={className} language={language} {...props}>
         {children}
-        <CodeBlockContent code={code} language={language} showLineNumbers={showLineNumbers} />
+        <CodeBlockContent code={code} language={language} showLineNumbers={showLineNumbers} highlight={highlight} />
       </CodeBlockContainer>
     </CodeBlockContext.Provider>
   );

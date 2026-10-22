@@ -17,8 +17,13 @@ export interface ChatMessageListProps {
   pendingLabel?: string;
   anchorMessageId?: string | null;
   error?: Error | null;
-  onCopy: (text: string) => void;
-  onRegenerate: () => void;
+  onCopy: (text: string) => void | boolean | Promise<void | boolean>;
+  onRegenerate: (messageId?: string) => void;
+  onContinue?: () => void;
+  isLoading?: boolean;
+  allBranchMessages?: UIMessage[];
+  onEdit?: (message: UIMessage, text: string) => void;
+  onSelectBranch?: (messageId: string) => void;
 }
 
 export function ChatMessageList({
@@ -30,6 +35,11 @@ export function ChatMessageList({
   error,
   onCopy,
   onRegenerate,
+  onContinue,
+  isLoading = false,
+  allBranchMessages = messages,
+  onEdit,
+  onSelectBranch,
 }: ChatMessageListProps) {
   const { t } = useTranslation("chat");
   const turns = useMemo(() => groupMessagesIntoTurns(messages), [messages]);
@@ -43,6 +53,8 @@ export function ChatMessageList({
         const animateStyle =
           delay > 0 ? ({ "--chat-delay": `${delay}ms` } as CSSProperties) : undefined;
         if (turn.type === "user") {
+          const parentId = getParentMessageId(turn.message, allBranchMessages);
+          const siblings = getSiblingMessages(allBranchMessages, "user", parentId);
           return (
             <MessageScrollerItem
               key={turn.id}
@@ -50,21 +62,33 @@ export function ChatMessageList({
               scrollAnchor={Boolean(anchorMessageId && turn.id === anchorMessageId)}
             >
               <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
-                <UserMessage message={turn.message} />
+                <UserMessage message={turn.message} siblingMessages={siblings} disabled={isLoading} onEdit={onEdit} onCopy={onCopy} onSelectBranch={onSelectBranch} />
               </div>
             </MessageScrollerItem>
           );
         }
 
+        const activeAssistant = turn.versions.at(-1);
+        const assistantParentId = activeAssistant
+          ? getParentMessageId(activeAssistant, allBranchMessages)
+          : null;
+        const assistantSiblings = getSiblingMessages(allBranchMessages, "assistant", assistantParentId);
+
         return (
           <MessageScrollerItem key={turn.id} messageId={turn.id}>
             <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
               <AssistantMessage
-                versions={turn.versions}
+                isLast={isLast}
+                message={activeAssistant}
+                versions={assistantSiblings.length > 0 ? assistantSiblings : turn.versions}
                 citedSourcesMap={citedSourcesMap}
                 onCopy={onCopy}
-                onRegenerate={onRegenerate}
+                onRegenerate={() => onRegenerate(activeAssistant?.id)}
+                onSelectVersion={onSelectBranch}
+                isInteractionDisabled={isLoading}
                 showRegenerate={isLast}
+                onContinue={onContinue}
+                showContinue={isLast && !isLoading}
               />
             </div>
           </MessageScrollerItem>
@@ -83,11 +107,36 @@ export function ChatMessageList({
       )}
       {error && (
         <MessageScrollerItem messageId="chat-error-banner">
-          <ChatErrorCard message={error.message} onRegenerate={onRegenerate} />
+          <ChatErrorCard message={error.message} onRegenerate={() => onRegenerate()} />
         </MessageScrollerItem>
       )}
     </>
   );
+}
+
+function getParentMessageId(message: UIMessage, allBranchMessages: UIMessage[]): string | null {
+  const persistedMessage = allBranchMessages.find((candidate) => candidate.id === message.id);
+  const metadata = (persistedMessage?.metadata ?? message.metadata) as
+    | { parentId?: string | null }
+    | undefined;
+  return metadata?.parentId ?? null;
+}
+
+function getSiblingMessages(
+  messages: UIMessage[],
+  role: UIMessage["role"],
+  parentId: string | null,
+): UIMessage[] {
+  return messages
+    .filter((message) => {
+      const metadata = message.metadata as { parentId?: string | null } | undefined;
+      return message.role === role && (metadata?.parentId ?? null) === parentId;
+    })
+    .sort((left, right) => {
+      const leftIndex = (left.metadata as { siblingIndex?: number } | undefined)?.siblingIndex ?? 0;
+      const rightIndex = (right.metadata as { siblingIndex?: number } | undefined)?.siblingIndex ?? 0;
+      return leftIndex - rightIndex;
+    });
 }
 
 function ChatErrorCard({ message, onRegenerate }: { message?: string; onRegenerate: () => void }) {

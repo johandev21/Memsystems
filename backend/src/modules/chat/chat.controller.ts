@@ -21,7 +21,11 @@ import type { Response } from 'express';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ChatService } from './chat.service';
-import { ChatRequestDto } from './dto/chat-request.dto';
+import {
+  ChatRequestDto,
+  SelectMessageDto,
+  selectMessageSchema,
+} from './dto/chat-request.dto';
 
 @ApiTags('Chat')
 @Controller('notebooks/:id/chat')
@@ -95,6 +99,9 @@ export class ChatController {
           content,
           parts: userParts,
           messageId: lastUserMessage?.id,
+          parentMessageId: body.parentMessageId,
+          editMessageId: body.editMessageId,
+          sourceIds: body.sourceIds,
           regenerateMessageId: body.regenerateMessageId,
           model: body.model,
           language: body.language,
@@ -128,6 +135,33 @@ export class ChatController {
       res.off('close', abortOnDisconnect);
       reader?.releaseLock();
     }
+  }
+
+  @Post('selection')
+  @ApiOperation({
+    summary: 'Select conversation branch endpoint',
+    description:
+      'Sets the active conversation endpoint to the given message ID.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiBody({ type: SelectMessageDto })
+  @ApiOkResponse({
+    description: 'Updated selected message ID.',
+    schema: {
+      type: 'object',
+      properties: { selectedMessageId: { type: 'string' } },
+    },
+  })
+  @UsePipes(new ZodValidationPipe(selectMessageSchema))
+  async selectMessage(
+    @Param('id') notebookId: string,
+    @Body() body: SelectMessageDto,
+  ) {
+    const selectedMessageId = await this.chatService.selectMessage(
+      notebookId,
+      body.messageId,
+    );
+    return { selectedMessageId };
   }
 
   @Delete()

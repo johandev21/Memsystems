@@ -5,6 +5,7 @@ import { NotebookModelProvider } from "../../context/notebook-model-context";
 import { useNotebookPanels } from "../../hooks/use-notebook-panels";
 import { useSourcesPanel } from "../../hooks/use-sources-panel";
 import { useStudioDialogs } from "../../hooks/use-studio-dialogs";
+import { ChatSessionProvider } from "@/features/notebook-chat/context/chat-session";
 
 const GenerateBriefDialog = lazy(() =>
   import("@/features/study-material-generation/components/GenerateBriefDialog").then(
@@ -49,39 +50,45 @@ function NotebookWorkspaceInner({ notebookId }: { notebookId: string }) {
   }, [dialogs.selectedStudyMaterialId, sourcesRef, studioRef]);
 
   return (
-    <>
-      <DesktopLayout
-        notebookId={notebookId}
-        sourcesRef={sourcesRef}
-        chatRef={chatRef}
-        studioRef={studioRef}
-        sourcesCollapsed={sourcesCollapsed}
-        studioCollapsed={studioCollapsed}
-        onSyncSources={syncSources}
-        onSyncStudio={syncStudio}
-        dialogs={dialogs}
-        selectedSourceId={sources.selectedSourceId}
-        selectedLocator={sources.selectedLocator}
-        onSelectSource={sources.setSelectedSourceId}
-      />
-      <MobileNotebookLayout
-        notebookId={notebookId}
-        dialogs={dialogs}
-        selectedSourceId={sources.selectedSourceId}
-        selectedLocator={sources.selectedLocator}
-        onSelectSource={sources.setSelectedSourceId}
-      />
-      {dialogs.dialogOpen && (
-        <Suspense fallback={null}>
-          <GenerateBriefDialog
-            notebookId={notebookId}
-            kind={dialogs.generateKind}
-            open={dialogs.dialogOpen}
-            onOpenChange={dialogs.setDialogOpen}
-            onComplete={dialogs.handleGenerateComplete}
-          />
-        </Suspense>
-      )}
-    </>
+    <ChatSessionProvider
+      key={notebookId}
+      notebookId={notebookId}
+      selectedSourceId={sources.selectedSourceId}
+    >
+      <>
+        <DesktopLayout
+          notebookId={notebookId}
+          sourcesRef={sourcesRef}
+          chatRef={chatRef}
+          studioRef={studioRef}
+          sourcesCollapsed={sourcesCollapsed}
+          studioCollapsed={studioCollapsed}
+          onSyncSources={syncSources}
+          onSyncStudio={syncStudio}
+          dialogs={dialogs}
+          selectedSourceId={sources.selectedSourceId}
+          selectedLocator={sources.selectedLocator}
+          onSelectSource={sources.setSelectedSourceId}
+        />
+        <MobileNotebookLayout
+          notebookId={notebookId}
+          dialogs={dialogs}
+          selectedSourceId={sources.selectedSourceId}
+          selectedLocator={sources.selectedLocator}
+          onSelectSource={sources.setSelectedSourceId}
+        />
+        {dialogs.dialogOpen && (
+          <Suspense fallback={null}>
+            <GenerateBriefDialog
+              notebookId={notebookId}
+              kind={dialogs.generateKind}
+              open={dialogs.dialogOpen}
+              onOpenChange={dialogs.setDialogOpen}
+              onComplete={dialogs.handleGenerateComplete}
+            />
+          </Suspense>
+        )}
+      </>
+    </ChatSessionProvider>
   );
 }

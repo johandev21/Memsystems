@@ -113,4 +113,64 @@ describe("AssistantActionToolbar", () => {
     await user.click(regenBtn);
     expect(onRegenerate).toHaveBeenCalledTimes(1);
   });
+
+  it("renders continue button when showContinue is true and handles click with mobile touch targets", async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+
+    render(
+      <AssistantActionToolbar
+        totalVersions={1}
+        activeIndex={0}
+        onPreviousVersion={vi.fn()}
+        onNextVersion={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showContinue={true}
+        onContinue={onContinue}
+      />,
+    );
+
+    const continueBtn = screen.getByRole("button", { name: "Continue" });
+    expect(continueBtn.className).toContain("min-h-11");
+    expect(continueBtn.className).toContain("touch-manipulation");
+    expect(continueBtn.className).toContain("active:scale-97");
+
+    await user.click(continueBtn);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render continue button when showContinue is false or omitted", () => {
+    render(
+      <AssistantActionToolbar
+        totalVersions={1}
+        activeIndex={0}
+        onPreviousVersion={vi.fn()}
+        onNextVersion={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showContinue={false}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+  });
+
+  it("disables continue button while streaming", () => {
+    render(
+      <AssistantActionToolbar
+        totalVersions={1}
+        activeIndex={0}
+        onPreviousVersion={vi.fn()}
+        onNextVersion={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        showContinue={true}
+        isStreaming={true}
+      />,
+    );
+
+    const continueBtn = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
+    expect(continueBtn.disabled).toBe(true);
+  });
 });

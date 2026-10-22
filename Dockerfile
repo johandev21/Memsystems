@@ -6,18 +6,21 @@
 FROM node:24-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME/bin:$PATH
-RUN npm install -g pnpm@12.5.1
+RUN npm install -g pnpm@12.5.1 && \
+    pnpm config set trust-lockfile true && \
+    pnpm config set fetch-retries 5 && \
+    pnpm config set fetch-retry-maxtimeout 120000
 WORKDIR /app
 
 # ---------------------------------------------------------------------------
 # deps: install the full monorepo (devDeps included, required for building)
 # ---------------------------------------------------------------------------
 FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 RUN --mount=type=cache,id=memsystems-pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --trust-lockfile
 
 # ---------------------------------------------------------------------------
 # backend-prod-deps: extract production-only deps for the backend package

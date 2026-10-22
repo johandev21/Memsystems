@@ -7,10 +7,12 @@ import {
 } from "@/features/ai";
 import { NotebookBanner } from "@/features/notebooks/components/shared/notebook-banner";
 import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks/components/dialogs/notebook-settings-dialog";
-import { useCallback, useEffect, useLayoutEffect, memo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, memo, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
+import { useContext } from "react";
+import { ChatSessionContext } from "../context/chat-session-context";
 import { CHAT_ENTRANCE_CLASS } from "../utils/chat-entrance";
 import { ChatConversationSkeleton } from "./chat-conversation-skeleton";
 import { ChatEmptyState } from "./chat-empty-state";
@@ -18,9 +20,41 @@ import { ChatMessageList } from "./chat-message-list";
 import { ClearHistoryDialog } from "./clear-history-dialog";
 import { Composer } from "./composer";
 
-export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: string }) {
-  const { t } = useTranslation("chat");
+export const ChatPanel = memo(function ChatPanel({ notebookId, selectedSourceId }: { notebookId: string; selectedSourceId?: string | null }) {
+  const sharedSession = useContext(ChatSessionContext);
+  if (sharedSession) {
+    return (
+      <ChatPanelContent
+        notebookId={notebookId}
+        session={sharedSession.session}
+        registerPanel={sharedSession.registerPanel}
+      />
+    );
+  }
+  return <StandaloneChatPanel notebookId={notebookId} selectedSourceId={selectedSourceId} />;
+});
+
+function StandaloneChatPanel({ notebookId, selectedSourceId }: { notebookId: string; selectedSourceId?: string | null }) {
+  const sourceIds = useMemo(() => selectedSourceId ? [selectedSourceId] : undefined, [selectedSourceId]);
   const panelRef = useRef<HTMLDivElement>(null);
+  const session = useChatPanel(notebookId, panelRef, sourceIds);
+  return <ChatPanelContent notebookId={notebookId} session={session} panelRef={panelRef} />;
+}
+
+function ChatPanelContent({
+  notebookId,
+  session,
+  panelRef: suppliedPanelRef,
+  registerPanel,
+}: {
+  notebookId: string;
+  session: ReturnType<typeof useChatPanel>;
+  panelRef?: React.RefObject<HTMLDivElement | null>;
+  registerPanel?: (element: HTMLElement | null) => (() => void) | undefined;
+}) {
+  const { t } = useTranslation("chat");
+  const localPanelRef = useRef<HTMLDivElement>(null);
+  const panelRef = suppliedPanelRef ?? localPanelRef;
   const composerWrapperRef = useRef<HTMLDivElement>(null);
   const conversationWrapperRef = useRef<HTMLDivElement>(null);
   const {
@@ -31,9 +65,12 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
     selectedModel,
     handleModelChange,
     messages,
+    selectedMessages,
+    allBranchMessages,
     citedSourcesMap,
     status,
     isLoading,
+    isBranchSelectionPending,
     isHistoryPending,
     error,
     messageCount,
@@ -45,14 +82,44 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
     setIsClearDialogOpen,
     clearHistoryMutation,
     handleSubmit,
+    handleEdit,
     handleCopy,
     handleRegenerate,
+    handleSelectBranch,
     composerTextareaRef,
     stop,
     chatAnnouncement,
-  } = useChatPanel(notebookId, panelRef);
+  } = session;
+
+  const handleContinue = useCallback(() => {
+    handleSubmit(t("actions.continuePrompt"));
+  }, [handleSubmit, t]);
+
+  const [responseAnnouncement, setResponseAnnouncement] = useState<string | null>(null);
+  const prevStatusRef = useRef(status);
+
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    if (prevStatus === status) return;
+    prevStatusRef.current = status;
+
+    const isGenerating = status === "submitted" || status === "streaming";
+    const wasGenerating = prevStatus === "submitted" || prevStatus === "streaming";
+
+    if (!wasGenerating && isGenerating) {
+      setResponseAnnouncement(t("announcements.responding"));
+    } else if (wasGenerating && status === "ready") {
+      setResponseAnnouncement(t("announcements.responseComplete"));
+      const timer = window.setTimeout(() => {
+        setResponseAnnouncement(null);
+      }, 4000);
+      return () => window.clearTimeout(timer);
+    }
+  }, [status, t]);
 
   useComposerHeight(conversationWrapperRef, composerWrapperRef);
+
+  useEffect(() => registerPanel?.(panelRef.current), [panelRef, registerPanel]);
 
   const handleScrollToBottom = useCallback(() => {
     clearAnchor();
@@ -99,6 +166,9 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
       <div aria-live="polite" className="sr-only">
         {chatAnnouncement}
       </div>
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {responseAnnouncement}
+      </div>
       <div
         ref={conversationWrapperRef}
         className="relative flex w-full min-h-0 flex-1 flex-col"
@@ -121,17 +191,21 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
               isUntitled,
               showBannerAsUntitled,
               hasMessages,
-              isLoading,
+              isLoading: isLoading || isBranchSelectionPending,
               isHistoryPending,
               showPendingIndicator,
             }}
-            messages={messages}
+            messages={selectedMessages}
+            allBranchMessages={allBranchMessages}
             citedSourcesMap={citedSourcesMap}
             pendingLabel={pendingLabel}
             anchorMessageId={anchorMessageId}
             error={error}
             onCopy={handleCopy}
             onRegenerate={handleRegenerate}
+            onContinue={handleContinue}
+            onEdit={handleEdit}
+            onSelectBranch={handleSelectBranch}
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-floating-control select-none px-2">
             <div className="relative mx-auto w-full max-w-4xl">
@@ -160,6 +234,7 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
           onInputChange={setInput}
           onSubmit={handleSubmit}
           isLoading={isLoading}
+          isDisabled={isBranchSelectionPending}
           onStop={stop}
           models={modelOptions}
           capabilitiesVerified={capabilitiesVerified}
@@ -170,7 +245,7 @@ export const ChatPanel = memo(function ChatPanel({ notebookId }: { notebookId: s
       </div>
     </div>
   );
-});
+}
 
 interface ChatContentFlags {
   isUntitled: boolean;
@@ -186,12 +261,16 @@ interface ChatContentProps {
   notebookTitle: string;
   flags: ChatContentFlags;
   messages: ReturnType<typeof useChatPanel>["messages"];
+  allBranchMessages: ReturnType<typeof useChatPanel>["allBranchMessages"];
   citedSourcesMap: ReturnType<typeof useChatPanel>["citedSourcesMap"];
   pendingLabel: string;
   anchorMessageId: ReturnType<typeof useChatPanel>["anchorMessageId"];
   error: ReturnType<typeof useChatPanel>["error"];
-  onCopy: (content: string) => void;
-  onRegenerate: () => void;
+  onCopy: ReturnType<typeof useChatPanel>["handleCopy"];
+  onRegenerate: ReturnType<typeof useChatPanel>["handleRegenerate"];
+  onContinue: () => void;
+  onEdit: ReturnType<typeof useChatPanel>["handleEdit"];
+  onSelectBranch: ReturnType<typeof useChatPanel>["handleSelectBranch"];
 }
 
 function ChatContent({
@@ -199,13 +278,18 @@ function ChatContent({
   notebookTitle,
   flags,
   messages,
+  allBranchMessages,
   citedSourcesMap,
   pendingLabel,
   anchorMessageId,
   error,
   onCopy,
   onRegenerate,
+  onContinue,
+  onEdit,
+  onSelectBranch,
 }: ChatContentProps) {
+  const { t } = useTranslation("chat");
   const {
     isUntitled,
     showBannerAsUntitled,
@@ -217,7 +301,10 @@ function ChatContent({
   const showHistorySkeleton = isHistoryPending && !hasMessages;
   return (
     <ConversationContent
-      className="mx-auto w-full max-w-4xl pb-32 pb-(--composer-pad)"
+      role="log"
+      aria-label={t("transcript.ariaLabel")}
+      tabIndex={0}
+      className="mx-auto w-full max-w-4xl pb-32 pb-(--composer-pad) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
       aria-busy={isLoading}
       style={
         { "--composer-pad": "calc(var(--composer-height, 96px) + 1rem)" } as React.CSSProperties
@@ -272,6 +359,7 @@ function ChatContent({
       {hasMessages && (
         <ChatMessageList
           messages={messages}
+          allBranchMessages={allBranchMessages}
           citedSourcesMap={citedSourcesMap}
           showPendingIndicator={showPendingIndicator}
           pendingLabel={pendingLabel}
@@ -279,6 +367,10 @@ function ChatContent({
           error={error}
           onCopy={onCopy}
           onRegenerate={onRegenerate}
+          onContinue={onContinue}
+          onEdit={onEdit}
+          onSelectBranch={onSelectBranch}
+          isLoading={isLoading}
         />
       )}
     </ConversationContent>
@@ -296,6 +388,7 @@ interface ChatComposerAreaProps {
   onInputChange: (val: string) => void;
   onSubmit: ReturnType<typeof useChatPanel>["handleSubmit"];
   isLoading: boolean;
+  isDisabled: boolean;
   onStop: () => void;
   models: ReturnType<typeof useChatPanel>["modelOptions"];
   capabilitiesVerified: boolean;
@@ -315,6 +408,7 @@ function ChatComposerArea({
   onInputChange,
   onSubmit,
   isLoading,
+  isDisabled,
   onStop,
   models,
   capabilitiesVerified,
@@ -350,6 +444,7 @@ function ChatComposerArea({
             onInputChange={onInputChange}
             onSubmit={onSubmit}
             isLoading={isLoading}
+            isDisabled={isDisabled}
             onStop={onStop}
             models={models}
             capabilitiesVerified={capabilitiesVerified}

@@ -54,6 +54,28 @@ export const chatRequestSchema = z.object({
     .optional()
     .describe('Base Language code used for the reply.'),
   groundingMode: groundingModeSchema.optional(),
+  parentMessageId: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      'Parent message ID for conversation branching; null explicitly selects the root.',
+    ),
+  editMessageId: z.string().optional().describe('Message ID to edit in place.'),
+  sourceIds: z
+    .array(z.string().min(1))
+    .max(100)
+    .optional()
+    .describe('Explicit source IDs to restrict grounding evidence to.'),
 });
 
 export class ChatRequestDto extends createZodDto(chatRequestSchema) {}
+
+export const selectMessageSchema = z.object({
+  messageId: z
+    .string()
+    .min(1)
+    .describe('Message ID to set as active endpoint.'),
+});
+
+export class SelectMessageDto extends createZodDto(selectMessageSchema) {}

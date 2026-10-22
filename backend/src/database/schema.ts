@@ -2,6 +2,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { sql } from 'drizzle-orm';
 import {
   AnyPgColumn,
+  boolean,
   customType,
   index,
   integer,
@@ -229,6 +230,10 @@ export const notebooks = pgTable(
     groundingMode: groundingModeEnum('grounding_mode')
       .default('strict')
       .notNull(),
+    selectedChatMessageId: varchar('selected_chat_message_id').references(
+      (): AnyPgColumn => notebookChatMessages.id,
+      { onDelete: 'set null' },
+    ),
     agentAccess: agentAccessLevelEnum('agent_access'),
     deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -521,6 +526,14 @@ export const notebookChatMessages = pgTable(
     notebookId: varchar('notebook_id')
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
+    parentId: varchar('parent_id').references(
+      (): AnyPgColumn => notebookChatMessages.id,
+      { onDelete: 'cascade' },
+    ),
+    preferredChildId: varchar('preferred_child_id'),
+    preferredChildInitialized: boolean('preferred_child_initialized')
+      .default(false)
+      .notNull(),
     role: chatRoleEnum('role').notNull(),
     content: text('content').notNull(),
     reasoning: text('reasoning'),
@@ -555,6 +568,7 @@ export const notebookChatMessages = pgTable(
   (table) => [
     index('notebook_chat_messages_notebook_id_idx').on(table.notebookId),
     index('notebook_chat_messages_created_at_idx').on(table.createdAt),
+    index('notebook_chat_messages_parent_id_idx').on(table.parentId),
   ],
 );
 

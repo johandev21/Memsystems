@@ -7,6 +7,10 @@ import { RetrievalService } from '../../src/modules/ai/retrieval/retrieval.servi
 import { RetrievalTraceService } from '../../src/modules/ai/retrieval/retrieval-trace.service';
 import { ChatService } from '../../src/modules/chat/chat.service';
 import { DRIZZLE } from '../../src/modules/database/database.module';
+import {
+  notebooks,
+  notebookChatMessages,
+} from '../../src/database/schema';
 import { NotebooksService } from '../../src/modules/notebooks/notebooks.service';
 
 const mocks = vi.hoisted(() => ({
@@ -87,16 +91,43 @@ async function createChatServiceHarness() {
   const insertedValues: Record<string, unknown>[] = [];
   const degradedRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
   const historyRowsState: { rows: Record<string, unknown>[] } = { rows: [] };
+  const selectedMessageState: { id: string | null } = { id: null };
+  const selectionConflictState: { id: string | null } = { id: null };
+  const deletionState = { count: 0 };
 
   const db = {
     select: vi.fn(() => ({
-      from: vi.fn(() => ({
+      from: vi.fn((table) => ({
         where: vi.fn(() => {
-          const rows = Promise.resolve(degradedRowsState.rows);
+          if (table === notebooks) {
+            return Promise.resolve([
+              { selectedChatMessageId: selectedMessageState.id },
+            ]);
+          }
+          const selectedRows = table === notebookChatMessages
+            ? historyRowsState.rows
+            : degradedRowsState.rows;
+          const rows = Promise.resolve(selectedRows);
           return {
-            orderBy: vi
-              .fn()
-              .mockImplementation(() => Promise.resolve(historyRowsState.rows)),
+            orderBy: vi.fn().mockImplementation((orderCol) => {
+              const rows = [...historyRowsState.rows];
+              const isDesc = Boolean(
+                orderCol?.queryChunks?.some((c) =>
+                  c?.value?.some((v) => typeof v === 'string' && v.includes('desc')),
+                ),
+              );
+              rows.sort((a, b) => {
+                const at = a.createdAt ? new Date(a.createdAt as string | number | Date).getTime() : 0;
+                const bt = b.createdAt ? new Date(b.createdAt as string | number | Date).getTime() : 0;
+                return isDesc ? bt - at : at - bt;
+              });
+              const promise = Promise.resolve(rows);
+              return Object.assign(promise, {
+                limit: vi.fn().mockImplementation((lim) =>
+                  Promise.resolve(rows.slice(0, lim)),
+                ),
+              });
+            }),
             then: rows.then.bind(rows),
           };
         }),
@@ -123,10 +154,40 @@ async function createChatServiceHarness() {
       }),
     })),
     update: vi.fn(() => ({
-      set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+      set: vi.fn((values: Record<string, unknown>) => ({
+        where: vi.fn(() => {
+          if (
+            !('updatedAt' in values) &&
+            typeof values.selectedChatMessageId === 'string'
+          ) {
+            selectedMessageState.id = values.selectedChatMessageId;
+          }
+          return {
+            returning: vi.fn(async () => {
+              if (selectionConflictState.id) {
+                selectedMessageState.id = selectionConflictState.id;
+                selectionConflictState.id = null;
+                return [];
+              }
+              if (typeof values.selectedChatMessageId === 'string') {
+                selectedMessageState.id = values.selectedChatMessageId;
+              }
+              return [{ id: 'notebook-1' }];
+            }),
+            then: (resolve: (value: undefined) => unknown) =>
+              resolve(undefined),
+          };
+        }),
+      })),
     })),
+    transaction: vi.fn(async (run: (tx: unknown) => Promise<unknown>) =>
+      run(db),
+    ),
     delete: vi.fn(() => ({
-      where: vi.fn().mockResolvedValue(undefined),
+      where: vi.fn(() => {
+        deletionState.count += 1;
+        return Promise.resolve(undefined);
+      }),
     })),
   };
   const provider = {
@@ -185,11 +246,40 @@ async function createChatServiceHarness() {
     get degradedSourceRows() {
       return degradedRowsState.rows;
     },
+    set selectedMessageId(id: string | null) {
+      selectedMessageState.id = id;
+    },
+    set selectionConflictOnNextWrite(id: string | null) {
+      selectionConflictState.id = id;
+    },
+    get selectedMessageId() {
+      return selectedMessageState.id;
+    },
+    get deletedMessageCount() {
+      return deletionState.count;
+    },
     set degradedSourceRows(rows: Record<string, unknown>[]) {
       degradedRowsState.rows = rows;
     },
     set historyRows(rows: Record<string, unknown>[]) {
-      historyRowsState.rows = rows;
+      let previousId: string | null = null;
+      let lastUserId: string | null = null;
+      let previousRole: string | null = null;
+      historyRowsState.rows = rows.map((row) => {
+        const parentId =
+          row.parentId !== undefined
+            ? (row.parentId as string | null)
+            : row.role === 'user'
+              ? previousId
+              : previousRole === 'assistant'
+                ? lastUserId
+                : previousId;
+        if (row.role === 'user') lastUserId = row.id as string;
+        previousId = row.id as string;
+        previousRole = row.role as string;
+        return { ...row, parentId };
+      });
+      selectedMessageState.id = (historyRowsState.rows.at(-1)?.id as string) ?? null;
     },
   };
 }
@@ -237,6 +327,336 @@ describe('ChatService streaming lifecycle', () => {
     });
   });
 
+  it('reads chat rows and their selected endpoint from one consistent snapshot', async () => {
+    let historyRows: Record<string, unknown>[] = [];
+    let selectedMessageId: string | null = null;
+    let committedConcurrentTurn = false;
+    const commitConcurrentTurn = () => {
+      if (committedConcurrentTurn) return;
+      committedConcurrentTurn = true;
+      historyRows = [
+        {
+          id: 'new-user',
+          notebookId: 'notebook-1',
+          parentId: null,
+          role: 'user',
+          content: 'Concurrent question',
+          parts: [{ type: 'text', text: 'Concurrent question' }],
+          createdAt: new Date('2026-08-22T10:00:00.000Z'),
+          citedSourceIds: null,
+        },
+      ];
+      selectedMessageId = 'new-user';
+    };
+    const db = {
+      select: vi.fn(() => ({
+        from: vi.fn((table: unknown) => {
+          let joined = false;
+          const builder = {
+            leftJoin: vi.fn(() => {
+              joined = true;
+              return builder;
+            }),
+            where: vi.fn(() => {
+              if (joined) {
+                return {
+                  orderBy: vi.fn(async () => {
+                    const snapshot = historyRows.length > 0
+                      ? historyRows.map((message) => ({
+                          message,
+                          selectedChatMessageId: selectedMessageId,
+                        }))
+                      : [{
+                          message: null,
+                          selectedChatMessageId: selectedMessageId,
+                        }];
+                    commitConcurrentTurn();
+                    return snapshot;
+                  }),
+                };
+              }
+              if (table === notebookChatMessages) {
+                return {
+                  orderBy: vi.fn(async () => {
+                    const snapshot = [...historyRows];
+                    commitConcurrentTurn();
+                    return snapshot;
+                  }),
+                };
+              }
+              return Promise.resolve([
+                { selectedChatMessageId: selectedMessageId },
+              ]);
+            }),
+          };
+          return builder;
+        }),
+      })),
+    };
+    const service = new ChatService(
+      db as never,
+      { assertNotebookOwner: vi.fn().mockResolvedValue(undefined) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(service.listMessages('notebook-1')).resolves.toMatchObject({
+      messages: [],
+      selectedMessageId: null,
+      selectedPathIds: [],
+    });
+    expect(db.select).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats an explicit null parent as a root even when a branch is selected', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [];
+    harness.selectedMessageId = 'selected-assistant';
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Who was Plato?',
+      model: 'openai/gpt-5.6-sol',
+      messageId: 'new-root-user',
+      parentMessageId: null,
+    });
+
+    expect(harness.insertedValues.find((row) => row.id === 'new-root-user'))
+      .toEqual(expect.objectContaining({ parentId: null }));
+    expect(harness.retrieve).toHaveBeenCalledWith(expect.objectContaining({ history: [] }));
+  });
+
+  it('does not start a stream when a concurrent branch switch wins selection', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      {
+        id: 'branch-a', role: 'user', content: 'Question A', parentId: null,
+        createdAt: new Date('2026-08-22T09:00:00.000Z'),
+      },
+      {
+        id: 'answer-a', role: 'assistant', content: 'Answer A', parentId: 'branch-a',
+        createdAt: new Date('2026-08-22T09:01:00.000Z'),
+      },
+      {
+        id: 'branch-b', role: 'user', content: 'Question B', parentId: null,
+        createdAt: new Date('2026-08-22T09:02:00.000Z'),
+      },
+    ];
+    harness.selectedMessageId = 'answer-a';
+    harness.selectionConflictOnNextWrite = 'branch-b';
+
+    await expect(harness.service.sendMessage('notebook-1', {
+      content: 'Follow up for A',
+      parentMessageId: 'answer-a',
+      model: 'openai/gpt-5.6-sol',
+    })).rejects.toThrow('Chat branch changed while starting the message');
+
+    expect(harness.selectedMessageId).toBe('branch-b');
+    expect(harness.retrieve).not.toHaveBeenCalled();
+    expect(mocks.streamText).not.toHaveBeenCalled();
+    expect(harness.deletedMessageCount).toBe(1);
+  });
+
+  it('retries a persisted user ID only when payload and branch intent match', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      {
+        id: 'prior-user', role: 'user', content: 'Earlier question',
+        parentId: null, parts: [{ type: 'text', text: 'Earlier question' }],
+        createdAt: new Date('2026-08-22T09:00:00.000Z'),
+      },
+      {
+        id: 'prior-answer', role: 'assistant', content: 'Earlier answer',
+        parentId: 'prior-user', parts: [{ type: 'text', text: 'Earlier answer' }],
+        createdAt: new Date('2026-08-22T09:01:00.000Z'),
+      },
+      {
+        id: 'retry-user', role: 'user', content: 'Retry this question',
+        parentId: 'prior-answer',
+        parts: [{ type: 'text', text: 'Retry this question', state: 'done' }],
+        createdAt: new Date('2026-08-22T09:02:00.000Z'),
+      },
+    ];
+    harness.selectedMessageId = 'retry-user';
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Retry this question',
+      parts: [{ type: 'text', text: 'Retry this question', state: 'streaming' }],
+      messageId: 'retry-user',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(harness.insertedValues.some((row) => row.id === 'retry-user')).toBe(false);
+    expect(harness.retrieve).toHaveBeenCalledWith(expect.objectContaining({
+      history: [
+        { role: 'user', content: 'Earlier question' },
+        { role: 'assistant', content: 'Earlier answer' },
+      ],
+    }));
+
+    await expect(harness.service.sendMessage('notebook-1', {
+      content: 'A different question',
+      parts: [{ type: 'text', text: 'A different question' }],
+      messageId: 'retry-user',
+      model: 'openai/gpt-5.6-sol',
+    })).rejects.toThrow('Message ID already belongs to a different chat request');
+
+    await expect(harness.service.sendMessage('notebook-1', {
+      content: 'Retry this question',
+      parts: [{ type: 'text', text: 'Retry this question' }],
+      messageId: 'retry-user',
+      parentMessageId: 'prior-user',
+      model: 'openai/gpt-5.6-sol',
+    })).rejects.toThrow('Message ID already belongs to a different chat request');
+  });
+
+  it('builds edit and regeneration context from the requested nested branch only', async () => {
+    const branchRows = [
+      { id: 'root-user', role: 'user', content: 'MARKER root user', parentId: null },
+      { id: 'root-answer', role: 'assistant', content: 'MARKER root answer', parentId: 'root-user' },
+      { id: 'question', role: 'user', content: 'MARKER original question', parentId: 'root-answer' },
+      { id: 'answer-a', role: 'assistant', content: 'MARKER answer A', parentId: 'question' },
+      { id: 'answer-b', role: 'assistant', content: 'MARKER answer B', parentId: 'question' },
+      { id: 'nested-user-b', role: 'user', content: 'MARKER nested user B', parentId: 'answer-b' },
+      { id: 'nested-answer-b', role: 'assistant', content: 'MARKER nested answer B', parentId: 'nested-user-b' },
+      { id: 'other-root', role: 'user', content: 'MARKER unrelated root', parentId: null },
+    ].map((row, index) => ({
+      ...row,
+      parts: [{ type: 'text', text: row.content }],
+      createdAt: new Date(`2026-08-22T09:0${index}:00.000Z`),
+    }));
+
+    const editHarness = await createChatServiceHarness();
+    editHarness.historyRows = branchRows;
+    editHarness.selectedMessageId = 'nested-answer-b';
+    await editHarness.service.sendMessage('notebook-1', {
+      content: 'MARKER edited question',
+      parts: [{ type: 'text', text: 'MARKER edited question' }],
+      editMessageId: 'question',
+      model: 'openai/gpt-5.6-sol',
+    });
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'MARKER root user' },
+      { role: 'assistant', content: 'MARKER root answer' },
+      { role: 'user', content: 'MARKER edited question' },
+    ]);
+
+    const regenerateHarness = await createChatServiceHarness();
+    regenerateHarness.historyRows = branchRows;
+    regenerateHarness.selectedMessageId = 'nested-answer-b';
+    await regenerateHarness.service.sendMessage('notebook-1', {
+      content: 'MARKER original question',
+      regenerateMessageId: 'answer-a',
+      model: 'openai/gpt-5.6-sol',
+    });
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'MARKER root user' },
+      { role: 'assistant', content: 'MARKER root answer' },
+      { role: 'user', content: 'MARKER original question' },
+    ]);
+  });
+
+  it('restores a completed reply when selecting its user-message branch', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      {
+        id: 'user-a', role: 'user', content: 'Question A', parentId: null,
+        createdAt: new Date('2026-08-22T09:00:00.000Z'),
+      },
+      {
+        id: 'assistant-a', role: 'assistant', content: 'Answer A', parentId: 'user-a',
+        createdAt: new Date('2026-08-22T09:01:00.000Z'),
+      },
+      {
+        id: 'user-b', role: 'user', content: 'Question B', parentId: null,
+        createdAt: new Date('2026-08-22T09:02:00.000Z'),
+      },
+      {
+        id: 'assistant-b', role: 'assistant', content: 'Answer B', parentId: 'user-b',
+        createdAt: new Date('2026-08-22T09:03:00.000Z'),
+      },
+    ];
+
+    await expect(harness.service.selectMessage('notebook-1', 'user-a'))
+      .resolves.toBe('assistant-a');
+    expect(harness.selectedMessageId).toBe('assistant-a');
+    await expect(harness.service.selectMessage('notebook-1', 'assistant-b'))
+      .resolves.toBe('assistant-b');
+    expect(harness.selectedMessageId).toBe('assistant-b');
+  });
+
+  it('continues from the exact endpoint selected for a nested question version', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      { id: 'root-user', role: 'user', content: 'Root question', parentId: null },
+      { id: 'root-answer', role: 'assistant', content: 'Root answer', parentId: 'root-user' },
+      {
+        id: 'version-user', role: 'user', content: 'Nested question', parentId: 'root-answer',
+        preferredChildId: 'answer-b', preferredChildInitialized: true,
+      },
+      { id: 'answer-a', role: 'assistant', content: 'Version A', parentId: 'version-user' },
+      { id: 'answer-b', role: 'assistant', content: 'Version B', parentId: 'version-user' },
+      { id: 'descendant-user', role: 'user', content: 'Descendant question', parentId: 'answer-b' },
+      { id: 'descendant-answer', role: 'assistant', content: 'Descendant answer', parentId: 'descendant-user' },
+    ].map((row, index) => ({
+      ...row,
+      createdAt: new Date(`2026-08-22T09:0${index}:00.000Z`),
+    }));
+
+    await expect(harness.service.selectMessage('notebook-1', 'version-user'))
+      .resolves.toBe('descendant-answer');
+    expect(harness.selectedMessageId).toBe('descendant-answer');
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Follow up on version B',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(harness.insertedValues.find((row) => row.content === 'Follow up on version B'))
+      .toEqual(expect.objectContaining({ parentId: 'descendant-answer' }));
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'Root question' },
+      { role: 'assistant', content: 'Root answer' },
+      { role: 'user', content: 'Nested question' },
+      { role: 'assistant', content: 'Version B' },
+      { role: 'user', content: 'Descendant question' },
+      { role: 'assistant', content: 'Descendant answer' },
+      { role: 'user', content: 'Follow up on version B' },
+    ]);
+  });
+
+  it('uses the selected user endpoint after stop for an explicit new send', async () => {
+    const harness = await createChatServiceHarness();
+    harness.historyRows = [
+      { id: 'root-user', role: 'user', content: 'Root question', parentId: null },
+      { id: 'root-answer', role: 'assistant', content: 'Root answer', parentId: 'root-user' },
+      { id: 'stopped-user', role: 'user', content: 'Interrupted question', parentId: 'root-answer' },
+      { id: 'partial-answer', role: 'assistant', content: 'Partial response', parentId: 'stopped-user' },
+    ].map((row, index) => ({
+      ...row,
+      createdAt: new Date(`2026-08-22T09:0${index}:00.000Z`),
+    }));
+    harness.selectedMessageId = 'stopped-user';
+
+    await harness.service.sendMessage('notebook-1', {
+      content: 'Next question after stopping',
+      parentMessageId: 'stopped-user',
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(harness.insertedValues.find((row) => row.content === 'Next question after stopping'))
+      .toEqual(expect.objectContaining({ parentId: 'stopped-user' }));
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages).toEqual([
+      { role: 'user', content: 'Root question' },
+      { role: 'assistant', content: 'Root answer' },
+      { role: 'user', content: 'Interrupted question' },
+      { role: 'user', content: 'Next question after stopping' },
+    ]);
+    expect(mocks.streamText.mock.calls.at(-1)?.[0].messages)
+      .not.toContainEqual({ role: 'assistant', content: 'Partial response' });
+  });
+
   it('passes the recent turns to retrieval so follow-ups can be resolved', async () => {
     const harness = await createChatServiceHarness();
     harness.historyRows = [
@@ -268,7 +688,7 @@ describe('ChatService streaming lifecycle', () => {
         { role: 'user', content: 'What is osmosis across a membrane?' },
         {
           role: 'assistant',
-          content: 'Osmosis moves water across a membrane [ref:R1].',
+          content: 'Osmosis moves water across a membrane.',
         },
       ],
     });
@@ -631,6 +1051,90 @@ describe('ChatService streaming lifecycle', () => {
     expect(mocks.streamText).not.toHaveBeenCalled();
   });
 
+  it('handles non-image file parts in user messages', async () => {
+    await service.sendMessage('notebook-1', {
+      content: 'Summarize this PDF',
+      parts: [
+        {
+          type: 'file',
+          mediaType: 'application/pdf',
+          url: 'https://example.com/doc.pdf',
+          filename: 'doc.pdf',
+        },
+        { type: 'text', text: 'Summarize this PDF' },
+      ],
+      model: 'openai/gpt-5.6-sol',
+    });
+
+    expect(mocks.streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: expect.arrayContaining([
+              { type: 'text', text: 'Summarize this PDF' },
+              {
+                type: 'file',
+                data: 'https://example.com/doc.pdf',
+                mediaType: 'application/pdf',
+                filename: 'doc.pdf',
+              },
+            ]),
+          }),
+        ]),
+      }),
+    );
+    expect(requireCapability).toHaveBeenCalledWith(
+      expect.anything(),
+      'openai/gpt-5.6-sol',
+      'fileInput',
+      'file attachments',
+    );
+  });
+
+  it('rejects unsupported file input before starting the model stream', async () => {
+    requireCapability.mockImplementation(
+      (_provider: unknown, _modelId: string, capability: string) => {
+        if (capability === 'fileInput') {
+          throw new CapabilityUnsupportedError(
+            "DeepSeek R1 doesn't support file attachments. Switch to a model that supports file attachments and try again.",
+          );
+        }
+      },
+    );
+
+    await expect(
+      service.sendMessage('notebook-1', {
+        content: 'Explain this document',
+        parts: [
+          {
+            type: 'file',
+            mediaType: 'application/pdf',
+            url: 'https://example.com/doc.pdf',
+          },
+        ],
+        model: 'deepseek/deepseek-r1',
+      }),
+    ).rejects.toThrow(/doesn't support file attachments/);
+    expect(mocks.streamText).not.toHaveBeenCalled();
+  });
+
+  it('rejects file attachments without valid mediaType', async () => {
+    await expect(
+      service.sendMessage('notebook-1', {
+        content: 'Check this file',
+        parts: [
+          {
+            type: 'file',
+            url: 'https://example.com/unknown',
+          },
+        ],
+        model: 'openai/gpt-5.6-sol',
+      }),
+    ).rejects.toThrow(/mediaType is required/);
+    expect(mocks.streamText).not.toHaveBeenCalled();
+  });
+
   it('requests gateway options without any fallback model chain', async () => {
     const aiService = (service as any).aiService as {
       getGatewayRequestOptions: ReturnType<typeof vi.fn>;
@@ -773,6 +1277,45 @@ describe('ChatService streaming lifecycle', () => {
             role: 'user',
             content: [
               { type: 'image', image: 'data:image/png;base64,iVBORw0KGgo=' },
+            ],
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it('sends file-only input without embedding an empty retrieval query', async () => {
+    await expect(
+      service.sendMessage('notebook-1', {
+        content: '',
+        parts: [
+          {
+            type: 'file',
+            mediaType: 'application/pdf',
+            url: 'https://example.com/paper.pdf',
+            filename: 'paper.pdf',
+          },
+        ],
+        model: 'openai/gpt-5.6-sol',
+      }),
+    ).resolves.toMatchObject({ userMessageId: expect.any(String) });
+
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(
+      insertedValues.find((values) => values.role === 'user'),
+    ).toMatchObject({ content: '', parts: [{ type: 'file' }] });
+    expect(mocks.streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: [
+              {
+                type: 'file',
+                data: 'https://example.com/paper.pdf',
+                mediaType: 'application/pdf',
+                filename: 'paper.pdf',
+              },
             ],
           }),
         ]),

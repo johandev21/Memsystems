@@ -84,9 +84,17 @@ export default interface Resources {
     }
   },
   "chat": {
+    "actions": {
+      "continue": "Continue",
+      "continuePrompt": "Continue from where you stopped"
+    },
     "announcement": {
       "openingChat": "Opening chat.",
       "openingChatFor": "Opening chat for {{concept}}."
+    },
+    "announcements": {
+      "responding": "Responding",
+      "responseComplete": "Response complete"
     },
     "assistant": {
       "branchPage": "{{current}} of {{total}}",
@@ -95,6 +103,9 @@ export default interface Resources {
       "nextVersion": "Next version",
       "previousVersion": "Previous version",
       "regenerateResponse": "Regenerate response"
+    },
+    "branch": {
+      "selectFailed": "Couldn't switch to that conversation branch"
     },
     "clearHistory": {
       "cancel": "Cancel",
@@ -106,6 +117,7 @@ export default interface Resources {
       "title": "Clear Chat History"
     },
     "composer": {
+      "attachFiles": "Attach files",
       "attachPhoto": "Attach photo",
       "attachmentAlt": "Attachment",
       "imageAlt": "Image",
@@ -115,7 +127,16 @@ export default interface Resources {
       "searchPlaceholder": "Search models...",
       "selectModelTitle": "Select Model",
       "sendMessage": "Send message",
-      "stopResponse": "Stop response"
+      "stopResponse": "Stop response",
+      "unsupportedAttachment": "This model does not support file attachments",
+      "unsupportedImage": "This model does not support image attachments"
+    },
+    "edit": {
+      "attachmentsUnchanged": "{{count}} attachment(s) will stay with this message.",
+      "cancel": "Cancel",
+      "editMessage": "Edit message",
+      "editorLabel": "Edit your message",
+      "send": "Send"
     },
     "empty": {
       "blankCanvas": "Start with a blank canvas",
@@ -141,7 +162,8 @@ export default interface Resources {
       "visualRegion": "Visual region"
     },
     "message": {
-      "copiedToClipboard": "Copied to clipboard"
+      "copiedToClipboard": "Copied to clipboard",
+      "copyFailed": "Couldn't copy to clipboard"
     },
     "noEvidence": {
       "correctiveAction": "Suggested fix: import the file version or paste the source text, then ask again.",
@@ -173,6 +195,16 @@ export default interface Resources {
       "referencesAria": "References",
       "sourceUnavailable": "Source unavailable",
       "triggerAria": "Reference {{number}}: {{title}}"
+    },
+    "sender": {
+      "assistant": "Assistant",
+      "user": "You"
+    },
+    "status": {
+      "stopped": "Stopped"
+    },
+    "transcript": {
+      "ariaLabel": "Chat transcript"
     },
     "userMessage": {
       "attachedImageAlt": "Attached image"

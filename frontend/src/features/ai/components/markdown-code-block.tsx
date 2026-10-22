@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { BundledLanguage } from "shiki";
 import { cn } from "@/shared/utils/cn";
+import { useMarkdownBlockContext } from "@/components/ui/markdown-blocks";
 import {
   CodeBlock,
   CodeBlockActions,
@@ -23,6 +24,7 @@ export function MarkdownCodeBlock({
   children,
   showLineNumbers = false,
 }: MarkdownCodeBlockProps) {
+  const { isFenceUnclosed } = useMarkdownBlockContext();
   const match = /language-([\w-]+)/.exec(className || "");
   const language = (match ? match[1] : "text") as BundledLanguage;
   const rawCode = getRawText(children).replace(/\n$/, "");
@@ -37,6 +39,7 @@ export function MarkdownCodeBlock({
       language={language}
       containerClassName={containerClassName}
       showLineNumbers={showLineNumbers}
+      highlight={!isFenceUnclosed}
     />
   );
 }
@@ -54,11 +57,13 @@ function MarkdownBlockCode({
   language,
   containerClassName,
   showLineNumbers,
+  highlight = true,
 }: {
   code: string;
   language: BundledLanguage;
   containerClassName?: string;
   showLineNumbers: boolean;
+  highlight?: boolean;
 }) {
   return (
     <CodeBlock
@@ -66,6 +71,7 @@ function MarkdownBlockCode({
       code={code}
       language={language}
       showLineNumbers={showLineNumbers}
+      highlight={highlight}
     >
       <CodeBlockHeader>
         <CodeBlockTitle>

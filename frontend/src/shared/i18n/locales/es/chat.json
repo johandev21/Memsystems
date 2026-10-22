@@ -1,7 +1,15 @@
 {
+  "actions": {
+    "continue": "Continuar",
+    "continuePrompt": "Continúa desde donde te quedaste"
+  },
   "announcement": {
     "openingChat": "Abriendo el chat.",
     "openingChatFor": "Abriendo el chat para {{concept}}."
+  },
+  "announcements": {
+    "responding": "Respondiendo",
+    "responseComplete": "Respuesta completa"
   },
   "assistant": {
     "branchPage": "{{current}} de {{total}}",
@@ -10,6 +18,9 @@
     "nextVersion": "Versión siguiente",
     "previousVersion": "Versión anterior",
     "regenerateResponse": "Regenerar respuesta"
+  },
+  "branch": {
+    "selectFailed": "No se pudo cambiar a esa rama de la conversación"
   },
   "clearHistory": {
     "cancel": "Cancelar",
@@ -21,6 +32,7 @@
     "title": "Borrar el historial del chat"
   },
   "composer": {
+    "attachFiles": "Adjuntar archivos",
     "attachmentAlt": "Archivo adjunto",
     "attachPhoto": "Adjuntar foto",
     "imageAlt": "Imagen",
@@ -30,7 +42,9 @@
     "searchPlaceholder": "Buscar modelos...",
     "selectModelTitle": "Seleccionar modelo",
     "sendMessage": "Enviar mensaje",
-    "stopResponse": "Detener respuesta"
+    "stopResponse": "Detener respuesta",
+    "unsupportedAttachment": "Este modelo no admite archivos adjuntos",
+    "unsupportedImage": "Este modelo no admite imágenes"
   },
   "empty": {
     "blankCanvas": "Empieza con un lienzo en blanco",
@@ -56,7 +70,8 @@
     "visualRegion": "Región visual"
   },
   "message": {
-    "copiedToClipboard": "Copiado al portapapeles"
+    "copiedToClipboard": "Copiado al portapapeles",
+    "copyFailed": "No se pudo copiar al portapapeles"
   },
   "noEvidence": {
     "correctiveAction": "Corrección sugerida: importa la versión en archivo o pega el texto de la fuente, y vuelve a preguntar.",
@@ -89,7 +104,24 @@
     "sourceUnavailable": "Fuente no disponible",
     "triggerAria": "Referencia {{number}}: {{title}}"
   },
+  "sender": {
+    "assistant": "Asistente",
+    "user": "Tú"
+  },
+  "status": {
+    "stopped": "Detenido"
+  },
+  "transcript": {
+    "ariaLabel": "Transcripción del chat"
+  },
   "userMessage": {
     "attachedImageAlt": "Imagen adjunta"
+  },
+  "edit": {
+    "attachmentsUnchanged": "{{count}} archivo(s) adjunto(s) permanecerán en este mensaje.",
+    "cancel": "Cancelar",
+    "editMessage": "Editar mensaje",
+    "editorLabel": "Edita tu mensaje",
+    "send": "Enviar"
   }
 }

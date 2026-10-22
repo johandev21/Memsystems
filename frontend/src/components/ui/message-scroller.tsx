@@ -95,6 +95,14 @@ function MessageScrollerButton({
 }: MessageScrollerButtonProps) {
   const { t } = useTranslation();
   const { scrollToEnd } = useMessageScroller();
+  const stopFollowingRef = React.useRef<(() => void) | null>(null);
+
+  React.useEffect(
+    () => () => {
+      stopFollowingRef.current?.();
+    },
+    [],
+  );
 
   const handleClick = React.useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -115,10 +123,82 @@ function MessageScrollerButton({
         scrollToEnd({ behavior: props.behavior ?? "smooth" });
 
         if (viewport instanceof HTMLElement) {
-          viewport.scrollTo({
-            top: viewport.scrollHeight,
-            behavior: props.behavior ?? "smooth",
-          });
+          stopFollowingRef.current?.();
+
+          let frame = 0;
+          let active = true;
+          const content = viewport.querySelector('[data-slot="message-scroller-content"]');
+          const followEnd = () => {
+            if (!active) return;
+            window.cancelAnimationFrame(frame);
+            frame = window.requestAnimationFrame(() => {
+              if (active) {
+                viewport.scrollTo({
+                  top: viewport.scrollHeight,
+                  behavior: props.behavior ?? "smooth",
+                });
+              }
+            });
+          };
+          const stopFollowing = () => {
+            if (!active) return;
+            active = false;
+            window.cancelAnimationFrame(frame);
+            resizeObserver.disconnect();
+            mutationObserver.disconnect();
+            viewport.removeEventListener("wheel", onWheel);
+            viewport.removeEventListener("touchstart", onTouchStart);
+            viewport.removeEventListener("touchmove", onTouchMove);
+            viewport.removeEventListener("keydown", onKeyDown);
+            viewport.removeEventListener("pointerdown", onPointerDown);
+            viewport.removeEventListener("pointerup", onPointerUp);
+            if (stopFollowingRef.current === stopFollowing) {
+              stopFollowingRef.current = null;
+            }
+          };
+          const onWheel = (event: WheelEvent) => {
+            if (event.deltaY < 0) stopFollowing();
+          };
+          const onKeyDown = (event: KeyboardEvent) => {
+            if (["ArrowUp", "PageUp", "Home"].includes(event.key)) stopFollowing();
+          };
+          let touchStartY: number | null = null;
+          const onTouchStart = (event: TouchEvent) => {
+            touchStartY = event.touches[0]?.clientY ?? null;
+          };
+          const onTouchMove = (event: TouchEvent) => {
+            const touchY = event.touches[0]?.clientY;
+            if (touchStartY !== null && touchY !== undefined && touchY > touchStartY) {
+              stopFollowing();
+            }
+          };
+          let pointerStartTop = viewport.scrollTop;
+          const onPointerDown = () => {
+            pointerStartTop = viewport.scrollTop;
+          };
+          const onPointerUp = () => {
+            if (viewport.scrollTop < pointerStartTop) stopFollowing();
+          };
+          const resizeObserver = new ResizeObserver(followEnd);
+          const mutationObserver = new MutationObserver(followEnd);
+
+          if (content) {
+            resizeObserver.observe(content);
+            mutationObserver.observe(content, {
+              childList: true,
+              characterData: true,
+              subtree: true,
+            });
+          }
+          resizeObserver.observe(viewport);
+          viewport.addEventListener("wheel", onWheel, { passive: true });
+          viewport.addEventListener("touchstart", onTouchStart, { passive: true });
+          viewport.addEventListener("touchmove", onTouchMove, { passive: true });
+          viewport.addEventListener("keydown", onKeyDown);
+          viewport.addEventListener("pointerdown", onPointerDown);
+          viewport.addEventListener("pointerup", onPointerUp);
+          stopFollowingRef.current = stopFollowing;
+          followEnd();
         }
       }
     },

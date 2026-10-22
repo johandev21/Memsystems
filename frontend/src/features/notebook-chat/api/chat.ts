@@ -1,4 +1,4 @@
-import { apiDelete, createQueryOptions } from "@/shared/api";
+import { apiDelete, apiPost, createQueryOptions } from "@/shared/api";
 
 export type { CitationLocator } from "@/shared/citations/citation";
 import type { CitationLocator } from "@/shared/citations/citation";
@@ -53,6 +53,16 @@ export interface ChatRequest {
   messages: ChatRequestMessage[];
   language?: string;
   groundingMode?: 'strict' | 'moderate' | 'free';
+  parentMessageId?: string | null;
+  editMessageId?: string;
+  regenerateMessageId?: string;
+  sourceIds?: string[];
+}
+
+export interface ChatHistoryDTO {
+  messages: ChatMessageDTO[];
+  selectedMessageId: string | null;
+  selectedPathIds: string[];
 }
 
 export interface ChatMessageDTO {
@@ -71,10 +81,15 @@ export interface ChatMessageDTO {
   citedSourceIds: CitedSourceEntry[] | null;
   citedSources: CitedSourceDTO[];
   createdAt: string;
+  parentId?: string | null;
+  siblingIndex?: number;
+  siblingCount?: number;
+  isOnSelectedPath?: boolean;
+  isSelected?: boolean;
 }
 
 export const chatMessagesQueryOptions = (notebookId: string) =>
-  createQueryOptions<ChatMessageDTO[]>(
+  createQueryOptions<ChatHistoryDTO>(
     ["chat", notebookId, "messages"],
     `/api/notebooks/${notebookId}/chat`,
     { staleTime: 0, refetchOnMount: "always" },
@@ -82,3 +97,9 @@ export const chatMessagesQueryOptions = (notebookId: string) =>
 
 export const clearChatHistory = (notebookId: string) =>
   apiDelete(`/api/notebooks/${notebookId}/chat`);
+
+export const selectChatBranch = (notebookId: string, messageId: string) =>
+  apiPost<{ messageId: string }, { selectedMessageId: string }>(
+    `/api/notebooks/${notebookId}/chat/selection`,
+    { messageId },
+  );
