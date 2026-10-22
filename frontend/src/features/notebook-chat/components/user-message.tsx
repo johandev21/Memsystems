@@ -44,6 +44,7 @@ export function UserMessage({ message, siblingMessages = [], disabled = false, o
   const [copied, setCopied] = useState(false);
   const peers = siblingMessages.length ? siblingMessages : [message];
   const activeIndex = Math.max(0, peers.findIndex((item) => item.id === message.id));
+  const Content = editing ? "div" : MessageContent;
 
   const save = () => {
     if (disabled) return;
@@ -66,11 +67,11 @@ export function UserMessage({ message, siblingMessages = [], disabled = false, o
   };
 
   return (
-    <Message className={cn("[content-visibility:auto] [contain-intrinsic-size:auto_60px]", editing && "max-w-full")} from="user">
+    <Message className={cn("[content-visibility:auto] [contain-intrinsic-size:auto_60px]", editing && "max-w-4/5")} from="user">
       <span className="sr-only">{t("sender.user")}</span>
-      <MessageContent className={cn(
+      <Content className={cn(
         "px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3 break-words [overflow-wrap:anywhere]",
-        editing && "!ml-0 !w-full !max-w-full !rounded-xl !border !border-border !bg-surface-1 !px-3 !py-3 !text-foreground focus-within:border-ring",
+        editing && "ml-auto w-full min-w-0 rounded-2xl bg-primary/20 text-foreground",
       )}>
         {fileParts.map((file, index) => {
           if (file.mediaType?.startsWith("image/")) {
@@ -111,12 +112,12 @@ export function UserMessage({ message, siblingMessages = [], disabled = false, o
                 }
               }}
               aria-label={t("edit.editorLabel")}
-              rows={2}
-              className="max-h-60 min-h-20 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-0 py-1 leading-relaxed shadow-none outline-none ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
+              rows={3}
+              className="max-h-60 min-h-28 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-0 py-1 leading-relaxed shadow-none outline-none ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
             />
-            <div className="mt-2 flex flex-wrap justify-end gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={() => { setEditing(false); setDraft(text); }}>{t("edit.cancel")}</Button>
-              <Button type="button" size="sm" onClick={save} disabled={disabled || !draft.trim() || draft.trim() === text.trim()}>{t("edit.send")}</Button>
+            <div className="mt-3 flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" className="rounded-full font-normal hover:bg-primary/10 max-sm:min-h-11" onClick={() => { setEditing(false); setDraft(text); }}>{t("edit.cancel")}</Button>
+              <Button type="button" size="sm" className="rounded-full font-normal max-sm:min-h-11" onClick={save} disabled={disabled || !draft.trim() || draft.trim() === text.trim()}>{t("edit.send")}</Button>
             </div>
           </div>
         ) : textParts.map((part, index) => (
@@ -124,7 +125,7 @@ export function UserMessage({ message, siblingMessages = [], disabled = false, o
             {part.text}
           </MessageResponse>
         ))}
-      </MessageContent>
+      </Content>
       {!editing && <div className="mt-1 flex flex-wrap items-center justify-end gap-1 text-text-tertiary">
         {peers.length > 1 && <>
           <UserMessageAction label={t("assistant.previousVersion")} disabled={disabled || activeIndex === 0} onClick={() => onSelectBranch?.(peers[activeIndex - 1].id)}><ChevronLeft className="size-3.5" /></UserMessageAction>
