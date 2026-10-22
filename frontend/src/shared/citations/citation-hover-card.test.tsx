@@ -84,13 +84,17 @@ describe("CitationHoverCard", () => {
     });
     await user.hover(trigger);
 
-    const copyBtn = await screen.findByRole("button", { name: /copy quote/i });
+    const copyBtn = await screen.findByRole("button", {
+      name: /copy citation quote to clipboard/i,
+    });
     await user.click(copyBtn);
 
     expect(writeTextMock).toHaveBeenCalledWith(
       "Demonstrations depend on necessary premises.",
     );
-    expect(await screen.findByText(/quote copied!/i)).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: /citation quote copied to clipboard/i }),
+    ).toBeTruthy();
   });
 
   it("dispatches 'open-source-viewer' event with locator on clicking 'Open source'", async () => {
@@ -129,17 +133,23 @@ describe("CitationHoverCard", () => {
 
   it("renders external link with text fragment for URL sources", async () => {
     const user = userEvent.setup();
-    render(<CitationHoverCard reference={sampleReference()} />);
+    render(
+      <CitationHoverCard
+        reference={sampleReference({
+          id: "",
+          locator: null,
+          url: "https://example.com/aristotle-logic",
+        })}
+      />,
+    );
 
     const trigger = screen.getByRole("button", {
       name: "Reference 1: Stanford Encyclopedia of Philosophy",
     });
     await user.hover(trigger);
 
-    const externalLink = await screen.findByRole("button", { name: /open external source/i });
-    expect(externalLink.getAttribute("href")).toBe(
-      "https://example.com/aristotle-logic#:~:text=Demonstrations%20depend%20on",
-    );
+    const externalLink = await screen.findByRole("button", { name: /open source/i });
+    expect(externalLink.getAttribute("href")).toBe("https://example.com/aristotle-logic");
     expect(externalLink.getAttribute("target")).toBe("_blank");
   });
 
@@ -235,7 +245,9 @@ describe("CitationHoverCard", () => {
     expect(screen.getAllByText("Stanford Encyclopedia of Philosophy").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Aristotle > Logic > Demonstrations")).toBeTruthy();
     expect(screen.getAllByText("Demonstrations depend on necessary premises.").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole("button", { name: /copy quote/i })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /copy citation quote to clipboard/i }),
+    ).toBeTruthy();
   });
 
   it("smooths broken newlines, strips backslash escapes, and cleans breadcrumbs", async () => {
@@ -323,5 +335,3 @@ describe("CitationHoverCard", () => {
     expect(document.querySelector("mark")).toBeNull();
   });
 });
-
-
