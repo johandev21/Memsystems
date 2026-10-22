@@ -194,11 +194,18 @@ async function chatHarness(notebookMode: string) {
       }),
     })),
     update: vi.fn(() => ({
-      set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+      set: vi.fn(() => ({
+        where: vi.fn(() => {
+          const ret = vi.fn().mockResolvedValue([{ id: 'notebook-1' }]);
+          const promise = Promise.resolve([{ id: 'notebook-1' }]);
+          return Object.assign(promise, { returning: ret });
+        }),
+      })),
     })),
     delete: vi.fn(() => ({
       where: vi.fn().mockResolvedValue(undefined),
     })),
+    transaction: vi.fn(async (cb: any) => cb(dbMock)),
   };
   const provider = {
     createModel: vi.fn(() => ({})),
@@ -324,9 +331,9 @@ describe('Chat grounding mode override', () => {
       {} as never,
       new RetrievalTraceService(db as never),
     );
-    const messages = await service.listMessages(notebook.id);
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({ groundingMode: 'free' });
+    const result = await service.listMessages(notebook.id);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]).toMatchObject({ groundingMode: 'free' });
   });
 });
 
