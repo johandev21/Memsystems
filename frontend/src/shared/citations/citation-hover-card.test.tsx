@@ -92,7 +92,9 @@ describe("CitationHoverCard", () => {
     expect(writeTextMock).toHaveBeenCalledWith(
       "Demonstrations depend on necessary premises.",
     );
-    expect(await screen.findByText(/quote copied!/i)).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: /citation quote copied to clipboard/i }),
+    ).toBeTruthy();
   });
 
   it("dispatches 'open-source-viewer' event with locator on clicking 'Open source'", async () => {
@@ -136,6 +138,7 @@ describe("CitationHoverCard", () => {
         reference={sampleReference({
           id: "",
           locator: null,
+          url: "https://example.com/aristotle-logic",
         })}
       />,
     );
@@ -145,10 +148,8 @@ describe("CitationHoverCard", () => {
     });
     await user.hover(trigger);
 
-    const externalLink = await screen.findByRole("link", { name: /open source/i });
-    expect(externalLink.getAttribute("href")).toBe(
-      "https://example.com/aristotle-logic#:~:text=Demonstrations%20depend%20on",
-    );
+    const externalLink = await screen.findByRole("button", { name: /open source/i });
+    expect(externalLink.getAttribute("href")).toBe("https://example.com/aristotle-logic");
     expect(externalLink.getAttribute("target")).toBe("_blank");
   });
 
