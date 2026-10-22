@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components/layout";
-import { AppearanceCard, LanguageCard, MobileSettingsView, TrashCard } from "@/features/settings";
+import {
+  AppearanceCard,
+  LanguageCard,
+  MobileSettingsView,
+  TrashCard,
+} from "@/features/settings";
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");

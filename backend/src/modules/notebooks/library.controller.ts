@@ -8,24 +8,21 @@ import {
   Post,
   UsePipes,
 } from '@nestjs/common';
-import { z } from 'zod';
+import {
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { NotebookFolderService } from './notebook-folder.service';
 import { NotebooksService } from './notebooks.service';
+import { CreateLibraryFolderDto } from './dto/create-library-folder.dto';
+import { UpdateLibraryFolderDto } from './dto/update-library-folder.dto';
 
-const createFolderSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Folder name is required')
-    .max(200, 'Folder name must be at most 200 characters'),
-  parentId: z.string().nullable().optional(),
-});
-
-const updateFolderSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  parentId: z.string().nullable().optional(),
-});
-
+@ApiTags('Library')
 @Controller('library')
 export class LibraryController {
   constructor(
@@ -34,6 +31,21 @@ export class LibraryController {
   ) {}
 
   @Get()
+  @ApiOperation({
+    summary: 'Get Library',
+    description:
+      'Returns the Library Folder tree and every Notebook it contains.',
+  })
+  @ApiOkResponse({
+    description: 'Library folders and notebooks.',
+    schema: {
+      type: 'object',
+      properties: {
+        folders: { type: 'array', items: { type: 'object' } },
+        notebooks: { type: 'array', items: { type: 'object' } },
+      },
+    },
+  })
   async getLibrary() {
     const [folders, notebooks] = await Promise.all([
       this.notebookFolderService.list(),
@@ -43,21 +55,42 @@ export class LibraryController {
   }
 
   @Post('folders')
-  @UsePipes(new ZodValidationPipe(createFolderSchema))
-  async createFolder(@Body() body: z.infer<typeof createFolderSchema>) {
+  @ApiOperation({
+    summary: 'Create Library Folder',
+    description:
+      'Creates a Library Folder, optionally inside another Library Folder.',
+  })
+  @ApiBody({ type: CreateLibraryFolderDto })
+  @ApiCreatedResponse({ description: 'The created Library Folder.' })
+  @UsePipes(new ZodValidationPipe(CreateLibraryFolderDto.schema))
+  async createFolder(@Body() body: CreateLibraryFolderDto) {
     return this.notebookFolderService.create(body);
   }
 
   @Patch('folders/:id')
-  @UsePipes(new ZodValidationPipe(updateFolderSchema))
+  @ApiOperation({
+    summary: 'Update Library Folder',
+    description: 'Renames a Library Folder or moves it to another parent.',
+  })
+  @ApiParam({ name: 'id', description: 'Library Folder id.' })
+  @ApiBody({ type: UpdateLibraryFolderDto })
+  @ApiOkResponse({ description: 'The updated Library Folder.' })
+  @UsePipes(new ZodValidationPipe(UpdateLibraryFolderDto.schema))
   async updateFolder(
     @Param('id') id: string,
-    @Body() body: z.infer<typeof updateFolderSchema>,
+    @Body() body: UpdateLibraryFolderDto,
   ) {
     return this.notebookFolderService.update(id, body);
   }
 
   @Delete('folders/:id')
+  @ApiOperation({
+    summary: 'Delete Library Folder',
+    description:
+      'Soft-deletes a Library Folder. Contained Notebooks are handled according to the folder delete rules.',
+  })
+  @ApiParam({ name: 'id', description: 'Library Folder id.' })
+  @ApiOkResponse({ description: 'The deleted Library Folder.' })
   async deleteFolder(@Param('id') id: string) {
     return this.notebookFolderService.delete(id);
   }

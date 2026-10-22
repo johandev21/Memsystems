@@ -138,11 +138,19 @@ describe('generation grounding evaluation gate', () => {
         // The metrics come from what the real prompt builder rendered, not
         // from the grounding's chunk list alone.
         expect(request.promptChars, request.requestId).toBeGreaterThan(0);
+        expect(request.promptChars, request.requestId).toBeLessThanOrEqual(
+          request.maxPromptChars,
+        );
         expect(
           request.renderedChunkIds.length,
           request.requestId,
         ).toBeGreaterThan(0);
         expect(request.droppedBlocks, request.requestId).toBe(0);
+        if (request.intent === 'broad-survey') {
+          expect(request.traces, request.requestId).toBe(0);
+        } else {
+          expect(request.traces, request.requestId).toBeGreaterThan(0);
+        }
         // The per-section plan never loses a labeled section the pre-ticket
         // one-bounded-set plan could reach.
         const previous = singlePass.requests.find(
@@ -152,6 +160,21 @@ describe('generation grounding evaluation gate', () => {
           previous.sectionCoverage,
         );
       }
+
+      expect(grounded.efficiency).toBeDefined();
+      expect(grounded.efficiency!.broadSurveyTraces).toBe(0);
+      expect(grounded.efficiency!.focusedBriefTraces).toBeGreaterThan(0);
+      expect(grounded.efficiency!.averagePromptChars).toBeGreaterThan(0);
+
+      const boilerplateRequest = grounded.requests.find(
+        (request) => request.requestId === 'g-boilerplate-filtered-source',
+      )!;
+      for (const renderedId of boilerplateRequest.renderedChunkIds) {
+        expect(renderedId).not.toMatch(
+          /os-(toc|preface|ack|bibliography|index)$/,
+        );
+      }
+
       const bypassedLongSource = bypassed.requests.find(
         (request) => request.requestId === 'g-long-source-guide',
       )!;
@@ -165,6 +188,12 @@ describe('generation grounding evaluation gate', () => {
           (request) => request.requestId === 'g-long-source-guide',
         )!.renderedChunkIds,
       );
+
+      const bypassedHeadingless = bypassed.requests.find(
+        (request) => request.requestId === 'g-headingless-long-source',
+      )!;
+      expect(bypassedHeadingless.sectionCoverage).toBeLessThan(1);
+      expect(bypassedHeadingless.citationAccuracy).toBeLessThan(1);
     },
   );
 });

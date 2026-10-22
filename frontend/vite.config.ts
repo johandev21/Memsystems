@@ -77,6 +77,14 @@ export default defineConfig({
         target: process.env.NESTJS_BACKEND_URL || 'http://127.0.0.1:4000',
         changeOrigin: true,
       },
+      '/llms.txt': {
+        target: process.env.NESTJS_BACKEND_URL || 'http://127.0.0.1:4000',
+        changeOrigin: true,
+      },
+      '/llms-full.txt': {
+        target: process.env.NESTJS_BACKEND_URL || 'http://127.0.0.1:4000',
+        changeOrigin: true,
+      },
     },
   },
 })

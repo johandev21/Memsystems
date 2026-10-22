@@ -167,28 +167,35 @@
       "idx": 23,
       "version": "7",
       "when": 1790700000000,
-      "tag": "0023_chat_branches",
+      "tag": "0023_agent_access",
       "breakpoints": true
     },
     {
       "idx": 24,
       "version": "7",
       "when": 1790800000000,
-      "tag": "0024_repair_chat_branches",
+      "tag": "0024_chat_branches",
       "breakpoints": true
     },
     {
       "idx": 25,
       "version": "7",
-      "when": 1792670000000,
-      "tag": "0025_chat_branch_preferences",
+      "when": 1790900000000,
+      "tag": "0025_repair_chat_branches",
       "breakpoints": true
     },
     {
       "idx": 26,
       "version": "7",
+      "when": 1792670000000,
+      "tag": "0026_chat_branch_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
       "when": 1792670100000,
-      "tag": "0026_chat_branch_stopped_endpoint",
+      "tag": "0027_chat_branch_stopped_endpoint",
       "breakpoints": true
     }
   ]

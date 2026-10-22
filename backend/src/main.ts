@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './common/filters/domain-exception.filter';
+import { configureOpenApi } from './common/openapi/configure-openapi';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -11,7 +12,9 @@ async function bootstrap() {
   app.use(json({ limit: '20mb' }));
   app.use(urlencoded({ extended: true, limit: '20mb' }));
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: ['llms.txt', 'llms-full.txt'],
+  });
 
   app.enableCors({
     origin: process.env.CLIENT_URL || [
@@ -23,6 +26,8 @@ async function bootstrap() {
   });
 
   app.useGlobalFilters(new DomainExceptionFilter());
+
+  configureOpenApi(app);
 
   const port = Number(process.env.PORT) || 4000;
   await app.listen(port, '0.0.0.0');

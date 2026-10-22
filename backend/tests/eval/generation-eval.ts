@@ -28,7 +28,10 @@ import { createCitationEvidence } from '../../src/modules/chat/chat-citations';
 import {
   GENERATION_EVIDENCE_CHUNKS_PER_SOURCE,
   GenerationGroundingService,
+  classifyBriefIntent,
   formatGroundedSourceText,
+  getKindGroundingBudget,
+  type BriefIntent,
   type GenerationGrounding,
   type GroundedSource,
 } from '../../src/modules/study-materials/generation/generation-grounding';
@@ -73,6 +76,7 @@ export interface GenerationEvalOptions {
 
 export interface GenerationEvalRequestResult {
   requestId: string;
+  intent: BriefIntent;
   selectedSources: number;
   representedSources: number;
   sourceCoverage: number;
@@ -87,9 +91,20 @@ export interface GenerationEvalRequestResult {
   renderedChunkIds: string[];
   /** Characters of source block the prompt carried. */
   promptChars: number;
+  /** Kind-aware prompt character ceiling for this request. */
+  maxPromptChars: number;
   /** Evidence blocks the prompt budget excluded. */
   droppedBlocks: number;
   traces: number;
+}
+
+export interface GenerationEvalEfficiencyMetrics {
+  averagePromptChars: number;
+  totalTraces: number;
+  broadSurveyTraces: number;
+  focusedBriefTraces: number;
+  broadSurveyAvgPromptChars: number;
+  focusedBriefAvgPromptChars: number;
 }
 
 export interface GenerationEvalMetrics {
@@ -101,6 +116,12 @@ export interface GenerationEvalMetrics {
   citationAccuracy: number;
   /** Share of requests whose material carries at least one citation. */
   citationAttachment: number;
+  /** Average prompt characters across evaluated generation requests. */
+  averagePromptChars?: number;
+  /** Total retrieval traces executed for broad-survey requests. */
+  broadSurveyTraces?: number;
+  /** Total retrieval traces executed for focused-brief requests. */
+  focusedBriefTraces?: number;
 }
 
 export interface GenerationEvalReport {
@@ -108,6 +129,7 @@ export interface GenerationEvalReport {
   rerank: boolean;
   hybrid: boolean;
   metrics: GenerationEvalMetrics;
+  efficiency?: GenerationEvalEfficiencyMetrics;
   requests: GenerationEvalRequestResult[];
 }
 
@@ -118,12 +140,12 @@ export interface GenerationEvalGateFailure {
   message: string;
 }
 
-const GENERATION_QUALITY_METRICS: (keyof GenerationEvalMetrics)[] = [
+const GENERATION_QUALITY_METRICS = [
   'sourceCoverage',
   'sectionCoverage',
   'citationAccuracy',
   'citationAttachment',
-];
+] as const;
 
 export async function evaluateGenerationGrounding(
   options: GenerationEvalOptions = {},
@@ -208,6 +230,7 @@ export async function evaluateGenerationGrounding(
     rerank: rerankEnabled,
     hybrid: hybridEnabled,
     metrics: computeMetrics(requests),
+    efficiency: computeEfficiencyMetrics(requests),
     requests,
   };
 }
@@ -378,9 +401,11 @@ function buildRequestResult(
   grounding: GenerationGrounding,
   seeded: Awaited<ReturnType<typeof seedGoldenCorpus>>,
 ): GenerationEvalRequestResult {
+  const budget = getKindGroundingBudget(request.kind);
   // The real prompt builder decides what the model can see and cite.
   const formatted = formatGroundedSourceText(grounding, {
     includeSourceId: false,
+    kind: request.kind,
   });
   const promptChunkIds = new Set(formatted.renderedChunkIds);
   const selectedSeededIds = new Set(
@@ -392,6 +417,7 @@ function buildRequestResult(
     selectedSeededIds.has(source.id),
   ).length;
 
+  const sourceTitles: string[] = [];
   // Every seeded chunk id that belongs to each labeled section, in chunk
   // order, across the request's selected sources.
   const chunkIdsBySection = new Map<string, string[]>();
@@ -399,14 +425,41 @@ function buildRequestResult(
     const source = seeded.sourceByGoldenId.get(goldenSourceId);
     if (!source)
       throw new Error(`Golden source id not seeded: ${goldenSourceId}`);
-    for (const chunk of source.chunks) {
+    sourceTitles.push(source.title);
+    const allHeadingless = source.chunks.every(
+      (chunk) => !chunk.headingPath || chunk.headingPath.length === 0,
+    );
+    for (let idx = 0; idx < source.chunks.length; idx++) {
+      const chunk = source.chunks[idx];
       const section = (chunk.headingPath ?? []).join(' > ');
       const list = chunkIdsBySection.get(section) ?? [];
       const seededChunkId = seeded.chunkIdByGoldenId.get(chunk.id);
       if (seededChunkId) list.push(seededChunkId);
       chunkIdsBySection.set(section, list);
+
+      if (allHeadingless && seededChunkId) {
+        const third = Math.min(
+          2,
+          Math.floor((idx * 3) / Math.max(1, source.chunks.length)),
+        );
+        const stratumLabel =
+          third === 0
+            ? 'Stratum 1 (Opening)'
+            : third === 1
+              ? 'Stratum 2 (Middle)'
+              : 'Stratum 3 (Closing)';
+        const sList = chunkIdsBySection.get(stratumLabel) ?? [];
+        sList.push(seededChunkId);
+        chunkIdsBySection.set(stratumLabel, sList);
+      }
     }
   }
+
+  const intent = classifyBriefIntent({
+    brief: request.brief,
+    kind: request.kind,
+    sourceTitles,
+  });
 
   const coveredSections = request.expectedSections.filter((section) =>
     (chunkIdsBySection.get(section) ?? []).some((chunkId) =>
@@ -449,6 +502,7 @@ function buildRequestResult(
   const expectedCount = request.expectedSections.length;
   return {
     requestId: request.id,
+    intent,
     selectedSources: request.sourceIds.length,
     representedSources: represented,
     sourceCoverage: request.sourceIds.length
@@ -463,14 +517,36 @@ function buildRequestResult(
     evidenceChunks: grounding.evidence.length,
     renderedChunkIds: formatted.renderedChunkIds,
     promptChars: formatted.text.length,
+    maxPromptChars: budget.maxPromptChars,
     droppedBlocks: formatted.droppedBlocks,
     traces: grounding.traces.length,
+  };
+}
+
+function computeEfficiencyMetrics(
+  requests: GenerationEvalRequestResult[],
+): GenerationEvalEfficiencyMetrics {
+  const broadRequests = requests.filter((r) => r.intent === 'broad-survey');
+  const focusedRequests = requests.filter((r) => r.intent === 'focused-brief');
+  const broadSurveyTraces = broadRequests.reduce((sum, r) => sum + r.traces, 0);
+  const focusedBriefTraces = focusedRequests.reduce(
+    (sum, r) => sum + r.traces,
+    0,
+  );
+  return {
+    averagePromptChars: mean(requests.map((r) => r.promptChars)),
+    totalTraces: broadSurveyTraces + focusedBriefTraces,
+    broadSurveyTraces,
+    focusedBriefTraces,
+    broadSurveyAvgPromptChars: mean(broadRequests.map((r) => r.promptChars)),
+    focusedBriefAvgPromptChars: mean(focusedRequests.map((r) => r.promptChars)),
   };
 }
 
 function computeMetrics(
   requests: GenerationEvalRequestResult[],
 ): GenerationEvalMetrics {
+  const efficiency = computeEfficiencyMetrics(requests);
   return {
     sourceCoverage: mean(requests.map((request) => request.sourceCoverage)),
     sectionCoverage: mean(requests.map((request) => request.sectionCoverage)),
@@ -478,6 +554,9 @@ function computeMetrics(
     citationAttachment: mean(
       requests.map((request) => request.citationAttachment),
     ),
+    averagePromptChars: efficiency.averagePromptChars,
+    broadSurveyTraces: efficiency.broadSurveyTraces,
+    focusedBriefTraces: efficiency.focusedBriefTraces,
   };
 }
 

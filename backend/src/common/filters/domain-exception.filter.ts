@@ -55,7 +55,22 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const res = exception.getResponse() as
-        string | { message?: string | string[] };
+        | string
+        | {
+            message?: string | string[];
+            statusCode?: number;
+            code?: string;
+          };
+      // Guards for Agent traffic return a complete error contract
+      // (`statusCode`, `message`, `code`, optional `retryAfter`). Forward it
+      // verbatim instead of wrapping it as a generic HTTP exception.
+      if (
+        typeof res === 'object' &&
+        typeof res.statusCode === 'number' &&
+        typeof res.code === 'string'
+      ) {
+        return response.status(status).json(res);
+      }
       const message =
         typeof res === 'string' ? res : (res.message ?? exception.message);
       return response.status(status).json({

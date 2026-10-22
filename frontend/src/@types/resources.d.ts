@@ -919,6 +919,23 @@ export default interface Resources {
       "processingSources": "processing sources"
     },
     "settings": {
+      "agentAccess": {
+        "descriptions": {
+          "inherit": "Use the workspace default for this notebook.",
+          "off": "Agents cannot access this notebook.",
+          "on": "Agents can read and change this notebook.",
+          "read_only": "Agents can read this notebook but cannot change it."
+        },
+        "inherit": "Inherit ({{level}})",
+        "label": "Agent access",
+        "updateFailed": "Failed to update agent access",
+        "updated": "Agent access updated",
+        "values": {
+          "off": "Off",
+          "on": "On",
+          "read_only": "Read-only"
+        }
+      },
       "appSettings": "App settings",
       "ariaLabel": "Notebook settings",
       "cancel": "Cancel",
@@ -976,6 +993,144 @@ export default interface Resources {
     }
   },
   "settings": {
+    "agentAccess": {
+      "audit": {
+        "allKeys": "All agent keys",
+        "allStatuses": "All statuses",
+        "args": "Arguments",
+        "clear": "Clear log",
+        "clearConfirmDescription": "Delete every agent activity entry? This cannot be undone.",
+        "clearConfirmTitle": "Clear activity log",
+        "clearFailed": "Failed to clear activity log",
+        "cleared": "Activity log cleared",
+        "description": "Review what connected agents did, including tool, status, duration, and redacted arguments.",
+        "duration": "{{duration}} ms",
+        "emptyDescription": "Tool calls made with an agent key will appear here.",
+        "emptyTitle": "No agent activity yet",
+        "filterKey": "Filter by agent key",
+        "filterStatus": "Filter by status",
+        "keyLabel": "Key: {{name}}",
+        "loadFailed": "Could not load agent activity.",
+        "next": "Next",
+        "noKey": "No key",
+        "notebook": "Notebook {{id}}",
+        "page": "Page {{page}} of {{pages}}",
+        "previous": "Previous",
+        "status": {
+          "denied": "Denied",
+          "error": "Error",
+          "pending_approval": "Pending approval",
+          "success": "Success"
+        },
+        "title": "Agent activity",
+        "unknownKey": "Unknown key",
+        "view": "View activity"
+      },
+      "cancel": "Cancel",
+      "cardHint": "These policies apply to every connected agent. Each notebook can override its own access level.",
+      "description": "Control what connected AI agents can do in this workspace.",
+      "keys": {
+        "copied": "Agent key copied",
+        "copiedAction": "Copied",
+        "copy": "Copy key",
+        "copyFailed": "Failed to copy agent key",
+        "copyNowTitle": "Copy this key now",
+        "copyWarning": "This key is shown only once. Store it somewhere safe — you cannot see it again.",
+        "create": "Create key",
+        "createFailed": "Failed to create agent key",
+        "created": "Agent key created",
+        "createdAt": "Created {{date}}",
+        "creating": "Creating…",
+        "description": "Agent keys let local tools connect to Memsystems. Revoke a key to stop it immediately.",
+        "emptyDescription": "Create a key, then add it to your agent client configuration.",
+        "emptyTitle": "No agent keys yet",
+        "lastUsedAt": "Last used {{date}}",
+        "listTitle": "Your keys",
+        "loadFailed": "Could not load agent keys.",
+        "manage": "Manage agent keys",
+        "nameLabel": "Key name",
+        "namePlaceholder": "e.g. Claude Code",
+        "neverUsed": "Never used",
+        "revoke": "Revoke",
+        "revokeConfirmDescription": "Revoke “{{name}}”? Requests using this key will be rejected immediately.",
+        "revokeConfirmTitle": "Revoke agent key",
+        "revokeFailed": "Failed to revoke agent key",
+        "revoked": "Agent key revoked",
+        "revoking": "Revoking…",
+        "status": {
+          "active": "Active",
+          "revoked": "Revoked"
+        },
+        "title": "Agent keys"
+      },
+      "levels": {
+        "off": "Off",
+        "on": "On",
+        "read_only": "Read-only"
+      },
+      "pendingActions": {
+        "approve": "Approve",
+        "approveFailed": "Failed to approve action",
+        "approved": "Action approved",
+        "approving": "Approving…",
+        "description": "Review destructive requests from connected agents. Each request expires automatically.",
+        "emptyDescription": "Destructive agent requests that need your approval will appear here.",
+        "emptyTitle": "No pending actions",
+        "expires": "Expires {{date}}",
+        "indicator_one": "{{count}} pending agent action",
+        "indicator_other": "{{count}} pending agent actions",
+        "keyLabel": "Key: {{name}}",
+        "loadFailed": "Could not load pending actions.",
+        "noKey": "No key",
+        "reject": "Reject",
+        "rejectFailed": "Failed to reject action",
+        "rejected": "Action rejected",
+        "rejecting": "Rejecting…",
+        "status": {
+          "approved": "Approved",
+          "expired": "Expired",
+          "failed": "Failed",
+          "pending": "Pending",
+          "rejected": "Rejected"
+        },
+        "target": "Target: {{target}}",
+        "targetType": {
+          "folder": "Folder",
+          "notebook": "Notebook",
+          "source": "Source",
+          "study_material": "Study material",
+          "trash": "Trash"
+        },
+        "title": "Pending agent actions"
+      },
+      "policies": {
+        "allow": "Allow",
+        "ask": "Ask every time",
+        "loadFailed": "Couldn't load agent access settings",
+        "loadFailedDescription": "Check your connection and try again.",
+        "never": "Never",
+        "notebookDefault": {
+          "description": "Applies to notebooks that do not set their own agent access.",
+          "title": "Default per-notebook agent access"
+        },
+        "permanentDelete": {
+          "description": "Permanently deleting items or emptying Trash always requires your approval.",
+          "title": "Permanent delete / empty Trash"
+        },
+        "resourceDelete": {
+          "description": "Deleting notebooks, library folders, or sources always requires your approval.",
+          "title": "Delete notebooks, library folders, sources"
+        },
+        "saveFailed": "Failed to update agent access policies",
+        "saved": "Agent access policies updated",
+        "softDelete": {
+          "description": "When an agent deletes a study material, ask for approval or allow it.",
+          "title": "Soft delete (to Trash)"
+        }
+      },
+      "retry": "Try again",
+      "title": "Agent access"
+    },
     "appearance": {
       "description": "Choose how Memsystems looks. Theme sets the palette, color scheme sets light or dark.",
       "title": "Appearance"

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AgentDocsController } from './agent-docs/agent-docs.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AiModule } from './modules/ai/ai.module';
@@ -28,7 +29,7 @@ import { TrashModule } from './modules/trash/trash.module';
     StudyMaterialsModule,
     TrashModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, AgentDocsController],
   providers: [AppService],
 })
 export class AppModule {}

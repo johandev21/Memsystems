@@ -7,6 +7,7 @@ import { NotebooksController } from './notebooks.controller';
 import { NotebooksService } from './notebooks.service';
 
 @Module({
+  imports: [],
   controllers: [NotebooksController, LibraryController],
   providers: [
     NotebooksService,

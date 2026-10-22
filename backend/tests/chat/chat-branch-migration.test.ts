@@ -39,7 +39,7 @@ const migrationSql = (filename: string) =>
 
 describe('chat branch migrations', () => {
   it('backfills the chronological legacy transcript in 0023 without changing message data', async () => {
-    const migration = migrationSql('0023_chat_branches.sql');
+    const migration = migrationSql('0024_chat_branches.sql');
     const result = await runRolledBackFixture('chat_0023_legacy_fixture', async (tx) => {
       await tx.execute(sql.raw(`
         CREATE TABLE notebooks (id varchar PRIMARY KEY, title varchar NOT NULL);
@@ -91,7 +91,7 @@ describe('chat branch migrations', () => {
   });
 
   it('preserves roots, nested siblings, and the selected endpoint when 0024 sees existing links', async () => {
-    const migration = migrationSql('0024_repair_chat_branches.sql');
+    const migration = migrationSql('0025_repair_chat_branches.sql');
     const messages = [
       { id: 'root-a', role: 'user', parentId: null },
       { id: 'root-b', role: 'user', parentId: null },
@@ -143,7 +143,7 @@ describe('chat branch migrations', () => {
   });
 
   it('rebuilds a legacy tree only when 0024 adds a missing parent column', async () => {
-    const migration = migrationSql('0024_repair_chat_branches.sql');
+    const migration = migrationSql('0025_repair_chat_branches.sql');
     const result = await runRolledBackFixture('chat_0024_legacy_fixture', async (tx) => {
       await tx.execute(sql.raw(`
         CREATE TABLE notebooks (id varchar PRIMARY KEY, title varchar NOT NULL);
@@ -181,9 +181,9 @@ describe('chat branch migrations', () => {
   });
 
   it('initializes durable preferences from the selected path and stable defaults without rewiring the tree', async () => {
-    const migration = migrationSql('0025_chat_branch_preferences.sql');
+    const migration = migrationSql('0026_chat_branch_preferences.sql');
     const stoppedEndpointMigration = migrationSql(
-      '0026_chat_branch_stopped_endpoint.sql',
+      '0027_chat_branch_stopped_endpoint.sql',
     );
     const result = await runRolledBackFixture('chat_0025_preferences_fixture', async (tx) => {
       await tx.execute(sql.raw(`

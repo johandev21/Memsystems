@@ -8,75 +8,64 @@ import {
   Res,
   UsePipes,
 } from '@nestjs/common';
+import {
+  ApiBody,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
-import { z } from 'zod';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ChatService } from './chat.service';
+import {
+  ChatRequestDto,
+  SelectMessageDto,
+  selectMessageSchema,
+} from './dto/chat-request.dto';
 
-const textPartSchema = z.object({
-  type: z.literal('text'),
-  text: z.string(),
-  state: z.enum(['streaming', 'done']).optional(),
-});
-
-const reasoningPartSchema = z.object({
-  type: z.literal('reasoning'),
-  text: z.string(),
-  state: z.enum(['streaming', 'done']).optional(),
-});
-
-const filePartSchema = z.object({
-  type: z.literal('file'),
-  mediaType: z.string(),
-  url: z.string(),
-  filename: z.string().optional(),
-});
-
-const messagePartSchema = z.union([
-  textPartSchema,
-  reasoningPartSchema,
-  filePartSchema,
-]);
-
-const messageSchema = z.object({
-  id: z.string().optional(),
-  role: z.enum(['user', 'assistant', 'system']),
-  parts: z.array(messagePartSchema).min(1),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
-const chatRequestSchema = z.object({
-  messages: z.array(messageSchema).min(1),
-  model: z.string().min(1),
-  message: messageSchema.optional(),
-  /** @deprecated Unused. Kept for backwards compatibility with existing clients. */
-  regenerateMessageId: z.string().optional(),
-  language: z.string().min(1).max(35).optional(),
-  groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
-  // null explicitly selects the root for a new conversation. Omission keeps
-  // backwards compatibility by using the notebook's persisted selection.
-  parentMessageId: z.string().nullable().optional(),
-  editMessageId: z.string().optional(),
-  sourceIds: z.array(z.string().min(1)).max(100).optional(),
-});
-
-const selectMessageSchema = z.object({ messageId: z.string().min(1) });
-
+@ApiTags('Chat')
 @Controller('notebooks/:id/chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get()
+  @ApiOperation({
+    summary: 'List Chat messages',
+    description:
+      'Returns the persisted Chat messages for the Notebook, including Citations on assistant messages.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'Chat messages for the Notebook.' })
   async list(@Param('id') notebookId: string) {
     return this.chatService.listMessages(notebookId);
   }
 
   @Post()
-  @UsePipes(new ZodValidationPipe(chatRequestSchema))
+  @ApiOperation({
+    summary: 'Send Chat message',
+    description:
+      'Starts a Chat Turn. The reply is grounded in the Notebook Sources and streamed as AI SDK UI message frames. Citations appear inline as keys such as `[ref:R1]`; the final `finish` frame lists the cited Sources and citation check counts.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiBody({ type: ChatRequestDto })
+  @ApiProduces('text/event-stream')
+  @ApiResponse({
+    status: 201,
+    description: 'Server-sent event stream of Chat UI message frames.',
+    content: {
+      'text/event-stream': {
+        schema: { $ref: '#/components/schemas/ChatUiStreamFrame' },
+      },
+    },
+  })
+  @UsePipes(new ZodValidationPipe(ChatRequestDto.schema))
   async sendMessage(
     @Param('id') notebookId: string,
-    @Body() body: z.infer<typeof chatRequestSchema>,
+    @Body() body: ChatRequestDto,
     @Res() res: Response,
   ) {
     const userParts = this.chatService.extractUserMessageParts(body.messages);
@@ -149,10 +138,24 @@ export class ChatController {
   }
 
   @Post('selection')
+  @ApiOperation({
+    summary: 'Select conversation branch endpoint',
+    description:
+      'Sets the active conversation endpoint to the given message ID.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiBody({ type: SelectMessageDto })
+  @ApiOkResponse({
+    description: 'Updated selected message ID.',
+    schema: {
+      type: 'object',
+      properties: { selectedMessageId: { type: 'string' } },
+    },
+  })
   @UsePipes(new ZodValidationPipe(selectMessageSchema))
   async selectMessage(
     @Param('id') notebookId: string,
-    @Body() body: z.infer<typeof selectMessageSchema>,
+    @Body() body: SelectMessageDto,
   ) {
     const selectedMessageId = await this.chatService.selectMessage(
       notebookId,
@@ -162,6 +165,18 @@ export class ChatController {
   }
 
   @Delete()
+  @ApiOperation({
+    summary: 'Clear Chat',
+    description: 'Deletes every Chat message in the Notebook.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiOkResponse({
+    description: 'Chat cleared.',
+    schema: {
+      type: 'object',
+      properties: { success: { type: 'boolean' } },
+    },
+  })
   async clearMessages(@Param('id') notebookId: string) {
     await this.chatService.clearMessages(notebookId);
     return { success: true };

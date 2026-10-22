@@ -159,6 +159,23 @@
     "processingSources": "procesando fuentes"
   },
   "settings": {
+    "agentAccess": {
+      "descriptions": {
+        "inherit": "Usa el valor predeterminado del espacio de trabajo para este cuaderno.",
+        "off": "Los agentes no pueden acceder a este cuaderno.",
+        "on": "Los agentes pueden leer y modificar este cuaderno.",
+        "read_only": "Los agentes pueden leer este cuaderno pero no modificarlo."
+      },
+      "inherit": "Heredar ({{level}})",
+      "label": "Acceso de agentes",
+      "updateFailed": "No se pudo actualizar el acceso de agentes",
+      "updated": "Acceso de agentes actualizado",
+      "values": {
+        "off": "Desactivado",
+        "on": "Activado",
+        "read_only": "Solo lectura"
+      }
+    },
     "appSettings": "Ajustes de la aplicación",
     "ariaLabel": "Ajustes del cuaderno",
     "cancel": "Cancelar",

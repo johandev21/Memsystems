@@ -1,4 +1,142 @@
 {
+  "agentAccess": {
+    "audit": {
+      "allKeys": "Todas las claves de agente",
+      "allStatuses": "Todos los estados",
+      "args": "Argumentos",
+      "clear": "Vaciar registro",
+      "clearConfirmDescription": "¿Eliminar todas las entradas de actividad de agentes? Esta acción no se puede deshacer.",
+      "clearConfirmTitle": "Vaciar registro de actividad",
+      "cleared": "Registro de actividad vaciado",
+      "clearFailed": "No se pudo vaciar el registro de actividad",
+      "description": "Revisa lo que hicieron los agentes conectados: herramienta, estado, duración y argumentos redactados.",
+      "duration": "{{duration}} ms",
+      "emptyDescription": "Las llamadas a herramientas con una clave de agente aparecerán aquí.",
+      "emptyTitle": "Aún no hay actividad de agentes",
+      "filterKey": "Filtrar por clave de agente",
+      "filterStatus": "Filtrar por estado",
+      "keyLabel": "Clave: {{name}}",
+      "loadFailed": "No se pudo cargar la actividad de agentes.",
+      "next": "Siguiente",
+      "noKey": "Sin clave",
+      "notebook": "Cuaderno {{id}}",
+      "page": "Página {{page}} de {{pages}}",
+      "previous": "Anterior",
+      "status": {
+        "denied": "Denegado",
+        "error": "Error",
+        "pending_approval": "Aprobación pendiente",
+        "success": "Correcto"
+      },
+      "title": "Actividad de agentes",
+      "unknownKey": "Clave desconocida",
+      "view": "Ver actividad"
+    },
+    "cancel": "Cancelar",
+    "cardHint": "Estas políticas se aplican a todos los agentes conectados. Cada cuaderno puede sobrescribir su propio nivel de acceso.",
+    "description": "Controla lo que los agentes de IA conectados pueden hacer en este espacio de trabajo.",
+    "keys": {
+      "copied": "Clave de agente copiada",
+      "copiedAction": "Copiada",
+      "copy": "Copiar clave",
+      "copyFailed": "No se pudo copiar la clave de agente",
+      "copyNowTitle": "Copia esta clave ahora",
+      "copyWarning": "Esta clave solo se muestra una vez. Guárdala en un lugar seguro: no podrás verla de nuevo.",
+      "create": "Crear clave",
+      "created": "Clave de agente creada",
+      "createFailed": "No se pudo crear la clave de agente",
+      "createdAt": "Creada {{date}}",
+      "creating": "Creando…",
+      "description": "Las claves de agente permiten que herramientas locales se conecten a Memsystems. Revoca una clave para detenerla de inmediato.",
+      "emptyDescription": "Crea una clave y añádela a la configuración de tu cliente de agentes.",
+      "emptyTitle": "Aún no hay claves de agente",
+      "lastUsedAt": "Último uso {{date}}",
+      "listTitle": "Tus claves",
+      "loadFailed": "No se pudieron cargar las claves de agente.",
+      "manage": "Gestionar claves de agente",
+      "nameLabel": "Nombre de la clave",
+      "namePlaceholder": "p. ej. Claude Code",
+      "neverUsed": "Nunca usada",
+      "revoke": "Revocar",
+      "revoked": "Clave de agente revocada",
+      "revokeConfirmDescription": "¿Revocar “{{name}}”? Las solicitudes con esta clave se rechazarán de inmediato.",
+      "revokeConfirmTitle": "Revocar clave de agente",
+      "revokeFailed": "No se pudo revocar la clave de agente",
+      "revoking": "Revocando…",
+      "status": {
+        "active": "Activa",
+        "revoked": "Revocada"
+      },
+      "title": "Claves de agente"
+    },
+    "levels": {
+      "off": "Desactivado",
+      "on": "Activado",
+      "read_only": "Solo lectura"
+    },
+    "pendingActions": {
+      "approve": "Aprobar",
+      "approved": "Acción aprobada",
+      "approveFailed": "No se pudo aprobar la acción",
+      "approving": "Aprobando…",
+      "description": "Revisa las solicitudes destructivas de los agentes conectados. Cada solicitud caduca automáticamente.",
+      "emptyDescription": "Las solicitudes destructivas de agentes que necesitan tu aprobación aparecerán aquí.",
+      "emptyTitle": "No hay acciones pendientes",
+      "expires": "Caduca {{date}}",
+      "indicator_one": "{{count}} acción de agente pendiente",
+      "indicator_other": "{{count}} acciones de agente pendientes",
+      "keyLabel": "Clave: {{name}}",
+      "loadFailed": "No se pudieron cargar las acciones pendientes.",
+      "noKey": "Sin clave",
+      "reject": "Rechazar",
+      "rejected": "Acción rechazada",
+      "rejectFailed": "No se pudo rechazar la acción",
+      "rejecting": "Rechazando…",
+      "status": {
+        "approved": "Aprobada",
+        "expired": "Caducada",
+        "failed": "Fallida",
+        "pending": "Pendiente",
+        "rejected": "Rechazada"
+      },
+      "target": "Objetivo: {{target}}",
+      "targetType": {
+        "folder": "Carpeta",
+        "notebook": "Cuaderno",
+        "source": "Fuente",
+        "study_material": "Material de estudio",
+        "trash": "Papelera"
+      },
+      "title": "Acciones de agente pendientes"
+    },
+    "policies": {
+      "allow": "Permitir",
+      "ask": "Preguntar siempre",
+      "loadFailed": "No se pudo cargar la configuración de acceso de agentes",
+      "loadFailedDescription": "Comprueba tu conexión e inténtalo de nuevo.",
+      "never": "Nunca",
+      "notebookDefault": {
+        "description": "Se aplica a los cuadernos que no definen su propio acceso de agentes.",
+        "title": "Acceso de agentes predeterminado por cuaderno"
+      },
+      "permanentDelete": {
+        "description": "Eliminar elementos permanentemente o vaciar la papelera siempre requiere tu aprobación.",
+        "title": "Eliminación permanente / vaciar papelera"
+      },
+      "resourceDelete": {
+        "description": "Eliminar cuadernos, carpetas de la biblioteca o fuentes siempre requiere tu aprobación.",
+        "title": "Eliminar cuadernos, carpetas de la biblioteca, fuentes"
+      },
+      "saved": "Políticas de acceso de agentes actualizadas",
+      "saveFailed": "No se pudieron actualizar las políticas de acceso de agentes",
+      "softDelete": {
+        "description": "Cuando un agente elimina un material de estudio, pide aprobación o permítelo.",
+        "title": "Eliminación suave (a la papelera)"
+      }
+    },
+    "retry": "Reintentar",
+    "title": "Acceso de agentes"
+  },
   "appearance": {
     "description": "Elige el aspecto de Memsystems. El tema define la paleta y el esquema de color define el modo claro u oscuro.",
     "title": "Apariencia"

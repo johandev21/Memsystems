@@ -14,46 +14,30 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import {
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
   FileFieldsInterceptor,
   FileInterceptor,
 } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { NotebookExportService } from './notebook-export.service';
 import { NotebookImportService } from './notebook-import.service';
 import { NotebooksService } from './notebooks.service';
+import { CreateNotebookDto } from './dto/create-notebook.dto';
+import { UpdateNotebookDto } from './dto/update-notebook.dto';
 
-const createNotebookSchema = z.object({
-  title: z
-    .string()
-    .min(1, 'Title is required')
-    .max(200, 'Title must be at most 200 characters'),
-  description: z
-    .string()
-    .max(500, 'Description must be at most 500 characters')
-    .optional(),
-  icon: z.string().max(50, 'Icon must be at most 50 characters').optional(),
-  folderId: z.string().nullable().optional(),
-  groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
-});
-
-const updateNotebookSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200).optional(),
-  description: z.string().max(500).nullable().optional(),
-  icon: z.string().max(50).nullable().optional(),
-  folderId: z.string().nullable().optional(),
-  groundingMode: z.enum(['strict', 'moderate', 'free']).optional(),
-  bannerFocalPoint: z
-    .object({
-      x: z.number().min(0).max(1),
-      y: z.number().min(0).max(1),
-    })
-    .nullable()
-    .optional(),
-});
-
+@ApiTags('Notebooks')
 @Controller('notebooks')
 export class NotebooksController {
   constructor(
@@ -63,6 +47,19 @@ export class NotebooksController {
   ) {}
 
   @Get()
+  @ApiOperation({
+    summary: 'List Notebooks',
+    description:
+      'Lists Notebooks in the workspace, newest first, with optional pagination and title search.',
+  })
+  @ApiQuery({ name: 'limit', required: false, schema: { type: 'integer' } })
+  @ApiQuery({ name: 'offset', required: false, schema: { type: 'integer' } })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Case-insensitive title search.',
+  })
+  @ApiOkResponse({ description: 'Notebook summaries.' })
   async list(
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
@@ -78,12 +75,40 @@ export class NotebooksController {
   }
 
   @Post()
-  @UsePipes(new ZodValidationPipe(createNotebookSchema))
-  async create(@Body() body: z.infer<typeof createNotebookSchema>) {
+  @ApiOperation({
+    summary: 'Create Notebook',
+    description:
+      'Creates a Notebook and optionally places it in a Library Folder with an Agent Access override.',
+  })
+  @ApiBody({ type: CreateNotebookDto })
+  @ApiCreatedResponse({ description: 'The created Notebook.' })
+  @UsePipes(new ZodValidationPipe(CreateNotebookDto.schema))
+  async create(@Body() body: CreateNotebookDto) {
     return this.notebooksService.create(body);
   }
 
   @Post('import')
+  @ApiOperation({
+    summary: 'Import Notebook',
+    description:
+      'Imports a previously exported Notebook archive into the Library.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        folderId: {
+          type: 'string',
+          description:
+            'Library Folder that should contain the imported Notebook.',
+        },
+      },
+    },
+  })
+  @ApiCreatedResponse({ description: 'The imported Notebook.' })
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: 100 * 1024 * 1024 } }),
   )
@@ -100,30 +125,89 @@ export class NotebooksController {
   }
 
   @Get(':id')
+  @ApiOperation({
+    summary: 'Get Notebook',
+    description:
+      'Returns one Notebook with its Library Folder, grounding settings, resolved Agent Access, and banner metadata.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'The Notebook.' })
   async get(@Param('id') id: string) {
     return this.notebooksService.get(id);
   }
 
   @Get(':id/export')
+  @ApiOperation({
+    summary: 'Export Notebook',
+    description:
+      'Downloads a portable archive of the Notebook, its Sources, and its Study Materials.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiProduces('application/octet-stream')
+  @ApiOkResponse({
+    description: 'Notebook archive.',
+    content: {
+      'application/octet-stream': {
+        schema: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   async export(@Param('id') id: string, @Res() res: Response) {
     return this.notebookExportService.exportNotebook(id, res);
   }
 
   @Patch(':id')
-  @UsePipes(new ZodValidationPipe(updateNotebookSchema))
-  async update(
-    @Param('id') id: string,
-    @Body() body: z.infer<typeof updateNotebookSchema>,
-  ) {
+  @ApiOperation({
+    summary: 'Update Notebook',
+    description:
+      'Updates Notebook metadata, Library Folder placement, grounding mode, Agent Access, or the banner focal point.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiBody({ type: UpdateNotebookDto })
+  @ApiOkResponse({ description: 'The updated Notebook.' })
+  @UsePipes(new ZodValidationPipe(UpdateNotebookDto.schema))
+  async update(@Param('id') id: string, @Body() body: UpdateNotebookDto) {
     return this.notebooksService.update(id, body);
   }
 
   @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete Notebook',
+    description:
+      'Soft-deletes the Notebook and its contents. Restore it from Trash while it is still there.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'The deleted Notebook.' })
   async delete(@Param('id') id: string) {
     return this.notebooksService.delete(id);
   }
 
   @Post(':id/banner')
+  @ApiOperation({
+    summary: 'Upload Notebook banner',
+    description:
+      'Uploads a Banner image and optional pre-rendered size variants, with an optional focal point.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        variant240: { type: 'string', format: 'binary' },
+        variant480: { type: 'string', format: 'binary' },
+        variant960: { type: 'string', format: 'binary' },
+        variant1920: { type: 'string', format: 'binary' },
+        focalPoint: {
+          type: 'string',
+          description: 'JSON object with numeric `x` and `y` in the range 0–1.',
+        },
+      },
+    },
+  })
+  @ApiCreatedResponse({ description: 'The Notebook with its updated Banner.' })
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'file', maxCount: 1 },
@@ -185,6 +269,13 @@ export class NotebooksController {
   }
 
   @Delete(':id/banner')
+  @ApiOperation({
+    summary: 'Remove Notebook banner',
+    description:
+      'Removes the Banner and its stored variants from the Notebook.',
+  })
+  @ApiParam({ name: 'id', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'The Notebook without a Banner.' })
   async removeBanner(@Param('id') id: string) {
     return this.notebooksService.removeBanner(id);
   }
