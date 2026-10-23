@@ -1,9 +1,5 @@
-import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/shared/utils/cn";
-import { useDescriptionOverflow } from "../../hooks/use-description-overflow";
 
 interface NotebookDescriptionProps {
   description: string;
@@ -19,9 +15,6 @@ export function NotebookDescription({
   onCancel,
 }: NotebookDescriptionProps) {
   const { t } = useTranslation("notebooks");
-  const descriptionId = useId();
-  const { captionRef, isExpanded, isOverflowing, setIsExpanded } =
-    useDescriptionOverflow(description);
 
   if (isEditing) {
     const showCharacterCount = description.length >= 400;
@@ -58,31 +51,9 @@ export function NotebookDescription({
 
   return (
     <div className="px-3 sm:px-4">
-      <div className="flex max-w-[68ch] flex-col items-start gap-1">
-        <p
-          ref={captionRef}
-          id={descriptionId}
-          className={cn(
-            "whitespace-pre-wrap text-xs sm:text-sm leading-relaxed text-foreground/70",
-            !isExpanded && "line-clamp-3",
-          )}
-        >
-          {description}
-        </p>
-        {isOverflowing || isExpanded ? (
-          <Button
-            type="button"
-            variant="link"
-            size="xs"
-            aria-controls={descriptionId}
-            aria-expanded={isExpanded}
-            onClick={() => setIsExpanded((expanded) => !expanded)}
-            className="h-auto rounded-none border-0 p-0 text-xs font-medium text-foreground/85 underline-offset-4 hover:text-foreground focus-visible:border-0 focus-visible:ring-0 focus-visible:underline active:translate-y-0 touch-manipulation active:scale-97 cursor-pointer"
-          >
-            {isExpanded ? t("description.less") : t("description.more")}
-          </Button>
-        ) : null}
-      </div>
+      <p className="max-w-[68ch] whitespace-pre-wrap text-xs sm:text-sm leading-relaxed text-foreground/70">
+        {description}
+      </p>
     </div>
   );
 }
