@@ -1,14 +1,15 @@
 import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
-import { MarkdownRenderer } from "@/components/ui/markdown";
-import { MarkdownCodeBlock } from "@/features/ai";
-import type { SourceSegmentLocator } from "../../types";
+import { MarkdownRenderer, type MarkdownComponents } from "@/components/ui/markdown";
+import { MarkdownTable } from "@/features/ai/components/markdown-table";
+import type { SourceSegment, SourceSegmentLocator } from "../../types";
 import { splitTextIntoChunks } from "../../utils/detect-document-type";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
 
 export interface MarkdownDocumentViewerProps {
   content: string;
+  segments?: SourceSegment[];
   selectedLocator?: SourceSegmentLocator | null;
   scrollElement?: HTMLDivElement | null;
 }
@@ -63,7 +64,7 @@ const HeadingWithId = ({
   );
 };
 
-const markdownComponents = {
+const markdownComponents: MarkdownComponents = {
   h1: ({ children }: { children?: ReactNode }) => (
     <HeadingWithId level={1}>{children}</HeadingWithId>
   ),
@@ -88,7 +89,7 @@ const markdownComponents = {
     </p>
   ),
   blockquote: ({ children }: { children?: ReactNode }) => (
-    <blockquote className="border-l-4 border-primary/60 bg-muted/30 px-4 py-2.5 my-4 rounded-r-lg text-foreground/85 italic">
+    <blockquote className="border-l-2 border-border pl-4 my-4 text-foreground/85 italic">
       {children}
     </blockquote>
   ),
@@ -102,45 +103,51 @@ const markdownComponents = {
     <li className="pl-1">{children}</li>
   ),
   hr: () => <hr className="my-6 border-t border-border/40" />,
-  table: ({ children }: { children?: ReactNode }) => (
-    <div className="my-4 overflow-x-auto overscroll-x-contain rounded-lg border border-border/40 shadow-xs">
-      <table className="w-full text-left text-sm border-collapse min-w-125">{children}</table>
-    </div>
-  ),
-  thead: ({ children }: { children?: ReactNode }) => (
-    <thead className="border-b border-border/40 bg-muted/40 font-semibold text-foreground">
-      {children}
-    </thead>
-  ),
-  th: ({ children }: { children?: ReactNode }) => (
-    <th className="px-4 py-2.5 text-xs font-semibold text-foreground border-b border-border/30">
-      {children}
-    </th>
-  ),
-  td: ({ children }: { children?: ReactNode }) => (
-    <td className="px-4 py-2 text-xs text-foreground/85 border-b border-border/20 last:border-b-0">
-      {children}
-    </td>
-  ),
+  table: MarkdownTable,
+  thead: ({ children, node }) => {
+    const cells = node?.children
+      .filter((row) => row.type === "element")
+      .flatMap((row) => row.children.filter((cell) => cell.type === "element"));
+    const isEmpty = cells?.every((cell) =>
+      cell.children.every((child) => child.type === "text" && !child.value.trim()),
+    );
+    return isEmpty ? null : <thead>{children}</thead>;
+  },
   code: ({ className, children }: { className?: string; children?: ReactNode }) => (
-    <MarkdownCodeBlock
-      className={cn("max-w-full overflow-x-auto", className)}
-      containerClassName="rounded-xl border border-border/60 max-w-full overflow-x-auto"
-      showLineNumbers
+    <code
+      className={cn(
+        "font-mono",
+        className,
+        !className && "rounded bg-muted px-1 py-0.5 text-sm",
+      )}
     >
       {children}
-    </MarkdownCodeBlock>
+    </code>
+  ),
+  img: ({ alt }: { alt?: string | undefined }) => (
+    <span className="text-muted-foreground">{alt || ""}</span>
   ),
 };
 
 export function MarkdownDocumentViewer({
   content,
+  segments,
   selectedLocator,
   scrollElement,
 }: MarkdownDocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const chunks = useMemo(() => splitTextIntoChunks(content || ""), [content]);
+  const segmentTarget = useMemo(() => {
+    if (
+      !selectedLocator ||
+      selectedLocator.symbol ||
+      (typeof selectedLocator.pageNumber === "number" && selectedLocator.pageNumber > 0)
+    ) {
+      return null;
+    }
+    return findSegmentTarget(selectedLocator, segments, content, chunks);
+  }, [selectedLocator, segments, content, chunks]);
 
   const targetChunkIndex = useMemo(() => {
     if (!selectedLocator || chunks.length === 0) return null;
@@ -159,8 +166,8 @@ export function MarkdownDocumentViewer({
       return Math.min(selectedLocator.pageNumber - 1, chunks.length - 1);
     }
 
-    return null;
-  }, [selectedLocator, chunks]);
+    return selectedLocator.symbol ? null : segmentTarget?.chunkIndex ?? null;
+  }, [selectedLocator, chunks, segmentTarget]);
 
   const isVirtualized = chunks.length > 25 && scrollElement !== undefined;
 
@@ -183,6 +190,18 @@ export function MarkdownDocumentViewer({
           const slug = createSlug(selectedLocator.symbol);
           targetElement =
             root.querySelector(`#heading-${slug}`) || root.querySelector(`[id*="${slug}"]`);
+        }
+        if (
+          !targetElement &&
+          !selectedLocator?.symbol &&
+          !(typeof selectedLocator?.pageNumber === "number" && selectedLocator.pageNumber > 0)
+        ) {
+          const matchingElements = Array.from(
+            root.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li, td, pre"),
+          ).filter((element) => element.textContent === segmentTarget?.content);
+          if (matchingElements.length === 1) {
+            targetElement = matchingElements[0] as HTMLElement;
+          }
         }
         if (!targetElement && selectedLocator?.pageNumber) {
           const paragraphs = root.querySelectorAll("p, h1, h2, h3, h4, blockquote");
@@ -220,7 +239,7 @@ export function MarkdownDocumentViewer({
       setHighlightedIndex(null);
     }, 3000);
     return () => clearTimeout(timer);
-  }, [targetChunkIndex, isVirtualized, selectedLocator, scrollElement]);
+  }, [targetChunkIndex, isVirtualized, selectedLocator, scrollElement, segmentTarget]);
 
   if (!content?.trim()) {
     return <EmptyMarkdownState />;
@@ -302,6 +321,61 @@ function StaticMarkdownDocument({ content }: { content: string }) {
       <MarkdownRenderer components={markdownComponents}>{content}</MarkdownRenderer>
     </MarkdownDocumentShell>
   );
+}
+
+function findSegmentTarget(
+  locator: SourceSegmentLocator,
+  segments: SourceSegment[] | undefined,
+  content: string,
+  chunks: string[],
+): { chunkIndex: number; content: string } | null {
+  const locatorKeys = [
+    "slideNumber",
+    "startOffsetMs",
+    "endOffsetMs",
+    "speaker",
+    "sheetName",
+    "cellRange",
+    "lineStart",
+    "lineEnd",
+    "imageRegion",
+  ] as const;
+  const selectedKeys = locatorKeys.filter((key) => locator[key] !== undefined);
+  if (!segments || selectedKeys.length === 0) return null;
+
+  const matches = segments.filter((segment) =>
+    selectedKeys.every((key) => {
+      const selectedValue = locator[key];
+      const segmentValue = segment.locator?.[key];
+      if (key === "imageRegion") {
+        const selectedRegion = locator.imageRegion;
+        const segmentRegion = segment.locator?.imageRegion;
+        return Boolean(
+          selectedRegion &&
+            segmentRegion &&
+            selectedRegion.x === segmentRegion.x &&
+            selectedRegion.y === segmentRegion.y &&
+            selectedRegion.width === segmentRegion.width &&
+            selectedRegion.height === segmentRegion.height,
+        );
+      }
+      return selectedValue === segmentValue;
+    }),
+  );
+  if (matches.length !== 1 || !matches[0].content) return null;
+
+  const segmentContent = matches[0].content;
+  const contentIndex = content.indexOf(segmentContent);
+  if (contentIndex < 0 || content.indexOf(segmentContent, contentIndex + 1) >= 0) return null;
+
+  const segmentChunks = splitTextIntoChunks(segmentContent);
+  const chunkMatches = chunks.flatMap((_, index) => {
+    const matches = segmentChunks.every((chunk, offset) => chunks[index + offset] === chunk);
+    return matches ? [index] : [];
+  });
+  return segmentChunks.length > 0 && chunkMatches.length === 1
+    ? { chunkIndex: chunkMatches[0], content: segmentContent }
+    : null;
 }
 
 const MarkdownChunk = memo(function MarkdownChunk({

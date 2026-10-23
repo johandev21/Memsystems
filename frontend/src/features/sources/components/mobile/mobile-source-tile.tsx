@@ -1,6 +1,7 @@
 import { AlertCircle, AlertTriangle, Loader2, MoreVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
+import { sourceDisplayTitle } from "../../utils/source-display-title";
 import {
   isSourceDegraded,
   isSourceProcessing,
@@ -33,7 +34,7 @@ export function MobileSourceTile({ source, onOpen, onActions }: MobileSourceTile
       >
         <SourceStatusIcon source={source} />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="line-clamp-2 text-sm leading-snug text-foreground">{source.title}</span>
+          <span className="line-clamp-2 text-sm leading-snug text-foreground">{sourceDisplayTitle(source)}</span>
           {statusLine && (
             <span
               className={

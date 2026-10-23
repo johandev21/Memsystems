@@ -1,106 +1,32 @@
-import { createElement } from "react";
 import {
   AlertCircle,
-  BookOpen,
-  Code,
-  File,
-  FileText,
-  Globe,
-  Headphones,
-  ImageIcon,
   Loader2,
-  Presentation,
-  Video,
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
 import type { PendingSourceUpload } from "../hooks/use-upload-store";
-import { SourceFavicon } from "./sources-list/source-icon";
+import { MarkdownIcon } from "./sources-list/markdown-icon";
 import { processingStageLabel } from "../utils/source-processing";
-import { isYouTubeUrl } from "../utils/detect-document-type";
-
-function getKindIcon(upload: PendingSourceUpload) {
-  if (
-    upload.modality === "video" ||
-    /\.(mp4|mov|mkv)$/i.test(upload.title) ||
-    (upload.kind === "url" && isYouTubeUrl(upload.url))
-  ) {
-    return Video;
-  }
-  if (upload.modality === "audio" || /\.(mp3|m4a|wav|webm|aac|ogg)$/i.test(upload.title)) {
-    return Headphones;
-  }
-  if (
-    upload.modality === "image" ||
-    /\.(png|jpe?g|webp|heic|heif|gif|svg|bmp)$/i.test(upload.title)
-  ) {
-    return ImageIcon;
-  }
-  if (upload.modality === "slides" || /\.pptx$/i.test(upload.title)) {
-    return Presentation;
-  }
-  if (upload.modality === "ebook" || /\.epub$/i.test(upload.title)) {
-    return BookOpen;
-  }
-  if (/\.tex$/i.test(upload.title)) {
-    return Code;
-  }
-  if (/\.bib$/i.test(upload.title)) {
-    return FileText;
-  }
-  switch (upload.kind) {
-    case "url":
-      return Globe;
-    case "file":
-      return FileText;
-    default:
-      return File;
-  }
-}
+import { sourceDisplayTitle } from "../utils/source-display-title";
 
 interface PendingUploadRowProps {
   upload: PendingSourceUpload;
   onCancel: (id: string) => void;
 }
 
-function PendingUploadKindIcon({
-  upload,
-  className,
-}: {
-  upload: PendingSourceUpload;
-  className?: string;
-}) {
-  if (upload.kind === "url" && upload.url) {
-    const isYoutube = isYouTubeUrl(upload.url);
-    const FallbackIcon = isYoutube ? Video : Globe;
-    return (
-      <SourceFavicon
-        url={upload.url}
-        title={upload.title}
-        className={className}
-        fallback={<FallbackIcon className={className} />}
-      />
-    );
-  }
-  const Icon = getKindIcon(upload);
-  return createElement(Icon, { className });
-}
-
 function UploadStatusIcon({
   isError,
   isTerminal,
-  upload,
 }: {
   isError: boolean;
   isTerminal: boolean;
-  upload: PendingSourceUpload;
 }) {
   if (isError) {
     return <AlertCircle className="size-4 shrink-0 text-destructive" />;
   }
   if (isTerminal) {
-    return <PendingUploadKindIcon upload={upload} className="size-4 shrink-0 text-muted-foreground" />;
+    return <MarkdownIcon className="size-4 shrink-0 text-muted-foreground" />;
   }
   return <Loader2 className="size-4 shrink-0 animate-spin text-primary" />;
 }
@@ -120,14 +46,11 @@ function UploadHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <UploadStatusIcon isError={isError} isTerminal={isTerminal} upload={upload} />
-        {!isTerminal && (
-          <PendingUploadKindIcon
-            upload={upload}
-            className="size-3.5 shrink-0 text-muted-foreground"
-          />
+        <UploadStatusIcon isError={isError} isTerminal={isTerminal} />
+        {(!isTerminal || isError) && (
+          <MarkdownIcon className="size-3.5 shrink-0 text-muted-foreground" />
         )}
-        <span className="truncate text-xs font-medium text-foreground">{upload.title}</span>
+        <span className="truncate text-xs font-medium text-foreground">{sourceDisplayTitle(upload)}</span>
       </div>
       <button
         type="button"

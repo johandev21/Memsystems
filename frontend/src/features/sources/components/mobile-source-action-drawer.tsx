@@ -19,6 +19,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import type { Source } from "../api/sources";
+import { sourceDisplayTitle } from "../utils/source-display-title";
 import type { SourceFolder } from "../types/source-folder.types";
 import { MobileMoveFolderPicker } from "./mobile/mobile-move-folder-picker";
 import { SourceIcon } from "./sources-list/source-icon";
@@ -113,7 +114,7 @@ export function MobileSourceActionDrawer({
                     {t("tree:actions.moveToFolder", "Move to folder")}
                   </DrawerTitle>
                   <DrawerDescription className="text-xs truncate">
-                    {source.title}
+                    {sourceDisplayTitle(source)}
                   </DrawerDescription>
                 </div>
               </div>
@@ -132,7 +133,7 @@ export function MobileSourceActionDrawer({
                 <SourceIcon source={source} className="size-5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <DrawerTitle className="text-base font-semibold truncate">
-                    {source.title}
+                    {sourceDisplayTitle(source)}
                   </DrawerTitle>
                   <DrawerDescription className="text-xs truncate">
                     {statusLabel}

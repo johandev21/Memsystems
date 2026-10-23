@@ -48,7 +48,7 @@ describe("MobileSourceActionDrawer", () => {
       />,
     );
 
-    expect(screen.getByText("Test Source Document.pdf")).toBeTruthy();
+    expect(screen.getByText("Test Source Document")).toBeTruthy();
     expect(screen.getByRole("button", { name: /view content/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /rename/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /delete/i })).toBeTruthy();

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { SourceWithContent } from "../../types";
 import type { ReaderControls } from "./source-content-types";
+import { sourceDisplayTitle } from "../../utils/source-display-title";
 
 function ReaderMoreMenu({
   source,
@@ -105,7 +106,7 @@ export function SourceReaderHeader({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h3 className="text-sm font-semibold truncate text-foreground min-w-0 flex-1">
-          {source.title}
+          {sourceDisplayTitle(source)}
         </h3>
       </div>
       <div className="flex items-center gap-1">

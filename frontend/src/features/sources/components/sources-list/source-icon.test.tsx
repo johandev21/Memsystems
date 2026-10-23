@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { Source } from "../../api/sources";
-import { getFaviconUrl, getSourceIcon } from "./source-icon-utils";
+import { getFaviconUrl } from "./source-icon-utils";
 import { SourceFavicon, SourceIcon } from "./source-icon";
 
 function createMockSource(overrides: Partial<Source> = {}): Source {
@@ -94,84 +94,26 @@ describe("SourceFavicon", () => {
 });
 
 describe("SourceIcon", () => {
-  it("renders favicon for a standard web URL source", () => {
-    const source = createMockSource({
-      kind: "url",
-      url: "https://developer.mozilla.org/en-US/",
-      title: "MDN Web Docs",
-    });
+  it.each([
+    createMockSource({ kind: "url", url: "https://example.com" }),
+    createMockSource({ kind: "url", url: "https://youtube.com/watch?v=abc" }),
+    createMockSource({ kind: "file", title: "notes.pdf", modality: "document" }),
+    createMockSource({ kind: "file", title: "recording.mp3", modality: "audio" }),
+    createMockSource({ kind: "file", title: "photo.png", modality: "image" }),
+  ])("renders the Markdown identity glyph for every source", (source) => {
+    const { container } = render(<SourceIcon source={source} className="size-5 text-muted-foreground" />);
+    const svg = container.querySelector("svg");
 
-    const { container } = render(<SourceIcon source={source} />);
-
-    const img = container.querySelector("img");
-    expect(img).toBeTruthy();
-    expect(img?.getAttribute("src")).toBe(
-      "https://www.google.com/s2/favicons?domain=developer.mozilla.org&sz=32",
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 24 24");
+    expect(svg?.getAttribute("fill")).toBe("currentColor");
+    expect(svg?.getAttribute("stroke")).toBe("none");
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    expect(svg?.getAttribute("focusable")).toBe("false");
+    expect(svg?.classList.contains("size-5")).toBe(true);
+    expect(svg?.classList.contains("text-muted-foreground")).toBe(true);
+    expect(svg?.querySelector("path")?.getAttribute("d")).toBe(
+      "M22.27 19.385H1.73A1.73 1.73 0 010 17.655V6.345a1.73 1.73 0 011.73-1.73h20.54A1.73 1.73 0 0124 6.345v11.308a1.73 1.73 0 01-1.73 1.731zM5.769 15.923v-4.5l2.308 2.885 2.307-2.885v4.5h2.308V8.078h-2.308l-2.307 2.885-2.308-2.885H3.46v7.847zM21.232 12h-2.309V8.077h-2.307V12h-2.308l3.461 4.039z",
     );
-  });
-
-  it("renders YouTube favicon for YouTube URL source and falls back to Video icon on error", () => {
-    const source = createMockSource({
-      kind: "url",
-      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      title: "YouTube Video",
-    });
-
-    const { container } = render(<SourceIcon source={source} />);
-
-    const img = container.querySelector("img");
-    expect(img).toBeTruthy();
-    expect(img?.getAttribute("src")).toBe(
-      "https://www.google.com/s2/favicons?domain=www.youtube.com&sz=32",
-    );
-
-    // Trigger error to verify fallback
-    fireEvent.error(img!);
-    expect(container.querySelector("svg.lucide-video")).toBeTruthy();
-  });
-
-  it("falls back to Link2 icon on image error for standard web source", () => {
-    const source = createMockSource({
-      kind: "url",
-      url: "https://example.org",
-      title: "Example",
-    });
-
-    const { container } = render(<SourceIcon source={source} />);
-
-    const img = container.querySelector("img");
-    expect(img).toBeTruthy();
-    fireEvent.error(img!);
-    expect(container.querySelector("svg.lucide-link-2")).toBeTruthy();
-  });
-
-  it("renders standard icons for file and non-url sources", () => {
-    const fileSource = createMockSource({
-      kind: "file",
-      url: null,
-      title: "notes.pdf",
-      contentType: "application/pdf",
-    });
-
-    const { container: fileContainer } = render(<SourceIcon source={fileSource} />);
-    expect(fileContainer.querySelector("img")).toBeNull();
-    expect(fileContainer.querySelector("svg.lucide-file-text")).toBeTruthy();
-
-    const audioSource = createMockSource({
-      kind: "file",
-      url: null,
-      title: "recording.mp3",
-      modality: "audio",
-    });
-    const { container: audioContainer } = render(<SourceIcon source={audioSource} />);
-    expect(audioContainer.querySelector("svg.lucide-headphones")).toBeTruthy();
-  });
-});
-
-describe("getSourceIcon", () => {
-  it("returns fallback Lucide icons based on source modality or kind", () => {
-    expect(getSourceIcon(createMockSource({ kind: "url", url: "https://example.com" }))).toBeDefined();
-    expect(getSourceIcon(createMockSource({ kind: "file", title: "doc.pdf" }))).toBeDefined();
-    expect(getSourceIcon(createMockSource({ modality: "slides", title: "deck.pptx" }))).toBeDefined();
+    expect(container.querySelector("img")).toBeNull();
   });
 });

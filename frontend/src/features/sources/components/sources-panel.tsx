@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { sourceDisplayTitle } from "../utils/source-display-title";
 import {
   DndContext,
   DragOverlay,
@@ -180,7 +181,7 @@ export const SourcesPanel = memo(function SourcesPanel({
       () =>
         sources?.map((s) => ({
           id: s.id,
-          name: s.title,
+          name: sourceDisplayTitle(s),
           folderId: s.folderId,
         })) ?? [],
       [sources],
@@ -256,7 +257,7 @@ export const SourcesPanel = memo(function SourcesPanel({
   );
 
   const handleDelete = useCallback(
-    (source: Source) => setSourceToDelete({ id: source.id, title: source.title }),
+    (source: Source) => setSourceToDelete({ id: source.id, title: sourceDisplayTitle(source) }),
     [setSourceToDelete],
   );
   const handleRetry = useCallback(
@@ -293,7 +294,7 @@ export const SourcesPanel = memo(function SourcesPanel({
       if (node.type === "folder") {
         requestDeleteFolder(node.id);
       } else if (node.source) {
-        setSourceToDelete({ id: node.source.id, title: node.source.title });
+        setSourceToDelete({ id: node.source.id, title: sourceDisplayTitle(node.source) });
       }
     },
     [requestDeleteFolder, setSourceToDelete],
@@ -328,7 +329,7 @@ export const SourcesPanel = memo(function SourcesPanel({
           onMove={handleMove}
           onCreateFolder={handleCreateFolder}
           onDeleteFolder={handleDeleteFolder}
-          onDeleteSource={(source) => setSourceToDelete({ id: source.id, title: source.title })}
+          onDeleteSource={(source) => setSourceToDelete({ id: source.id, title: sourceDisplayTitle(source) })}
           onRetrySource={(source) => retryMutation.mutate(source.id)}
           onCancelSource={(source) => cancelMutation.mutate(source.id)}
           deletingId={deleteMutation.isPending ? deleteMutation.variables : undefined}
@@ -526,7 +527,7 @@ function SourcesDragPreview({
 }) {
   const folder = folders.find((f) => f.id === itemId);
   const source = sources.find((s) => s.id === itemId);
-  const name = folder?.name ?? source?.title ?? "Item";
+  const name = folder?.name ?? (source ? sourceDisplayTitle(source) : "Item");
   const isFolder = Boolean(folder);
 
   return (

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { sourceQueryOptions } from "../api/sources";
+import { sourceDisplayTitle } from "../utils/source-display-title";
 import type { SourceWithContent } from "../types";
 import { SourceReaderSkeleton } from "./skeletons/source-reader-skeleton";
 import {
@@ -7,7 +8,6 @@ import {
   sourceProcessingStatus,
   SOURCE_POLL_INTERVAL_MS,
 } from "../utils/source-processing";
-import { detectDocumentType } from "../utils/detect-document-type";
 import type { SourceContentViewerProps } from "./content-viewer/source-content-types";
 import {
   useCachedSourceSummary,
@@ -48,11 +48,9 @@ export function SourceContentViewer({
   });
 
   if (isPending) {
-    const detectedType = cachedSource ? detectDocumentType(cachedSource) : null;
     return (
       <SourceReaderSkeleton
-        detectedType={detectedType}
-        title={cachedSource?.title}
+        title={cachedSource ? sourceDisplayTitle(cachedSource) : undefined}
         isFullscreen={readerControls.isFullscreen}
         forceFullscreen={forceFullscreen}
         onClose={onClose}

@@ -332,6 +332,9 @@
       margin-block-start: 0;
       border-block-end: 0;
     }
+    &:where(.markdown-table-wrapper > table > tbody:first-child > tr:first-child > :is(td, th)) {
+      border-block-start: 0;
+    }
     &:where(.markdown-table-wrapper :is(th, td)) {
       overflow-wrap: break-word;
     }

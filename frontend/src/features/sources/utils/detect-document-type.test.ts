@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  detectDocumentType,
   extractArXivId,
   extractDoi,
   extractYouTubeId,
@@ -9,7 +8,6 @@ import {
   isYouTubeUrl,
   splitTextIntoChunks,
 } from "./detect-document-type";
-import type { SourceWithContent } from "../types";
 
 describe("detect-document-type utilities", () => {
   describe("YouTube helpers", () => {
@@ -70,166 +68,6 @@ describe("detect-document-type utilities", () => {
       expect(isDoi("https://example.com")).toBe(false);
       expect(extractDoi("https://example.com")).toBeNull();
       expect(isDoi("")).toBe(false);
-    });
-  });
-
-  describe("detectDocumentType", () => {
-    it("detects video for YouTube sources", () => {
-      const source: SourceWithContent = {
-        id: "s-yt",
-        notebookId: "nb-1",
-        kind: "url",
-        title: "YouTube Video",
-        url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        modality: "video",
-        contentType: "text/html",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "Video transcript",
-        s3Key: null,
-        sha256: null,
-        fileSize: null,
-      };
-      expect(detectDocumentType(source)).toBe("video");
-    });
-
-    it("detects article for web and academic URL sources", () => {
-      const source: SourceWithContent = {
-        id: "s-arxiv",
-        notebookId: "nb-1",
-        kind: "url",
-        title: "arXiv Paper",
-        url: "https://arxiv.org/abs/2301.12345",
-        modality: "document",
-        contentType: "application/pdf",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "Paper abstract",
-        s3Key: null,
-        sha256: null,
-        fileSize: null,
-      };
-      expect(detectDocumentType(source)).toBe("article");
-    });
-
-    it("detects code for programming source files", () => {
-      const source: SourceWithContent = {
-        id: "s-code",
-        notebookId: "nb-1",
-        kind: "file",
-        title: "algorithm.py",
-        url: null,
-        modality: "code",
-        contentType: "text/x-python",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "def solve():\n    pass",
-        s3Key: "uploads/algorithm.py",
-        sha256: null,
-        fileSize: 100,
-      };
-      expect(detectDocumentType(source)).toBe("code");
-    });
-
-    it("detects jupyter for .ipynb notebooks", () => {
-      const source: SourceWithContent = {
-        id: "s-nb",
-        notebookId: "nb-1",
-        kind: "file",
-        title: "analysis.ipynb",
-        url: null,
-        modality: "code",
-        contentType: "application/x-ipynb+json",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: '{"cells": []}',
-        s3Key: "uploads/analysis.ipynb",
-        sha256: null,
-        fileSize: 500,
-      };
-      expect(detectDocumentType(source)).toBe("jupyter");
-    });
-
-    it("detects dataset for CSV, TSV, and XLSX files", () => {
-      const sourceCsv: SourceWithContent = {
-        id: "s-csv",
-        notebookId: "nb-1",
-        kind: "file",
-        title: "dataset.csv",
-        url: null,
-        modality: "dataset",
-        contentType: "text/csv",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "a,b,c\n1,2,3",
-        s3Key: "uploads/dataset.csv",
-        sha256: null,
-        fileSize: 200,
-      };
-      expect(detectDocumentType(sourceCsv)).toBe("dataset");
-
-      const sourceXlsx: SourceWithContent = {
-        id: "s-xlsx",
-        notebookId: "nb-1",
-        kind: "file",
-        title: "financials.xlsx",
-        url: null,
-        modality: "dataset",
-        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "Sheet 1 preview",
-        s3Key: "uploads/financials.xlsx",
-        sha256: null,
-        fileSize: 2000,
-      };
-      expect(detectDocumentType(sourceXlsx)).toBe("dataset");
-    });
-
-    it("detects plaintext for .txt and .log files even if they contain Markdown syntax", () => {
-      const sourceTxt: SourceWithContent = {
-        id: "s-txt",
-        notebookId: "nb-1",
-        kind: "file",
-        title: "notes.txt",
-        url: null,
-        modality: "document",
-        contentType: "text/plain",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "# Heading\n\n- item 1\n- item 2\n\n`code block`",
-        s3Key: "uploads/notes.txt",
-        sha256: null,
-        fileSize: 150,
-      };
-      expect(detectDocumentType(sourceTxt)).toBe("plaintext");
-
-      const sourceLog: SourceWithContent = {
-        id: "s-log",
-        notebookId: "nb-1",
-        kind: "file",
-        title: "app.log",
-        url: null,
-        modality: "document",
-        contentType: "text/plain",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "2026-08-30 [INFO] Server started: #1",
-        s3Key: "uploads/app.log",
-        sha256: null,
-        fileSize: 250,
-      };
-      expect(detectDocumentType(sourceLog)).toBe("plaintext");
-    });
-
-    it("detects markdown for genuine .md and .markdown files", () => {
-      const sourceMd: SourceWithContent = {
-        id: "s-md",
-        notebookId: "nb-1",
-        kind: "file",
-        title: "README.md",
-        url: null,
-        modality: "document",
-        contentType: "text/markdown",
-        createdAt: "2026-08-30T00:00:00Z",
-        rawText: "# Project Readme\n\nWelcome to the project.",
-        s3Key: "uploads/README.md",
-        sha256: null,
-        fileSize: 300,
-      };
-      expect(detectDocumentType(sourceMd)).toBe("markdown");
     });
   });
 

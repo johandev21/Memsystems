@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/context-menu";
 import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
+import { sourceDisplayTitle } from "../../utils/source-display-title";
 import type { Source } from "../../api/sources";
 import type { SourceFolder } from "../../types/source-folder.types";
 import {
@@ -140,7 +141,7 @@ export function SourceRow({
       role="treeitem"
       aria-level={depth + 1}
       aria-selected={isFocused}
-      aria-label={source.title}
+      aria-label={sourceDisplayTitle(source)}
       data-slot="sources-tree-source-row"
       data-size="sm"
       data-selected={isFocused ? "true" : undefined}
@@ -191,12 +192,12 @@ export function SourceRow({
           initialValue={source.title}
           onCommit={(val) => onRenameCommit?.(source.id, val)}
           onCancel={() => onRenameCancel?.()}
-          ariaLabel={source.title}
+          ariaLabel={sourceDisplayTitle(source)}
           size="sm"
         />
       ) : (
         <HighlightMatch
-          text={source.title}
+          text={sourceDisplayTitle(source)}
           query={searchQuery}
           className="min-w-0 flex-1 truncate leading-none"
         />

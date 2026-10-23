@@ -2,15 +2,9 @@ import { ArrowLeft, Maximize2, MoreVertical, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { DocumentType } from "../../utils/detect-document-type";
-import { AudioViewerSkeleton } from "./audio-viewer-skeleton";
 import { DocumentViewerSkeleton } from "./document-viewer-skeleton";
-import { ImageViewerSkeleton } from "./image-viewer-skeleton";
-import { SlidesViewerSkeleton } from "./slides-viewer-skeleton";
-import { VideoViewerSkeleton } from "./video-viewer-skeleton";
 
 export interface SourceReaderSkeletonProps {
-  detectedType?: DocumentType | null;
   title?: string | null;
   isFullscreen?: boolean;
   forceFullscreen?: boolean;
@@ -79,27 +73,7 @@ function SkeletonHeader({
   );
 }
 
-function SkeletonViewerBody({ detectedType }: { detectedType?: DocumentType | null }) {
-  switch (detectedType) {
-    case "audio":
-      return <AudioViewerSkeleton />;
-    case "video":
-      return <VideoViewerSkeleton />;
-    case "slides":
-      return <SlidesViewerSkeleton />;
-    case "image":
-      return <ImageViewerSkeleton />;
-    case "epub":
-      return <DocumentViewerSkeleton variant="book" />;
-    case "article":
-      return <DocumentViewerSkeleton variant="article" />;
-    default:
-      return <DocumentViewerSkeleton variant="document" />;
-  }
-}
-
 export function SourceReaderSkeleton({
-  detectedType,
   title,
   isFullscreen,
   forceFullscreen,
@@ -123,7 +97,7 @@ export function SourceReaderSkeleton({
         isEffectivelyFullscreen={isEffectivelyFullscreen}
       />
       <div className="flex-1 min-h-0 overflow-hidden">
-        <SkeletonViewerBody detectedType={detectedType} />
+        <DocumentViewerSkeleton variant="document" />
       </div>
     </div>
   );
