@@ -294,6 +294,31 @@ describe.sequential('SourcesService', () => {
     expect(jobs.enqueue).toHaveBeenCalledWith(source.id);
   });
 
+  it('retry reacquires YouTube URL sources through processing', async () => {
+    const jobs = {
+      enqueue: vi.fn().mockResolvedValue({ id: 'index-job' }),
+      enqueueProcessing: vi.fn().mockResolvedValue({ id: 'processing-job' }),
+      cancelForSource: vi.fn(),
+      latestForSource: vi.fn(),
+      reindexNotebook: vi.fn(),
+    } as any;
+    const { service } = createSourcesService({ jobs });
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'url',
+      title: 'YouTube transcript',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      rawText: '',
+      processingStatus: 'failed',
+    });
+
+    const job = await service.retry(source.id);
+
+    expect(job.id).toBe('processing-job');
+    expect(jobs.enqueueProcessing).toHaveBeenCalledWith(source.id);
+    expect(jobs.enqueue).not.toHaveBeenCalled();
+  });
+
   it('reindex rejects unknown sources', async () => {
     const { service } = createSourcesService();
     const notebook = await seedNotebook();

@@ -195,37 +195,76 @@ describe("SourceContentViewer", () => {
     expect(container.querySelector("img, iframe, video, audio")).toBeNull();
   });
 
+  it("keeps the reader recovery menu accessible for failed YouTube sources", () => {
+    const source: SourceWithContent = {
+      id: "failed-youtube",
+      notebookId: "nb-1",
+      kind: "url",
+      title: "Nietzsche lecture",
+      url: "https://youtube.com/live/dQw4w9WgXcQ",
+      modality: "video",
+      contentType: "text/html",
+      fileSize: null,
+      createdAt: "2026-10-22T12:00:00Z",
+      rawText: "",
+      s3Key: null,
+      sha256: null,
+      processingStatus: "failed",
+    };
+    renderWithClient(<SourceContentViewer sourceId={source.id} onClose={vi.fn()} />, {
+      key: ["source", source.id],
+      data: source,
+    });
+    expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy();
+    expect(screen.getByText("This source is not available for reading.")).toBeTruthy();
+  });
+
   it.each([
     ["PDF", "book.pdf", "application/pdf", "document", "file"],
-    ["presentation", "deck.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "slides", "file"],
-    ["spreadsheet", "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "dataset", "file"],
+    [
+      "presentation",
+      "deck.pptx",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "slides",
+      "file",
+    ],
+    [
+      "spreadsheet",
+      "data.xlsx",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "dataset",
+      "file",
+    ],
     ["web page", "Article", "text/html", "document", "url"],
     ["audio", "lecture.mp3", "audio/mpeg", "audio", "file"],
     ["video", "lecture.mp4", "video/mp4", "video", "file"],
     ["image", "diagram.png", "image/png", "image", "file"],
     ["legacy record without MIME", "old-upload", null, "document", "file"],
-  ] as const)("renders extracted Markdown for %s sources", (_label, title, contentType, modality, kind) => {
-    const source: SourceWithContent = {
-      id: `src-${title}`,
-      notebookId: "nb-1",
-      kind,
-      title,
-      url: kind === "url" ? "https://example.com/article" : null,
-      modality,
-      contentType,
-      fileSize: 100,
-      createdAt: "2026-08-30T12:00:00.000Z",
-      rawText: "# Extracted Markdown",
-      s3Key: kind === "file" ? `uploads/${title}` : null,
-      sha256: null,
-    };
-    renderWithClient(
-      <SourceContentViewer sourceId={source.id} onClose={vi.fn()} />,
-      { key: ["source", source.id], data: source },
-    );
+  ] as const)(
+    "renders extracted Markdown for %s sources",
+    (_label, title, contentType, modality, kind) => {
+      const source: SourceWithContent = {
+        id: `src-${title}`,
+        notebookId: "nb-1",
+        kind,
+        title,
+        url: kind === "url" ? "https://example.com/article" : null,
+        modality,
+        contentType,
+        fileSize: 100,
+        createdAt: "2026-08-30T12:00:00.000Z",
+        rawText: "# Extracted Markdown",
+        s3Key: kind === "file" ? `uploads/${title}` : null,
+        sha256: null,
+      };
+      renderWithClient(<SourceContentViewer sourceId={source.id} onClose={vi.fn()} />, {
+        key: ["source", source.id],
+        data: source,
+      });
 
-    expect(screen.getByRole("heading", { name: "Extracted Markdown" })).toBeTruthy();
-  });
+      expect(screen.getByRole("heading", { name: "Extracted Markdown" })).toBeTruthy();
+    },
+  );
 
   it("routes genuine markdown source to MarkdownDocumentViewer", () => {
     const mockMdSource: SourceWithContent = {
@@ -276,16 +315,14 @@ describe("SourceContentViewer", () => {
       sha256: null,
     };
 
-    renderWithClient(
-      <SourceContentViewer sourceId="src-degraded-1" onClose={vi.fn()} />,
-      { key: ["source", "src-degraded-1"], data: degradedSource },
-    );
+    renderWithClient(<SourceContentViewer sourceId="src-degraded-1" onClose={vi.fn()} />, {
+      key: ["source", "src-degraded-1"],
+      data: degradedSource,
+    });
 
     expect(screen.getByText("This source has no usable content")).toBeTruthy();
     expect(screen.getByText(/table of contents/i)).toBeTruthy();
     expect(screen.getByText(/paste the text/i)).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: /back to sources/i }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /back to sources/i })).toBeTruthy();
   });
 });

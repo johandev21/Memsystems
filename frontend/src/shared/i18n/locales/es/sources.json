@@ -105,6 +105,8 @@
     "fullscreenMode": "Modo pantalla completa",
     "loadFailedDescription": "No se pudieron cargar los detalles de la fuente. Inténtalo de nuevo.",
     "moreActions": "Más acciones",
+    "importCaptions": "Importar subtítulos",
+    "retryCaptions": "Reintentar subtítulos",
     "notAvailable": "Esta fuente no está disponible para leer.",
     "openOriginalWebpage": "Abrir página web original",
     "openWebpage": "Abrir página web",

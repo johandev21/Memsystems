@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { sourceQueryOptions } from "../api/sources";
 import { sourceDisplayTitle } from "../utils/source-display-title";
+import { isYouTubeUrl } from "../utils/detect-document-type";
 import type { SourceWithContent } from "../types";
 import { SourceReaderSkeleton } from "./skeletons/source-reader-skeleton";
 import {
@@ -63,7 +64,7 @@ export function SourceContentViewer({
   }
 
   const status = sourceProcessingStatus(source);
-  if (status !== "ready") {
+  if (status !== "ready" && !isYouTubeUrl(source.url)) {
     return <SourceProcessingState source={source} onClose={onClose} />;
   }
 
@@ -81,7 +82,15 @@ export function SourceContentViewer({
         forceFullscreen={forceFullscreen}
         onClose={onClose}
       />
-      <SourceDocument source={source} controls={readerControls} selectedLocator={selectedLocator} />
+      {status === "ready" ? (
+        <SourceDocument
+          source={source}
+          controls={readerControls}
+          selectedLocator={selectedLocator}
+        />
+      ) : (
+        <SourceProcessingState source={source} onClose={onClose} />
+      )}
     </div>
   );
 }

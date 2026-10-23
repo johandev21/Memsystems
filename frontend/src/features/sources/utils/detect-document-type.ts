@@ -1,6 +1,6 @@
 export function isYouTubeUrl(url?: string | null): boolean {
   if (!url) return false;
-  return /(?:youtube\.com\/(?:watch\?|embed\/|v\/|shorts\/)|youtu\.be\/)/i.test(url);
+  return /(?:youtube\.com\/(?:watch\?|embed\/|v\/|shorts\/|live\/)|youtu\.be\/)/i.test(url);
 }
 
 export function extractYouTubeId(url?: string | null): string | null {

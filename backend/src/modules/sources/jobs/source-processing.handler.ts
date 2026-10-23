@@ -8,7 +8,10 @@ import { JobQueueService } from '../../jobs/job-queue.service';
 import { DRIZZLE } from '../../database/database.module';
 import { IndexResult } from '../../ai/indexing/indexing.service';
 import { StorageService } from '../../storage/storage.service';
-import { SourceAcquisitionService } from '../acquisition/source-acquisition.service';
+import {
+  assertYouTubeDocumentHasText,
+  SourceAcquisitionService,
+} from '../acquisition/source-acquisition.service';
 import { SourceVersionService } from '../source-version.service';
 import {
   DocumentNormalizerService,
@@ -357,6 +360,7 @@ export class SourceProcessingHandler implements JobHandler<
           title: source.title,
           sourceUrl: source.url,
         });
+        assertYouTubeDocumentHasText(document);
       } else if (source.url) {
         await this.versions.markProcessing(sourceId, 'extracting');
         document = await this.acquisitionService.acquireUrl(source.url);

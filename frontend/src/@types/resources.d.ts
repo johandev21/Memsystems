@@ -412,6 +412,7 @@ export default interface Resources {
         "youtube": {
           "captionParseFailed": "Failed to parse user-provided caption: {{reason}}",
           "invalidUrl": "Invalid YouTube URL or video ID: \"{{url}}\"",
+          "noCaptions": "No readable captions were found for this video. Try another video or provide a transcript.",
           "oauthCaptionFailed": "OAuth caption acquisition failed: {{reason}}",
           "oauthDownloadFailed": "Failed to download YouTube caption track {{captionId}} (HTTP {{status}}): {{reason}}",
           "oauthDownloadTokenRequired": "OAuth access token is required to download YouTube caption",
@@ -1427,12 +1428,14 @@ export default interface Resources {
       "exitFullscreen": "Exit Fullscreen (Esc)",
       "failedToLoad": "Failed to load document",
       "fullscreenMode": "Fullscreen Mode",
+      "importCaptions": "Import captions",
       "loadFailedDescription": "Unable to load source details. Please try again.",
       "moreActions": "More actions",
       "notAvailable": "This source is not available for reading.",
       "openOriginalWebpage": "Open original webpage",
       "openWebpage": "Open Webpage",
-      "processingWillBeAvailable": "This source will become available here when processing finishes."
+      "processingWillBeAvailable": "This source will become available here when processing finishes.",
+      "retryCaptions": "Retry captions"
     },
     "skeletons": {
       "audioStartTime": "0:00",

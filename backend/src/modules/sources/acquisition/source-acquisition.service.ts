@@ -25,6 +25,7 @@ import {
   type CrawledDocument,
   type CrawlerService,
 } from '../../crawler/crawler.types';
+import { BadRequestError } from '../../../common/errors/domain-error';
 
 export interface AcquiredUrlDocument extends NormalizedDocument {
   status?: number;
@@ -36,6 +37,16 @@ export interface AcquiredUrlDocument extends NormalizedDocument {
 }
 
 export type AcquireUrlOptions = YouTubeAcquisitionOptions;
+
+export function assertYouTubeDocumentHasText(
+  document: NormalizedDocument,
+): void {
+  if (!document.text.trim()) {
+    throw new BadRequestError('YouTube video has no readable captions', {
+      messageKey: 'errors.sources.youtube.noCaptions',
+    });
+  }
+}
 
 @Injectable()
 export class SourceAcquisitionService {
@@ -69,6 +80,7 @@ export class SourceAcquisitionService {
         canonicalUrl: `https://www.youtube.com/watch?v=${videoId}`,
         contentType: 'text/html',
       });
+      assertYouTubeDocumentHasText(doc);
       return {
         ...doc,
         status: 200,

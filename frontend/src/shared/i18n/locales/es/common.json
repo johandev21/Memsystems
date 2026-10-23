@@ -200,6 +200,7 @@
       "youtube": {
         "captionParseFailed": "No se pudo analizar el subtítulo proporcionado por el usuario: {{reason}}",
         "invalidUrl": "URL o ID de vídeo de YouTube no válido: \"{{url}}\"",
+        "noCaptions": "No se encontraron subtítulos legibles para este vídeo. Prueba con otro vídeo o proporciona una transcripción.",
         "oauthCaptionFailed": "Falló la adquisición del subtítulo mediante OAuth: {{reason}}",
         "oauthDownloadFailed": "No se pudo descargar la pista de subtítulos de YouTube {{captionId}} (HTTP {{status}}): {{reason}}",
         "oauthDownloadTokenRequired": "Se requiere un token de acceso OAuth para descargar el subtítulo de YouTube",

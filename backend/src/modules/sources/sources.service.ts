@@ -636,7 +636,12 @@ export class SourcesService {
       })
       .where(eq(sources.id, id));
 
-    if (source.kind === 'file' && source.s3Key) {
+    if (
+      (source.kind === 'file' && source.s3Key) ||
+      (source.kind === 'url' &&
+        source.url &&
+        this.sourceExtractionService.isYouTubeUrl(source.url))
+    ) {
       return this.sourceJobsService.enqueueProcessing(id);
     }
     return this.sourceJobsService.enqueue(id);

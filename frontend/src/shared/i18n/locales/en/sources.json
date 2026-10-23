@@ -105,6 +105,8 @@
     "fullscreenMode": "Fullscreen Mode",
     "loadFailedDescription": "Unable to load source details. Please try again.",
     "moreActions": "More actions",
+    "importCaptions": "Import captions",
+    "retryCaptions": "Retry captions",
     "notAvailable": "This source is not available for reading.",
     "openOriginalWebpage": "Open original webpage",
     "openWebpage": "Open Webpage",

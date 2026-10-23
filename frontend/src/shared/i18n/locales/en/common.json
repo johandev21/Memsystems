@@ -200,6 +200,7 @@
       "youtube": {
         "captionParseFailed": "Failed to parse user-provided caption: {{reason}}",
         "invalidUrl": "Invalid YouTube URL or video ID: \"{{url}}\"",
+        "noCaptions": "No readable captions were found for this video. Try another video or provide a transcript.",
         "oauthCaptionFailed": "OAuth caption acquisition failed: {{reason}}",
         "oauthDownloadFailed": "Failed to download YouTube caption track {{captionId}} (HTTP {{status}}): {{reason}}",
         "oauthDownloadTokenRequired": "OAuth access token is required to download YouTube caption",

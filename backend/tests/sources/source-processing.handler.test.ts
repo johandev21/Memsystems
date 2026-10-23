@@ -13,6 +13,7 @@ import { VideoInspectorService } from '../../src/modules/sources/extraction/vide
 import { YouTubeAcquisitionService } from '../../src/modules/sources/acquisition/youtube-acquisition.service';
 import { TranscriptionService } from '../../src/modules/sources/extraction/transcription.service';
 import { SourceAcquisitionService } from '../../src/modules/sources/acquisition/source-acquisition.service';
+import { BadRequestError } from '../../src/common/errors/domain-error';
 import { SourceExtractionService } from '../../src/modules/sources/extraction/source-extraction.service';
 import {
   SourceProcessingCancelledError,
@@ -807,6 +808,39 @@ describe('SourceProcessingHandler', () => {
         speaker: 'Prof. Demaine',
       }),
     );
+  });
+
+  it('fails YouTube processing when normalized captions are blank', async () => {
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'url',
+      title: 'YouTube Lecture Video',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      rawText: '',
+      modality: 'video',
+    });
+    const { handler } = createHandler({
+      youtubeAcquisition: {
+        acquire: vi.fn().mockResolvedValue({
+          videoId: 'dQw4w9WgXcQ',
+          title: 'YouTube Lecture Video',
+          segments: [{ content: '  ', startOffsetMs: 0, endOffsetMs: 1000 }],
+          rawText: '  ',
+        }),
+      },
+    });
+    const job = {
+      id: 'proc-job-youtube-empty',
+      type: 'source_processing',
+      payload: { sourceId: source.id, notebookId: notebook.id },
+      attemptCount: 1,
+      maxAttempts: 3,
+    } as any;
+
+    await expect(handler.process(job)).rejects.toMatchObject({
+      constructor: BadRequestError,
+      messageKey: 'errors.sources.youtube.noCaptions',
+    });
   });
 
   it.each([

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BadRequestError } from '../../src/common/errors/domain-error';
 import type { CrawlerService } from '../../src/modules/crawler/crawler.types';
 import { DocumentNormalizerService } from '../../src/modules/sources/extraction/document-normalizer.service';
 import type { HttpFetcherService } from '../../src/modules/sources/acquisition/http-fetcher.service';
@@ -67,6 +68,25 @@ function createHarness() {
 describe('SourceAcquisitionService with crawler', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('rejects YouTube acquisition when normalized caption text is blank', async () => {
+    const harness = createHarness();
+    harness.acquireYoutube.mockResolvedValue({
+      videoId: 'dQw4w9WgXcQ',
+      title: 'Video title',
+      author: 'Video author',
+      durationMs: 1000,
+      segments: [{ content: '   ', startOffsetMs: 0, endOffsetMs: 1000 }],
+      rawText: '   ',
+    });
+
+    await expect(
+      harness.service.acquireUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+    ).rejects.toMatchObject({
+      constructor: BadRequestError,
+      messageKey: 'errors.sources.youtube.noCaptions',
+    });
   });
 
   it('routes non-YouTube URLs through the crawler instead of HttpFetcher', async () => {

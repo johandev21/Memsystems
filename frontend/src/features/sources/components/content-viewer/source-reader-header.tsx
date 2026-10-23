@@ -1,5 +1,19 @@
-import { ArrowLeft, Download, ExternalLink, Loader2, Maximize2, Minimize2, MoreVertical, X } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  Download,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  MoreVertical,
+  RefreshCw,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +24,10 @@ import {
 import type { SourceWithContent } from "../../types";
 import type { ReaderControls } from "./source-content-types";
 import { sourceDisplayTitle } from "../../utils/source-display-title";
+import { isYouTubeUrl } from "../../utils/detect-document-type";
+import { isSourceProcessing } from "../../utils/source-processing";
+import { retrySource } from "../../api/sources";
+import { AddTranscriptDialog } from "../add-transcript-dialog";
 
 function ReaderMoreMenu({
   source,
@@ -23,57 +41,98 @@ function ReaderMoreMenu({
   isFullscreen: boolean;
 }) {
   const { t } = useTranslation("sources");
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const retryMutation = useMutation({
+    mutationFn: () => retrySource(source.id),
+    onSuccess: async () => {
+      toast.info(t("toasts.sourceProcessingRestarted"));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["source", source.id] }),
+        queryClient.invalidateQueries({ queryKey: ["sources", source.notebookId] }),
+      ]);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
   const showWebpage = source.kind === "url" && !!source.url;
   const showDownload = source.kind === "file";
+  const showCaptions = isYouTubeUrl(source.url);
+  const captionsBusy = retryMutation.isPending || isSourceProcessing(source);
 
   if (!showWebpage && !showDownload) return null;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer touch-manipulation active:scale-97 transition-transform"
-            aria-label={t("reader.moreActions")}
-          />
-        }
-      >
-        <MoreVertical className="h-4 w-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        layerClassName={isFullscreen ? "z-viewer-popover" : undefined}
-        className="w-48"
-      >
-        {showWebpage && (
-          <DropdownMenuItem
-            render={
-              <a
-                href={source.url ?? "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t("reader.openOriginalWebpage")}
-                className="cursor-pointer"
-              />
-            }
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            {t("reader.openWebpage")}
-          </DropdownMenuItem>
-        )}
-        {showDownload && (
-          <DropdownMenuItem onClick={onDownload} disabled={downloading} className="cursor-pointer">
-            {downloading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="h-3.5 w-3.5" />
-            )}
-            {t("reader.downloadFile")}
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer touch-manipulation active:scale-97 transition-transform"
+              aria-label={t("reader.moreActions")}
+            />
+          }
+        >
+          <MoreVertical className="h-4 w-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          layerClassName={isFullscreen ? "z-viewer-popover" : undefined}
+          className="w-48"
+        >
+          {showCaptions && (
+            <>
+              <DropdownMenuItem onClick={() => setTranscriptOpen(true)} disabled={captionsBusy}>
+                <FileText className="h-3.5 w-3.5" />
+                {t("reader.importCaptions")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => retryMutation.mutate()} disabled={captionsBusy}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                {t("reader.retryCaptions")}
+              </DropdownMenuItem>
+            </>
+          )}
+          {showWebpage && (
+            <DropdownMenuItem
+              render={
+                <a
+                  href={source.url ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t("reader.openOriginalWebpage")}
+                  className="cursor-pointer"
+                />
+              }
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              {t("reader.openWebpage")}
+            </DropdownMenuItem>
+          )}
+          {showDownload && (
+            <DropdownMenuItem
+              onClick={onDownload}
+              disabled={downloading}
+              className="cursor-pointer"
+            >
+              {downloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              {t("reader.downloadFile")}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {showCaptions && (
+        <AddTranscriptDialog
+          sourceId={source.id}
+          sourceTitle={sourceDisplayTitle(source)}
+          open={transcriptOpen}
+          onOpenChange={setTranscriptOpen}
+        />
+      )}
+    </>
   );
 }
 
