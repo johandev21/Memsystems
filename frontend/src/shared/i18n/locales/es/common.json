@@ -123,6 +123,12 @@
       },
       "parse": {
         "crawlFailed": "No pudimos obtener esta página web. Inténtalo de nuevo.",
+        "fileUnauthorized": "No se pudo autenticar el análisis del documento. Revisa FIRECRAWL_API_KEY.",
+        "fileInvalid": "El documento está dañado, es demasiado grande o su formato no es compatible.",
+        "fileRateLimited": "El análisis del documento alcanzó el límite de solicitudes de Firecrawl. Inténtalo de nuevo más tarde.",
+        "fileTimeout": "El análisis del documento agotó el tiempo de espera. Inténtalo de nuevo.",
+        "fileUnavailable": "El servicio de análisis de documentos no está disponible. Inténtalo de nuevo más tarde.",
+        "fileFailed": "No pudimos analizar este documento. Inténtalo de nuevo.",
         "epubCorrupted": "El archivo de libro electrónico parece estar dañado o no ser válido.",
         "pptxCorrupted": "El archivo de presentación parece estar dañado o no ser válido.",
         "tabularCorrupted": "El archivo de datos parece estar dañado o no ser válido.",

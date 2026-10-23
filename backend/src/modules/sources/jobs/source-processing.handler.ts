@@ -2,7 +2,7 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../../database/schema';
-import { sources } from '../../../database/schema';
+import { sources, sourceUploadIntents } from '../../../database/schema';
 import { Job, JobHandler } from '../../jobs/job-handler.interface';
 import { JobQueueService } from '../../jobs/job-queue.service';
 import { DRIZZLE } from '../../database/database.module';
@@ -35,17 +35,69 @@ import { TranscriptionService } from '../extraction/transcription.service';
 import { SourceExtractionService } from '../extraction/source-extraction.service';
 import { VisionExtractionService } from '../extraction/vision-extraction.service';
 import type { VisionExtractionResult } from '../extraction/vision-extraction.port';
-import { PptxInspectorService } from '../extraction/pptx-inspector.service';
-import { EpubInspectorService } from '../extraction/epub-inspector.service';
-import { PptxParserService } from '../extraction/pptx-parser.service';
-import { EpubParserService } from '../extraction/epub-parser.service';
+import { SourceQualityService } from '../source-quality.service';
+import {
+  CRAWLER_SERVICE,
+  type CrawlerService,
+} from '../../crawler/crawler.types';
+import { ParseFileError } from '../source-errors';
+import {
+  getFileExtension,
+  isTabularFile,
+} from '../extraction/tabular-inspector.service';
 import { TabularInspectorService } from '../extraction/tabular-inspector.service';
 import { TabularParserService } from '../extraction/tabular-parser.service';
-import { SourceQualityService } from '../source-quality.service';
 import {
   DomainError,
   InternalError,
 } from '../../../common/errors/domain-error';
+
+const PARSED_FILE_TYPES: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/epub+zip': 'epub',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    'docx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    'pptx',
+  'application/vnd.ms-powerpoint.presentation.macroenabled.12': 'pptm',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-excel': 'xls',
+  'application/x-excel': 'xls',
+  'text/csv': 'csv',
+};
+
+function parsedFileExtension(
+  contentType: string | null,
+  fileName: string,
+): string | undefined {
+  const extension = getFileExtension(fileName);
+  const supported = new Set([
+    'pdf',
+    'epub',
+    'docx',
+    'pptx',
+    'pptm',
+    'xlsx',
+    'xls',
+    'csv',
+  ]);
+  if (extension && supported.has(extension)) return extension;
+  const mime = contentType?.split(';')[0].trim().toLowerCase();
+  return mime ? PARSED_FILE_TYPES[mime] : undefined;
+}
+
+function isLocalTextFile(
+  contentType: string | null,
+  fileName: string,
+): boolean {
+  const extension = getFileExtension(fileName);
+  const mime = contentType?.split(';')[0].trim().toLowerCase();
+  return (
+    extension === 'txt' ||
+    extension === 'md' ||
+    (!extension && (mime === 'text/plain' || mime === 'text/markdown'))
+  );
+}
 
 export interface SourceProcessingJobPayload {
   sourceId: string;
@@ -88,12 +140,10 @@ export class SourceProcessingHandler implements JobHandler<
     private readonly transcriptionService: TranscriptionService,
     private readonly sourceExtractionService: SourceExtractionService,
     private readonly documentNormalizer: DocumentNormalizerService,
+    @Inject(CRAWLER_SERVICE)
+    private readonly crawler: CrawlerService,
     private readonly videoInspector: VideoInspectorService,
     private readonly youtubeAcquisition: YouTubeAcquisitionService,
-    private readonly pptxInspector: PptxInspectorService,
-    private readonly epubInspector: EpubInspectorService,
-    private readonly pptxParser: PptxParserService,
-    private readonly epubParser: EpubParserService,
     private readonly tabularInspector: TabularInspectorService,
     private readonly tabularParser: TabularParserService,
     @Optional() sourceQualityService?: SourceQualityService,
@@ -143,23 +193,30 @@ export class SourceProcessingHandler implements JobHandler<
           isImageFile(source.contentType, source.s3Key) ||
           source.modality === 'image';
 
-        const isPptx =
-          this.sourceExtractionService.isPptxFile(
-            source.contentType,
-            source.s3Key,
-          ) || source.modality === 'slides';
-
-        const isEpub =
-          this.sourceExtractionService.isEpubFile(
-            source.contentType,
-            source.s3Key,
-          ) || source.modality === 'ebook';
-
-        const isTabular =
-          this.sourceExtractionService.isTabularFile(
-            source.contentType,
-            source.s3Key,
-          ) || source.modality === 'dataset';
+        const artifactName = source.s3Key.split('/').pop() || source.s3Key;
+        const [upload] = await this.db
+          .select({ filename: sourceUploadIntents.filename })
+          .from(sourceUploadIntents)
+          .where(eq(sourceUploadIntents.storageKey, source.s3Key))
+          .limit(1);
+        const fileName =
+          upload?.filename ??
+          (getFileExtension(artifactName)
+            ? artifactName
+            : source.title || artifactName);
+        const extension =
+          parsedFileExtension(source.contentType, fileName) ??
+          (source.modality === 'slides'
+            ? 'pptx'
+            : source.modality === 'ebook'
+              ? 'epub'
+              : undefined);
+        const fileExtension = getFileExtension(fileName);
+        const isLocalTabular =
+          ['tsv', 'tab', 'ods'].includes(fileExtension) ||
+          (!extension &&
+            (isTabularFile(source.contentType, fileName) ||
+              source.modality === 'dataset'));
 
         const buffer = await this.storageService.getObjectBuffer(source.s3Key);
 
@@ -245,32 +302,41 @@ export class SourceProcessingHandler implements JobHandler<
             filename: source.title,
             contentType: inspected.mimeType,
           });
-        } else if (isPptx) {
+        } else if (isLocalTextFile(source.contentType, fileName)) {
           await this.versions.markProcessing(sourceId, 'extracting');
-          this.pptxInspector.inspect(buffer, source.contentType, source.s3Key);
-          const result = this.pptxParser.parse(buffer);
-          document = this.documentNormalizer.fromPptxResult(result, {
-            title: source.title,
-            filename: source.s3Key,
-          });
-        } else if (isEpub) {
-          await this.versions.markProcessing(sourceId, 'extracting');
-          this.epubInspector.inspect(buffer, source.contentType, source.s3Key);
-          const result = this.epubParser.parse(buffer);
-          document = this.documentNormalizer.fromEpubResult(result, {
-            title: source.title,
-          });
-        } else if (isTabular) {
+          document = await this.acquisitionService.acquireFile(
+            buffer,
+            source.contentType ?? '',
+            fileName,
+          );
+        } else if (isLocalTabular) {
           qualityGateApplies = false;
           await this.versions.markProcessing(sourceId, 'extracting');
           this.tabularInspector.inspect(
             buffer,
-            source.s3Key,
+            fileName,
             source.contentType ?? undefined,
           );
-          const result = this.tabularParser.parse(buffer, source.s3Key);
+          const result = this.tabularParser.parse(buffer, fileName);
           document = this.documentNormalizer.fromTabularResult(result, {
             title: source.title,
+          });
+        } else if (extension) {
+          qualityGateApplies =
+            extension !== 'csv' && extension !== 'xls' && extension !== 'xlsx';
+          await this.versions.markProcessing(sourceId, 'extracting');
+          const parserFileName =
+            fileExtension === extension
+              ? fileName
+              : `${fileName.replace(/\.[^.]+$/, '')}.${extension}`;
+          const parsed = await this.crawler.parseFile({
+            buffer,
+            filename: parserFileName,
+            contentType: source.contentType ?? '',
+          });
+          document = this.documentNormalizer.fromParsedFileResult(parsed, {
+            fileName: parserFileName,
+            contentType: source.contentType ?? '',
           });
         } else {
           await this.versions.markProcessing(sourceId, 'extracting');
@@ -356,7 +422,8 @@ export class SourceProcessingHandler implements JobHandler<
           : undefined;
       if (
         !(error instanceof SourceProcessingCancelledError) &&
-        job.attemptCount >= job.maxAttempts &&
+        ((error instanceof ParseFileError && !error.retryable) ||
+          job.attemptCount >= job.maxAttempts) &&
         (await this.queue.isActive(job.id))
       ) {
         await this.versions.markFailed(

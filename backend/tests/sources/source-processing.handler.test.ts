@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   sourceSegments,
+  sourceUploadIntents,
   sourceVersions,
   sources,
 } from '../../src/database/schema';
@@ -20,10 +21,7 @@ import {
 import { SourceVersionService } from '../../src/modules/sources/source-version.service';
 import { VisionExtractionService } from '../../src/modules/sources/extraction/vision-extraction.service';
 import { StorageService } from '../../src/modules/storage/storage.service';
-import { PptxInspectorService } from '../../src/modules/sources/extraction/pptx-inspector.service';
-import { EpubInspectorService } from '../../src/modules/sources/extraction/epub-inspector.service';
-import { PptxParserService } from '../../src/modules/sources/extraction/pptx-parser.service';
-import { EpubParserService } from '../../src/modules/sources/extraction/epub-parser.service';
+import { ParseFileError } from '../../src/modules/sources/source-errors';
 import { TabularInspectorService } from '../../src/modules/sources/extraction/tabular-inspector.service';
 import { TabularParserService } from '../../src/modules/sources/extraction/tabular-parser.service';
 import { db } from '../db';
@@ -42,10 +40,7 @@ describe('SourceProcessingHandler', () => {
       videoInspector?: Partial<VideoInspectorService>;
       youtubeAcquisition?: Partial<YouTubeAcquisitionService>;
       versions?: Partial<SourceVersionService>;
-      pptxInspector?: Partial<PptxInspectorService>;
-      epubInspector?: Partial<EpubInspectorService>;
-      pptxParser?: Partial<PptxParserService>;
-      epubParser?: Partial<EpubParserService>;
+      crawler?: { parseFile: ReturnType<typeof vi.fn> };
       tabularInspector?: Partial<TabularInspectorService>;
       tabularParser?: Partial<TabularParserService>;
     } = {},
@@ -200,98 +195,28 @@ describe('SourceProcessingHandler', () => {
     const sourceExtractionService = new SourceExtractionService();
     const documentNormalizer = new DocumentNormalizerService();
 
-    const pptxInspector = {
-      inspect: vi.fn().mockReturnValue({
-        mimeType:
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        slideCount: 2,
+    const crawler = {
+      parseFile: vi.fn().mockResolvedValue({
+        title: 'Parsed document',
+        markdown:
+          '# Parsed document\n\nExtracted content with enough detail to study.',
       }),
-      ...overrides.pptxInspector,
-    } as any;
-
-    const epubInspector = {
-      inspect: vi.fn().mockReturnValue({
-        mimeType: 'application/epub+zip',
-        chapterCount: 3,
-      }),
-      ...overrides.epubInspector,
-    } as any;
-
-    const pptxParser = {
-      parse: vi.fn().mockReturnValue({
-        slideCount: 2,
-        slides: [
-          {
-            slideNumber: 1,
-            title: 'Intro',
-            texts: ['Intro', 'Welcome to slides'],
-            notes: 'Speaker notes for intro',
-          },
-          {
-            slideNumber: 2,
-            title: 'Conclusion',
-            texts: ['Conclusion', 'Thanks'],
-          },
-        ],
-      }),
-      ...overrides.pptxParser,
-    } as any;
-
-    const epubParser = {
-      parse: vi.fn().mockReturnValue({
-        chapterCount: 2,
-        chapters: [
-          {
-            ordinal: 1,
-            title: 'Chapter 1',
-            textContent: 'Chapter 1 content',
-            href: 'chap1.xhtml',
-          },
-          {
-            ordinal: 2,
-            title: 'Chapter 2',
-            textContent: 'Chapter 2 content',
-            href: 'chap2.xhtml',
-          },
-        ],
-      }),
-      ...overrides.epubParser,
-    } as any;
-
+      ...overrides.crawler,
+    };
     const tabularInspector = {
-      inspect: vi.fn().mockReturnValue({
-        fileName: 'data.csv',
-        format: 'csv',
-        fileSize: 50,
-      }),
+      inspect: vi.fn(),
       ...overrides.tabularInspector,
     } as any;
-
     const tabularParser = {
       parse: vi.fn().mockReturnValue({
-        fileName: 'data.csv',
+        fileName: 'data.tsv',
         title: 'data',
-        format: 'csv',
-        totalRows: 2,
-        totalColumns: 2,
+        format: 'tsv',
+        totalRows: 1,
+        totalColumns: 1,
         sheetCount: 1,
-        sheets: [
-          {
-            sheetName: 'Sheet 1',
-            rowCount: 2,
-            columnCount: 2,
-            cellRange: 'A1:B3',
-            headers: ['id', 'val'],
-            columns: [{ name: 'id', type: 'number' }],
-            sampleRows: [
-              ['1', '10'],
-              ['2', '20'],
-            ],
-            markdownTable: '| id | val |\n|---|---|\n| 1 | 10 |\n| 2 | 20 |',
-            rawText: '## Sheet: Sheet 1\n\n| id | val |',
-          },
-        ],
-        rawText: '# data\n\n## Sheet: Sheet 1\n\n| id | val |',
+        sheets: [],
+        rawText: '# data\n\n| value |',
       }),
       ...overrides.tabularParser,
     } as any;
@@ -308,12 +233,9 @@ describe('SourceProcessingHandler', () => {
       transcriptionService,
       sourceExtractionService,
       documentNormalizer,
+      crawler as any,
       videoInspector,
       youtubeAcquisition,
-      pptxInspector,
-      epubInspector,
-      pptxParser,
-      epubParser,
       tabularInspector,
       tabularParser,
     );
@@ -330,14 +252,11 @@ describe('SourceProcessingHandler', () => {
       transcriptionService,
       sourceExtractionService,
       documentNormalizer,
-      videoInspector,
-      youtubeAcquisition,
-      pptxInspector,
-      epubInspector,
-      pptxParser,
-      epubParser,
+      crawler,
       tabularInspector,
       tabularParser,
+      videoInspector,
+      youtubeAcquisition,
     };
   }
 
@@ -483,14 +402,14 @@ describe('SourceProcessingHandler', () => {
     );
   });
 
-  it('processes non-image file with extracting stage and acquisitionService', async () => {
+  it('processes a plain-text file with extracting stage and local acquisition', async () => {
     const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
-      title: 'paper.pdf',
+      title: 'paper.txt',
       rawText: '',
-      s3Key: 'sources/paper.pdf',
-      contentType: 'application/pdf',
+      s3Key: 'sources/paper.txt',
+      contentType: 'text/plain',
       modality: 'document',
     });
 
@@ -890,172 +809,319 @@ describe('SourceProcessingHandler', () => {
     );
   });
 
-  it('processes PPTX slides flow with extracting stage, validates limits, parses and persists slide segments', async () => {
-    const notebook = await seedNotebook();
-    const source = await seedSource(notebook.id, {
-      kind: 'file',
-      title: 'deck.pptx',
-      rawText: '',
-      s3Key: 'sources/deck.pptx',
-      contentType:
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      modality: 'slides',
-    });
-
-    const { handler, pptxInspector, pptxParser, queue } = createHandler();
-
-    const job = {
-      id: 'proc-job-pptx-1',
-      type: 'source_processing',
-      payload: { sourceId: source.id, notebookId: notebook.id },
-      attemptCount: 1,
-      maxAttempts: 3,
-    } as any;
-
-    const result = await handler.process(job);
-
-    expect(pptxInspector.inspect).toHaveBeenCalledWith(
-      expect.any(Buffer),
+  it.each([
+    ['paper.pdf', 'application/pdf'],
+    ['book.epub', 'application/epub+zip'],
+    [
+      'report.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ],
+    [
+      'deck.pptx',
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'sources/deck.pptx',
-    );
-    expect(pptxParser.parse).toHaveBeenCalledWith(expect.any(Buffer));
-    expect(queue.enqueueIfActive).toHaveBeenCalledWith(
-      'proc-job-pptx-1',
-      'source_indexing',
-      expect.objectContaining({
-        sourceId: source.id,
-        notebookId: notebook.id,
-        sourceVersionId: result.sourceVersionId,
-      }),
-      expect.any(Object),
-    );
-    expect(result.segmentCount).toBeGreaterThan(0);
+    ],
+    ['deck.pptm', 'application/vnd.ms-powerpoint.presentation.macroEnabled.12'],
+    [
+      'sheet.xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ],
+    ['legacy.xls', 'application/vnd.ms-excel'],
+    ['data.csv', 'text/csv'],
+  ])(
+    'routes %s through crawler parsing and persists normalized content',
+    async (filename, contentType) => {
+      const notebook = await seedNotebook();
+      const source = await seedSource(notebook.id, {
+        kind: 'file',
+        title: filename,
+        rawText: '',
+        s3Key: `pending-sources/${filename}`,
+        contentType,
+        modality: 'document',
+      });
+      const markdown =
+        '# Parsed document\n\n## Details\n\nA detailed paragraph with enough extracted study content.\n\n| Topic | Notes |\n| --- | --- |\n| Routing | Preserved table |';
+      const crawler = {
+        parseFile: vi
+          .fn()
+          .mockResolvedValue({ title: 'Parsed document', markdown }),
+      };
+      const { handler } = createHandler({ crawler: crawler as any });
+      const result = await handler.process({
+        id: `parse-${filename}`,
+        type: 'source_processing',
+        payload: { sourceId: source.id, notebookId: notebook.id },
+        attemptCount: 1,
+        maxAttempts: 3,
+      } as any);
 
-    const [version] = await db
-      .select()
-      .from(sourceVersions)
-      .where(eq(sourceVersions.id, result.sourceVersionId));
-    expect(version.extractorId).toBe('parser');
+      expect(crawler.parseFile).toHaveBeenCalledWith({
+        buffer: expect.any(Buffer),
+        filename,
+        contentType,
+      });
+      const [version] = await db
+        .select()
+        .from(sourceVersions)
+        .where(eq(sourceVersions.id, result.sourceVersionId));
+      expect(version.extractorId).toBe('firecrawl');
+      const [updatedSource] = await db
+        .select()
+        .from(sources)
+        .where(eq(sources.id, source.id));
+      expect(updatedSource.rawText).toBe(markdown);
+      const segments = await db
+        .select()
+        .from(sourceSegments)
+        .where(eq(sourceSegments.sourceVersionId, result.sourceVersionId));
+      expect(segments.length).toBeGreaterThan(0);
+      expect(segments.map((segment) => segment.content).join('\n')).toContain(
+        'detailed paragraph',
+      );
+      expect(
+        segments.some((segment) => segment.content.includes('Preserved table')),
+      ).toBe(true);
+      expect(
+        segments.some(
+          (segment) =>
+            Array.isArray(segment.metadata.headingPath) &&
+            segment.metadata.headingPath.join('/') ===
+              'Parsed document/Details',
+        ),
+      ).toBe(true);
+    },
+  );
 
-    const segments = await db
-      .select()
-      .from(sourceSegments)
-      .where(eq(sourceSegments.sourceVersionId, result.sourceVersionId))
-      .orderBy(sourceSegments.ordinal);
-
-    // At least slide 1 heading + notes + slide 2
-    expect(segments.length).toBeGreaterThanOrEqual(2);
-    expect(segments[0].locator).toEqual(
-      expect.objectContaining({ slideNumber: 1 }),
-    );
-    expect(segments.some((s) => s.locator.slideNumber === 2)).toBe(true);
-
-    const [updatedSource] = await db
-      .select()
-      .from(sources)
-      .where(eq(sources.id, source.id));
-    expect(updatedSource.processingStage).toBe('indexing');
-  });
-
-  it('processes EPUB ebook flow with extracting stage, validates limits, parses and persists chapter segments', async () => {
+  it.each([
+    ['notes.txt', 'text/plain'],
+    ['notes.md', 'text/markdown'],
+  ])('keeps %s on local extraction', async (filename, contentType) => {
     const notebook = await seedNotebook();
     const source = await seedSource(notebook.id, {
       kind: 'file',
-      title: 'book.epub',
+      title: filename,
       rawText: '',
-      s3Key: 'sources/book.epub',
-      contentType: 'application/epub+zip',
-      modality: 'ebook',
+      s3Key: `pending-sources/${filename}`,
+      contentType,
     });
-
-    const { handler, epubInspector, epubParser, queue } = createHandler();
-
-    const job = {
-      id: 'proc-job-epub-1',
-      type: 'source_processing',
-      payload: { sourceId: source.id, notebookId: notebook.id },
-      attemptCount: 1,
-      maxAttempts: 3,
-    } as any;
-
-    const result = await handler.process(job);
-
-    expect(epubInspector.inspect).toHaveBeenCalledWith(
-      expect.any(Buffer),
-      'application/epub+zip',
-      'sources/book.epub',
-    );
-    expect(epubParser.parse).toHaveBeenCalledWith(expect.any(Buffer));
-    expect(queue.enqueueIfActive).toHaveBeenCalledWith(
-      'proc-job-epub-1',
-      'source_indexing',
-      expect.objectContaining({
-        sourceId: source.id,
-        notebookId: notebook.id,
-        sourceVersionId: result.sourceVersionId,
-      }),
-      expect.any(Object),
-    );
-    expect(result.segmentCount).toBe(2);
-
-    const segments = await db
-      .select()
-      .from(sourceSegments)
-      .where(eq(sourceSegments.sourceVersionId, result.sourceVersionId))
-      .orderBy(sourceSegments.ordinal);
-
-    expect(segments).toHaveLength(2);
-    expect(segments[0].content).toContain('Chapter 1');
-    expect(segments[0].locator).toEqual(
-      expect.objectContaining({ pageNumber: 1 }),
-    );
-  });
-
-  it('processes Tabular datasets into table segments with sheet and cellRange locators', async () => {
-    const notebook = await seedNotebook();
-    const source = await seedSource(notebook.id, {
-      kind: 'file',
-      title: 'data.csv',
-      rawText: '',
-      s3Key: 'sources/data.csv',
-      contentType: 'text/csv',
-      modality: 'dataset',
-    });
-
-    const { handler, tabularInspector, tabularParser, queue } = createHandler();
-
-    const job = {
-      id: 'proc-job-tab-1',
+    const { handler, acquisition, crawler } = createHandler();
+    await handler.process({
+      id: `local-${filename}`,
       type: 'source_processing',
       payload: { sourceId: source.id },
-      attempt: 1,
+      attemptCount: 1,
       maxAttempts: 3,
-    } as any;
+    } as any);
+    expect(acquisition.acquireFile).toHaveBeenCalled();
+    expect(crawler.parseFile).not.toHaveBeenCalled();
+  });
 
-    const result = await handler.process(job);
-
-    expect(tabularInspector.inspect).toHaveBeenCalledWith(
-      expect.any(Buffer),
-      'sources/data.csv',
-      'text/csv',
+  it('uses the artifact extension for routing despite a text MIME conflict', async () => {
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'file',
+      title: 'renamed notes',
+      rawText: '',
+      s3Key: 'pending-sources/original-paper.pdf',
+      contentType: 'text/plain',
+    });
+    const { handler, crawler, acquisition } = createHandler();
+    await handler.process({
+      id: 'mime-conflict',
+      type: 'source_processing',
+      payload: { sourceId: source.id },
+      attemptCount: 1,
+      maxAttempts: 3,
+    } as any);
+    expect(crawler.parseFile).toHaveBeenCalledWith(
+      expect.objectContaining({ filename: 'original-paper.pdf' }),
     );
+    expect(acquisition.acquireFile).not.toHaveBeenCalled();
+  });
+
+  it('uses the artifact extension when the editable title omits it and MIME is absent', async () => {
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'file',
+      title: 'renamed slides',
+      rawText: '',
+      s3Key: 'pending-sources/original-deck.pptx',
+      contentType: null,
+    });
+    const { handler, crawler } = createHandler();
+    await handler.process({
+      id: 'artifact-extension',
+      type: 'source_processing',
+      payload: { sourceId: source.id },
+      attemptCount: 1,
+      maxAttempts: 3,
+    } as any);
+    expect(crawler.parseFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: 'original-deck.pptx',
+        contentType: '',
+      }),
+    );
+  });
+
+  it.each([
+    ['slides', 'untitled slides', 'untitled slides.pptx'],
+    ['ebook', 'untitled book', 'untitled book.epub'],
+  ] as const)(
+    'uses the %s modality when MIME and filename type are unavailable',
+    async (modality, title, filename) => {
+      const notebook = await seedNotebook();
+      const source = await seedSource(notebook.id, {
+        kind: 'file',
+        title,
+        rawText: '',
+        s3Key: 'pending-sources/upload-token',
+        contentType: null,
+        modality,
+      });
+      const { handler, crawler } = createHandler();
+      await handler.process({
+        id: `modality-${modality}`,
+        type: 'source_processing',
+        payload: { sourceId: source.id },
+        attemptCount: 1,
+        maxAttempts: 3,
+      } as any);
+      expect(crawler.parseFile).toHaveBeenCalledWith(
+        expect.objectContaining({ filename }),
+      );
+    },
+  );
+
+  it.each(['original.pdf', 'original.csv', 'original.md'])(
+    'routes opaque uploads using the original filename %s',
+    async (filename) => {
+      const notebook = await seedNotebook();
+      const storageKey = 'pending-sources/opaque-token';
+      await db.insert(sourceUploadIntents).values({
+        id: 'opaque-token',
+        notebookId: notebook.id,
+        storageKey,
+        filename,
+        contentType: 'application/octet-stream',
+        expectedBytes: 15,
+        status: 'consumed',
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+      const source = await seedSource(notebook.id, {
+        kind: 'file',
+        title: 'An editable title',
+        rawText: '',
+        s3Key: storageKey,
+        contentType: 'application/octet-stream',
+      });
+      const { handler, crawler, acquisition } = createHandler();
+
+      await handler.process({
+        id: 'opaque-upload-job',
+        type: 'source_processing',
+        payload: { sourceId: source.id },
+        attemptCount: 1,
+        maxAttempts: 3,
+      } as any);
+
+      if (filename.endsWith('.md')) {
+        expect(crawler.parseFile).not.toHaveBeenCalled();
+        expect(acquisition.acquireFile).toHaveBeenCalledWith(
+          expect.any(Buffer),
+          'application/octet-stream',
+          filename,
+        );
+      } else {
+        expect(crawler.parseFile).toHaveBeenCalledWith(
+          expect.objectContaining({ filename }),
+        );
+        expect(acquisition.acquireFile).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  it('keeps legacy TSV datasets on the local tabular parser', async () => {
+    const notebook = await seedNotebook();
+    const source = await seedSource(notebook.id, {
+      kind: 'file',
+      title: 'data.tsv',
+      rawText: '',
+      s3Key: 'pending-sources/data.tsv',
+      contentType: 'text/tab-separated-values',
+      modality: 'dataset',
+    });
+    const { handler, crawler, tabularParser } = createHandler();
+    await handler.process({
+      id: 'local-tsv',
+      type: 'source_processing',
+      payload: { sourceId: source.id },
+      attemptCount: 1,
+      maxAttempts: 3,
+    } as any);
     expect(tabularParser.parse).toHaveBeenCalledWith(
       expect.any(Buffer),
-      'sources/data.csv',
+      'data.tsv',
     );
-    expect(queue.enqueueIfActive).toHaveBeenCalled();
-    expect(result.segmentCount).toBe(1);
+    expect(crawler.parseFile).not.toHaveBeenCalled();
+  });
 
-    const segments = await db
+  it('retries transient parse failures and marks a permanent parse failure immediately', async () => {
+    const notebook = await seedNotebook();
+    const retrySource = await seedSource(notebook.id, {
+      kind: 'file',
+      title: 'retry.pdf',
+      rawText: '',
+      s3Key: 'pending-sources/retry.pdf',
+      contentType: 'application/pdf',
+    });
+    const retryable = new ParseFileError(
+      'Crawler unavailable',
+      'service_unavailable',
+      true,
+    );
+    const { handler } = createHandler({
+      crawler: { parseFile: vi.fn().mockRejectedValue(retryable) } as any,
+    });
+    await expect(
+      handler.process({
+        id: 'retry-parse',
+        type: 'source_processing',
+        payload: { sourceId: retrySource.id },
+        attemptCount: 1,
+        maxAttempts: 3,
+      } as any),
+    ).rejects.toBe(retryable);
+    let [source] = await db
       .select()
-      .from(sourceSegments)
-      .where(eq(sourceSegments.sourceVersionId, result.sourceVersionId));
+      .from(sources)
+      .where(eq(sources.id, retrySource.id));
+    expect(source.processingStatus).not.toBe('failed');
 
-    expect(segments).toHaveLength(1);
-    expect(segments[0].kind).toBe('table');
-    expect(segments[0].locator).toEqual(
-      expect.objectContaining({ sheetName: 'Sheet 1', cellRange: 'A1:B3' }),
-    );
+    const permanentSource = await seedSource(notebook.id, {
+      kind: 'file',
+      title: 'invalid.pdf',
+      rawText: '',
+      s3Key: 'pending-sources/invalid.pdf',
+      contentType: 'application/pdf',
+    });
+    const permanent = new ParseFileError('Invalid file', 'invalid_file', false);
+    const permanentHandler = createHandler({
+      crawler: { parseFile: vi.fn().mockRejectedValue(permanent) } as any,
+    }).handler;
+    await expect(
+      permanentHandler.process({
+        id: 'permanent-parse',
+        type: 'source_processing',
+        payload: { sourceId: permanentSource.id },
+        attemptCount: 1,
+        maxAttempts: 3,
+      } as any),
+    ).rejects.toBe(permanent);
+    [source] = await db
+      .select()
+      .from(sources)
+      .where(eq(sources.id, permanentSource.id));
+    expect(source.processingStatus).toBe('failed');
   });
 });

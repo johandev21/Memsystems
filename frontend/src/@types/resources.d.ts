@@ -336,6 +336,12 @@ export default interface Resources {
         "parse": {
           "crawlFailed": "We couldn't fetch this webpage. Please try again.",
           "epubCorrupted": "The ebook file appears to be corrupt or invalid.",
+          "fileFailed": "We couldn't parse this document. Please try again.",
+          "fileInvalid": "The document is corrupt, too large, or its format is not supported.",
+          "fileRateLimited": "Document parsing reached the Firecrawl rate limit. Please try again later.",
+          "fileTimeout": "Document parsing timed out. Please try again.",
+          "fileUnauthorized": "Document parsing could not authenticate. Check FIRECRAWL_API_KEY.",
+          "fileUnavailable": "The document parsing service is unavailable. Please try again later.",
           "pptxCorrupted": "The presentation file appears to be corrupt or invalid.",
           "tabularCorrupted": "The data file appears to be corrupt or invalid.",
           "zipCorrupted": "The archive appears to be corrupt or invalid."

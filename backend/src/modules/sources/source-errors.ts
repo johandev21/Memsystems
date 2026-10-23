@@ -25,3 +25,23 @@ export class WebScrapeError extends BadRequestError {
     this.name = 'WebScrapeError';
   }
 }
+
+export type ParseFileErrorCode =
+  | 'unauthorized'
+  | 'invalid_file'
+  | 'rate_limited'
+  | 'timeout'
+  | 'service_unavailable'
+  | 'parse_failed';
+
+export class ParseFileError extends BadRequestError {
+  constructor(
+    message: string,
+    public readonly code: ParseFileErrorCode,
+    public readonly retryable: boolean,
+    options?: DomainErrorOptions,
+  ) {
+    super(message, options);
+    this.name = 'ParseFileError';
+  }
+}

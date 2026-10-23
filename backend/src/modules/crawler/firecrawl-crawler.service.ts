@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Firecrawl } from 'firecrawl';
-import { WebScrapeError } from '../sources/source-errors';
+import { ParseFileError, WebScrapeError } from '../sources/source-errors';
 import type {
   CrawledDocument,
   CrawlerScrapeOptions,
   CrawlerService,
+  ParseFileInput,
+  ParsedFileDocument,
   SearchResultItem,
 } from './crawler.types';
 
@@ -192,6 +194,102 @@ export class FirecrawlCrawlerService implements CrawlerService {
         Date.now() - startedAt,
       );
     }
+  }
+
+  async parseFile(input: ParseFileInput): Promise<ParsedFileDocument> {
+    const startedAt = Date.now();
+    try {
+      const document = await this.client.parse(
+        {
+          data: input.buffer,
+          filename: input.filename,
+          contentType: input.contentType,
+        },
+        { formats: ['markdown'], timeout: this.timeoutMs },
+      );
+      const metadata = document.metadata as
+        (Record<string, unknown> & { title?: unknown }) | undefined;
+      this.logger.log(
+        `Firecrawl file parse succeeded filename="${input.filename}" durationMs=${Date.now() - startedAt}`,
+      );
+      return {
+        markdown: document.markdown ?? '',
+        title: asString(metadata?.title),
+        metadata,
+      };
+    } catch (error: unknown) {
+      throw this.toParseFileError(
+        error,
+        input.filename,
+        Date.now() - startedAt,
+      );
+    }
+  }
+
+  private toParseFileError(
+    error: unknown,
+    filename: string,
+    durationMs: number,
+  ): ParseFileError {
+    const status = errorStatus(error);
+    const detail = error instanceof Error ? error.message : String(error);
+    if (isAuthError(error)) {
+      return new ParseFileError(
+        'Firecrawl rejected the API key — check FIRECRAWL_API_KEY.',
+        'unauthorized',
+        false,
+        { messageKey: 'errors.sources.parse.fileUnauthorized' },
+      );
+    }
+    if (isRateLimitError(error)) {
+      return new ParseFileError(
+        `Firecrawl rate limit hit for ${filename}: slow down and retry later.`,
+        'rate_limited',
+        true,
+        { messageKey: 'errors.sources.parse.fileRateLimited' },
+      );
+    }
+    if (isTimeoutError(error) || status === 408 || status === 504) {
+      return new ParseFileError(
+        `File parse timed out after ${this.timeoutMs}ms: ${filename}`,
+        'timeout',
+        true,
+        { messageKey: 'errors.sources.parse.fileTimeout' },
+      );
+    }
+    if (status !== undefined && status >= 500) {
+      return new ParseFileError(
+        `Firecrawl is unavailable while parsing ${filename}: ${detail}`,
+        'service_unavailable',
+        true,
+        { messageKey: 'errors.sources.parse.fileUnavailable' },
+      );
+    }
+    if (
+      status === 400 ||
+      status === 413 ||
+      status === 415 ||
+      status === 422 ||
+      /invalid file|unsupported file|invalid format|unsupported format|corrupt/i.test(
+        errorNameAndMessage(error),
+      )
+    ) {
+      return new ParseFileError(
+        `Unsupported or invalid file ${filename}: ${detail}`,
+        'invalid_file',
+        false,
+        { messageKey: 'errors.sources.parse.fileInvalid' },
+      );
+    }
+    this.logger.warn(
+      `Firecrawl file parse failed filename="${filename}" durationMs=${durationMs} error="${detail}"`,
+    );
+    return new ParseFileError(
+      `File parse failed for ${filename}: ${detail}`,
+      'parse_failed',
+      true,
+      { messageKey: 'errors.sources.parse.fileFailed' },
+    );
   }
 
   private toWebScrapeError(

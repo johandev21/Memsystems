@@ -7,6 +7,7 @@ import {
   JobQueueService,
 } from '../../src/modules/jobs/job-queue.service';
 import { db, resetDatabase } from '../db';
+import { ParseFileError } from '../../src/modules/sources/source-errors';
 
 const TEST_CONFIG: JobQueueConfig = {
   concurrency: 2,
@@ -193,6 +194,64 @@ describe('JobQueueService', () => {
     expect(afterSecond.attemptCount).toBe(2);
     expect(afterSecond.result).toEqual({ success: true });
     expect(afterSecond.lastError).toBeNull();
+  });
+
+  it('does not retry permanent document parsing errors', async () => {
+    const handler: JobHandler<void, void> = {
+      type: 'permanent_parse_failure',
+      process: vi
+        .fn()
+        .mockRejectedValue(
+          new ParseFileError('Invalid document', 'invalid_file', false),
+        ),
+    };
+    queue.registerHandler(handler);
+    const job = await queue.enqueue(handler.type, undefined);
+
+    await queue.drain();
+    await queue.drain();
+
+    const [stored] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+    expect(stored.status).toBe('failed');
+    expect(stored.attemptCount).toBe(1);
+    expect(stored.completedAt).toBeInstanceOf(Date);
+    expect(stored.nextAttemptAt).toBeNull();
+    expect(handler.process).toHaveBeenCalledOnce();
+  });
+
+  it('retries transient document parsing errors through all three attempts', async () => {
+    const handler: JobHandler<void, void> = {
+      type: 'transient_parse_failure',
+      process: vi
+        .fn()
+        .mockRejectedValue(
+          new ParseFileError('Rate limited', 'rate_limited', true),
+        ),
+    };
+    queue.registerHandler(handler);
+    const job = await queue.enqueue(handler.type, undefined, {
+      backoffBaseMs: 1000,
+    });
+
+    for (const attempt of [1, 2, 3]) {
+      const startedAt = Date.now();
+      await queue.drain();
+      const [stored] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+      expect(stored.attemptCount).toBe(attempt);
+      expect(stored.status).toBe(attempt === 3 ? 'failed' : 'pending');
+      if (attempt < 3) {
+        expect(stored.nextAttemptAt!.getTime()).toBeGreaterThanOrEqual(
+          startedAt + 1000 * 2 ** (attempt - 1),
+        );
+        await db
+          .update(jobs)
+          .set({ nextAttemptAt: new Date(Date.now() - 1000) })
+          .where(eq(jobs.id, job.id));
+      } else {
+        expect(stored.completedAt).toBeInstanceOf(Date);
+      }
+    }
+    expect(handler.process).toHaveBeenCalledTimes(3);
   });
 
   it('marks job failed when maximum attempts are exceeded', async () => {

@@ -445,7 +445,11 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
       },
     );
 
-    if (jobRow.attemptCount >= jobRow.maxAttempts) {
+    const permanentFailure =
+      err instanceof DomainError &&
+      'retryable' in err &&
+      err.retryable === false;
+    if (permanentFailure || jobRow.attemptCount >= jobRow.maxAttempts) {
       await this.db
         .update(jobs)
         .set({

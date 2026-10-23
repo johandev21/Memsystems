@@ -27,8 +27,21 @@ export interface CrawlerScrapeOptions {
   onlyMainContent?: boolean;
 }
 
+export interface ParseFileInput {
+  buffer: Buffer;
+  filename: string;
+  contentType?: string;
+}
+
+export interface ParsedFileDocument {
+  markdown: string;
+  title?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface CrawlerService {
   scrape(url: string, options?: CrawlerScrapeOptions): Promise<CrawledDocument>;
+  parseFile(input: ParseFileInput): Promise<ParsedFileDocument>;
   search(query: string, limit?: number): Promise<SearchResultItem[]>;
 }
 

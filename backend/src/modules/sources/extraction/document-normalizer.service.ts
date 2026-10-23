@@ -6,6 +6,7 @@ import { measureHtmlLinkDensity } from '../source-quality.service';
 import type {
   FirecrawlDocumentInput,
   FirecrawlMetaInput,
+  ParsedFileDocument,
 } from '../../crawler/crawler.types';
 import type { VisionExtractionResult } from './vision-extraction.port';
 import type { TranscriptionResult } from './transcription.port';
@@ -77,6 +78,7 @@ export interface NormalizedDocument {
   fetchedUrl?: string;
   language?: string;
   author?: string;
+  pageCount?: number;
   siteName?: string;
   publishedAt?: string;
   modifiedAt?: string;
@@ -247,13 +249,14 @@ export function sectionsFromHtml(articleHtml: string): DocumentSection[] {
   }));
 }
 
-const FENCE_RE = /^```/;
+const FENCE_OPEN_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+const FENCE_CLOSE_RE = /^ {0,3}(`+|~+)[ \t]*$/;
 
 export function sectionsFromMarkdown(markdown: string): DocumentSection[] {
   const lines = markdown.split('\n');
   const sections: SectionAccumulator[] = [];
   let current: SectionAccumulator = { headingPath: [], blocks: [] };
-  let inFence = false;
+  let fence: { marker: string; length: number } | undefined;
 
   const finalize = (): void => {
     if (current.blocks.length > 0) {
@@ -263,25 +266,36 @@ export function sectionsFromMarkdown(markdown: string): DocumentSection[] {
   };
 
   for (const line of lines) {
-    if (FENCE_RE.test(line)) {
-      inFence = !inFence;
+    if (fence) {
+      const closeMatch = line.match(FENCE_CLOSE_RE);
+      if (
+        closeMatch &&
+        closeMatch[1][0] === fence.marker &&
+        closeMatch[1].length >= fence.length
+      ) {
+        fence = undefined;
+      }
       current.blocks.push(line);
       continue;
     }
-    if (!inFence) {
-      const match = line.match(/^(#{1,6})\s+(.+?)\s*$/);
-      if (match) {
-        const level = match[1].length;
-        const headingPath = [
-          ...current.headingPath.slice(0, level - 1),
-          match[2].trim(),
-        ];
-        finalize();
-        current = { headingPath, blocks: [line] };
-        continue;
-      }
+    const openMatch = line.match(FENCE_OPEN_RE);
+    if (openMatch && !(openMatch[1][0] === '`' && openMatch[2].includes('`'))) {
+      fence = { marker: openMatch[1][0], length: openMatch[1].length };
+      current.blocks.push(line);
+      continue;
     }
-    if (inFence || line.trim() || current.blocks.length > 0) {
+    const match = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (match) {
+      const level = match[1].length;
+      const headingPath = [
+        ...current.headingPath.slice(0, level - 1),
+        match[2].trim(),
+      ];
+      finalize();
+      current = { headingPath, blocks: [line] };
+      continue;
+    }
+    if (line.trim() || current.blocks.length > 0) {
       current.blocks.push(line);
     }
   }
@@ -390,6 +404,36 @@ export class DocumentNormalizerService {
       contentType: meta.contentType,
       contentHash: contentHashOf(normalized),
       sections,
+    };
+  }
+
+  fromParsedFileResult(
+    doc: ParsedFileDocument,
+    meta: { fileName: string; contentType: string },
+  ): NormalizedDocument {
+    const markdown = doc.markdown ?? '';
+    const text = normalizeProse(markdown);
+    const metadata = doc.metadata ?? {};
+    const pageCount = ['numPages', 'totalPages', 'pageCount']
+      .map((key) => metadata[key])
+      .find(
+        (value): value is number =>
+          typeof value === 'number' && Number.isSafeInteger(value) && value > 0,
+      );
+
+    return {
+      title:
+        doc.title?.trim() ||
+        asMetadataString(metadata, 'title')?.trim() ||
+        meta.fileName,
+      text,
+      markdown,
+      author: asMetadataString(metadata, 'author')?.trim(),
+      pageCount,
+      extractionMethod: 'firecrawl',
+      contentType: meta.contentType,
+      contentHash: contentHashOf(text),
+      sections: sectionsFromMarkdown(markdown),
     };
   }
 

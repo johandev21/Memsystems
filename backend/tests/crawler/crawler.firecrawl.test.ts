@@ -74,6 +74,143 @@ describe('FirecrawlCrawlerService', () => {
     expect(result.metadata).toMatchObject({ title: 'T', language: 'en' });
   });
 
+  it('parses files through the SDK and maps markdown metadata', async () => {
+    const parseMock = vi.spyOn(Firecrawl.prototype, 'parse').mockResolvedValue({
+      markdown: '# Parsed',
+      metadata: { title: 'Document title', author: 'A' },
+    });
+    const service = new FirecrawlCrawlerService();
+    const buffer = Buffer.from('file bytes');
+
+    await expect(
+      service.parseFile({
+        buffer,
+        filename: 'document.pdf',
+        contentType: 'application/pdf',
+      }),
+    ).resolves.toEqual({
+      markdown: '# Parsed',
+      title: 'Document title',
+      metadata: { title: 'Document title', author: 'A' },
+    });
+    expect(parseMock).toHaveBeenCalledWith(
+      {
+        data: buffer,
+        filename: 'document.pdf',
+        contentType: 'application/pdf',
+      },
+      { formats: ['markdown'], timeout: 30_000 },
+    );
+  });
+
+  it('returns empty markdown when file parse output has no markdown', async () => {
+    vi.spyOn(Firecrawl.prototype, 'parse').mockResolvedValue({
+      metadata: { title: 'Empty result' },
+    });
+    const service = new FirecrawlCrawlerService();
+
+    await expect(
+      service.parseFile({ buffer: Buffer.from('x'), filename: 'empty.pdf' }),
+    ).resolves.toEqual({
+      markdown: '',
+      title: 'Empty result',
+      metadata: { title: 'Empty result' },
+    });
+  });
+
+  it.each([401, 403])(
+    'classifies HTTP %s authentication failures as permanent',
+    async (status) => {
+      vi.spyOn(Firecrawl.prototype, 'parse').mockRejectedValue(
+        Object.assign(new Error('Invalid API key'), { status }),
+      );
+      const service = new FirecrawlCrawlerService();
+
+      await expect(
+        service.parseFile({ buffer: Buffer.from('x'), filename: 'a.pdf' }),
+      ).rejects.toMatchObject({
+        code: 'unauthorized',
+        retryable: false,
+        messageKey: 'errors.sources.parse.fileUnauthorized',
+      });
+    },
+  );
+
+  it('classifies rate limits and gateway timeouts as retryable', async () => {
+    const service = new FirecrawlCrawlerService();
+    const parseMock = vi.spyOn(Firecrawl.prototype, 'parse');
+    for (const [failure, code] of [
+      [
+        Object.assign(new Error('Too many requests'), { statusCode: 429 }),
+        'rate_limited',
+      ],
+      [
+        Object.assign(new Error('Request timeout'), { statusCode: 408 }),
+        'timeout',
+      ],
+      [
+        Object.assign(new Error('Gateway timeout'), { statusCode: 504 }),
+        'timeout',
+      ],
+    ] as const) {
+      parseMock.mockRejectedValueOnce(failure);
+      await expect(
+        service.parseFile({ buffer: Buffer.from('x'), filename: 'a.pdf' }),
+      ).rejects.toMatchObject({
+        code,
+        retryable: true,
+        messageKey:
+          code === 'rate_limited'
+            ? 'errors.sources.parse.fileRateLimited'
+            : 'errors.sources.parse.fileTimeout',
+      });
+    }
+  });
+
+  it('classifies network and server failures as retryable', async () => {
+    const service = new FirecrawlCrawlerService();
+    const parseMock = vi.spyOn(Firecrawl.prototype, 'parse');
+    parseMock.mockRejectedValueOnce(
+      Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }),
+    );
+    await expect(
+      service.parseFile({ buffer: Buffer.from('x'), filename: 'a.pdf' }),
+    ).rejects.toMatchObject({
+      code: 'parse_failed',
+      retryable: true,
+      messageKey: 'errors.sources.parse.fileFailed',
+    });
+
+    parseMock.mockRejectedValueOnce(
+      Object.assign(new Error('Internal server error'), { statusCode: 503 }),
+    );
+    await expect(
+      service.parseFile({ buffer: Buffer.from('x'), filename: 'a.pdf' }),
+    ).rejects.toMatchObject({
+      code: 'service_unavailable',
+      retryable: true,
+      messageKey: 'errors.sources.parse.fileUnavailable',
+    });
+  });
+
+  it.each([400, 413, 415, 422])(
+    'classifies HTTP %s file rejections as permanent',
+    async (status) => {
+      vi.spyOn(Firecrawl.prototype, 'parse').mockRejectedValue(
+        Object.assign(new Error('File rejected'), { status }),
+      );
+      const service = new FirecrawlCrawlerService();
+
+      await expect(
+        service.parseFile({ buffer: Buffer.from('x'), filename: 'a.bin' }),
+      ).rejects.toMatchObject({
+        code: 'invalid_file',
+        retryable: false,
+        messageKey: 'errors.sources.parse.fileInvalid',
+      });
+    },
+  );
+
   it('prefers metadata url/sourceURL for canonicalUrl', async () => {
     vi.spyOn(Firecrawl.prototype, 'scrape').mockResolvedValue(
       scrapeSuccess({

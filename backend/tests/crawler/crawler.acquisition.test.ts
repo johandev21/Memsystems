@@ -41,6 +41,7 @@ function createHarness() {
   const scrape = vi.fn();
   const crawler = {
     scrape,
+    parseFile: vi.fn(),
   } as unknown as CrawlerService;
 
   const service = new SourceAcquisitionService(

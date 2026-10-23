@@ -61,6 +61,7 @@ function createWebSearchService(
   notebooksService: NotebooksService,
 ) {
   const crawler = {
+    parseFile: vi.fn(),
     search: vi.fn().mockResolvedValue([
       {
         title: 'Philosophy Basics',

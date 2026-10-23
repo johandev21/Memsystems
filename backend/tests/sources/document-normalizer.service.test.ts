@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DocumentNormalizerService,
   NORMALIZATION_VERSION,
+  contentHashOf,
   sectionsFromHtml,
   sectionsFromMarkdown,
 } from '../../src/modules/sources/extraction/document-normalizer.service';
@@ -80,6 +81,141 @@ describe('DocumentNormalizerService.fromFile', () => {
     });
     expect(doc.sections).toHaveLength(1);
     expect(doc.markdown).toBeUndefined();
+  });
+});
+
+describe('DocumentNormalizerService.fromParsedFileResult', () => {
+  it('preserves parsed Markdown structure and deterministic metadata', () => {
+    const markdown = [
+      '# Report',
+      '',
+      '## Findings',
+      '',
+      '| Item | Count |',
+      '| --- | ---: |',
+      '| A | 2 |',
+      '',
+      '- First',
+      '- Second',
+      '',
+      '```ts',
+      'const heading = "# inside code";',
+      '```',
+      '',
+      '### Details',
+      '',
+      'More text.',
+    ].join('\n');
+    const doc = service.fromParsedFileResult(
+      {
+        markdown,
+        title: '  Parsed report  ',
+        metadata: { author: '  Jane Doe ', pageCount: 12 },
+      },
+      { fileName: 'report.pdf', contentType: 'application/pdf' },
+    );
+
+    expect(doc.extractionMethod).toBe('firecrawl');
+    expect(doc.title).toBe('Parsed report');
+    expect(doc.author).toBe('Jane Doe');
+    expect(doc.pageCount).toBe(12);
+    expect(doc.contentType).toBe('application/pdf');
+    expect(doc.contentHash).toBe(contentHashOf(doc.text));
+    expect(doc.sections.map((section) => section.headingPath)).toEqual([
+      ['Report'],
+      ['Report', 'Findings'],
+      ['Report', 'Findings', 'Details'],
+    ]);
+    expect(doc.sections.map((section) => section.ordinal)).toEqual([0, 1, 2]);
+    expect(doc.sections[1].content).toContain('| A | 2 |');
+    expect(doc.sections[1].content).toContain('- First');
+    expect(doc.sections[1].content).toContain(
+      'const heading = "# inside code";',
+    );
+  });
+
+  it('recognizes longer, tilde, and indented code fences', () => {
+    const markdown = [
+      '# Document',
+      '',
+      '````md',
+      '```',
+      '# Still code',
+      '```',
+      '```',
+      '````',
+      '',
+      '   ~~~text',
+      '   ```',
+      '## Also code',
+      '   ~~~',
+      '',
+      '## Actual heading',
+      '',
+      'Content.',
+    ].join('\n');
+    const doc = service.fromParsedFileResult(
+      { markdown },
+      { fileName: 'document.pdf', contentType: 'application/pdf' },
+    );
+
+    expect(doc.sections.map((section) => section.headingPath)).toEqual([
+      ['Document'],
+      ['Document', 'Actual heading'],
+    ]);
+    expect(doc.sections[0].content).toContain('# Still code');
+    expect(doc.sections[0].content).toContain('## Also code');
+  });
+
+  it('falls back from document title to metadata title and then filename', () => {
+    const metadataTitle = service.fromParsedFileResult(
+      { markdown: 'Text.', metadata: { title: '  Metadata title  ' } },
+      { fileName: 'source.pdf', contentType: 'application/pdf' },
+    );
+    const fileName = service.fromParsedFileResult(
+      { markdown: 'Text.', title: ' ', metadata: { title: ' ' } },
+      { fileName: 'source.pdf', contentType: 'application/pdf' },
+    );
+
+    expect(metadataTitle.title).toBe('Metadata title');
+    expect(fileName.title).toBe('source.pdf');
+    expect(fileName.pageCount).toBeUndefined();
+  });
+
+  it('prefers parsed page count and falls back to total then legacy page count', () => {
+    const parsedCount = service.fromParsedFileResult(
+      {
+        markdown: '',
+        metadata: { numPages: 8, totalPages: 10, pageCount: 12 },
+      },
+      { fileName: 'source.pdf', contentType: 'application/pdf' },
+    );
+    const totalCount = service.fromParsedFileResult(
+      {
+        markdown: '',
+        metadata: { numPages: 0, totalPages: 10, pageCount: 12 },
+      },
+      { fileName: 'source.pdf', contentType: 'application/pdf' },
+    );
+    const legacyCount = service.fromParsedFileResult(
+      {
+        markdown: '',
+        metadata: { numPages: '8', totalPages: -1, pageCount: 12 },
+      },
+      { fileName: 'source.pdf', contentType: 'application/pdf' },
+    );
+    const invalidCounts = service.fromParsedFileResult(
+      {
+        markdown: '',
+        metadata: { numPages: 2.5, totalPages: NaN, pageCount: 0 },
+      },
+      { fileName: 'source.pdf', contentType: 'application/pdf' },
+    );
+
+    expect(parsedCount.pageCount).toBe(8);
+    expect(totalCount.pageCount).toBe(10);
+    expect(legacyCount.pageCount).toBe(12);
+    expect(invalidCounts.pageCount).toBeUndefined();
   });
 });
 
