@@ -106,6 +106,8 @@ Copia `backend/.env.example` a `backend/.env.local` y completa los valores neces
 
 Para guardar una clave de AI Gateway o de Voyage desde la aplicación, configura también `CREDENTIALS_ENCRYPTION_KEY`.
 
+La adquisición de fuentes web y la extracción de archivos PDF, EPUB, DOCX, PPTX/PPTM, XLSX, XLS y CSV usan Firecrawl Cloud y requieren `FIRECRAWL_API_KEY`. Firecrawl Cloud acepta archivos de hasta 50 MB por solicitud. Los archivos TXT y Markdown se procesan localmente sin costo de Firecrawl; los flujos dedicados para medios no cambian. `FIRECRAWL_API_URL` es opcional y permite apuntar a una instancia autoalojada compatible con `/v2/parse`. Si falta la clave, la extracción falla claramente: en producción no se sustituye silenciosamente por una extracción local con pérdida.
+
 Para el desarrollo local se puede usar el almacenamiento en disco incluido en el proyecto. La configuración correspondiente está en `backend/.env.example`.
 
 El frontend no necesita un `.env.local`: sus únicas variables (`VITE_HOST`, `NESTJS_BACKEND_URL`, `VITE_USE_POLLING`, `VITE_POLLING_INTERVAL`) son opcionales y se leen del entorno del proceso, no de los archivos `.env` de Vite. Están documentadas en `frontend/.env.example`.
