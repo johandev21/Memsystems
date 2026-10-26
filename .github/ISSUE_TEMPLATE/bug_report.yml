@@ -1,0 +1,54 @@
+name: Reportar un error
+description: Informa un comportamiento incorrecto o una regresión.
+title: "[Error]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe el problema con información suficiente para reproducirlo. Elimina claves, tokens, datos personales y contenido privado antes de enviar.
+  - type: textarea
+    id: summary
+    attributes:
+      label: ¿Qué ocurrió?
+      description: Describe el resultado observado y el que esperabas.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Pasos para reproducir
+      description: Incluye los pasos mínimos y cualquier configuración necesaria.
+      placeholder: |
+        1. Abre...
+        2. Selecciona...
+        3. Observa...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión o commit
+      description: Indica la versión publicada o el hash del commit.
+    validations:
+      required: false
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Entorno
+      options:
+        - Desarrollo local
+        - Docker de desarrollo
+        - Docker de producción local
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Mensajes de error o registros
+      description: Elimina secretos, tokens, datos personales y contenido privado.
+      render: text
+    validations:
+      required: false

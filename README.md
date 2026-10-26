@@ -251,3 +251,7 @@ docs/       Documentación técnica del proyecto
 ## Estado del proyecto
 
 El proyecto se encuentra en desarrollo. Algunas funciones y configuraciones pueden cambiar mientras evoluciona la aplicación.
+
+## Licencia
+
+Memsystems se distribuye bajo la licencia [Apache 2.0](LICENSE).
