@@ -6,8 +6,8 @@ import {
   createNotebook as createNotebookApi,
   deleteNotebook as deleteNotebookApi,
   updateNotebook as updateNotebookApi,
-} from "@/features/notebooks/api/notebooks";
-import type { Notebook } from "@/features/notebooks/types";
+  type Notebook,
+} from "@/features/notebooks";
 import {
   createLibraryFolder,
   deleteLibraryFolder,

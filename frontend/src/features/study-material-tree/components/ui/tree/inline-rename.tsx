@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { InlineRename as SharedInlineRename } from "@/components/ui/tree";
+import { InlineRename as SharedInlineRename } from "@/shared/components/ui/tree";
 import { useTreeControllerContext } from "../controller-state";
 
 export type InlineRenameProps = {

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   Drawer,
   DrawerClose,
@@ -8,8 +8,8 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
+} from "@/shared/components/ui/drawer";
+import { Input } from "@/shared/components/ui/input";
 import type { LibraryItem } from "../model/library-sort";
 import { MAX_TITLE_LENGTH } from "../model/title";
 

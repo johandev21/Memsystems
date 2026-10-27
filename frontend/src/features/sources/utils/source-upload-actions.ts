@@ -1,6 +1,6 @@
 import { createFileSource, createTextSource, createUrlSource } from "../api/sources";
 import { useUploadStore, type PendingSourceUpload } from "../hooks/upload-store";
-import type { Source } from "../types";
+import type { Source } from "../types/source.types";
 
 interface UploadActionContext {
   notebookId: string;

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { FolderDTO } from "../../types";
+import type { FolderDTO } from "../../types/folder.types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import {
   buildStudyMaterialTree,

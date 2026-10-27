@@ -1,7 +1,7 @@
 import {
   InputGroup,
   InputGroupAddon,
-} from "@/components/ui/input-group";
+} from "@/shared/components/ui/input-group";
 import { cn } from "@/shared/utils/cn";
 import type { FileUIPart, SourceDocumentUIPart } from "ai";
 import { nanoid } from "nanoid";
@@ -49,53 +49,6 @@ export type PromptInputProps = Omit<HTMLAttributes<HTMLFormElement>, "onSubmit" 
     event: FormEvent<HTMLFormElement>,
   ) => void | Promise<void>;
 };
-
-export function PromptInputFormShell({
-  accept,
-  multiple,
-  className,
-  inputRef,
-  formRef,
-  handleChange,
-  handleSubmit,
-  children,
-  formProps,
-}: {
-  accept?: string;
-  multiple?: boolean;
-  className?: string;
-  inputRef: RefObject<HTMLInputElement | null>;
-  formRef: RefObject<HTMLFormElement | null>;
-  handleChange: ChangeEventHandler<HTMLInputElement>;
-  handleSubmit: FormEventHandler<HTMLFormElement>;
-  children: ReactNode;
-  formProps: HTMLAttributes<HTMLFormElement>;
-}) {
-  const { t } = useTranslation("ai");
-
-  return (
-    <>
-      <input
-        accept={accept}
-        aria-label={t("promptInput.uploadFiles")}
-        className="hidden"
-        multiple={multiple}
-        onChange={handleChange}
-        ref={inputRef}
-        title={t("promptInput.uploadFiles")}
-        type="file"
-      />
-      <form
-        className={cn("w-full", className)}
-        onSubmit={handleSubmit}
-        ref={formRef}
-        {...formProps}
-      >
-        <InputGroup className="overflow-hidden">{children}</InputGroup>
-      </form>
-    </>
-  );
-}
 
 export const PromptInput = ({
   className,
@@ -256,6 +209,53 @@ export const PromptInput = ({
     </LocalAttachmentsContext.Provider>
   );
 };
+
+export function PromptInputFormShell({
+  accept,
+  multiple,
+  className,
+  inputRef,
+  formRef,
+  handleChange,
+  handleSubmit,
+  children,
+  formProps,
+}: {
+  accept?: string;
+  multiple?: boolean;
+  className?: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+  formRef: RefObject<HTMLFormElement | null>;
+  handleChange: ChangeEventHandler<HTMLInputElement>;
+  handleSubmit: FormEventHandler<HTMLFormElement>;
+  children: ReactNode;
+  formProps: HTMLAttributes<HTMLFormElement>;
+}) {
+  const { t } = useTranslation("ai");
+
+  return (
+    <>
+      <input
+        accept={accept}
+        aria-label={t("promptInput.uploadFiles")}
+        className="hidden"
+        multiple={multiple}
+        onChange={handleChange}
+        ref={inputRef}
+        title={t("promptInput.uploadFiles")}
+        type="file"
+      />
+      <form
+        className={cn("w-full", className)}
+        onSubmit={handleSubmit}
+        ref={formRef}
+        {...formProps}
+      >
+        <InputGroup className="overflow-hidden">{children}</InputGroup>
+      </form>
+    </>
+  );
+}
 
 export type PromptInputBodyProps = HTMLAttributes<HTMLDivElement>;
 

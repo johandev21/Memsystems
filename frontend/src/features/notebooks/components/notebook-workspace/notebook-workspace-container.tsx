@@ -5,13 +5,10 @@ import { NotebookModelProvider } from "../../context/notebook-model-context";
 import { useNotebookPanels } from "../../hooks/use-notebook-panels";
 import { useSourcesPanel } from "../../hooks/use-sources-panel";
 import { useStudioDialogs } from "../../hooks/use-studio-dialogs";
-import { ChatSessionProvider } from "@/features/notebook-chat/context/chat-session";
+import { ChatSessionProvider } from "@/features/notebook-chat";
+import { loadGenerateBriefDialog } from "@/features/study-material-generation";
 
-const GenerateBriefDialog = lazy(() =>
-  import("@/features/study-material-generation/components/GenerateBriefDialog").then(
-    (m) => ({ default: m.GenerateBriefDialog }),
-  ),
-);
+const GenerateBriefDialog = lazy(loadGenerateBriefDialog);
 
 export interface NotebookWorkspaceContainerProps {
   notebookId: string;

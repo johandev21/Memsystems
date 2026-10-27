@@ -1,5 +1,5 @@
 import { createRouter } from "@tanstack/react-router";
-import { RouteLoadingFallback } from "../../components/feedback/route-loading-fallback";
+import { RouteLoadingFallback } from "./route-loading-fallback";
 import { routeTree } from "../../routeTree.gen";
 
 export interface RouterContext {

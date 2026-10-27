@@ -151,12 +151,16 @@
   "trash": {
     "action": "Open Trash",
     "cardDescription": "View, restore, or permanently delete items.",
+    "deleteFailedToast": "Failed to delete item",
+    "deleteSuccessToast": "Permanently deleted",
     "description": "Items in trash are automatically deleted forever after 30 days.",
     "modal": {
       "confirmDeleteDescription": "Permanently delete \"{{name}}\"? This cannot be undone.",
       "confirmDeleteTitle": "Delete Forever",
       "daysRemaining": "{{count}}d left",
+      "deleteFailedToast": "Failed to delete \"{{name}}\"",
       "deleteForever": "Delete forever",
+      "deleteSuccessToast": "Permanently deleted \"{{name}}\"",
       "emptyDescription": "Deleted folders, notebooks, sources, and study materials stay recoverable here for 30 days.",
       "emptyFailedToast": "Failed to empty trash",
       "emptySuccessToast": "Trash emptied",
@@ -170,10 +174,14 @@
       "noResults": "No deleted items found matching \"{{query}}\"",
       "recentlyDeletedHeading": "Recently Deleted",
       "restore": "Restore",
+      "restoreFailedToast": "Failed to restore \"{{name}}\"",
+      "restoreSuccessToast": "Restored \"{{name}}\"",
       "searchPlaceholder": "Search deleted items...",
       "subtitle": "Items are permanently deleted after 30 days.",
       "title": "Trash"
     },
+    "restoreFailedToast": "Failed to restore item",
+    "restoreSuccessToast": "Restored from Trash",
     "title": "Trash"
   }
 }

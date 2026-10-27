@@ -1,4 +1,4 @@
-import { treeVariants, type TreeSize } from "@/components/ui/tree";
+import { treeVariants, type TreeSize } from "@/shared/components/ui/tree";
 
 export type StudyMaterialsTreeSize = TreeSize;
 export const studyMaterialsTreeVariants = treeVariants;

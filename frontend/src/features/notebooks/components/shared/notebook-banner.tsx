@@ -1,20 +1,7 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { ImageUploadDialog } from "../dialogs/image-upload-dialog";
-import { EDIT_NOTEBOOK_EVENT } from "../dialogs/notebook-settings-dialog";
 import { NotebookDescription } from "./notebook-description";
 import { BannerCanvas } from "./banner-canvas";
-import {
-  DEFAULT_FOCAL_POINT,
-  type BannerDraftState,
-  bannerDraftReducer,
-  saveNotebookBannerChanges,
-} from "./notebook-banner-draft";
-import { resolveGroundingMode } from "../../model/grounding-mode";
-import { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
-import type { BannerUploadPayload } from "../../utils/banner-variants";
+import { useNotebookBannerEditor } from "../../hooks/use-notebook-banner-editor";
 import type { GroundingMode } from "../../model/grounding-mode";
 
 export interface NotebookBannerProps {
@@ -30,211 +17,71 @@ export interface NotebookBannerProps {
   isUntitled: boolean;
 }
 
-export function NotebookBanner({
-  notebookId,
-  title,
-  description,
-  icon,
-  groundingMode,
-  bannerUrl,
-  bannerVariants,
-  bannerFocalPoint,
-  updatedAt,
-  isUntitled,
-}: NotebookBannerProps) {
-  const { t, i18n } = useTranslation("notebooks");
-  const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
-  const bannerUploadRef = useRef<BannerUploadPayload | null>(null);
+export function NotebookBanner(props: NotebookBannerProps) {
+  const {
+    notebookId,
+    title,
+    description,
+    icon,
+    groundingMode,
+    bannerUrl,
+    bannerVariants,
+    bannerFocalPoint,
+    updatedAt,
+    isUntitled,
+  } = props;
 
-  const createInitialDraft = useCallback(
-    (): BannerDraftState => ({
-      title,
-      description: description ?? "",
-      icon: icon ?? "notebook",
-      groundingMode: resolveGroundingMode(undefined, groundingMode),
-      focalPoint: bannerFocalPoint ?? DEFAULT_FOCAL_POINT,
-      previewUrl: null,
-      bannerRemoved: false,
-      imageError: false,
-    }),
-    [bannerFocalPoint, description, groundingMode, icon, title],
-  );
-
-  const [draft, dispatch] = useReducer(bannerDraftReducer, undefined, createInitialDraft);
-
-  const resetDraft = useCallback(() => {
-    if (draft.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(draft.previewUrl);
-    bannerUploadRef.current = null;
-    dispatch({ type: "RESET", payload: createInitialDraft() });
-  }, [createInitialDraft, draft.previewUrl]);
-
-  const beginEditing = useCallback(() => {
-    resetDraft();
-    setIsEditing(true);
-  }, [resetDraft]);
-
-  const beginEditingRef = useRef(beginEditing);
-  useEffect(() => {
-    beginEditingRef.current = beginEditing;
-  }, [beginEditing]);
-
-  useEffect(() => {
-    const handleEditRequest = (event: Event) => {
-      const detail = (event as CustomEvent<{ notebookId?: string }>).detail;
-      if (detail?.notebookId === notebookId) beginEditingRef.current();
-    };
-    window.addEventListener(EDIT_NOTEBOOK_EVENT, handleEditRequest);
-    return () => window.removeEventListener(EDIT_NOTEBOOK_EVENT, handleEditRequest);
-  }, [notebookId]);
-
-  useEffect(() => {
-    return () => {
-      if (draft.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(draft.previewUrl);
-    };
-  }, [draft.previewUrl]);
-
-  const formattedDate = useMemo(
-    () =>
-      new Date(updatedAt).toLocaleDateString(i18n.resolvedLanguage ?? "en", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-    [updatedAt, i18n.resolvedLanguage],
-  );
-
-  const visibleBannerUrl = draft.bannerRemoved ? null : (draft.previewUrl ?? bannerUrl ?? null);
-  const visibleFocalPoint = isEditing ? draft.focalPoint : (bannerFocalPoint ?? DEFAULT_FOCAL_POINT);
-
-  const focalPointDrag = useBannerFocalPointDrag({
-    enabled: isEditing && !!visibleBannerUrl,
-    focalPoint: draft.focalPoint,
-    onChange: (focalPoint) => dispatch({ type: "SET_FOCAL_POINT", focalPoint }),
+  const editor = useNotebookBannerEditor({
+    notebookId,
+    title,
+    description,
+    icon,
+    groundingMode,
+    bannerUrl,
+    bannerVariants,
+    bannerFocalPoint,
+    updatedAt,
   });
-
-  const handleBannerKeyDown = (e: React.KeyboardEvent) => {
-    if (!isEditing || !visibleBannerUrl) return;
-    const STEP = 0.05;
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      dispatch({
-        type: "SET_FOCAL_POINT",
-        focalPoint: { ...draft.focalPoint, y: Math.max(0, draft.focalPoint.y - STEP) },
-      });
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      dispatch({
-        type: "SET_FOCAL_POINT",
-        focalPoint: { ...draft.focalPoint, y: Math.min(1, draft.focalPoint.y + STEP) },
-      });
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      dispatch({
-        type: "SET_FOCAL_POINT",
-        focalPoint: { ...draft.focalPoint, x: Math.max(0, draft.focalPoint.x - STEP) },
-      });
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      dispatch({
-        type: "SET_FOCAL_POINT",
-        focalPoint: { ...draft.focalPoint, x: Math.min(1, draft.focalPoint.x + STEP) },
-      });
-    }
-  };
-
-  const handleSelectFile = (payload: BannerUploadPayload) => {
-    if (draft.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(draft.previewUrl);
-    bannerUploadRef.current = payload;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === "string") {
-        dispatch({ type: "SET_PREVIEW", previewUrl: reader.result });
-      }
-    };
-    reader.readAsDataURL(payload.file);
-  };
-
-  const handleCancel = () => {
-    resetDraft();
-    setIsEditing(false);
-  };
-
-  const handleSave = async () => {
-    const trimmedTitle = draft.title.trim();
-    if (!trimmedTitle) {
-      toast.error(t("banner.titleRequired"));
-      return;
-    }
-    setIsSaving(true);
-    try {
-      await saveNotebookBannerChanges({
-        notebookId,
-        title,
-        description,
-        icon,
-        groundingMode,
-        bannerUrl,
-        bannerFocalPoint,
-        draft: { ...draft, title: trimmedTitle },
-        bannerUpload: bannerUploadRef.current,
-        queryClient,
-      });
-      toast.success(t("banner.updated"));
-      setIsEditing(false);
-      bannerUploadRef.current = null;
-      dispatch({ type: "RESET", payload: createInitialDraft() });
-    } catch {
-      toast.error(t("banner.updateFailed"));
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <div className="group/header mb-6 flex flex-col gap-3">
       <BannerCanvas
-        containerRef={focalPointDrag.containerRef}
-        isEditing={isEditing}
-        visibleBannerUrl={visibleBannerUrl}
-        visibleBannerVariants={isEditing && draft.previewUrl ? null : bannerVariants}
-        visibleFocalPoint={visibleFocalPoint}
-        imageError={draft.imageError}
-        onImageError={() => dispatch({ type: "SET_IMAGE_ERROR", error: true })}
-        focalPointDrag={focalPointDrag}
-        onKeyDown={handleBannerKeyDown}
-        isSaving={isSaving}
-        onOpenImageDialog={() => setImageDialogOpen(true)}
-        onRemoveBanner={() => {
-          bannerUploadRef.current = null;
-          dispatch({ type: "REMOVE_BANNER" });
-        }}
-        onCancel={handleCancel}
-        onSave={handleSave}
-        onBeginEditing={beginEditing}
-        draftTitle={draft.title}
-        onDraftTitleChange={(nextTitle) => dispatch({ type: "SET_TITLE", title: nextTitle })}
-        formattedDate={formattedDate}
-        draftIcon={draft.icon}
-        onDraftIconChange={(nextIcon) => dispatch({ type: "SET_ICON", icon: nextIcon })}
+        containerRef={editor.focalPointDrag.containerRef}
+        isEditing={editor.isEditing}
+        visibleBannerUrl={editor.visibleBannerUrl}
+        visibleBannerVariants={editor.visibleBannerVariants}
+        visibleFocalPoint={editor.visibleFocalPoint}
+        imageError={editor.draft.imageError}
+        onImageError={editor.handleImageError}
+        focalPointDrag={editor.focalPointDrag}
+        onKeyDown={editor.handleBannerKeyDown}
+        isSaving={editor.isSaving}
+        onOpenImageDialog={() => editor.setImageDialogOpen(true)}
+        onRemoveBanner={editor.handleRemoveBanner}
+        onCancel={editor.handleCancel}
+        onSave={editor.handleSave}
+        onBeginEditing={editor.beginEditing}
+        draftTitle={editor.draft.title}
+        onDraftTitleChange={editor.handleDraftTitleChange}
+        formattedDate={editor.formattedDate}
+        draftIcon={editor.draft.icon}
+        onDraftIconChange={editor.handleDraftIconChange}
         icon={icon}
         title={title}
         isUntitled={isUntitled}
       />
 
       <NotebookDescription
-        description={isEditing ? draft.description : (description ?? "")}
-        isEditing={isEditing}
-        onChange={(nextDescription) => dispatch({ type: "SET_DESCRIPTION", description: nextDescription })}
-        onCancel={handleCancel}
+        description={editor.isEditing ? editor.draft.description : (description ?? "")}
+        isEditing={editor.isEditing}
+        onChange={editor.handleDraftDescriptionChange}
+        onCancel={editor.handleCancel}
       />
 
       <ImageUploadDialog
-        open={imageDialogOpen}
-        onOpenChange={setImageDialogOpen}
-        onSelectFile={handleSelectFile}
+        open={editor.imageDialogOpen}
+        onOpenChange={editor.setImageDialogOpen}
+        onSelectFile={editor.handleSelectFile}
       />
     </div>
   );

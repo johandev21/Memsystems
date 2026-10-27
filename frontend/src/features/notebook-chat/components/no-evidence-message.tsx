@@ -1,6 +1,6 @@
 import { SearchX } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { NoEvidenceMetadata } from "../types/no-evidence.types";
+import type { NoEvidenceMetadata } from "../utils/no-evidence";
 
 export function NoEvidencePanel({ metadata }: { metadata: NoEvidenceMetadata }) {
   const { t } = useTranslation("chat");

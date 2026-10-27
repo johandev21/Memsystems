@@ -1,8 +1,8 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SUPPORTED_LANGUAGES } from "@/features/language/utils/languages";
-import { THEMES } from "@/features/theme/utils/themes";
+import { SUPPORTED_LANGUAGES } from "@/features/language";
+import { THEMES } from "@/features/theme";
 import { SettingsPageSkeleton } from "./settings-page-skeleton";
 
 vi.mock("@tanstack/react-router", () => ({

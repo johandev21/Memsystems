@@ -1,8 +1,38 @@
 import type { ReactNode } from "react";
-import { Logo, SettingsLink } from "@/components/layout";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ChatConversationSkeleton } from "@/features/notebook-chat/components/chat-conversation-skeleton";
+import { Logo, SettingsLink } from "@/shared/components/layout";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { ChatConversationSkeleton } from "@/features/notebook-chat";
 import { cn } from "@/shared/utils/cn";
+
+export function NotebookPageSkeleton() {
+  return (
+    <div className="flex h-dvh flex-col">
+      <NotebookHeaderSkeleton />
+      <div className="flex-1 mx-0 sm:mx-2 lg:mx-4 my-0 sm:my-2 scrollbar-none overflow-hidden">
+        <div className="hidden lg:flex h-full gap-2.5">
+          <Panel className="w-1/5">
+            <SourcesPanelSkeleton />
+          </Panel>
+          <Panel className="flex-1">
+            <PanelHeaderSkeleton />
+            <ChatBodySkeleton />
+          </Panel>
+          <Panel className="w-1/5">
+            <StudioPanelSkeleton />
+          </Panel>
+        </div>
+        <div className="lg:hidden h-full flex flex-col">
+          <div className="flex items-center gap-2 p-2" aria-hidden="true">
+            <Skeleton className="h-8 flex-1 rounded-lg" />
+            <Skeleton className="h-8 flex-1 rounded-lg" />
+            <Skeleton className="h-8 flex-1 rounded-lg" />
+          </div>
+          <ChatBodySkeleton />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function NotebookHeaderSkeleton() {
   return (
@@ -80,36 +110,6 @@ function ChatBodySkeleton() {
     <div className="flex-1 min-h-0 overflow-hidden p-4">
       <div className="mx-auto w-full max-w-4xl">
         <ChatConversationSkeleton withBanner />
-      </div>
-    </div>
-  );
-}
-
-export function NotebookPageSkeleton() {
-  return (
-    <div className="flex h-dvh flex-col">
-      <NotebookHeaderSkeleton />
-      <div className="flex-1 mx-0 sm:mx-2 lg:mx-4 my-0 sm:my-2 scrollbar-none overflow-hidden">
-        <div className="hidden lg:flex h-full gap-2.5">
-          <Panel className="w-1/5">
-            <SourcesPanelSkeleton />
-          </Panel>
-          <Panel className="flex-1">
-            <PanelHeaderSkeleton />
-            <ChatBodySkeleton />
-          </Panel>
-          <Panel className="w-1/5">
-            <StudioPanelSkeleton />
-          </Panel>
-        </div>
-        <div className="lg:hidden h-full flex flex-col">
-          <div className="flex items-center gap-2 p-2" aria-hidden="true">
-            <Skeleton className="h-8 flex-1 rounded-lg" />
-            <Skeleton className="h-8 flex-1 rounded-lg" />
-            <Skeleton className="h-8 flex-1 rounded-lg" />
-          </div>
-          <ChatBodySkeleton />
-        </div>
       </div>
     </div>
   );

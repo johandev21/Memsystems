@@ -1,3 +1,4 @@
+import i18n from "@/shared/i18n";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 
 export const KIND_LABEL_KEYS = {
@@ -10,4 +11,8 @@ export const KIND_LABEL_KEYS = {
 
 export function kindLabelKey(kind: StudyMaterialKind): (typeof KIND_LABEL_KEYS)[StudyMaterialKind] {
   return KIND_LABEL_KEYS[kind];
+}
+
+export function getStudyMaterialKindLabel(kind: StudyMaterialKind): string {
+  return i18n.t(kindLabelKey(kind), { ns: "generation" });
 }

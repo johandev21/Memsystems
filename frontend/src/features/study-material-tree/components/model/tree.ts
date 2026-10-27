@@ -1,7 +1,7 @@
-import type { FolderDTO } from "../../types";
+import type { FolderDTO } from "../../types/folder.types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import i18n from "@/shared/i18n";
-import { flattenVisibleTree, getDescendantFolderIds } from "@/components/ui/tree";
+import { flattenVisibleTree, getDescendantFolderIds } from "@/shared/components/ui/tree";
 
 export { flattenVisibleTree, getDescendantFolderIds };
 

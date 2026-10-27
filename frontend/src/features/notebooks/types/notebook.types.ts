@@ -28,3 +28,22 @@ export interface NotebooksResponse {
   notebooks: Notebook[];
   total: number;
 }
+
+export interface CreateNotebookDto {
+  title?: string;
+  icon?: string;
+  description?: string;
+  folderId?: string | null;
+}
+
+export type UpdateNotebookDto = Partial<
+  Pick<
+    Notebook,
+    "title" | "description" | "icon" | "folderId" | "bannerFocalPoint" | "groundingMode"
+  >
+>;
+
+export interface BannerCrop {
+  x: number;
+  y: number;
+}

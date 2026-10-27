@@ -1,5 +1,5 @@
-﻿import { apiDelete, apiPatch, apiPost, createQueryOptions } from "@/shared/api";
-import type { FolderDTO, CreateFolderInput } from "../types";
+import { apiDelete, apiPatch, apiPost, createQueryOptions } from "@/shared/api";
+import type { FolderDTO, CreateFolderInput } from "../types/folder.types";
 
 export interface UpdateFolderInput {
   name?: string;

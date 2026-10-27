@@ -1,4 +1,4 @@
-import type { Notebook } from "@/features/notebooks/types";
+import type { Notebook } from "@/features/notebooks";
 import type { CoverVariants, LibraryNotebook } from "./types";
 
 export function toCoverVariants(

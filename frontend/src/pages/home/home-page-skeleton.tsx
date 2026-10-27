@@ -1,8 +1,5 @@
-import { AppHeader } from "@/components/layout";
-import {
-  LibraryGridSkeleton,
-  LibraryHeroSkeleton,
-} from "@/features/notebook-library/components/library-skeleton";
+import { AppHeader } from "@/shared/components/layout";
+import { LibraryGridSkeleton, LibraryHeroSkeleton } from "@/features/notebook-library";
 
 export function HomePageSkeleton() {
   return (

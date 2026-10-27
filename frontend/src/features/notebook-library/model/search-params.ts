@@ -19,3 +19,5 @@ export function parseLibrarySearch(search: Record<string, unknown>): LibrarySear
     ...(parsed.sort ? { sort: parsed.sort } : {}),
   };
 }
+
+export const parseLibrarySearchParams = parseLibrarySearch;

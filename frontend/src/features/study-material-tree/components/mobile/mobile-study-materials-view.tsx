@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { FolderDTO } from "../../types";
+import { ConfirmDeleteDialog } from "@/shared/components/ui/confirm-delete-dialog";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import type { FolderDTO } from "../../types/folder.types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import { canMoveItem, type TreeNode } from "../model/tree";
 import type { TreeCommandExecutor } from "../model/commands";
-import { MobileCreatePromptDrawer } from "@/components/ui/mobile-create-prompt-drawer";
+import { MobileCreatePromptDrawer } from "@/shared/components/ui/mobile-create-prompt-drawer";
 import { MobileFolderActionDrawer } from "./mobile-folder-action-drawer";
 import { MobileFolderTile } from "./mobile-folder-tile";
 import { MobileMaterialActionDrawer } from "./mobile-material-action-drawer";

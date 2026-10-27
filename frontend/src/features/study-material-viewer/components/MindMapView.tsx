@@ -19,6 +19,14 @@ import { useMindMapLayout } from "./mind-map/use-mind-map-layout";
 
 export type { MindMapNodeData, MindMapEdgeData, MindMapViewProps };
 
+export function MindMapView(props: MindMapViewProps) {
+  return (
+    <ReactFlowProvider>
+      <MindMapFlow {...props} />
+    </ReactFlowProvider>
+  );
+}
+
 const nodeTypes = { mindMap: MindMapNode };
 const edgeTypes = { highlight: HighlightEdge };
 
@@ -81,13 +89,5 @@ function MindMapFlow(props: MindMapViewProps) {
         <span className="size-1.5 rounded-full bg-surface-border-strong" /> {t("mindMap.hint")}
       </div>
     </div>
-  );
-}
-
-export function MindMapView(props: MindMapViewProps) {
-  return (
-    <ReactFlowProvider>
-      <MindMapFlow {...props} />
-    </ReactFlowProvider>
   );
 }

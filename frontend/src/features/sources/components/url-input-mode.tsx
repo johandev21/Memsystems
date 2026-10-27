@@ -7,16 +7,16 @@ import {
   Video,
 } from "lucide-react";
 import type { TFunction } from "i18next";
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { isArXivUrl, isDoi, isYouTubeUrl } from "../utils/detect-document-type";
 
-interface UrlInputModeProps {
+export interface UrlInputModeProps {
   urlValue: string;
   onUrlValueChange: (v: string) => void;
   urlTitle: string;
@@ -29,6 +29,167 @@ interface UrlInputModeProps {
   onBack: () => void;
   isPending: boolean;
   busy: boolean;
+}
+
+export function UrlInputMode({
+  urlValue,
+  onUrlValueChange,
+  urlTitle,
+  onUrlTitleChange,
+  captionText = "",
+  onCaptionTextChange,
+  oauthToken = "",
+  onOauthTokenChange,
+  onSubmit,
+  onBack,
+  isPending,
+  busy,
+}: UrlInputModeProps) {
+  const { t } = useTranslation("sources");
+  const meta = resolveUrlTypeMeta(urlValue, t);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (urlValue.trim()) onSubmit();
+  };
+
+  return (
+    <form className="mx-auto flex w-full max-w-xl flex-col gap-5" onSubmit={handleSubmit}>
+      <UrlAddressField
+        urlValue={urlValue}
+        meta={meta}
+        busy={busy}
+        onUrlValueChange={onUrlValueChange}
+        urlLabel={t("urlMode.urlLabel")}
+        arxivInfo={t("urlMode.arxivInfo")}
+        doiInfo={t("urlMode.doiInfo")}
+      />
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="source-url-title" className="text-xs font-medium text-foreground">
+          {t("urlMode.titleLabel")}
+        </Label>
+        <Input
+          id="source-url-title"
+          placeholder={meta.titlePlaceholder}
+          value={urlTitle}
+          onChange={(e) => onUrlTitleChange(e.target.value)}
+          disabled={busy}
+          className="h-11 sm:h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
+        />
+      </div>
+
+      {meta.isYouTube && onCaptionTextChange && (
+        <AdvancedYouTubeSection
+          captionText={captionText}
+          onCaptionTextChange={onCaptionTextChange}
+          oauthToken={oauthToken}
+          onOauthTokenChange={onOauthTokenChange}
+          busy={busy}
+        />
+      )}
+
+      <div className="flex items-center justify-end gap-2.5 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={busy}
+          className="cursor-pointer min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
+        >
+          {t("urlMode.back")}
+        </Button>
+        <UrlSubmitButton
+          busy={busy}
+          isPending={isPending}
+          hasValue={Boolean(urlValue.trim())}
+          submitLabel={meta.submitLabel}
+          pendingLabel={meta.pendingLabel}
+        />
+      </div>
+    </form>
+  );
+}
+
+function UrlAddressField({
+  urlValue,
+  meta,
+  busy,
+  onUrlValueChange,
+  urlLabel,
+  arxivInfo,
+  doiInfo,
+}: {
+  urlValue: string;
+  meta: UrlTypeMeta;
+  busy: boolean;
+  onUrlValueChange: (value: string) => void;
+  urlLabel: string;
+  arxivInfo: string;
+  doiInfo: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <Label htmlFor="source-url" className="text-xs font-medium text-foreground">
+          {urlLabel}
+        </Label>
+        <UrlTypeBadge
+          isYouTube={meta.isYouTube}
+          isArXiv={meta.isArXiv}
+          isAcademicDoi={meta.isAcademicDoi}
+        />
+      </div>
+      <Input
+        id="source-url"
+        type="text"
+        placeholder={meta.placeholder}
+        value={urlValue}
+        onChange={(e) => onUrlValueChange(e.target.value)}
+        autoFocus
+        required
+        disabled={busy}
+        className="h-11 sm:h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
+      />
+      {meta.isArXiv && (
+        <p className="text-xs text-muted-foreground">{arxivInfo}</p>
+      )}
+      {meta.isAcademicDoi && (
+        <p className="text-xs text-muted-foreground">{doiInfo}</p>
+      )}
+    </div>
+  );
+}
+
+function UrlSubmitButton({
+  busy,
+  isPending,
+  hasValue,
+  submitLabel,
+  pendingLabel,
+}: {
+  busy: boolean;
+  isPending: boolean;
+  hasValue: boolean;
+  submitLabel: string;
+  pendingLabel: string;
+}) {
+  return (
+    <Button
+      type="submit"
+      disabled={busy || !hasValue}
+      className="cursor-pointer min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
+    >
+      {isPending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {pendingLabel}
+        </>
+      ) : (
+        submitLabel
+      )}
+    </Button>
+  );
 }
 
 function UrlTypeBadge({
@@ -98,7 +259,7 @@ function AdvancedYouTubeSection({
   const { t } = useTranslation("sources");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -253,165 +414,4 @@ function resolveUrlTypeMeta(
     submitLabel: t("urlMode.addWebsite"),
     pendingLabel: t("urlMode.addingWebsite"),
   };
-}
-
-export function UrlInputMode({
-  urlValue,
-  onUrlValueChange,
-  urlTitle,
-  onUrlTitleChange,
-  captionText = "",
-  onCaptionTextChange,
-  oauthToken = "",
-  onOauthTokenChange,
-  onSubmit,
-  onBack,
-  isPending,
-  busy,
-}: UrlInputModeProps) {
-  const { t } = useTranslation("sources");
-  const meta = resolveUrlTypeMeta(urlValue, t);
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (urlValue.trim()) onSubmit();
-  };
-
-  return (
-    <form className="mx-auto flex w-full max-w-xl flex-col gap-5" onSubmit={handleSubmit}>
-      <UrlAddressField
-        urlValue={urlValue}
-        meta={meta}
-        busy={busy}
-        onUrlValueChange={onUrlValueChange}
-        urlLabel={t("urlMode.urlLabel")}
-        arxivInfo={t("urlMode.arxivInfo")}
-        doiInfo={t("urlMode.doiInfo")}
-      />
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="source-url-title" className="text-xs font-medium text-foreground">
-          {t("urlMode.titleLabel")}
-        </Label>
-        <Input
-          id="source-url-title"
-          placeholder={meta.titlePlaceholder}
-          value={urlTitle}
-          onChange={(e) => onUrlTitleChange(e.target.value)}
-          disabled={busy}
-          className="h-11 sm:h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
-        />
-      </div>
-
-      {meta.isYouTube && onCaptionTextChange && (
-        <AdvancedYouTubeSection
-          captionText={captionText}
-          onCaptionTextChange={onCaptionTextChange}
-          oauthToken={oauthToken}
-          onOauthTokenChange={onOauthTokenChange}
-          busy={busy}
-        />
-      )}
-
-      <div className="flex items-center justify-end gap-2.5 pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onBack}
-          disabled={busy}
-          className="cursor-pointer min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
-        >
-          {t("urlMode.back")}
-        </Button>
-        <UrlSubmitButton
-          busy={busy}
-          isPending={isPending}
-          hasValue={Boolean(urlValue.trim())}
-          submitLabel={meta.submitLabel}
-          pendingLabel={meta.pendingLabel}
-        />
-      </div>
-    </form>
-  );
-}
-
-function UrlAddressField({
-  urlValue,
-  meta,
-  busy,
-  onUrlValueChange,
-  urlLabel,
-  arxivInfo,
-  doiInfo,
-}: {
-  urlValue: string;
-  meta: UrlTypeMeta;
-  busy: boolean;
-  onUrlValueChange: (value: string) => void;
-  urlLabel: string;
-  arxivInfo: string;
-  doiInfo: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="source-url" className="text-xs font-medium text-foreground">
-          {urlLabel}
-        </Label>
-        <UrlTypeBadge
-          isYouTube={meta.isYouTube}
-          isArXiv={meta.isArXiv}
-          isAcademicDoi={meta.isAcademicDoi}
-        />
-      </div>
-      <Input
-        id="source-url"
-        type="text"
-        placeholder={meta.placeholder}
-        value={urlValue}
-        onChange={(e) => onUrlValueChange(e.target.value)}
-        autoFocus
-        required
-        disabled={busy}
-        className="h-11 sm:h-10 border-border/70 bg-background text-sm focus-visible:border-ring"
-      />
-      {meta.isArXiv && (
-        <p className="text-xs text-muted-foreground">{arxivInfo}</p>
-      )}
-      {meta.isAcademicDoi && (
-        <p className="text-xs text-muted-foreground">{doiInfo}</p>
-      )}
-    </div>
-  );
-}
-
-function UrlSubmitButton({
-  busy,
-  isPending,
-  hasValue,
-  submitLabel,
-  pendingLabel,
-}: {
-  busy: boolean;
-  isPending: boolean;
-  hasValue: boolean;
-  submitLabel: string;
-  pendingLabel: string;
-}) {
-  return (
-    <Button
-      type="submit"
-      disabled={busy || !hasValue}
-      className="cursor-pointer min-h-11 sm:min-h-9 px-4 touch-manipulation active:scale-97 transition-transform"
-    >
-      {isPending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          {pendingLabel}
-        </>
-      ) : (
-        submitLabel
-      )}
-    </Button>
-  );
 }

@@ -1,16 +1,7 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { Download, Eraser, Pencil, Settings, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import {
-  deleteNotebook,
-  exportNotebook,
-  notebookQueryOptions,
-  updateNotebook,
-} from "../../api/notebooks";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,16 +15,16 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/shared/components/ui/dropdown-menu";
 import {
-  GROUNDING_MODES,
-  resolveGroundingMode,
-  type GroundingMode,
-} from "../../model/grounding-mode";
+  CLEAR_NOTEBOOK_CHAT_EVENT,
+  EDIT_NOTEBOOK_EVENT,
+  useNotebookSettingsActions,
+} from "../../hooks/use-notebook-settings-actions";
+import { GROUNDING_MODES, type GroundingMode } from "../../model/grounding-mode";
 import { NotebookDeleteDialog } from "../notebook-delete-dialog";
 
-export const EDIT_NOTEBOOK_EVENT = "edit-notebook";
-export const CLEAR_NOTEBOOK_CHAT_EVENT = "clear-notebook-chat";
+export { CLEAR_NOTEBOOK_CHAT_EVENT, EDIT_NOTEBOOK_EVENT };
 
 export interface NotebookSettingsDialogProps {
   notebookId: string;
@@ -41,76 +32,22 @@ export interface NotebookSettingsDialogProps {
 
 export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogProps) {
   const { t } = useTranslation("notebooks");
-  const { data: notebook } = useQuery(notebookQueryOptions(notebookId));
   const [open, setOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isSavingMode, setIsSavingMode] = useState(false);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
-  const groundingMode = resolveGroundingMode(undefined, notebook?.groundingMode);
-
-  const handleGroundingModeChange = async (mode: GroundingMode) => {
-    if (mode === groundingMode || isSavingMode) return;
-    setIsSavingMode(true);
-    try {
-      await updateNotebook(notebookId, { groundingMode: mode });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["notebooks", notebookId] }),
-        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
-      ]);
-      toast.success(t("settings.groundingModeUpdated"));
-    } catch {
-      toast.error(t("settings.groundingModeFailed"));
-    } finally {
-      setIsSavingMode(false);
-    }
-  };
-
-  const dispatchNotebookAction = (name: string) => {
-    window.dispatchEvent(new CustomEvent(name, { detail: { notebookId } }));
-    setOpen(false);
-  };
-
-  const handleEdit = () => dispatchNotebookAction(EDIT_NOTEBOOK_EVENT);
-  const handleClearChat = () => dispatchNotebookAction(CLEAR_NOTEBOOK_CHAT_EVENT);
-  const handleExport = async () => {
-    setOpen(false);
-    try {
-      toast.loading(t("settings.exporting", "Exporting notebook…"), { id: `export-${notebookId}` });
-      await exportNotebook(notebookId, notebook?.title);
-      toast.success(t("settings.exportSuccess", "Notebook exported successfully"), {
-        id: `export-${notebookId}`,
-      });
-    } catch {
-      toast.error(t("settings.exportFailed", "Failed to export notebook"), {
-        id: `export-${notebookId}`,
-      });
-    }
-  };
-  const handleOpenDelete = () => {
-    setOpen(false);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    const returnFolderId = notebook?.folderId;
-    try {
-      await deleteNotebook(notebookId);
-      await queryClient.invalidateQueries({ queryKey: ["notebooks"] });
-      toast.success(t("settings.deleted"));
-      navigate({
-        to: "/",
-        search: returnFolderId ? { folderId: returnFolderId } : undefined,
-      });
-    } catch {
-      toast.error(t("settings.deleteFailed"));
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+  const {
+    notebook,
+    groundingMode,
+    isSavingMode,
+    isDeleting,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    handleGroundingModeChange,
+    handleEditNotebook,
+    handleClearHistory,
+    handleExportNotebook,
+    handleOpenDelete,
+    handleConfirmDelete,
+  } = useNotebookSettingsActions(notebookId, { onAction: () => setOpen(false) });
 
   return (
     <>
@@ -138,51 +75,23 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
+            <DropdownMenuItem onClick={handleEditNotebook} className="cursor-pointer">
               <Pencil />
               <span>{t("settings.edit")}</span>
             </DropdownMenuItem>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="cursor-pointer whitespace-nowrap [&>svg:last-child]:ml-0">
-                <SlidersHorizontal />
-                <span>{t("groundingMode.label")}</span>
-                <span className="ml-auto mr-1 text-xs text-muted-foreground font-normal capitalize">
-                  {t(`groundingMode.${groundingMode}`)}
-                </span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-72 p-1">
-                <DropdownMenuRadioGroup
-                  value={groundingMode}
-                  onValueChange={(val) => handleGroundingModeChange(val as GroundingMode)}
-                >
-                  {GROUNDING_MODES.map((mode) => (
-                    <DropdownMenuRadioItem
-                      key={mode}
-                      value={mode}
-                      disabled={isSavingMode}
-                      className="cursor-pointer items-start py-2 pr-8 [&_[data-slot=dropdown-menu-radio-item-indicator]]:top-2.5"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-foreground">
-                          {t(`groundingMode.${mode}`)}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-normal leading-snug whitespace-normal">
-                          {t(`groundingMode.descriptions.${mode}`)}
-                        </span>
-                      </div>
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+            <GroundingModeSubMenu
+              groundingMode={groundingMode}
+              isSavingMode={isSavingMode}
+              onGroundingModeChange={handleGroundingModeChange}
+            />
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={handleClearChat} className="cursor-pointer">
+            <DropdownMenuItem onClick={handleClearHistory} className="cursor-pointer">
               <Eraser />
               <span>{t("settings.clearChat")}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExport} className="cursor-pointer">
+            <DropdownMenuItem onClick={handleExportNotebook} className="cursor-pointer">
               <Download />
               <span>{t("settings.export", "Export notebook")}</span>
             </DropdownMenuItem>
@@ -203,8 +112,58 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
         onOpenChange={setDeleteDialogOpen}
         notebookTitle={notebook?.title}
         isDeleting={isDeleting}
-        onDelete={handleDelete}
+        onDelete={handleConfirmDelete}
       />
     </>
+  );
+}
+
+interface GroundingModeSubMenuProps {
+  groundingMode: GroundingMode;
+  isSavingMode: boolean;
+  onGroundingModeChange: (mode: GroundingMode) => void;
+}
+
+function GroundingModeSubMenu({
+  groundingMode,
+  isSavingMode,
+  onGroundingModeChange,
+}: GroundingModeSubMenuProps) {
+  const { t } = useTranslation("notebooks");
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger className="cursor-pointer whitespace-nowrap [&>svg:last-child]:ml-0">
+        <SlidersHorizontal />
+        <span>{t("groundingMode.label")}</span>
+        <span className="ml-auto mr-1 text-xs text-muted-foreground font-normal capitalize">
+          {t(`groundingMode.${groundingMode}`)}
+        </span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-72 p-1">
+        <DropdownMenuRadioGroup
+          value={groundingMode}
+          onValueChange={(val) => onGroundingModeChange(val as GroundingMode)}
+        >
+          {GROUNDING_MODES.map((mode) => (
+            <DropdownMenuRadioItem
+              key={mode}
+              value={mode}
+              disabled={isSavingMode}
+              className="cursor-pointer items-start py-2 pr-8 [&_[data-slot=dropdown-menu-radio-item-indicator]]:top-2.5"
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="font-medium text-foreground">
+                  {t(`groundingMode.${mode}`)}
+                </span>
+                <span className="text-xs text-muted-foreground font-normal leading-snug whitespace-normal">
+                  {t(`groundingMode.descriptions.${mode}`)}
+                </span>
+              </div>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }

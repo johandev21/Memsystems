@@ -1,5 +1,5 @@
-import type { DynamicIconProps } from "@/components/ui/dynamic-icon";
-import { DynamicIcon } from "@/components/ui/dynamic-icon";
+import type { DynamicIconProps } from "./icon-picker/dynamic-icon";
+import { DynamicIcon } from "./icon-picker/dynamic-icon";
 
 export type NotebookIconProps = DynamicIconProps;
 

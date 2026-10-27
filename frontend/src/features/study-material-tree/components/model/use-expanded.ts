@@ -1,11 +1,11 @@
-import type { FolderDTO } from "../../types";
+import type { FolderDTO } from "../../types/folder.types";
 import {
   getActiveFolderIds,
   getInitialExpandedIds,
   reconcileExpandedIds,
   computeExpandedForNotebook as computeSharedExpandedForNotebook,
   usePersistentExpandedFolders as useSharedPersistentExpandedFolders,
-} from "@/components/ui/tree";
+} from "@/shared/components/ui/tree";
 
 export { getActiveFolderIds, getInitialExpandedIds, reconcileExpandedIds };
 

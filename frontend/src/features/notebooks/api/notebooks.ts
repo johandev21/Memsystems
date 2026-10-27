@@ -1,5 +1,5 @@
 import { fetchApi, apiDelete, createQueryOptions } from "@/shared/api";
-import type { Notebook, NotebooksResponse } from "../types";
+import type { Notebook, NotebooksResponse } from "../types/notebook.types";
 import type { BannerVariantWidth } from "../utils/banner-variants";
 
 export type { Notebook, NotebooksResponse };
@@ -7,6 +7,11 @@ export type NotebooksPage = NotebooksResponse;
 
 export const notebookQueryOptions = (id: string) =>
   createQueryOptions<Notebook>(["notebooks", id], `/api/notebooks/${id}`, {
+    staleTime: 30_000,
+  });
+
+export const notebooksQueryOptions = () =>
+  createQueryOptions<NotebooksResponse>(["notebooks"], "/api/notebooks", {
     staleTime: 30_000,
   });
 

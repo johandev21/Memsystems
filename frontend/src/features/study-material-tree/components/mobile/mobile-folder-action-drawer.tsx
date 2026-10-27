@@ -7,9 +7,9 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { MobileFolderMovePanel } from "@/components/ui/mobile-folder-move-panel";
-import type { FolderDTO } from "../../types";
+} from "@/shared/components/ui/drawer";
+import { MobileFolderMovePanel } from "@/shared/components/ui/mobile-folder-move-panel";
+import type { FolderDTO } from "../../types/folder.types";
 
 const ACTION_CLASS =
   "flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium active:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer [@media(hover:hover)]:hover:bg-muted";

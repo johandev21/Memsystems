@@ -1,6 +1,6 @@
 import { fetchApi, apiDelete, createQueryOptions } from "@/shared/api";
 import i18n from "@/shared/i18n";
-import type { SourceKind, Source, SourceWithContent } from "../types";
+import type { SourceKind, Source, SourceWithContent } from "../types/source.types";
 
 export type { SourceKind, Source, SourceWithContent };
 export const SOURCE_LIMIT = 300;
@@ -187,3 +187,31 @@ export async function updateSource(sourceId: string, input: { title?: string }):
   }
   return data as Source;
 }
+
+export async function submitSourceTranscript(
+  sourceId: string,
+  transcript: string,
+): Promise<unknown> {
+  const response = await fetchApi(`/api/sources/${sourceId}/transcript`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ transcriptText: transcript }),
+  });
+
+  if (!response.ok) {
+    const errorData = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      error?: string;
+    };
+    throw new Error(
+      errorData.message ??
+        errorData.error ??
+        i18n.t("transcriptDialog.saveFailed", { ns: "sources" }),
+    );
+  }
+
+  return response.json().catch(() => ({}));
+}
+

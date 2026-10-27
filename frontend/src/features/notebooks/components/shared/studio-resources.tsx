@@ -3,11 +3,11 @@ import type { TFunction } from "i18next";
 import { CircleAlert, RefreshCw, X } from "lucide-react";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useGenerationStore } from "@/features/study-material-generation/hooks/use-generation-store";
+import { Button } from "@/shared/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import { useGenerationStore } from "@/features/study-material-generation";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
-import { sourcesQueryOptions } from "@/features/sources/api/sources";
+import { sourcesQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import {
   KIND_LABEL_KEYS,

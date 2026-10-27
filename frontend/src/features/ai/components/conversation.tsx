@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -6,7 +6,7 @@ import {
   MessageScrollerItem,
   MessageScrollerProvider,
   MessageScrollerViewport,
-} from "@/components/ui/message-scroller";
+} from "./message-scroller";
 import { cn } from "@/shared/utils/cn";
 import type { UIMessage } from "ai";
 import { DownloadIcon } from "lucide-react";

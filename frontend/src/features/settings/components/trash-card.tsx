@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TrashModal } from "@/features/trash/components/trash-modal";
+import { TrashModal } from "@/features/trash";
 
 export function TrashCard() {
   const { t } = useTranslation("settings");

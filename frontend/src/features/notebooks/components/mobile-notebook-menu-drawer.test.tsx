@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/shared/i18n/i18n";
-import { Tabs } from "@/components/ui/tabs";
+import { Tabs } from "@/shared/components/ui/tabs";
 import { MobileNotebookMenuDrawer } from "./mobile-notebook-menu-drawer";
 import { NotebookHeader } from "./notebook-header";
 import { MobileTabsHeader } from "./notebook-workspace/mobile-tabs-header";

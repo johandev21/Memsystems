@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import i18n from "@/shared/i18n/i18n";
 import notebooksEn from "@/shared/i18n/locales/en/notebooks.json";
-import type { Notebook } from "@/features/notebooks/types";
+import type { Notebook } from "@/features/notebooks";
 import { libraryQueryOptions, type LibraryFolder, type LibraryResponse } from "../api/library";
 import { useLibraryMutations } from "./use-library-mutations";
 
@@ -18,8 +18,8 @@ vi.mock("../api/library", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/notebooks/api/notebooks", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/notebooks/api/notebooks")>();
+vi.mock("@/features/notebooks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/notebooks")>();
   return {
     ...actual,
     createNotebook: vi.fn(),
@@ -33,7 +33,7 @@ import {
   createNotebook as createNotebookApi,
   deleteNotebook as deleteNotebookApi,
   updateNotebook as updateNotebookApi,
-} from "@/features/notebooks/api/notebooks";
+} from "@/features/notebooks";
 
 beforeAll(() => {
   i18n.addResourceBundle("en", "notebooks", notebooksEn, true, true);

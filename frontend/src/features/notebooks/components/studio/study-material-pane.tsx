@@ -1,18 +1,13 @@
 import { lazy, Suspense } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { MaterialViewerSkeleton } from "@/features/study-material-viewer/components/skeletons";
-import type { StudyMaterialDTO, StudyMaterialKind } from "@/features/study-material-viewer/types";
 import {
-  studyMaterialQueryOptions,
-  studyMaterialsQueryOptions,
-} from "@/features/study-material-viewer/api";
+  loadMaterialViewer,
+  MaterialViewerSkeleton,
+  useStudyMaterial,
+  type StudyMaterialDTO,
+} from "@/features/study-material-viewer";
 
-const MaterialViewer = lazy(() =>
-  import("@/features/study-material-viewer/components/MaterialViewer").then(
-    (m) => ({ default: m.MaterialViewer }),
-  ),
-);
+const MaterialViewer = lazy(loadMaterialViewer);
 
 export function StudyMaterialPane({
   notebookId,
@@ -29,22 +24,11 @@ export function StudyMaterialPane({
   forceFullscreen?: boolean;
   defaultFullscreen?: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const {
-    data: material,
-    isLoading,
-    error,
-  } = useQuery({
-    ...studyMaterialQueryOptions(materialId),
-    initialData: initialMaterial,
-  });
-
-  const cachedKind: StudyMaterialKind | null =
-    initialMaterial?.kind ??
-    queryClient
-      .getQueryData<StudyMaterialDTO[]>(studyMaterialsQueryOptions(notebookId).queryKey)
-      ?.find((item) => item.id === materialId)?.kind ??
-    null;
+  const { material, cachedKind, isLoading, error } = useStudyMaterial(
+    notebookId,
+    materialId,
+    initialMaterial,
+  );
 
   if (isLoading) {
     return <MaterialViewerSkeleton kind={cachedKind} />;

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import type { StudyMaterialDTO } from "@/features/study-material-viewer/types";
+import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 
 const StudyMaterialPane = lazy(() =>
   import("./study-material-pane").then((m) => ({ default: m.StudyMaterialPane })),

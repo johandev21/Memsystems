@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import i18n from "@/shared/i18n";
 import { formatDisplayTitle } from "../utils/format-title";
 import { useRoadmapProgress, type RoadmapPhase, type RoadmapTopic } from "../hooks/use-roadmap-progress";
-
 import type { RoadmapContentType } from "../shapes/roadmap";
 
 export type RoadmapContent = RoadmapContentType;
@@ -17,6 +16,25 @@ export interface RoadmapViewProps {
   materialId: string;
   content: RoadmapContent;
 }
+
+export function RoadmapView({ materialId, content }: RoadmapViewProps) {
+  useRoadmapProgress(materialId, content.phases);
+
+  const handleStudyPhaseInChat = (phase: RoadmapPhase, phaseIndex: number) => {
+    const promptText = buildPhaseStudyPrompt(phase, phaseIndex, content.title);
+    dispatchChatPrompt(promptText);
+  };
+
+  return (
+    <div className="@container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-safe pb-16 sm:pb-20 select-none px-3 @sm:px-4 overflow-x-auto overscroll-x-contain touch-pan-x">
+      <RoadmapHeader title={content.title} description={content.description} />
+
+      <RoadmapSpine phases={content.phases} onStudyPhase={handleStudyPhaseInChat} />
+    </div>
+  );
+}
+
+export default RoadmapView;
 
 interface RoadmapHeaderProps {
   title?: string;
@@ -47,64 +65,6 @@ interface RoadmapPhaseSectionProps {
 
 const SEND_CHAT_PROMPT_EVENT = "send-chat-prompt";
 
-function formatMilestoneLabel(phaseIndex: number): string {
-  return i18n.t("roadmap.phase", { ns: "viewer", number: phaseIndex + 1 });
-}
-
-function formatTopicSummary(topics: RoadmapTopic[]): string {
-  return topics
-    .map(
-      (topic, index) =>
-        `${index + 1}. **${formatDisplayTitle(topic.title)}**${topic.description ? `: ${topic.description}` : ""}`,
-    )
-    .join("\n");
-}
-
-function buildPhaseStudyPrompt(
-  phase: RoadmapPhase,
-  phaseIndex: number,
-  roadmapTitle?: string,
-): string {
-  const formattedPhaseTitle = formatDisplayTitle(phase.title);
-  const topicSummary = formatTopicSummary(phase.topics);
-  const roadmapContext = roadmapTitle
-    ? i18n.t("roadmap.prompt.context", { ns: "viewer", title: formatDisplayTitle(roadmapTitle) })
-    : "";
-
-  return i18n.t("roadmap.prompt.study", {
-    ns: "viewer",
-    number: phaseIndex + 1,
-    title: formattedPhaseTitle,
-    roadmapContext,
-    description: phase.description || i18n.t("roadmap.prompt.notAvailable", { ns: "viewer" }),
-    topics: topicSummary,
-  });
-}
-
-function buildTopicCopyText(topic: RoadmapTopic): string {
-  const lines: string[] = [formatDisplayTitle(topic.title)];
-  if (topic.description) {
-    lines.push("", topic.description);
-  }
-  if (topic.keyTakeaways?.length) {
-    lines.push("", i18n.t("roadmap.keyObjectives", { ns: "viewer" }));
-    topic.keyTakeaways.forEach((keyPoint) => lines.push(`- ${keyPoint}`));
-  }
-  return lines.join("\n");
-}
-
-function dispatchChatPrompt(promptText: string): void {
-  window.dispatchEvent(
-    new CustomEvent(SEND_CHAT_PROMPT_EVENT, {
-      detail: { prompt: promptText, autoSend: false, focusChat: true },
-    }),
-  );
-}
-
-function isLeftPosition(topicIndex: number): boolean {
-  return topicIndex % 2 === 0;
-}
-
 function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
   if (!title) return null;
 
@@ -119,6 +79,36 @@ function RoadmapHeader({ title, description }: RoadmapHeaderProps) {
           {description}
         </p>
       )}
+    </div>
+  );
+}
+
+function RoadmapSpine({ phases, onStudyPhase }: RoadmapSpineProps) {
+  return (
+    <div className="relative w-full flex flex-col items-center gap-8 @sm:gap-12 @3xl:gap-14 pt-2">
+      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-surface-4 -translate-x-1/2 z-0" />
+
+      {phases.map((phase, phaseIndex) => (
+        <RoadmapPhaseSection
+          key={phase.id}
+          phase={phase}
+          phaseIndex={phaseIndex}
+          onStudyPhase={onStudyPhase}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RoadmapPhaseSection({ phase, phaseIndex, onStudyPhase }: RoadmapPhaseSectionProps) {
+  return (
+    <div className="relative z-10 w-full flex flex-col items-center gap-4 @sm:gap-6 @3xl:gap-8">
+      <PhaseMilestoneCard phase={phase} phaseIndex={phaseIndex} onStudyPhase={onStudyPhase} />
+      <div className="grid grid-cols-1 @3xl:grid-cols-2 gap-4 @sm:gap-6 @3xl:gap-8 w-full px-1 @sm:px-4">
+        {phase.topics.map((topic, topicIndex) => (
+          <TopicCard key={topic.id} topic={topic} isLeft={isLeftPosition(topicIndex)} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -224,51 +214,60 @@ function TopicCard({ topic, isLeft }: TopicCardProps) {
   );
 }
 
-function RoadmapSpine({ phases, onStudyPhase }: RoadmapSpineProps) {
-  return (
-    <div className="relative w-full flex flex-col items-center gap-8 @sm:gap-12 @3xl:gap-14 pt-2">
-      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-surface-4 -translate-x-1/2 z-0" />
+function formatMilestoneLabel(phaseIndex: number): string {
+  return i18n.t("roadmap.phase", { ns: "viewer", number: phaseIndex + 1 });
+}
 
-      {phases.map((phase, phaseIndex) => (
-        <RoadmapPhaseSection
-          key={phase.id}
-          phase={phase}
-          phaseIndex={phaseIndex}
-          onStudyPhase={onStudyPhase}
-        />
-      ))}
-    </div>
+function formatTopicSummary(topics: RoadmapTopic[]): string {
+  return topics
+    .map(
+      (topic, index) =>
+        `${index + 1}. **${formatDisplayTitle(topic.title)}**${topic.description ? `: ${topic.description}` : ""}`,
+    )
+    .join("\n");
+}
+
+function buildPhaseStudyPrompt(
+  phase: RoadmapPhase,
+  phaseIndex: number,
+  roadmapTitle?: string,
+): string {
+  const formattedPhaseTitle = formatDisplayTitle(phase.title);
+  const topicSummary = formatTopicSummary(phase.topics);
+  const roadmapContext = roadmapTitle
+    ? i18n.t("roadmap.prompt.context", { ns: "viewer", title: formatDisplayTitle(roadmapTitle) })
+    : "";
+
+  return i18n.t("roadmap.prompt.study", {
+    ns: "viewer",
+    number: phaseIndex + 1,
+    title: formattedPhaseTitle,
+    roadmapContext,
+    description: phase.description || i18n.t("roadmap.prompt.notAvailable", { ns: "viewer" }),
+    topics: topicSummary,
+  });
+}
+
+function buildTopicCopyText(topic: RoadmapTopic): string {
+  const lines: string[] = [formatDisplayTitle(topic.title)];
+  if (topic.description) {
+    lines.push("", topic.description);
+  }
+  if (topic.keyTakeaways?.length) {
+    lines.push("", i18n.t("roadmap.keyObjectives", { ns: "viewer" }));
+    topic.keyTakeaways.forEach((keyPoint) => lines.push(`- ${keyPoint}`));
+  }
+  return lines.join("\n");
+}
+
+function dispatchChatPrompt(promptText: string): void {
+  window.dispatchEvent(
+    new CustomEvent(SEND_CHAT_PROMPT_EVENT, {
+      detail: { prompt: promptText, autoSend: false, focusChat: true },
+    }),
   );
 }
 
-function RoadmapPhaseSection({ phase, phaseIndex, onStudyPhase }: RoadmapPhaseSectionProps) {
-  return (
-    <div className="relative z-10 w-full flex flex-col items-center gap-4 @sm:gap-6 @3xl:gap-8">
-      <PhaseMilestoneCard phase={phase} phaseIndex={phaseIndex} onStudyPhase={onStudyPhase} />
-      <div className="grid grid-cols-1 @3xl:grid-cols-2 gap-4 @sm:gap-6 @3xl:gap-8 w-full px-1 @sm:px-4">
-        {phase.topics.map((topic, topicIndex) => (
-          <TopicCard key={topic.id} topic={topic} isLeft={isLeftPosition(topicIndex)} />
-        ))}
-      </div>
-    </div>
-  );
+function isLeftPosition(topicIndex: number): boolean {
+  return topicIndex % 2 === 0;
 }
-
-export function RoadmapView({ materialId, content }: RoadmapViewProps) {
-  useRoadmapProgress(materialId, content.phases);
-
-  const handleStudyPhaseInChat = (phase: RoadmapPhase, phaseIndex: number) => {
-    const promptText = buildPhaseStudyPrompt(phase, phaseIndex, content.title);
-    dispatchChatPrompt(promptText);
-  };
-
-  return (
-    <div className="@container flex flex-col items-center gap-6 @sm:gap-8 @3xl:gap-10 w-full max-w-4xl mx-auto animate-in fade-in duration-300 pb-safe pb-16 sm:pb-20 select-none px-3 @sm:px-4 overflow-x-auto overscroll-x-contain touch-pan-x">
-      <RoadmapHeader title={content.title} description={content.description} />
-
-      <RoadmapSpine phases={content.phases} onStudyPhase={handleStudyPhaseInChat} />
-    </div>
-  );
-}
-
-export default RoadmapView;

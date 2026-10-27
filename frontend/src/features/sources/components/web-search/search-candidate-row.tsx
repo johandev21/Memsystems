@@ -1,6 +1,6 @@
 import { Check, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { resolveDynamicMessage } from "@/shared/api/api-error";
 import { cn } from "@/shared/utils/cn";
 import type { WebSearchCandidate, WebSearchImportResultItem } from "../../api/web-search";

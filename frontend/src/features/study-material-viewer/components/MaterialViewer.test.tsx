@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StudyMaterialDTO } from "../types";
+import type { StudyMaterialDTO } from "../types/study-material.types";
 import { MaterialViewer } from "./MaterialViewer";
 
 const flashcards: StudyMaterialDTO = {

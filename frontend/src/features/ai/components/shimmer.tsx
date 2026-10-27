@@ -3,22 +3,6 @@ import { LazyMotion, domAnimation, m } from "motion/react";
 import { createElement, type CSSProperties, type ElementType, type JSX, memo, useMemo } from "react";
 import { cn } from "@/shared/utils/cn";
 
-type MotionHTMLProps = MotionProps & Record<string, unknown>;
-
-const motionComponentCache = new Map<
-  keyof JSX.IntrinsicElements,
-  React.ComponentType<MotionHTMLProps>
->();
-
-const getMotionComponent = (element: keyof JSX.IntrinsicElements) => {
-  let component = motionComponentCache.get(element);
-  if (!component) {
-    component = m.create(element);
-    motionComponentCache.set(element, component);
-  }
-  return component;
-};
-
 export interface TextShimmerProps {
   children: string;
   as?: ElementType;
@@ -27,13 +11,13 @@ export interface TextShimmerProps {
   spread?: number;
 }
 
-const ShimmerComponent = ({
+export const Shimmer = memo(function Shimmer({
   children,
   as: Component = "p",
   className,
   duration = 2,
   spread = 2,
-}: TextShimmerProps) => {
+}: TextShimmerProps) {
   const MotionComponent = getMotionComponent(Component as keyof JSX.IntrinsicElements);
 
   const dynamicSpread = useMemo(() => (children?.length ?? 0) * spread, [children, spread]);
@@ -65,6 +49,20 @@ const ShimmerComponent = ({
       )}
     </LazyMotion>
   );
-};
+});
 
-export const Shimmer = memo(ShimmerComponent);
+type MotionHTMLProps = MotionProps & Record<string, unknown>;
+
+const motionComponentCache = new Map<
+  keyof JSX.IntrinsicElements,
+  React.ComponentType<MotionHTMLProps>
+>();
+
+const getMotionComponent = (element: keyof JSX.IntrinsicElements) => {
+  let component = motionComponentCache.get(element);
+  if (!component) {
+    component = m.create(element);
+    motionComponentCache.set(element, component);
+  }
+  return component;
+};

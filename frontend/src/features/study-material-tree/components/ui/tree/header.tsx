@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { CardHeader } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/shared/components/ui/button";
+import { CardHeader } from "@/shared/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/utils/cn";
 import { useDroppable } from "@dnd-kit/core";
 import { Maximize2, Minimize2, Search } from "lucide-react";

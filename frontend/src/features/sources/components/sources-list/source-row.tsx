@@ -21,8 +21,8 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
+} from "@/shared/components/ui/context-menu";
+import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/shared/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 import { sourceDisplayTitle } from "../../utils/source-display-title";
 import type { Source } from "../../api/sources";

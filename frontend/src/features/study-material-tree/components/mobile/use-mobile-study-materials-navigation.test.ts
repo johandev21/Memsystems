@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { FolderDTO } from "../../types";
+import type { FolderDTO } from "../../types/folder.types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import { useMobileStudyMaterialsNavigation } from "./use-mobile-study-materials-navigation";
 

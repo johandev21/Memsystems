@@ -7,7 +7,7 @@ const { providerProps, mockScrollToEnd } = vi.hoisted(() => ({
   mockScrollToEnd: vi.fn(),
 }));
 
-vi.mock("@/components/ui/message-scroller", async () => {
+vi.mock("./message-scroller", async () => {
   const React = await import("react");
 
   type DivProps = Record<string, unknown>;

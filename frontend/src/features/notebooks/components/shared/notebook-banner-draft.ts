@@ -5,6 +5,8 @@ import {
   resolveGroundingMode,
   type GroundingMode,
 } from "../../model/grounding-mode";
+export { useNotebookBannerEditor } from "../../hooks/use-notebook-banner-editor";
+export type { UseNotebookBannerEditorProps } from "../../hooks/use-notebook-banner-editor";
 
 export const DEFAULT_FOCAL_POINT = { x: 0.5, y: 0.5 };
 

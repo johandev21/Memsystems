@@ -1,5 +1,5 @@
 import { apiDelete, apiPatch, apiPost, createQueryOptions } from "@/shared/api";
-import type { Notebook } from "@/features/notebooks/types";
+import type { Notebook } from "@/features/notebooks";
 
 export interface LibraryFolder {
   id: string;

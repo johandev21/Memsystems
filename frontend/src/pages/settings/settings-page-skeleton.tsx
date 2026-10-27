@@ -1,9 +1,55 @@
-import { AppHeader } from "@/components/layout";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SUPPORTED_LANGUAGES } from "@/features/language/utils/languages";
-import { THEMES } from "@/features/theme/utils/themes";
+import { AppHeader } from "@/shared/components/layout";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { LANGUAGES } from "@/features/language";
+import { THEMES } from "@/features/theme";
 
 const SCHEME_OPTION_COUNT = 3;
+
+export function SettingsPageSkeleton() {
+  return (
+    <div className="min-h-dvh flex flex-col bg-background">
+      <div className="sm:hidden w-full px-3">
+        <MobileSettingsSkeleton />
+      </div>
+
+      <div className="hidden sm:flex flex-col w-full">
+        <AppHeader />
+        <main className="w-full mx-auto max-w-260 px-3 sm:px-6 lg:px-8 pb-16 pt-6 sm:pt-10 lg:pt-14">
+          <header className="mb-10" aria-hidden="true">
+            <Skeleton className="h-9 sm:h-10 w-44" />
+          </header>
+
+          <section aria-hidden="true">
+            <div className="mb-6">
+              <Skeleton className="h-6 w-28" />
+              <Skeleton className="mt-1 h-6 w-72 max-w-full" />
+            </div>
+            <div className="space-y-8">
+              <SchemeSelectorSkeleton />
+              <ThemeGridSkeleton />
+            </div>
+          </section>
+
+          <section className="mt-12" aria-hidden="true">
+            <div className="mb-6">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="mt-1 h-6 w-64 max-w-full" />
+            </div>
+            <LanguageSelectorSkeleton />
+          </section>
+
+          <section className="mt-12" aria-hidden="true">
+            <div className="mb-6">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="mt-1 h-6 w-80 max-w-full" />
+            </div>
+            <TrashCardSkeleton />
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+}
 
 function SchemeSelectorSkeleton() {
   return (
@@ -52,7 +98,7 @@ function ThemeGridSkeleton() {
 function LanguageSelectorSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {SUPPORTED_LANGUAGES.map((lang) => (
+      {LANGUAGES.map((lang) => (
         <div
           key={lang.code}
           className="flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5"
@@ -123,52 +169,6 @@ function MobileSettingsSkeleton() {
           <Skeleton className="h-3.5 w-52 rounded-md" />
         </div>
         <TrashCardSkeleton />
-      </div>
-    </div>
-  );
-}
-
-export function SettingsPageSkeleton() {
-  return (
-    <div className="min-h-dvh flex flex-col bg-background">
-      <div className="sm:hidden w-full px-3">
-        <MobileSettingsSkeleton />
-      </div>
-
-      <div className="hidden sm:flex flex-col w-full">
-        <AppHeader />
-        <main className="w-full mx-auto max-w-260 px-3 sm:px-6 lg:px-8 pb-16 pt-6 sm:pt-10 lg:pt-14">
-          <header className="mb-10" aria-hidden="true">
-            <Skeleton className="h-9 sm:h-10 w-44" />
-          </header>
-
-          <section aria-hidden="true">
-            <div className="mb-6">
-              <Skeleton className="h-6 w-28" />
-              <Skeleton className="mt-1 h-6 w-72 max-w-full" />
-            </div>
-            <div className="space-y-8">
-              <SchemeSelectorSkeleton />
-              <ThemeGridSkeleton />
-            </div>
-          </section>
-
-          <section className="mt-12" aria-hidden="true">
-            <div className="mb-6">
-              <Skeleton className="h-6 w-24" />
-              <Skeleton className="mt-1 h-6 w-64 max-w-full" />
-            </div>
-            <LanguageSelectorSkeleton />
-          </section>
-
-          <section className="mt-12" aria-hidden="true">
-            <div className="mb-6">
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="mt-1 h-6 w-80 max-w-full" />
-            </div>
-            <TrashCardSkeleton />
-          </section>
-        </main>
       </div>
     </div>
   );

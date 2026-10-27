@@ -1,4 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Download,
@@ -13,21 +12,92 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type { SourceWithContent } from "../../types";
+} from "@/shared/components/ui/dropdown-menu";
+import type { SourceWithContent } from "../../types/source.types";
 import type { ReaderControls } from "./source-content-types";
 import { sourceDisplayTitle } from "../../utils/source-display-title";
 import { isYouTubeUrl } from "../../utils/detect-document-type";
 import { isSourceProcessing } from "../../utils/source-processing";
-import { retrySource } from "../../api/sources";
+import { useRetrySource } from "../../hooks/use-retry-source";
 import { AddTranscriptDialog } from "../add-transcript-dialog";
+
+export interface SourceReaderHeaderProps {
+  source: SourceWithContent;
+  controls: ReaderControls;
+  forceFullscreen?: boolean;
+  onClose: () => void;
+}
+
+export function SourceReaderHeader({
+  source,
+  controls,
+  forceFullscreen,
+  onClose,
+}: SourceReaderHeaderProps) {
+  const { t } = useTranslation("sources");
+  return (
+    <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-11 shrink-0 select-none">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0 touch-manipulation active:scale-97 transition-transform"
+          aria-label={t("reader.backToSources")}
+          title={t("reader.backToSources")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h3 className="text-sm font-semibold truncate text-foreground min-w-0 flex-1">
+          {sourceDisplayTitle(source)}
+        </h3>
+      </div>
+      <div className="flex items-center gap-1">
+        <ReaderMoreMenu
+          source={source}
+          downloading={controls.downloading}
+          onDownload={controls.handleDownload}
+          isFullscreen={controls.isEffectivelyFullscreen}
+        />
+        {!forceFullscreen && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={controls.toggleFullscreen}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
+            title={controls.isFullscreen ? t("reader.exitFullscreen") : t("reader.fullscreenMode")}
+          >
+            {controls.isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+        {controls.isEffectivelyFullscreen && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
+            title={t("reader.close")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ReaderMoreMenu({
   source,
@@ -42,18 +112,7 @@ function ReaderMoreMenu({
 }) {
   const { t } = useTranslation("sources");
   const [transcriptOpen, setTranscriptOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const retryMutation = useMutation({
-    mutationFn: () => retrySource(source.id),
-    onSuccess: async () => {
-      toast.info(t("toasts.sourceProcessingRestarted"));
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["source", source.id] }),
-        queryClient.invalidateQueries({ queryKey: ["sources", source.notebookId] }),
-      ]);
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
+  const retryMutation = useRetrySource(source);
   const showWebpage = source.kind === "url" && !!source.url;
   const showDownload = source.kind === "file";
   const showCaptions = isYouTubeUrl(source.url);
@@ -133,77 +192,5 @@ function ReaderMoreMenu({
         />
       )}
     </>
-  );
-}
-
-export interface SourceReaderHeaderProps {
-  source: SourceWithContent;
-  controls: ReaderControls;
-  forceFullscreen?: boolean;
-  onClose: () => void;
-}
-
-export function SourceReaderHeader({
-  source,
-  controls,
-  forceFullscreen,
-  onClose,
-}: SourceReaderHeaderProps) {
-  const { t } = useTranslation("sources");
-  return (
-    <div className="flex items-center justify-between gap-2 p-1.5 bg-panel-header-bg min-h-11 shrink-0 select-none">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg shrink-0 touch-manipulation active:scale-97 transition-transform"
-          aria-label={t("reader.backToSources")}
-          title={t("reader.backToSources")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h3 className="text-sm font-semibold truncate text-foreground min-w-0 flex-1">
-          {sourceDisplayTitle(source)}
-        </h3>
-      </div>
-      <div className="flex items-center gap-1">
-        <ReaderMoreMenu
-          source={source}
-          downloading={controls.downloading}
-          onDownload={controls.handleDownload}
-          isFullscreen={controls.isEffectivelyFullscreen}
-        />
-        {!forceFullscreen && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={controls.toggleFullscreen}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
-            title={controls.isFullscreen ? t("reader.exitFullscreen") : t("reader.fullscreenMode")}
-          >
-            {controls.isFullscreen ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
-          </Button>
-        )}
-        {controls.isEffectivelyFullscreen && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg touch-manipulation active:scale-97 transition-transform"
-            title={t("reader.close")}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-    </div>
   );
 }

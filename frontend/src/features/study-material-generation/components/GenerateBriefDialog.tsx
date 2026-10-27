@@ -17,13 +17,12 @@ import {
 import type { ModelOption } from "@/features/ai";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { MODAL_POPOVER_LAYER, OverlayLayerContext } from "@/components/ui/overlay-layer";
-import { useModelPersistence } from "@/features/notebooks/hooks/use-model-persistence";
-import { useNotebookGroundingMode } from "@/features/notebooks/model/grounding-mode";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Button } from "@/shared/components/ui/button";
+import { MODAL_POPOVER_LAYER, OverlayLayerContext } from "@/shared/components/ui/overlay-layer";
+import { useModelPersistence, useNotebookGroundingMode } from "@/features/notebooks";
 import { useGenerationStore } from "../hooks/use-generation-store";
-import type { StudyMaterialKind } from "@/features/study-material-viewer/types";
+import type { StudyMaterialKind } from "@/features/study-material-viewer";
 import { useTranslation } from "react-i18next";
 import { kindLabelKey } from "../kind-label";
 import type { BriefFormData } from "./forms/types";
@@ -112,31 +111,58 @@ export function GenerateBriefDialog({
   const label = t(kindLabelKey(kind));
   const titleText = t("dialog.title", { kind: label });
 
-  const bodyContent = !isConnectionUsable(connection) ? (
-    <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
-  ) : isCapable ? (
-    <BriefForm
-      notebookId={notebookId}
-      kind={kind}
-      value={value}
-      onChange={updateBriefForm}
-      onSubmit={handleSubmit}
-      submitLabel={t("actions.generate")}
-      disabled={false}
-    />
-  ) : (
-    <StudyMaterialCapabilityGate
-      modelName={activeModel?.displayName ?? selectedModel}
-      capabilitiesVerified={capabilitiesVerified}
-      models={models}
-      selectedModel={selectedModel}
-      onSelect={setModel}
-    />
+  return (
+    <BriefDialogShell
+      open={open}
+      onClose={handleClose}
+      titleText={titleText}
+      isMobile={isMobile}
+    >
+      {!isConnectionUsable(connection) ? (
+        <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
+      ) : isCapable ? (
+        <BriefForm
+          notebookId={notebookId}
+          kind={kind}
+          value={value}
+          onChange={updateBriefForm}
+          onSubmit={handleSubmit}
+          submitLabel={t("actions.generate")}
+          disabled={false}
+        />
+      ) : (
+        <StudyMaterialCapabilityGate
+          modelName={activeModel?.displayName ?? selectedModel}
+          capabilitiesVerified={capabilitiesVerified}
+          models={models}
+          selectedModel={selectedModel}
+          onSelect={setModel}
+        />
+      )}
+    </BriefDialogShell>
   );
+}
+
+interface BriefDialogShellProps {
+  open: boolean;
+  onClose: () => void;
+  titleText: string;
+  isMobile: boolean;
+  children: React.ReactNode;
+}
+
+function BriefDialogShell({
+  open,
+  onClose,
+  titleText,
+  isMobile,
+  children,
+}: BriefDialogShellProps) {
+  const { t } = useTranslation("generation");
 
   if (isMobile) {
     return (
-      <DialogPrimitive.Root open={open} onOpenChange={handleClose}>
+      <DialogPrimitive.Root open={open} onOpenChange={onClose}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Backdrop
             data-slot="mobile-fullscreen-backdrop"
@@ -171,7 +197,7 @@ export function GenerateBriefDialog({
               </div>
 
               <div className="flex-1 flex flex-col overflow-y-auto overscroll-contain px-4 py-4 min-w-0 pb-safe-lg">
-                {bodyContent}
+                {children}
               </div>
             </OverlayLayerContext.Provider>
           </DialogPrimitive.Popup>
@@ -181,7 +207,7 @@ export function GenerateBriefDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         className={cn(
           "bg-surface-1 border border-surface-border generate-material-dialog",
@@ -195,7 +221,7 @@ export function GenerateBriefDialog({
             {titleText}
           </DialogTitle>
         </DialogHeader>
-        {bodyContent}
+        {children}
       </DialogContent>
     </Dialog>
   );

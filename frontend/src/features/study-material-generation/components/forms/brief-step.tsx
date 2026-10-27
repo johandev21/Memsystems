@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/shared/components/ui/button";
+import { Label } from "@/shared/components/ui/label";
 import { cn } from "@/shared/utils/cn";
 
 export function BriefStep({

@@ -1,4 +1,4 @@
-import { Label } from "@/components/ui/label";
+import { Label } from "@/shared/components/ui/label";
 import { cn } from "@/shared/utils/cn";
 import { optionRowClass } from "./option-row";
 

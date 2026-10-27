@@ -9,15 +9,16 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/shared/utils/cn";
 import {
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
+} from "@/shared/components/ui/drawer";
 import type { Source } from "../api/sources";
 import { sourceDisplayTitle } from "../utils/source-display-title";
 import type { SourceFolder } from "../types/source-folder.types";
@@ -142,96 +143,177 @@ export function MobileSourceActionDrawer({
               </div>
             </DrawerHeader>
 
-            <div className="flex flex-col gap-1 py-2">
-              <button
-                type="button"
-                data-slot="mobile-source-action-view"
-                onClick={() => handleSelectAction(() => onViewContent?.())}
-                className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer"
-              >
-                <Eye className="size-4.5 text-muted-foreground shrink-0" />
-                <span>{t("sources:actions.viewContent", "View content")}</span>
-              </button>
-
-              <button
-                type="button"
-                data-slot="mobile-source-action-rename"
-                onClick={() => handleSelectAction(() => onBeginRename?.())}
-                className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer"
-              >
-                <Pencil className="size-4.5 text-muted-foreground shrink-0" />
-                <span>{t("tree:actions.rename", "Rename")}</span>
-              </button>
-
-              {hasMoveTargets && (
-                <button
-                  type="button"
-                  data-slot="mobile-source-action-move"
-                  onClick={() => setIsMoving(true)}
-                  className="flex min-h-12 w-full items-center justify-between rounded-xl px-3.5 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FolderInput className="size-4.5 text-muted-foreground shrink-0" />
-                    <span className="truncate">{t("tree:actions.moveToFolder", "Move to folder")}</span>
-                  </div>
-                  <ChevronRight className="size-4 text-muted-foreground shrink-0" />
-                </button>
-              )}
-
-              {failed && onRetry && (
-                <button
-                  type="button"
-                  data-slot="mobile-source-action-retry"
-                  onClick={() => handleSelectAction(onRetry)}
-                  disabled={retrying}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer"
-                >
-                  {retrying ? (
-                    <Loader2 className="size-4.5 animate-spin text-muted-foreground shrink-0" />
-                  ) : (
-                    <RotateCcw className="size-4.5 text-muted-foreground shrink-0" />
-                  )}
-                  <span>{t("sources:sourceRow.retryProcessing", "Retry processing")}</span>
-                </button>
-              )}
-
-              {active && onCancel && (
-                <button
-                  type="button"
-                  data-slot="mobile-source-action-cancel"
-                  onClick={() => handleSelectAction(onCancel)}
-                  disabled={cancelling}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-foreground hover:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer"
-                >
-                  {cancelling ? (
-                    <Loader2 className="size-4.5 animate-spin text-muted-foreground shrink-0" />
-                  ) : (
-                    <X className="size-4.5 text-muted-foreground shrink-0" />
-                  )}
-                  <span>{t("sources:pendingUpload.cancelProcessing", "Cancel")}</span>
-                </button>
-              )}
-
-              {onDelete && (
-                <button
-                  type="button"
-                  data-slot="mobile-source-action-delete"
-                  onClick={() => handleSelectAction(onDelete)}
-                  disabled={deleting}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 active:scale-98 transition-transform touch-manipulation cursor-pointer"
-                >
-                  {deleting ? (
-                    <Loader2 className="size-4.5 animate-spin shrink-0" />
-                  ) : (
-                    <Trash2 className="size-4.5 shrink-0" />
-                  )}
-                  <span>{t("sources:sourceRow.delete", "Delete")}</span>
-                </button>
-              )}
-            </div>
+            <MobileSourceActionList
+              onViewContent={onViewContent}
+              onBeginRename={onBeginRename}
+              hasMoveTargets={hasMoveTargets}
+              onStartMove={() => setIsMoving(true)}
+              failed={failed}
+              onRetry={onRetry}
+              retrying={retrying}
+              active={active}
+              onCancel={onCancel}
+              cancelling={cancelling}
+              onDelete={onDelete}
+              deleting={deleting}
+              onSelectAction={handleSelectAction}
+            />
           </>
         )}
       </DrawerContent>
     </Drawer>
+  );
+}
+
+interface MobileSourceActionListProps {
+  onViewContent?: () => void;
+  onBeginRename?: () => void;
+  hasMoveTargets: boolean;
+  onStartMove: () => void;
+  failed: boolean;
+  onRetry?: () => void;
+  retrying: boolean;
+  active: boolean;
+  onCancel?: () => void;
+  cancelling: boolean;
+  onDelete?: () => void;
+  deleting: boolean;
+  onSelectAction: (action: () => void) => void;
+}
+
+function MobileSourceActionList({
+  onViewContent,
+  onBeginRename,
+  hasMoveTargets,
+  onStartMove,
+  failed,
+  onRetry,
+  retrying,
+  active,
+  onCancel,
+  cancelling,
+  onDelete,
+  deleting,
+  onSelectAction,
+}: MobileSourceActionListProps) {
+  const { t } = useTranslation(["sources", "tree"]);
+
+  return (
+    <div className="flex flex-col gap-1 py-2">
+      <SourceActionRow
+        dataSlot="mobile-source-action-view"
+        onClick={() => onSelectAction(() => onViewContent?.())}
+        icon={<Eye className="size-4.5 text-muted-foreground shrink-0" />}
+        label={t("sources:actions.viewContent", "View content")}
+      />
+
+      <SourceActionRow
+        dataSlot="mobile-source-action-rename"
+        onClick={() => onSelectAction(() => onBeginRename?.())}
+        icon={<Pencil className="size-4.5 text-muted-foreground shrink-0" />}
+        label={t("tree:actions.rename", "Rename")}
+      />
+
+      {hasMoveTargets && (
+        <SourceActionRow
+          dataSlot="mobile-source-action-move"
+          onClick={onStartMove}
+          icon={<FolderInput className="size-4.5 text-muted-foreground shrink-0" />}
+          label={t("tree:actions.moveToFolder", "Move to folder")}
+          chevron
+        />
+      )}
+
+      {failed && onRetry && (
+        <SourceActionRow
+          dataSlot="mobile-source-action-retry"
+          onClick={() => onSelectAction(onRetry)}
+          disabled={retrying}
+          icon={
+            retrying ? (
+              <Loader2 className="size-4.5 animate-spin text-muted-foreground shrink-0" />
+            ) : (
+              <RotateCcw className="size-4.5 text-muted-foreground shrink-0" />
+            )
+          }
+          label={t("sources:sourceRow.retryProcessing", "Retry processing")}
+        />
+      )}
+
+      {active && onCancel && (
+        <SourceActionRow
+          dataSlot="mobile-source-action-cancel"
+          onClick={() => onSelectAction(onCancel)}
+          disabled={cancelling}
+          icon={
+            cancelling ? (
+              <Loader2 className="size-4.5 animate-spin text-muted-foreground shrink-0" />
+            ) : (
+              <X className="size-4.5 text-muted-foreground shrink-0" />
+            )
+          }
+          label={t("sources:pendingUpload.cancelProcessing", "Cancel")}
+        />
+      )}
+
+      {onDelete && (
+        <SourceActionRow
+          dataSlot="mobile-source-action-delete"
+          onClick={() => onSelectAction(onDelete)}
+          disabled={deleting}
+          destructive
+          icon={
+            deleting ? (
+              <Loader2 className="size-4.5 animate-spin shrink-0" />
+            ) : (
+              <Trash2 className="size-4.5 shrink-0" />
+            )
+          }
+          label={t("sources:sourceRow.delete", "Delete")}
+        />
+      )}
+    </div>
+  );
+}
+
+interface SourceActionRowProps {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  dataSlot?: string;
+  disabled?: boolean;
+  destructive?: boolean;
+  chevron?: boolean;
+}
+
+function SourceActionRow({
+  icon,
+  label,
+  onClick,
+  dataSlot,
+  disabled,
+  destructive,
+  chevron,
+}: SourceActionRowProps) {
+  return (
+    <button
+      type="button"
+      data-slot={dataSlot}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-transform touch-manipulation cursor-pointer active:scale-98",
+        destructive
+          ? "text-destructive hover:bg-destructive/10"
+          : "text-foreground hover:bg-muted",
+        chevron && "justify-between",
+      )}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      {chevron && <ChevronRight className="size-4 text-muted-foreground shrink-0" />}
+    </button>
   );
 }

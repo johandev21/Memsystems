@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { sourcesQueryOptions } from "@/features/sources/api/sources";
+import { sourcesQueryOptions } from "@/features/sources";
 import {
   canSubmitBrief,
   useNotebookGroundingMode,
-} from "@/features/notebooks/model/grounding-mode";
+} from "@/features/notebooks";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
 export interface UseBriefWizardOptions

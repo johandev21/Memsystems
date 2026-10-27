@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { FolderPicker } from "./folder-picker";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {

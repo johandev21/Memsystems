@@ -8,8 +8,8 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "@/components/ui/command";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+} from "@/shared/components/ui/command";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { cn } from "@/shared/utils/cn";
 import { CheckIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";

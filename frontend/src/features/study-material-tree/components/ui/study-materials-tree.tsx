@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { ConfirmDeleteDialog } from "@/shared/components/ui/confirm-delete-dialog";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -7,11 +7,11 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import type { FolderDTO } from "../../types";
+} from "@/shared/components/ui/context-menu";
+import { EmptyState } from "@/shared/components/ui/empty-state";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import type { FolderDTO } from "../../types/folder.types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import { cn } from "@/shared/utils/cn";
 import {
@@ -27,7 +27,7 @@ import {
 } from "@dnd-kit/core";
 import {
   TreeSearchBar,
-} from "@/components/ui/tree";
+} from "@/shared/components/ui/tree";
 import { ChevronsUpDown, Folder, FolderOpen, FolderPlus, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

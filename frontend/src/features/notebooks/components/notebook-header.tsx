@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Logo, SettingsLink } from "@/components/layout";
+import { Logo, SettingsLink } from "@/shared/components/layout";
 import { notebookQueryOptions } from "../api/notebooks";
 import { EditableNotebookTitle } from "./editable-notebook-title";
 import { MobileNotebookMenuDrawer } from "./mobile-notebook-menu-drawer";

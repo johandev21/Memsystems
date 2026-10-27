@@ -5,12 +5,12 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
+} from "@/shared/components/ui/drawer";
 import {
   RESOURCES,
   KIND_LABEL_KEYS,
   isInScope,
-} from "@/features/notebooks/components/shared/studio-resources-config";
+} from "../shared/studio-resources-config";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 
 export interface MobileStudyMaterialCreateDrawerProps {

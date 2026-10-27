@@ -1,11 +1,15 @@
-import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, memo, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { MarkdownRenderer, type MarkdownComponents } from "@/shared/components/ui/markdown";
 import { cn } from "@/shared/utils/cn";
-import { MarkdownRenderer, type MarkdownComponents } from "@/components/ui/markdown";
-import { MarkdownTable } from "@/features/ai/components/markdown-table";
-import type { SourceSegment, SourceSegmentLocator } from "../../types";
+import { MarkdownTable } from "@/features/ai";
+import type { SourceSegment, SourceSegmentLocator } from "../../types/source.types";
 import { splitTextIntoChunks } from "../../utils/detect-document-type";
 import { VirtualizedDocumentContainer } from "./virtualized-document-container";
+import {
+  createSlug,
+  useMarkdownLocatorHighlight,
+} from "../../hooks/use-markdown-locator-highlight";
 
 export interface MarkdownDocumentViewerProps {
   content: string;
@@ -14,23 +18,126 @@ export interface MarkdownDocumentViewerProps {
   scrollElement?: HTMLDivElement | null;
 }
 
-function getRawText(node: ReactNode): string {
-  if (!node) return "";
-  if (typeof node === "string") return node;
-  if (typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(getRawText).join("");
-  if (typeof node === "object" && node && "props" in node) {
-    const props = node.props as { children?: ReactNode };
-    return getRawText(props.children);
+export function MarkdownDocumentViewer({
+  content,
+  segments,
+  selectedLocator,
+  scrollElement,
+}: MarkdownDocumentViewerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chunks = useMemo(() => splitTextIntoChunks(content || ""), [content]);
+  const isVirtualized = chunks.length > 25 && scrollElement !== undefined;
+
+  const { targetChunkIndex, highlightedIndex } = useMarkdownLocatorHighlight({
+    content,
+    chunks,
+    segments,
+    selectedLocator,
+    scrollElement,
+    containerRef,
+    isVirtualized,
+  });
+
+  if (!content?.trim()) {
+    return <EmptyMarkdownState />;
   }
-  return "";
+
+  if (isVirtualized) {
+    return (
+      <div ref={containerRef} className="w-full">
+        <VirtualizedMarkdownDocument
+          chunks={chunks}
+          content={content}
+          scrollElement={scrollElement}
+          targetIndex={targetChunkIndex}
+          highlightedIndex={highlightedIndex}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="w-full">
+      <StaticMarkdownDocument content={content} />
+    </div>
+  );
 }
 
-function createSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+function EmptyMarkdownState() {
+  const { t } = useTranslation("sourceRenderers");
+  return (
+    <div className="py-12 text-center text-xs text-muted-foreground">
+      {t("markdownViewer.noContent")}
+    </div>
+  );
+}
+
+function VirtualizedMarkdownDocument({
+  chunks,
+  content,
+  scrollElement,
+  targetIndex,
+  highlightedIndex,
+}: {
+  chunks: string[];
+  content: string;
+  scrollElement: HTMLDivElement | null;
+  targetIndex?: number | null;
+  highlightedIndex?: number | null;
+}) {
+  const keyedChunks = useMemo(() => getKeyedChunks(chunks, content), [chunks, content]);
+
+  return (
+    <MarkdownDocumentShell>
+      <VirtualizedDocumentContainer
+        items={keyedChunks}
+        scrollElement={scrollElement}
+        estimateSize={(index) => estimateChunkSize(keyedChunks[index]?.content || "")}
+        overscan={8}
+        targetIndex={targetIndex}
+        highlightedIndex={highlightedIndex}
+        getItemKey={(chunk) => chunk.id}
+        renderItem={(chunk, _index, isHighlighted) => (
+          <MarkdownChunk chunk={chunk.content} isHighlighted={isHighlighted} />
+        )}
+      />
+    </MarkdownDocumentShell>
+  );
+}
+
+function StaticMarkdownDocument({ content }: { content: string }) {
+  return (
+    <MarkdownDocumentShell>
+      <MarkdownRenderer components={markdownComponents}>{content}</MarkdownRenderer>
+    </MarkdownDocumentShell>
+  );
+}
+
+const MarkdownChunk = memo(function MarkdownChunk({
+  chunk,
+  isHighlighted,
+}: {
+  chunk: string;
+  isHighlighted?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-md p-1 transition-all duration-300",
+        isHighlighted && "bg-primary/15 ring-2 ring-primary/30",
+      )}
+    >
+      <MarkdownRenderer components={markdownComponents}>{chunk}</MarkdownRenderer>
+    </div>
+  );
+});
+
+function MarkdownDocumentShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="typeset typeset-chat typeset-compact max-w-none">
+      {children}
+    </div>
+  );
 }
 
 const HeadingWithId = ({
@@ -129,150 +236,16 @@ const markdownComponents: MarkdownComponents = {
   ),
 };
 
-export function MarkdownDocumentViewer({
-  content,
-  segments,
-  selectedLocator,
-  scrollElement,
-}: MarkdownDocumentViewerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
-  const chunks = useMemo(() => splitTextIntoChunks(content || ""), [content]);
-  const segmentTarget = useMemo(() => {
-    if (
-      !selectedLocator ||
-      selectedLocator.symbol ||
-      (typeof selectedLocator.pageNumber === "number" && selectedLocator.pageNumber > 0)
-    ) {
-      return null;
-    }
-    return findSegmentTarget(selectedLocator, segments, content, chunks);
-  }, [selectedLocator, segments, content, chunks]);
-
-  const targetChunkIndex = useMemo(() => {
-    if (!selectedLocator || chunks.length === 0) return null;
-
-    if (selectedLocator.symbol) {
-      const slug = createSlug(selectedLocator.symbol);
-      const symLower = selectedLocator.symbol.toLowerCase().trim();
-      const foundIdx = chunks.findIndex((c) => {
-        const cSlug = createSlug(c);
-        return cSlug.includes(slug) || c.toLowerCase().includes(symLower);
-      });
-      if (foundIdx !== -1) return foundIdx;
-    }
-
-    if (typeof selectedLocator.pageNumber === "number" && selectedLocator.pageNumber > 0) {
-      return Math.min(selectedLocator.pageNumber - 1, chunks.length - 1);
-    }
-
-    return selectedLocator.symbol ? null : segmentTarget?.chunkIndex ?? null;
-  }, [selectedLocator, chunks, segmentTarget]);
-
-  const isVirtualized = chunks.length > 25 && scrollElement !== undefined;
-
-  const [prevTargetChunkIndex, setPrevTargetChunkIndex] = useState<
-    typeof targetChunkIndex | undefined
-  >(undefined);
-  if (prevTargetChunkIndex !== targetChunkIndex) {
-    setPrevTargetChunkIndex(targetChunkIndex);
-    if (targetChunkIndex !== null) setHighlightedIndex(targetChunkIndex);
+function getRawText(node: ReactNode): string {
+  if (!node) return "";
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(getRawText).join("");
+  if (typeof node === "object" && node && "props" in node) {
+    const props = node.props as { children?: ReactNode };
+    return getRawText(props.children);
   }
-
-  useEffect(() => {
-    if (targetChunkIndex === null) return;
-
-    if (!isVirtualized) {
-      const root = scrollElement || containerRef.current;
-      if (root) {
-        let targetElement: HTMLElement | null = null;
-        if (selectedLocator?.symbol) {
-          const slug = createSlug(selectedLocator.symbol);
-          targetElement =
-            root.querySelector(`#heading-${slug}`) || root.querySelector(`[id*="${slug}"]`);
-        }
-        if (
-          !targetElement &&
-          !selectedLocator?.symbol &&
-          !(typeof selectedLocator?.pageNumber === "number" && selectedLocator.pageNumber > 0)
-        ) {
-          const matchingElements = Array.from(
-            root.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li, td, pre"),
-          ).filter((element) => element.textContent === segmentTarget?.content);
-          if (matchingElements.length === 1) {
-            targetElement = matchingElements[0] as HTMLElement;
-          }
-        }
-        if (!targetElement && selectedLocator?.pageNumber) {
-          const paragraphs = root.querySelectorAll("p, h1, h2, h3, h4, blockquote");
-          const targetIdx = Math.min(selectedLocator.pageNumber - 1, paragraphs.length - 1);
-          if (targetIdx >= 0 && paragraphs[targetIdx]) {
-            targetElement = paragraphs[targetIdx] as HTMLElement;
-          }
-        }
-        if (targetElement) {
-          targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          targetElement.classList.add(
-            "bg-primary/15",
-            "ring-2",
-            "ring-primary/30",
-            "rounded-md",
-            "p-1",
-            "transition-all",
-            "duration-500",
-          );
-          const timer = setTimeout(() => {
-            targetElement?.classList.remove(
-              "bg-primary/15",
-              "ring-2",
-              "ring-primary/30",
-              "rounded-md",
-              "p-1",
-            );
-          }, 3000);
-          return () => clearTimeout(timer);
-        }
-      }
-    }
-
-    const timer = setTimeout(() => {
-      setHighlightedIndex(null);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [targetChunkIndex, isVirtualized, selectedLocator, scrollElement, segmentTarget]);
-
-  if (!content?.trim()) {
-    return <EmptyMarkdownState />;
-  }
-
-  if (isVirtualized) {
-    return (
-      <div ref={containerRef} className="w-full">
-        <VirtualizedMarkdownDocument
-          chunks={chunks}
-          content={content}
-          scrollElement={scrollElement}
-          targetIndex={targetChunkIndex}
-          highlightedIndex={highlightedIndex}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div ref={containerRef} className="w-full">
-      <StaticMarkdownDocument content={content} />
-    </div>
-  );
-}
-
-function EmptyMarkdownState() {
-  const { t } = useTranslation("sourceRenderers");
-  return (
-    <div className="py-12 text-center text-xs text-muted-foreground">
-      {t("markdownViewer.noContent")}
-    </div>
-  );
+  return "";
 }
 
 function estimateChunkSize(chunk: string): number {
@@ -300,127 +273,4 @@ function getKeyedChunks(chunks: string[], content: string) {
   }
 
   return keyedChunks;
-}
-
-function VirtualizedMarkdownDocument({
-  chunks,
-  content,
-  scrollElement,
-  targetIndex,
-  highlightedIndex,
-}: {
-  chunks: string[];
-  content: string;
-  scrollElement: HTMLDivElement | null;
-  targetIndex?: number | null;
-  highlightedIndex?: number | null;
-}) {
-  const keyedChunks = useMemo(() => getKeyedChunks(chunks, content), [chunks, content]);
-
-  return (
-    <MarkdownDocumentShell>
-      <VirtualizedDocumentContainer
-        items={keyedChunks}
-        scrollElement={scrollElement}
-        estimateSize={(index) => estimateChunkSize(keyedChunks[index]?.content || "")}
-        overscan={8}
-        targetIndex={targetIndex}
-        highlightedIndex={highlightedIndex}
-        getItemKey={(chunk) => chunk.id}
-        renderItem={(chunk, _index, isHighlighted) => (
-          <MarkdownChunk chunk={chunk.content} isHighlighted={isHighlighted} />
-        )}
-      />
-    </MarkdownDocumentShell>
-  );
-}
-
-function StaticMarkdownDocument({ content }: { content: string }) {
-  return (
-    <MarkdownDocumentShell>
-      <MarkdownRenderer components={markdownComponents}>{content}</MarkdownRenderer>
-    </MarkdownDocumentShell>
-  );
-}
-
-function findSegmentTarget(
-  locator: SourceSegmentLocator,
-  segments: SourceSegment[] | undefined,
-  content: string,
-  chunks: string[],
-): { chunkIndex: number; content: string } | null {
-  const locatorKeys = [
-    "slideNumber",
-    "startOffsetMs",
-    "endOffsetMs",
-    "speaker",
-    "sheetName",
-    "cellRange",
-    "lineStart",
-    "lineEnd",
-    "imageRegion",
-  ] as const;
-  const selectedKeys = locatorKeys.filter((key) => locator[key] !== undefined);
-  if (!segments || selectedKeys.length === 0) return null;
-
-  const matches = segments.filter((segment) =>
-    selectedKeys.every((key) => {
-      const selectedValue = locator[key];
-      const segmentValue = segment.locator?.[key];
-      if (key === "imageRegion") {
-        const selectedRegion = locator.imageRegion;
-        const segmentRegion = segment.locator?.imageRegion;
-        return Boolean(
-          selectedRegion &&
-            segmentRegion &&
-            selectedRegion.x === segmentRegion.x &&
-            selectedRegion.y === segmentRegion.y &&
-            selectedRegion.width === segmentRegion.width &&
-            selectedRegion.height === segmentRegion.height,
-        );
-      }
-      return selectedValue === segmentValue;
-    }),
-  );
-  if (matches.length !== 1 || !matches[0].content) return null;
-
-  const segmentContent = matches[0].content;
-  const contentIndex = content.indexOf(segmentContent);
-  if (contentIndex < 0 || content.indexOf(segmentContent, contentIndex + 1) >= 0) return null;
-
-  const segmentChunks = splitTextIntoChunks(segmentContent);
-  const chunkMatches = chunks.flatMap((_, index) => {
-    const matches = segmentChunks.every((chunk, offset) => chunks[index + offset] === chunk);
-    return matches ? [index] : [];
-  });
-  return segmentChunks.length > 0 && chunkMatches.length === 1
-    ? { chunkIndex: chunkMatches[0], content: segmentContent }
-    : null;
-}
-
-const MarkdownChunk = memo(function MarkdownChunk({
-  chunk,
-  isHighlighted,
-}: {
-  chunk: string;
-  isHighlighted?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-md p-1 transition-all duration-300",
-        isHighlighted && "bg-primary/15 ring-2 ring-primary/30",
-      )}
-    >
-      <MarkdownRenderer components={markdownComponents}>{chunk}</MarkdownRenderer>
-    </div>
-  );
-});
-
-function MarkdownDocumentShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="typeset typeset-chat typeset-compact max-w-none">
-      {children}
-    </div>
-  );
 }

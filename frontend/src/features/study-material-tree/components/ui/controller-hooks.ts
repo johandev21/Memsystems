@@ -3,7 +3,7 @@ import {
   useControllableFolderExpansion,
   usePendingTreeCommands as useSharedPendingTreeCommands,
   useTreeFocusRegistry,
-} from "@/components/ui/tree";
+} from "@/shared/components/ui/tree";
 
 export { useControllableFolderExpansion, useTreeFocusRegistry };
 

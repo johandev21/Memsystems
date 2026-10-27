@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { AppHeader } from "@/components/layout";
+import { AppHeader } from "@/shared/components/layout";
 import {
   AppearanceCard,
   LanguageCard,

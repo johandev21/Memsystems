@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { BundledLanguage } from "shiki";
 import { cn } from "@/shared/utils/cn";
-import { useMarkdownBlockContext } from "@/components/ui/markdown-blocks";
+import { useMarkdownBlockContext } from "@/shared/components/ui/markdown-blocks";
 import {
   CodeBlock,
   CodeBlockActions,

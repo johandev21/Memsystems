@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SourceContentViewer } from "./source-content-viewer";
-import type { SourceWithContent } from "../types";
+import type { SourceWithContent } from "../types/source.types";
 
 function renderWithClient(
   ui: React.ReactElement,

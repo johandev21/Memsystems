@@ -3,7 +3,7 @@ import {
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuSeparator,
-} from "@/components/ui/context-menu";
+} from "@/shared/components/ui/context-menu";
 import {
   ChevronsUpDown,
   Copy,

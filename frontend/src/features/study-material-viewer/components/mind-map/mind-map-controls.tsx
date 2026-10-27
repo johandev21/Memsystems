@@ -1,6 +1,6 @@
 import { ChevronsDownUp, ChevronsUpDown, Crosshair, Minus, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 
 export function EmptyMindMap() {
   const { t } = useTranslation("viewer");

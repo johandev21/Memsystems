@@ -1,14 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { sourceQueryOptions } from "../api/sources";
 import { sourceDisplayTitle } from "../utils/source-display-title";
 import { isYouTubeUrl } from "../utils/detect-document-type";
-import type { SourceWithContent } from "../types";
 import { SourceReaderSkeleton } from "./skeletons/source-reader-skeleton";
-import {
-  isSourceProcessing,
-  sourceProcessingStatus,
-  SOURCE_POLL_INTERVAL_MS,
-} from "../utils/source-processing";
+import { sourceProcessingStatus } from "../utils/source-processing";
 import type { SourceContentViewerProps } from "./content-viewer/source-content-types";
 import {
   useCachedSourceSummary,
@@ -17,6 +10,7 @@ import {
 import { SourceReaderHeader } from "./content-viewer/source-reader-header";
 import { SourceProcessingState, SourceReaderError } from "./content-viewer/source-reader-states";
 import { SourceDocument } from "./content-viewer/source-document-renderer";
+import { useSourceDetail } from "../hooks/use-source-detail";
 
 export type { SourceContentViewerProps };
 
@@ -28,18 +22,7 @@ export function SourceContentViewer({
   selectedLocator,
 }: SourceContentViewerProps) {
   const cachedSource = useCachedSourceSummary(sourceId);
-  const {
-    data: source,
-    isPending,
-    isError,
-  } = useQuery({
-    ...sourceQueryOptions(sourceId),
-    staleTime: 0,
-    refetchInterval: (query) => {
-      const current = query.state.data as SourceWithContent | undefined;
-      return current && isSourceProcessing(current) ? SOURCE_POLL_INTERVAL_MS : false;
-    },
-  });
+  const { data: source, isPending, isError } = useSourceDetail(sourceId);
 
   const readerControls = useSourceReaderControls({
     defaultFullscreen,

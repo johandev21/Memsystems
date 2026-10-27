@@ -1,4 +1,4 @@
-import { AppHeader } from "@/components/layout";
+import { AppHeader } from "@/shared/components/layout";
 import { NotebookLibrary } from "@/features/notebook-library";
 
 export function HomePage() {

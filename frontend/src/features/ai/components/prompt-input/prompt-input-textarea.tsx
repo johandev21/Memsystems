@@ -1,4 +1,4 @@
-import { InputGroupTextarea } from "@/components/ui/input-group";
+import { InputGroupTextarea } from "@/shared/components/ui/input-group";
 import { cn } from "@/shared/utils/cn";
 import {
   type ChangeEvent,

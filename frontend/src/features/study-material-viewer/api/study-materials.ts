@@ -5,7 +5,7 @@ import {
   createQueryOptions,
   fetchApi,
 } from "@/shared/api";
-import type { StudyMaterialDTO, CreateStudyMaterialInput } from "../types";
+import type { StudyMaterialDTO, CreateStudyMaterialInput } from "../types/study-material.types";
 
 export interface UpdateStudyMaterialInput {
   title?: string;

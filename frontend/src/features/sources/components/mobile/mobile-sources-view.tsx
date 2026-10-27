@@ -1,13 +1,13 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDeleteDialog } from "@/shared/components/ui/confirm-delete-dialog";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import type { Source } from "../../api/sources";
 import type { PendingSourceUpload } from "../../hooks/use-upload-store";
 import type { SourcesTreeNode } from "../../model/sources-tree";
 import type { SourceFolder } from "../../types/source-folder.types";
-import { MobileCreatePromptDrawer } from "@/components/ui/mobile-create-prompt-drawer";
+import { MobileCreatePromptDrawer } from "@/shared/components/ui/mobile-create-prompt-drawer";
 import { AddSourceDialog } from "../add-source-dialog";
 import { MobileSourceActionDrawer } from "../mobile-source-action-drawer";
 import { PendingUploadRow } from "../pending-upload-row";

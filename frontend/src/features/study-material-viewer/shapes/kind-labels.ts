@@ -1,5 +1,5 @@
 import i18n from "@/shared/i18n";
-import type { StudyMaterialKind } from "../types";
+import type { StudyMaterialKind } from "../types/study-material.types";
 
 export const KIND_LABELS: Record<StudyMaterialKind, string> = {
   quiz: "Quiz",

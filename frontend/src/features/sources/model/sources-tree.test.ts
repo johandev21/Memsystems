@@ -3,12 +3,13 @@ import {
   buildSourcesTree,
   canMoveSourcesItem,
   deleteSourcesFolder,
+  filterSourcesTree,
   flattenVisibleTreeWithDepth,
   getDescendantFolderIds,
   moveSourcesItem,
   renameSourcesItem,
 } from "./sources-tree";
-import { flattenVisibleTree } from "@/components/ui/tree";
+import { flattenVisibleTree } from "@/shared/components/ui/tree";
 import type { Source } from "../types/source.types";
 import type { SourceFolder } from "../types/source-folder.types";
 
@@ -337,4 +338,31 @@ describe("Sources Tree move operations (pure unit)", () => {
       expect(deleteSourcesFolder(state, "unknown-folder")).toBe(state);
     });
   });
+
+  describe("filterSourcesTree", () => {
+    it("filters nodes based on folder and item visibility predicates", () => {
+      const folders = [
+        createFolder({ id: "f1", name: "Folder 1" }),
+        createFolder({ id: "f2", name: "Folder 2" }),
+      ];
+      const sources = [
+        createSource({ id: "s1", title: "Source 1", folderId: "f1" }),
+        createSource({ id: "s2", title: "Source 2", folderId: "f1" }),
+        createSource({ id: "s3", title: "Source 3", folderId: "f2" }),
+      ];
+
+      const tree = buildSourcesTree({ folders, sources });
+
+      const filtered = filterSourcesTree(tree, {
+        isFolderVisible: (id) => id === "f1",
+        isItemVisible: (id) => id === "s1",
+      });
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].id).toBe("f1");
+      expect(filtered[0].children).toHaveLength(1);
+      expect(filtered[0].children[0].id).toBe("s1");
+    });
+  });
 });
+

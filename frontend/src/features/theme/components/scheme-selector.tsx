@@ -23,34 +23,49 @@ export function SchemeSelector() {
         role="radiogroup"
         aria-label={t("scheme.title")}
       >
-        {SCHEME_OPTIONS.map((opt) => {
-          const Icon = opt.icon;
-          const selected = current === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => setTheme(opt.value)}
-              className={`group flex flex-col gap-2.5 rounded-selector border p-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                selected
-                  ? "border-primary bg-card shadow-sm ring-1 ring-primary/20"
-                  : "border-border bg-card hover:bg-card-hover"
-              }`}
-            >
-              <SchemePreview scheme={opt.value} />
-              <span className="flex items-center justify-between gap-2 px-0.5">
-                <span className="inline-flex min-w-0 items-center gap-1.5 text-base font-medium text-foreground">
-                  <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{t(opt.labelKey)}</span>
-                </span>
-              </span>
-            </button>
-          );
-        })}
+        {SCHEME_OPTIONS.map((opt) => (
+          <SchemeOptionCard
+            key={opt.value}
+            option={opt}
+            selected={current === opt.value}
+            onSelect={() => setTheme(opt.value)}
+          />
+        ))}
       </div>
     </div>
+  );
+}
+
+interface SchemeOptionCardProps {
+  option: (typeof SCHEME_OPTIONS)[number];
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function SchemeOptionCard({ option, selected, onSelect }: SchemeOptionCardProps) {
+  const { t } = useTranslation("theme");
+  const Icon = option.icon;
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={`group flex flex-col gap-2.5 rounded-selector border p-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+        selected
+          ? "border-primary bg-card shadow-sm ring-1 ring-primary/20"
+          : "border-border bg-card hover:bg-card-hover"
+      }`}
+    >
+      <SchemePreview scheme={option.value} />
+      <span className="flex items-center justify-between gap-2 px-0.5">
+        <span className="inline-flex min-w-0 items-center gap-1.5 text-base font-medium text-foreground">
+          <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+          <span className="truncate">{t(option.labelKey)}</span>
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -127,13 +142,17 @@ function SingleSchemePreview({
         <div
           className="h-1.5 w-8 rounded-full bg-(--scheme-accent)"
           style={
-            { "--scheme-accent": `color-mix(in oklch, ${bg}, ${accent} ${isDark ? "35%" : "25%"})` } as React.CSSProperties
+            {
+              "--scheme-accent": `color-mix(in oklch, ${bg}, ${accent} ${isDark ? "35%" : "25%"})`,
+            } as React.CSSProperties
           }
         />
         <div
           className="h-1.5 flex-1 rounded-full bg-(--scheme-mix)"
           style={
-            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "10%" : "6%"})` } as React.CSSProperties
+            {
+              "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "10%" : "6%"})`,
+            } as React.CSSProperties
           }
         />
       </div>
@@ -151,19 +170,25 @@ function SingleSchemePreview({
           <div
             className="h-2 rounded bg-(--scheme-mix)"
             style={
-              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` } as React.CSSProperties
+              {
+                "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
+              } as React.CSSProperties
             }
           />
           <div
             className="h-2 w-3/4 rounded bg-(--scheme-mix)"
             style={
-              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` } as React.CSSProperties
+              {
+                "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
+              } as React.CSSProperties
             }
           />
           <div
             className="mt-1 h-2 w-5/6 rounded bg-(--scheme-soft)"
             style={
-              { "--scheme-soft": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "8%" : "5%"})` } as React.CSSProperties
+              {
+                "--scheme-soft": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "8%" : "5%"})`,
+              } as React.CSSProperties
             }
           />
         </div>
@@ -181,7 +206,9 @@ function SingleSchemePreview({
         <div
           className="h-2 w-16 rounded-full bg-(--scheme-mix)"
           style={
-            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})` } as React.CSSProperties
+            {
+              "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isDark ? "12%" : "8%"})`,
+            } as React.CSSProperties
           }
         />
       </div>
@@ -199,16 +226,25 @@ interface SchemeHalfPaneProps {
 function SchemeHalfPane({ bg, accent, mixTarget, accentPercent }: SchemeHalfPaneProps) {
   const isWhite = mixTarget === "white";
   return (
-    <div className="flex flex-1 flex-col p-2 bg-(--scheme-bg)" style={{ "--scheme-bg": bg } as React.CSSProperties}>
+    <div
+      className="flex flex-1 flex-col p-2 bg-(--scheme-bg)"
+      style={{ "--scheme-bg": bg } as React.CSSProperties}
+    >
       <div className="mb-1.5 flex gap-1">
         <div
           className="h-1.5 w-8 rounded-full bg-(--scheme-accent)"
-          style={{ "--scheme-accent": `color-mix(in oklch, ${bg}, ${accent} ${accentPercent})` } as React.CSSProperties}
+          style={
+            {
+              "--scheme-accent": `color-mix(in oklch, ${bg}, ${accent} ${accentPercent})`,
+            } as React.CSSProperties
+          }
         />
         <div
           className="h-1.5 flex-1 rounded-full bg-(--scheme-mix)"
           style={
-            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "10%" : "6%"})` } as React.CSSProperties
+            {
+              "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "10%" : "6%"})`,
+            } as React.CSSProperties
           }
         />
       </div>
@@ -226,13 +262,17 @@ function SchemeHalfPane({ bg, accent, mixTarget, accentPercent }: SchemeHalfPane
           <div
             className="h-2 rounded bg-(--scheme-mix)"
             style={
-              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})` } as React.CSSProperties
+              {
+                "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
+              } as React.CSSProperties
             }
           />
           <div
             className="h-2 w-3/4 rounded bg-(--scheme-mix)"
             style={
-              { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})` } as React.CSSProperties
+              {
+                "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
+              } as React.CSSProperties
             }
           />
         </div>
@@ -241,7 +281,9 @@ function SchemeHalfPane({ bg, accent, mixTarget, accentPercent }: SchemeHalfPane
         <div
           className="h-1.5 w-16 rounded-full bg-(--scheme-mix)"
           style={
-            { "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})` } as React.CSSProperties
+            {
+              "--scheme-mix": `color-mix(in oklch, ${bg}, ${mixTarget} ${isWhite ? "12%" : "8%"})`,
+            } as React.CSSProperties
           }
         />
       </div>

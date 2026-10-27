@@ -8,7 +8,7 @@ import {
   MessageScrollerContent,
   MessageScrollerProvider,
   MessageScrollerViewport,
-} from "@/components/ui/message-scroller";
+} from "@/features/ai";
 import { ChatMessageList, type ChatMessageListProps } from "./chat-message-list";
 
 // The list suspends on `useTranslation("chat")` until that namespace is

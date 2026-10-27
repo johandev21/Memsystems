@@ -12,6 +12,8 @@ export const THEME_NAMES = [
 ] as const;
 
 export type ThemeName = (typeof THEME_NAMES)[number];
+export type ThemeId = ThemeName;
+export type Scheme = "light" | "dark" | "system";
 
 export type ThemeDescriptionKey = `descriptions.${ThemeName}`;
 

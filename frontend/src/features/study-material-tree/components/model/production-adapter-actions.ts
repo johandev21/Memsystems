@@ -3,13 +3,14 @@ import { toast } from "sonner";
 import i18n from "@/shared/i18n";
 import { createFolder, updateFolder, deleteFolder } from "../../api/folders";
 import {
+  deleteStudyMaterial,
   duplicateStudyMaterial,
   moveStudyMaterial,
   updateStudyMaterial,
-} from "@/features/study-material-viewer/api";
+  type StudyMaterialDTO,
+} from "@/features/study-material-viewer";
 import { getDescendantFolderIds } from "./tree";
-import type { FolderDTO } from "../../types";
-import type { StudyMaterialDTO } from "@/features/study-material-viewer/types";
+import type { FolderDTO } from "../../types/folder.types";
 import type { CommandResult } from "./commands";
 
 export interface AdapterContext {
@@ -201,7 +202,6 @@ export async function executeDeleteItem(
       },
     );
     try {
-      const { deleteStudyMaterial } = await import("@/features/study-material-viewer/api");
       await deleteStudyMaterial(id);
       void ctx.refetchTree();
       return { ok: true };
@@ -221,7 +221,6 @@ export async function executeDeleteItem(
       return { ok: true };
     } catch {
       try {
-        const { deleteStudyMaterial } = await import("@/features/study-material-viewer/api");
         await deleteStudyMaterial(id);
         void ctx.refetchTree();
         return { ok: true };

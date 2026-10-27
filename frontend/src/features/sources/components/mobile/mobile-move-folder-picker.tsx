@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { MobileMoveFolderPickerView } from "@/components/ui/mobile-folder-move-panel";
+import { MobileMoveFolderPickerView } from "@/shared/components/ui/mobile-folder-move-panel";
 import type { SourceFolder } from "../../types/source-folder.types";
 
 export interface MobileMoveFolderPickerProps {

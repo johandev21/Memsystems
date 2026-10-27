@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "i18next";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PaletteProvider } from "@/features/theme/components/palette-provider";
+import { PaletteProvider } from "@/features/theme";
 import { MobileSettingsView } from "./mobile-settings-view";
 
 const mockSetTheme = vi.fn();

@@ -1,14 +1,14 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { FolderPicker } from "@/features/notebooks/components/studio/folder-picker";
-import { SourceMultiSelect } from "@/features/notebooks/components/studio/source-multi-select";
+import { Button } from "@/shared/components/ui/button";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { FolderPicker } from "./folder-picker";
+import { SourceMultiSelect } from "./source-multi-select";
 import {
   canSubmitBrief,
   useNotebookGroundingMode,
-} from "@/features/notebooks/model/grounding-mode";
+} from "@/features/notebooks";
 import { kindLabelKey } from "../../kind-label";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 

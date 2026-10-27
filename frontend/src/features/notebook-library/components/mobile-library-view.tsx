@@ -1,6 +1,6 @@
 import { Folder, Notebook } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { MobileCreatePromptDrawer } from "@/components/ui/mobile-create-prompt-drawer";
+import { MobileCreatePromptDrawer } from "@/shared/components/ui/mobile-create-prompt-drawer";
 import { useMobileLibraryActions } from "../hooks/use-mobile-library-actions";
 import { folderAncestors } from "../model/folder-hierarchy";
 import type { LibraryItem, LibrarySortKey } from "../model/library-sort";

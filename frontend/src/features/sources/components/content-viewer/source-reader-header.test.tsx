@@ -5,10 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { fetchApi } from "@/shared/api";
 import { retrySource } from "../../api/sources";
-import type { SourceWithContent } from "../../types";
+import type { SourceWithContent } from "../../types/source.types";
 import { SourceReaderHeader } from "./source-reader-header";
 
-vi.mock("../../api/sources", () => ({ retrySource: vi.fn() }));
+vi.mock("../../api/sources", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../api/sources")>()),
+  retrySource: vi.fn(),
+}));
 vi.mock("@/shared/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/api")>()),
   fetchApi: vi.fn(),

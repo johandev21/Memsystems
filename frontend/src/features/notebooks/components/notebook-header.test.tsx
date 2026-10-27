@@ -19,7 +19,7 @@ vi.mock("./mobile-notebook-menu-drawer", () => ({
   MobileNotebookMenuDrawer: () => <div data-testid="mobile-menu" />,
 }));
 
-vi.mock("@/components/layout", () => ({
+vi.mock("@/shared/components/layout", () => ({
   Logo: () => <div>Logo</div>,
   SettingsLink: () => <div data-testid="settings-link">SettingsLink</div>,
 }));

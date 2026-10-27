@@ -1,7 +1,7 @@
 import { ArrowLeft, Maximize2, MoreVertical, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DocumentViewerSkeleton } from "./document-viewer-skeleton";
 
 export interface SourceReaderSkeletonProps {
@@ -9,6 +9,36 @@ export interface SourceReaderSkeletonProps {
   isFullscreen?: boolean;
   forceFullscreen?: boolean;
   onClose: () => void;
+}
+
+export function SourceReaderSkeleton({
+  title,
+  isFullscreen,
+  forceFullscreen,
+  onClose,
+}: SourceReaderSkeletonProps) {
+  const isEffectivelyFullscreen = Boolean(forceFullscreen || isFullscreen);
+
+  return (
+    <div
+      data-testid="source-reader-skeleton"
+      className={
+        isEffectivelyFullscreen
+          ? "fixed inset-0 z-viewer flex h-dvh w-screen flex-col bg-panel-bg text-foreground overflow-hidden pb-safe"
+          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden pb-safe"
+      }
+    >
+      <SkeletonHeader
+        onClose={onClose}
+        title={title}
+        forceFullscreen={forceFullscreen}
+        isEffectivelyFullscreen={isEffectivelyFullscreen}
+      />
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <DocumentViewerSkeleton variant="document" />
+      </div>
+    </div>
+  );
 }
 
 function SkeletonHeader({
@@ -68,36 +98,6 @@ function SkeletonHeader({
             <X className="h-4 w-4" />
           </Button>
         )}
-      </div>
-    </div>
-  );
-}
-
-export function SourceReaderSkeleton({
-  title,
-  isFullscreen,
-  forceFullscreen,
-  onClose,
-}: SourceReaderSkeletonProps) {
-  const isEffectivelyFullscreen = Boolean(forceFullscreen || isFullscreen);
-
-  return (
-    <div
-      data-testid="source-reader-skeleton"
-      className={
-        isEffectivelyFullscreen
-          ? "fixed inset-0 z-viewer flex h-dvh w-screen flex-col bg-panel-bg text-foreground overflow-hidden pb-safe"
-          : "flex h-full flex-col bg-panel-bg text-foreground overflow-hidden pb-safe"
-      }
-    >
-      <SkeletonHeader
-        onClose={onClose}
-        title={title}
-        forceFullscreen={forceFullscreen}
-        isEffectivelyFullscreen={isEffectivelyFullscreen}
-      />
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <DocumentViewerSkeleton variant="document" />
       </div>
     </div>
   );

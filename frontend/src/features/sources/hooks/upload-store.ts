@@ -4,7 +4,7 @@ import type {
   SourceModality,
   SourceProcessingStage,
   SourceProcessingStatus,
-} from "../types";
+} from "../types/source.types";
 
 export interface PendingSourceUpload {
   id: string;

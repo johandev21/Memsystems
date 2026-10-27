@@ -92,6 +92,34 @@ export function flattenVisibleTreeWithDepth(
   return rows;
 }
 
+export function filterSourcesTree(
+  nodes: readonly SourcesTreeNode[],
+  predicates: {
+    isFolderVisible?: (folderId: string) => boolean;
+    isItemVisible?: (itemId: string, folderId?: string | null) => boolean;
+  },
+): SourcesTreeNode[] {
+  const { isFolderVisible, isItemVisible } = predicates;
+  const result: SourcesTreeNode[] = [];
+  for (const node of nodes) {
+    if (node.type === "folder") {
+      if (isFolderVisible ? isFolderVisible(node.id) : true) {
+        const filteredChildren = filterSourcesTree(node.children, predicates);
+        result.push({
+          ...node,
+          children: filteredChildren,
+        });
+      }
+    } else if (node.type === "source" && node.source) {
+      if (isItemVisible ? isItemVisible(node.source.id, node.source.folderId) : true) {
+        result.push(node);
+      }
+    }
+  }
+  return result;
+}
+
+
 function byCreatedAtThenId<T extends { createdAt: string; id: string }>(first: T, second: T) {
   const timeCompare = first.createdAt.localeCompare(second.createdAt);
   if (timeCompare !== 0) return timeCompare;

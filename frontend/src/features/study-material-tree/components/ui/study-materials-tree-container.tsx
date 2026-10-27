@@ -1,9 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { foldersQueryOptions } from "../../api/folders";
-import { studyMaterialsQueryOptions } from "@/features/study-material-viewer/api";
-import { useTreeSearch } from "@/components/ui/tree";
+import { useTreeSearch } from "@/shared/components/ui/tree";
 import { StudyMaterialsTree, type StudyMaterialsTreeSize } from "./study-materials-tree";
 import { StudyMaterialsTreeSkeleton } from "./study-materials-tree-skeleton";
 import { StudyMaterialsTreeError } from "./study-materials-tree-error";
@@ -12,6 +9,10 @@ import { useProductionTreeAdapter } from "../model/production-adapter";
 import type { TreeCommandExecutor } from "../model/commands";
 import { MobileStudyMaterialsView } from "../mobile/mobile-study-materials-view";
 import { cn } from "@/shared/utils/cn";
+import {
+  useStudyMaterialsTreeData,
+  type StudyMaterialsTreeData,
+} from "../../hooks/use-study-materials-tree-data";
 
 export interface StudyMaterialsTreeContainerProps {
   notebookId: string;
@@ -24,107 +25,6 @@ export interface StudyMaterialsTreeContainerProps {
   onPanelToggle?: () => void;
   isSearchOpen?: boolean;
   onToggleSearch?: () => void;
-}
-
-function useStudyMaterialsTreeData(notebookId: string) {
-  const { t } = useTranslation("tree");
-  const foldersQuery = useQuery({
-    ...foldersQueryOptions(notebookId),
-    enabled: Boolean(notebookId),
-  });
-  const materialsQuery = useQuery({
-    ...studyMaterialsQueryOptions(notebookId),
-    enabled: Boolean(notebookId),
-  });
-
-  const folders = foldersQuery.data ?? [];
-  const materials = materialsQuery.data ?? [];
-
-  const isInitialLoading = foldersQuery.isPending || materialsQuery.isPending;
-  const isError = foldersQuery.isError || materialsQuery.isError;
-  const errorMessage =
-    (foldersQuery.error as Error | undefined)?.message ??
-    (materialsQuery.error as Error | undefined)?.message ??
-    t("errors.loadFailed");
-  const isFetching = foldersQuery.isFetching || materialsQuery.isFetching;
-  const hasData = foldersQuery.isSuccess && materialsQuery.isSuccess;
-
-  const handleRetry = useCallback(() => {
-    void foldersQuery.refetch();
-    void materialsQuery.refetch();
-  }, [foldersQuery, materialsQuery]);
-
-  return {
-    folders,
-    materials,
-    isInitialLoading,
-    isError,
-    errorMessage,
-    isFetching,
-    hasData,
-    handleRetry,
-  };
-}
-
-interface TreeLoadedContentProps {
-  className?: string;
-  data: ReturnType<typeof useStudyMaterialsTreeData>;
-  onMaterialActivate?: (materialId: string) => void;
-  effectiveOnCommand: TreeCommandExecutor;
-  size?: StudyMaterialsTreeSize;
-  expandedIds: Set<string>;
-  setExpandedIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  isPanelExpanded: boolean;
-  onPanelToggle: () => void;
-  variant?: StudyMaterialsTreeContainerProps["variant"];
-  search: ReturnType<typeof useTreeSearch>;
-  isSearchOpen: boolean;
-  onToggleSearch: () => void;
-}
-
-function TreeLoadedContent({
-  className,
-  data,
-  onMaterialActivate,
-  effectiveOnCommand,
-  size,
-  expandedIds,
-  setExpandedIds,
-  isPanelExpanded,
-  onPanelToggle,
-  variant,
-  search,
-  isSearchOpen,
-  onToggleSearch,
-}: TreeLoadedContentProps) {
-  return (
-    <div
-      data-slot="study-materials-tree-container"
-      className={cn(isPanelExpanded && "h-full flex flex-col min-h-0", className)}
-    >
-      {data.isFetching && data.hasData && <TreeUpdatingIndicator />}
-      <StudyMaterialsTree
-        folders={data.folders}
-        materials={data.materials}
-        onMaterialActivate={onMaterialActivate}
-        onCommand={effectiveOnCommand}
-        size={size}
-        expandedIds={expandedIds}
-        onExpandedChange={setExpandedIds}
-        isPanelExpanded={isPanelExpanded}
-        onPanelToggle={onPanelToggle}
-        contentHeight={variant ?? "standalone"}
-        searchQuery={search.searchQuery}
-        onSearchChange={search.setSearchQuery}
-        matchCount={search.matchCount}
-        isItemVisible={search.isItemVisible}
-        isFolderVisible={search.isFolderVisible}
-        isSearchOpen={isSearchOpen}
-        onToggleSearch={onToggleSearch}
-      />
-      {data.isError && data.hasData && <TreeRefreshError onRetry={data.handleRetry} />}
-    </div>
-  );
 }
 
 export function StudyMaterialsTreeContainer({
@@ -163,24 +63,8 @@ export function StudyMaterialsTreeContainer({
   }, [onControlledToggleSearch]);
 
   const search = useTreeSearch({
-    items: useMemo(
-      () =>
-        data.materials.map((m) => ({
-          id: m.id,
-          name: m.title,
-          folderId: m.folderId,
-        })),
-      [data.materials],
-    ),
-    folders: useMemo(
-      () =>
-        data.folders.map((f) => ({
-          id: f.id,
-          name: f.name,
-          parentId: f.parentId,
-        })),
-      [data.folders],
-    ),
+    items: data.searchItems,
+    folders: data.searchFolders,
   });
 
   useEffect(() => {
@@ -219,7 +103,7 @@ export function StudyMaterialsTreeContainer({
 
 interface TreeContainerViewProps extends Omit<TreeLoadedContentProps, "expandedIds" | "search"> {
   notebookId: string;
-  data: ReturnType<typeof useStudyMaterialsTreeData>;
+  data: StudyMaterialsTreeData;
   expandedIds: Set<string>;
   setExpandedIds: TreeLoadedContentProps["setExpandedIds"];
   search: ReturnType<typeof useTreeSearch>;
@@ -295,6 +179,67 @@ function TreeContainerView({
       isSearchOpen={isSearchOpen}
       onToggleSearch={onToggleSearch}
     />
+  );
+}
+
+interface TreeLoadedContentProps {
+  className?: string;
+  data: StudyMaterialsTreeData;
+  onMaterialActivate?: (materialId: string) => void;
+  effectiveOnCommand: TreeCommandExecutor;
+  size?: StudyMaterialsTreeSize;
+  expandedIds: Set<string>;
+  setExpandedIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  isPanelExpanded: boolean;
+  onPanelToggle: () => void;
+  variant?: StudyMaterialsTreeContainerProps["variant"];
+  search: ReturnType<typeof useTreeSearch>;
+  isSearchOpen: boolean;
+  onToggleSearch: () => void;
+}
+
+function TreeLoadedContent({
+  className,
+  data,
+  onMaterialActivate,
+  effectiveOnCommand,
+  size,
+  expandedIds,
+  setExpandedIds,
+  isPanelExpanded,
+  onPanelToggle,
+  variant,
+  search,
+  isSearchOpen,
+  onToggleSearch,
+}: TreeLoadedContentProps) {
+  return (
+    <div
+      data-slot="study-materials-tree-container"
+      className={cn(isPanelExpanded && "h-full flex flex-col min-h-0", className)}
+    >
+      {data.isFetching && data.hasData && <TreeUpdatingIndicator />}
+      <StudyMaterialsTree
+        folders={data.folders}
+        materials={data.materials}
+        onMaterialActivate={onMaterialActivate}
+        onCommand={effectiveOnCommand}
+        size={size}
+        expandedIds={expandedIds}
+        onExpandedChange={setExpandedIds}
+        isPanelExpanded={isPanelExpanded}
+        onPanelToggle={onPanelToggle}
+        contentHeight={variant ?? "standalone"}
+        searchQuery={search.searchQuery}
+        onSearchChange={search.setSearchQuery}
+        matchCount={search.matchCount}
+        isItemVisible={search.isItemVisible}
+        isFolderVisible={search.isFolderVisible}
+        isSearchOpen={isSearchOpen}
+        onToggleSearch={onToggleSearch}
+      />
+      {data.isError && data.hasData && <TreeRefreshError onRetry={data.handleRetry} />}
+    </div>
   );
 }
 

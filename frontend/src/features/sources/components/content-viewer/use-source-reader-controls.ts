@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { fetchApi } from "@/shared/api";
-import type { Source, SourceWithContent } from "../../types";
+import type { Source, SourceWithContent } from "../../types/source.types";
 import type { ReaderControls } from "./source-content-types";
 
 export function useCachedSourceSummary(sourceId: string): Source | undefined {

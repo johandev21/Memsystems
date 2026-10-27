@@ -1,22 +1,21 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/shared/components/ui/tabs";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { ChatPanel } from "@/features/notebook-chat";
-import { SourcesPanel } from "@/features/sources/components/sources-panel";
-import { SourceReaderSkeleton } from "@/features/sources/components/skeletons/source-reader-skeleton";
+import {
+  loadSourceContentViewer,
+  SourcesPanel,
+  SourceReaderSkeleton,
+  type SourceSegmentLocator,
+} from "@/features/sources";
 import { RightPane } from "../studio/right-pane";
 import { MobileStudioView } from "../studio/mobile-studio-view";
 import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
-import type { SourceSegmentLocator } from "@/features/sources/types";
 import { MobileTabsHeader } from "./mobile-tabs-header";
 
-const SourceContentViewer = lazy(() =>
-  import("@/features/sources/components/source-content-viewer").then(
-    (m) => ({ default: m.SourceContentViewer }),
-  ),
-);
+const SourceContentViewer = lazy(loadSourceContentViewer);
 
 export interface MobileNotebookLayoutProps {
   notebookId: string;

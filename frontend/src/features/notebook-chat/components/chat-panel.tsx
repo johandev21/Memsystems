@@ -3,13 +3,12 @@ import {
   ConversationContent,
   ConversationScrollButton,
   GatewayKeyPrompt,
+  MessageScrollerItem,
   isConnectionUsable,
 } from "@/features/ai";
-import { NotebookBanner } from "@/features/notebooks/components/shared/notebook-banner";
-import { CLEAR_NOTEBOOK_CHAT_EVENT } from "@/features/notebooks/components/dialogs/notebook-settings-dialog";
+import { CLEAR_NOTEBOOK_CHAT_EVENT, NotebookBanner } from "@/features/notebooks";
 import { useCallback, useEffect, useLayoutEffect, memo, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { useChatPanel } from "../hooks/use-chat-panel";
 import { useContext } from "react";
 import { ChatSessionContext } from "../context/chat-session-context";
@@ -95,27 +94,7 @@ function ChatPanelContent({
     handleSubmit(t("actions.continuePrompt"));
   }, [handleSubmit, t]);
 
-  const [responseAnnouncement, setResponseAnnouncement] = useState<string | null>(null);
-  const prevStatusRef = useRef(status);
-
-  useEffect(() => {
-    const prevStatus = prevStatusRef.current;
-    if (prevStatus === status) return;
-    prevStatusRef.current = status;
-
-    const isGenerating = status === "submitted" || status === "streaming";
-    const wasGenerating = prevStatus === "submitted" || prevStatus === "streaming";
-
-    if (!wasGenerating && isGenerating) {
-      setResponseAnnouncement(t("announcements.responding"));
-    } else if (wasGenerating && status === "ready") {
-      setResponseAnnouncement(t("announcements.responseComplete"));
-      const timer = window.setTimeout(() => {
-        setResponseAnnouncement(null);
-      }, 4000);
-      return () => window.clearTimeout(timer);
-    }
-  }, [status, t]);
+  const responseAnnouncement = useResponseAnnouncement(status);
 
   useComposerHeight(conversationWrapperRef, composerWrapperRef);
 
@@ -125,21 +104,13 @@ function ChatPanelContent({
     clearAnchor();
   }, [clearAnchor]);
 
-  useEffect(() => {
-    const handleClearRequest = (event: Event) => {
-      const detail = (event as CustomEvent<{ notebookId?: string }>).detail;
-      if (
-        detail?.notebookId === notebookId &&
-        messageCount > 0 &&
-        !isLoading &&
-        (!panelRef.current || panelRef.current.getClientRects().length > 0)
-      ) {
-        setIsClearDialogOpen(true);
-      }
-    };
-    window.addEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
-    return () => window.removeEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
-  }, [isLoading, messageCount, notebookId, panelRef, setIsClearDialogOpen]);
+  useClearChatEventListener({
+    notebookId,
+    messageCount,
+    isLoading,
+    panelRef,
+    onOpenClearDialog: setIsClearDialogOpen,
+  });
 
   const selectedModelSupportsReasoning = modelOptions.some(
     (m) => m.id === selectedModel && m.capabilities?.reasoning === true,
@@ -488,4 +459,61 @@ function useComposerHeight(
       document.documentElement.style.removeProperty("--composer-height");
     };
   }, [conversationRef, composerRef]);
+}
+
+function useResponseAnnouncement(status: string): string | null {
+  const { t } = useTranslation("chat");
+  const [responseAnnouncement, setResponseAnnouncement] = useState<string | null>(null);
+  const prevStatusRef = useRef(status);
+
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    if (prevStatus === status) return;
+    prevStatusRef.current = status;
+
+    const isGenerating = status === "submitted" || status === "streaming";
+    const wasGenerating = prevStatus === "submitted" || prevStatus === "streaming";
+
+    if (!wasGenerating && isGenerating) {
+      setResponseAnnouncement(t("announcements.responding"));
+    } else if (wasGenerating && status === "ready") {
+      setResponseAnnouncement(t("announcements.responseComplete"));
+      const timer = window.setTimeout(() => {
+        setResponseAnnouncement(null);
+      }, 4000);
+      return () => window.clearTimeout(timer);
+    }
+  }, [status, t]);
+
+  return responseAnnouncement;
+}
+
+function useClearChatEventListener({
+  notebookId,
+  messageCount,
+  isLoading,
+  panelRef,
+  onOpenClearDialog,
+}: {
+  notebookId: string;
+  messageCount: number;
+  isLoading: boolean;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  onOpenClearDialog: (open: boolean) => void;
+}) {
+  useEffect(() => {
+    const handleClearRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{ notebookId?: string }>).detail;
+      if (
+        detail?.notebookId === notebookId &&
+        messageCount > 0 &&
+        !isLoading &&
+        (!panelRef.current || panelRef.current.getClientRects().length > 0)
+      ) {
+        onOpenClearDialog(true);
+      }
+    };
+    window.addEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
+    return () => window.removeEventListener(CLEAR_NOTEBOOK_CHAT_EVENT, handleClearRequest);
+  }, [isLoading, messageCount, notebookId, panelRef, onOpenClearDialog]);
 }

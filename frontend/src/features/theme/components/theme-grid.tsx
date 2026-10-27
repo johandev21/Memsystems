@@ -1,4 +1,4 @@
-import { Logo } from "@/components/layout";
+import { Logo } from "@/shared/components/layout";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 import { THEMES, type ThemeName } from "../utils/themes";

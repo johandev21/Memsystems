@@ -2,21 +2,21 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react
 import { useDroppable } from "@dnd-kit/core";
 import { ArrowUpDown, ChevronRight, MoreHorizontal, NotebookText } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { EmptyState } from "@/components/ui/empty-state";
+import { EmptyState } from "@/shared/components/ui/empty-state";
 import { cn } from "@/shared/utils/cn";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/shared/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/shared/components/ui/select";
 import type { LibraryFolder, LibraryNotebook } from "../model/types";
 import {
   sortLibraryItems,
@@ -58,6 +58,41 @@ export interface FolderLibraryProps {
   onImportNotebook?: () => void;
 }
 
+function useFolderLibraryItems(
+  folders: LibraryFolder[],
+  notebooks: LibraryNotebook[],
+  activeFolderId: string | null,
+  sortKey: LibrarySortKey,
+  locale?: string,
+) {
+  const items = useMemo(() => {
+    const visible =
+      activeFolderId === null
+        ? toLibraryItems(
+            childFolders(folders, null),
+            notebooks.filter((notebook) => notebook.folderId === null),
+          )
+        : toLibraryItems(
+            childFolders(folders, activeFolderId),
+            notebooks.filter((notebook) => notebook.folderId === activeFolderId),
+          );
+    return sortLibraryItems(visible, sortKey, locale);
+  }, [activeFolderId, folders, notebooks, sortKey, locale]);
+
+  const folderNotebooks = useMemo(
+    () =>
+      new Map(
+        folders.map((folder) => [
+          folder.id,
+          sortNotebooks(descendantNotebooks(folders, notebooks, folder.id), sortKey, locale),
+        ]),
+      ),
+    [folders, notebooks, sortKey, locale],
+  );
+
+  return { items, folderNotebooks };
+}
+
 export function FolderLibrary({
   folders,
   notebooks,
@@ -85,47 +120,35 @@ export function FolderLibrary({
 }: FolderLibraryProps) {
   const { t, i18n } = useTranslation("notebooks");
   const locale = i18n.resolvedLanguage;
-  const sortOptions: { value: LibrarySortKey; label: string; description: string }[] = [
-    {
-      value: "name",
-      label: t("library.sort.name"),
-      description: t("library.sort.nameDescription"),
-    },
-    {
-      value: "updatedAt",
-      label: t("library.sort.updatedAt"),
-      description: t("library.sort.updatedAtDescription"),
-    },
-    {
-      value: "createdAt",
-      label: t("library.sort.createdAt"),
-      description: t("library.sort.createdAtDescription"),
-    },
-  ];
+  const sortOptions: { value: LibrarySortKey; label: string; description: string }[] = useMemo(
+    () => [
+      {
+        value: "name",
+        label: t("library.sort.name"),
+        description: t("library.sort.nameDescription"),
+      },
+      {
+        value: "updatedAt",
+        label: t("library.sort.updatedAt"),
+        description: t("library.sort.updatedAtDescription"),
+      },
+      {
+        value: "createdAt",
+        label: t("library.sort.createdAt"),
+        description: t("library.sort.createdAtDescription"),
+      },
+    ],
+    [t],
+  );
+
   const activeFolder = folders.find((folder) => folder.id === activeFolderId);
   const breadcrumbs = folderAncestors(folders, activeFolderId);
-  const items = useMemo(() => {
-    const visible =
-      activeFolderId === null
-        ? toLibraryItems(
-            childFolders(folders, null),
-            notebooks.filter((notebook) => notebook.folderId === null),
-          )
-        : toLibraryItems(
-            childFolders(folders, activeFolderId),
-            notebooks.filter((notebook) => notebook.folderId === activeFolderId),
-          );
-    return sortLibraryItems(visible, sortKey, locale);
-  }, [activeFolderId, folders, notebooks, sortKey, locale]);
-  const folderNotebooks = useMemo(
-    () =>
-      new Map(
-        folders.map((folder) => [
-          folder.id,
-          sortNotebooks(descendantNotebooks(folders, notebooks, folder.id), sortKey, locale),
-        ]),
-      ),
-    [folders, notebooks, sortKey, locale],
+  const { items, folderNotebooks } = useFolderLibraryItems(
+    folders,
+    notebooks,
+    activeFolderId,
+    sortKey,
+    locale,
   );
 
   const emptyState = activeFolder
@@ -166,38 +189,14 @@ export function FolderLibrary({
       </div>
 
       <div className="hidden sm:flex flex-col gap-4 w-full">
-        {activeFolder && <Breadcrumb folders={breadcrumbs} onOpenFolder={onOpenFolder} />}
-        <div className="flex items-start sm:items-center justify-between gap-4 min-w-0">
-          <h2
-            dir="auto"
-            className="text-lg font-semibold text-foreground min-w-0 break-words [overflow-wrap:anywhere] line-clamp-3"
-            title={activeFolder?.name ?? t("library.library")}
-          >
-            {activeFolder?.name ?? t("library.library")}
-          </h2>
-          <div className="flex items-center gap-2 shrink-0">
-            <Select
-              items={sortOptions}
-              value={sortKey}
-              onValueChange={(value) => onSortChange(value as LibrarySortKey)}
-            >
-              <SelectTrigger size="sm" aria-label={t("library.sort.aria")} className="shrink-0">
-                <ArrowUpDown className="size-4" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="w-56">
-                {sortOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="items-start py-2">
-                    <span className="flex flex-col gap-0.5">
-                      <span className="font-medium">{option.label}</span>
-                      <span className="text-xs text-muted-foreground">{option.description}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <DesktopLibraryHeader
+          activeFolder={activeFolder}
+          breadcrumbs={breadcrumbs}
+          sortKey={sortKey}
+          sortOptions={sortOptions}
+          onSortChange={onSortChange}
+          onOpenFolder={onOpenFolder}
+        />
         <LibraryGrid
           items={items}
           folderNotebooks={folderNotebooks}
@@ -219,6 +218,64 @@ export function FolderLibrary({
         />
       </div>
     </div>
+  );
+}
+
+interface DesktopLibraryHeaderProps {
+  activeFolder: LibraryFolder | undefined;
+  breadcrumbs: LibraryFolder[];
+  sortKey: LibrarySortKey;
+  sortOptions: { value: LibrarySortKey; label: string; description: string }[];
+  onSortChange: (sortKey: LibrarySortKey) => void;
+  onOpenFolder: (id: string | null) => void;
+}
+
+function DesktopLibraryHeader({
+  activeFolder,
+  breadcrumbs,
+  sortKey,
+  sortOptions,
+  onSortChange,
+  onOpenFolder,
+}: DesktopLibraryHeaderProps) {
+  const { t } = useTranslation("notebooks");
+  const folderTitle = activeFolder?.name ?? t("library.library");
+
+  return (
+    <>
+      {activeFolder && <Breadcrumb folders={breadcrumbs} onOpenFolder={onOpenFolder} />}
+      <div className="flex items-start sm:items-center justify-between gap-4 min-w-0">
+        <h2
+          dir="auto"
+          className="text-lg font-semibold text-foreground min-w-0 break-words [overflow-wrap:anywhere] line-clamp-3"
+          title={folderTitle}
+        >
+          {folderTitle}
+        </h2>
+        <div className="flex items-center gap-2 shrink-0">
+          <Select
+            items={sortOptions}
+            value={sortKey}
+            onValueChange={(value) => onSortChange(value as LibrarySortKey)}
+          >
+            <SelectTrigger size="sm" aria-label={t("library.sort.aria")} className="shrink-0">
+              <ArrowUpDown className="size-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="w-56">
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="items-start py-2">
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-medium">{option.label}</span>
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </>
   );
 }
 

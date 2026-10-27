@@ -1,4 +1,4 @@
-import type { Source } from "../types";
+import type { Source } from "../types/source.types";
 
 export function sourceDisplayTitle(source: Pick<Source, "kind" | "title">): string {
   if (source.kind !== "file") return source.title;

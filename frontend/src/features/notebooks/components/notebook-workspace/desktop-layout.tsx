@@ -1,24 +1,23 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { GroupImperativeHandle, PanelImperativeHandle } from "react-resizable-panels";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/components/ui/resizable";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { cn } from "@/shared/utils/cn";
 import { ChatPanel, ChatPanelHeader } from "@/features/notebook-chat";
-import { SourcesPanel } from "@/features/sources/components/sources-panel";
-import { SourceReaderSkeleton } from "@/features/sources/components/skeletons/source-reader-skeleton";
+import {
+  loadSourceContentViewer,
+  SourcesPanel,
+  SourceReaderSkeleton,
+  type SourceSegmentLocator,
+} from "@/features/sources";
 import { StudyMaterialsPanel } from "@/features/study-material-tree";
 import { StudioResources } from "../shared/studio-resources";
 import { RightPane } from "../studio/right-pane";
-import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
-import type { SourceSegmentLocator } from "@/features/sources/types";
-
-const SourceContentViewer = lazy(() =>
-  import("@/features/sources/components/source-content-viewer").then(
-    (m) => ({ default: m.SourceContentViewer }),
-  ),
-);
 import { StudioPanelHeader } from "./studio-panel-header";
+import type { UseStudioDialogsReturn } from "../../hooks/use-studio-dialogs";
+
+const SourceContentViewer = lazy(loadSourceContentViewer);
 
 const COLLAPSED_PANEL_SIZE = "48px";
 const SIDE_PANEL_MIN_SIZE = "220px";
@@ -154,26 +153,14 @@ export function DesktopLayout({
             isTransitioning && "transition-all duration-200 ease-out",
           )}
         >
-          <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
-            {selectedSourceId ? (
-              <Suspense
-                fallback={<SourceReaderSkeleton onClose={() => onSelectSource(null)} />}
-              >
-                <SourceContentViewer
-                  sourceId={selectedSourceId}
-                  selectedLocator={selectedLocator}
-                  onClose={() => onSelectSource(null)}
-                />
-              </Suspense>
-            ) : (
-              <SourcesPanel
-                notebookId={notebookId}
-                collapsed={sourcesCollapsed}
-                onSelectSource={onSelectSource}
-                onToggleCollapse={toggleSourcesCollapse}
-              />
-            )}
-          </div>
+          <SourcesPanelBody
+            notebookId={notebookId}
+            selectedSourceId={selectedSourceId}
+            selectedLocator={selectedLocator}
+            sourcesCollapsed={sourcesCollapsed}
+            onSelectSource={onSelectSource}
+            onToggleCollapse={toggleSourcesCollapse}
+          />
         </ResizablePanel>
         <WorkspaceResizeHandle disabled={isReviewingStudyMaterial} />
         <ResizablePanel
@@ -211,73 +198,144 @@ export function DesktopLayout({
             isTransitioning && "transition-all duration-200 ease-out",
           )}
         >
-          <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
-            {dialogs.selectedStudyMaterialId ? (
-              <RightPane
-                notebookId={notebookId}
-                mode={{
-                  kind: "viewer",
-                  materialId: dialogs.selectedStudyMaterialId,
-                }}
-                onModeChange={(mode) => {
-                  if (mode.kind === "select") {
-                    exitStudyMaterialReview();
-                  }
-                }}
-              />
-            ) : studioCollapsed ? (
-              <>
-                <StudioPanelHeader
-                  collapsed={true}
-                  onToggleCollapse={toggleStudioCollapse}
-                />
-                <ScrollArea className="flex-1">
-                  <StudioResources
-                    notebookId={notebookId}
-                    collapsed={true}
-                    onGenerate={dialogs.handleGenerate}
-                  />
-                </ScrollArea>
-              </>
-            ) : isStudyMaterialsExpanded ? (
-              <div className="flex flex-col h-full min-h-0 min-w-0">
-                <StudyMaterialsPanel
-                  notebookId={notebookId}
-                  onSelectMaterial={dialogs.setSelectedStudyMaterialId}
-                  isExpanded={true}
-                  onToggleExpand={toggleStudyMaterialsExpand}
-                  isSearchOpen={studioSearchOpen}
-                  onToggleSearch={() => setStudioSearchOpen((v) => !v)}
-                />
-              </div>
-            ) : (
-              <>
-                <StudioPanelHeader
-                  collapsed={false}
-                  onToggleCollapse={toggleStudioCollapse}
-                />
-                <ScrollArea className="flex-1">
-                  <StudioResources
-                    notebookId={notebookId}
-                    collapsed={false}
-                    onGenerate={dialogs.handleGenerate}
-                  />
-                </ScrollArea>
-                <div className="p-1.5 pt-0">
-                  <StudyMaterialsPanel
-                    notebookId={notebookId}
-                    onSelectMaterial={dialogs.setSelectedStudyMaterialId}
-                    isExpanded={false}
-                    onToggleExpand={toggleStudyMaterialsExpand}
-                    isSearchOpen={studioSearchOpen}
-                    onToggleSearch={() => setStudioSearchOpen((v) => !v)}
-                  />
-                </div>
-              </>
-            )}
-          </div>
+          <StudioPanelBody
+            notebookId={notebookId}
+            dialogs={dialogs}
+            studioCollapsed={studioCollapsed}
+            isStudyMaterialsExpanded={isStudyMaterialsExpanded}
+            studioSearchOpen={studioSearchOpen}
+            onToggleCollapse={toggleStudioCollapse}
+            onToggleExpand={toggleStudyMaterialsExpand}
+            onToggleSearch={() => setStudioSearchOpen((v) => !v)}
+            onExitReview={exitStudyMaterialReview}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
+    </div>
+  );
+}
+
+interface SourcesPanelBodyProps {
+  notebookId: string;
+  selectedSourceId: string | null;
+  selectedLocator?: SourceSegmentLocator | null;
+  sourcesCollapsed: boolean;
+  onSelectSource: (id: string | null) => void;
+  onToggleCollapse: () => void;
+}
+
+function SourcesPanelBody({
+  notebookId,
+  selectedSourceId,
+  selectedLocator,
+  sourcesCollapsed,
+  onSelectSource,
+  onToggleCollapse,
+}: SourcesPanelBodyProps) {
+  return (
+    <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
+      {selectedSourceId ? (
+        <Suspense fallback={<SourceReaderSkeleton onClose={() => onSelectSource(null)} />}>
+          <SourceContentViewer
+            sourceId={selectedSourceId}
+            selectedLocator={selectedLocator}
+            onClose={() => onSelectSource(null)}
+          />
+        </Suspense>
+      ) : (
+        <SourcesPanel
+          notebookId={notebookId}
+          collapsed={sourcesCollapsed}
+          onSelectSource={onSelectSource}
+          onToggleCollapse={onToggleCollapse}
+        />
+      )}
+    </div>
+  );
+}
+
+interface StudioPanelBodyProps {
+  notebookId: string;
+  dialogs: UseStudioDialogsReturn;
+  studioCollapsed: boolean;
+  isStudyMaterialsExpanded: boolean;
+  studioSearchOpen: boolean;
+  onToggleCollapse: () => void;
+  onToggleExpand: () => void;
+  onToggleSearch: () => void;
+  onExitReview: () => void;
+}
+
+function StudioPanelBody({
+  notebookId,
+  dialogs,
+  studioCollapsed,
+  isStudyMaterialsExpanded,
+  studioSearchOpen,
+  onToggleCollapse,
+  onToggleExpand,
+  onToggleSearch,
+  onExitReview,
+}: StudioPanelBodyProps) {
+  return (
+    <div className="flex flex-col h-full min-w-0 overflow-hidden bg-panel-bg">
+      {dialogs.selectedStudyMaterialId ? (
+        <RightPane
+          notebookId={notebookId}
+          mode={{
+            kind: "viewer",
+            materialId: dialogs.selectedStudyMaterialId,
+          }}
+          onModeChange={(mode) => {
+            if (mode.kind === "select") {
+              onExitReview();
+            }
+          }}
+        />
+      ) : studioCollapsed ? (
+        <>
+          <StudioPanelHeader collapsed={true} onToggleCollapse={onToggleCollapse} />
+          <ScrollArea className="flex-1">
+            <StudioResources
+              notebookId={notebookId}
+              collapsed={true}
+              onGenerate={dialogs.handleGenerate}
+            />
+          </ScrollArea>
+        </>
+      ) : isStudyMaterialsExpanded ? (
+        <div className="flex flex-col h-full min-h-0 min-w-0">
+          <StudyMaterialsPanel
+            notebookId={notebookId}
+            onSelectMaterial={dialogs.setSelectedStudyMaterialId}
+            isExpanded={true}
+            onToggleExpand={onToggleExpand}
+            isSearchOpen={studioSearchOpen}
+            onToggleSearch={onToggleSearch}
+          />
+        </div>
+      ) : (
+        <>
+          <StudioPanelHeader collapsed={false} onToggleCollapse={onToggleCollapse} />
+          <ScrollArea className="flex-1">
+            <StudioResources
+              notebookId={notebookId}
+              collapsed={false}
+              onGenerate={dialogs.handleGenerate}
+            />
+          </ScrollArea>
+          <div className="p-1.5 pt-0">
+            <StudyMaterialsPanel
+              notebookId={notebookId}
+              onSelectMaterial={dialogs.setSelectedStudyMaterialId}
+              isExpanded={false}
+              onToggleExpand={onToggleExpand}
+              isSearchOpen={studioSearchOpen}
+              onToggleSearch={onToggleSearch}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

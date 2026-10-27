@@ -19,8 +19,8 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/components/ui/tree";
+} from "@/shared/components/ui/context-menu";
+import { HighlightMatch, InlineRename, getTreeRowClassName, useTreeRowDragDrop } from "@/shared/components/ui/tree";
 import type { SourceFolder } from "../types/source-folder.types";
 
 export interface SourceFolderRowProps {

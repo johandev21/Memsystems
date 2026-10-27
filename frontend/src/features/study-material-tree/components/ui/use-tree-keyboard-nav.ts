@@ -1,5 +1,5 @@
 import type { TreeNode } from "../model/tree";
-import { useTreeKeyboardNav as useSharedTreeKeyboardNav } from "@/components/ui/tree";
+import { useTreeKeyboardNav as useSharedTreeKeyboardNav } from "@/shared/components/ui/tree";
 
 export interface UseTreeKeyboardNavOptions {
   activeDragItemId: string | null;

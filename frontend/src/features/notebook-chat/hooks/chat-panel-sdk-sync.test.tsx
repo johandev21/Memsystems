@@ -46,7 +46,13 @@ vi.mock("@/features/ai", async (importOriginal) => {
 vi.mock("@/features/notebooks/hooks/use-model-persistence", () => ({
   useModelPersistence: () => ({ model: null, setModel: vi.fn() }),
 }));
-vi.mock("@/features/notebooks/api", () => ({ notebookQueryOptions: (id: string) => ({ queryKey: ["notebooks", id] }) }));
+vi.mock("@/features/notebooks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/notebooks")>();
+  return {
+    ...actual,
+    notebookQueryOptions: (id: string) => ({ queryKey: ["notebooks", id] }),
+  };
+});
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 beforeAll(async () => { await i18n.loadNamespaces("chat"); });

@@ -7,7 +7,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer";
+} from "@/shared/components/ui/drawer";
 import { cn } from "@/shared/utils/cn";
 import type { ModelOption } from "../types/model.types";
 import { getProviderName } from "../utils/model-providers";
@@ -76,7 +76,10 @@ export function MobileModelSelectorDrawer({
     return result;
   }, [groups, searchQuery, isControlledSearch]);
 
-  const isEmpty = Object.values(filteredGroups).every((models) => models.length === 0);
+  const handleSelectModel = (modelId: string) => {
+    onSelect(modelId);
+    onOpenChange(false);
+  };
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -88,102 +91,170 @@ export function MobileModelSelectorDrawer({
           </DrawerTitle>
         </DrawerHeader>
 
-        <div className="pb-3 shrink-0">
-          <div className="relative flex items-center rounded-xl border border-border/80 bg-muted/40 px-3 py-2 motion-chrome duration-150 ease-in-out focus-within:border-ring focus-within:bg-muted/70 focus-within:ring-2 focus-within:ring-ring/20 hover:border-border hover:bg-muted/60">
-            <SearchIcon className="size-4 shrink-0 text-muted-foreground mr-2.5" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder={
-                searchPlaceholder ??
-                t("chat:composer.searchPlaceholder", "Search models...")
-              }
-              aria-label={
-                searchPlaceholder ??
-                t("chat:composer.searchPlaceholder", "Search models...")
-              }
-              className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-none p-0 h-6"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck="false"
-            />
-            {searchQuery.length > 0 && (
-              <button
-                type="button"
-                onClick={() => handleSearchChange("")}
-                className="size-5 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 flex items-center justify-center text-muted-foreground active:scale-95 touch-manipulation ml-1 cursor-pointer shrink-0"
-                aria-label={t("common:clear", "Clear search")}
-              >
-                <XIcon className="size-3" />
-              </button>
-            )}
-          </div>
-        </div>
+        <MobileModelSearchInput
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder={searchPlaceholder}
+        />
 
-        <div
-          role="listbox"
-          aria-label={
-            typeof title === "string"
-              ? title
-              : t("chat:composer.selectModelTitle", "Select Model")
-          }
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-0.5 pb-2"
-        >
-          {isEmpty ? (
-            <div className="py-12 px-4 text-center text-sm text-muted-foreground">
-              {emptyLabel ?? t("chat:composer.noModelsFound", "No models found")}
-            </div>
-          ) : (
-            Object.entries(filteredGroups).map(([provider, models]) => {
-              if (models.length === 0) return null;
-              return (
-                <div key={provider} className="py-1.5 first:pt-0">
-                  <div className="px-3 py-1 text-xs font-medium text-muted-foreground select-none">
-                    {getProviderName(provider)}
-                  </div>
-                  <div className="flex flex-col gap-0.5 mt-0.5">
-                    {models.map((model) => {
-                      const isSelected = selectedModel === model.id;
-                      return (
-                        <button
-                          key={model.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          onClick={() => {
-                            onSelect(model.id);
-                            onOpenChange(false);
-                          }}
-                          className={cn(
-                            "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left motion-selection-press duration-150 ease-out active:scale-[0.98] touch-manipulation min-h-12 select-none",
-                            isSelected
-                              ? "bg-muted font-medium text-foreground"
-                              : "text-foreground/90 hover:bg-muted/50 active:bg-muted/70",
-                          )}
-                        >
-                          <ModelSelectorLogo
-                            provider={provider}
-                            className="size-4 shrink-0 opacity-85"
-                          />
-                          <span className="flex-1 min-w-0 truncate text-sm leading-normal">
-                            {model.displayName}
-                          </span>
-                          {isSelected ? (
-                            <CheckIcon className="size-4.5 shrink-0 text-primary" />
-                          ) : (
-                            <span className="size-4.5 shrink-0" aria-hidden="true" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+        <MobileModelGroupList
+          groups={filteredGroups}
+          selectedModel={selectedModel}
+          onSelect={handleSelectModel}
+          title={title}
+          emptyLabel={emptyLabel}
+        />
       </DrawerContent>
     </Drawer>
+  );
+}
+
+interface MobileModelSearchInputProps {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  searchPlaceholder?: string;
+}
+
+function MobileModelSearchInput({
+  searchQuery,
+  onSearchChange,
+  searchPlaceholder,
+}: MobileModelSearchInputProps) {
+  const { t } = useTranslation(["chat", "common"]);
+
+  return (
+    <div className="pb-3 shrink-0">
+      <div className="relative flex items-center rounded-xl border border-border/80 bg-muted/40 px-3 py-2 motion-chrome duration-150 ease-in-out focus-within:border-ring focus-within:bg-muted/70 focus-within:ring-2 focus-within:ring-ring/20 hover:border-border hover:bg-muted/60">
+        <SearchIcon className="size-4 shrink-0 text-muted-foreground mr-2.5" />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={
+            searchPlaceholder ??
+            t("chat:composer.searchPlaceholder", "Search models...")
+          }
+          aria-label={
+            searchPlaceholder ??
+            t("chat:composer.searchPlaceholder", "Search models...")
+          }
+          className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-none p-0 h-6"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
+        />
+        {searchQuery.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onSearchChange("")}
+            className="size-5 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 flex items-center justify-center text-muted-foreground active:scale-95 touch-manipulation ml-1 cursor-pointer shrink-0"
+            aria-label={t("common:clear", "Clear search")}
+          >
+            <XIcon className="size-3" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface MobileModelGroupListProps {
+  groups: Record<string, ModelOption[]>;
+  selectedModel: string;
+  onSelect: (modelId: string) => void;
+  emptyLabel?: string;
+  title?: ReactNode;
+}
+
+function MobileModelGroupList({
+  groups,
+  selectedModel,
+  onSelect,
+  emptyLabel,
+  title,
+}: MobileModelGroupListProps) {
+  const { t } = useTranslation(["chat"]);
+  const isEmpty = Object.values(groups).every((models) => models.length === 0);
+
+  return (
+    <div
+      role="listbox"
+      aria-label={
+        typeof title === "string"
+          ? title
+          : t("chat:composer.selectModelTitle", "Select Model")
+      }
+      className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-0.5 pb-2"
+    >
+      {isEmpty ? (
+        <div className="py-12 px-4 text-center text-sm text-muted-foreground">
+          {emptyLabel ?? t("chat:composer.noModelsFound", "No models found")}
+        </div>
+      ) : (
+        Object.entries(groups).map(([provider, models]) => {
+          if (models.length === 0) return null;
+          return (
+            <div key={provider} className="py-1.5 first:pt-0">
+              <div className="px-3 py-1 text-xs font-medium text-muted-foreground select-none">
+                {getProviderName(provider)}
+              </div>
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                {models.map((model) => (
+                  <MobileModelOptionButton
+                    key={model.id}
+                    model={model}
+                    provider={provider}
+                    isSelected={selectedModel === model.id}
+                    onSelect={onSelect}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+interface MobileModelOptionButtonProps {
+  model: ModelOption;
+  provider: string;
+  isSelected: boolean;
+  onSelect: (modelId: string) => void;
+}
+
+function MobileModelOptionButton({
+  model,
+  provider,
+  isSelected,
+  onSelect,
+}: MobileModelOptionButtonProps) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={isSelected}
+      onClick={() => onSelect(model.id)}
+      className={cn(
+        "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left motion-selection-press duration-150 ease-out active:scale-[0.98] touch-manipulation min-h-12 select-none",
+        isSelected
+          ? "bg-muted font-medium text-foreground"
+          : "text-foreground/90 hover:bg-muted/50 active:bg-muted/70",
+      )}
+    >
+      <ModelSelectorLogo
+        provider={provider}
+        className="size-4 shrink-0 opacity-85"
+      />
+      <span className="flex-1 min-w-0 truncate text-sm leading-normal">
+        {model.displayName}
+      </span>
+      {isSelected ? (
+        <CheckIcon className="size-4.5 shrink-0 text-primary" />
+      ) : (
+        <span className="size-4.5 shrink-0" aria-hidden="true" />
+      )}
+    </button>
   );
 }

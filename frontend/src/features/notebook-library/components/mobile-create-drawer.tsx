@@ -5,7 +5,7 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
+} from "@/shared/components/ui/drawer";
 
 export interface MobileCreateDrawerProps {
   isOpen: boolean;

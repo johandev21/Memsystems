@@ -6,7 +6,7 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
+} from "@/shared/components/ui/drawer";
 import { cn } from "@/shared/utils/cn";
 import type { LibraryItem } from "../model/library-sort";
 import type { LibraryFolder } from "../model/types";

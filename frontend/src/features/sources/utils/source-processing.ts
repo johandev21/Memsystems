@@ -5,7 +5,7 @@ import type {
   SourceProcessingStage,
   SourceProcessingStatus,
   SourceQualityReason,
-} from "../types";
+} from "../types/source.types";
 
 type DynamicTranslate = (
   key: string,

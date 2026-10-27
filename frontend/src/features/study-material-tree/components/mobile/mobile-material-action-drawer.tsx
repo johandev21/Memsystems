@@ -14,9 +14,9 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { MobileFolderMovePanel } from "@/components/ui/mobile-folder-move-panel";
-import type { FolderDTO } from "../../types";
+} from "@/shared/components/ui/drawer";
+import { MobileFolderMovePanel } from "@/shared/components/ui/mobile-folder-move-panel";
+import type { FolderDTO } from "../../types/folder.types";
 import type { TreeNode } from "../model/tree";
 import { getTreeIcon } from "../ui/tree/row-icon";
 

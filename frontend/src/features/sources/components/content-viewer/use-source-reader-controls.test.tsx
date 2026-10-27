@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchApi } from "@/shared/api";
-import type { SourceWithContent } from "../../types";
+import type { SourceWithContent } from "../../types/source.types";
 import { useSourceReaderControls } from "./use-source-reader-controls";
 
 vi.mock("@/shared/api", () => ({ fetchApi: vi.fn() }));

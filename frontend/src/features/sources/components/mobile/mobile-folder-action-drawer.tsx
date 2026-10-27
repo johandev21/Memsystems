@@ -7,8 +7,8 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { MobileFolderMovePanel } from "@/components/ui/mobile-folder-move-panel";
+} from "@/shared/components/ui/drawer";
+import { MobileFolderMovePanel } from "@/shared/components/ui/mobile-folder-move-panel";
 import type { SourceFolder } from "../../types/source-folder.types";
 
 const ACTION_CLASS =

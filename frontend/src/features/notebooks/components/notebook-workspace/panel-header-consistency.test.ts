@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 const sources = import.meta.glob<string>(
   [
     "/src/features/notebook-chat/components/chat-panel-header.tsx",
-    "/src/features/notebooks/components/notebook-workspace/sources-panel-header.tsx",
+    "/src/features/sources/components/sources-panel-header.tsx",
     "/src/features/notebooks/components/notebook-workspace/studio-panel-header.tsx",
     "/src/features/sources/components/content-viewer/source-reader-header.tsx",
     "/src/features/sources/components/skeletons/source-reader-skeleton.tsx",

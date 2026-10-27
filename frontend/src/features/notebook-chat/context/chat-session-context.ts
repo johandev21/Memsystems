@@ -1,4 +1,4 @@
-import { createContext } from "react";
+import { createContext, useContext } from "react";
 import type { useChatPanel } from "../hooks/use-chat-panel";
 
 export type ChatSession = ReturnType<typeof useChatPanel>;
@@ -9,3 +9,7 @@ export interface SharedChatSession {
 }
 
 export const ChatSessionContext = createContext<SharedChatSession | null>(null);
+
+export function useChatSession(): SharedChatSession | null {
+  return useContext(ChatSessionContext);
+}

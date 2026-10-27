@@ -6,7 +6,7 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
+} from "@/shared/components/ui/drawer";
 import type { LibraryItem } from "../model/library-sort";
 
 export interface MobileActionDrawerProps {

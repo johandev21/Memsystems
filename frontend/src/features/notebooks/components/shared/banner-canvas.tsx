@@ -2,9 +2,9 @@ import { AlertCircle, Check, ImagePlus, Move, Pencil, Trash2, X } from "lucide-r
 import { useState } from "react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { IconPicker } from "@/components/ui/icon-picker";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { IconPicker } from "../icon-picker/icon-picker";
+import { Input } from "@/shared/components/ui/input";
 import { NotebookIcon } from "../notebook-icon";
 import type { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
 import { buildBannerSrcSet } from "../../utils/banner-variants";
@@ -36,6 +36,102 @@ export interface BannerCanvasProps {
   isUntitled: boolean;
 }
 
+export function BannerCanvas({
+  containerRef,
+  isEditing,
+  visibleBannerUrl,
+  visibleBannerVariants,
+  visibleFocalPoint,
+  imageError,
+  onImageError,
+  focalPointDrag,
+  onKeyDown,
+  isSaving,
+  onOpenImageDialog,
+  onRemoveBanner,
+  onCancel,
+  onSave,
+  onBeginEditing,
+  draftTitle,
+  onDraftTitleChange,
+  formattedDate,
+  draftIcon,
+  onDraftIconChange,
+  icon,
+  title,
+  isUntitled,
+}: BannerCanvasProps) {
+  const { t } = useTranslation("notebooks");
+
+  return (
+    <div
+      ref={containerRef}
+      role="region"
+      aria-label={t("banner.canvas")}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onMouseDown={focalPointDrag.handleMouseDown}
+      onMouseMove={focalPointDrag.handleMouseMove}
+      onMouseUp={focalPointDrag.stopDragging}
+      onMouseLeave={focalPointDrag.stopDragging}
+      onTouchStart={focalPointDrag.handleTouchStart}
+      onTouchMove={focalPointDrag.handleTouchMove}
+      onTouchEnd={focalPointDrag.stopDragging}
+      onTouchCancel={focalPointDrag.stopDragging}
+      className={cn(
+        "relative aspect-2/1 sm:aspect-3/1 min-h-[140px] sm:min-h-0 w-full overflow-hidden rounded-2xl sm:rounded-4xl border border-border bg-muted select-none outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        isEditing &&
+          visibleBannerUrl &&
+          (focalPointDrag.isDragging ? "cursor-grabbing" : "cursor-grab"),
+      )}
+    >
+      <BannerImage
+        visibleBannerUrl={visibleBannerUrl && !imageError ? visibleBannerUrl : null}
+        visibleBannerVariants={visibleBannerVariants}
+        visibleFocalPoint={visibleFocalPoint}
+        imageError={imageError}
+        onImageError={onImageError}
+      />
+
+      {isEditing ? (
+        <BannerEditToolbar
+          visibleBannerUrl={visibleBannerUrl}
+          isSaving={isSaving}
+          onOpenImageDialog={onOpenImageDialog}
+          onRemoveBanner={onRemoveBanner}
+          onCancel={onCancel}
+          onSave={onSave}
+        />
+      ) : (
+        <Button
+          variant="secondary"
+          size="icon-sm"
+          onClick={onBeginEditing}
+          aria-label={t("banner.editNotebook")}
+          title={t("banner.editNotebook")}
+          className="absolute right-3 top-3 bg-background/80 opacity-100 sm:opacity-0 shadow-sm backdrop-blur-sm transition-fade hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100 max-sm:min-h-11 max-sm:min-w-11 touch-manipulation active:scale-97 cursor-pointer z-10"
+        >
+          <Pencil />
+        </Button>
+      )}
+
+      <BannerTitleCard
+        isEditing={isEditing}
+        draftTitle={draftTitle}
+        onDraftTitleChange={onDraftTitleChange}
+        formattedDate={formattedDate}
+        draftIcon={draftIcon}
+        onDraftIconChange={onDraftIconChange}
+        icon={icon}
+        title={title}
+        isUntitled={isUntitled}
+      />
+    </div>
+  );
+}
+
+const loadedBannerKeys = new Set<string>();
+
 function getBannerKey(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
@@ -44,8 +140,6 @@ function getBannerKey(url: string | null | undefined): string | null {
     return url.split("?")[0];
   }
 }
-
-const loadedBannerKeys = new Set<string>();
 
 export function BannerImage({
   visibleBannerUrl,
@@ -235,100 +329,6 @@ export function BannerTitleCard({
         )}
         <span className="text-xs font-medium text-muted-foreground/80">{formattedDate}</span>
       </div>
-    </div>
-  );
-}
-
-export function BannerCanvas({
-  containerRef,
-  isEditing,
-  visibleBannerUrl,
-  visibleBannerVariants,
-  visibleFocalPoint,
-  imageError,
-  onImageError,
-  focalPointDrag,
-  onKeyDown,
-  isSaving,
-  onOpenImageDialog,
-  onRemoveBanner,
-  onCancel,
-  onSave,
-  onBeginEditing,
-  draftTitle,
-  onDraftTitleChange,
-  formattedDate,
-  draftIcon,
-  onDraftIconChange,
-  icon,
-  title,
-  isUntitled,
-}: BannerCanvasProps) {
-  const { t } = useTranslation("notebooks");
-
-  return (
-    <div
-      ref={containerRef}
-      role="region"
-      aria-label={t("banner.canvas")}
-      tabIndex={0}
-      onKeyDown={onKeyDown}
-      onMouseDown={focalPointDrag.handleMouseDown}
-      onMouseMove={focalPointDrag.handleMouseMove}
-      onMouseUp={focalPointDrag.stopDragging}
-      onMouseLeave={focalPointDrag.stopDragging}
-      onTouchStart={focalPointDrag.handleTouchStart}
-      onTouchMove={focalPointDrag.handleTouchMove}
-      onTouchEnd={focalPointDrag.stopDragging}
-      onTouchCancel={focalPointDrag.stopDragging}
-      className={cn(
-        "relative aspect-2/1 sm:aspect-3/1 min-h-[140px] sm:min-h-0 w-full overflow-hidden rounded-2xl sm:rounded-4xl border border-border bg-muted select-none outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isEditing &&
-          visibleBannerUrl &&
-          (focalPointDrag.isDragging ? "cursor-grabbing" : "cursor-grab"),
-      )}
-    >
-      <BannerImage
-        visibleBannerUrl={visibleBannerUrl && !imageError ? visibleBannerUrl : null}
-        visibleBannerVariants={visibleBannerVariants}
-        visibleFocalPoint={visibleFocalPoint}
-        imageError={imageError}
-        onImageError={onImageError}
-      />
-
-      {isEditing ? (
-        <BannerEditToolbar
-          visibleBannerUrl={visibleBannerUrl}
-          isSaving={isSaving}
-          onOpenImageDialog={onOpenImageDialog}
-          onRemoveBanner={onRemoveBanner}
-          onCancel={onCancel}
-          onSave={onSave}
-        />
-      ) : (
-        <Button
-          variant="secondary"
-          size="icon-sm"
-          onClick={onBeginEditing}
-          aria-label={t("banner.editNotebook")}
-          title={t("banner.editNotebook")}
-          className="absolute right-3 top-3 bg-background/80 opacity-100 sm:opacity-0 shadow-sm backdrop-blur-sm transition-fade hover:bg-background group-hover/header:opacity-100 group-focus-within/header:opacity-100 max-sm:min-h-11 max-sm:min-w-11 touch-manipulation active:scale-97 cursor-pointer z-10"
-        >
-          <Pencil />
-        </Button>
-      )}
-
-      <BannerTitleCard
-        isEditing={isEditing}
-        draftTitle={draftTitle}
-        onDraftTitleChange={onDraftTitleChange}
-        formattedDate={formattedDate}
-        draftIcon={draftIcon}
-        onDraftIconChange={onDraftIconChange}
-        icon={icon}
-        title={title}
-        isUntitled={isUntitled}
-      />
     </div>
   );
 }

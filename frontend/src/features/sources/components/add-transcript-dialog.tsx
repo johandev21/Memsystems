@@ -1,9 +1,8 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Check, FileText, Loader2, Upload } from "lucide-react";
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +10,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { fetchApi } from "@/shared/api";
+} from "@/shared/components/ui/dialog";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { useSubmitSourceTranscript } from "../hooks/use-submit-source-transcript";
 import { parseRawTextToVideoSegments } from "../utils/video-transcript-parser";
 
 export interface AddTranscriptDialogProps {
@@ -33,17 +32,17 @@ export function AddTranscriptDialog({
   onTranscriptsAdded,
 }: AddTranscriptDialogProps) {
   const { t } = useTranslation("sources");
-  const queryClient = useQueryClient();
+  const submitTranscript = useSubmitSourceTranscript(sourceId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [transcriptText, setTranscriptText] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputId = useId();
+  const isSubmitting = submitTranscript.isPending;
 
   const parsedSegments = useMemo(() => {
     return parseRawTextToVideoSegments(transcriptText);
   }, [transcriptText]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -66,33 +65,16 @@ export function AddTranscriptDialog({
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      const response = await fetchApi(`/api/sources/${sourceId}/transcript`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ transcriptText: trimmed }),
-      });
-
-      if (!response.ok) {
-        const errorData = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(errorData.message || t("transcriptDialog.saveFailed"));
-      }
-
+      await submitTranscript.mutateAsync(trimmed);
       toast.success(
         t("transcriptDialog.addSuccess", { count: parsedSegments.length }),
       );
-      queryClient.invalidateQueries({ queryKey: ["source", sourceId] });
-      queryClient.invalidateQueries({ queryKey: ["sources"] });
       onTranscriptsAdded?.();
       onOpenChange(false);
       setTranscriptText("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("transcriptDialog.saveFailed"));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

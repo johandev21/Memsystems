@@ -2,7 +2,7 @@ import {
   findTreeNode,
   getTreeDragData as getSharedTreeDragData,
   getTreeDropData as getSharedTreeDropData,
-} from "@/components/ui/tree";
+} from "@/shared/components/ui/tree";
 
 export const ROOT_DROP_ID = "study-materials-root";
 export const DRAG_ID_PREFIX = "study-materials-drag:";

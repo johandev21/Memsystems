@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 
 export interface MobileTabsHeaderProps {
   notebookId?: string;

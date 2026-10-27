@@ -5,9 +5,9 @@ import type {
   SlidesEditorContentType,
 } from "@/features/study-material-generation";
 import { useTranslation } from "react-i18next";
-import { stripCitationMarkersFromContent } from "@/shared/citations/citation";
+import { stripCitationMarkersFromContent } from "@/features/notebook-chat";
 import type { MindMapContentType } from "../shapes/mind-map";
-import type { StudyMaterialDTO } from "../types";
+import type { StudyMaterialDTO } from "../types/study-material.types";
 import { FlashcardView } from "./FlashcardView";
 import { MindMapView } from "./MindMapView";
 import { QuizView } from "./QuizView";

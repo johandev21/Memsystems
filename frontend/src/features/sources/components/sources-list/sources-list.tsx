@@ -7,11 +7,12 @@ import type { Source } from "../../api/sources";
 import type { SourceFolder } from "../../types/source-folder.types";
 import {
   buildSourcesTree,
+  filterSourcesTree,
   flattenVisibleTreeWithDepth,
   type SourcesTreeNode,
 } from "../../model/sources-tree";
 import { SourcesTreeBranch, SourcesTreeNodeRow } from "../sources-tree-branch";
-import { treeVariants } from "@/components/ui/tree";
+import { treeVariants } from "@/shared/components/ui/tree";
 import { cn } from "@/shared/utils/cn";
 
 const TREE_VIRTUALIZATION_THRESHOLD = 25;
@@ -106,28 +107,7 @@ export const SourcesList = memo(function SourcesList({
 
   const filteredTree = useMemo(() => {
     if (!searchQuery) return tree;
-
-    const filterNodes = (nodes: readonly SourcesTreeNode[]): SourcesTreeNode[] => {
-      const result: SourcesTreeNode[] = [];
-      for (const node of nodes) {
-        if (node.type === "folder") {
-          if (isFolderVisible ? isFolderVisible(node.id) : true) {
-            const filteredChildren = filterNodes(node.children);
-            result.push({
-              ...node,
-              children: filteredChildren,
-            });
-          }
-        } else if (node.type === "source" && node.source) {
-          if (isItemVisible ? isItemVisible(node.source.id, node.source.folderId) : true) {
-            result.push(node);
-          }
-        }
-      }
-      return result;
-    };
-
-    return filterNodes(tree);
+    return filterSourcesTree(tree, { isFolderVisible, isItemVisible });
   }, [tree, searchQuery, isFolderVisible, isItemVisible]);
 
   const flatRows = useMemo(

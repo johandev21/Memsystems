@@ -1,7 +1,7 @@
 import { AlertTriangle, File, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import type { SourceWithContent } from "../../types";
+import { Button } from "@/shared/components/ui/button";
+import type { SourceWithContent } from "../../types/source.types";
 import {
   isSourceDegraded,
   isSourceProcessing,

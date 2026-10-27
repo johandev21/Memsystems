@@ -8,9 +8,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { chatMessagesQueryOptions } from "@/features/notebook-chat/api/chat";
-import { notebookQueryOptions } from "@/features/notebooks/api";
+} from "@/shared/components/ui/context-menu";
+import { chatMessagesQueryOptions } from "@/features/notebook-chat";
+import { notebookQueryOptions } from "@/features/notebooks";
 import { cn } from "@/shared/utils/cn";
 import { getFolderCovers } from "../model/artwork-assets";
 import { isTempId } from "../model/temp-id";
@@ -35,40 +35,6 @@ type NotebookCover = {
   coverVariants?: CoverVariants | null;
 };
 
-function useCardTitleEditing({ autoEdit, onOpen }: { autoEdit?: boolean; onOpen: () => void }) {
-  const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
-  const editingTitleRef = useRef(Boolean(autoEdit));
-  const openSuppressedUntilRef = useRef(0);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  const handleTitleEditingChange = useCallback((editing: boolean) => {
-    const wasEditing = editingTitleRef.current;
-    editingTitleRef.current = editing;
-    if (!wasEditing || editing) return;
-    openSuppressedUntilRef.current = Date.now() + 500;
-    if (document.activeElement === document.body) cardRef.current?.focus();
-  }, []);
-
-  const beginRename = useCallback(() => {
-    editingTitleRef.current = true;
-    requestEdit((value) => value + 1);
-  }, []);
-
-  const handleOpen = useCallback(() => {
-    if (editingTitleRef.current || Date.now() < openSuppressedUntilRef.current) return;
-    onOpen();
-  }, [onOpen]);
-
-  return {
-    beginRename,
-    cardRef,
-    editRequest,
-    handleOpen,
-    handleTitleEditingChange,
-    titleEditingRef: editingTitleRef,
-  };
-}
-
 export type FolderCardProps = {
   folder: FolderRef;
   notebooks: NotebookCover[];
@@ -81,6 +47,7 @@ export type FolderCardProps = {
   onDismissEdit?: (name: string) => void;
   onRemove: () => void;
 };
+
 export type NotebookCardProps = {
   notebook: {
     id: string;
@@ -100,10 +67,12 @@ export type NotebookCardProps = {
   onRemove: () => void;
   onExport?: () => void;
 };
+
 export type NotebookPreviewProps = {
   notebook: { title: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
   compact?: boolean;
 };
+
 export type FolderPreviewProps = {
   folder: FolderRef;
   notebooks: NotebookCover[];
@@ -201,86 +170,6 @@ export function FolderCard({
   );
 }
 
-function FolderArtwork({
-  title,
-  notebooks,
-  onRename,
-  onCancelEdit,
-  onDismissEdit,
-  onEditingChange,
-  editRequest,
-  ariaLabel,
-  hideTitle,
-}: {
-  title: string;
-  notebooks: NotebookCover[];
-  onRename: (name: string) => void;
-  onCancelEdit?: () => void;
-  onDismissEdit?: (name: string) => void;
-  onEditingChange?: (editing: boolean) => void;
-  editRequest: number;
-  ariaLabel: string;
-  hideTitle?: boolean;
-}) {
-  const covers = getFolderCovers(notebooks);
-  const titleFontSize = useFittedFolderTitle(hideTitle ? "" : title);
-  const titleSlot = hideTitle ? (
-    <span aria-hidden="true" />
-  ) : (
-    <InlineEditableText
-      value={title}
-      onSave={onRename}
-      onCancel={onCancelEdit}
-      onDismiss={onDismissEdit}
-      onEditingChange={onEditingChange}
-      ariaLabel={ariaLabel}
-      editRequest={editRequest}
-      maxLength={MAX_TITLE_LENGTH}
-      tooltip={title}
-      className="library-artwork__title-editor"
-      inputClassName="library-artwork__title-input"
-    >
-      <span>{title}</span>
-    </InlineEditableText>
-  );
-  const props = { title, titleFontSize, titleSlot };
-  return (
-    <span className="library-artwork">
-      {notebooks.length === 0 ? (
-        <EmptyFolderArtwork {...props} />
-      ) : notebooks.length === 1 ? (
-        <SingleFolderArtwork {...props} covers={covers} />
-      ) : notebooks.length === 2 ? (
-        <DoubleFolderArtwork {...props} covers={covers} />
-      ) : (
-        <ManyFolderArtwork {...props} covers={covers} extraCount={notebooks.length - 2} />
-      )}
-    </span>
-  );
-}
-
-function NotebookArtwork({
-  notebook,
-  titleSlot,
-  hideTitle,
-}: NotebookPreviewProps & { titleSlot?: ReactNode; hideTitle?: boolean }) {
-  return (
-    <span className="library-artwork">
-      {notebook.coverUrl ? (
-        <CoveredNotebookArtwork
-          title={notebook.title}
-          coverUrl={notebook.coverUrl}
-          coverVariants={notebook.coverVariants}
-          titleSlot={titleSlot}
-          hideLabel={hideTitle}
-        />
-      ) : (
-        <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} hideLabel={hideTitle} />
-      )}
-    </span>
-  );
-}
-
 export function NotebookCard({
   notebook,
   selected,
@@ -294,16 +183,11 @@ export function NotebookCard({
   onExport,
 }: NotebookCardProps) {
   const { t } = useTranslation("notebooks");
-  const queryClient = useQueryClient();
   const { attributes, listeners, isDragging, setNodeRef } = useDraggable({
     id: `notebook:${notebook.id}`,
     data: { kind: "notebook", notebookId: notebook.id },
   });
-  const prefetch = useCallback(() => {
-    if (isTempId(notebook.id)) return;
-    void queryClient.prefetchQuery(notebookQueryOptions(notebook.id));
-    void queryClient.prefetchQuery(chatMessagesQueryOptions(notebook.id));
-  }, [notebook.id, queryClient]);
+  const prefetch = usePrefetchNotebookCard(notebook.id);
   const {
     beginRename,
     cardRef,
@@ -414,4 +298,127 @@ export function FolderPreview({ folder, notebooks, compact }: FolderPreviewProps
       />
     </div>
   );
+}
+
+function FolderArtwork({
+  title,
+  notebooks,
+  onRename,
+  onCancelEdit,
+  onDismissEdit,
+  onEditingChange,
+  editRequest,
+  ariaLabel,
+  hideTitle,
+}: {
+  title: string;
+  notebooks: NotebookCover[];
+  onRename: (name: string) => void;
+  onCancelEdit?: () => void;
+  onDismissEdit?: (name: string) => void;
+  onEditingChange?: (editing: boolean) => void;
+  editRequest: number;
+  ariaLabel: string;
+  hideTitle?: boolean;
+}) {
+  const covers = getFolderCovers(notebooks);
+  const titleFontSize = useFittedFolderTitle(hideTitle ? "" : title);
+  const titleSlot = hideTitle ? (
+    <span aria-hidden="true" />
+  ) : (
+    <InlineEditableText
+      value={title}
+      onSave={onRename}
+      onCancel={onCancelEdit}
+      onDismiss={onDismissEdit}
+      onEditingChange={onEditingChange}
+      ariaLabel={ariaLabel}
+      editRequest={editRequest}
+      maxLength={MAX_TITLE_LENGTH}
+      tooltip={title}
+      className="library-artwork__title-editor"
+      inputClassName="library-artwork__title-input"
+    >
+      <span>{title}</span>
+    </InlineEditableText>
+  );
+  const props = { title, titleFontSize, titleSlot };
+  return (
+    <span className="library-artwork">
+      {notebooks.length === 0 ? (
+        <EmptyFolderArtwork {...props} />
+      ) : notebooks.length === 1 ? (
+        <SingleFolderArtwork {...props} covers={covers} />
+      ) : notebooks.length === 2 ? (
+        <DoubleFolderArtwork {...props} covers={covers} />
+      ) : (
+        <ManyFolderArtwork {...props} covers={covers} extraCount={notebooks.length - 2} />
+      )}
+    </span>
+  );
+}
+
+function NotebookArtwork({
+  notebook,
+  titleSlot,
+  hideTitle,
+}: NotebookPreviewProps & { titleSlot?: ReactNode; hideTitle?: boolean }) {
+  return (
+    <span className="library-artwork">
+      {notebook.coverUrl ? (
+        <CoveredNotebookArtwork
+          title={notebook.title}
+          coverUrl={notebook.coverUrl}
+          coverVariants={notebook.coverVariants}
+          titleSlot={titleSlot}
+          hideLabel={hideTitle}
+        />
+      ) : (
+        <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} hideLabel={hideTitle} />
+      )}
+    </span>
+  );
+}
+
+function usePrefetchNotebookCard(notebookId: string) {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    if (isTempId(notebookId)) return;
+    void queryClient.prefetchQuery(notebookQueryOptions(notebookId));
+    void queryClient.prefetchQuery(chatMessagesQueryOptions(notebookId));
+  }, [notebookId, queryClient]);
+}
+
+function useCardTitleEditing({ autoEdit, onOpen }: { autoEdit?: boolean; onOpen: () => void }) {
+  const [editRequest, requestEdit] = useState(autoEdit ? 1 : 0);
+  const editingTitleRef = useRef(Boolean(autoEdit));
+  const openSuppressedUntilRef = useRef(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleTitleEditingChange = useCallback((editing: boolean) => {
+    const wasEditing = editingTitleRef.current;
+    editingTitleRef.current = editing;
+    if (!wasEditing || editing) return;
+    openSuppressedUntilRef.current = Date.now() + 500;
+    if (document.activeElement === document.body) cardRef.current?.focus();
+  }, []);
+
+  const beginRename = useCallback(() => {
+    editingTitleRef.current = true;
+    requestEdit((value) => value + 1);
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    if (editingTitleRef.current || Date.now() < openSuppressedUntilRef.current) return;
+    onOpen();
+  }, [onOpen]);
+
+  return {
+    beginRename,
+    cardRef,
+    editRequest,
+    handleOpen,
+    handleTitleEditingChange,
+    titleEditingRef: editingTitleRef,
+  };
 }

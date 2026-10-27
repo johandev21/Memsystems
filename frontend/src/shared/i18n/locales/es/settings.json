@@ -151,12 +151,16 @@
   "trash": {
     "action": "Abrir papelera",
     "cardDescription": "Ver, restaurar o eliminar permanentemente elementos.",
+    "deleteFailedToast": "Error al eliminar el elemento",
+    "deleteSuccessToast": "Eliminado permanentemente",
     "description": "Los elementos en la papelera se eliminan automáticamente después de 30 días.",
     "modal": {
       "confirmDeleteDescription": "¿Eliminar permanentemente \"{{name}}\"? Esta acción no se puede deshacer.",
       "confirmDeleteTitle": "Eliminar permanentemente",
       "daysRemaining": "Quedan {{count}} d",
+      "deleteFailedToast": "Error al eliminar \"{{name}}\"",
       "deleteForever": "Eliminar permanentemente",
+      "deleteSuccessToast": "\"{{name}}\" eliminado permanentemente",
       "emptyDescription": "Las carpetas, cuadernos, fuentes y materiales de estudio eliminados permanecen recuperables aquí durante 30 días.",
       "emptyFailedToast": "Error al vaciar la papelera",
       "emptySuccessToast": "Papelera vaciada",
@@ -170,10 +174,14 @@
       "noResults": "No se encontraron elementos eliminados que coincidan con \"{{query}}\"",
       "recentlyDeletedHeading": "Eliminados recientemente",
       "restore": "Restaurar",
+      "restoreFailedToast": "Error al restaurar \"{{name}}\"",
+      "restoreSuccessToast": "\"{{name}}\" restaurado",
       "searchPlaceholder": "Buscar elementos eliminados...",
       "subtitle": "Los elementos se eliminan permanentemente después de 30 días.",
       "title": "Papelera"
     },
+    "restoreFailedToast": "Error al restaurar el elemento",
+    "restoreSuccessToast": "Restaurado de la papelera",
     "title": "Papelera"
   }
 }

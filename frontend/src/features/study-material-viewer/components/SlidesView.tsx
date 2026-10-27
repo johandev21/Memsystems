@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import { formatDisplayTitle } from "../utils/format-title";
-import { downloadSlidesPptx } from "../api/study-materials";
-import type { SlideElementType, SlidesContentType, SlidesSlideType } from "../shapes/slides";
+import type { SlidesContentType, SlidesSlideType } from "../shapes/slides";
+import {
+  buildSlidePreviews,
+  slideBodyLines,
+  svgToDataUrl,
+} from "../utils/slides-preview";
+import { useSlidesExport } from "../hooks/use-slides-export";
 
 export interface SlidesViewProps {
   materialId: string;
@@ -16,10 +20,6 @@ export interface SlidesViewProps {
 
 const SEND_CHAT_PROMPT_EVENT = "send-chat-prompt";
 
-function svgToDataUrl(svg: string): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
 function dispatchChatPrompt(promptText: string): void {
   window.dispatchEvent(
     new CustomEvent(SEND_CHAT_PROMPT_EVENT, {
@@ -28,67 +28,10 @@ function dispatchChatPrompt(promptText: string): void {
   );
 }
 
-function elementText(element: SlideElementType): string[] {
-  switch (element.type) {
-    case "text":
-      return element.text ? [element.text] : [];
-    case "bullet-list":
-      return element.items ?? [];
-    case "card-group":
-      return (element.cards ?? []).flatMap((card) =>
-        card.body ? [`${card.title}: ${card.body}`] : [card.title],
-      );
-    case "comparison": {
-      const lines: string[] = [];
-      if (element.left) {
-        lines.push(`${element.left.heading}:`);
-        lines.push(...element.left.points.map((point) => `- ${point}`));
-      }
-      if (element.right) {
-        lines.push(`${element.right.heading}:`);
-        lines.push(...element.right.points.map((point) => `- ${point}`));
-      }
-      return lines;
-    }
-    case "timeline":
-    case "process":
-      return (element.steps ?? []).map((step) =>
-        step.body ? `${step.title}: ${step.body}` : step.title,
-      );
-    case "statistic": {
-      const lines = [`${element.value ?? ""} — ${element.label ?? ""}`];
-      if (element.context) lines.push(element.context);
-      return lines;
-    }
-    case "quote":
-      return element.quote
-        ? [`"${element.quote}"${element.attribution ? ` — ${element.attribution}` : ""}`]
-        : [];
-    case "shape":
-      return [];
-    default:
-      return [];
-  }
-}
-
-function slideBodyLines(slide: SlidesSlideType): string[] {
-  const lines: string[] = [];
-  for (const bullet of slide.bullets ?? []) lines.push(`• ${bullet}`);
-  if (slide.body) lines.push(slide.body);
-  for (const element of slide.elements ?? []) lines.push(...elementText(element));
-  return lines;
-}
-
 export function SlidesView({ materialId, materialTitle, content }: SlidesViewProps) {
   const { t } = useTranslation("viewer");
   const slides = useMemo(() => content.slides ?? [], [content.slides]);
-  const previewById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const preview of content.previews ?? []) {
-      map.set(preview.slideId, preview.svg);
-    }
-    return map;
-  }, [content.previews]);
+  const previewById = useMemo(() => buildSlidePreviews(content), [content]);
 
   const designPreset = content.design?.preset;
   const designRole = useCallback(
@@ -97,7 +40,7 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
   );
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const { isDownloading, downloadPptx } = useSlidesExport(materialId, materialTitle);
   const clampedIndex = slides.length === 0 ? 0 : Math.min(activeIndex, slides.length - 1);
   const activeSlide = slides[clampedIndex];
 
@@ -121,18 +64,6 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [slides.length]);
-
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    try {
-      await downloadSlidesPptx(materialId, materialTitle || "slides");
-      toast.success(t("slides.exportedToast"));
-    } catch {
-      toast.error(t("slides.exportFailedToast"));
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   const handleStudyInChat = () => {
     if (!activeSlide) return;
@@ -167,147 +98,28 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
 
   return (
     <div className="flex w-full max-w-4xl mx-auto flex-col gap-4 animate-in fade-in duration-300 pb-safe pb-16 sm:pb-20 select-none px-2.5 sm:px-4">
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 sm:gap-2 text-xs font-medium text-text-tertiary">
-          {t("slides.position", { current: clampedIndex + 1, total: slides.length })}
-          {designPreset && (
-            <span
-              aria-label={t("slides.deckDesign", { preset: designPreset })}
-              className="rounded-full border border-surface-border-subtle px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-text-secondary"
-            >
-              {designPreset}
-            </span>
-          )}
-          {activeSlide && (
-            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-text-tertiary">
-              {designRole(activeSlide)}
-            </span>
-          )}
-        </span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleDownload}
-          disabled={isDownloading}
-          className="min-h-11 sm:min-h-8 sm:h-8 rounded-xl text-xs font-medium cursor-pointer touch-manipulation active:scale-97 transition-transform"
-        >
-          {isDownloading ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Download className="size-3.5" />
-          )}
-          {t("slides.exportPptx")}
-        </Button>
-      </div>
-      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-surface-border-subtle bg-black w-full aspect-video flex items-center justify-center">
-        {activePreview ? (
-          <img
-            key={activeSlide.id}
-            src={svgToDataUrl(activePreview)}
-            alt={t("slides.previewAlt", { number: clampedIndex + 1, title: activeSlide.title })}
-            className="block h-full max-h-[70vh] w-full aspect-video object-contain bg-black"
-            draggable={false}
-          />
-        ) : (
-          <div
-            role="img"
-            aria-label={t("slides.unavailableAlt", {
-              number: clampedIndex + 1,
-              title: activeSlide.title,
-            })}
-            className="flex aspect-video w-full flex-col justify-center gap-2 p-4 sm:p-8 overflow-y-auto"
-          >
-            <p className="text-base sm:text-lg font-bold text-text-primary">
-              {formatDisplayTitle(activeSlide.title)}
-            </p>
-            {activeSlide.subtitle && (
-              <p className="text-xs sm:text-sm text-text-secondary">{activeSlide.subtitle}</p>
-            )}
-            {slideBodyLines(activeSlide)
-              .slice(0, 6)
-              .map((line) => (
-                <p key={line} className="text-xs sm:text-sm text-text-secondary">
-                  {line}
-                </p>
-              ))}
-            <p className="text-xs text-text-faint">{t("slides.previewUnavailable")}</p>
-          </div>
-        )}
-        <div className="absolute inset-y-0 left-0 flex items-center pl-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => goTo(clampedIndex - 1)}
-            aria-label={t("slides.previous")}
-            className="min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 sm:h-9 sm:w-9 rounded-full bg-black/60 text-white hover:bg-black/80 cursor-pointer touch-manipulation active:scale-97 transition-transform"
-          >
-            <ChevronLeft className="size-5" />
-          </Button>
-        </div>
-        <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => goTo(clampedIndex + 1)}
-            aria-label={t("slides.next")}
-            className="min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 sm:h-9 sm:w-9 rounded-full bg-black/60 text-white hover:bg-black/80 cursor-pointer touch-manipulation active:scale-97 transition-transform"
-          >
-            <ChevronRight className="size-5" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1 touch-pan-x overscroll-x-contain">
-        {slides.map((slide, index) => {
-          const preview = previewById.get(slide.id);
-          const selected = index === clampedIndex;
-          return (
-            <button
-              key={slide.id}
-              type="button"
-              onClick={() => goTo(index)}
-              aria-label={t("slides.goToSlide", { number: index + 1 })}
-              aria-current={selected}
-              className={cn(
-                "shrink-0 w-24 sm:w-28 overflow-hidden rounded-xl border transition-all cursor-pointer touch-manipulation active:scale-97",
-                selected
-                  ? "border-primary ring-1 ring-primary"
-                  : "border-surface-border-subtle opacity-70 hover:opacity-100",
-              )}
-            >
-              {preview ? (
-                <img
-                  src={svgToDataUrl(preview)}
-                  alt=""
-                  className="w-full aspect-video object-contain bg-black/60"
-                  draggable={false}
-                />
-              ) : (
-                <span className="flex aspect-video w-full items-center justify-center p-1 text-xs text-text-tertiary">
-                  {formatDisplayTitle(slide.title)}
-                </span>
-              )}
-              <span className="block truncate px-1.5 py-1 text-xs font-medium text-text-secondary">
-                {index + 1}. {formatDisplayTitle(slide.title)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {(activeSlide?.notes || activeSlide?.speakerNotes) && (
-        <div className="rounded-xl border border-surface-border-subtle bg-surface-2/60 p-3 sm:p-4 text-xs leading-relaxed text-text-secondary">
-          <p className="whitespace-pre-wrap break-words">
-            {t("slides.speakerNotes", {
-              notes: activeSlide.speakerNotes ?? activeSlide.notes ?? "",
-            })}
-          </p>
-        </div>
-      )}
-
+      <SlidesHeaderBar
+        clampedIndex={clampedIndex}
+        totalSlides={slides.length}
+        designPreset={designPreset}
+        activeSlideRole={activeSlide ? designRole(activeSlide) : undefined}
+        isDownloading={isDownloading}
+        onDownload={downloadPptx}
+      />
+      <SlideStage
+        activeSlide={activeSlide}
+        activePreview={activePreview}
+        clampedIndex={clampedIndex}
+        onPrevious={() => goTo(clampedIndex - 1)}
+        onNext={() => goTo(clampedIndex + 1)}
+      />
+      <SlideThumbnailStrip
+        slides={slides}
+        previewById={previewById}
+        clampedIndex={clampedIndex}
+        onSelectSlide={goTo}
+      />
+      {activeSlide && <SlideSpeakerNotes slide={activeSlide} />}
       <div className="flex justify-center pb-safe">
         <Button
           type="button"
@@ -319,6 +131,212 @@ export function SlidesView({ materialId, materialTitle, content }: SlidesViewPro
           {t("slides.studyInChat")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+interface SlidesHeaderBarProps {
+  clampedIndex: number;
+  totalSlides: number;
+  designPreset?: string;
+  activeSlideRole?: string;
+  isDownloading: boolean;
+  onDownload: () => void;
+}
+
+function SlidesHeaderBar({
+  clampedIndex,
+  totalSlides,
+  designPreset,
+  activeSlideRole,
+  isDownloading,
+  onDownload,
+}: SlidesHeaderBarProps) {
+  const { t } = useTranslation("viewer");
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="flex items-center gap-1.5 sm:gap-2 text-xs font-medium text-text-tertiary">
+        {t("slides.position", { current: clampedIndex + 1, total: totalSlides })}
+        {designPreset && (
+          <span
+            aria-label={t("slides.deckDesign", { preset: designPreset })}
+            className="rounded-full border border-surface-border-subtle px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+          >
+            {designPreset}
+          </span>
+        )}
+        {activeSlideRole && (
+          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-text-tertiary">
+            {activeSlideRole}
+          </span>
+        )}
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onDownload}
+        disabled={isDownloading}
+        className="min-h-11 sm:min-h-8 sm:h-8 rounded-xl text-xs font-medium cursor-pointer touch-manipulation active:scale-97 transition-transform"
+      >
+        {isDownloading ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <Download className="size-3.5" />
+        )}
+        {t("slides.exportPptx")}
+      </Button>
+    </div>
+  );
+}
+
+interface SlideStageProps {
+  activeSlide: SlidesSlideType;
+  activePreview?: string;
+  clampedIndex: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}
+
+function SlideStage({
+  activeSlide,
+  activePreview,
+  clampedIndex,
+  onPrevious,
+  onNext,
+}: SlideStageProps) {
+  const { t } = useTranslation("viewer");
+
+  return (
+    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-surface-border-subtle bg-black w-full aspect-video flex items-center justify-center">
+      {activePreview ? (
+        <img
+          key={activeSlide.id}
+          src={svgToDataUrl(activePreview)}
+          alt={t("slides.previewAlt", { number: clampedIndex + 1, title: activeSlide.title })}
+          className="block h-full max-h-[70vh] w-full aspect-video object-contain bg-black"
+          draggable={false}
+        />
+      ) : (
+        <div
+          role="img"
+          aria-label={t("slides.unavailableAlt", {
+            number: clampedIndex + 1,
+            title: activeSlide.title,
+          })}
+          className="flex aspect-video w-full flex-col justify-center gap-2 p-4 sm:p-8 overflow-y-auto"
+        >
+          <p className="text-base sm:text-lg font-bold text-text-primary">
+            {formatDisplayTitle(activeSlide.title)}
+          </p>
+          {activeSlide.subtitle && (
+            <p className="text-xs sm:text-sm text-text-secondary">{activeSlide.subtitle}</p>
+          )}
+          {slideBodyLines(activeSlide)
+            .slice(0, 6)
+            .map((line) => (
+              <p key={line} className="text-xs sm:text-sm text-text-secondary">
+                {line}
+              </p>
+            ))}
+          <p className="text-xs text-text-faint">{t("slides.previewUnavailable")}</p>
+        </div>
+      )}
+      <div className="absolute inset-y-0 left-0 flex items-center pl-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onPrevious}
+          aria-label={t("slides.previous")}
+          className="min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 sm:h-9 sm:w-9 rounded-full bg-black/60 text-white hover:bg-black/80 cursor-pointer touch-manipulation active:scale-97 transition-transform"
+        >
+          <ChevronLeft className="size-5" />
+        </Button>
+      </div>
+      <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onNext}
+          aria-label={t("slides.next")}
+          className="min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 sm:h-9 sm:w-9 rounded-full bg-black/60 text-white hover:bg-black/80 cursor-pointer touch-manipulation active:scale-97 transition-transform"
+        >
+          <ChevronRight className="size-5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface SlideThumbnailStripProps {
+  slides: SlidesSlideType[];
+  previewById: Map<string, string>;
+  clampedIndex: number;
+  onSelectSlide: (index: number) => void;
+}
+
+function SlideThumbnailStrip({
+  slides,
+  previewById,
+  clampedIndex,
+  onSelectSlide,
+}: SlideThumbnailStripProps) {
+  const { t } = useTranslation("viewer");
+
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1 touch-pan-x overscroll-x-contain">
+      {slides.map((slide, index) => {
+        const preview = previewById.get(slide.id);
+        const selected = index === clampedIndex;
+        return (
+          <button
+            key={slide.id}
+            type="button"
+            onClick={() => onSelectSlide(index)}
+            aria-label={t("slides.goToSlide", { number: index + 1 })}
+            aria-current={selected}
+            className={cn(
+              "shrink-0 w-24 sm:w-28 overflow-hidden rounded-xl border transition-all cursor-pointer touch-manipulation active:scale-97",
+              selected
+                ? "border-primary ring-1 ring-primary"
+                : "border-surface-border-subtle opacity-70 hover:opacity-100",
+            )}
+          >
+            {preview ? (
+              <img
+                src={svgToDataUrl(preview)}
+                alt=""
+                className="w-full aspect-video object-contain bg-black/60"
+                draggable={false}
+              />
+            ) : (
+              <span className="flex aspect-video w-full items-center justify-center p-1 text-xs text-text-tertiary">
+                {formatDisplayTitle(slide.title)}
+              </span>
+            )}
+            <span className="block truncate px-1.5 py-1 text-xs font-medium text-text-secondary">
+              {index + 1}. {formatDisplayTitle(slide.title)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SlideSpeakerNotes({ slide }: { slide: SlidesSlideType }) {
+  const { t } = useTranslation("viewer");
+  const notes = slide.speakerNotes ?? slide.notes;
+  if (!notes) return null;
+
+  return (
+    <div className="rounded-xl border border-surface-border-subtle bg-surface-2/60 p-3 sm:p-4 text-xs leading-relaxed text-text-secondary">
+      <p className="whitespace-pre-wrap break-words">
+        {t("slides.speakerNotes", { notes })}
+      </p>
     </div>
   );
 }

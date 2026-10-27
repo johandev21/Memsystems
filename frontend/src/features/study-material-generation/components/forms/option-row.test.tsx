@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
   generationSourceCheckboxClass,
   generationSourceIconClass,

@@ -1,14 +1,7 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQueryClient,
-  type InfiniteData,
-} from "@tanstack/react-query";
 import { RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -16,36 +9,29 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+} from "@/shared/components/ui/command";
+import { ConfirmDeleteDialog } from "@/shared/components/ui/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/shared/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Spinner } from "@/components/ui/spinner";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { libraryQueryOptions, type LibraryResponse } from "@/features/notebook-library/api/library";
+} from "@/shared/components/ui/drawer";
+import { EmptyState } from "@/shared/components/ui/empty-state";
+import { Spinner } from "@/shared/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { cn } from "@/shared/utils/cn";
-import {
-  deleteForeverTrashItem,
-  emptyTrashApi,
-  fetchTrashPage,
-  restoreTrashItem,
-  type TrashItem,
-  type TrashPageResponse,
-} from "../api/trash";
+import type { TrashItem } from "../api/trash";
+import { useTrashModalController } from "../hooks/use-trash-modal-controller";
 import { TrashItemIcon } from "./trash-item-icon";
 
 export interface TrashModalProps {
@@ -56,8 +42,6 @@ export interface TrashModalProps {
   onEmptyTrash?: () => void;
 }
 
-const HOLD_DURATION_MS = 1400;
-
 export function TrashModal({
   open,
   onOpenChange,
@@ -67,255 +51,12 @@ export function TrashModal({
 }: TrashModalProps) {
   const { t } = useTranslation("settings");
   const isDesktop = useMediaQuery("(min-width: 640px)");
-  const queryClient = useQueryClient();
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [pendingHardDelete, setPendingHardDelete] = useState<TrashItem | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery({
-      queryKey: ["trash"],
-      queryFn: ({ pageParam }) => fetchTrashPage(pageParam, 30),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-      staleTime: 10_000,
-      enabled: open,
-    });
-
-  const restoreMutation = useMutation({
-    mutationFn: (item: TrashItem) => restoreTrashItem(item.kind, item.id),
-    onMutate: async (item) => {
-      await queryClient.cancelQueries({ queryKey: ["trash"] });
-      await queryClient.cancelQueries({ queryKey: libraryQueryOptions.queryKey });
-
-      const previousTrash = queryClient.getQueryData<InfiniteData<TrashPageResponse>>(["trash"]);
-      const previousLibrary = queryClient.getQueryData<LibraryResponse>(
-        libraryQueryOptions.queryKey,
-      );
-
-      queryClient.setQueryData<InfiniteData<TrashPageResponse>>(["trash"], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            items: page.items.filter((i) => i.id !== item.id),
-          })),
-        };
-      });
-
-      const now = new Date().toISOString();
-      if (item.kind === "notebook_folder") {
-        queryClient.setQueryData<LibraryResponse>(libraryQueryOptions.queryKey, (current) => {
-          if (!current) return current;
-          if (current.folders.some((f) => f.id === item.id)) return current;
-          return {
-            ...current,
-            folders: [
-              ...current.folders,
-              {
-                id: item.id,
-                name: item.name,
-                parentId: null,
-                createdAt: item.deletedAt,
-                updatedAt: now,
-              },
-            ],
-          };
-        });
-      } else if (item.kind === "notebook") {
-        queryClient.setQueryData<LibraryResponse>(libraryQueryOptions.queryKey, (current) => {
-          if (!current) return current;
-          if (current.notebooks.some((nb) => nb.id === item.id)) return current;
-          return {
-            ...current,
-            notebooks: [
-              ...current.notebooks,
-              {
-                id: item.id,
-                title: item.name,
-                description: "",
-                icon: "notebook",
-                folderId: null,
-                banner: null,
-                bannerUrl: null,
-                bannerFocalPoint: null,
-                bannerVariants: { w240: null, w480: null, w960: null, w1920: null },
-                groundingMode: "strict" as const,
-                createdAt: item.deletedAt,
-                updatedAt: now,
-              },
-            ],
-          };
-        });
-      }
-
-      return { previousTrash, previousLibrary };
-    },
-    onError: (_err, item, context) => {
-      if (context?.previousTrash) {
-        queryClient.setQueryData(["trash"], context.previousTrash);
-      }
-      if (context?.previousLibrary) {
-        queryClient.setQueryData(libraryQueryOptions.queryKey, context.previousLibrary);
-      }
-      toast.error(`Failed to restore "${item.name}"`);
-    },
-    onSuccess: (_res, item) => {
-      toast.success(`Restored "${item.name}"`);
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["trash"] });
-      void queryClient.invalidateQueries({ queryKey: ["library"] });
-      void queryClient.invalidateQueries({ queryKey: ["notebooks"] });
-      void queryClient.invalidateQueries({ queryKey: ["source-folders"] });
-      void queryClient.invalidateQueries({ queryKey: ["sources"] });
-      void queryClient.invalidateQueries({ queryKey: ["study-material-folders"] });
-      void queryClient.invalidateQueries({ queryKey: ["study-materials"] });
-    },
+  const controller = useTrashModalController({
+    open,
+    onRestore,
+    onDeleteForever,
+    onEmptyTrash,
   });
-
-  const deleteForeverMutation = useMutation({
-    mutationFn: (item: TrashItem) => deleteForeverTrashItem(item.kind, item.id),
-    onMutate: async (item) => {
-      await queryClient.cancelQueries({ queryKey: ["trash"] });
-      const previousTrash = queryClient.getQueryData<InfiniteData<TrashPageResponse>>(["trash"]);
-
-      queryClient.setQueryData<InfiniteData<TrashPageResponse>>(["trash"], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            items: page.items.filter((i) => i.id !== item.id),
-          })),
-        };
-      });
-
-      return { previousTrash };
-    },
-    onError: (_err, item, context) => {
-      if (context?.previousTrash) {
-        queryClient.setQueryData(["trash"], context.previousTrash);
-      }
-      toast.error(`Failed to delete "${item.name}"`);
-    },
-    onSuccess: (_res, item) => {
-      toast.success(`Permanently deleted "${item.name}"`);
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["trash"] });
-    },
-  });
-
-  const emptyTrashMutation = useMutation({
-    mutationFn: () => emptyTrashApi(),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["trash"] });
-      const previousTrash = queryClient.getQueryData<InfiniteData<TrashPageResponse>>(["trash"]);
-
-      queryClient.setQueryData<InfiniteData<TrashPageResponse>>(["trash"], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            items: [],
-          })),
-        };
-      });
-
-      return { previousTrash };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousTrash) {
-        queryClient.setQueryData(["trash"], context.previousTrash);
-      }
-      toast.error(t("trash.modal.emptyFailedToast"));
-    },
-    onSuccess: () => {
-      toast.success(t("trash.modal.emptySuccessToast"));
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["trash"] });
-      void queryClient.invalidateQueries({ queryKey: ["library"] });
-      void queryClient.invalidateQueries({ queryKey: ["notebooks"] });
-      void queryClient.invalidateQueries({ queryKey: ["source-folders"] });
-      void queryClient.invalidateQueries({ queryKey: ["sources"] });
-      void queryClient.invalidateQueries({ queryKey: ["study-material-folders"] });
-      void queryClient.invalidateQueries({ queryKey: ["study-materials"] });
-    },
-  });
-
-  const handleRestore = (item: TrashItem) => {
-    if (onRestore) {
-      onRestore(item);
-    } else {
-      restoreMutation.mutate(item);
-    }
-  };
-
-  const handleDeleteForever = (item: TrashItem) => {
-    if (onDeleteForever) {
-      onDeleteForever(item);
-    } else {
-      deleteForeverMutation.mutate(item);
-    }
-  };
-
-  const handleEmptyTrash = () => {
-    if (onEmptyTrash) {
-      onEmptyTrash();
-    } else {
-      emptyTrashMutation.mutate();
-    }
-  };
-
-  const { allItems, filteredItems, expiringSoon, recentlyDeleted } = useTrashItems(data, searchQuery);
-  const holdToEmpty = useHoldToEmptyTrash(allItems.length > 0, handleEmptyTrash);
-
-  // Infinite scroll
-  useEffect(() => {
-    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const headerContent = (
-    <TrashModalHeader
-      hasItems={allItems.length > 0}
-      isHoldingEmpty={holdToEmpty.isHoldingEmpty}
-      onStartHold={holdToEmpty.startHold}
-      onCancelHold={holdToEmpty.cancelHold}
-    />
-  );
-  const bodyContent = (
-    <TrashModalBody
-      searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
-      isLoading={isLoading}
-      isError={isError}
-      allItems={allItems}
-      filteredItems={filteredItems}
-      expiringSoon={expiringSoon}
-      recentlyDeleted={recentlyDeleted}
-      sentinelRef={sentinelRef}
-      isFetchingNextPage={isFetchingNextPage}
-      isRestoring={(id) => restoreMutation.isPending && restoreMutation.variables?.id === id}
-      isDeleting={(id) => deleteForeverMutation.isPending && deleteForeverMutation.variables?.id === id}
-      onRestore={handleRestore}
-      onDeleteForever={setPendingHardDelete}
-    />
-  );
 
   return (
     <>
@@ -325,58 +66,49 @@ export function TrashModal({
         onOpenChange={onOpenChange}
         title={t("trash.modal.title")}
         subtitle={t("trash.modal.subtitle")}
-        headerContent={headerContent}
-        bodyContent={bodyContent}
+        headerContent={
+          <TrashModalHeader
+            hasItems={controller.allItems.length > 0}
+            isHoldingEmpty={controller.holdToEmpty.isHoldingEmpty}
+            onStartHold={controller.holdToEmpty.startHold}
+            onCancelHold={controller.holdToEmpty.cancelHold}
+          />
+        }
+        bodyContent={
+          <TrashModalBody
+            searchQuery={controller.searchQuery}
+            onSearchChange={controller.setSearchQuery}
+            isLoading={controller.isLoading}
+            isError={controller.isError}
+            allItems={controller.allItems}
+            filteredItems={controller.filteredItems}
+            expiringSoon={controller.expiringSoon}
+            recentlyDeleted={controller.recentlyDeleted}
+            sentinelRef={controller.sentinelRef}
+            isFetchingNextPage={controller.isFetchingNextPage}
+            isRestoring={controller.isRestoring}
+            isDeleting={controller.isDeleting}
+            onRestore={controller.handleRestore}
+            onDeleteForever={controller.setPendingHardDelete}
+          />
+        }
       />
       <ConfirmDeleteDialog
-        open={pendingHardDelete !== null}
-        onOpenChange={(openConfirm) => !openConfirm && setPendingHardDelete(null)}
+        open={controller.pendingHardDelete !== null}
+        onOpenChange={(openConfirm) => !openConfirm && controller.setPendingHardDelete(null)}
         title={t("trash.modal.confirmDeleteTitle")}
         description={t("trash.modal.confirmDeleteDescription", {
-          name: pendingHardDelete?.name ?? "",
+          name: controller.pendingHardDelete?.name ?? "",
         })}
         onConfirm={() => {
-          if (pendingHardDelete) {
-            handleDeleteForever(pendingHardDelete);
-            setPendingHardDelete(null);
+          if (controller.pendingHardDelete) {
+            controller.handleDeleteForever(controller.pendingHardDelete);
+            controller.setPendingHardDelete(null);
           }
         }}
       />
     </>
   );
-}
-
-function useTrashItems(data: InfiniteData<TrashPageResponse> | undefined, searchQuery: string) {
-  const allItems = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
-
-  const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return allItems;
-    const query = searchQuery.toLowerCase().trim();
-    return allItems.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) ||
-        (item.notebookTitle && item.notebookTitle.toLowerCase().includes(query)) ||
-        (item.subtypeLabel && item.subtypeLabel.toLowerCase().includes(query)),
-    );
-  }, [allItems, searchQuery]);
-
-  const expiringSoon = useMemo(
-    () =>
-      filteredItems
-        .filter((item) => item.daysRemaining <= 7)
-        .sort((a, b) => a.daysRemaining - b.daysRemaining),
-    [filteredItems],
-  );
-
-  const recentlyDeleted = useMemo(
-    () =>
-      filteredItems
-        .filter((item) => item.daysRemaining > 7)
-        .sort((a, b) => b.daysRemaining - a.daysRemaining),
-    [filteredItems],
-  );
-
-  return { allItems, filteredItems, expiringSoon, recentlyDeleted };
 }
 
 function TrashModalSurface({
@@ -504,42 +236,6 @@ function HoldToEmptyButton({
   );
 }
 
-function useHoldToEmptyTrash(hasItems: boolean, onEmpty: () => void) {
-  const [isHoldingEmpty, setIsHoldingEmpty] = useState(false);
-  const holdTimerRef = useRef<number | null>(null);
-
-  const startHold = () => {
-    if (!hasItems) return;
-    setIsHoldingEmpty(true);
-    if (holdTimerRef.current !== null) {
-      clearTimeout(holdTimerRef.current);
-    }
-    holdTimerRef.current = setTimeout(() => {
-      setIsHoldingEmpty(false);
-      holdTimerRef.current = null;
-      onEmpty();
-    }, HOLD_DURATION_MS);
-  };
-
-  const cancelHold = () => {
-    setIsHoldingEmpty(false);
-    if (holdTimerRef.current !== null) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (holdTimerRef.current !== null) {
-        clearTimeout(holdTimerRef.current);
-      }
-    };
-  }, []);
-
-  return { isHoldingEmpty, startHold, cancelHold };
-}
-
 interface TrashModalBodyProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -659,7 +355,6 @@ function TrashItemsResult({
           onDeleteForever={onDeleteForever}
         />
       )}
-      {/* Sentinel for infinite pagination */}
       <div ref={sentinelRef} className="py-1 flex justify-center">
         {isFetchingNextPage && <Spinner className="size-4 text-muted-foreground" />}
       </div>

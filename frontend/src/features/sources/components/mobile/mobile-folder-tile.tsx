@@ -1,6 +1,6 @@
 import { MoreVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { MobileFolderTileView } from "@/components/ui/mobile-folder-tile";
+import { MobileFolderTileView } from "@/shared/components/ui/mobile-folder-tile";
 import { MobileTileActionsButton } from "./mobile-tile-parts";
 
 export interface MobileFolderTileProps {

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import type { ComponentProps, CSSProperties, HTMLAttributes } from "react";
@@ -20,67 +20,6 @@ import {
   type TokenizedCode,
 } from "../utils/code-highlighting";
 
-const isItalic = (fontStyle: number | undefined) => fontStyle && fontStyle & 1;
-const isBold = (fontStyle: number | undefined) => fontStyle && fontStyle & 2;
-const isUnderline = (fontStyle: number | undefined) => fontStyle && fontStyle & 4;
-
-interface KeyedToken {
-  token: ThemedToken;
-  key: string;
-}
-interface KeyedLine {
-  tokens: KeyedToken[];
-  key: string;
-}
-
-const TokenSpan = ({ token }: { token: ThemedToken }) => (
-  <span
-    className={cn(
-      "bg-(--token-bg) text-(--token-fg) dark:!bg-(--shiki-dark-bg) dark:!text-(--shiki-dark)",
-      isItalic(token.fontStyle) && "italic",
-      isBold(token.fontStyle) && "font-bold",
-      isUnderline(token.fontStyle) && "underline",
-    )}
-    style={
-      {
-        "--token-bg": token.bgColor,
-        "--token-fg": token.color,
-        "--shiki-dark-bg": token.htmlStyle?.["--shiki-dark-bg"],
-        "--shiki-dark": token.htmlStyle?.["--shiki-dark"],
-      } as CSSProperties
-    }
-  >
-    {token.content}
-  </span>
-);
-
-const LINE_NUMBER_CLASSES = cn(
-  "block",
-  "before:content-[counter(line)]",
-  "before:inline-block",
-  "before:[counter-increment:line]",
-  "before:w-8",
-  "before:mr-4",
-  "before:text-right",
-  "before:text-muted-foreground/50",
-  "before:font-mono",
-  "before:select-none",
-);
-
-const LineSpan = ({
-  keyedLine,
-  showLineNumbers,
-}: {
-  keyedLine: KeyedLine;
-  showLineNumbers: boolean;
-}) => (
-  <span className={showLineNumbers ? LINE_NUMBER_CLASSES : "block"}>
-    {keyedLine.tokens.length === 0
-      ? "\n"
-      : keyedLine.tokens.map(({ token, key }) => <TokenSpan key={key} token={token} />)}
-  </span>
-);
-
 export type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   code: string;
   language: BundledLanguage;
@@ -96,46 +35,26 @@ const CodeBlockContext = createContext<CodeBlockContextType>({
   code: "",
 });
 
-const CodeBlockBody = memo(
-  ({
-    tokenized,
-    showLineNumbers,
-    className,
-  }: {
-    tokenized: TokenizedCode;
-    showLineNumbers: boolean;
-    className?: string;
-  }) => {
-    const keyedLines = useMemo(() => addKeysToTokens(tokenized.tokens), [tokenized.tokens]);
+export const CodeBlock = ({
+  code,
+  language,
+  showLineNumbers = false,
+  highlight = true,
+  className,
+  children,
+  ...props
+}: CodeBlockProps) => {
+  const contextValue = useMemo(() => ({ code }), [code]);
 
-    return (
-      <pre
-        className={cn(
-          "bg-(--code-bg) text-(--code-fg) dark:!bg-(--shiki-dark-bg) dark:!text-(--shiki-dark) m-0 p-3 sm:p-4 text-xs sm:text-sm",
-          className,
-        )}
-        style={{ "--code-bg": tokenized.bg, "--code-fg": tokenized.fg } as CSSProperties}
-      >
-        <code
-          className={cn(
-            "font-mono text-xs sm:text-sm",
-            showLineNumbers && "[counter-increment:line_0] [counter-reset:line]",
-          )}
-        >
-          {keyedLines.map((keyedLine) => (
-            <LineSpan key={keyedLine.key} keyedLine={keyedLine} showLineNumbers={showLineNumbers} />
-          ))}
-        </code>
-      </pre>
-    );
-  },
-  (prevProps, nextProps) =>
-    prevProps.tokenized === nextProps.tokenized &&
-    prevProps.showLineNumbers === nextProps.showLineNumbers &&
-    prevProps.className === nextProps.className,
-);
-
-CodeBlockBody.displayName = "CodeBlockBody";
+  return (
+    <CodeBlockContext.Provider value={contextValue}>
+      <CodeBlockContainer className={className} language={language} {...props}>
+        {children}
+        <CodeBlockContent code={code} language={language} showLineNumbers={showLineNumbers} highlight={highlight} />
+      </CodeBlockContainer>
+    </CodeBlockContext.Provider>
+  );
+};
 
 export const CodeBlockContainer = ({
   className,
@@ -201,75 +120,6 @@ export const CodeBlockActions = ({
   </div>
 );
 
-export const CodeBlockContent = ({
-  code,
-  language,
-  showLineNumbers = false,
-  highlight = true,
-}: {
-  code: string;
-  language: BundledLanguage;
-  showLineNumbers?: boolean;
-  highlight?: boolean;
-}) => {
-  const rawTokens = useMemo(() => createRawTokens(code), [code]);
-
-  const syncTokens = useMemo(
-    () => highlight ? highlightCode(code, language) ?? rawTokens : rawTokens,
-    [code, language, rawTokens, highlight],
-  );
-
-  const asyncKey = `${language}\0${code}`;
-  const [asyncState, setAsyncState] = useState<{ key: string; tokens: TokenizedCode | null }>(() => ({
-    key: asyncKey,
-    tokens: null,
-  }));
-
-  useEffect(() => {
-    if (!highlight) return;
-    let cancelled = false;
-
-    highlightCode(code, language, (result) => {
-      if (!cancelled) {
-        setAsyncState({ key: asyncKey, tokens: result });
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [asyncKey, code, language, highlight]);
-
-  const tokenized = !highlight ? rawTokens : asyncState.key === asyncKey ? asyncState.tokens ?? syncTokens : syncTokens;
-
-  return (
-    <div className="relative overflow-auto">
-      <CodeBlockBody showLineNumbers={showLineNumbers} tokenized={tokenized} />
-    </div>
-  );
-};
-
-export const CodeBlock = ({
-  code,
-  language,
-  showLineNumbers = false,
-  highlight = true,
-  className,
-  children,
-  ...props
-}: CodeBlockProps) => {
-  const contextValue = useMemo(() => ({ code }), [code]);
-
-  return (
-    <CodeBlockContext.Provider value={contextValue}>
-      <CodeBlockContainer className={className} language={language} {...props}>
-        {children}
-        <CodeBlockContent code={code} language={language} showLineNumbers={showLineNumbers} highlight={highlight} />
-      </CodeBlockContainer>
-    </CodeBlockContext.Provider>
-  );
-};
-
 export type CodeBlockCopyButtonProps = ComponentProps<typeof Button> & {
   onCopy?: () => void;
   onError?: (error: Error) => void;
@@ -327,3 +177,161 @@ export const CodeBlockCopyButton = ({
     </Button>
   );
 };
+
+export const CodeBlockContent = ({
+  code,
+  language,
+  showLineNumbers = false,
+  highlight = true,
+}: {
+  code: string;
+  language: BundledLanguage;
+  showLineNumbers?: boolean;
+  highlight?: boolean;
+}) => {
+  const tokenized = useTokenizedCode(code, language, highlight);
+
+  return (
+    <div className="relative overflow-auto">
+      <CodeBlockBody showLineNumbers={showLineNumbers} tokenized={tokenized} />
+    </div>
+  );
+};
+
+function useTokenizedCode(
+  code: string,
+  language: BundledLanguage,
+  highlight: boolean = true,
+): TokenizedCode {
+  const rawTokens = useMemo(() => createRawTokens(code), [code]);
+
+  const syncTokens = useMemo(
+    () => (highlight ? highlightCode(code, language) ?? rawTokens : rawTokens),
+    [code, language, rawTokens, highlight],
+  );
+
+  const asyncKey = `${language}\0${code}`;
+  const [asyncState, setAsyncState] = useState<{ key: string; tokens: TokenizedCode | null }>(() => ({
+    key: asyncKey,
+    tokens: null,
+  }));
+
+  useEffect(() => {
+    if (!highlight) return;
+    let cancelled = false;
+
+    highlightCode(code, language, (result) => {
+      if (!cancelled) {
+        setAsyncState({ key: asyncKey, tokens: result });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [asyncKey, code, language, highlight]);
+
+  return !highlight ? rawTokens : asyncState.key === asyncKey ? asyncState.tokens ?? syncTokens : syncTokens;
+}
+
+const CodeBlockBody = memo(
+  ({
+    tokenized,
+    showLineNumbers,
+    className,
+  }: {
+    tokenized: TokenizedCode;
+    showLineNumbers: boolean;
+    className?: string;
+  }) => {
+    const keyedLines = useMemo(() => addKeysToTokens(tokenized.tokens), [tokenized.tokens]);
+
+    return (
+      <pre
+        className={cn(
+          "bg-(--code-bg) text-(--code-fg) dark:!bg-(--shiki-dark-bg) dark:!text-(--shiki-dark) m-0 p-3 sm:p-4 text-xs sm:text-sm",
+          className,
+        )}
+        style={{ "--code-bg": tokenized.bg, "--code-fg": tokenized.fg } as CSSProperties}
+      >
+        <code
+          className={cn(
+            "font-mono text-xs sm:text-sm",
+            showLineNumbers && "[counter-increment:line_0] [counter-reset:line]",
+          )}
+        >
+          {keyedLines.map((keyedLine) => (
+            <LineSpan key={keyedLine.key} keyedLine={keyedLine} showLineNumbers={showLineNumbers} />
+          ))}
+        </code>
+      </pre>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.tokenized === nextProps.tokenized &&
+    prevProps.showLineNumbers === nextProps.showLineNumbers &&
+    prevProps.className === nextProps.className,
+);
+
+CodeBlockBody.displayName = "CodeBlockBody";
+
+const isItalic = (fontStyle: number | undefined) => fontStyle && fontStyle & 1;
+const isBold = (fontStyle: number | undefined) => fontStyle && fontStyle & 2;
+const isUnderline = (fontStyle: number | undefined) => fontStyle && fontStyle & 4;
+
+interface KeyedToken {
+  token: ThemedToken;
+  key: string;
+}
+interface KeyedLine {
+  tokens: KeyedToken[];
+  key: string;
+}
+
+const LINE_NUMBER_CLASSES = cn(
+  "block",
+  "before:content-[counter(line)]",
+  "before:inline-block",
+  "before:[counter-increment:line]",
+  "before:w-8",
+  "before:mr-4",
+  "before:text-right",
+  "before:text-muted-foreground/50",
+  "before:font-mono",
+  "before:select-none",
+);
+
+const LineSpan = ({
+  keyedLine,
+  showLineNumbers,
+}: {
+  keyedLine: KeyedLine;
+  showLineNumbers: boolean;
+}) => (
+  <span className={showLineNumbers ? LINE_NUMBER_CLASSES : "block"}>
+    {keyedLine.tokens.length === 0
+      ? "\n"
+      : keyedLine.tokens.map(({ token, key }) => <TokenSpan key={key} token={token} />)}
+  </span>
+);
+
+const TokenSpan = ({ token }: { token: ThemedToken }) => (
+  <span
+    className={cn(
+      "bg-(--token-bg) text-(--token-fg) dark:!bg-(--shiki-dark-bg) dark:!text-(--shiki-dark)",
+      isItalic(token.fontStyle) && "italic",
+      isBold(token.fontStyle) && "font-bold",
+      isUnderline(token.fontStyle) && "underline",
+    )}
+    style={
+      {
+        "--token-bg": token.bgColor,
+        "--token-fg": token.color,
+        "--shiki-dark-bg": token.htmlStyle?.["--shiki-dark-bg"],
+        "--shiki-dark": token.htmlStyle?.["--shiki-dark"],
+      } as CSSProperties
+    }
+  >
+    {token.content}
+  </span>
+);

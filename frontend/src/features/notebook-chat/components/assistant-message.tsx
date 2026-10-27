@@ -11,10 +11,10 @@ import {
   ReasoningTrigger,
 } from "@/features/ai";
 import type { CitedSourceDTO } from "../api/chat";
-import { noEvidenceMetadataOf } from "../types/no-evidence.types";
-import { getReferenceKeyFromHref, prepareReferenceMessage } from "../types/message-reference.types";
+import { noEvidenceMetadataOf } from "../utils/no-evidence";
+import { getReferenceKeyFromHref, prepareReferenceMessage } from "../utils/citation-markdown-links";
 import { isMessageCancelled } from "../types/chat-turn.types";
-import { CitationChipRow, CitationHoverCard } from "@/shared/citations/citation-hover-card";
+import { CitationChipRow, CitationHoverCard } from "../citations/citation-hover-card";
 import { NoEvidencePanel } from "./no-evidence-message";
 import { AssistantActionToolbar } from "./assistant-action-toolbar";
 import { cn } from "@/shared/utils/cn";
@@ -37,6 +37,188 @@ export interface AssistantMessageProps {
   isLast?: boolean;
   onSelectVersion?: (messageId: string) => void;
   isInteractionDisabled?: boolean;
+}
+
+export function AssistantMessage({
+  message,
+  versions,
+  citedSources,
+  citedSourcesMap,
+  onCopy,
+  onRegenerate,
+  showRegenerate = true,
+  onContinue,
+  showContinue = false,
+  isLast,
+  onSelectVersion,
+  isInteractionDisabled = false,
+}: AssistantMessageProps) {
+  const { t } = useTranslation("chat");
+  const [copied, setCopied] = useState(false);
+
+  const {
+    displayMessage,
+    activeCitations,
+    versionCount,
+    effectiveVersionIndex,
+    handlePreviousVersion,
+    handleNextVersion,
+  } = useAssistantVersions({
+    message,
+    versions,
+    citedSources,
+    citedSourcesMap,
+    onSelectVersion,
+  });
+
+  const content = useAssistantMessageContent(displayMessage, activeCitations);
+  const isCancelled = isMessageCancelled(displayMessage?.metadata);
+
+  if (!displayMessage || (content.isEmpty && !isCancelled)) return <EmptyAssistantMessage />;
+
+  const hasMultipleVersions = versionCount > 1;
+
+  const handleCopy = async () => {
+    const succeeded = await onCopy(content.fullPlainText);
+    if (succeeded === false) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Message
+      className={cn(
+        !isLast && "[content-visibility:auto] [contain-intrinsic-size:auto_100px]",
+      )}
+      from="assistant"
+    >
+      <span className="sr-only">{t("sender.assistant")}</span>
+      <MessageContent>
+        {content.noEvidence ? (
+          <NoEvidencePanel metadata={content.noEvidence} />
+        ) : (
+          <>
+            <AssistantReasoning content={content} />
+            <AssistantResponses messageId={displayMessage.id} content={content} />
+            {!content.isStreaming && <CitationChipRow references={content.remainingReferences} />}
+          </>
+        )}
+        {isCancelled && !content.isStreaming && (
+          <p className="text-xs text-text-tertiary select-none">{t("status.stopped")}</p>
+        )}
+      </MessageContent>
+
+      <AssistantActionToolbar
+        totalVersions={versionCount}
+        activeIndex={effectiveVersionIndex}
+        hasMultipleVersions={hasMultipleVersions}
+        onPreviousVersion={handlePreviousVersion}
+        onNextVersion={handleNextVersion}
+        versionsDisabled={isInteractionDisabled}
+        onCopy={handleCopy}
+        onRegenerate={onRegenerate}
+        showRegenerate={showRegenerate}
+        onContinue={onContinue}
+        showContinue={Boolean(showContinue && isCancelled)}
+        isStreaming={content.isStreaming || isInteractionDisabled}
+        copied={copied}
+      />
+    </Message>
+  );
+}
+
+interface UseAssistantVersionsParams {
+  message?: UIMessage;
+  versions?: UIMessage[];
+  citedSources?: CitedSourceDTO[];
+  citedSourcesMap?: Map<string, CitedSourceDTO[]>;
+  onSelectVersion?: (messageId: string) => void;
+}
+
+function useAssistantVersions({
+  message,
+  versions,
+  citedSources,
+  citedSourcesMap,
+  onSelectVersion,
+}: UseAssistantVersionsParams) {
+  const versionList = useMemo(() => {
+    const availableVersions = versions && versions.length > 0 ? versions : [];
+    if (!message) return availableVersions;
+
+    const activeIndex = availableVersions.findIndex((version) => version.id === message.id);
+    if (activeIndex < 0) return [...availableVersions, message];
+
+    return availableVersions.map((version, index) =>
+      index === activeIndex
+        ? {
+            ...version,
+            ...message,
+            metadata: {
+              ...(typeof version.metadata === "object" && version.metadata !== null
+                ? version.metadata
+                : {}),
+              ...(typeof message.metadata === "object" && message.metadata !== null
+                ? message.metadata
+                : {}),
+            },
+          }
+        : version,
+    );
+  }, [versions, message]);
+
+  const [selectedVersionIndex, setSelectedVersionIndex] = useState<number>(() =>
+    Math.max(0, versionList.length - 1),
+  );
+
+  const prevLengthRef = useRef(versionList.length);
+  useEffect(() => {
+    if (versionList.length > prevLengthRef.current) {
+      setSelectedVersionIndex(versionList.length - 1);
+    }
+    prevLengthRef.current = versionList.length;
+  }, [versionList.length]);
+
+  const selectedBranchIndex = message ? versionList.findIndex((item) => item.id === message.id) : -1;
+  const activeIndex = Math.min(
+    Math.max(0, selectedVersionIndex),
+    Math.max(0, versionList.length - 1),
+  );
+  const resolvedIndex = selectedBranchIndex >= 0 ? selectedBranchIndex : activeIndex;
+  const displayMessage = versionList[resolvedIndex];
+
+  const activeCitations = useMemo(() => {
+    if (!displayMessage) return [];
+    if (citedSourcesMap) {
+      return citedSourcesMap.get(displayMessage.id) ?? [];
+    }
+    return citedSources ?? [];
+  }, [displayMessage, citedSourcesMap, citedSources]);
+
+  const handlePreviousVersion = () => {
+    if (onSelectVersion) {
+      onSelectVersion(versionList[Math.max(0, resolvedIndex - 1)].id);
+    } else {
+      setSelectedVersionIndex((i) => Math.max(0, i - 1));
+    }
+  };
+
+  const handleNextVersion = () => {
+    if (onSelectVersion) {
+      onSelectVersion(versionList[Math.min(versionList.length - 1, resolvedIndex + 1)].id);
+    } else {
+      setSelectedVersionIndex((i) => Math.min(versionList.length - 1, i + 1));
+    }
+  };
+
+  return {
+    displayMessage,
+    activeCitations,
+    versionCount: versionList.length,
+    effectiveVersionIndex: resolvedIndex,
+    handlePreviousVersion,
+    handleNextVersion,
+  };
 }
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
@@ -77,127 +259,6 @@ function getReasoningText(parts: UIMessage["parts"]): string {
 }
 
 type MessageComponents = NonNullable<MessageResponseProps["components"]>;
-
-export function AssistantMessage({
-  message,
-  versions,
-  citedSources,
-  citedSourcesMap,
-  onCopy,
-  onRegenerate,
-  showRegenerate = true,
-  onContinue,
-  showContinue = false,
-  isLast,
-  onSelectVersion,
-  isInteractionDisabled = false,
-}: AssistantMessageProps) {
-  const { t } = useTranslation("chat");
-  const versionList = useMemo(() => {
-    const availableVersions = versions && versions.length > 0 ? versions : [];
-    if (!message) return availableVersions;
-
-    const activeIndex = availableVersions.findIndex((version) => version.id === message.id);
-    if (activeIndex < 0) return [...availableVersions, message];
-
-    return availableVersions.map((version, index) => index === activeIndex
-      ? {
-          ...version,
-          ...message,
-          metadata: {
-            ...(typeof version.metadata === "object" && version.metadata !== null ? version.metadata : {}),
-            ...(typeof message.metadata === "object" && message.metadata !== null ? message.metadata : {}),
-          },
-        }
-      : version);
-  }, [versions, message]);
-
-  const [selectedVersionIndex, setSelectedVersionIndex] = useState<number>(() =>
-    Math.max(0, versionList.length - 1),
-  );
-  const [copied, setCopied] = useState(false);
-
-  const prevLengthRef = useRef(versionList.length);
-  useEffect(() => {
-    if (versionList.length > prevLengthRef.current) {
-      setSelectedVersionIndex(versionList.length - 1);
-    }
-    prevLengthRef.current = versionList.length;
-  }, [versionList.length]);
-
-  const selectedBranchIndex = message ? versionList.findIndex((item) => item.id === message.id) : -1;
-  const activeIndex = Math.min(
-    Math.max(0, selectedVersionIndex),
-    Math.max(0, versionList.length - 1),
-  );
-  const resolvedIndex = selectedBranchIndex >= 0 ? selectedBranchIndex : activeIndex;
-  const activeMessage = versionList[resolvedIndex];
-
-  const activeCitations = useMemo(() => {
-    if (!activeMessage) return [];
-    if (citedSourcesMap) {
-      return citedSourcesMap.get(activeMessage.id) ?? [];
-    }
-    return citedSources ?? [];
-  }, [activeMessage, citedSourcesMap, citedSources]);
-
-  const content = useAssistantMessageContent(activeMessage, activeCitations);
-  const isCancelled = isMessageCancelled(activeMessage?.metadata);
-
-  if (!activeMessage || (content.isEmpty && !isCancelled)) return <EmptyAssistantMessage />;
-
-  const hasMultipleVersions = versionList.length > 1;
-
-  const handleCopy = async () => {
-    const succeeded = await onCopy(content.fullPlainText);
-    if (succeeded === false) return;
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <Message
-      className={cn(
-        !isLast && "[content-visibility:auto] [contain-intrinsic-size:auto_100px]",
-      )}
-      from="assistant"
-    >
-      <span className="sr-only">{t("sender.assistant")}</span>
-      <MessageContent>
-        {content.noEvidence ? (
-          <NoEvidencePanel metadata={content.noEvidence} />
-        ) : (
-          <>
-            <AssistantReasoning content={content} />
-            <AssistantResponses messageId={activeMessage.id} content={content} />
-            {!content.isStreaming && <CitationChipRow references={content.remainingReferences} />}
-          </>
-        )}
-        {isCancelled && !content.isStreaming && (
-          <p className="text-xs text-text-tertiary select-none">{t("status.stopped")}</p>
-        )}
-      </MessageContent>
-
-      {(
-        <AssistantActionToolbar
-          totalVersions={versionList.length}
-          activeIndex={resolvedIndex}
-          hasMultipleVersions={hasMultipleVersions}
-          onPreviousVersion={() => onSelectVersion ? onSelectVersion(versionList[Math.max(0, resolvedIndex - 1)].id) : setSelectedVersionIndex((i) => Math.max(0, i - 1))}
-          onNextVersion={() => onSelectVersion ? onSelectVersion(versionList[Math.min(versionList.length - 1, resolvedIndex + 1)].id) : setSelectedVersionIndex((i) => Math.min(versionList.length - 1, i + 1))}
-          versionsDisabled={isInteractionDisabled}
-          onCopy={handleCopy}
-          onRegenerate={onRegenerate}
-          showRegenerate={showRegenerate}
-          onContinue={onContinue}
-          showContinue={Boolean(showContinue && isCancelled)}
-          isStreaming={content.isStreaming || isInteractionDisabled}
-          copied={copied}
-        />
-      )}
-    </Message>
-  );
-}
 
 function useAssistantMessageContent(
   message: UIMessage | undefined,

@@ -1,7 +1,7 @@
 import { apiDelete, apiPost, createQueryOptions } from "@/shared/api";
 
-export type { CitationLocator } from "@/shared/citations/citation";
-import type { CitationLocator } from "@/shared/citations/citation";
+export type { CitationLocator } from "../citations/citation";
+import type { CitationLocator } from "../citations/citation";
 
 export interface CitedSourceDTO {
   id: string;

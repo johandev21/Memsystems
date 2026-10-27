@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import i18n from "@/shared/i18n";
-import type { FolderDTO } from "../../types";
+import type { FolderDTO } from "../../types/folder.types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import {
   getCommandPendingKey,

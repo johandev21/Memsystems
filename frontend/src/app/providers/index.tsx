@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/shared/components/ui/sonner";
 import { QueryProvider } from "./query-provider";
 import { AppThemeProvider } from "./theme-provider";
 

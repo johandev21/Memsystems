@@ -1,11 +1,11 @@
-import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ContextMenu, ContextMenuTrigger } from "@/shared/components/ui/context-menu";
 import { cn } from "@/shared/utils/cn";
 import {
   HighlightMatch,
   getTreeRowClassName,
   useIsCoarsePointer,
   useTreeRowDragDrop,
-} from "@/components/ui/tree";
+} from "@/shared/components/ui/tree";
 import { GripVertical } from "lucide-react";
 import { createElement } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,28 +26,6 @@ type RowProps = {
   node: TreeNode;
   depth: number;
 };
-
-function useTreeRowPendingCommands(nodeId: string, pendingKeys: Set<string>) {
-  const pendingRename = pendingKeys.has(
-    getCommandPendingKey({ type: "renameItem", id: nodeId, name: "" }),
-  );
-  const pendingDuplicate = pendingKeys.has(
-    getCommandPendingKey({ type: "duplicateMaterial", id: nodeId }),
-  );
-  const pendingMove = pendingKeys.has(
-    getCommandPendingKey({ type: "moveItem", id: nodeId, targetFolderId: null }),
-  );
-  const pendingDelete = pendingKeys.has(getCommandPendingKey({ type: "deleteItem", id: nodeId }));
-  const isPending = pendingRename || pendingDuplicate || pendingMove || pendingDelete;
-
-  return {
-    pendingRename,
-    pendingDuplicate,
-    pendingMove,
-    pendingDelete,
-    isPending,
-  };
-}
 
 export function Row({ node, depth }: RowProps) {
   const controller = useTreeControllerContext();
@@ -88,6 +66,30 @@ export function Row({ node, depth }: RowProps) {
 
   const pending = useTreeRowPendingCommands(node.id, controller.pendingKeys);
 
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isCoarse) {
+      (
+        listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void }
+      )?.onPointerDown?.(event as unknown as React.PointerEvent);
+    }
+    if (event.button !== 0 || isRenaming) return;
+    (event.currentTarget as HTMLElement).focus();
+    controller.select(node);
+  };
+
+  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isRenaming) return;
+    const target = event.target as HTMLElement;
+    if (
+      target.closest('[data-slot="study-materials-tree-drag-handle"]') ||
+      target.closest('[data-slot="study-materials-tree-row-actions"]')
+    ) {
+      return;
+    }
+    event.currentTarget.focus();
+    controller.activate(node);
+  };
+
   const row = (
     <div
       ref={setNodeRefs}
@@ -120,28 +122,8 @@ export function Row({ node, depth }: RowProps) {
         }),
         studyMaterialsTreeRowVariants,
       )}
-      onPointerDown={(event) => {
-        if (!isCoarse) {
-          (
-            listeners as unknown as { onPointerDown?: (e: React.PointerEvent) => void }
-          )?.onPointerDown?.(event as unknown as React.PointerEvent);
-        }
-        if (event.button !== 0 || isRenaming) return;
-        (event.currentTarget as HTMLElement).focus();
-        controller.select(node);
-      }}
-      onClick={(event) => {
-        if (isRenaming) return;
-        const target = event.target as HTMLElement;
-        if (
-          target.closest('[data-slot="study-materials-tree-drag-handle"]') ||
-          target.closest('[data-slot="study-materials-tree-row-actions"]')
-        ) {
-          return;
-        }
-        event.currentTarget.focus();
-        controller.activate(node);
-      }}
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
       onContextMenu={() => controller.select(node)}
       onFocus={() => controller.select(node)}
       onKeyDown={(event) => controller.handleKeyDown(event, node)}
@@ -177,6 +159,28 @@ export function Row({ node, depth }: RowProps) {
       <RowMenu node={node} />
     </ContextMenu>
   );
+}
+
+function useTreeRowPendingCommands(nodeId: string, pendingKeys: Set<string>) {
+  const pendingRename = pendingKeys.has(
+    getCommandPendingKey({ type: "renameItem", id: nodeId, name: "" }),
+  );
+  const pendingDuplicate = pendingKeys.has(
+    getCommandPendingKey({ type: "duplicateMaterial", id: nodeId }),
+  );
+  const pendingMove = pendingKeys.has(
+    getCommandPendingKey({ type: "moveItem", id: nodeId, targetFolderId: null }),
+  );
+  const pendingDelete = pendingKeys.has(getCommandPendingKey({ type: "deleteItem", id: nodeId }));
+  const isPending = pendingRename || pendingDuplicate || pendingMove || pendingDelete;
+
+  return {
+    pendingRename,
+    pendingDuplicate,
+    pendingMove,
+    pendingDelete,
+    isPending,
+  };
 }
 
 type TreeRowDragHandleProps = {

@@ -1,4 +1,4 @@
-import type { SourceSegmentLocator } from "../types";
+import type { SourceSegmentLocator } from "../types/source.types";
 
 export interface ParsedAudioSegment {
   id: string;

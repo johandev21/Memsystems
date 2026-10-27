@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
-import type { StudyMaterialDTO } from "../types";
+import type { StudyMaterialDTO } from "../types/study-material.types";
 import { useMaterialViewerFullscreen } from "../hooks/use-material-viewer-fullscreen";
 import { MaterialViewerHeader } from "./material-viewer-header";
 import { MaterialContentRenderer } from "./material-content-renderer";

@@ -3,10 +3,10 @@ import { ExternalLink, Loader2, RotateCcw, Settings2 } from "lucide-react";
 import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { CitedSourceDTO } from "../api/chat";
-import { MessageScrollerItem } from "@/components/ui/message-scroller";
+import { MessageScrollerItem } from "@/features/ai";
 import { AssistantMessage } from "./assistant-message";
 import { UserMessage } from "./user-message";
-import { groupMessagesIntoTurns } from "../types/chat-turn.types";
+import { type ChatTurn, groupMessagesIntoTurns } from "../types/chat-turn.types";
 import { GATEWAY_TOP_UP_URL, classifyChatError } from "../utils/chat-error";
 import { CHAT_ENTRANCE_CLASS, chatEntranceDelay } from "../utils/chat-entrance";
 
@@ -47,53 +47,23 @@ export function ChatMessageList({
 
   return (
     <>
-      {turns.map((turn, index) => {
-        const isLast = index === turns.length - 1;
-        const delay = chatEntranceDelay(index);
-        const animateStyle =
-          delay > 0 ? ({ "--chat-delay": `${delay}ms` } as CSSProperties) : undefined;
-        if (turn.type === "user") {
-          const parentId = getParentMessageId(turn.message, allBranchMessages);
-          const siblings = getSiblingMessages(allBranchMessages, "user", parentId);
-          return (
-            <MessageScrollerItem
-              key={turn.id}
-              messageId={turn.id}
-              scrollAnchor={Boolean(anchorMessageId && turn.id === anchorMessageId)}
-            >
-              <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
-                <UserMessage message={turn.message} siblingMessages={siblings} disabled={isLoading} onEdit={onEdit} onCopy={onCopy} onSelectBranch={onSelectBranch} />
-              </div>
-            </MessageScrollerItem>
-          );
-        }
-
-        const activeAssistant = turn.versions.at(-1);
-        const assistantParentId = activeAssistant
-          ? getParentMessageId(activeAssistant, allBranchMessages)
-          : null;
-        const assistantSiblings = getSiblingMessages(allBranchMessages, "assistant", assistantParentId);
-
-        return (
-          <MessageScrollerItem key={turn.id} messageId={turn.id}>
-            <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
-              <AssistantMessage
-                isLast={isLast}
-                message={activeAssistant}
-                versions={assistantSiblings.length > 0 ? assistantSiblings : turn.versions}
-                citedSourcesMap={citedSourcesMap}
-                onCopy={onCopy}
-                onRegenerate={() => onRegenerate(activeAssistant?.id)}
-                onSelectVersion={onSelectBranch}
-                isInteractionDisabled={isLoading}
-                showRegenerate={isLast}
-                onContinue={onContinue}
-                showContinue={isLast && !isLoading}
-              />
-            </div>
-          </MessageScrollerItem>
-        );
-      })}
+      {turns.map((turn, index) => (
+        <ChatTurnRow
+          key={turn.id}
+          turn={turn}
+          index={index}
+          isLast={index === turns.length - 1}
+          anchorMessageId={anchorMessageId}
+          allBranchMessages={allBranchMessages}
+          citedSourcesMap={citedSourcesMap}
+          isLoading={isLoading}
+          onCopy={onCopy}
+          onRegenerate={onRegenerate}
+          onContinue={onContinue}
+          onEdit={onEdit}
+          onSelectBranch={onSelectBranch}
+        />
+      ))}
       {showPendingIndicator && (
         <MessageScrollerItem messageId="thinking-indicator">
           <div
@@ -111,6 +81,89 @@ export function ChatMessageList({
         </MessageScrollerItem>
       )}
     </>
+  );
+}
+
+interface ChatTurnRowProps {
+  turn: ChatTurn;
+  index: number;
+  isLast: boolean;
+  anchorMessageId?: string | null;
+  allBranchMessages: UIMessage[];
+  citedSourcesMap: Map<string, CitedSourceDTO[]>;
+  isLoading: boolean;
+  onCopy: (text: string) => void | boolean | Promise<void | boolean>;
+  onRegenerate: (messageId?: string) => void;
+  onContinue?: () => void;
+  onEdit?: (message: UIMessage, text: string) => void;
+  onSelectBranch?: (messageId: string) => void;
+}
+
+function ChatTurnRow({
+  turn,
+  index,
+  isLast,
+  anchorMessageId,
+  allBranchMessages,
+  citedSourcesMap,
+  isLoading,
+  onCopy,
+  onRegenerate,
+  onContinue,
+  onEdit,
+  onSelectBranch,
+}: ChatTurnRowProps) {
+  const delay = chatEntranceDelay(index);
+  const animateStyle =
+    delay > 0 ? ({ "--chat-delay": `${delay}ms` } as CSSProperties) : undefined;
+
+  if (turn.type === "user") {
+    const parentId = getParentMessageId(turn.message, allBranchMessages);
+    const siblings = getSiblingMessages(allBranchMessages, "user", parentId);
+    return (
+      <MessageScrollerItem
+        key={turn.id}
+        messageId={turn.id}
+        scrollAnchor={Boolean(anchorMessageId && turn.id === anchorMessageId)}
+      >
+        <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
+          <UserMessage
+            message={turn.message}
+            siblingMessages={siblings}
+            disabled={isLoading}
+            onEdit={onEdit}
+            onCopy={onCopy}
+            onSelectBranch={onSelectBranch}
+          />
+        </div>
+      </MessageScrollerItem>
+    );
+  }
+
+  const activeAssistant = turn.versions.at(-1);
+  const assistantParentId = activeAssistant
+    ? getParentMessageId(activeAssistant, allBranchMessages)
+    : null;
+  const assistantSiblings = getSiblingMessages(allBranchMessages, "assistant", assistantParentId);
+
+  return (
+    <MessageScrollerItem key={turn.id} messageId={turn.id}>
+      <div className={CHAT_ENTRANCE_CLASS} style={animateStyle}>
+        <AssistantMessage
+          isLast={isLast}
+          message={activeAssistant}
+          versions={assistantSiblings.length > 0 ? assistantSiblings : turn.versions}
+          citedSourcesMap={citedSourcesMap}
+          onCopy={onCopy}
+          onRegenerate={() => onRegenerate(activeAssistant?.id)}
+          onSelectVersion={onSelectBranch}
+          isInteractionDisabled={isLoading}
+          showRegenerate={isLast}
+          onContinue={onContinue}
+          showContinue={isLast && !isLoading}
+        />
+      </div>
+    </MessageScrollerItem>
   );
 }
 
