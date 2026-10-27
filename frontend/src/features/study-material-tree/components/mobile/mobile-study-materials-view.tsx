@@ -114,8 +114,6 @@ export function MobileStudyMaterialsView({
     }
   }, [itemToDelete, onCommand]);
 
-  const isEmpty = navigation.items.length === 0;
-
   return (
     <div
       data-slot="mobile-study-materials-view"
@@ -131,34 +129,16 @@ export function MobileStudyMaterialsView({
         data-slot="study-materials-content"
         className="min-h-0 flex-1 px-2 pb-28 pt-1"
       >
-        {isPending ? (
-          <StudyMaterialsLoadingState />
-        ) : isError ? (
-          <StudyMaterialsErrorState message={errorMessage} onRetry={onRetryLoad} />
-        ) : isEmpty ? (
-          <StudyMaterialsEmptyState inFolder={navigation.activeFolderId !== null} />
-        ) : (
-          <div
-            key={navigation.activeFolderId ?? "root"}
-            role="list"
-            className={`flex flex-col gap-0.5 animate-in fade-in duration-200 ease-out motion-reduce:animate-none ${
-              navigation.direction === "forward"
-                ? "slide-in-from-right-4"
-                : "slide-in-from-left-4"
-            }`}
-          >
-            {navigation.items.map((node) => (
-              <StudyMaterialTreeTile
-                key={node.id}
-                node={node}
-                onOpenFolder={navigation.openFolder}
-                onOpenMaterial={onSelectMaterial}
-                onMaterialActions={setActionMaterialId}
-                onFolderActions={setActionFolderId}
-              />
-            ))}
-          </div>
-        )}
+        <StudyMaterialsMainContent
+          navigation={navigation}
+          isPending={isPending}
+          isError={isError}
+          errorMessage={errorMessage}
+          onRetryLoad={onRetryLoad}
+          onSelectMaterial={onSelectMaterial}
+          onMaterialActions={setActionMaterialId}
+          onFolderActions={setActionFolderId}
+        />
       </div>
 
       <MobileMaterialActionDrawer
@@ -224,6 +204,54 @@ export function MobileStudyMaterialsView({
         onConfirm={handleDeleteConfirm}
       />
     </div>
+  );
+}
+
+function StudyMaterialsMainContent({
+  navigation,
+  isPending,
+  isError,
+  errorMessage,
+  onRetryLoad,
+  onSelectMaterial,
+  onMaterialActions,
+  onFolderActions,
+}: {
+  navigation: ReturnType<typeof useMobileStudyMaterialsNavigation>;
+  isPending: boolean;
+  isError: boolean;
+  errorMessage?: string;
+  onRetryLoad: () => void;
+  onSelectMaterial: (id: string | null) => void;
+  onMaterialActions: (id: string) => void;
+  onFolderActions: (id: string) => void;
+}) {
+  if (isPending) return <StudyMaterialsLoadingState />;
+  if (isError) return <StudyMaterialsErrorState message={errorMessage} onRetry={onRetryLoad} />;
+  if (navigation.items.length === 0) {
+    return <StudyMaterialsEmptyState inFolder={navigation.activeFolderId !== null} />;
+  }
+
+  return (
+    <ul
+      key={navigation.activeFolderId ?? "root"}
+      className={`flex flex-col gap-0.5 animate-in fade-in duration-200 ease-out motion-reduce:animate-none ${
+        navigation.direction === "forward"
+          ? "slide-in-from-right-4"
+          : "slide-in-from-left-4"
+      }`}
+    >
+      {navigation.items.map((node) => (
+        <StudyMaterialTreeTile
+          key={node.id}
+          node={node}
+          onOpenFolder={navigation.openFolder}
+          onOpenMaterial={onSelectMaterial}
+          onMaterialActions={onMaterialActions}
+          onFolderActions={onFolderActions}
+        />
+      ))}
+    </ul>
   );
 }
 

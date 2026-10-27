@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import {
   closestCenter,
   DndContext,
@@ -9,6 +17,7 @@ import {
 } from "@dnd-kit/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import type { TFunction } from "i18next";
 import { CloudOff, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -36,11 +45,137 @@ const libraryCollisionDetection: CollisionDetection = (args) =>
 
 type LibraryDragData = { kind?: string; folderId?: string | null; notebookId?: string };
 
+function createLibraryAnnouncements(
+  folders: LibraryFolder[],
+  notebooks: LibraryNotebook[],
+  t: TFunction<"notebooks">,
+): Announcements {
+  const activeName = (dragData: LibraryDragData | undefined) => {
+    if (dragData?.kind === "folder") {
+      return (
+        folders.find((folder) => folder.id === dragData.folderId)?.name ??
+        t("library.untitledFolder")
+      );
+    }
+    if (dragData?.kind === "notebook") {
+      return (
+        notebooks.find((notebook) => notebook.id === dragData.notebookId)?.title ??
+        t("library.untitledNotebook")
+      );
+    }
+    return "";
+  };
+  const targetName = (dropData: LibraryDragData | undefined) => {
+    if (!dropData || !("folderId" in dropData)) return null;
+    return typeof dropData.folderId === "string"
+      ? folderPath(folders, dropData.folderId)
+      : t("library.library");
+  };
+
+  return {
+    onDragStart: ({ active }) =>
+      t("library.dnd.dragStart", { name: activeName(active.data.current) }),
+    onDragOver: ({ active, over }) => {
+      const target = targetName(over?.data.current);
+      return target
+        ? t("library.dnd.dragOver", { name: activeName(active.data.current), target })
+        : t("library.dnd.dragOverNone", { name: activeName(active.data.current) });
+    },
+    onDragEnd: ({ active, over }) => {
+      const target = targetName(over?.data.current);
+      return target
+        ? t("library.dnd.dragEnd", { name: activeName(active.data.current), target })
+        : t("library.dnd.dragEndNone", { name: activeName(active.data.current) });
+    },
+    onDragCancel: ({ active }) =>
+      t("library.dnd.dragCancel", { name: activeName(active.data.current) }),
+  };
+}
+
+function useNotebookExport(t: TFunction<"notebooks">) {
+  return useCallback(async (id: string, title: string) => {
+    try {
+      toast.loading(t("settings.exporting", "Exporting notebook…"), { id: `export-${id}` });
+      await exportNotebook(id, title);
+      toast.success(t("settings.exportSuccess", "Notebook exported successfully"), {
+        id: `export-${id}`,
+      });
+    } catch {
+      toast.error(t("settings.exportFailed", "Failed to export notebook"), {
+        id: `export-${id}`,
+      });
+    }
+  }, [t]);
+}
+
+function useMobileLibraryCreation(
+  mutations: ReturnType<typeof useLibraryMutations>,
+  activeFolderId: string | null,
+  navigate: ReturnType<typeof useNavigate>,
+) {
+  const handleCreateFolder = useCallback(async (name: string) => {
+    const { promise } = mutations.createFolder({ name, parentId: activeFolderId });
+    await promise;
+  }, [activeFolderId, mutations]);
+
+  const handleCreateNotebook = useCallback(async (title: string) => {
+    const { promise } = mutations.createNotebook({ title, folderId: activeFolderId });
+    const serverId = await promise;
+    if (serverId) {
+      void navigate({ to: "/notebooks/$notebookId", params: { notebookId: serverId } });
+    }
+  }, [activeFolderId, mutations, navigate]);
+
+  return {
+    handleCreateFolderMobile: handleCreateFolder,
+    handleCreateNotebookMobile: handleCreateNotebook,
+  };
+}
+
+function useNotebookImport(
+  activeFolderId: string | null,
+  navigate: ReturnType<typeof useNavigate>,
+  t: TFunction<"notebooks">,
+) {
+  const queryClient = useQueryClient();
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTriggerImport = useCallback(() => {
+    importInputRef.current?.click();
+  }, []);
+
+  const handleImportFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = "";
+
+    const toastId = toast.loading(t("library.toasts.importing", "Importing notebook…"));
+    try {
+      const imported = await importNotebook(file, activeFolderId);
+      toast.success(t("library.toasts.importSuccess", "Notebook imported successfully"), {
+        id: toastId,
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
+        queryClient.invalidateQueries({ queryKey: ["folders"] }),
+        queryClient.invalidateQueries({ queryKey: ["library"] }),
+      ]);
+      void navigate({ to: "/notebooks/$notebookId", params: { notebookId: imported.id } });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("library.toasts.importFailed", "Failed to import notebook");
+      toast.error(message, { id: toastId });
+    }
+  }, [activeFolderId, navigate, queryClient, t]);
+
+  return { importInputRef, handleTriggerImport, handleImportFileChange };
+}
+
 export function NotebookLibrary() {
   const { t } = useTranslation("notebooks");
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const importInputRef = useRef<HTMLInputElement>(null);
   const search = useSearch({ strict: false }) as LibrarySearch | undefined;
   const rawFolderId = search?.folderId ?? null;
   const sortKey: LibrarySortKey = search?.sort ?? "name";
@@ -74,47 +209,10 @@ export function NotebookLibrary() {
     }
   }, [isLoading, isError, data, rawFolderId, folders, navigate]);
 
-  const announcements = useMemo<Announcements>(() => {
-    const activeName = (dragData: LibraryDragData | undefined) => {
-      if (dragData?.kind === "folder") {
-        return (
-          folders.find((folder) => folder.id === dragData.folderId)?.name ??
-          t("library.untitledFolder")
-        );
-      }
-      if (dragData?.kind === "notebook") {
-        return (
-          notebooks.find((notebook) => notebook.id === dragData.notebookId)?.title ??
-          t("library.untitledNotebook")
-        );
-      }
-      return "";
-    };
-    const targetName = (dropData: LibraryDragData | undefined) => {
-      if (!dropData || !("folderId" in dropData)) return null;
-      return typeof dropData.folderId === "string"
-        ? folderPath(folders, dropData.folderId)
-        : t("library.library");
-    };
-    return {
-      onDragStart: ({ active }) =>
-        t("library.dnd.dragStart", { name: activeName(active.data.current) }),
-      onDragOver: ({ active, over }) => {
-        const target = targetName(over?.data.current);
-        return target
-          ? t("library.dnd.dragOver", { name: activeName(active.data.current), target })
-          : t("library.dnd.dragOverNone", { name: activeName(active.data.current) });
-      },
-      onDragEnd: ({ active, over }) => {
-        const target = targetName(over?.data.current);
-        return target
-          ? t("library.dnd.dragEnd", { name: activeName(active.data.current), target })
-          : t("library.dnd.dragEndNone", { name: activeName(active.data.current) });
-      },
-      onDragCancel: ({ active }) =>
-        t("library.dnd.dragCancel", { name: activeName(active.data.current) }),
-    };
-  }, [folders, notebooks, t]);
+  const announcements = useMemo(
+    () => createLibraryAnnouncements(folders, notebooks, t),
+    [folders, notebooks, t],
+  );
 
   const interaction = useLibraryInteractions({
     folders,
@@ -126,6 +224,17 @@ export function NotebookLibrary() {
       void mutations.updateNotebook(notebookId, { folderId });
     },
   });
+  const handleExportNotebook = useNotebookExport(t);
+  const { handleCreateFolderMobile, handleCreateNotebookMobile } = useMobileLibraryCreation(
+    mutations,
+    activeFolderId,
+    navigate,
+  );
+  const { importInputRef, handleTriggerImport, handleImportFileChange } = useNotebookImport(
+    activeFolderId,
+    navigate,
+    t,
+  );
 
   const draftKey = draft ? `${draft.kind}:${draft.id}` : null;
 
@@ -232,9 +341,12 @@ export function NotebookLibrary() {
         replace: true,
       });
     }
-    await mutations.deleteFolder(id);
-    setIsDeleting(false);
-    setPendingFolderDelete(null);
+    try {
+      await mutations.deleteFolder(id);
+      setPendingFolderDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const requestRemoveNotebook = (id: string) => {
@@ -248,70 +360,16 @@ export function NotebookLibrary() {
     setIsDeleting(true);
     if (draft?.id === id) setDraft(null);
     setSelectedKey((current) => (current === `notebook:${id}` ? null : current));
-    await mutations.deleteNotebook(id);
-    setIsDeleting(false);
-    setPendingDelete(null);
+    try {
+      await mutations.deleteNotebook(id);
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const openNotebook = (id: string) => {
     void navigate({ to: "/notebooks/$notebookId", params: { notebookId: id } });
-  };
-
-  const handleCreateFolderMobile = async (name: string) => {
-    const { promise } = mutations.createFolder({ name, parentId: activeFolderId });
-    await promise;
-  };
-
-  const handleCreateNotebookMobile = async (title: string) => {
-    const { promise } = mutations.createNotebook({ title, folderId: activeFolderId });
-    const serverId = await promise;
-    if (serverId) {
-      void navigate({ to: "/notebooks/$notebookId", params: { notebookId: serverId } });
-    }
-  };
-
-  const handleExportNotebook = async (id: string, title: string) => {
-    try {
-      toast.loading(t("settings.exporting", "Exporting notebook…"), { id: `export-${id}` });
-      await exportNotebook(id, title);
-      toast.success(t("settings.exportSuccess", "Notebook exported successfully"), {
-        id: `export-${id}`,
-      });
-    } catch {
-      toast.error(t("settings.exportFailed", "Failed to export notebook"), {
-        id: `export-${id}`,
-      });
-    }
-  };
-
-  const handleTriggerImport = () => {
-    importInputRef.current?.click();
-  };
-
-  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-
-    const toastId = toast.loading(t("library.toasts.importing", "Importing notebook…"));
-    try {
-      const imported = await importNotebook(file, activeFolderId);
-      toast.success(t("library.toasts.importSuccess", "Notebook imported successfully"), {
-        id: toastId,
-      });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
-        queryClient.invalidateQueries({ queryKey: ["folders"] }),
-        queryClient.invalidateQueries({ queryKey: ["library"] }),
-      ]);
-      void navigate({ to: "/notebooks/$notebookId", params: { notebookId: imported.id } });
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : t("library.toasts.importFailed", "Failed to import notebook");
-      toast.error(msg, { id: toastId });
-    }
   };
 
   return (
@@ -372,42 +430,89 @@ export function NotebookLibrary() {
             onImportNotebook={handleTriggerImport}
           />
         </LibraryContent>
-        <DragOverlay dropAnimation={null}>
-          {interaction.draggedNotebook ? (
-            <NotebookPreview
-              notebook={interaction.draggedNotebook}
-              compact={interaction.isPreviewCompact}
-            />
-          ) : interaction.draggedFolder ? (
-            <FolderPreview
-              folder={interaction.draggedFolder}
-              notebooks={interaction.draggedFolderNotebooks}
-              compact={interaction.isPreviewCompact}
-            />
-          ) : null}
-        </DragOverlay>
+        <LibraryDragOverlay
+          notebook={interaction.draggedNotebook ?? null}
+          folder={interaction.draggedFolder ?? null}
+          folderNotebooks={interaction.draggedFolderNotebooks}
+          compact={interaction.isPreviewCompact}
+        />
       </DndContext>
-      <ConfirmDeleteDialog
-        open={pendingDelete !== null}
-        onOpenChange={(open) => {
-          if (!open && !isDeleting) setPendingDelete(null);
-        }}
-        title={t("library.removeNotebook")}
-        description={t("library.removeNotebookConfirm", { title: pendingDelete?.title ?? "" })}
-        isLoading={isDeleting}
-        onConfirm={() => void confirmRemoveNotebook()}
-      />
-      <ConfirmDeleteDialog
-        open={pendingFolderDelete !== null}
-        onOpenChange={(open) => {
-          if (!open && !isDeleting) setPendingFolderDelete(null);
-        }}
-        title={t("library.removeFolder")}
-        description={t("library.removeFolderConfirm", { name: pendingFolderDelete?.name ?? "" })}
-        isLoading={isDeleting}
-        onConfirm={() => void confirmRemoveFolder()}
+      <LibraryDeleteDialogs
+        notebook={pendingDelete}
+        folder={pendingFolderDelete}
+        isDeleting={isDeleting}
+        onCloseNotebook={() => setPendingDelete(null)}
+        onCloseFolder={() => setPendingFolderDelete(null)}
+        onConfirmNotebook={() => void confirmRemoveNotebook()}
+        onConfirmFolder={() => void confirmRemoveFolder()}
       />
     </div>
+  );
+}
+
+function LibraryDragOverlay({
+  notebook,
+  folder,
+  folderNotebooks,
+  compact,
+}: {
+  notebook: LibraryNotebook | null;
+  folder: LibraryFolder | null;
+  folderNotebooks: LibraryNotebook[];
+  compact: boolean;
+}) {
+  return (
+    <DragOverlay dropAnimation={null}>
+      {notebook ? (
+        <NotebookPreview notebook={notebook} compact={compact} />
+      ) : folder ? (
+        <FolderPreview folder={folder} notebooks={folderNotebooks} compact={compact} />
+      ) : null}
+    </DragOverlay>
+  );
+}
+
+function LibraryDeleteDialogs({
+  notebook,
+  folder,
+  isDeleting,
+  onCloseNotebook,
+  onCloseFolder,
+  onConfirmNotebook,
+  onConfirmFolder,
+}: {
+  notebook: LibraryNotebook | null;
+  folder: LibraryFolder | null;
+  isDeleting: boolean;
+  onCloseNotebook: () => void;
+  onCloseFolder: () => void;
+  onConfirmNotebook: () => void;
+  onConfirmFolder: () => void;
+}) {
+  const { t } = useTranslation("notebooks");
+  return (
+    <>
+      <ConfirmDeleteDialog
+        open={notebook !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) onCloseNotebook();
+        }}
+        title={t("library.removeNotebook")}
+        description={t("library.removeNotebookConfirm", { title: notebook?.title ?? "" })}
+        isLoading={isDeleting}
+        onConfirm={onConfirmNotebook}
+      />
+      <ConfirmDeleteDialog
+        open={folder !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) onCloseFolder();
+        }}
+        title={t("library.removeFolder")}
+        description={t("library.removeFolderConfirm", { name: folder?.name ?? "" })}
+        isLoading={isDeleting}
+        onConfirm={onConfirmFolder}
+      />
+    </>
   );
 }
 

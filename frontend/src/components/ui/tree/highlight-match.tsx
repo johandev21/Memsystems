@@ -19,7 +19,12 @@ export const HighlightMatch = memo(function HighlightMatch({
     }
     const cleanQuery = query.trim();
     const regex = new RegExp(`(${cleanQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-    return text.split(regex);
+    let offset = 0;
+    return text.split(regex).map((part) => {
+      const start = text.indexOf(part, offset);
+      offset = start + part.length;
+      return { part, key: `${start}:${part.length}:${part}` };
+    });
   }, [text, query]);
 
   if (!parts) {
@@ -30,9 +35,9 @@ export const HighlightMatch = memo(function HighlightMatch({
 
   return (
     <span className={className}>
-      {parts.map((part, index) =>
+      {parts.map(({ part, key }) =>
         part.toLowerCase() === cleanQueryLower ? (
-          <mark key={index} className={highlightClassName}>
+          <mark key={key} className={highlightClassName}>
             {part}
           </mark>
         ) : (

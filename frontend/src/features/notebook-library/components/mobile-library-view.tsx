@@ -188,7 +188,7 @@ function MobileLibraryItemList({
   onOpenActions: (item: LibraryItem) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3.5 w-full" role="list">
+    <ul className="flex flex-col gap-3.5 w-full">
       {items.map((item) =>
         item.kind === "folder" ? (
           <MobileFolderTile
@@ -206,6 +206,6 @@ function MobileLibraryItemList({
           />
         ),
       )}
-    </div>
+    </ul>
   );
 }

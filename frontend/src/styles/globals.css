@@ -91,9 +91,14 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   --radius-panel: min(var(--radius-4xl), 24px);
+  --radius-checkbox: 5px;
+  --radius-tooltip-arrow: 2px;
   --radius-selector: 1.25rem;
   --radius-artwork: 1rem;
   --radius-flashcard: 1.75rem;
+  --color-secondary-hover: color-mix(in oklch, var(--secondary), var(--foreground) 5%);
+  --ease-message-active: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-message-inactive: cubic-bezier(0.7, 0, 0.84, 0);
   --blur-panel: 6px;
   --shadow-overlay: 0 8px 24px var(--shadow-overlay-color);
 }

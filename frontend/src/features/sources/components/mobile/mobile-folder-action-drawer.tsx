@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Folder, FolderInput, FolderPlus, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, Folder, FolderInput, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { useState, type ElementType } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,8 +8,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { MobileFolderMovePanel } from "@/components/ui/mobile-folder-move-panel";
 import type { SourceFolder } from "../../types/source-folder.types";
-import { MobileMoveFolderPicker } from "./mobile-move-folder-picker";
 
 const ACTION_CLASS =
   "flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium active:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer [@media(hover:hover)]:hover:bg-muted";
@@ -57,34 +57,20 @@ export function MobileFolderActionDrawer({
     <Drawer open={folder !== null} onOpenChange={(open) => (open ? undefined : close())}>
       <DrawerContent className="max-h-[85vh] p-4 pb-safe-lg">
         {folder && isMoving ? (
-          <>
-            <DrawerHeader className="pb-3 text-left">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsMoving(false)}
-                  aria-label={t("actions.collapse", "Back")}
-                  className="flex size-11 items-center justify-center rounded-lg text-muted-foreground active:scale-97 transition-transform touch-manipulation cursor-pointer"
-                >
-                  <ArrowLeft className="size-4" />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <DrawerTitle className="truncate text-base font-semibold">
-                    {t("actions.moveToFolder", "Move to folder")}
-                  </DrawerTitle>
-                  <DrawerDescription className="truncate text-xs">{folder.name}</DrawerDescription>
-                </div>
-              </div>
-            </DrawerHeader>
-            <MobileMoveFolderPicker
-              folders={targets}
-              canMoveToRoot={canMoveToRoot}
-              onSelect={(targetId) => {
-                close();
-                onMove(folder.id, targetId);
-              }}
-            />
-          </>
+          <MobileFolderMovePanel
+            folderName={folder.name}
+            title={t("actions.moveToFolder", "Move to folder")}
+            backLabel={t("actions.collapse", "Back")}
+            rootLabel={t("actions.moveToSourcesRoot", "Move to Sources root")}
+            emptyLabel={t("tree.emptyDescription", "No folders available")}
+            folders={targets}
+            canMoveToRoot={canMoveToRoot}
+            onBack={() => setIsMoving(false)}
+            onSelect={(targetId) => {
+              close();
+              onMove(folder.id, targetId);
+            }}
+          />
         ) : folder ? (
           <>
             <DrawerHeader className="pb-2 text-left">

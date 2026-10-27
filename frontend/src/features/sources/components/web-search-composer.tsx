@@ -55,7 +55,6 @@ export function WebSearchComposer({
     [webSearch.importResults],
   );
 
-  const friendlyError = webSearch.searchError;
   const isAtSourceLimit = remainingSourceSlots === 0;
 
   return (
@@ -63,16 +62,7 @@ export function WebSearchComposer({
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {clearAnnouncement}
       </div>
-      {showHeader && (
-        <div>
-          <h3 id="web-source-search-title" className="font-medium text-foreground">
-            {t("webSearch.title")}
-          </h3>
-          <p className="mt-1 text-sm leading-5 text-muted-foreground">
-            {t("webSearch.intro")}
-          </p>
-        </div>
-      )}
+      {showHeader && <WebSearchHeader />}
 
       <div className="rounded-2xl border border-composer-border bg-composer-bg p-2 shadow-sm transition-frame focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15">
         <textarea
@@ -116,12 +106,58 @@ export function WebSearchComposer({
         </div>
       </div>
 
+      <WebSearchFeedback
+        webSearch={webSearch}
+        isAtSourceLimit={isAtSourceLimit}
+        expanded={expanded}
+        onExpandedChange={setExpanded}
+        remainingSourceSlots={remainingSourceSlots}
+        importedCount={importedCount}
+        failedUrls={failedUrls}
+        onClearResults={handleClearResults}
+      />
+    </section>
+  );
+}
+
+function WebSearchHeader() {
+  const { t } = useTranslation("sources");
+  return (
+    <div>
+      <h3 id="web-source-search-title" className="font-medium text-foreground">
+        {t("webSearch.title")}
+      </h3>
+      <p className="mt-1 text-sm leading-5 text-muted-foreground">{t("webSearch.intro")}</p>
+    </div>
+  );
+}
+
+function WebSearchFeedback({
+  webSearch,
+  isAtSourceLimit,
+  expanded,
+  onExpandedChange,
+  remainingSourceSlots,
+  importedCount,
+  failedUrls,
+  onClearResults,
+}: {
+  webSearch: ReturnType<typeof useWebSearch>;
+  isAtSourceLimit: boolean;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  remainingSourceSlots: number;
+  importedCount: number;
+  failedUrls: string[];
+  onClearResults: () => Promise<void>;
+}) {
+  const { t } = useTranslation("sources");
+  return (
+    <>
       {isAtSourceLimit && (
         <Alert>
           <AlertTitle>{t("webSearch.limitReached")}</AlertTitle>
-          <AlertDescription>
-            {t("webSearch.limitReachedDescription")}
-          </AlertDescription>
+          <AlertDescription>{t("webSearch.limitReachedDescription")}</AlertDescription>
         </Alert>
       )}
 
@@ -134,17 +170,17 @@ export function WebSearchComposer({
         )}
       </div>
 
-      {friendlyError && (
+      {webSearch.searchError && (
         <Alert variant="destructive">
           <AlertTitle>{t("webSearch.errorTitle")}</AlertTitle>
-          <AlertDescription>{friendlyError}</AlertDescription>
+          <AlertDescription>{webSearch.searchError}</AlertDescription>
           <AlertAction>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="h-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={handleClearResults}
+              onClick={onClearResults}
               disabled={webSearch.clearing}
             >
               {webSearch.clearing ? t("webSearch.clearing") : t("webSearch.clearResults")}
@@ -164,16 +200,14 @@ export function WebSearchComposer({
         <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-medium text-foreground">{t("webSearch.emptyTitle")}</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {t("webSearch.emptyDescription")}
-            </p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("webSearch.emptyDescription")}</p>
           </div>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="h-7 shrink-0"
-            onClick={handleClearResults}
+            onClick={onClearResults}
             disabled={webSearch.clearing}
           >
             {webSearch.clearing ? t("webSearch.clearing") : t("webSearch.clearResults")}
@@ -185,13 +219,13 @@ export function WebSearchComposer({
         <SearchResults
           webSearch={webSearch}
           expanded={expanded}
-          onExpandedChange={setExpanded}
+          onExpandedChange={onExpandedChange}
           remainingSourceSlots={remainingSourceSlots}
           importedCount={importedCount}
           failedUrls={failedUrls}
-          onClearResults={handleClearResults}
+          onClearResults={onClearResults}
         />
       )}
-    </section>
+    </>
   );
 }

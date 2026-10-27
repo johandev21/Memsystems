@@ -10,39 +10,39 @@ export function QaCard({ question, answer, isRevealed }: QaCardProps) {
   const { t } = useTranslation("viewer");
 
   return (
-    <article className="flex w-full flex-col gap-5 rounded-flashcard border border-surface-border-subtle bg-card p-6 text-left shadow-xs sm:p-8">
+    <>
       <span className="w-fit rounded-md border border-surface-border bg-surface-2 px-2 py-0.5 text-xs font-semibold tracking-wide text-text-tertiary">
         {t("flashcard.questionBadge")}
       </span>
 
-      <p
-        className={
+      <span
+        className={`block ${
           isRevealed
             ? "text-sm leading-relaxed whitespace-pre-wrap break-words text-text-secondary"
             : "text-lg leading-relaxed font-medium whitespace-pre-wrap break-words text-text-primary sm:text-xl"
-        }
+        }`}
       >
         {question}
-      </p>
+      </span>
 
       {isRevealed && (
         <>
           <SolutionDivider label={t("flashcard.solution")} />
-          <p className="text-base leading-relaxed whitespace-pre-wrap break-words text-text-primary">
+          <span className="block text-base leading-relaxed whitespace-pre-wrap break-words text-text-primary">
             {answer}
-          </p>
+          </span>
         </>
       )}
-    </article>
+    </>
   );
 }
 
 function SolutionDivider({ label }: { label: string }) {
   return (
-    <div aria-hidden="true" className="flex items-center gap-3">
+    <span aria-hidden="true" className="flex items-center gap-3">
       <span className="h-px flex-1 bg-surface-border" />
       <span className="text-xs font-semibold tracking-wide text-primary">{label}</span>
       <span className="h-px flex-1 bg-surface-border" />
-    </div>
+    </span>
   );
 }

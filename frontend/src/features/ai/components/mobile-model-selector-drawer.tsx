@@ -89,7 +89,7 @@ export function MobileModelSelectorDrawer({
         </DrawerHeader>
 
         <div className="pb-3 shrink-0">
-          <div className="relative flex items-center rounded-xl border border-border/80 bg-muted/40 px-3 py-2 transition-all duration-150 focus-within:border-ring focus-within:bg-muted/70 focus-within:ring-2 focus-within:ring-ring/20 hover:border-border hover:bg-muted/60">
+          <div className="relative flex items-center rounded-xl border border-border/80 bg-muted/40 px-3 py-2 motion-chrome duration-150 ease-in-out focus-within:border-ring focus-within:bg-muted/70 focus-within:ring-2 focus-within:ring-ring/20 hover:border-border hover:bg-muted/60">
             <SearchIcon className="size-4 shrink-0 text-muted-foreground mr-2.5" />
             <input
               type="search"
@@ -156,7 +156,7 @@ export function MobileModelSelectorDrawer({
                             onOpenChange(false);
                           }}
                           className={cn(
-                            "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-150 ease-out active:scale-[0.98] touch-manipulation min-h-12 select-none",
+                            "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left motion-selection-press duration-150 ease-out active:scale-[0.98] touch-manipulation min-h-12 select-none",
                             isSelected
                               ? "bg-muted font-medium text-foreground"
                               : "text-foreground/90 hover:bg-muted/50 active:bg-muted/70",

@@ -40,20 +40,46 @@
 
 /* Named replacements for one-off arbitrary values (see shadcn/no-arbitrary-values). */
 
-@utility transition-chrome {
+@utility motion-chrome {
   transition-property: background-color, border-color, box-shadow;
 }
 
-@utility transition-interactive {
+@utility motion-interactive {
   transition-property: background-color, color, box-shadow;
 }
 
-@utility transition-tint {
+@utility motion-background-transform {
+  transition-property: background-color, transform;
+}
+
+@utility motion-selection-press {
+  transition-property: background-color, color, transform;
+}
+
+@utility transition-button {
+  transition-property: background-color, border-color, box-shadow, color, opacity, translate;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@utility motion-tint {
   transition-property: background-color, color;
 }
 
 @utility transition-frame {
   transition-property: border-color, box-shadow;
+}
+
+@utility transition-color-shadow {
+  transition-property: color, box-shadow;
+}
+
+@utility transition-scale-fade {
+  transition-property: translate, scale, opacity;
+}
+
+@utility rounded-inherit {
+  border-radius: inherit;
 }
 
 @utility transition-elevation {

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   ChevronRight,
   Copy,
   Eye,
@@ -16,10 +15,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { MobileFolderMovePanel } from "@/components/ui/mobile-folder-move-panel";
 import type { FolderDTO } from "../../types";
 import type { TreeNode } from "../model/tree";
 import { getTreeIcon } from "../ui/tree/row-icon";
-import { MobileMoveFolderPicker } from "./mobile-move-folder-picker";
 
 const ACTION_CLASS =
   "flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium active:bg-muted active:scale-98 transition-transform touch-manipulation cursor-pointer [@media(hover:hover)]:hover:bg-muted";
@@ -86,31 +85,17 @@ export function MobileMaterialActionDrawer({
     <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="max-h-[85vh] p-4 pb-safe-lg">
         {isMoving ? (
-          <>
-            <DrawerHeader className="pb-3 text-left">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsMoving(false)}
-                  aria-label={t("actions.collapse", "Back")}
-                  className="flex size-11 items-center justify-center rounded-lg text-muted-foreground active:scale-97 transition-transform touch-manipulation cursor-pointer"
-                >
-                  <ArrowLeft className="size-4" />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <DrawerTitle className="truncate text-base font-semibold">
-                    {t("actions.moveToFolder", "Move to folder")}
-                  </DrawerTitle>
-                  <DrawerDescription className="truncate text-xs">{material.name}</DrawerDescription>
-                </div>
-              </div>
-            </DrawerHeader>
-            <MobileMoveFolderPicker
-              folders={validTargetFolders}
-              canMoveToRoot={canMoveToRoot}
-              onSelect={handleSelectMoveTarget}
-            />
-          </>
+          <MobileFolderMovePanel
+            folderName={material.name}
+            title={t("actions.moveToFolder", "Move to folder")}
+            backLabel={t("actions.collapse", "Back")}
+            rootLabel={t("actions.moveToRoot", "Move to Study Materials")}
+            emptyLabel={t("tree.emptyDescription", "No folders available")}
+            folders={validTargetFolders}
+            canMoveToRoot={canMoveToRoot}
+            onBack={() => setIsMoving(false)}
+            onSelect={handleSelectMoveTarget}
+          />
         ) : (
           <>
             <DrawerHeader className="pb-2 text-left">

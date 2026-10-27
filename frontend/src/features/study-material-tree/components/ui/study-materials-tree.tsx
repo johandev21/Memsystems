@@ -98,7 +98,6 @@ export function StudyMaterialsTree({
   isSearchOpen,
   onToggleSearch,
 }: ProductionStudyMaterialsTreeProps) {
-  const { t } = useTranslation("tree");
   const [internalSelected, setInternalSelected] = useState<string | null>(
     defaultSelectedId !== undefined ? defaultSelectedId : null,
   );
@@ -197,52 +196,17 @@ export function StudyMaterialsTree({
               className,
             )}
           >
-            <Card
-              size="sm"
-              className={cn(
-                "gap-0 overflow-hidden bg-study-materials-panel py-0 shadow-none",
-                isPanelExpanded
-                  ? "h-full flex flex-col !rounded-none !bg-panel-bg border-none ring-0"
-                  : "!rounded-2xl",
-              )}
-            >
-              <TreeHeader
-                isPanelExpanded={isPanelExpanded}
-                onPanelToggle={onPanelToggle}
-                isSearchOpen={isSearchOpen}
-                onToggleSearch={onToggleSearch}
-              />
-              {isSearchOpen && (
-                <div className="px-2 pt-2">
-                  <TreeSearchBar
-                    value={searchQuery ?? ""}
-                    onChange={onSearchChange ?? (() => {})}
-                    onClear={() => onSearchChange?.("")}
-                    onClose={onToggleSearch}
-                    matchCount={matchCount}
-                    isSearching={Boolean(searchQuery && searchQuery.trim().length > 0)}
-                    placeholder={t("search.placeholder")}
-                  />
-                </div>
-              )}
-              <CardContent
-                className={cn(
-                  "min-h-0 p-0 overflow-hidden",
-                  isPanelExpanded
-                    ? "flex-1 !rounded-none"
-                    : cn(
-                        "!rounded-b-2xl",
-                        contentHeight === "desktop"
-                          ? "h-62.5"
-                          : contentHeight === "mobile"
-                            ? "max-h-[38dvh] min-h-60 h-auto overflow-y-auto overscroll-contain"
-                            : "h-100",
-                      ),
-                )}
-              >
-                <TreeContent isPrototype={isPrototype} />
-              </CardContent>
-            </Card>
+            <StudyMaterialsTreePanel
+              isPrototype={isPrototype}
+              isPanelExpanded={isPanelExpanded}
+              onPanelToggle={onPanelToggle}
+              isSearchOpen={isSearchOpen}
+              onToggleSearch={onToggleSearch}
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              matchCount={matchCount}
+              contentHeight={contentHeight}
+            />
           </div>
           <DragOverlay dropAnimation={null}>
             {activeDragNode ? (
@@ -253,6 +217,79 @@ export function StudyMaterialsTree({
       </DndContext>
       <DeleteTreeItemDialog controller={controller} isPrototype={isPrototype} />
     </TooltipProvider>
+  );
+}
+
+interface StudyMaterialsTreePanelProps {
+  isPrototype: boolean;
+  isPanelExpanded?: boolean;
+  onPanelToggle?: () => void;
+  isSearchOpen?: boolean;
+  onToggleSearch?: () => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  matchCount?: number;
+  contentHeight: NonNullable<ProductionStudyMaterialsTreeProps["contentHeight"]>;
+}
+
+function StudyMaterialsTreePanel({
+  isPrototype,
+  isPanelExpanded,
+  onPanelToggle,
+  isSearchOpen,
+  onToggleSearch,
+  searchQuery,
+  onSearchChange,
+  matchCount,
+  contentHeight,
+}: StudyMaterialsTreePanelProps) {
+  const { t } = useTranslation("tree");
+  return (
+    <Card
+      size="sm"
+      className={cn(
+        "gap-0 overflow-hidden bg-study-materials-panel py-0 shadow-none",
+        isPanelExpanded
+          ? "h-full flex flex-col !rounded-none !bg-panel-bg border-none ring-0"
+          : "!rounded-2xl",
+      )}
+    >
+      <TreeHeader
+        isPanelExpanded={isPanelExpanded}
+        onPanelToggle={onPanelToggle}
+        isSearchOpen={isSearchOpen}
+        onToggleSearch={onToggleSearch}
+      />
+      {isSearchOpen && (
+        <div className="px-2 pt-2">
+          <TreeSearchBar
+            value={searchQuery ?? ""}
+            onChange={onSearchChange ?? (() => {})}
+            onClear={() => onSearchChange?.("")}
+            onClose={onToggleSearch}
+            matchCount={matchCount}
+            isSearching={Boolean(searchQuery && searchQuery.trim().length > 0)}
+            placeholder={t("search.placeholder")}
+          />
+        </div>
+      )}
+      <CardContent
+        className={cn(
+          "min-h-0 p-0 overflow-hidden",
+          isPanelExpanded
+            ? "flex-1 !rounded-none"
+            : cn(
+                "!rounded-b-2xl",
+                contentHeight === "desktop" && "h-62.5",
+                contentHeight === "mobile" &&
+                  "max-h-[38dvh] min-h-60 h-auto overflow-y-auto overscroll-contain",
+                contentHeight === "standalone" && "h-100",
+              ),
+        )}
+      >
+        <TreeContent isPrototype={isPrototype} />
+      </CardContent>
+    </Card>
   );
 }
 

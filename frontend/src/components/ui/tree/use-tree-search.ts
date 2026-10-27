@@ -37,25 +37,32 @@ export function useTreeSearch<TItem extends TreeSearchItem, TFolder extends Tree
   items,
   folders,
 }: UseTreeSearchOptions<TItem, TFolder>): UseTreeSearchResult {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchState, setSearchState] = useState({ searchQuery: "", isSearchOpen: false });
+  const { searchQuery, isSearchOpen } = searchState;
+
+  const setSearchQuery = useCallback((searchQuery: string) => {
+    setSearchState((prev) => ({ ...prev, searchQuery }));
+  }, []);
+  const setIsSearchOpen = useCallback((isSearchOpen: boolean) => {
+    setSearchState((prev) => ({ ...prev, isSearchOpen }));
+  }, []);
 
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const isSearching = isSearchOpen && trimmedQuery.length > 0;
 
   const toggleSearch = useCallback(() => {
-    setIsSearchOpen((prev) => {
-      const next = !prev;
-      if (!next) {
-        setSearchQuery("");
-      }
-      return next;
+    setSearchState((prev) => {
+      const isSearchOpen = !prev.isSearchOpen;
+      return {
+        isSearchOpen,
+        searchQuery: isSearchOpen ? prev.searchQuery : "",
+      };
     });
   }, []);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
-  }, []);
+  }, [setSearchQuery]);
 
   const { matchingItemIds, matchingFolderIds, expandedFolderIds, matchCount } = useMemo(() => {
     if (!isSearching) {

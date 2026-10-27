@@ -250,6 +250,7 @@ export function MarkdownDocumentViewer({
       <div ref={containerRef} className="w-full">
         <VirtualizedMarkdownDocument
           chunks={chunks}
+          content={content}
           scrollElement={scrollElement}
           targetIndex={targetChunkIndex}
           highlightedIndex={highlightedIndex}
@@ -286,29 +287,48 @@ function estimateChunkSize(chunk: string): number {
   return Math.max(36, Math.min(600, lineCount * 20 + Math.ceil(trimmed.length / 80) * 16));
 }
 
+function getKeyedChunks(chunks: string[], content: string) {
+  const normalizedContent = content.replace(/\r\n?/g, "\n");
+  const keyedChunks: { id: string; content: string }[] = [];
+  let searchFrom = 0;
+
+  for (const chunk of chunks) {
+    const start = normalizedContent.indexOf(chunk, searchFrom);
+    const offset = start < 0 ? searchFrom : start;
+    keyedChunks.push({ id: `markdown-chunk-${offset}`, content: chunk });
+    searchFrom = offset + chunk.length;
+  }
+
+  return keyedChunks;
+}
+
 function VirtualizedMarkdownDocument({
   chunks,
+  content,
   scrollElement,
   targetIndex,
   highlightedIndex,
 }: {
   chunks: string[];
+  content: string;
   scrollElement: HTMLDivElement | null;
   targetIndex?: number | null;
   highlightedIndex?: number | null;
 }) {
+  const keyedChunks = useMemo(() => getKeyedChunks(chunks, content), [chunks, content]);
+
   return (
     <MarkdownDocumentShell>
       <VirtualizedDocumentContainer
-        items={chunks}
+        items={keyedChunks}
         scrollElement={scrollElement}
-        estimateSize={(index) => estimateChunkSize(chunks[index] || "")}
+        estimateSize={(index) => estimateChunkSize(keyedChunks[index]?.content || "")}
         overscan={8}
         targetIndex={targetIndex}
         highlightedIndex={highlightedIndex}
-        getItemKey={(_chunk, index) => `md-chunk-${index}`}
-        renderItem={(chunk, index, isHighlighted) => (
-          <MarkdownChunk key={`md-chunk-${index}`} chunk={chunk} isHighlighted={isHighlighted} />
+        getItemKey={(chunk) => chunk.id}
+        renderItem={(chunk, _index, isHighlighted) => (
+          <MarkdownChunk chunk={chunk.content} isHighlighted={isHighlighted} />
         )}
       />
     </MarkdownDocumentShell>

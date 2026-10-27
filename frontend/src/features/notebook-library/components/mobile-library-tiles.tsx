@@ -11,8 +11,7 @@ export interface MobileFolderTileProps {
 export function MobileFolderTile({ folder, onOpen, onActions }: MobileFolderTileProps) {
   const { t } = useTranslation("notebooks");
   return (
-    <div
-      role="listitem"
+    <li
       data-slot="mobile-folder-tile"
       className="group relative flex w-full items-center justify-between text-text-secondary select-none"
     >
@@ -41,7 +40,7 @@ export function MobileFolderTile({ folder, onOpen, onActions }: MobileFolderTile
       >
         <MoreVertical className="size-5 text-current" />
       </button>
-    </div>
+    </li>
   );
 }
 
@@ -54,8 +53,7 @@ export interface MobileNotebookTileProps {
 export function MobileNotebookTile({ notebook, onOpen, onActions }: MobileNotebookTileProps) {
   const { t } = useTranslation("notebooks");
   return (
-    <div
-      role="listitem"
+    <li
       data-slot="mobile-notebook-tile"
       className="group relative flex w-full items-center justify-between text-text-secondary select-none"
     >
@@ -90,7 +88,7 @@ export function MobileNotebookTile({ notebook, onOpen, onActions }: MobileNotebo
       >
         <MoreVertical className="size-5 text-current" />
       </button>
-    </div>
+    </li>
   );
 }
 

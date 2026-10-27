@@ -61,8 +61,6 @@ export function MobileSourcesView(props: MobileSourcesViewProps) {
   const actionSource = sources?.find((source) => source.id === actionSourceId) ?? null;
   const actionFolder = folders?.find((folder) => folder.id === actionFolderId) ?? null;
   const renaming = findRenameTarget(props.editingItemId, sources, folders);
-  const showPendingUploads = navigation.activeFolderId === null && pendingUploads.length > 0;
-  const isEmpty = navigation.items.length === 0 && !showPendingUploads;
 
   return (
     <div className="relative flex h-full min-w-0 flex-col bg-background">
@@ -75,49 +73,18 @@ export function MobileSourcesView(props: MobileSourcesViewProps) {
         data-slot="sources-panel-content"
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-28 pt-2"
       >
-        {showPendingUploads && (
-          <div className="mb-2 flex flex-col gap-2">
-            {pendingUploads.map((upload) => (
-              <PendingUploadRow
-                key={upload.id}
-                upload={upload}
-                onCancel={props.onCancelPendingUpload}
-              />
-            ))}
-          </div>
-        )}
-
-        {isPending ? (
-          <SourcesLoadingState />
-        ) : isError ? (
-          <SourcesErrorState onRetry={props.onRetryLoad} />
-        ) : isEmpty ? (
-          <SourcesEmptyState
-            inFolder={navigation.activeFolderId !== null}
-            onAddSource={() => setAddSourceDialogOpen(true)}
-          />
-        ) : (
-          <div
-            key={navigation.activeFolderId ?? "root"}
-            role="list"
-            className={`flex flex-col gap-0.5 animate-in fade-in duration-200 ease-out motion-reduce:animate-none ${
-              navigation.direction === "forward"
-                ? "slide-in-from-right-4"
-                : "slide-in-from-left-4"
-            }`}
-          >
-            {navigation.items.map((node) => (
-              <SourcesTreeTile
-                key={node.id}
-                node={node}
-                onOpenFolder={navigation.openFolder}
-                onOpenSource={props.onSelectSource}
-                onSourceActions={setActionSourceId}
-                onFolderActions={setActionFolderId}
-              />
-            ))}
-          </div>
-        )}
+        <MobileSourcesContent
+          navigation={navigation}
+          pendingUploads={pendingUploads}
+          isPending={isPending}
+          isError={isError}
+          onCancelPendingUpload={props.onCancelPendingUpload}
+          onRetryLoad={props.onRetryLoad}
+          onAddSource={() => setAddSourceDialogOpen(true)}
+          onSelectSource={props.onSelectSource}
+          onSourceActions={setActionSourceId}
+          onFolderActions={setActionFolderId}
+        />
       </div>
 
       <AddSourceFab onOpen={() => setCreateDrawerOpen(true)} />
@@ -198,6 +165,115 @@ export function MobileSourcesView(props: MobileSourcesViewProps) {
         onConfirm={props.onDeleteFolder}
       />
     </div>
+  );
+}
+
+function MobileSourcesContent({
+  navigation,
+  pendingUploads,
+  isPending,
+  isError,
+  onCancelPendingUpload,
+  onRetryLoad,
+  onAddSource,
+  onSelectSource,
+  onSourceActions,
+  onFolderActions,
+}: {
+  navigation: ReturnType<typeof useMobileSourcesNavigation>;
+  pendingUploads: PendingSourceUpload[];
+  isPending: boolean;
+  isError: boolean;
+  onCancelPendingUpload: (id: string) => void;
+  onRetryLoad: () => void;
+  onAddSource: () => void;
+  onSelectSource: (id: string) => void;
+  onSourceActions: (id: string) => void;
+  onFolderActions: (id: string) => void;
+}) {
+  const showPendingUploads = navigation.activeFolderId === null && pendingUploads.length > 0;
+  const isEmpty = navigation.items.length === 0 && !showPendingUploads;
+
+  return (
+    <>
+      {showPendingUploads && (
+        <div className="mb-2 flex flex-col gap-2">
+          {pendingUploads.map((upload) => (
+            <PendingUploadRow
+              key={upload.id}
+              upload={upload}
+              onCancel={onCancelPendingUpload}
+            />
+          ))}
+        </div>
+      )}
+      <SourcesMainContent
+        navigation={navigation}
+        isPending={isPending}
+        isError={isError}
+        isEmpty={isEmpty}
+        onRetryLoad={onRetryLoad}
+        onAddSource={onAddSource}
+        onSelectSource={onSelectSource}
+        onSourceActions={onSourceActions}
+        onFolderActions={onFolderActions}
+      />
+    </>
+  );
+}
+
+function SourcesMainContent({
+  navigation,
+  isPending,
+  isError,
+  isEmpty,
+  onRetryLoad,
+  onAddSource,
+  onSelectSource,
+  onSourceActions,
+  onFolderActions,
+}: {
+  navigation: ReturnType<typeof useMobileSourcesNavigation>;
+  isPending: boolean;
+  isError: boolean;
+  isEmpty: boolean;
+  onRetryLoad: () => void;
+  onAddSource: () => void;
+  onSelectSource: (id: string) => void;
+  onSourceActions: (id: string) => void;
+  onFolderActions: (id: string) => void;
+}) {
+  if (isPending) return <SourcesLoadingState />;
+  if (isError) return <SourcesErrorState onRetry={onRetryLoad} />;
+  if (isEmpty) {
+    return (
+      <SourcesEmptyState
+        inFolder={navigation.activeFolderId !== null}
+        onAddSource={onAddSource}
+      />
+    );
+  }
+
+  return (
+    <ul
+      key={navigation.activeFolderId ?? "root"}
+      className={`flex flex-col gap-0.5 animate-in fade-in duration-200 ease-out motion-reduce:animate-none ${
+        navigation.direction === "forward"
+          ? "slide-in-from-right-4"
+          : "slide-in-from-left-4"
+      }`}
+    >
+      {navigation.items.map((node) => (
+        <SourcesTreeTile
+          key={node.id}
+          node={node}
+          onOpenFolder={navigation.openFolder}
+          onOpenSource={onSelectSource}
+          onSourceActions={onSourceActions}
+          onFolderActions={onFolderActions}
+        />
+      ))}
+    </ul>
   );
 }
 

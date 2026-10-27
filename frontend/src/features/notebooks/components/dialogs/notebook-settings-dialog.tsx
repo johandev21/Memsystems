@@ -5,16 +5,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   deleteNotebook,
   exportNotebook,
   notebookQueryOptions,
@@ -40,6 +30,7 @@ import {
   resolveGroundingMode,
   type GroundingMode,
 } from "../../model/grounding-mode";
+import { NotebookDeleteDialog } from "../notebook-delete-dialog";
 
 export const EDIT_NOTEBOOK_EVENT = "edit-notebook";
 export const CLEAR_NOTEBOOK_CHAT_EVENT = "clear-notebook-chat";
@@ -207,24 +198,13 @@ export function NotebookSettingsDialog({ notebookId }: NotebookSettingsDialogPro
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-3xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("settings.delete")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("settings.deleteConfirm", {
-                title: notebook?.title ?? t("settings.thisNotebook"),
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{t("settings.cancel")}</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? t("settings.deleting") : t("settings.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <NotebookDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        notebookTitle={notebook?.title}
+        isDeleting={isDeleting}
+        onDelete={handleDelete}
+      />
     </>
   );
 }

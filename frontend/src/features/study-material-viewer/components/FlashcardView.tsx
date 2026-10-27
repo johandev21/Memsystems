@@ -87,29 +87,28 @@ function FlashcardStage({
   onToggleReveal,
   onRevealKeyDown,
 }: {
-  stageRef: React.RefObject<HTMLDivElement | null>;
+  stageRef: React.RefObject<HTMLButtonElement | null>;
   isRevealed: boolean;
   currentCardIndex: number;
   activeCard: FlashcardItem;
   onToggleReveal: () => void;
-  onRevealKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
+  onRevealKeyDown: (e: KeyboardEvent<HTMLButtonElement>) => void;
 }) {
   const { t } = useTranslation("viewer");
   return (
-    <div
+    <button
       ref={stageRef}
-      role="button"
-      tabIndex={0}
+      type="button"
       aria-label={t("flashcard.cardAria", {
         number: currentCardIndex + 1,
         type: t(isRevealed ? "flashcard.types.answer" : "flashcard.types.question"),
       })}
       onClick={onToggleReveal}
       onKeyDown={onRevealKeyDown}
-      className="cursor-pointer rounded-flashcard transition-shadow duration-200 focus-visible:outline-2 focus-visible:outline-ring"
+      className="flex w-full flex-col gap-5 cursor-pointer rounded-flashcard border border-surface-border-subtle bg-card p-6 text-left shadow-xs transition-shadow duration-200 focus-visible:outline-2 focus-visible:outline-ring sm:p-8"
     >
       <QaCard question={activeCard.front} answer={activeCard.back} isRevealed={isRevealed} />
-    </div>
+    </button>
   );
 }
 
@@ -117,7 +116,7 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
   const { t } = useTranslation("viewer");
   const { currentCardIndex, isRevealed, setIsRevealed, handleNext, handlePrev } =
     useFlashcardSession(cards.length);
-  const stageRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLButtonElement>(null);
   const activeCard = cards[currentCardIndex];
 
   function navigate(action: () => void) {
@@ -125,10 +124,12 @@ function FlashcardSession({ cards }: { cards: FlashcardItem[] }) {
     stageRef.current?.focus();
   }
 
-  function handleRevealKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+  function handleRevealKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.nativeEvent.isComposing || event.defaultPrevented || event.repeat) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    if (event.key === " " || event.key === "Spacebar") {
+    if (event.key === "Enter") {
+      event.preventDefault();
+    } else if (event.key === " " || event.key === "Spacebar") {
       event.preventDefault();
       setIsRevealed(!isRevealed);
     } else if (event.key === "ArrowRight" && cards.length > 1) {

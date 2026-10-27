@@ -76,8 +76,6 @@ export function SourceFolderRow({
   onKeyDown,
   searchQuery,
 }: SourceFolderRowProps) {
-  const { t } = useTranslation(["tree", "sources"]);
-
   const {
     isDragging,
     isOver,
@@ -181,128 +179,168 @@ export function SourceFolderRow({
   return (
     <ContextMenu>
       <ContextMenuTrigger data-slot="source-folder-row-trigger" render={row} />
-      <ContextMenuContent className="min-w-48">
-        <ContextMenuGroup>
-          <ContextMenuItem
-            data-slot="source-folder-menu-rename"
-            onClick={(e) => {
-              e.stopPropagation();
-              onBeginRename?.(folder.id);
-            }}
-          >
-            <Pencil className="size-4 mr-2" />
-            {t("tree:actions.rename", "Rename")}
-          </ContextMenuItem>
-          <ContextMenuItem
-            data-slot="source-folder-menu-toggle"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleOpen();
-            }}
-          >
-            {isOpen ? (
-              <>
-                <ChevronsUpDown className="size-4 mr-2" />
-                {t("tree:actions.collapse", "Collapse")}
-              </>
-            ) : (
-              <>
-                <FolderOpen className="size-4 mr-2" />
-                {t("tree:actions.expand", "Expand")}
-              </>
-            )}
-          </ContextMenuItem>
-          <ContextMenuItem
-            data-slot="source-folder-menu-new-subfolder"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateChildFolder();
-            }}
-          >
-            <FolderPlus className="size-4 mr-2" />
-            {t("tree:actions.newSubfolder", "New subfolder")}
-          </ContextMenuItem>
-        </ContextMenuGroup>
-        {(folder.parentId !== null || validTargetFolders.length > 0) && <ContextMenuSeparator />}
-        <ContextMenuGroup>
-          {folder.parentId !== null && (
-            <ContextMenuItem
-              data-slot="source-folder-menu-move-root"
-              onClick={(e) => {
-                e.stopPropagation();
-                onMove?.(folder.id, null);
-              }}
-            >
-              <FolderInput className="size-4 mr-2" />
-              {t("tree:actions.moveToSourcesRoot", "Move to Sources root")}
-            </ContextMenuItem>
-          )}
-          {validTargetFolders.length > 0 && (
-            <ContextMenuSub>
-              <ContextMenuSubTrigger data-slot="source-folder-menu-move-folder">
-                <FolderInput className="size-4 mr-2" />
-                {t("tree:actions.moveToFolder", "Move to folder")}
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent className="min-w-44">
-                {validTargetFolders.map((f) => (
-                  <ContextMenuItem
-                    key={f.id}
-                    data-slot={`move-folder-target-${f.id}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMove?.(folder.id, f.id);
-                    }}
-                  >
-                    <Folder className="size-4 mr-2 text-muted-foreground" />
-                    <span className="truncate">{f.name}</span>
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-          )}
-        </ContextMenuGroup>
-        {(onExpandAll || onCollapseAll) && <ContextMenuSeparator />}
-        <ContextMenuGroup>
-          {onExpandAll && (
-            <ContextMenuItem
-              data-slot="source-folder-menu-expand-all"
-              onClick={(e) => {
-                e.stopPropagation();
-                onExpandAll();
-              }}
-            >
-              <FolderOpen className="size-4 mr-2" />
-              {t("tree:actions.expandAll", "Expand all")}
-            </ContextMenuItem>
-          )}
-          {onCollapseAll && (
-            <ContextMenuItem
-              data-slot="source-folder-menu-collapse-all"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCollapseAll();
-              }}
-            >
-              <ChevronsUpDown className="size-4 mr-2" />
-              {t("tree:actions.collapseAll", "Collapse all")}
-            </ContextMenuItem>
-          )}
-        </ContextMenuGroup>
-        <ContextMenuSeparator />
-        <ContextMenuGroup>
-          <ContextMenuItem
-            data-slot="source-folder-menu-delete"
-            variant="destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete?.(folder.id);
-            }}
-          >
-            <Trash2 className="size-4 mr-2" />
-            {t("tree:actions.delete", "Delete")}
-          </ContextMenuItem>
-        </ContextMenuGroup>
-      </ContextMenuContent>
+      <SourceFolderContextMenu
+        folder={folder}
+        validTargetFolders={validTargetFolders}
+        isOpen={isOpen}
+        onToggleOpen={onToggleOpen}
+        onBeginRename={onBeginRename}
+        onCreateChildFolder={onCreateChildFolder}
+        onMove={onMove}
+        onExpandAll={onExpandAll}
+        onCollapseAll={onCollapseAll}
+        onDelete={onDelete}
+      />
     </ContextMenu>
+  );
+}
+
+function SourceFolderContextMenu({
+  folder,
+  validTargetFolders,
+  isOpen,
+  onToggleOpen,
+  onBeginRename,
+  onCreateChildFolder,
+  onMove,
+  onExpandAll,
+  onCollapseAll,
+  onDelete,
+}: {
+  folder: SourceFolder;
+  validTargetFolders: SourceFolder[];
+  isOpen: boolean;
+  onToggleOpen: () => void;
+  onBeginRename?: (id: string) => void;
+  onCreateChildFolder: () => void;
+  onMove?: (itemId: string, targetFolderId: string | null) => void;
+  onExpandAll?: () => void;
+  onCollapseAll?: () => void;
+  onDelete?: (id: string) => void;
+}) {
+  const { t } = useTranslation("tree");
+  return (
+    <ContextMenuContent className="min-w-48">
+      <ContextMenuGroup>
+        <ContextMenuItem
+          data-slot="source-folder-menu-rename"
+          onClick={(event) => {
+            event.stopPropagation();
+            onBeginRename?.(folder.id);
+          }}
+        >
+          <Pencil className="size-4 mr-2" />
+          {t("actions.rename", "Rename")}
+        </ContextMenuItem>
+        <ContextMenuItem
+          data-slot="source-folder-menu-toggle"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleOpen();
+          }}
+        >
+          {isOpen ? (
+            <>
+              <ChevronsUpDown className="size-4 mr-2" />
+              {t("actions.collapse", "Collapse")}
+            </>
+          ) : (
+            <>
+              <FolderOpen className="size-4 mr-2" />
+              {t("actions.expand", "Expand")}
+            </>
+          )}
+        </ContextMenuItem>
+        <ContextMenuItem
+          data-slot="source-folder-menu-new-subfolder"
+          onClick={(event) => {
+            event.stopPropagation();
+            onCreateChildFolder();
+          }}
+        >
+          <FolderPlus className="size-4 mr-2" />
+          {t("actions.newSubfolder", "New subfolder")}
+        </ContextMenuItem>
+      </ContextMenuGroup>
+      {(folder.parentId !== null || validTargetFolders.length > 0) && <ContextMenuSeparator />}
+      <ContextMenuGroup>
+        {folder.parentId !== null && (
+          <ContextMenuItem
+            data-slot="source-folder-menu-move-root"
+            onClick={(event) => {
+              event.stopPropagation();
+              onMove?.(folder.id, null);
+            }}
+          >
+            <FolderInput className="size-4 mr-2" />
+            {t("actions.moveToSourcesRoot", "Move to Sources root")}
+          </ContextMenuItem>
+        )}
+        {validTargetFolders.length > 0 && (
+          <ContextMenuSub>
+            <ContextMenuSubTrigger data-slot="source-folder-menu-move-folder">
+              <FolderInput className="size-4 mr-2" />
+              {t("actions.moveToFolder", "Move to folder")}
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent className="min-w-44">
+              {validTargetFolders.map((targetFolder) => (
+                <ContextMenuItem
+                  key={targetFolder.id}
+                  data-slot={`move-folder-target-${targetFolder.id}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onMove?.(folder.id, targetFolder.id);
+                  }}
+                >
+                  <Folder className="size-4 mr-2 text-muted-foreground" />
+                  <span className="truncate">{targetFolder.name}</span>
+                </ContextMenuItem>
+              ))}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        )}
+      </ContextMenuGroup>
+      {(onExpandAll || onCollapseAll) && <ContextMenuSeparator />}
+      <ContextMenuGroup>
+        {onExpandAll && (
+          <ContextMenuItem
+            data-slot="source-folder-menu-expand-all"
+            onClick={(event) => {
+              event.stopPropagation();
+              onExpandAll();
+            }}
+          >
+            <FolderOpen className="size-4 mr-2" />
+            {t("actions.expandAll", "Expand all")}
+          </ContextMenuItem>
+        )}
+        {onCollapseAll && (
+          <ContextMenuItem
+            data-slot="source-folder-menu-collapse-all"
+            onClick={(event) => {
+              event.stopPropagation();
+              onCollapseAll();
+            }}
+          >
+            <ChevronsUpDown className="size-4 mr-2" />
+            {t("actions.collapseAll", "Collapse all")}
+          </ContextMenuItem>
+        )}
+      </ContextMenuGroup>
+      <ContextMenuSeparator />
+      <ContextMenuGroup>
+        <ContextMenuItem
+          data-slot="source-folder-menu-delete"
+          variant="destructive"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete?.(folder.id);
+          }}
+        >
+          <Trash2 className="size-4 mr-2" />
+          {t("actions.delete", "Delete")}
+        </ContextMenuItem>
+      </ContextMenuGroup>
+    </ContextMenuContent>
   );
 }

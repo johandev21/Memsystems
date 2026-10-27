@@ -131,7 +131,6 @@ export function FolderPicker({
               }
             }}
             className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint text-text-primary"
-            autoFocus
           />
           {search && (
             <button

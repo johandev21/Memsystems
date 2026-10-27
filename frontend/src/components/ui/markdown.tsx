@@ -34,6 +34,16 @@ type RehypePlugins = NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlu
 const defaultRemarkPlugins: RemarkPlugins = [remarkGfm, remarkMath];
 const defaultRehypePlugins: RehypePlugins = [[rehypeSanitize, markdownSanitizeSchema], rehypeKatex];
 
+function getMarkdownBlockKeys(blocks: string[], textContent: string) {
+  let searchFrom = 0;
+  return blocks.map((block) => {
+    const start = textContent.indexOf(block, searchFrom);
+    const offset = start < 0 ? searchFrom : start;
+    searchFrom = offset + block.length;
+    return `markdown-block:${offset}`;
+  });
+}
+
 function shallowEqual<T extends Record<string, unknown> | undefined>(a: T, b: T): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
@@ -146,6 +156,12 @@ export function MarkdownRenderer({
     if (!textContent) return [];
     return splitMarkdownIntoBlocks(textContent);
   }, [textContent]);
+  const blockKeys = useMemo(() => getMarkdownBlockKeys(blocks, textContent), [blocks, textContent]);
+  const renderedBlocks = blocks.map((content, index) => ({
+    content,
+    key: blockKeys[index],
+    index,
+  }));
 
   if (!textContent && !trailingContent) {
     return null;
@@ -153,10 +169,10 @@ export function MarkdownRenderer({
 
   return (
     <div className={className} {...props}>
-      {blocks.map((block, index) => (
+      {renderedBlocks.map(({ content, key, index }) => (
         <MemoizedMarkdownBlock
-          key={index}
-          content={block}
+          key={key}
+          content={content}
           index={index}
           isTrailing={index === blocks.length - 1}
           isStreaming={isStreaming}

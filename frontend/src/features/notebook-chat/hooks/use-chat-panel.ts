@@ -164,8 +164,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
   // A branch selection is asynchronous. Keep this in a ref as well as state so
   // two submit events in the same React batch cannot race the selection.
   const branchSelectionPendingRef = useRef(false);
+  const [pendingBranchRestoreId, setPendingBranchRestoreId] = useState<string | null>(null);
   const pendingBranchRestoreRef = useRef<string | null>(null);
-  const [isBranchSelectionPending, setIsBranchSelectionPending] = useState(false);
+  const [isSelectingBranch, setIsSelectingBranch] = useState(false);
 
   const transport = useMemo(() => {
     return new DefaultChatTransport({
@@ -313,7 +314,6 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
         };
         pendingBranchRestoreRef.current = null;
         branchSelectionPendingRef.current = false;
-        setIsBranchSelectionPending(false);
         clearError();
       }
       return;
@@ -338,21 +338,31 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
 
   const [clearedAnchorId, setClearedAnchorId] = useState<string | null>(null);
 
-  const initialHydratedIdsRef = useRef<Set<string> | null>(null);
-  if (initialHydratedIdsRef.current === null && chatHistory) {
-    initialHydratedIdsRef.current = new Set(chatHistory.map((message) => message.id));
-  }
+  const [initialHydratedIds, setInitialHydratedIds] = useState<Set<string> | null>(() =>
+    chatHistory ? new Set(chatHistory.map((message) => message.id)) : null,
+  );
+  useEffect(() => {
+    if (initialHydratedIds === null && chatHistory) {
+      setInitialHydratedIds(new Set(chatHistory.map((message) => message.id)));
+    }
+  }, [chatHistory, initialHydratedIds]);
 
   const rawAnchorMessageId = useMemo(() => {
-    const initialIds = initialHydratedIdsRef.current;
     for (let i = messages.length - 1; i >= 0; i--) {
       const message = messages[i];
       if (message?.role === "user") {
-        return initialIds?.has(message.id) ? null : message.id;
+        return initialHydratedIds?.has(message.id) ? null : message.id;
       }
     }
     return null;
-  }, [messages]);
+  }, [initialHydratedIds, messages]);
+
+  const isBranchSelectionPending =
+    isSelectingBranch ||
+    Boolean(
+      pendingBranchRestoreId &&
+        transcriptThroughMessage(formattedMessages, pendingBranchRestoreId).length === 0,
+    );
 
   const anchorMessageId =
     rawAnchorMessageId && rawAnchorMessageId !== clearedAnchorId
@@ -519,8 +529,9 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
     const previousEndpoint = getCurrentParentMessageId();
     abortedMessagesRef.current = null;
     pendingBranchRestoreRef.current = null;
+    setPendingBranchRestoreId(null);
     branchSelectionPendingRef.current = true;
-    setIsBranchSelectionPending(true);
+    setIsSelectingBranch(true);
     const panel = panelRef?.current;
     const findMessageRow = () => {
       const rows = Array.from(
@@ -544,6 +555,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
         setMessages(selectedTranscript);
       } else {
         pendingBranchRestoreRef.current = selectedMessageId;
+        setPendingBranchRestoreId(selectedMessageId);
       }
       let historyRefetchFailed = false;
       try {
@@ -563,6 +575,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       if (refreshedTranscript.length > 0) {
         setMessages(refreshedTranscript);
         pendingBranchRestoreRef.current = null;
+        setPendingBranchRestoreId(null);
         clearError();
       } else {
         // The selection endpoint may remember a descendant that this client
@@ -571,6 +584,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
         selectedMessageIdOverrideRef.current = previousEndpoint;
         setMessages(previousTranscript);
         pendingBranchRestoreRef.current = null;
+        setPendingBranchRestoreId(null);
         if (!historyRefetchFailed) toast.error(t("branch.selectFailed"));
       }
       if (beforeTop !== undefined) requestAnimationFrame(() => {
@@ -581,6 +595,7 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
       selectedMessageIdOverrideRef.current = previousEndpoint;
       setMessages(previousTranscript);
       pendingBranchRestoreRef.current = null;
+      setPendingBranchRestoreId(null);
       toast.error(t("branch.selectFailed"));
       try {
         await queryClient.refetchQueries({ queryKey: ["chat", notebookId, "messages"] });
@@ -588,12 +603,12 @@ export function useChatPanel(notebookId: string, panelRef?: React.RefObject<HTML
         // Keep the failed selection local; the next explicit refetch can recover.
       }
     } finally {
+      setIsSelectingBranch(false);
       if (!pendingBranchRestoreRef.current) {
         branchSelectionPendingRef.current = false;
-        setIsBranchSelectionPending(false);
       }
     }
-  }, [chatHistory, clearError, formattedMessages, getCurrentParentMessageId, isLoading, messages, notebookId, panelRef, queryClient, setIsBranchSelectionPending, setMessages, t]);
+  }, [chatHistory, clearError, formattedMessages, getCurrentParentMessageId, isLoading, messages, notebookId, panelRef, queryClient, setIsSelectingBranch, setMessages, setPendingBranchRestoreId, t]);
 
   useEffect(() => {
     const handleSendPromptEvent = (e: Event) => {

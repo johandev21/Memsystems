@@ -70,7 +70,7 @@ interface TreeLoadedContentProps {
   className?: string;
   data: ReturnType<typeof useStudyMaterialsTreeData>;
   onMaterialActivate?: (materialId: string) => void;
-  effectiveOnCommand?: TreeCommandExecutor;
+  effectiveOnCommand: TreeCommandExecutor;
   size?: StudyMaterialsTreeSize;
   expandedIds: Set<string>;
   setExpandedIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
@@ -197,6 +197,50 @@ export function StudyMaterialsTreeContainer({
   const productionExecute = useProductionTreeAdapter(notebookId);
   const effectiveOnCommand = onCommand ?? productionExecute;
 
+  return (
+    <TreeContainerView
+      className={className}
+      data={data}
+      notebookId={notebookId}
+      onMaterialActivate={onMaterialActivate}
+      effectiveOnCommand={effectiveOnCommand}
+      size={size}
+      expandedIds={effectiveExpandedIds}
+      setExpandedIds={setExpandedIds}
+      isPanelExpanded={isPanelExpanded}
+      onPanelToggle={handlePanelToggle}
+      variant={variant}
+      search={search}
+      isSearchOpen={isSearchOpen}
+      onToggleSearch={handleToggleSearch}
+    />
+  );
+}
+
+interface TreeContainerViewProps extends Omit<TreeLoadedContentProps, "expandedIds" | "search"> {
+  notebookId: string;
+  data: ReturnType<typeof useStudyMaterialsTreeData>;
+  expandedIds: Set<string>;
+  setExpandedIds: TreeLoadedContentProps["setExpandedIds"];
+  search: ReturnType<typeof useTreeSearch>;
+}
+
+function TreeContainerView({
+  className,
+  data,
+  notebookId,
+  onMaterialActivate,
+  effectiveOnCommand,
+  size,
+  expandedIds,
+  setExpandedIds,
+  isPanelExpanded,
+  onPanelToggle,
+  variant,
+  search,
+  isSearchOpen,
+  onToggleSearch,
+}: TreeContainerViewProps) {
   if (variant === "mobile") {
     return (
       <div data-slot="study-materials-tree-container" className={className}>
@@ -242,14 +286,14 @@ export function StudyMaterialsTreeContainer({
       onMaterialActivate={onMaterialActivate}
       effectiveOnCommand={effectiveOnCommand}
       size={size}
-      expandedIds={effectiveExpandedIds}
+      expandedIds={expandedIds}
       setExpandedIds={setExpandedIds}
       isPanelExpanded={isPanelExpanded}
-      onPanelToggle={handlePanelToggle}
+      onPanelToggle={onPanelToggle}
       variant={variant}
       search={search}
       isSearchOpen={isSearchOpen}
-      onToggleSearch={handleToggleSearch}
+      onToggleSearch={onToggleSearch}
     />
   );
 }

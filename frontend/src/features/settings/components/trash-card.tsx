@@ -12,7 +12,7 @@ export function TrashCard() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5 text-left transition-all hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer select-none"
+        className="relative flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5 text-left motion-chrome duration-150 ease-in-out hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer select-none"
         aria-label={t("trash.action")}
       >
         <div className="relative flex h-20 w-full items-center justify-center overflow-hidden rounded-xl bg-muted/20 p-2">

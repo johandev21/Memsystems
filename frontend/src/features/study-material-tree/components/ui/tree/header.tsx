@@ -22,7 +22,7 @@ export function TreeHeader({
 }: TreeHeaderProps) {
   const { t } = useTranslation("tree");
   const controller = useTreeControllerContext();
-  const isSearchOpen = controlledIsSearchOpen ?? controller.isSearchOpen;
+  const isSearchOpen = controlledIsSearchOpen ?? controller.isSearchOpen ?? false;
   const onToggleSearch = controlledOnToggleSearch ?? controller.onToggleSearch;
 
   const { active, isOver, setNodeRef } = useDroppable({
@@ -66,50 +66,75 @@ export function TreeHeader({
         </div>
         <div className="flex items-center gap-0.5">
           {onToggleSearch && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "cursor-pointer active:scale-97 transition-transform touch-manipulation",
-                      isPanelExpanded ? "h-7 w-7" : "size-6",
-                      isSearchOpen && "bg-accent text-accent-foreground font-semibold",
-                    )}
-                    aria-label={t("header.search")}
-                    onClick={onToggleSearch}
-                  >
-                    <Search className={isPanelExpanded ? "size-4" : "size-3.5"} />
-                  </Button>
-                }
-              />
-              <TooltipContent>{t("header.search")}</TooltipContent>
-            </Tooltip>
+            <SearchHeaderAction
+              isPanelExpanded={isPanelExpanded}
+              isSearchOpen={isSearchOpen}
+              onToggleSearch={onToggleSearch}
+            />
           )}
-
-
           {onPanelToggle && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={isPanelExpanded ? t("header.collapsePanel") : t("header.expandPanel")}
-              title={isPanelExpanded ? t("header.collapsePanel") : t("header.expandPanel")}
-              onClick={onPanelToggle}
-              className={cn(
-                "cursor-pointer active:scale-97 transition-transform touch-manipulation",
-                isPanelExpanded ? "h-7 w-7" : "size-6 ml-0.5",
-              )}
-            >
-              {isPanelExpanded ? (
-                <Minimize2 className="size-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
-              )}
-            </Button>
+            <PanelHeaderAction isPanelExpanded={isPanelExpanded} onPanelToggle={onPanelToggle} />
           )}
         </div>
       </div>
     </CardHeader>
+  );
+}
+
+function SearchHeaderAction({
+  isPanelExpanded,
+  isSearchOpen,
+  onToggleSearch,
+}: {
+  isPanelExpanded?: boolean;
+  isSearchOpen: boolean;
+  onToggleSearch: () => void;
+}) {
+  const { t } = useTranslation("tree");
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "cursor-pointer active:scale-97 transition-transform touch-manipulation",
+              isPanelExpanded ? "h-7 w-7" : "size-6",
+              isSearchOpen && "bg-accent text-accent-foreground font-semibold",
+            )}
+            aria-label={t("header.search")}
+            onClick={onToggleSearch}
+          >
+            <Search className={isPanelExpanded ? "size-4" : "size-3.5"} />
+          </Button>
+        }
+      />
+      <TooltipContent>{t("header.search")}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function PanelHeaderAction({
+  isPanelExpanded,
+  onPanelToggle,
+}: { isPanelExpanded?: boolean; onPanelToggle: () => void }) {
+  const { t } = useTranslation("tree");
+  const label = isPanelExpanded ? t("header.collapsePanel") : t("header.expandPanel");
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={label}
+      title={label}
+      onClick={onPanelToggle}
+      className={cn(
+        "cursor-pointer active:scale-97 transition-transform touch-manipulation",
+        isPanelExpanded ? "h-7 w-7" : "size-6 ml-0.5",
+      )}
+    >
+      {isPanelExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="h-4 w-4" />}
+    </Button>
   );
 }

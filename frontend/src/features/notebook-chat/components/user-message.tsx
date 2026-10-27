@@ -44,9 +44,7 @@ export function UserMessage({ message, siblingMessages = [], disabled = false, o
   const [copied, setCopied] = useState(false);
   const peers = siblingMessages.length ? siblingMessages : [message];
   const activeIndex = Math.max(0, peers.findIndex((item) => item.id === message.id));
-  const Content = editing ? "div" : MessageContent;
-
-  const save = () => {
+  const handleSave = () => {
     if (disabled) return;
     const nextText = draft.trim();
     if (!nextText || nextText === text.trim()) {
@@ -56,7 +54,7 @@ export function UserMessage({ message, siblingMessages = [], disabled = false, o
     onEdit?.(message, nextText);
     setEditing(false);
   };
-  const copy = async () => {
+  const handleCopy = async () => {
     if (!onCopy) return;
     const content = text || fileParts.map((file) => file.filename || t("composer.attachmentAlt")).join("\n");
     const succeeded = await onCopy(content);
@@ -69,73 +67,205 @@ export function UserMessage({ message, siblingMessages = [], disabled = false, o
   return (
     <Message className={cn("[content-visibility:auto] [contain-intrinsic-size:auto_60px]", editing && "max-w-4/5")} from="user">
       <span className="sr-only">{t("sender.user")}</span>
-      <Content className={cn(
-        "px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3 break-words [overflow-wrap:anywhere]",
-        editing && "ml-auto w-full min-w-0 rounded-2xl bg-primary/20 text-foreground",
-      )}>
-        {fileParts.map((file, index) => {
-          if (file.mediaType?.startsWith("image/")) {
-            return (
-              <div
-                key={`${message.id}-file-${index}`}
-                className={cn(
-                  "relative mb-1 max-w-xs overflow-hidden rounded-xl border shadow-xs",
-                  editing ? "border-border" : "border-primary-foreground/20",
-                )}
-              >
-                <img
-                  src={file.url}
-                  alt={file.filename || t("userMessage.attachedImageAlt")}
-                  className="max-h-60 w-auto rounded-xl object-contain"
-                />
-              </div>
-            );
-          }
-          return null;
-        })}
-        {editing ? (
-          <div className="w-full min-w-0">
-            {fileParts.length > 0 && <p className="mb-2 text-xs text-muted-foreground">{t("edit.attachmentsUnchanged", { count: fileParts.length })}</p>}
-            <Textarea
-              autoFocus
-              value={draft}
-              onChange={(event) => setDraft(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape" && !event.nativeEvent.isComposing) {
-                  event.preventDefault();
-                  setEditing(false);
-                  setDraft(text);
-                }
-                if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
-                  event.preventDefault();
-                  save();
-                }
-              }}
-              aria-label={t("edit.editorLabel")}
-              rows={3}
-              className="max-h-60 min-h-28 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-0 py-1 leading-relaxed shadow-none outline-none ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
-            />
-            <div className="mt-3 flex flex-wrap justify-end gap-2">
-              <Button type="button" variant="ghost" size="sm" className="rounded-full font-normal hover:bg-primary/10 max-sm:min-h-11" onClick={() => { setEditing(false); setDraft(text); }}>{t("edit.cancel")}</Button>
-              <Button type="button" size="sm" className="rounded-full font-normal max-sm:min-h-11" onClick={save} disabled={disabled || !draft.trim() || draft.trim() === text.trim()}>{t("edit.send")}</Button>
-            </div>
-          </div>
-        ) : textParts.map((part, index) => (
-          <MessageResponse key={`${message.id}-${index}`} className="break-words [overflow-wrap:anywhere]">
-            {part.text}
-          </MessageResponse>
-        ))}
-      </Content>
-      {!editing && <div className="mt-1 flex flex-wrap items-center justify-end gap-1 text-text-tertiary">
-        {peers.length > 1 && <>
-          <UserMessageAction label={t("assistant.previousVersion")} disabled={disabled || activeIndex === 0} onClick={() => onSelectBranch?.(peers[activeIndex - 1].id)}><ChevronLeft className="size-3.5" /></UserMessageAction>
-          <span className="min-w-13 text-center text-xs">{t("assistant.branchPage", { current: activeIndex + 1, total: peers.length })}</span>
-          <UserMessageAction label={t("assistant.nextVersion")} disabled={disabled || activeIndex === peers.length - 1} onClick={() => onSelectBranch?.(peers[activeIndex + 1].id)}><ChevronRight className="size-3.5" /></UserMessageAction>
-        </>}
-        {(text || fileParts.length > 0) && <UserMessageAction label={t("assistant.copyMessage")} onClick={() => void copy()}>{copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}</UserMessageAction>}
-        {onEdit && <UserMessageAction label={t("edit.editMessage")} disabled={disabled} onClick={() => { setDraft(text); setEditing(true); }}><Pencil className="size-3.5" /></UserMessageAction>}
-      </div>}
+      <UserMessageContent
+        messageId={message.id}
+        files={fileParts}
+        textParts={textParts}
+        text={text}
+        editing={editing}
+        draft={draft}
+        disabled={disabled}
+        onDraftChange={setDraft}
+        onCancel={() => {
+          setEditing(false);
+          setDraft(text);
+        }}
+        onSave={handleSave}
+      />
+      {!editing && (
+        <UserMessageToolbar
+          peers={peers}
+          activeIndex={activeIndex}
+          hasContent={Boolean(text || fileParts.length > 0)}
+          canEdit={Boolean(onEdit)}
+          disabled={disabled}
+          copied={copied}
+          onCopy={() => void handleCopy()}
+          onPrevious={() => onSelectBranch?.(peers[activeIndex - 1].id)}
+          onNext={() => onSelectBranch?.(peers[activeIndex + 1].id)}
+          onEdit={() => {
+            setDraft(text);
+            setEditing(true);
+          }}
+        />
+      )}
     </Message>
+  );
+}
+
+function UserMessageContent({
+  messageId,
+  files,
+  textParts,
+  text,
+  editing,
+  draft,
+  disabled,
+  onDraftChange,
+  onCancel,
+  onSave,
+}: {
+  messageId: string;
+  files: FilePart[];
+  textParts: TextPart[];
+  text: string;
+  editing: boolean;
+  draft: string;
+  disabled: boolean;
+  onDraftChange: (value: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const Content = editing ? "div" : MessageContent;
+  const textOccurrences = new Map<string, number>();
+  const keyedTextParts = textParts.map((part) => {
+    const occurrence = textOccurrences.get(part.text) ?? 0;
+    textOccurrences.set(part.text, occurrence + 1);
+    return { part, key: `${messageId}-text-${part.text}-${occurrence}` };
+  });
+
+  return (
+    <Content className={cn(
+      "px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3 break-words [overflow-wrap:anywhere]",
+      editing && "ml-auto w-full min-w-0 rounded-2xl bg-primary/20 text-foreground",
+    )}>
+      <UserMessageAttachments messageId={messageId} files={files} editing={editing} />
+      {editing ? (
+        <UserMessageEditor
+          fileCount={files.length}
+          text={text}
+          draft={draft}
+          disabled={disabled}
+          onDraftChange={onDraftChange}
+          onCancel={onCancel}
+          onSave={onSave}
+        />
+      ) : keyedTextParts.map(({ part, key }) => (
+        <MessageResponse key={key} className="break-words [overflow-wrap:anywhere]">
+          {part.text}
+        </MessageResponse>
+      ))}
+    </Content>
+  );
+}
+
+function UserMessageAttachments({ messageId, files, editing }: { messageId: string; files: FilePart[]; editing: boolean }) {
+  const { t } = useTranslation("chat");
+  const occurrences = new Map<string, number>();
+  return files.map((file) => {
+    const occurrence = occurrences.get(file.url) ?? 0;
+    occurrences.set(file.url, occurrence + 1);
+    if (!file.mediaType?.startsWith("image/")) return null;
+
+    return (
+      <div
+        key={`${messageId}-file-${file.url}-${occurrence}`}
+        className={cn(
+          "relative mb-1 max-w-xs overflow-hidden rounded-xl border shadow-xs",
+          editing ? "border-border" : "border-primary-foreground/20",
+        )}
+      >
+        <img
+          src={file.url}
+          alt={file.filename || t("userMessage.attachedImageAlt")}
+          className="max-h-60 w-auto rounded-xl object-contain"
+        />
+      </div>
+    );
+  });
+}
+
+function UserMessageEditor({
+  fileCount,
+  text,
+  draft,
+  disabled,
+  onDraftChange,
+  onCancel,
+  onSave,
+}: {
+  fileCount: number;
+  text: string;
+  draft: string;
+  disabled: boolean;
+  onDraftChange: (value: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const { t } = useTranslation("chat");
+  return (
+    <div className="w-full min-w-0">
+      {fileCount > 0 && <p className="mb-2 text-xs text-muted-foreground">{t("edit.attachmentsUnchanged", { count: fileCount })}</p>}
+      <Textarea
+        autoFocus
+        value={draft}
+        onChange={(event) => onDraftChange(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            onCancel();
+          }
+          if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            onSave();
+          }
+        }}
+        aria-label={t("edit.editorLabel")}
+        rows={3}
+        className="max-h-60 min-h-28 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-0 py-1 leading-relaxed shadow-none outline-none ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
+      />
+      <div className="mt-3 flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="ghost" size="sm" className="rounded-full font-normal hover:bg-primary/10 max-sm:min-h-11" onClick={onCancel}>{t("edit.cancel")}</Button>
+        <Button type="button" size="sm" className="rounded-full font-normal max-sm:min-h-11" onClick={onSave} disabled={disabled || !draft.trim() || draft.trim() === text.trim()}>{t("edit.send")}</Button>
+      </div>
+    </div>
+  );
+}
+
+function UserMessageToolbar({
+  peers,
+  activeIndex,
+  hasContent,
+  canEdit,
+  disabled,
+  copied,
+  onCopy,
+  onPrevious,
+  onNext,
+  onEdit,
+}: {
+  peers: UIMessage[];
+  activeIndex: number;
+  hasContent: boolean;
+  canEdit: boolean;
+  disabled: boolean;
+  copied: boolean;
+  onCopy: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  onEdit: () => void;
+}) {
+  const { t } = useTranslation("chat");
+  return (
+    <div className="mt-1 flex flex-wrap items-center justify-end gap-1 text-text-tertiary">
+      {peers.length > 1 && <>
+        <UserMessageAction label={t("assistant.previousVersion")} disabled={disabled || activeIndex === 0} onClick={onPrevious}><ChevronLeft className="size-3.5" /></UserMessageAction>
+        <span className="min-w-13 text-center text-xs">{t("assistant.branchPage", { current: activeIndex + 1, total: peers.length })}</span>
+        <UserMessageAction label={t("assistant.nextVersion")} disabled={disabled || activeIndex === peers.length - 1} onClick={onNext}><ChevronRight className="size-3.5" /></UserMessageAction>
+      </>}
+      {hasContent && <UserMessageAction label={t("assistant.copyMessage")} onClick={onCopy}>{copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}</UserMessageAction>}
+      {canEdit && <UserMessageAction label={t("edit.editMessage")} disabled={disabled} onClick={onEdit}><Pencil className="size-3.5" /></UserMessageAction>}
+    </div>
   );
 }
 

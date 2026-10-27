@@ -5,7 +5,7 @@ import {
   type InfiniteData,
 } from "@tanstack/react-query";
 import { RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { libraryQueryOptions, type LibraryResponse } from "@/features/notebook-library/api/library";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import { cn } from "@/shared/utils/cn";
 import {
   deleteForeverTrashItem,
   emptyTrashApi,
@@ -70,8 +71,6 @@ export function TrashModal({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingHardDelete, setPendingHardDelete] = useState<TrashItem | null>(null);
-  const [isHoldingEmpty, setIsHoldingEmpty] = useState(false);
-  const holdTimerRef = useRef<number | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -273,16 +272,91 @@ export function TrashModal({
     }
   };
 
+  const { allItems, filteredItems, expiringSoon, recentlyDeleted } = useTrashItems(data, searchQuery);
+  const holdToEmpty = useHoldToEmptyTrash(allItems.length > 0, handleEmptyTrash);
+
+  // Infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const headerContent = (
+    <TrashModalHeader
+      hasItems={allItems.length > 0}
+      isHoldingEmpty={holdToEmpty.isHoldingEmpty}
+      onStartHold={holdToEmpty.startHold}
+      onCancelHold={holdToEmpty.cancelHold}
+    />
+  );
+  const bodyContent = (
+    <TrashModalBody
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      isLoading={isLoading}
+      isError={isError}
+      allItems={allItems}
+      filteredItems={filteredItems}
+      expiringSoon={expiringSoon}
+      recentlyDeleted={recentlyDeleted}
+      sentinelRef={sentinelRef}
+      isFetchingNextPage={isFetchingNextPage}
+      isRestoring={(id) => restoreMutation.isPending && restoreMutation.variables?.id === id}
+      isDeleting={(id) => deleteForeverMutation.isPending && deleteForeverMutation.variables?.id === id}
+      onRestore={handleRestore}
+      onDeleteForever={setPendingHardDelete}
+    />
+  );
+
+  return (
+    <>
+      <TrashModalSurface
+        isDesktop={isDesktop}
+        open={open}
+        onOpenChange={onOpenChange}
+        title={t("trash.modal.title")}
+        subtitle={t("trash.modal.subtitle")}
+        headerContent={headerContent}
+        bodyContent={bodyContent}
+      />
+      <ConfirmDeleteDialog
+        open={pendingHardDelete !== null}
+        onOpenChange={(openConfirm) => !openConfirm && setPendingHardDelete(null)}
+        title={t("trash.modal.confirmDeleteTitle")}
+        description={t("trash.modal.confirmDeleteDescription", {
+          name: pendingHardDelete?.name ?? "",
+        })}
+        onConfirm={() => {
+          if (pendingHardDelete) {
+            handleDeleteForever(pendingHardDelete);
+            setPendingHardDelete(null);
+          }
+        }}
+      />
+    </>
+  );
+}
+
+function useTrashItems(data: InfiniteData<TrashPageResponse> | undefined, searchQuery: string) {
   const allItems = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return allItems;
-    const q = searchQuery.toLowerCase().trim();
+    const query = searchQuery.toLowerCase().trim();
     return allItems.filter(
       (item) =>
-        item.name.toLowerCase().includes(q) ||
-        (item.notebookTitle && item.notebookTitle.toLowerCase().includes(q)) ||
-        (item.subtypeLabel && item.subtypeLabel.toLowerCase().includes(q)),
+        item.name.toLowerCase().includes(query) ||
+        (item.notebookTitle && item.notebookTitle.toLowerCase().includes(query)) ||
+        (item.subtypeLabel && item.subtypeLabel.toLowerCase().includes(query)),
     );
   }, [allItems, searchQuery]);
 
@@ -302,24 +376,140 @@ export function TrashModal({
     [filteredItems],
   );
 
-  // Infinite scroll
-  useEffect(() => {
-    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  return { allItems, filteredItems, expiringSoon, recentlyDeleted };
+}
 
-  // Hold to Empty Trash
-  const startHoldEmpty = () => {
-    if (allItems.length === 0) return;
+function TrashModalSurface({
+  isDesktop,
+  open,
+  onOpenChange,
+  title,
+  subtitle,
+  headerContent,
+  bodyContent,
+}: {
+  isDesktop: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  subtitle: string;
+  headerContent: ReactNode;
+  bodyContent: ReactNode;
+}) {
+  if (isDesktop) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent showCloseButton={true} className="sm:max-w-2xl gap-0 p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-3 border-b border-border/50">
+            <DialogTitle className="sr-only">{title}</DialogTitle>
+            <DialogDescription className="sr-only">{subtitle}</DialogDescription>
+            {headerContent}
+          </DialogHeader>
+          {bodyContent}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="p-0 max-h-[85vh] overflow-hidden">
+        <DrawerHeader className="p-4 pb-3 border-b border-border/50 text-left">
+          <DrawerTitle className="sr-only">{title}</DrawerTitle>
+          <DrawerDescription className="sr-only">{subtitle}</DrawerDescription>
+          {headerContent}
+        </DrawerHeader>
+        {bodyContent}
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+function TrashModalHeader({
+  hasItems,
+  isHoldingEmpty,
+  onStartHold,
+  onCancelHold,
+}: {
+  hasItems: boolean;
+  isHoldingEmpty: boolean;
+  onStartHold: () => void;
+  onCancelHold: () => void;
+}) {
+  const { t } = useTranslation("settings");
+
+  return (
+    <div className="flex items-center justify-between gap-3 min-w-0 pr-10">
+      <div className="min-w-0 flex-1">
+        <h2 className="text-base font-semibold leading-none tracking-tight text-foreground">
+          {t("trash.modal.title")}
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground truncate">{t("trash.modal.subtitle")}</p>
+      </div>
+      {hasItems && (
+        <HoldToEmptyButton
+          isHolding={isHoldingEmpty}
+          onStartHold={onStartHold}
+          onCancelHold={onCancelHold}
+        />
+      )}
+    </div>
+  );
+}
+
+function HoldToEmptyButton({
+  isHolding,
+  onStartHold,
+  onCancelHold,
+}: {
+  isHolding: boolean;
+  onStartHold: () => void;
+  onCancelHold: () => void;
+}) {
+  const { t } = useTranslation("settings");
+
+  return (
+    <button
+      type="button"
+      data-holding={isHolding ? "true" : "false"}
+      onPointerDown={onStartHold}
+      onPointerUp={onCancelHold}
+      onPointerLeave={onCancelHold}
+      onPointerCancel={onCancelHold}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && !e.repeat) {
+          onStartHold();
+        }
+      }}
+      onKeyUp={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onCancelHold();
+        }
+      }}
+      aria-label={t("trash.modal.holdToEmptyAria")}
+      className="hold-delete-btn shrink-0 cursor-pointer rounded-lg bg-muted px-2.5 py-1.5 text-xs font-medium text-foreground select-none touch-manipulation"
+    >
+      <span className="flex items-center gap-1.5">
+        <Trash2 className="size-3 text-muted-foreground" />
+        <span>{t("trash.modal.holdToEmpty")}</span>
+      </span>
+      <span
+        aria-hidden="true"
+        className="hold-delete-overlay rounded-lg bg-destructive px-2.5 py-1.5 text-xs font-medium text-destructive-foreground"
+      >
+        <Trash2 className="size-3" />
+        <span>{t("trash.modal.holdToEmpty")}</span>
+      </span>
+    </button>
+  );
+}
+
+function useHoldToEmptyTrash(hasItems: boolean, onEmpty: () => void) {
+  const [isHoldingEmpty, setIsHoldingEmpty] = useState(false);
+  const holdTimerRef = useRef<number | null>(null);
+
+  const startHold = () => {
+    if (!hasItems) return;
     setIsHoldingEmpty(true);
     if (holdTimerRef.current !== null) {
       clearTimeout(holdTimerRef.current);
@@ -327,11 +517,11 @@ export function TrashModal({
     holdTimerRef.current = setTimeout(() => {
       setIsHoldingEmpty(false);
       holdTimerRef.current = null;
-      handleEmptyTrash();
+      onEmpty();
     }, HOLD_DURATION_MS);
   };
 
-  const cancelHoldEmpty = () => {
+  const cancelHold = () => {
     setIsHoldingEmpty(false);
     if (holdTimerRef.current !== null) {
       clearTimeout(holdTimerRef.current);
@@ -347,53 +537,30 @@ export function TrashModal({
     };
   }, []);
 
-  const headerContent = (
-    <div className="flex items-center justify-between gap-3 min-w-0 pr-10">
-      <div className="min-w-0 flex-1">
-        <h2 className="text-base font-semibold leading-none tracking-tight text-foreground">
-          {t("trash.modal.title")}
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground truncate">{t("trash.modal.subtitle")}</p>
-      </div>
+  return { isHoldingEmpty, startHold, cancelHold };
+}
 
-      {allItems.length > 0 && (
-        <button
-          type="button"
-          data-holding={isHoldingEmpty ? "true" : "false"}
-          onPointerDown={startHoldEmpty}
-          onPointerUp={cancelHoldEmpty}
-          onPointerLeave={cancelHoldEmpty}
-          onPointerCancel={cancelHoldEmpty}
-          onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === " ") && !e.repeat) {
-              startHoldEmpty();
-            }
-          }}
-          onKeyUp={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              cancelHoldEmpty();
-            }
-          }}
-          aria-label={t("trash.modal.holdToEmptyAria")}
-          className="hold-delete-btn shrink-0 cursor-pointer rounded-lg bg-muted px-2.5 py-1.5 text-xs font-medium text-foreground select-none touch-manipulation"
-        >
-          <span className="flex items-center gap-1.5">
-            <Trash2 className="size-3 text-muted-foreground" />
-            <span>{t("trash.modal.holdToEmpty")}</span>
-          </span>
-          <span
-            aria-hidden="true"
-            className="hold-delete-overlay rounded-lg bg-destructive px-2.5 py-1.5 text-xs font-medium text-destructive-foreground"
-          >
-            <Trash2 className="size-3" />
-            <span>{t("trash.modal.holdToEmpty")}</span>
-          </span>
-        </button>
-      )}
-    </div>
-  );
+interface TrashModalBodyProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  isLoading: boolean;
+  isError: boolean;
+  allItems: TrashItem[];
+  filteredItems: TrashItem[];
+  expiringSoon: TrashItem[];
+  recentlyDeleted: TrashItem[];
+  sentinelRef: RefObject<HTMLDivElement | null>;
+  isFetchingNextPage: boolean;
+  isRestoring: (itemId: string) => boolean;
+  isDeleting: (itemId: string) => boolean;
+  onRestore: (item: TrashItem) => void;
+  onDeleteForever: (item: TrashItem) => void;
+}
 
-  const bodyContent = (
+function TrashModalBody({ searchQuery, onSearchChange, ...resultsProps }: TrashModalBodyProps) {
+  const { t } = useTranslation("settings");
+
+  return (
     <Command
       shouldFilter={false}
       className="flex size-full flex-col overflow-hidden bg-transparent"
@@ -401,187 +568,202 @@ export function TrashModal({
       <CommandInput
         placeholder={t("trash.modal.searchPlaceholder")}
         value={searchQuery}
-        onValueChange={setSearchQuery}
+        onValueChange={onSearchChange}
         className="h-10 text-xs"
       />
       <CommandList className="max-h-[60vh] overflow-y-auto px-2 py-2">
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Spinner className="size-5 text-muted-foreground" />
-          </div>
-        ) : isError ? (
-          <EmptyState
-            icon={<Trash2 className="size-5 text-muted-foreground" />}
-            title={t("trash.modal.loadFailedTitle")}
-            description={t("trash.modal.loadFailedDescription")}
-            className="py-10"
-          />
-        ) : allItems.length === 0 ? (
-          <EmptyState
-            icon={<Trash2 className="size-5 text-muted-foreground" />}
-            title={t("trash.modal.emptyTitle")}
-            description={t("trash.modal.emptyDescription")}
-            className="py-10"
-          />
-        ) : filteredItems.length === 0 ? (
-          <CommandEmpty className="py-8 text-center text-xs text-muted-foreground">
-            {t("trash.modal.noResults", { query: searchQuery })}
-          </CommandEmpty>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {expiringSoon.length > 0 && (
-              <CommandGroup
-                heading={t("trash.modal.expiringSoonHeading")}
-                className="[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted-foreground"
-              >
-                {expiringSoon.map((item) => (
-                  <CommandItem
-                    key={item.id}
-                    value={item.id}
-                    className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 hover:bg-muted/60 data-[selected=true]:bg-muted/80"
-                  >
-                    <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                      <div className="mt-0.5 shrink-0">
-                        <TrashItemIcon kind={item.kind} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className="text-xs font-medium leading-4 text-foreground truncate"
-                          title={item.name}
-                        >
-                          <bdi>{item.name}</bdi>
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {item.notebookTitle ? `${item.notebookTitle} · ` : ""}
-                          {item.subtypeLabel ?? t("trash.modal.itemFallback")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="w-12 text-right text-xs tabular-nums text-destructive">
-                        {t("trash.modal.daysRemaining", { count: item.daysRemaining })}
-                      </span>
-                      <TrashRowActions
-                        item={item}
-                        isRestoring={
-                          restoreMutation.isPending && restoreMutation.variables?.id === item.id
-                        }
-                        isDeleting={
-                          deleteForeverMutation.isPending &&
-                          deleteForeverMutation.variables?.id === item.id
-                        }
-                        onRestore={handleRestore}
-                        onDeleteForever={setPendingHardDelete}
-                      />
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-
-            {recentlyDeleted.length > 0 && (
-              <CommandGroup
-                heading={t("trash.modal.recentlyDeletedHeading")}
-                className="[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted-foreground"
-              >
-                {recentlyDeleted.map((item) => (
-                  <CommandItem
-                    key={item.id}
-                    value={item.id}
-                    className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 hover:bg-muted/60 data-[selected=true]:bg-muted/80"
-                  >
-                    <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                      <div className="mt-0.5 shrink-0">
-                        <TrashItemIcon kind={item.kind} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className="text-xs font-medium leading-4 text-foreground truncate"
-                          title={item.name}
-                        >
-                          <bdi>{item.name}</bdi>
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {item.notebookTitle ? `${item.notebookTitle} · ` : ""}
-                          {item.subtypeLabel ?? t("trash.modal.itemFallback")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
-                        {t("trash.modal.daysRemaining", { count: item.daysRemaining })}
-                      </span>
-                      <TrashRowActions
-                        item={item}
-                        isRestoring={
-                          restoreMutation.isPending && restoreMutation.variables?.id === item.id
-                        }
-                        isDeleting={
-                          deleteForeverMutation.isPending &&
-                          deleteForeverMutation.variables?.id === item.id
-                        }
-                        onRestore={handleRestore}
-                        onDeleteForever={setPendingHardDelete}
-                      />
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-
-            {/* Sentinel for infinite pagination */}
-            <div ref={sentinelRef} className="py-1 flex justify-center">
-              {isFetchingNextPage && <Spinner className="size-4 text-muted-foreground" />}
-            </div>
-          </div>
-        )}
+        <TrashItemsResult {...resultsProps} searchQuery={searchQuery} />
       </CommandList>
     </Command>
   );
+}
+
+type TrashItemsResultProps = Omit<TrashModalBodyProps, "onSearchChange">;
+
+function TrashItemsResult({
+  searchQuery,
+  isLoading,
+  isError,
+  allItems,
+  filteredItems,
+  expiringSoon,
+  recentlyDeleted,
+  sentinelRef,
+  isFetchingNextPage,
+  isRestoring,
+  isDeleting,
+  onRestore,
+  onDeleteForever,
+}: TrashItemsResultProps) {
+  const { t } = useTranslation("settings");
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Spinner className="size-5 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        icon={<Trash2 className="size-5 text-muted-foreground" />}
+        title={t("trash.modal.loadFailedTitle")}
+        description={t("trash.modal.loadFailedDescription")}
+        className="py-10"
+      />
+    );
+  }
+
+  if (allItems.length === 0) {
+    return (
+      <EmptyState
+        icon={<Trash2 className="size-5 text-muted-foreground" />}
+        title={t("trash.modal.emptyTitle")}
+        description={t("trash.modal.emptyDescription")}
+        className="py-10"
+      />
+    );
+  }
+
+  if (filteredItems.length === 0) {
+    return (
+      <CommandEmpty className="py-8 text-center text-xs text-muted-foreground">
+        {t("trash.modal.noResults", { query: searchQuery })}
+      </CommandEmpty>
+    );
+  }
 
   return (
-    <>
-      {isDesktop ? (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent showCloseButton={true} className="sm:max-w-2xl gap-0 p-0 overflow-hidden">
-            <DialogHeader className="p-4 pb-3 border-b border-border/50">
-              <DialogTitle className="sr-only">{t("trash.modal.title")}</DialogTitle>
-              <DialogDescription className="sr-only">{t("trash.modal.subtitle")}</DialogDescription>
-              {headerContent}
-            </DialogHeader>
-            {bodyContent}
-          </DialogContent>
-        </Dialog>
-      ) : (
-        <Drawer open={open} onOpenChange={onOpenChange}>
-          <DrawerContent className="p-0 max-h-[85vh] overflow-hidden">
-            <DrawerHeader className="p-4 pb-3 border-b border-border/50 text-left">
-              <DrawerTitle className="sr-only">{t("trash.modal.title")}</DrawerTitle>
-              <DrawerDescription className="sr-only">{t("trash.modal.subtitle")}</DrawerDescription>
-              {headerContent}
-            </DrawerHeader>
-            {bodyContent}
-          </DrawerContent>
-        </Drawer>
+    <div className="flex flex-col gap-3">
+      {expiringSoon.length > 0 && (
+        <TrashItemGroup
+          items={expiringSoon}
+          heading={t("trash.modal.expiringSoonHeading")}
+          isExpiringSoon
+          isRestoring={isRestoring}
+          isDeleting={isDeleting}
+          onRestore={onRestore}
+          onDeleteForever={onDeleteForever}
+        />
       )}
+      {recentlyDeleted.length > 0 && (
+        <TrashItemGroup
+          items={recentlyDeleted}
+          heading={t("trash.modal.recentlyDeletedHeading")}
+          isExpiringSoon={false}
+          isRestoring={isRestoring}
+          isDeleting={isDeleting}
+          onRestore={onRestore}
+          onDeleteForever={onDeleteForever}
+        />
+      )}
+      {/* Sentinel for infinite pagination */}
+      <div ref={sentinelRef} className="py-1 flex justify-center">
+        {isFetchingNextPage && <Spinner className="size-4 text-muted-foreground" />}
+      </div>
+    </div>
+  );
+}
 
-      <ConfirmDeleteDialog
-        open={pendingHardDelete !== null}
-        onOpenChange={(openConfirm) => !openConfirm && setPendingHardDelete(null)}
-        title={t("trash.modal.confirmDeleteTitle")}
-        description={t("trash.modal.confirmDeleteDescription", {
-          name: pendingHardDelete?.name ?? "",
-        })}
-        onConfirm={() => {
-          if (pendingHardDelete) {
-            handleDeleteForever(pendingHardDelete);
-            setPendingHardDelete(null);
-          }
-        }}
-      />
-    </>
+interface TrashItemGroupProps {
+  items: TrashItem[];
+  heading: string;
+  isExpiringSoon: boolean;
+  isRestoring: (itemId: string) => boolean;
+  isDeleting: (itemId: string) => boolean;
+  onRestore: (item: TrashItem) => void;
+  onDeleteForever: (item: TrashItem) => void;
+}
+
+function TrashItemGroup({
+  items,
+  heading,
+  isExpiringSoon,
+  isRestoring,
+  isDeleting,
+  onRestore,
+  onDeleteForever,
+}: TrashItemGroupProps) {
+  return (
+    <CommandGroup
+      heading={heading}
+      className="[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted-foreground"
+    >
+      {items.map((item) => (
+        <TrashItemRow
+          key={item.id}
+          item={item}
+          isExpiringSoon={isExpiringSoon}
+          isRestoring={isRestoring(item.id)}
+          isDeleting={isDeleting(item.id)}
+          onRestore={onRestore}
+          onDeleteForever={onDeleteForever}
+        />
+      ))}
+    </CommandGroup>
+  );
+}
+
+function TrashItemRow({
+  item,
+  isExpiringSoon,
+  isRestoring,
+  isDeleting,
+  onRestore,
+  onDeleteForever,
+}: {
+  item: TrashItem;
+  isExpiringSoon: boolean;
+  isRestoring: boolean;
+  isDeleting: boolean;
+  onRestore: (item: TrashItem) => void;
+  onDeleteForever: (item: TrashItem) => void;
+}) {
+  const { t } = useTranslation("settings");
+
+  return (
+    <CommandItem
+      value={item.id}
+      className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 hover:bg-muted/60 data-[selected=true]:bg-muted/80"
+    >
+      <div className="flex min-w-0 flex-1 items-start gap-2.5">
+        <div className="mt-0.5 shrink-0">
+          <TrashItemIcon kind={item.kind} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-xs font-medium leading-4 text-foreground truncate"
+            title={item.name}
+          >
+            <bdi>{item.name}</bdi>
+          </p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {item.notebookTitle ? `${item.notebookTitle} · ` : ""}
+            {item.subtypeLabel ?? t("trash.modal.itemFallback")}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <span
+          className={cn(
+            "w-12 text-right text-xs tabular-nums",
+            isExpiringSoon ? "text-destructive" : "text-muted-foreground",
+          )}
+        >
+          {t("trash.modal.daysRemaining", { count: item.daysRemaining })}
+        </span>
+        <TrashRowActions
+          item={item}
+          isRestoring={isRestoring}
+          isDeleting={isDeleting}
+          onRestore={onRestore}
+          onDeleteForever={onDeleteForever}
+        />
+      </div>
+    </CommandItem>
   );
 }
 

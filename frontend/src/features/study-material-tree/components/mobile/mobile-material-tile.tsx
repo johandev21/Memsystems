@@ -19,7 +19,7 @@ export function MobileMaterialTile({ node, onOpen, onActions }: MobileMaterialTi
     : undefined;
 
   return (
-    <div role="listitem" data-slot="mobile-material-tile" className={MOBILE_TILE_CLASS}>
+    <li data-slot="mobile-material-tile" className={MOBILE_TILE_CLASS}>
       <button
         type="button"
         onClick={onOpen}
@@ -41,6 +41,6 @@ export function MobileMaterialTile({ node, onOpen, onActions }: MobileMaterialTi
         icon={MoreVertical}
         onClick={onActions}
       />
-    </div>
+    </li>
   );
 }

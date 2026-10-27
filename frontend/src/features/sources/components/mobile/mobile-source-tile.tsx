@@ -26,7 +26,7 @@ export function MobileSourceTile({ source, onOpen, onActions }: MobileSourceTile
   const statusLine = getStatusLine(source);
 
   return (
-    <div role="listitem" data-slot="mobile-source-tile" className={MOBILE_TILE_CLASS}>
+    <li data-slot="mobile-source-tile" className={MOBILE_TILE_CLASS}>
       <button
         type="button"
         onClick={onOpen}
@@ -53,7 +53,7 @@ export function MobileSourceTile({ source, onOpen, onActions }: MobileSourceTile
         icon={MoreVertical}
         onClick={onActions}
       />
-    </div>
+    </li>
   );
 }
 

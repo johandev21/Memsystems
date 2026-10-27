@@ -40,7 +40,20 @@ export interface AssistantMessageProps {
 }
 
 type TextPart = { type: "text"; text: string; state?: "streaming" | "done" };
+type PreparedAssistantPart = ReturnType<typeof prepareReferenceMessage> & { id: string };
 type ReasoningPart = { type: "reasoning"; text: string; state?: "streaming" | "done" };
+
+const textPartIds = new WeakMap<TextPart, string>();
+let nextTextPartId = 0;
+
+function getTextPartId(part: TextPart): string {
+  let id = textPartIds.get(part);
+  if (!id) {
+    id = `text-part-${nextTextPartId++}`;
+    textPartIds.set(part, id);
+  }
+  return id;
+}
 
 function isTextPart(part: UIMessage["parts"][number]): part is TextPart {
   const candidate = part as unknown as TextPart;
@@ -206,15 +219,12 @@ function useAssistantMessageContent(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [citationFingerprint],
   );
-  const referencesByKeyRef = useRef(referencesByKey);
-  referencesByKeyRef.current = referencesByKey;
-
   const messageComponents = useMemo<MessageComponents>(
     () => ({
       a: ({ href, children, ...props }) => {
         const referenceKey = getReferenceKeyFromHref(href);
         if (referenceKey) {
-          const reference = referencesByKeyRef.current.get(referenceKey.toUpperCase());
+          const reference = referencesByKey.get(referenceKey.toUpperCase());
           if (reference) return <CitationHoverCard reference={reference}>{children}</CitationHoverCard>;
           return <span className="font-medium text-muted-foreground">{children}</span>;
         }
@@ -231,11 +241,11 @@ function useAssistantMessageContent(
         );
       },
     }),
-    [],
+    [referencesByKey],
   );
-  const preparedParts = textParts.map((part) =>
-    prepareReferenceMessage(part.text, citedSources, isStreaming),
-  );
+  const preparedParts: PreparedAssistantPart[] = textParts.map((part) => {
+    return { id: getTextPartId(part), ...prepareReferenceMessage(part.text, citedSources, isStreaming) };
+  });
   const inlineCitationKeys = new Set(preparedParts.flatMap((part) => [...part.inlineCitationKeys]));
   const fullPlainText = textParts.map((part) => part.text).join("\n\n");
   const noEvidence = noEvidenceMetadataOf(message?.metadata);
@@ -275,9 +285,9 @@ function AssistantResponses({
   messageId: string;
   content: ReturnType<typeof useAssistantMessageContent>;
 }) {
-  return content.preparedParts.map((part, index) => (
+  return content.preparedParts.map((part) => (
     <MessageResponse
-      key={`${messageId}-${index}`}
+      key={`${messageId}-${part.id}`}
       components={content.messageComponents}
       isStreaming={content.isStreaming}
     >

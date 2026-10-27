@@ -20,6 +20,15 @@ export interface QuizViewProps {
 
 export function QuizView({ content, shuffle = true }: QuizViewProps) {
   const initialQuestions = useMemo(() => content?.questions || [], [content?.questions]);
+  const sessionKey = useMemo(
+    () => JSON.stringify([shuffle, initialQuestions]),
+    [initialQuestions, shuffle],
+  );
+
+  return <QuizSession key={sessionKey} questions={initialQuestions} shuffle={shuffle} />;
+}
+
+function QuizSession({ questions: initialQuestions, shuffle }: { questions: QuizQuestion[]; shuffle: boolean }) {
   const quizRef = useRef<HTMLDivElement>(null);
 
   const {

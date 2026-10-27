@@ -10,6 +10,7 @@ import {
   ImageIcon,
   Presentation,
   Video,
+  type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,6 +49,21 @@ import { useIsTouchDevice } from "@/shared/citations/use-touch-device";
 import { cn } from "@/shared/utils/cn";
 import { SourceFavicon } from "@/features/sources/components/sources-list/source-icon";
 
+const citationKindIcons: Record<string, LucideIcon> = {
+  video: Video,
+  audio: Headphones,
+  image: ImageIcon,
+  slides: Presentation,
+  presentation: Presentation,
+  ebook: BookOpen,
+  epub: BookOpen,
+  url: Globe,
+  web: Globe,
+  pdf: FileText,
+  file: FileText,
+  document: FileText,
+};
+
 function CitationKindIcon({
   kind,
   url,
@@ -76,14 +92,8 @@ function CitationKindIcon({
     );
   }
 
-  if (normalized === "video" || isYoutube) return <Video className={className} aria-hidden="true" />;
-  if (normalized === "audio") return <Headphones className={className} aria-hidden="true" />;
-  if (normalized === "image") return <ImageIcon className={className} aria-hidden="true" />;
-  if (normalized === "slides" || normalized === "presentation") return <Presentation className={className} aria-hidden="true" />;
-  if (normalized === "ebook" || normalized === "epub") return <BookOpen className={className} aria-hidden="true" />;
-  if (normalized === "url" || normalized === "web") return <Globe className={className} aria-hidden="true" />;
-  if (normalized === "pdf" || normalized === "file" || normalized === "document") return <FileText className={className} aria-hidden="true" />;
-  return <File className={className} aria-hidden="true" />;
+  const Icon = citationKindIcons[normalized] ?? File;
+  return <Icon className={className} aria-hidden="true" />;
 }
 
 const compactMarkdownComponents: MarkdownComponents = {
@@ -192,6 +202,15 @@ export function CitationActions({
   reference: CitationReference;
   safeUrl: string | null;
 }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-2 border-t border-border/40">
+      <CitationQuoteAction reference={reference} />
+      <CitationSourceActions reference={reference} safeUrl={safeUrl} />
+    </div>
+  );
+}
+
+function CitationQuoteAction({ reference }: { reference: CitationReference }) {
   const { t } = useTranslation("chat");
   const [copied, setCopied] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,17 +236,39 @@ export function CitationActions({
     }
   };
 
-  const handleOpenSourceViewer = () => {
-    window.dispatchEvent(
-      new CustomEvent("open-source-viewer", {
-        detail: {
-          sourceId: reference.id,
-          locator: reference.locator,
-        },
-      }),
-    );
-  };
+  if (!quoteToCopy) return null;
 
+  return (
+    <Button
+      type="button"
+      size="xs"
+      variant="ghost"
+      className="cursor-pointer gap-1.5 text-xs h-7 min-w-0"
+      onClick={handleCopy}
+      aria-label={
+        copied ? t("referencePopover.quoteCopiedAria") : t("referencePopover.copyQuoteAria")
+      }
+    >
+      {copied ? (
+        <Check className="size-3 text-primary" data-icon="inline-start" />
+      ) : (
+        <Copy className="size-3" data-icon="inline-start" />
+      )}
+      <span className="min-w-12 text-left">
+        {copied ? t("referencePopover.quoteCopied") : t("referencePopover.copyQuote")}
+      </span>
+    </Button>
+  );
+}
+
+function CitationSourceActions({
+  reference,
+  safeUrl,
+}: {
+  reference: CitationReference;
+  safeUrl: string | null;
+}) {
+  const { t } = useTranslation("chat");
   const hasInAppViewer = Boolean(
     reference.isAvailable &&
       (reference.locator?.imageRegion ||
@@ -242,59 +283,45 @@ export function CitationActions({
 
   const canOpenInApp = hasInAppViewer && Boolean(reference.id);
   const canOpenExternal = Boolean(safeUrl) && !canOpenInApp;
+  const handleOpenSourceViewer = () => {
+    window.dispatchEvent(
+      new CustomEvent("open-source-viewer", {
+        detail: {
+          sourceId: reference.id,
+          locator: reference.locator,
+        },
+      }),
+    );
+  };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-2 border-t border-border/40">
-      {quoteToCopy && (
+    <div className="flex flex-wrap items-center justify-end gap-1 ml-auto min-w-0">
+      {canOpenInApp && (
         <Button
           type="button"
           size="xs"
           variant="ghost"
-          className="cursor-pointer gap-1.5 text-xs h-7 min-w-0"
-          onClick={handleCopy}
-          aria-label={
-            copied ? t("referencePopover.quoteCopiedAria") : t("referencePopover.copyQuoteAria")
-          }
+          className="cursor-pointer gap-1.5 text-xs h-7"
+          onClick={handleOpenSourceViewer}
         >
-          {copied ? (
-            <Check className="size-3 text-primary" data-icon="inline-start" />
-          ) : (
-            <Copy className="size-3" data-icon="inline-start" />
-          )}
-          <span className="min-w-12 text-left">
-            {copied ? t("referencePopover.quoteCopied") : t("referencePopover.copyQuote")}
-          </span>
+          {t("referencePopover.openSource")}
         </Button>
       )}
 
-      <div className="flex flex-wrap items-center justify-end gap-1 ml-auto min-w-0">
-        {canOpenInApp && (
-          <Button
-            type="button"
-            size="xs"
-            variant="ghost"
-            className="cursor-pointer gap-1.5 text-xs h-7"
-            onClick={handleOpenSourceViewer}
-          >
-            {t("referencePopover.openSource")}
-          </Button>
-        )}
-
-        {canOpenExternal && (
-          <Button
-            render={
-              <a href={safeUrl ?? undefined} target="_blank" rel="noopener noreferrer">
-                {t("referencePopover.openSource")}
-                <ExternalLinkIcon className="size-3" data-icon="inline-end" />
-              </a>
-            }
-            nativeButton={false}
-            size="xs"
-            variant="ghost"
-            className="cursor-pointer gap-1.5 text-xs h-7"
-          />
-        )}
-      </div>
+      {canOpenExternal && (
+        <Button
+          render={
+            <a href={safeUrl ?? undefined} target="_blank" rel="noopener noreferrer">
+              {t("referencePopover.openSource")}
+              <ExternalLinkIcon className="size-3" data-icon="inline-end" />
+            </a>
+          }
+          nativeButton={false}
+          size="xs"
+          variant="ghost"
+          className="cursor-pointer gap-1.5 text-xs h-7"
+        />
+      )}
     </div>
   );
 }
