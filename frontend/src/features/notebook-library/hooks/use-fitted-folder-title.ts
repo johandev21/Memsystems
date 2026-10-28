@@ -14,7 +14,7 @@ export function useFittedFolderTitle(title: string) {
       const context = canvas.getContext("2d");
       if (!context) return;
       const widthAt = (size: number) => {
-        context.font = `500 ${size}px Poppins, system-ui, sans-serif`;
+        context.font = `500 ${size}px Sora, system-ui, sans-serif`;
         return context.measureText(title).width;
       };
       if (widthAt(MAX_SIZE) <= AVAILABLE_WIDTH) {

@@ -285,7 +285,7 @@
   pointer-events: none;
   width: 256px;
   height: 100%;
-  font-family: Poppins, system-ui, sans-serif;
+  font-family: var(--font-primary);
   font-weight: 500;
 }
 
@@ -312,7 +312,7 @@
   border-radius: 0;
   background: var(--notebook-folder-front);
   color: var(--notebook-folder-title);
-  font: 500 20px/1.3 Poppins, system-ui, sans-serif;
+  font: 500 20px/1.3 var(--font-primary);
   outline: 0;
 }
 

@@ -25,7 +25,7 @@
   --brand-google-yellow: oklch(0.708 0 0);
   --brand-google-red: oklch(0.439 0 0);
 
-  --font-primary: "Poppins";
+  --font-primary: "Sora", system-ui, sans-serif;
   --font-code: "Geist Mono Variable";
   --font-sans: var(--font-primary);
   --font-heading: var(--font-primary);
