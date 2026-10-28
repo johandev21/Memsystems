@@ -116,9 +116,9 @@ function LanguageSelectorSkeleton() {
 function TrashCardSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <div className="flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5">
-        <Skeleton className="h-20 w-full rounded-xl" />
-        <div className="flex h-11 flex-col justify-center gap-1.5 px-0.5">
+      <div className="flex flex-col gap-2.5 rounded-selector border border-border bg-card p-2.5 max-sm:min-h-11 max-sm:flex-row max-sm:items-center max-sm:rounded-xl">
+        <Skeleton className="h-20 w-full rounded-xl max-sm:size-5 max-sm:shrink-0" />
+        <div className="flex h-11 flex-col justify-center gap-1.5 px-0.5 max-sm:min-w-0 max-sm:flex-1">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-3.5 w-48 max-w-full" />
         </div>
