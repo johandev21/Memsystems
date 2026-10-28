@@ -5,6 +5,7 @@ import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
+import { prepareSeedState } from './seed-state';
 
 interface JournalEntry {
   idx: number;
@@ -58,6 +59,12 @@ async function main() {
 
   const pool = new Pool({ connectionString });
   const db = drizzle(pool);
+  const client = await pool.connect();
+  try {
+    await prepareSeedState(client);
+  } finally {
+    client.release();
+  }
 
   await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
   await pool.query(

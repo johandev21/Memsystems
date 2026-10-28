@@ -11,6 +11,7 @@ import { Pool } from 'pg';
 import { StorageService } from '../modules/storage/storage.service';
 import * as appSchema from './schema';
 import { notebookFolders, notebooks } from './schema';
+import { lockInitialSeed, prepareSeedState } from './seed-state';
 
 interface SeedNotebook {
   title: string;
@@ -107,135 +108,157 @@ async function main() {
     throw new Error('DATABASE_URL is not set. Cannot seed database.');
   }
 
-  const seedDir = resolveSeedDir();
-  console.log(
-    `Seed storage target: ${process.env.DEV_STORAGE_DIR ?? '<cwd>/dev-storage (default)'}`,
-  );
-  const entries = JSON.parse(
-    fs.readFileSync(path.join(seedDir, 'notebooks.json'), 'utf8'),
-  ) as SeedNotebook[];
-
   const pool = new Pool({ connectionString });
-  const db = drizzle(pool, { schema: appSchema });
-  const configAdapter = {
-    get: (key: string) => process.env[key],
-  } as unknown as ConfigService;
-  const storage = new StorageService(configAdapter);
-  const folderIds = await ensureSeedFolders(db, SEED_FOLDER_PATHS);
-
-  let created = 0;
-  let skipped = 0;
-  let bannersBackfilled = 0;
-  let filed = 0;
-
-  for (const entry of entries) {
-    const title = entry.title.trim();
-    const folderPath = SEED_NOTEBOOK_FOLDERS[title];
-    const folderId = folderPath ? (folderIds.get(folderPath) ?? null) : null;
-    if (folderPath && !folderId) {
-      throw new Error(`Seed folder not found for "${title}": ${folderPath}`);
+  const client = await pool.connect();
+  try {
+    await prepareSeedState(client);
+    await client.query('BEGIN');
+    if (!(await lockInitialSeed(client))) {
+      await client.query('COMMIT');
+      console.log('Initial seed already completed; skipping.');
+      return;
     }
 
-    const [existing] = await db
-      .select({
-        id: notebooks.id,
-        folderId: notebooks.folderId,
-        banner: notebooks.banner,
-        bannerVariants: notebooks.bannerVariants,
-      })
-      .from(notebooks)
-      .where(eq(notebooks.title, title))
-      .limit(1);
+    const seedDir = resolveSeedDir();
+    console.log(
+      `Seed storage target: ${process.env.DEV_STORAGE_DIR ?? '<cwd>/dev-storage (default)'}`,
+    );
+    const entries = JSON.parse(
+      fs.readFileSync(path.join(seedDir, 'notebooks.json'), 'utf8'),
+    ) as SeedNotebook[];
 
-    let bannerKey: string | null = null;
-    let variantKeys: {
-      w240?: string;
-      w480?: string;
-      w960?: string;
-      w1920?: string;
-    } | null = null;
-    if (entry.banner) {
-      const bannerPath = path.join(seedDir, 'banners', entry.banner);
-      if (!fs.existsSync(bannerPath)) {
-        console.warn(
-          `Banner not found for "${title}": ${entry.banner} (skipping banner)`,
-        );
-      } else {
-        const bytes = fs.readFileSync(bannerPath);
-        const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
-        const ext = path.extname(entry.banner).toLowerCase() || '.jpg';
-        bannerKey = `banners/${sha256}${ext}`;
-        await storage.putObject({
-          key: bannerKey,
-          body: bytes,
-          contentType: BANNER_CONTENT_TYPES[ext] ?? 'application/octet-stream',
-        });
+    const db = drizzle(client, { schema: appSchema });
+    const configAdapter = {
+      get: (key: string) => process.env[key],
+    } as unknown as ConfigService;
+    const storage = new StorageService(configAdapter);
+    const folderIds = await ensureSeedFolders(db, SEED_FOLDER_PATHS);
 
-        const baseName = entry.banner.replace(/\.[^.]+$/, '');
-        const stored: Record<string, string> = {};
-        for (const width of BANNER_VARIANT_WIDTHS) {
-          const variantPath = path.join(
-            seedDir,
-            'banners',
-            `${baseName}-${width}w.webp`,
+    let created = 0;
+    let skipped = 0;
+    let bannersBackfilled = 0;
+    let filed = 0;
+
+    for (const entry of entries) {
+      const title = entry.title.trim();
+      const folderPath = SEED_NOTEBOOK_FOLDERS[title];
+      const folderId = folderPath ? (folderIds.get(folderPath) ?? null) : null;
+      if (folderPath && !folderId) {
+        throw new Error(`Seed folder not found for "${title}": ${folderPath}`);
+      }
+
+      const [existing] = await db
+        .select({
+          id: notebooks.id,
+          folderId: notebooks.folderId,
+          banner: notebooks.banner,
+          bannerVariants: notebooks.bannerVariants,
+        })
+        .from(notebooks)
+        .where(eq(notebooks.title, title))
+        .limit(1);
+
+      let bannerKey: string | null = null;
+      let variantKeys: {
+        w240?: string;
+        w480?: string;
+        w960?: string;
+        w1920?: string;
+      } | null = null;
+      if (entry.banner) {
+        const bannerPath = path.join(seedDir, 'banners', entry.banner);
+        if (!fs.existsSync(bannerPath)) {
+          console.warn(
+            `Banner not found for "${title}": ${entry.banner} (skipping banner)`,
           );
-          if (!fs.existsSync(variantPath)) continue;
-          const variantKey = `banners/${sha256}-${width}w.webp`;
+        } else {
+          const bytes = fs.readFileSync(bannerPath);
+          const sha256 = crypto
+            .createHash('sha256')
+            .update(bytes)
+            .digest('hex');
+          const ext = path.extname(entry.banner).toLowerCase() || '.jpg';
+          bannerKey = `banners/${sha256}${ext}`;
           await storage.putObject({
-            key: variantKey,
-            body: fs.readFileSync(variantPath),
-            contentType: 'image/webp',
+            key: bannerKey,
+            body: bytes,
+            contentType:
+              BANNER_CONTENT_TYPES[ext] ?? 'application/octet-stream',
           });
-          stored[`w${width}`] = variantKey;
+
+          const baseName = entry.banner.replace(/\.[^.]+$/, '');
+          const stored: Record<string, string> = {};
+          for (const width of BANNER_VARIANT_WIDTHS) {
+            const variantPath = path.join(
+              seedDir,
+              'banners',
+              `${baseName}-${width}w.webp`,
+            );
+            if (!fs.existsSync(variantPath)) continue;
+            const variantKey = `banners/${sha256}-${width}w.webp`;
+            await storage.putObject({
+              key: variantKey,
+              body: fs.readFileSync(variantPath),
+              contentType: 'image/webp',
+            });
+            stored[`w${width}`] = variantKey;
+          }
+          if (Object.keys(stored).length > 0) {
+            variantKeys = stored;
+          }
         }
-        if (Object.keys(stored).length > 0) {
-          variantKeys = stored;
+      }
+
+      if (!existing) {
+        await db.insert(notebooks).values({
+          title: title.slice(0, 200),
+          description: entry.description.trim().slice(0, 500),
+          icon: entry.icon.trim().slice(0, 50) || 'notebook',
+          folderId,
+          banner: bannerKey,
+          bannerVariants: variantKeys,
+        });
+        created++;
+        console.log(`Seeded notebook "${title}"`);
+      } else {
+        const missingVariant = variantKeys
+          ? Object.entries(variantKeys).some(
+              ([key, value]) => value && !existing.bannerVariants?.[key],
+            )
+          : false;
+        if (
+          bannerKey &&
+          (!existing.banner || !existing.bannerVariants || missingVariant)
+        ) {
+          await db
+            .update(notebooks)
+            .set({ banner: bannerKey, bannerVariants: variantKeys })
+            .where(eq(notebooks.id, existing.id));
+          bannersBackfilled++;
         }
+        if (folderId && existing.folderId === null) {
+          await db
+            .update(notebooks)
+            .set({ folderId })
+            .where(eq(notebooks.id, existing.id));
+          filed++;
+        }
+        skipped++;
       }
     }
 
-    if (!existing) {
-      await db.insert(notebooks).values({
-        title: title.slice(0, 200),
-        description: entry.description.trim().slice(0, 500),
-        icon: entry.icon.trim().slice(0, 50) || 'notebook',
-        folderId,
-        banner: bannerKey,
-        bannerVariants: variantKeys,
-      });
-      created++;
-      console.log(`Seeded notebook "${title}"`);
-    } else {
-      const missingVariant = variantKeys
-        ? Object.entries(variantKeys).some(
-            ([key, value]) => value && !existing.bannerVariants?.[key],
-          )
-        : false;
-      if (
-        bannerKey &&
-        (!existing.banner || !existing.bannerVariants || missingVariant)
-      ) {
-        await db
-          .update(notebooks)
-          .set({ banner: bannerKey, bannerVariants: variantKeys })
-          .where(eq(notebooks.id, existing.id));
-        bannersBackfilled++;
-      }
-      if (folderId && existing.folderId === null) {
-        await db
-          .update(notebooks)
-          .set({ folderId })
-          .where(eq(notebooks.id, existing.id));
-        filed++;
-      }
-      skipped++;
-    }
+    await client.query("INSERT INTO public.seed_state (id) VALUES ('initial')");
+    await client.query('COMMIT');
+    console.log(
+      `Seed complete: ${created} created, ${skipped} already existed, ${bannersBackfilled} banners backfilled, ${filed} notebooks filed into folders.`,
+    );
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+    await pool.end();
   }
-
-  await pool.end();
-  console.log(
-    `Seed complete: ${created} created, ${skipped} already existed, ${bannersBackfilled} banners backfilled, ${filed} notebooks filed into folders.`,
-  );
 }
 
 main().catch((err) => {
