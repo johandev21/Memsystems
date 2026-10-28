@@ -9,7 +9,6 @@ import {
   ContextMenuTrigger,
 } from "@/shared/components/ui/context-menu";
 import { EmptyState } from "@/shared/components/ui/empty-state";
-import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import type { FolderDTO } from "../../types/folder.types";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
@@ -315,9 +314,9 @@ function TreeContent({ isPrototype }: { isPrototype: boolean }) {
             <TreeEmptyState isPrototype={isPrototype} />
           )
         ) : (
-          <ScrollArea className="h-full">
+          <div className="native-scrollbar h-full overflow-auto">
             <TreeBranchList />
-          </ScrollArea>
+          </div>
         )}
       </ContextMenuTrigger>
     </ContextMenu>
@@ -355,7 +354,7 @@ function TreeBranchList() {
       data-slot="study-materials-tree-content"
       role="tree"
       aria-label={t("tree.ariaLabel")}
-      className="flex min-h-full min-w-0 flex-col gap-0.5 p-2"
+      className="flex min-h-full w-max min-w-full flex-col gap-0.5 p-2"
     >
       {tree.map((node) => (
         <Branch key={node.id} node={node} depth={0} />

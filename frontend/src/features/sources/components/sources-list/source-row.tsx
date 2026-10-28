@@ -287,7 +287,7 @@ function SourceRowText({
         <HighlightMatch
           text={sourceDisplayTitle(source)}
           query={searchQuery}
-          className="min-w-0 flex-1 truncate leading-none"
+          className="flex-1 whitespace-nowrap leading-none"
         />
       )}
       {statusText && (

@@ -245,7 +245,7 @@ function TreeRowLabel({ node, isRenaming }: { node: TreeNode; isRenaming: boolea
     );
   }
   return (
-    <span className="min-w-0 flex-1 truncate leading-none" title={node.name}>
+    <span className="flex-1 whitespace-nowrap leading-none" title={node.name}>
       <HighlightMatch text={node.name} query={controller.searchQuery} />
     </span>
   );

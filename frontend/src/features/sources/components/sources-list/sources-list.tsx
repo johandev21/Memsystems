@@ -229,7 +229,7 @@ export const SourcesList = memo(function SourcesList({
                 key={row.node.id}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                className="absolute top-0 left-0 w-full translate-y-(--virtual-start)"
+                className="absolute top-0 left-0 w-full min-w-max translate-y-(--virtual-start)"
                 style={{ "--virtual-start": `${virtualRow.start}px` } as React.CSSProperties}
               >
                 <SourcesTreeNodeRow node={row.node} depth={row.depth} {...branchProps} />
@@ -247,7 +247,7 @@ export const SourcesList = memo(function SourcesList({
       ref={registerTreeSurface}
       aria-label={t("panels.sources", "Sources")}
       data-size="sm"
-      className={cn(treeVariants({ size: "sm" }), "flex flex-col gap-0.5")}
+      className={cn(treeVariants({ size: "sm" }), "flex w-max min-w-full flex-col gap-0.5")}
     >
       {filteredTree.map((node) => (
         <SourcesTreeBranch key={node.id} node={node} depth={0} {...branchProps} />

@@ -78,6 +78,19 @@
 }
 
 /* Native scroll containers match the compact shadcn ScrollArea treatment. */
+.native-scrollbar {
+  scrollbar-color: auto;
+  scrollbar-width: auto;
+}
+
+.native-scrollbar::-webkit-scrollbar,
+.native-scrollbar::-webkit-scrollbar-track,
+.native-scrollbar::-webkit-scrollbar-thumb,
+.native-scrollbar::-webkit-scrollbar-button,
+.native-scrollbar::-webkit-scrollbar-corner {
+  all: revert;
+}
+
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;

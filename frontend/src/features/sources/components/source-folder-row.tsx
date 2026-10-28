@@ -170,7 +170,7 @@ export function SourceFolderRow({
         <HighlightMatch
           text={folder.name}
           query={searchQuery}
-          className="min-w-0 flex-1 truncate leading-none"
+          className="flex-1 whitespace-nowrap leading-none"
         />
       )}
     </div>

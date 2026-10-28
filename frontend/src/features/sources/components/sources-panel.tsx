@@ -245,7 +245,7 @@ function DesktopSourcesPanel({
             <ContextMenuTrigger
               ref={scrollElementRef}
               data-slot="sources-panel-content"
-              className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
+              className="native-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-auto p-2"
             >
               {pendingUploads.map((upload) => (
                 <PendingUploadRow key={upload.id} upload={upload} onCancel={onCancelPendingUpload} />
