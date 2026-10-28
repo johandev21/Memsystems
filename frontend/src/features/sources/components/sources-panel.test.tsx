@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
@@ -1099,6 +1099,55 @@ describe("SourcesPanel with Source Folders (#104)", () => {
       expect(screen.getByRole("tree").contains(virtualWindow)).toBe(true);
       // 30 visible rows × 40px measured rows
       expect(virtualWindow.style.getPropertyValue("--virtual-total")).toBe("1200px");
+    });
+
+    it("retains virtual row sizes when the panel is hidden and reopened", async () => {
+      const observers: Array<{ callback: ResizeObserverCallback; elements: Set<Element> }> = [];
+      class TestResizeObserver {
+        private observer: (typeof observers)[number];
+        constructor(callback: ResizeObserverCallback) {
+          this.observer = { callback, elements: new Set() };
+          observers.push(this.observer);
+        }
+        observe(element: Element) { this.observer.elements.add(element); }
+        unobserve(element: Element) { this.observer.elements.delete(element); }
+        disconnect() { this.observer.elements.clear(); }
+      }
+      vi.stubGlobal("ResizeObserver", TestResizeObserver);
+      vi.spyOn(window.HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(40);
+      vi.spyOn(window.HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(800);
+      mockSourcesFetch([], Array.from({ length: 30 }, (_, i) =>
+        makeSource({ id: `s-${i}`, title: `Doc ${i}` }),
+      ));
+      const client = createTestClient();
+      const view = (collapsed: boolean) => (
+        <QueryClientProvider client={client}>
+          <SourcesPanel notebookId={notebookId} onSelectSource={vi.fn()} collapsed={collapsed} />
+        </QueryClientProvider>
+      );
+      try {
+        const { rerender } = render(view(false));
+        await waitFor(() => expect(screen.getAllByRole("treeitem").length).toBeGreaterThan(0));
+        const windowElement = document.querySelector('[data-slot="sources-tree-virtual-window"]') as HTMLElement;
+        expect(windowElement.style.getPropertyValue("--virtual-total")).toBe("1200px");
+        rerender(view(true));
+        let measuredRows = 0;
+        act(() => {
+          for (const observer of observers) {
+            const entries = [...observer.elements]
+              .filter((element) => element.hasAttribute("data-index"))
+              .map((target) => ({ target, borderBoxSize: [{ blockSize: 0, inlineSize: 0 }] }) as unknown as ResizeObserverEntry);
+            measuredRows += entries.length;
+            if (entries.length) observer.callback(entries, {} as ResizeObserver);
+          }
+        });
+        expect(measuredRows).toBeGreaterThan(0);
+        rerender(view(false));
+        expect(windowElement.style.getPropertyValue("--virtual-total")).toBe("1200px");
+        expect(screen.getAllByRole("treeitem").length).toBeGreaterThan(0);
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
   });
 });

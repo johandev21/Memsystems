@@ -250,7 +250,7 @@ function DesktopSourcesPanel({
               {pendingUploads.map((upload) => (
                 <PendingUploadRow key={upload.id} upload={upload} onCancel={onCancelPendingUpload} />
               ))}
-              <SourcesList {...sourceListProps} />
+              <SourcesList {...sourceListProps} collapsed={Boolean(collapsed)} />
             </ContextMenuTrigger>
             <ContextMenuContent className="min-w-48">
               <ContextMenuGroup>

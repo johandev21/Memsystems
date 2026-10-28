@@ -31,6 +31,7 @@ export interface SourcesListProps {
   isPending: boolean;
   isError: boolean;
   hasNoSources: boolean;
+  collapsed?: boolean;
   scrollElement?: HTMLDivElement | null;
   onSelectSource: (id: string) => void;
   onDelete: (source: Source) => void;
@@ -70,6 +71,7 @@ export const SourcesList = memo(function SourcesList({
   isPending,
   isError,
   hasNoSources,
+  collapsed = false,
   scrollElement,
   onSelectSource,
   onDelete,
@@ -123,6 +125,7 @@ export const SourcesList = memo(function SourcesList({
     count: flatRows.length,
     getScrollElement: () => scrollElement ?? null,
     estimateSize: () => 24,
+    useCachedMeasurements: collapsed,
     overscan: 5,
     getItemKey: (idx) => flatRows[idx]?.node.id ?? idx,
     enabled: isVirtualized,
@@ -264,6 +267,7 @@ function areSourcesListPropsEqual(prev: SourcesListProps, next: SourcesListProps
     prev.isPending === next.isPending &&
     prev.isError === next.isError &&
     prev.hasNoSources === next.hasNoSources &&
+    prev.collapsed === next.collapsed &&
     prev.deletingId === next.deletingId &&
     prev.retryingId === next.retryingId &&
     prev.cancellingId === next.cancellingId &&
