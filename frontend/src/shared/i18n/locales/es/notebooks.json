@@ -206,13 +206,18 @@
     "failedToGenerate": "No se pudo generar {{kind}}",
     "generating": "Generando {{kind}}...",
     "generationFailed": "La generación falló",
+    "audioOverview": {
+      "writing_script": "Redactando el guion del resumen…",
+      "synthesizing_audio": "Creando el audio…"
+    },
     "newMaterial": "Nuevo material de estudio",
     "resources": {
       "flashcards": "Tarjetas",
       "mindMap": "Mapa mental",
       "quiz": "Cuestionario",
       "roadmap": "Ruta de aprendizaje",
-      "slides": "Diapositivas"
+      "slides": "Diapositivas",
+      "audioOverview": "Resumen de audio"
     },
     "tooltipGenerating": "{{label}} (Generando...)"
   },

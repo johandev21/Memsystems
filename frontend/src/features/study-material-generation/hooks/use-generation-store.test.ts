@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import {
+  AUDIO_OVERVIEW_STALL_TIMEOUT_MS,
   GENERATION_ERROR_AUTO_DISMISS_MS,
   GENERATION_STALL_TIMEOUT_MS,
   useGenerationStore,
@@ -58,6 +59,16 @@ describe("generation startup", () => {
       .getState()
       .startBackgroundGeneration("notebook-1", input, new QueryClient());
     expect(toast.error).toHaveBeenCalledExactlyOnceWith("Generation failed: Failed to fetch");
+  });
+
+  it("shows Kokoro setup guidance when speech synthesis fails", async () => {
+    const error = JSON.stringify({ code: "audio_synthesis_failed", error: "Kokoro unavailable" });
+    const body = JSON.stringify({ error });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, {
+      headers: { "X-Request-Id": "request-audio" },
+    })));
+    await useGenerationStore.getState().startBackgroundGeneration("notebook-1", input, new QueryClient());
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Kokoro runtime")));
   });
 
   it("still detects a successful response missing its request ID", async () => {
@@ -164,5 +175,30 @@ describe("generation stall timeout", () => {
 
     await vi.advanceTimersByTimeAsync(GENERATION_ERROR_AUTO_DISMISS_MS);
     expect(useGenerationStore.getState().generations["request-stall"]).toBeUndefined();
+  });
+
+  it("allows long audio synthesis to finish before reporting a stalled generation", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(new ReadableStream({}), { headers: { "X-Request-Id": "request-audio-stall" } }),
+      ),
+    );
+
+    await useGenerationStore.getState().startBackgroundGeneration(
+      "notebook-1",
+      { ...input, kind: "audio_overview", audioOverviewOptions: {
+        format: "briefing", length: "extended", audience: "some_background",
+      } },
+      new QueryClient(),
+    );
+    expect(useGenerationStore.getState().generations["request-audio-stall"]?.status).toBe("streaming");
+
+    await vi.advanceTimersByTimeAsync(AUDIO_OVERVIEW_STALL_TIMEOUT_MS - GENERATION_STALL_TIMEOUT_MS);
+    expect(useGenerationStore.getState().generations["request-audio-stall"]?.status).toBe("streaming");
+
+    await vi.advanceTimersByTimeAsync(GENERATION_STALL_TIMEOUT_MS);
+    expect(useGenerationStore.getState().generations["request-audio-stall"]?.status).toBe("error");
   });
 });

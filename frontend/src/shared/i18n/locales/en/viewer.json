@@ -42,14 +42,16 @@
     "quiz": "Quiz",
     "roadmap": "Roadmap",
     "simple_flashcard": "Flashcards",
-    "slides": "Slides"
+    "slides": "Slides",
+    "audio_overview": "Audio Overview"
   },
   "kindsPlural": {
     "mind_map": "Mind Maps",
     "quiz": "Quizzes",
     "roadmap": "Roadmaps",
     "simple_flashcard": "Flashcards",
-    "slides": "Slides"
+    "slides": "Slides",
+    "audio_overview": "Audio Overviews"
   },
   "mindMap": {
     "center": "Center selected node",
@@ -156,5 +158,38 @@
     "studyInChat": "Study this slide in chat",
     "unavailableAlt": "Slide {{number}} unavailable: {{title}}"
   },
-  "unsupportedMaterial": "Unsupported material type"
+  "unsupportedMaterial": "Unsupported material type",
+  "audioOverview": {
+    "playerLabel": "Audio player for {{title}}",
+    "playbackError": "Audio playback failed. Try again or regenerate this overview.",
+    "transcript": "Transcript",
+    "outline": "Overview",
+    "citations": "Audio overview citations",
+    "regenerate": "Regenerate overview",
+    "regenerating": "Generating replacement. Your current overview remains available until it is ready.",
+    "writing_script": "Writing the replacement script. Your current overview remains available.",
+    "synthesizing_audio": "Creating replacement audio. Your current overview remains available.",
+    "regenerateError": "Could not regenerate this overview. Your current version is unchanged.",
+    "cancel": "Cancel generation",
+    "dismiss": "Keep current overview",
+    "briefLabel": "Focus and instructions",
+    "format": {
+      "label": "Format",
+      "briefing": "Briefing",
+      "deep_dive": "Deep dive"
+    },
+    "length": {
+      "label": "Length",
+      "short": "Short (2–3 min)",
+      "standard": "Standard (5–7 min)",
+      "extended": "Extended (10–12 min)",
+      "estimate": "Listening times are estimates."
+    },
+    "audience": {
+      "label": "Audience",
+      "new_to_topic": "New to the topic",
+      "some_background": "Some background",
+      "advanced": "Advanced"
+    }
+  }
 }

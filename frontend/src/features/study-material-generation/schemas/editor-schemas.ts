@@ -151,6 +151,8 @@ export function createEmptyStudyMaterial(kind: StudyMaterialKind): unknown {
           },
         ],
       };
+    case "audio_overview":
+      return { title: "Audio Overview", transcript: "", citations: [] };
   }
 }
 

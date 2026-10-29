@@ -1,9 +1,14 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import { Output, parsePartialJson, streamText, type LanguageModel } from 'ai';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { z } from 'zod';
 import * as appSchema from '../../../database/schema';
-import { studyMaterials } from '../../../database/schema';
+import {
+  generationRequests,
+  studyMaterialAudio,
+  studyMaterials,
+} from '../../../database/schema';
 import { AiService } from '../../ai/ai.service';
 import type { GatewayRequestOptions } from '../../ai/providers/gateway.provider';
 import { toClientStreamError } from '../../ai/stream-error';
@@ -25,6 +30,8 @@ import type {
 } from './prompts';
 import {
   MindMapContent,
+  AudioOverviewContent,
+  assertAudioOverviewScriptLength,
   QuizContent,
   RoadmapContent,
   SimpleFlashcardContent,
@@ -40,6 +47,7 @@ import {
   repairJsonText,
 } from '../content/content-normalizer';
 import { withSlidePreviews } from '../slides/slides-preview';
+import { KokoroSpeechService } from '../audio/kokoro-speech.service';
 import {
   GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD,
   GENERAL_KNOWLEDGE_SUPPLEMENT_LABEL,
@@ -52,9 +60,11 @@ export interface StreamResult {
   materialId: string;
 }
 
-export type StreamInput = Omit<StartGenerationInput, 'sourceIds'>;
+export type StreamInput = StartGenerationInput;
 
 const NO_OUTPUT_GUARD_MS = 90_000;
+const MAX_GENERATED_AUDIO_BYTES = 64 * 1024 * 1024;
+const MAX_GENERATED_AUDIO_SECONDS = 13 * 60;
 
 @Injectable()
 export class StreamHandler {
@@ -64,6 +74,7 @@ export class StreamHandler {
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly aiService: AiService,
+    @Optional() private readonly kokoroSpeech?: KokoroSpeechService,
   ) {}
 
   createStream(
@@ -81,7 +92,10 @@ export class StreamHandler {
       promptTemplate.instructions +
       languageDirective(input.language) +
       citationDirective(hasEvidence) +
-      groundingDirective(input.groundingMode, hasEvidence);
+      groundingDirective(
+        input.kind === 'audio_overview' ? 'strict' : input.groundingMode,
+        hasEvidence,
+      );
     const formatted = formatGroundedSourceText(grounding, {
       includeSourceId: false,
       kind: input.kind,
@@ -100,6 +114,7 @@ export class StreamHandler {
       roadmapOptions: input.roadmapOptions,
       mindMapOptions: input.mindMapOptions,
       slidesOptions: input.slidesOptions,
+      audioOverviewOptions: input.audioOverviewOptions,
     });
     const schema = this.getContentSchema(input.kind);
     const options = buildOptions(input);
@@ -143,6 +158,11 @@ export class StreamHandler {
             new TextEncoder().encode(`${JSON.stringify(payload)}\n`),
           );
         };
+        const emitStage = (stage: 'writing_script' | 'synthesizing_audio') => {
+          controller.enqueue(
+            new TextEncoder().encode(`${JSON.stringify({ stage })}\n`),
+          );
+        };
         const startNoOutputGuard = () => {
           if (firstFrameEmitted || guardTimer !== undefined) return;
           guardTimer = setTimeout(() => {
@@ -171,6 +191,7 @@ export class StreamHandler {
           model = provider.createModel(modelId);
           requestOptions = this.aiService.getGatewayRequestOptions();
 
+          if (input.kind === 'audio_overview') emitStage('writing_script');
           startNoOutputGuard();
           const result = streamText({
             model,
@@ -186,8 +207,16 @@ export class StreamHandler {
           }
 
           const finalContent: unknown = await result.output;
-          const normalized = normalizeContent(input.kind, finalContent);
+          if (guardTimer !== undefined) {
+            clearTimeout(guardTimer);
+            guardTimer = undefined;
+          }
+          const normalized = normalizeAudioContent(
+            input.kind,
+            normalizeContent(input.kind, finalContent),
+          );
           const validated = validateContent(input.kind, normalized);
+          assertAudioLength(input, validated);
           const contentToStore =
             input.kind === 'quiz'
               ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)
@@ -204,17 +233,18 @@ export class StreamHandler {
             return;
           }
 
-          const [inserted] = await this.db
-            .insert(studyMaterials)
-            .values({
-              notebookId,
-              kind: input.kind,
-              title: generateTitle(input.kind, normalized),
-              content: storable,
-              options,
-              folderId: input.folderId ?? null,
-            })
-            .returning();
+          const inserted = await this.saveMaterial(
+            notebookId,
+            input,
+            normalized,
+            storable,
+            options,
+            requestId,
+            abortSignal,
+            input.kind === 'audio_overview'
+              ? () => emitStage('synthesizing_audio')
+              : undefined,
+          );
 
           cleanup();
           controller.enqueue(
@@ -240,6 +270,18 @@ export class StreamHandler {
           if (abortSignal?.aborted || isAbortError(nativeError)) {
             cleanup();
             controller.close();
+            return;
+          }
+          if (nativeError instanceof AudioGenerationError) {
+            cleanup();
+            controller.error(nativeError);
+            onError(nativeError.message);
+            return;
+          }
+          if (nativeError instanceof AudioScriptLengthError) {
+            cleanup();
+            controller.error(nativeError);
+            onError(nativeError.message);
             return;
           }
           this.logger.warn(
@@ -325,12 +367,13 @@ export class StreamHandler {
               }
             }
 
-            const normalizedContent = normalizeContent(
+            const normalizedContent = normalizeAudioContent(
               input.kind,
-              parsedContent,
+              normalizeContent(input.kind, parsedContent),
             );
 
             const validated = validateContent(input.kind, normalizedContent);
+            assertAudioLength(input, validated);
             const contentToStore =
               input.kind === 'quiz'
                 ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)
@@ -347,17 +390,18 @@ export class StreamHandler {
               return;
             }
 
-            const [inserted] = await this.db
-              .insert(studyMaterials)
-              .values({
-                notebookId,
-                kind: input.kind,
-                title: generateTitle(input.kind, normalizedContent),
-                content: storable,
-                options,
-                folderId: input.folderId ?? null,
-              })
-              .returning();
+            const inserted = await this.saveMaterial(
+              notebookId,
+              input,
+              normalizedContent,
+              storable,
+              options,
+              requestId,
+              abortSignal,
+              input.kind === 'audio_overview'
+                ? () => emitStage('synthesizing_audio')
+                : undefined,
+            );
 
             cleanup();
             controller.enqueue(
@@ -385,17 +429,26 @@ export class StreamHandler {
               controller.close();
               return;
             }
+            if (fallbackError instanceof AudioScriptLengthError) {
+              cleanup();
+              controller.error(fallbackError);
+              onError(fallbackError.message);
+              return;
+            }
             this.logger.error(
               'Generation stream failed on fallback',
               fallbackError,
             );
 
             cleanup();
-            const standardError = new Error(
-              toClientStreamError(fallbackError, {
-                id: input.model ?? 'unknown model',
-              }),
-            );
+            const standardError =
+              fallbackError instanceof AudioGenerationError
+                ? fallbackError
+                : new Error(
+                    toClientStreamError(fallbackError, {
+                      id: input.model ?? 'unknown model',
+                    }),
+                  );
             controller.error(standardError);
             onError(standardError.message);
           }
@@ -404,6 +457,123 @@ export class StreamHandler {
     });
 
     return { stream };
+  }
+
+  private async saveMaterial(
+    notebookId: string,
+    input: StreamInput,
+    normalized: unknown,
+    storable: Record<string, unknown>,
+    options: Record<string, unknown> | null,
+    requestId: string,
+    signal?: AbortSignal,
+    onAudioSynthesisStart?: () => void,
+  ) {
+    const values = {
+      notebookId,
+      kind: input.kind,
+      title: generateTitle(input.kind, normalized),
+      content: storable,
+      options,
+      folderId: input.folderId ?? null,
+    };
+    if (input.kind !== 'audio_overview') {
+      const [inserted] = await this.db
+        .insert(studyMaterials)
+        .values(values)
+        .returning();
+      return inserted;
+    }
+    try {
+      if (!this.kokoroSpeech)
+        throw new Error('Kokoro is not configured. See docs/kokoro-setup.md.');
+      onAudioSynthesisStart?.();
+      const audioContent = storable as {
+        transcript: string;
+        sections?: Array<{ heading: string; text: string }>;
+      };
+      const speechSections = audioContent.sections?.length
+        ? audioContent.sections.map(({ heading, text }) => ({
+            text: `${heading}. ${stripCitationMarkers(text)}`,
+          }))
+        : [{ text: stripCitationMarkers(audioContent.transcript) }];
+      const audio = await this.kokoroSpeech.synthesizeSections(
+        speechSections,
+        input.language ?? 'en',
+        signal,
+      );
+      if (signal?.aborted)
+        throw new DOMException('Generation cancelled', 'AbortError');
+      assertGeneratedWav(audio);
+      return await this.db.transaction(async (tx) => {
+        const [request] = await tx
+          .select({ status: generationRequests.status })
+          .from(generationRequests)
+          .where(eq(generationRequests.id, requestId))
+          .for('update');
+        if (signal?.aborted || request?.status !== 'streaming')
+          throw new DOMException('Generation cancelled', 'AbortError');
+        let inserted: typeof studyMaterials.$inferSelect;
+        if (input.replaceMaterialId) {
+          const [existing] = await tx
+            .select()
+            .from(studyMaterials)
+            .where(eq(studyMaterials.id, input.replaceMaterialId))
+            .for('update');
+          if (
+            !existing ||
+            existing.notebookId !== notebookId ||
+            existing.kind !== 'audio_overview' ||
+            existing.deletedAt
+          )
+            throw new Error(
+              'The Audio Overview selected for replacement is unavailable.',
+            );
+          [inserted] = await tx
+            .update(studyMaterials)
+            .set({
+              title: values.title,
+              content: storable,
+              options,
+            })
+            .where(eq(studyMaterials.id, existing.id))
+            .returning();
+          const [audioRow] = await tx
+            .select({ id: studyMaterialAudio.studyMaterialId })
+            .from(studyMaterialAudio)
+            .where(eq(studyMaterialAudio.studyMaterialId, existing.id));
+          if (audioRow)
+            await tx
+              .update(studyMaterialAudio)
+              .set({ audio, contentType: 'audio/wav' })
+              .where(eq(studyMaterialAudio.studyMaterialId, existing.id));
+          else
+            await tx.insert(studyMaterialAudio).values({
+              studyMaterialId: existing.id,
+              audio,
+              contentType: 'audio/wav',
+            });
+        } else {
+          [inserted] = await tx
+            .insert(studyMaterials)
+            .values(values)
+            .returning();
+          await tx.insert(studyMaterialAudio).values({
+            studyMaterialId: inserted.id,
+            audio,
+            contentType: 'audio/wav',
+          });
+        }
+        if (signal?.aborted)
+          throw new DOMException('Generation cancelled', 'AbortError');
+        return inserted;
+      });
+    } catch (error) {
+      if (isAbortError(error) || signal?.aborted) throw error;
+      throw new AudioGenerationError(
+        error instanceof Error ? error.message : 'Audio synthesis failed.',
+      );
+    }
   }
 
   private prepareStorable(
@@ -415,10 +585,35 @@ export class StreamHandler {
       input.kind === 'slides'
         ? withSlidePreviews(validated as Record<string, unknown>)
         : (validated as Record<string, unknown>);
-    const withCitations = attachGenerationCitations(
-      storable,
-      extractGenerationCitations(storable, grounding.evidence),
-    );
+    if (input.kind === 'audio_overview') {
+      const audio = storable as {
+        sections: Array<{ heading: string; text: string }>;
+      };
+      audio.sections = audio.sections.map((section) => ({
+        ...section,
+        citations: extractGenerationCitations(section, grounding.evidence),
+        text: stripCitationMarkers(section.text),
+      }));
+      (audio as { transcript?: string }).transcript = audio.sections
+        .map((section) => section.text)
+        .join('\n\n');
+    }
+    const audioCitations =
+      input.kind === 'audio_overview'
+        ? (
+            (
+              storable as {
+                sections: Array<{
+                  citations: ReturnType<typeof extractGenerationCitations>;
+                }>;
+              }
+            ).sections ?? []
+          ).flatMap((section) => section.citations)
+        : null;
+    const allCitations =
+      audioCitations ??
+      extractGenerationCitations(storable, grounding.evidence);
+    const withCitations = attachGenerationCitations(storable, allCitations);
     if (input.groundingMode === 'moderate') return withCitations;
     return stripGeneralKnowledgeSupplement(withCitations);
   }
@@ -430,8 +625,51 @@ export class StreamHandler {
       roadmap: RoadmapContent,
       mind_map: MindMapContent,
       slides: SlidesContent,
+      // Citation metadata is attached after generation, not generated by the model.
+      audio_overview: z.object({
+        title: z.string().min(1).max(200),
+        sections: z
+          .array(
+            z.object({
+              heading: z.string().min(1).max(200),
+              text: z.string().min(1).max(30_000),
+            }),
+          )
+          .min(3)
+          .max(30),
+      }),
     };
     return schemas[kind];
+  }
+}
+
+class AudioGenerationError extends Error {
+  constructor(message: string) {
+    super(JSON.stringify({ error: message, code: 'audio_synthesis_failed' }));
+  }
+}
+
+class AudioScriptLengthError extends Error {
+  constructor(message: string) {
+    super(
+      JSON.stringify({ error: message, code: 'audio_script_length_invalid' }),
+    );
+  }
+}
+
+function assertAudioLength(input: StreamInput, content: unknown): void {
+  if (input.kind !== 'audio_overview') return;
+  try {
+    assertAudioOverviewScriptLength(
+      content as z.infer<typeof AudioOverviewContent>,
+      input.audioOverviewOptions?.length ?? 'standard',
+    );
+  } catch (error) {
+    throw new AudioScriptLengthError(
+      error instanceof Error
+        ? error.message
+        : 'Audio Overview length is invalid.',
+    );
   }
 }
 
@@ -440,6 +678,70 @@ function isAbortError(error: unknown): boolean {
     error instanceof Error &&
     (error.name === 'AbortError' || error.name === 'ResponseAborted')
   );
+}
+
+function stripCitationMarkers(text: string): string {
+  return text
+    .replace(/\[ref:[^\]]+\]/gi, '')
+    .replace(/#reference-\d+/gi, '')
+    .replace(/\s+([,.;!?])/g, '$1')
+    .trim();
+}
+
+function assertGeneratedWav(audio: Buffer): void {
+  if (
+    audio.length < 12 ||
+    audio.length > MAX_GENERATED_AUDIO_BYTES ||
+    audio.toString('ascii', 0, 4) !== 'RIFF' ||
+    audio.toString('ascii', 8, 12) !== 'WAVE'
+  ) {
+    throw new Error(
+      'Speech synthesis returned an invalid or oversized WAV file.',
+    );
+  }
+  let byteRate = 0;
+  let dataLength = 0;
+  for (let offset = 12; offset + 8 <= audio.length;) {
+    const chunkId = audio.toString('ascii', offset, offset + 4);
+    const chunkLength = audio.readUInt32LE(offset + 4);
+    const chunkStart = offset + 8;
+    if (chunkLength > audio.length - chunkStart) break;
+    if (chunkId === 'fmt ' && chunkLength >= 16) {
+      byteRate = audio.readUInt32LE(chunkStart + 8);
+    } else if (chunkId === 'data') {
+      dataLength = chunkLength;
+    }
+    offset = chunkStart + chunkLength + (chunkLength % 2);
+  }
+  if (
+    byteRate === 0 ||
+    dataLength === 0 ||
+    dataLength / byteRate > MAX_GENERATED_AUDIO_SECONDS
+  ) {
+    throw new Error(
+      'Speech synthesis returned a WAV with invalid duration metadata.',
+    );
+  }
+}
+
+function normalizeAudioContent(
+  kind: StudyMaterialKind,
+  content: unknown,
+): unknown {
+  if (kind !== 'audio_overview' || !content || typeof content !== 'object')
+    return content;
+  const record = content as Record<string, unknown>;
+  const sections = Array.isArray(record.sections)
+    ? (record.sections as Array<Record<string, unknown>>)
+    : [];
+  return {
+    ...record,
+    sections,
+    transcript: sections
+      .map((section) => (typeof section.text === 'string' ? section.text : ''))
+      .join('\n\n'),
+    citations: [],
+  };
 }
 
 function citationDirective(hasEvidence: boolean): string {
@@ -488,6 +790,8 @@ function baseFallbackSchemaHint(kind: StudyMaterialKind): string {
       return `{"title", "rootId", "nodes": [{"id", "label", "color": "#rrggbb", "position": {"x", "y"}}], "edges": [{"id", "sourceId", "targetId", "label", "directed"}]}. Example: {"title": "Sample Map", "rootId": "n1", "nodes": [{"id": "n1", "label": "Root", "color": "#64748b", "position": {"x": 0, "y": 0}}], "edges": []}`;
     case 'slides':
       return `{"schemaVersion": 2, "title", "design": {"background", "surface", "primary", "secondary", "text", "muted" hex colors}, "slides": [{"id", "role": "content", "title", "elements": []}]}. Example: {"schemaVersion": 2, "title": "Sample Deck", "design": {"background": "#0F172A", "surface": "#1E293B", "primary": "#38BDF8", "secondary": "#818CF8", "text": "#F8FAFC", "muted": "#94A3B8"}, "slides": [{"id": "s1", "role": "content", "title": "Intro", "elements": []}]}`;
+    case 'audio_overview':
+      return `{"title": "A concise title", "sections": [{"heading": "Opening", "text": "Orient the listener and introduce the topic."}, {"heading": "Main idea", "text": "Explain and connect the ideas."}, {"heading": "Wrap-up", "text": "Synthesize the learning."}]}`;
     default:
       return `A JSON object with a "title" string field. Example: {"title": "Sample"}`;
   }
@@ -523,6 +827,18 @@ function buildOptions(input: StreamInput): Record<string, unknown> | null {
       if (input.slidesOptions == null) return null;
       return input.slidesOptions;
     }
+    case 'audio_overview':
+      return {
+        kind: 'audio_overview',
+        ...(input.audioOverviewOptions ?? {
+          format: 'briefing',
+          length: 'standard',
+          audience: 'some_background',
+        }),
+        brief: input.brief,
+        language: input.language ?? 'en',
+        sourceIds: input.sourceIds ?? [],
+      };
     default:
       return null;
   }

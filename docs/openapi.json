@@ -1826,6 +1826,31 @@
         ]
       }
     },
+    "/api/study-materials/{id}/audio": {
+      "get": {
+        "operationId": "StudyMaterialsController_getAudioOverview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Audio Overview Study Material id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Playable WAV audio."
+          }
+        },
+        "summary": "Get Audio Overview WAV",
+        "tags": [
+          "Study Materials"
+        ]
+      }
+    },
     "/api/study-materials/{id}/export": {
       "get": {
         "description": "Builds and downloads a PowerPoint file for a slides Study Material.",
@@ -2287,7 +2312,7 @@
         },
         "responses": {
           "201": {
-            "description": "NDJSON stream of Generation frames. Partial content frames are followed by one terminal `done` or `error` frame.",
+            "description": "NDJSON stream of Generation frames. Audio Overview progress frames may include `stage` (`writing_script` or `synthesizing_audio`); partial content frames are followed by one terminal `done` or `error` frame.",
             "content": {
               "application/x-ndjson": {
                 "schema": {
@@ -3342,9 +3367,10 @@
           "simple_flashcard",
           "roadmap",
           "mind_map",
-          "slides"
+          "slides",
+          "audio_overview"
         ],
-        "description": "The kind of study material: quiz, simple flashcard, roadmap, mind map, or slides."
+        "description": "The kind of study material: quiz, simple flashcard, roadmap, mind map, slides, or audio overview."
       },
       "CreateStudyMaterialDto": {
         "type": "object",

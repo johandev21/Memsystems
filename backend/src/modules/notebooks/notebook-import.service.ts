@@ -9,6 +9,7 @@ import { DRIZZLE } from '../database/database.module';
 import { StorageService } from '../storage/storage.service';
 import { NotebookResponse, NotebooksService } from './notebooks.service';
 import { isGroundingMode, DEFAULT_GROUNDING_MODE } from './grounding-mode';
+import { validateContent } from '../study-materials/content/shapes';
 
 function getExtension(name: string): string {
   const dot = name.lastIndexOf('.');
@@ -141,6 +142,18 @@ interface ExportStudyMaterial {
   content: unknown;
   options?: Record<string, unknown> | null;
   createdAt?: string;
+  audioFile?: string;
+}
+
+const MAX_AUDIO_BYTES = 64 * 1024 * 1024;
+
+function isWav(buffer: Buffer): boolean {
+  return (
+    buffer.length >= 12 &&
+    buffer.length <= MAX_AUDIO_BYTES &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WAVE'
+  );
 }
 
 @Injectable()
@@ -269,6 +282,39 @@ export class NotebookImportService {
       'study-materials/items.json',
       [],
     );
+
+    const audioByMaterialId = new Map<string, Buffer>();
+    for (const sm of smList) {
+      if (sm.kind !== 'audio_overview') continue;
+      try {
+        validateContent(sm.kind, sm.content);
+      } catch {
+        throw new BadRequestError('Invalid Audio Overview content in archive', {
+          messageKey: 'errors.notebooks.import.invalidArchive',
+        });
+      }
+      if (!sm.audioFile || !sm.audioFile.startsWith('blobs/')) {
+        throw new BadRequestError('Audio Overview is missing its WAV file', {
+          messageKey: 'errors.notebooks.import.invalidArchive',
+        });
+      }
+      const audioEntry = zip.file(sm.audioFile);
+      if (!audioEntry) {
+        throw new BadRequestError('Audio Overview is missing its WAV file', {
+          messageKey: 'errors.notebooks.import.invalidArchive',
+        });
+      }
+      const audio = await audioEntry.async('nodebuffer');
+      if (!isWav(audio)) {
+        throw new BadRequestError(
+          'Audio Overview WAV is invalid or too large',
+          {
+            messageKey: 'errors.notebooks.import.invalidArchive',
+          },
+        );
+      }
+      audioByMaterialId.set(sm.id, audio);
+    }
 
     // 5. Verify target folder if provided
     let resolvedFolderId: string | null = null;
@@ -581,6 +627,16 @@ export class NotebookImportService {
         await tx
           .insert(appSchema.studyMaterials)
           .values(smRecords.slice(i, i + 100));
+      }
+
+      for (const [oldId, audio] of audioByMaterialId) {
+        const studyMaterialId = smIdMap.get(oldId);
+        if (!studyMaterialId) continue;
+        await tx.insert(appSchema.studyMaterialAudio).values({
+          studyMaterialId,
+          audio,
+          contentType: 'audio/wav',
+        });
       }
     });
 

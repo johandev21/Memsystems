@@ -13,6 +13,7 @@ import { MindMapView } from "./MindMapView";
 import { QuizView } from "./QuizView";
 import { RoadmapView } from "./RoadmapView";
 import { SlidesView } from "./SlidesView";
+import { AudioOverviewView } from "./AudioOverviewView";
 
 export interface MaterialContentRendererProps {
   material: StudyMaterialDTO;
@@ -67,6 +68,17 @@ export function MaterialContentRenderer({
           materialId={material.id}
           materialTitle={material.title}
           content={content as SlidesEditorContentType}
+        />
+      );
+      break;
+    case "audio_overview":
+      view = (
+        <AudioOverviewView
+          materialId={material.id}
+          notebookId={material.notebookId}
+          audioVersion={material.updatedAt}
+          options={material.options}
+          content={content as Parameters<typeof AudioOverviewView>[0]["content"]}
         />
       );
       break;

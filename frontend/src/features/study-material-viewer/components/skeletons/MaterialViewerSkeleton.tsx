@@ -24,6 +24,9 @@ export function MaterialViewerSkeleton({ kind }: MaterialViewerSkeletonProps) {
     case "slides":
       label = t("skeleton.kind.slides");
       break;
+    case "audio_overview":
+      label = t("kinds.audio_overview");
+      break;
     case "roadmap":
       label = t("skeleton.kind.roadmap");
       break;

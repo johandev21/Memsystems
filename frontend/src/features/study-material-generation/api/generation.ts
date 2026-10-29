@@ -18,7 +18,15 @@ export interface MindMapGenerationOptions {
 
 export interface SlidesGenerationOptions {
   slideCount: number;
-  theme: "dark" | "light" | "accent" | "editorial" | "academic" | "technical" | "warm" | "auto";
+  theme:
+    | "dark"
+    | "light"
+    | "accent"
+    | "editorial"
+    | "academic"
+    | "technical"
+    | "warm"
+    | "auto";
   detailLevel: "basic" | "detailed" | "auto";
 }
 
@@ -28,17 +36,24 @@ export interface StartGenerationInput {
   sourceIds: string[];
   folderId?: string | null;
   model?: string;
-  groundingMode?: 'strict' | 'moderate' | 'free';
+  groundingMode?: "strict" | "moderate" | "free";
   questionCount?: number;
   difficulty?: "easy" | "medium" | "hard" | "auto";
   roadmapOptions?: RoadmapGenerationOptions;
   mindMapOptions?: MindMapGenerationOptions;
   slidesOptions?: SlidesGenerationOptions;
   language?: string;
+  audioOverviewOptions?: {
+    format: "briefing" | "deep_dive";
+    length: "short" | "standard" | "extended";
+    audience: "new_to_topic" | "some_background" | "advanced";
+  };
+  replaceMaterialId?: string;
 }
 
 export type GenerationEvent =
   | { type: "partial"; content: unknown }
+  | { type: "stage"; stage: "writing_script" | "synthesizing_audio" }
   | { type: "done"; requestId: string; materialId?: string }
   | { type: "error"; error: Error };
 
@@ -63,18 +78,25 @@ export function startGeneration(
       let message = `Generation failed (${response.status})`;
       try {
         const data: unknown = await response.json();
-        if (data && typeof data === "object" && "error" in data && typeof data.error === "string") {
+        if (
+          data &&
+          typeof data === "object" &&
+          "error" in data &&
+          typeof data.error === "string"
+        ) {
           message = data.error;
         }
-      } catch {
-      }
+      } catch {}
       throw new Error(message);
     }
     return response;
   });
 
   const requestIdPromise = promise.then(
-    (res) => res.headers.get("X-Request-Id") ?? res.headers.get("X-Generation-Request-Id") ?? "",
+    (res) =>
+      res.headers.get("X-Request-Id") ??
+      res.headers.get("X-Generation-Request-Id") ??
+      "",
   );
 
   const stream: AsyncIterable<GenerationEvent> = {
@@ -140,8 +162,7 @@ async function* iteratorFrom(
     try {
       await reader.cancel().catch(() => {});
       reader.releaseLock();
-    } catch {
-    }
+    } catch {}
   }
 }
 
@@ -177,12 +198,29 @@ function parseLine(line: string): GenerationEvent {
       error: new Error((parsed as { error: string }).error),
     };
   }
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    ((parsed as { stage?: unknown }).stage === "writing_script" ||
+      (parsed as { stage?: unknown }).stage === "synthesizing_audio")
+  ) {
+    return {
+      type: "stage",
+      stage: (parsed as { stage: "writing_script" | "synthesizing_audio" })
+        .stage,
+    };
+  }
   return { type: "partial", content: parsed };
 }
 
-export async function cancelGeneration(notebookId: string, requestId: string): Promise<void> {
+export async function cancelGeneration(
+  notebookId: string,
+  requestId: string,
+): Promise<void> {
   const response = await fetch(
-    getApiUrl(`/api/notebooks/${notebookId}/generation-requests/${requestId}/cancel`),
+    getApiUrl(
+      `/api/notebooks/${notebookId}/generation-requests/${requestId}/cancel`,
+    ),
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

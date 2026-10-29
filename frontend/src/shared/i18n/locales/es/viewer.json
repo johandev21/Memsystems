@@ -42,14 +42,16 @@
     "quiz": "Cuestionario",
     "roadmap": "Ruta de aprendizaje",
     "simple_flashcard": "Tarjetas",
-    "slides": "Diapositivas"
+    "slides": "Diapositivas",
+    "audio_overview": "Resumen de audio"
   },
   "kindsPlural": {
     "mind_map": "Mapas mentales",
     "quiz": "Cuestionarios",
     "roadmap": "Rutas de aprendizaje",
     "simple_flashcard": "Tarjetas",
-    "slides": "Diapositivas"
+    "slides": "Diapositivas",
+    "audio_overview": "Resúmenes de audio"
   },
   "mindMap": {
     "center": "Centrar el nodo seleccionado",
@@ -157,5 +159,38 @@
     "studyInChat": "Estudiar esta diapositiva en el chat",
     "unavailableAlt": "Diapositiva {{number}} no disponible: {{title}}"
   },
-  "unsupportedMaterial": "Tipo de material no compatible"
+  "unsupportedMaterial": "Tipo de material no compatible",
+  "audioOverview": {
+    "playerLabel": "Reproductor de audio de {{title}}",
+    "playbackError": "No se pudo reproducir el audio. Inténtalo de nuevo o vuelve a generar este resumen.",
+    "transcript": "Transcripción",
+    "outline": "Esquema",
+    "citations": "Citas del resumen de audio",
+    "regenerate": "Volver a generar el resumen",
+    "regenerating": "Generando reemplazo. El resumen actual seguirá disponible hasta que esté listo.",
+    "writing_script": "Redactando el guion de reemplazo. El resumen actual sigue disponible.",
+    "synthesizing_audio": "Creando el audio de reemplazo. El resumen actual sigue disponible.",
+    "regenerateError": "No se pudo volver a generar el resumen. La versión actual no ha cambiado.",
+    "cancel": "Cancelar generación",
+    "dismiss": "Conservar resumen actual",
+    "briefLabel": "Enfoque e instrucciones",
+    "format": {
+      "label": "Formato",
+      "briefing": "Resumen",
+      "deep_dive": "Análisis profundo"
+    },
+    "length": {
+      "label": "Duración",
+      "short": "Corto (2–3 min)",
+      "standard": "Estándar (5–7 min)",
+      "extended": "Extendido (10–12 min)",
+      "estimate": "Los tiempos de escucha son estimados."
+    },
+    "audience": {
+      "label": "Público",
+      "new_to_topic": "Sin conocimientos previos",
+      "some_background": "Con algunos conocimientos",
+      "advanced": "Avanzado"
+    }
+  }
 }

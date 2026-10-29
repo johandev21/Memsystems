@@ -12,6 +12,7 @@ import {
   sourceSegments,
   sourceVersions,
   studyMaterialFolders,
+  studyMaterialAudio,
   studyMaterials,
 } from '../../database/schema';
 import { NotFoundError } from '../../common/errors/domain-error';
@@ -155,6 +156,26 @@ export class NotebookExportService {
       )
       .orderBy(desc(studyMaterials.createdAt));
 
+    const audioMaterialIds = smList
+      .filter((sm) => sm.kind === 'audio_overview')
+      .map((sm) => sm.id);
+    const audioRows = audioMaterialIds.length
+      ? await this.db
+          .select()
+          .from(studyMaterialAudio)
+          .where(inArray(studyMaterialAudio.studyMaterialId, audioMaterialIds))
+      : [];
+    const audioByMaterialId = new Map(
+      audioRows.map((row) => [row.studyMaterialId, row]),
+    );
+    for (const id of audioMaterialIds) {
+      if (!audioByMaterialId.has(id)) {
+        throw new NotFoundError('Study material audio', {
+          messageKey: 'errors.studyMaterials.studyMaterialNotFound',
+        });
+      }
+    }
+
     // 2. Prepare blob file mappings
     const blobEntries: { storageKey: string; archivePath: string }[] = [];
 
@@ -285,9 +306,19 @@ export class NotebookExportService {
     archive.append(JSON.stringify(smFoldersList, null, 2), {
       name: 'study-materials/folders.json',
     });
-    archive.append(JSON.stringify(smList, null, 2), {
+    const exportedStudyMaterials = smList.map((sm) => ({
+      ...sm,
+      ...(sm.kind === 'audio_overview'
+        ? { audioFile: `blobs/study-material-${sm.id}.wav` }
+        : {}),
+    }));
+    archive.append(JSON.stringify(exportedStudyMaterials, null, 2), {
       name: 'study-materials/items.json',
     });
+
+    for (const [id, row] of audioByMaterialId) {
+      archive.append(row.audio, { name: `blobs/study-material-${id}.wav` });
+    }
 
     // 5. Append binary blobs safely
     for (const blob of blobEntries) {

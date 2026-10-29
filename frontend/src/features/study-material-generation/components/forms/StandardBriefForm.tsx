@@ -5,10 +5,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { FolderPicker } from "./folder-picker";
 import { SourceMultiSelect } from "./source-multi-select";
-import {
-  canSubmitBrief,
-  useNotebookGroundingMode,
-} from "@/features/notebooks";
+import { canSubmitBrief, useNotebookGroundingMode } from "@/features/notebooks";
 import { kindLabelKey } from "../../kind-label";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
@@ -33,12 +30,9 @@ export function StandardBriefForm({
   const showFreeHint = groundingMode === "free" && !hasSources;
 
   const label = t(kindLabelKey(kind));
-  const canSubmit = canSubmitBrief(
-    groundingMode,
-    hasSources,
-    value.brief.trim().length > 0,
-    disabled,
-  );
+  const canSubmit =
+    canSubmitBrief(groundingMode, hasSources, value.brief.trim().length > 0, disabled) &&
+    (kind !== "audio_overview" || hasSources);
 
   return (
     <div className="min-w-0 space-y-4">
@@ -57,6 +51,56 @@ export function StandardBriefForm({
         />
       </div>
 
+      {kind === "audio_overview" && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(["format", "length", "audience"] as const).map((field) => {
+            const options =
+              field === "format"
+                ? ["briefing", "deep_dive"]
+                : field === "length"
+                  ? ["short", "standard", "extended"]
+                  : ["new_to_topic", "some_background", "advanced"];
+            const selected =
+              value[field] ??
+              (field === "format"
+                ? "briefing"
+                : field === "length"
+                  ? "standard"
+                  : "some_background");
+            return (
+              <div key={field} className="space-y-1.5">
+                <Label
+                  htmlFor={`audio-${field}`}
+                  className="text-sm font-medium text-text-tertiary"
+                >
+                  {t(`audioOverview.${field}.label`)}
+                </Label>
+                <select
+                  id={`audio-${field}`}
+                  className="h-10 w-full rounded-md border border-surface-border bg-surface-1 px-3 text-sm"
+                  value={selected}
+                  onChange={(event) =>
+                    update({ [field]: event.target.value } as Partial<BriefFormData>)
+                  }
+                  disabled={disabled}
+                >
+                  {options.map((option) => (
+                    <option key={option} value={option}>
+                      {t(`audioOverview.${field}.${option}` as never)}
+                    </option>
+                  ))}
+                </select>
+                {field === "length" && (
+                  <p className="text-xs text-text-secondary">
+                    {t("audioOverview.length.estimate")}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <Label className="text-sm font-medium text-text-tertiary">
           {t("fields.knowledgeSources")}
@@ -67,6 +111,9 @@ export function StandardBriefForm({
           onChange={(sourceIds) => update({ sourceIds })}
           className={disabled ? "opacity-60" : ""}
         />
+        {kind === "audio_overview" && !hasSources && (
+          <p className="text-xs text-text-secondary">{t("audioOverview.sourceRequired")}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -89,9 +136,7 @@ export function StandardBriefForm({
       >
         {submitLabel ?? t("actions.generate")}
       </Button>
-      {showFreeHint && (
-        <p className="text-xs text-text-secondary">{t("fields.freeHint")}</p>
-      )}
+      {showFreeHint && <p className="text-xs text-text-secondary">{t("fields.freeHint")}</p>}
     </div>
   );
 }

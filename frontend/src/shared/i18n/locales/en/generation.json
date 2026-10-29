@@ -75,7 +75,8 @@
     "quiz": "Quiz",
     "roadmap": "Roadmap",
     "simple_flashcard": "Flashcards",
-    "slides": "Slides"
+    "slides": "Slides",
+    "audio_overview": "Audio Overview"
   },
   "knowledge": {
     "defaultEmptySources": "No sources in notebook. Material will generate using general knowledge.",
@@ -265,5 +266,12 @@
     "stepAria": "Step {{step}}",
     "stepOf": "Step {{step}} of {{total}}",
     "title": "{{kind}} Setup"
+  },
+  "audioOverview": {
+    "sourceRequired": "Select at least one source to generate an Audio Overview.",
+    "synthesisFailed": "Audio generation failed. Check that the local Kokoro runtime is installed and configured, then try again.",
+    "format": { "label": "Format", "briefing": "Briefing", "deep_dive": "Deep dive" },
+    "length": { "label": "Length", "short": "Short (2–3 min)", "standard": "Standard (5–7 min)", "extended": "Extended (10–12 min)", "estimate": "Listening times are estimates." },
+    "audience": { "label": "Audience", "new_to_topic": "New to the topic", "some_background": "Some background", "advanced": "Advanced" }
   }
 }

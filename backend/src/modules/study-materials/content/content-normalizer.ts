@@ -741,6 +741,7 @@ export function generateTitle(
     roadmap: 'roadmap',
     mind_map: 'mind[-_ ]*map',
     slides: 'slides?',
+    audio_overview: 'audio[-_ ]*overview',
   };
   const suffixPattern = suffixMap[kind];
   if (suffixPattern) {

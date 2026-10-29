@@ -105,6 +105,19 @@ export class StudyMaterialsController {
     return this.studyMaterialService.get(id);
   }
 
+  @Get('study-materials/:id/audio')
+  @ApiOperation({ summary: 'Get Audio Overview WAV' })
+  @ApiParam({ name: 'id', description: 'Audio Overview Study Material id.' })
+  @ApiProduces('audio/wav')
+  @ApiOkResponse({ description: 'Playable WAV audio.' })
+  async getAudioOverview(@Param('id') id: string, @Res() res: Response) {
+    const { audio, contentType } = await this.studyMaterialService.getAudio(id);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', String(audio.length));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(audio);
+  }
+
   @Get('study-materials/:id/export')
   @ApiOperation({
     summary: 'Export slides',
@@ -366,7 +379,7 @@ export class StudyMaterialsController {
   @ApiResponse({
     status: 201,
     description:
-      'NDJSON stream of Generation frames. Partial content frames are followed by one terminal `done` or `error` frame.',
+      'NDJSON stream of Generation frames. Audio Overview progress frames may include `stage` (`writing_script` or `synthesizing_audio`); partial content frames are followed by one terminal `done` or `error` frame.',
     content: {
       'application/x-ndjson': {
         schema: { $ref: '#/components/schemas/GenerationStreamFrame' },

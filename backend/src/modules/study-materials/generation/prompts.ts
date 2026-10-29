@@ -61,6 +61,11 @@ interface PromptTemplate {
           | 'auto';
         detailLevel: 'basic' | 'detailed' | 'auto';
       };
+      audioOverviewOptions?: {
+        format: 'briefing' | 'deep_dive';
+        length: 'short' | 'standard' | 'extended';
+        audience: 'new_to_topic' | 'some_background' | 'advanced';
+      };
     },
   ) => string;
 }
@@ -246,12 +251,42 @@ Composition rules: the first slide MUST be role 'title'; the final slide MUST be
   },
 };
 
+const audioOverviewTemplate: PromptTemplate = {
+  instructions: `Create a coherent, single-speaker learning experience grounded only in the supplied evidence. Return JSON with a concise title and ordered sections, each with heading, text and citations: []. Build one arc: orient the listener, explain and connect ideas, make abstractions concrete when evidence supports examples, then synthesize. Define terms before relying on them, avoid repetition, and use natural spoken prose without stage directions. Cite source-supported claims inline using the exact [ref:R#] evidence markers. Never invent citations.`,
+  user: (brief, sourceTexts, options) => {
+    const choice = options?.audioOverviewOptions ?? {
+      format: 'briefing' as const,
+      length: 'standard' as const,
+      audience: 'some_background' as const,
+    };
+    const length = {
+      short: '2–3 minutes, about 260–390 spoken words',
+      standard: '5–7 minutes, about 650–910 spoken words',
+      extended: '10–12 minutes, about 1,300–1,560 spoken words',
+    }[choice.length];
+    const format =
+      choice.format === 'briefing'
+        ? 'Briefing: explain the key ideas and how they connect, prioritizing essentials.'
+        : 'Deep dive: unpack concepts, examples and implications in greater detail with clear signposting and connections.';
+    const audience = {
+      new_to_topic:
+        'Assume the listener is new to the topic; define essential terms plainly.',
+      some_background:
+        'Assume some familiarity; explain specialized terms and build useful connections.',
+      advanced:
+        'Assume strong foundations; focus on nuance, mechanisms and implications.',
+    }[choice.audience];
+    return `Format: ${format}\nTarget length: ${length} (approximate).\nAudience: ${audience}\n\nSource material:\n${sourceTexts}\n\n${brief ? `Focus and instructions: ${brief}` : 'Explain the most useful ideas in the sources.'}`;
+  },
+};
+
 const templates: Record<StudyMaterialKind, PromptTemplate> = {
   quiz: quizTemplate,
   simple_flashcard: simpleFlashcardTemplate,
   roadmap: roadmapTemplate,
   mind_map: mindMapTemplate,
   slides: slidesTemplate,
+  audio_overview: audioOverviewTemplate,
 };
 
 export function getPromptTemplate(kind: StudyMaterialKind): PromptTemplate {

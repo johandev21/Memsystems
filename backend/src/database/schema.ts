@@ -131,6 +131,7 @@ export const studyMaterialKindEnum = pgEnum('study_material_kind', [
   'roadmap',
   'mind_map',
   'slides',
+  'audio_overview',
 ]);
 
 export const generationStatusEnum = pgEnum('generation_status', [
@@ -488,6 +489,20 @@ export const studyMaterials = pgTable(
   ],
 );
 
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea',
+});
+
+export const studyMaterialAudio = pgTable('study_material_audio', {
+  studyMaterialId: varchar('study_material_id')
+    .primaryKey()
+    .references(() => studyMaterials.id, { onDelete: 'cascade' }),
+  audio: bytea('audio').notNull(),
+  contentType: varchar('content_type', { length: 100 })
+    .notNull()
+    .default('audio/wav'),
+});
+
 export const generationRequests = pgTable(
   'generation_requests',
   {
@@ -500,6 +515,8 @@ export const generationRequests = pgTable(
     kind: studyMaterialKindEnum('kind').notNull(),
     brief: text('brief').notNull().default(''),
     sourceIds: jsonb('source_ids').$type<string[]>().notNull().default([]),
+    generationOptions:
+      jsonb('generation_options').$type<Record<string, unknown>>(),
     targetFolderId: varchar('target_folder_id').references(
       () => studyMaterialFolders.id,
       { onDelete: 'set null' },

@@ -3,7 +3,8 @@ export type StudyMaterialKind =
   | "simple_flashcard"
   | "roadmap"
   | "mind_map"
-  | "slides";
+  | "slides"
+  | "audio_overview";
 
 export interface StudyMaterialDTO {
   id: string;

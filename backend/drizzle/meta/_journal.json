@@ -197,6 +197,20 @@
       "when": 1792670100000,
       "tag": "0027_chat_branch_stopped_endpoint",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793167200000,
+      "tag": "0028_audio_overview",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793167300000,
+      "tag": "0029_audio_overview_generation_options",
+      "breakpoints": true
     }
   ]
 }

@@ -77,7 +77,8 @@
     "quiz": "Cuestionario",
     "roadmap": "Ruta de aprendizaje",
     "simple_flashcard": "Tarjetas",
-    "slides": "Diapositivas"
+    "slides": "Diapositivas",
+    "audio_overview": "Resumen de audio"
   },
   "knowledge": {
     "defaultEmptySources": "No hay fuentes en el cuaderno. El material se generará con conocimientos generales.",
@@ -280,5 +281,12 @@
     "stepAria": "Paso {{step}}",
     "stepOf": "Paso {{step}} de {{total}}",
     "title": "Configuración de {{kind}}"
+  },
+  "audioOverview": {
+    "sourceRequired": "Selecciona al menos una fuente para generar un resumen de audio.",
+    "synthesisFailed": "No se pudo generar el audio. Comprueba que Kokoro esté instalado y configurado e inténtalo de nuevo.",
+    "format": { "label": "Formato", "briefing": "Resumen", "deep_dive": "Análisis profundo" },
+    "length": { "label": "Duración", "short": "Corto (2–3 min)", "standard": "Estándar (5–7 min)", "extended": "Extendido (10–12 min)", "estimate": "Los tiempos de escucha son estimados." },
+    "audience": { "label": "Público", "new_to_topic": "Sin conocimientos previos", "some_background": "Con algunos conocimientos", "advanced": "Avanzado" }
   }
 }

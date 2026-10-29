@@ -55,10 +55,42 @@ COPY frontend ./frontend
 COPY backend ./backend
 
 # ---------------------------------------------------------------------------
+# Local CPU speech runtime shared by development and production images.
+# ---------------------------------------------------------------------------
+FROM base AS kokoro-dev
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv /opt/kokoro/venv \
+    && /opt/kokoro/venv/bin/pip install --no-cache-dir 'kokoro-onnx==0.6.1' 'soundfile==0.13.1'
+RUN /opt/kokoro/venv/bin/python - <<'PY'
+import hashlib
+from pathlib import Path
+from urllib.request import urlretrieve
+
+base = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/'
+files = {
+    'kokoro-v1.0.onnx': 'beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a',
+    'voices-v1.0.bin': 'bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d',
+}
+target = Path('/opt/kokoro/models')
+target.mkdir(parents=True, exist_ok=True)
+for name, expected in files.items():
+    path = target / name
+    urlretrieve(base + name, path)
+    if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+        raise ValueError(f'Checksum mismatch: {name}')
+PY
+
+# ---------------------------------------------------------------------------
 # Development workspace: Compose runs separate services from this shared image
 # ---------------------------------------------------------------------------
-FROM source AS workspace-dev
+FROM kokoro-dev AS workspace-dev
+COPY --from=source /app /app
+COPY scripts/kokoro_synthesize.py /app/scripts/kokoro_synthesize.py
 ENV NODE_ENV=development
+ENV KOKORO_PYTHON=/opt/kokoro/venv/bin/python \
+    KOKORO_MODEL_PATH=/opt/kokoro/models/kokoro-v1.0.onnx \
+    KOKORO_VOICES_PATH=/opt/kokoro/models/voices-v1.0.bin
 EXPOSE 3000 4000
 
 # ---------------------------------------------------------------------------
@@ -73,9 +105,13 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 # ---------------------------------------------------------------------------
 # backend runtime
 # ---------------------------------------------------------------------------
-FROM node:24-slim AS backend-prod
+FROM kokoro-dev AS backend-prod
 ENV NODE_ENV=production
+ENV KOKORO_PYTHON=/opt/kokoro/venv/bin/python \
+    KOKORO_MODEL_PATH=/opt/kokoro/models/kokoro-v1.0.onnx \
+    KOKORO_VOICES_PATH=/opt/kokoro/models/voices-v1.0.bin
 WORKDIR /app/backend
+COPY scripts/kokoro_synthesize.py /app/scripts/kokoro_synthesize.py
 COPY --from=backend-prod-deps /prod/backend/package.json ./package.json
 COPY --from=backend-prod-deps /prod/backend/node_modules ./node_modules
 COPY --from=backend-build /app/backend/dist ./dist

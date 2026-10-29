@@ -511,6 +511,28 @@ export default interface Resources {
       "nextStep": "Next Step",
       "view": "View"
     },
+    "audioOverview": {
+      "audience": {
+        "advanced": "Advanced",
+        "label": "Audience",
+        "new_to_topic": "New to the topic",
+        "some_background": "Some background"
+      },
+      "format": {
+        "briefing": "Briefing",
+        "deep_dive": "Deep dive",
+        "label": "Format"
+      },
+      "length": {
+        "estimate": "Listening times are estimates.",
+        "extended": "Extended (10–12 min)",
+        "label": "Length",
+        "short": "Short (2–3 min)",
+        "standard": "Standard (5–7 min)"
+      },
+      "sourceRequired": "Select at least one source to generate an Audio Overview.",
+      "synthesisFailed": "Audio generation failed. Check that the local Kokoro runtime is installed and configured, then try again."
+    },
     "capabilityGate": {
       "chooseModel": "Choose a Model",
       "description": "{{name}} doesn't support structured output, which study material generation needs. Choose a model that supports it to continue.",
@@ -571,6 +593,7 @@ export default interface Resources {
       "sourcesLabel": "3. Knowledge Sources"
     },
     "kinds": {
+      "audio_overview": "Audio Overview",
       "mind_map": "Mind Map",
       "quiz": "Quiz",
       "roadmap": "Roadmap",
@@ -967,6 +990,10 @@ export default interface Resources {
       "noSources": "No sources yet. Add a source first to generate a study material."
     },
     "studio": {
+      "audioOverview": {
+        "synthesizing_audio": "Creating the audio…",
+        "writing_script": "Writing the overview script…"
+      },
       "cancelGeneration": "Cancel generation",
       "dismiss": "Dismiss",
       "dismissError": "Dismiss error",
@@ -975,6 +1002,7 @@ export default interface Resources {
       "generationFailed": "Generation failed",
       "newMaterial": "New study material",
       "resources": {
+        "audioOverview": "Audio Overview",
         "flashcards": "Flashcards",
         "mindMap": "Mind Map",
         "quiz": "Quiz",
@@ -1729,6 +1757,39 @@ export default interface Resources {
     }
   },
   "viewer": {
+    "audioOverview": {
+      "audience": {
+        "advanced": "Advanced",
+        "label": "Audience",
+        "new_to_topic": "New to the topic",
+        "some_background": "Some background"
+      },
+      "briefLabel": "Focus and instructions",
+      "cancel": "Cancel generation",
+      "citations": "Audio overview citations",
+      "dismiss": "Keep current overview",
+      "format": {
+        "briefing": "Briefing",
+        "deep_dive": "Deep dive",
+        "label": "Format"
+      },
+      "length": {
+        "estimate": "Listening times are estimates.",
+        "extended": "Extended (10–12 min)",
+        "label": "Length",
+        "short": "Short (2–3 min)",
+        "standard": "Standard (5–7 min)"
+      },
+      "outline": "Overview",
+      "playbackError": "Audio playback failed. Try again or regenerate this overview.",
+      "playerLabel": "Audio player for {{title}}",
+      "regenerate": "Regenerate overview",
+      "regenerateError": "Could not regenerate this overview. Your current version is unchanged.",
+      "regenerating": "Generating replacement. Your current overview remains available until it is ready.",
+      "synthesizing_audio": "Creating replacement audio. Your current overview remains available.",
+      "transcript": "Transcript",
+      "writing_script": "Writing the replacement script. Your current overview remains available."
+    },
     "common": {
       "cancel": "Cancel",
       "close": "Close",
@@ -1768,6 +1829,7 @@ export default interface Resources {
       "returnToStudio": "Return to Studio overview"
     },
     "kinds": {
+      "audio_overview": "Audio Overview",
       "mind_map": "Mind Map",
       "quiz": "Quiz",
       "roadmap": "Roadmap",
@@ -1775,6 +1837,7 @@ export default interface Resources {
       "slides": "Slides"
     },
     "kindsPlural": {
+      "audio_overview": "Audio Overviews",
       "mind_map": "Mind Maps",
       "quiz": "Quizzes",
       "roadmap": "Roadmaps",

@@ -6,6 +6,7 @@ import {
   Map as MapIcon,
   Network,
   Presentation,
+  Headphones,
 } from "lucide-react";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 
@@ -15,6 +16,7 @@ export const KIND_LABEL_KEYS = {
   roadmap: "studio.resources.roadmap",
   mind_map: "studio.resources.mindMap",
   slides: "studio.resources.slides",
+  audio_overview: "studio.resources.audioOverview",
 } as const satisfies Record<StudyMaterialKind, ParseKeys<"notebooks">>;
 
 export type ResourceConfig = {
@@ -55,6 +57,12 @@ export const RESOURCES: ResourceConfig[] = [
     icon: Presentation,
     colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
   },
+  {
+    key: "audioOverview",
+    kind: "audio_overview",
+    icon: Headphones,
+    colorClasses: "bg-studio-resource hover:bg-studio-resource-hover",
+  },
 ];
 
 export function isInScope(kind: StudyMaterialKind): boolean {
@@ -64,5 +72,6 @@ export function isInScope(kind: StudyMaterialKind): boolean {
     "roadmap",
     "mind_map",
     "slides",
+    "audio_overview",
   ].includes(kind);
 }

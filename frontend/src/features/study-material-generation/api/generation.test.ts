@@ -39,4 +39,40 @@ describe("startGeneration abort handle", () => {
 
     expect(signal.aborted).toBe(true);
   });
+
+  it("parses audio overview stage events from the generation stream", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    '{"stage":"writing_script"}\n{"stage":"synthesizing_audio"}\n{"done":true,"requestId":"request-1"}\n',
+                  ),
+                );
+                controller.close();
+              },
+            }),
+            { headers: { "X-Request-Id": "request-1" } },
+          ),
+      ),
+    );
+
+    const result = startGeneration("notebook-1", {
+      kind: "audio_overview",
+      brief: "",
+      sourceIds: ["source-1"],
+    });
+    const events = [];
+    for await (const event of result.stream) events.push(event);
+
+    expect(events).toEqual([
+      { type: "stage", stage: "writing_script" },
+      { type: "stage", stage: "synthesizing_audio" },
+      { type: "done", requestId: "request-1", materialId: undefined },
+    ]);
+  });
 });
