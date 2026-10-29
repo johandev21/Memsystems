@@ -30,11 +30,17 @@ describe('NotebooksService Integration Tests', () => {
 
     expect(created.id).toBeDefined();
     expect(created.title).toBe('My NestJS Notebook');
+    expect(created.banner).toBe('preset:abstract-watercolor');
+    expect(created.bannerUrl).toMatch(/^\/notebook-banners\/.+-1920w\.webp$/);
+    expect(created.bannerVariants?.w240).toMatch(/-240w\.webp$/);
+
+    const second = await notebooksService.create({ title: 'Next Notebook' });
+    expect(second.banner).toBe('preset:blurred-bokeh-lights');
 
     const list = await notebooksService.list();
     expect(Array.isArray(list)).toBe(true);
-    expect((list as any[]).length).toBe(1);
-    expect((list as any[])[0].id).toBe(created.id);
+    expect((list as any[]).length).toBe(2);
+    expect((list as any[]).map((item) => item.id)).toContain(created.id);
   });
 
   it('should update notebook details', async () => {

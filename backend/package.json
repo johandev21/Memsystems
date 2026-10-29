@@ -15,6 +15,7 @@
     "db:migrate": "ts-node src/database/migrate.ts",
     "db:seed": "ts-node src/database/seed.ts",
     "db:seed:variants": "ts-node scripts/generate-seed-variants.ts",
+    "assets:notebook-banners": "ts-node scripts/generate-notebook-banner-assets.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

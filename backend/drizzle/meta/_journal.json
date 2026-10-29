@@ -197,6 +197,13 @@
       "when": 1792670100000,
       "tag": "0027_chat_branch_stopped_endpoint",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793294000000,
+      "tag": "0028_remove_green_leaves_notebook_preset",
+      "breakpoints": true
     }
   ]
 }

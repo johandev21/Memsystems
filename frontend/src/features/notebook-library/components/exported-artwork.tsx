@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { CoverVariants } from "../model/types";
 import { coverSrcSet, primaryCoverUrl } from "../model/artwork-assets";
+import { isPresetBannerUrl } from "@/features/notebooks/utils/preset-banner";
 
 const FOLDER_BACK_PATH =
   "M0 150.5L0 19.5Q0 5.5 13.94 5.5L77.77 5.5Q87.73 5.5 94.92 12.42L105.14 22.25Q112.33 29.167 122.29 29.167L222.07 29.167Q238 29.167 238 45.167L238 150.5Z";
@@ -10,18 +11,21 @@ const FOLDER_FRONT_PATH_EMPTY =
   "M8 0Q0 0 0 8L0 109A16 16 0 0 0 16 125L223 125A16 16 0 0 0 239 109L239 8Q239 0 231 0Z";
 
 function CoverFill({ url, sizes, srcSet }: { url: string; sizes?: string; srcSet?: string }) {
+  const isPreset = isPresetBannerUrl(url);
   return (
-    <img
-      src={url}
-      srcSet={srcSet}
-      sizes={sizes}
-      alt=""
-      aria-hidden="true"
-      draggable={false}
-      className="absolute inset-0 size-full object-cover"
-      fetchPriority="high"
-      decoding="async"
-    />
+    <span className={`absolute inset-0 ${isPreset ? "bg-(--notebook-banner-tint)" : ""}`}>
+      <img
+        src={url}
+        srcSet={srcSet}
+        sizes={sizes}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={`absolute inset-0 size-full object-cover ${isPreset ? "mix-blend-multiply" : ""}`}
+        fetchPriority="high"
+        decoding="async"
+      />
+    </span>
   );
 }
 

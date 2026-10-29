@@ -7,6 +7,7 @@ import * as appSchema from '../../database/schema';
 import { BadRequestError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { StorageService } from '../storage/storage.service';
+import { PRESET_BANNER_PREFIX, isPresetBannerId } from './preset-banners';
 import { NotebookResponse, NotebooksService } from './notebooks.service';
 import { isGroundingMode, DEFAULT_GROUNDING_MODE } from './grounding-mode';
 
@@ -55,6 +56,7 @@ interface ExportNotebookData {
   groundingMode?: string;
   bannerFocalPoint?: { x: number; y: number } | null;
   bannerFile?: string | null;
+  bannerPreset?: string | null;
 }
 
 interface ExportSourceFolder {
@@ -317,7 +319,15 @@ export class NotebookImportService {
 
     // 7. Extract and upload blobs to storage
     let newBannerKey: string | null = null;
-    if (notebookData.bannerFile && zip.file(notebookData.bannerFile)) {
+    const bannerPreset =
+      notebookData.bannerPreset && isPresetBannerId(notebookData.bannerPreset)
+        ? notebookData.bannerPreset
+        : null;
+    if (
+      !bannerPreset &&
+      notebookData.bannerFile &&
+      zip.file(notebookData.bannerFile)
+    ) {
       try {
         const bannerBuffer = await zip
           .file(notebookData.bannerFile)!
@@ -371,7 +381,9 @@ export class NotebookImportService {
         description: notebookData.description ?? '',
         icon: notebookData.icon ?? 'notebook',
         folderId: resolvedFolderId,
-        banner: newBannerKey,
+        banner: bannerPreset
+          ? `${PRESET_BANNER_PREFIX}${bannerPreset}`
+          : newBannerKey,
         bannerVariants: null,
         bannerFocalPoint: notebookData.bannerFocalPoint ?? null,
         groundingMode,

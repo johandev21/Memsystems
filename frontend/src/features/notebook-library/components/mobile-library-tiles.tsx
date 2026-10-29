@@ -1,5 +1,6 @@
 import { Folder, MoreVertical, Notebook } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { isPresetBannerUrl } from "@/features/notebooks/utils/preset-banner";
 import type { LibraryFolder, LibraryNotebook } from "../model/types";
 
 export interface MobileFolderTileProps {
@@ -63,8 +64,8 @@ export function MobileNotebookTile({ notebook, onOpen, onActions }: MobileNotebo
         className="flex min-w-0 flex-1 items-center gap-2 text-left text-current transition-opacity active:opacity-70 touch-manipulation cursor-pointer"
       >
         {notebook.coverUrl ? (
-          <div className="h-8 aspect-10/7 shrink-0 overflow-hidden rounded-xs bg-muted">
-            <img src={notebook.coverUrl} alt="" className="size-full object-cover" />
+          <div className={`h-8 aspect-10/7 shrink-0 overflow-hidden rounded-xs ${isPresetBannerUrl(notebook.coverUrl) ? "bg-(--notebook-banner-tint)" : "bg-muted"}`}>
+            <img src={notebook.coverUrl} alt="" className={`size-full object-cover ${isPresetBannerUrl(notebook.coverUrl) ? "mix-blend-multiply" : ""}`} />
           </div>
         ) : (
           <Notebook className="size-8 shrink-0 text-current" />

@@ -17,6 +17,7 @@ import {
 import { NotFoundError } from '../../common/errors/domain-error';
 import { DRIZZLE } from '../database/database.module';
 import { StorageService } from '../storage/storage.service';
+import { PRESET_BANNER_PREFIX } from './preset-banners';
 
 function sanitizeFilename(name: string): string {
   const slug = name
@@ -159,13 +160,21 @@ export class NotebookExportService {
     const blobEntries: { storageKey: string; archivePath: string }[] = [];
 
     let bannerArchiveFile: string | null = null;
+    let bannerPreset: string | null = null;
     if (notebook.banner) {
-      const ext = getExtension(notebook.banner) || '.webp';
-      bannerArchiveFile = `blobs/banner${ext}`;
-      blobEntries.push({
-        storageKey: notebook.banner,
-        archivePath: bannerArchiveFile,
-      });
+      const presetId = notebook.banner.startsWith(PRESET_BANNER_PREFIX)
+        ? notebook.banner.slice(PRESET_BANNER_PREFIX.length)
+        : null;
+      if (presetId) {
+        bannerPreset = presetId;
+      } else {
+        const ext = getExtension(notebook.banner) || '.webp';
+        bannerArchiveFile = `blobs/banner${ext}`;
+        blobEntries.push({
+          storageKey: notebook.banner,
+          archivePath: bannerArchiveFile,
+        });
+      }
     }
 
     const exportedSources = sourcesList.map((src) => {
@@ -254,6 +263,7 @@ export class NotebookExportService {
       groundingMode: notebook.groundingMode,
       bannerFocalPoint: notebook.bannerFocalPoint,
       bannerFile: bannerArchiveFile,
+      bannerPreset,
       layout: {
         sourcesCollapsed: false,
         studioCollapsed: false,
@@ -310,7 +320,6 @@ export class NotebookExportService {
         );
       }
     }
-
     await archive.finalize();
   }
 }

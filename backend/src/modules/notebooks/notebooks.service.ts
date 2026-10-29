@@ -1,6 +1,6 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
@@ -20,6 +20,11 @@ import {
 import { DRIZZLE } from '../database/database.module';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { StorageService } from '../storage/storage.service';
+import {
+  PRESET_BANNER_IDS,
+  PRESET_BANNER_PREFIX,
+  presetBannerVariants,
+} from './preset-banners';
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_BANNER_BYTES = 2 * 1024 * 1024;
@@ -27,7 +32,6 @@ const BANNER_PRESIGN_TTL = 86400;
 
 const BANNER_VARIANT_WIDTHS = [240, 480, 960, 1920] as const;
 type BannerVariantWidth = (typeof BANNER_VARIANT_WIDTHS)[number];
-
 export interface BannerVariantKeys {
   w240?: string;
   w480?: string;
@@ -168,13 +172,20 @@ export class NotebooksService {
 
   async formatNotebook(nb: typeof notebooks.$inferSelect) {
     const res = toResponse(nb);
-    res.bannerUrl = nb.banner
-      ? await this.storageService.presignDownload(nb.banner, BANNER_PRESIGN_TTL)
+    const presetId = nb.banner?.startsWith(PRESET_BANNER_PREFIX)
+      ? nb.banner.slice(PRESET_BANNER_PREFIX.length)
       : null;
-    res.bannerVariants = await presignBannerVariants(
-      this.storageService,
-      nb.bannerVariants,
-    );
+    res.bannerUrl = presetId
+      ? presetBannerVariants(presetId).w1920
+      : nb.banner
+        ? await this.storageService.presignDownload(
+            nb.banner,
+            BANNER_PRESIGN_TTL,
+          )
+        : null;
+    res.bannerVariants = presetId
+      ? presetBannerVariants(presetId)
+      : await presignBannerVariants(this.storageService, nb.bannerVariants);
     return res;
   }
 
@@ -240,6 +251,25 @@ export class NotebooksService {
     if (folderId) {
       await this.assertFolderExists(folderId);
     }
+    const [latestPresetNotebook] = await this.db
+      .select({ banner: notebooks.banner })
+      .from(notebooks)
+      .where(
+        inArray(
+          notebooks.banner,
+          PRESET_BANNER_IDS.map((id) => `${PRESET_BANNER_PREFIX}${id}`),
+        ),
+      )
+      .orderBy(desc(notebooks.createdAt))
+      .limit(1);
+    const previousIndex = latestPresetNotebook
+      ? PRESET_BANNER_IDS.findIndex(
+          (id) =>
+            `${PRESET_BANNER_PREFIX}${id}` === latestPresetNotebook.banner,
+        )
+      : -1;
+    const bannerId =
+      PRESET_BANNER_IDS[(previousIndex + 1) % PRESET_BANNER_IDS.length];
     const [row] = await this.db
       .insert(notebooks)
       .values({
@@ -248,9 +278,10 @@ export class NotebooksService {
         icon: input.icon?.trim().slice(0, 50) ?? 'notebook',
         folderId,
         groundingMode: input.groundingMode ?? DEFAULT_GROUNDING_MODE,
+        banner: `${PRESET_BANNER_PREFIX}${bannerId}`,
       })
       .returning();
-    return toResponse(row);
+    return this.formatNotebook(row);
   }
 
   async update(id: string, input: UpdateNotebookInput) {
@@ -291,18 +322,7 @@ export class NotebooksService {
         messageKey: 'errors.notebooks.notebook.notFound',
       });
     }
-    const res = toResponse(row);
-    res.bannerUrl = row.banner
-      ? await this.storageService.presignDownload(
-          row.banner,
-          BANNER_PRESIGN_TTL,
-        )
-      : null;
-    res.bannerVariants = await presignBannerVariants(
-      this.storageService,
-      row.bannerVariants,
-    );
-    return res;
+    return this.formatNotebook(row);
   }
 
   async delete(id: string) {
@@ -410,7 +430,7 @@ export class NotebooksService {
       .from(notebooks)
       .where(eq(notebooks.id, notebookId));
 
-    if (existing?.banner) {
+    if (existing?.banner && !existing.banner.startsWith(PRESET_BANNER_PREFIX)) {
       await this.storageService.deleteObject(existing.banner).catch(() => {});
     }
     if (existing) {
@@ -500,7 +520,11 @@ export class NotebooksService {
       .from(notebooks)
       .where(eq(notebooks.id, notebookId));
 
-    if (existing?.banner && existing.banner !== key) {
+    if (
+      existing?.banner &&
+      !existing.banner.startsWith(PRESET_BANNER_PREFIX) &&
+      existing.banner !== key
+    ) {
       await this.storageService.deleteObject(existing.banner).catch(() => {});
     }
     if (existing) {

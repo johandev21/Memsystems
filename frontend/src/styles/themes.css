@@ -8,6 +8,7 @@
 /* Kanagawa — Japanese wave aesthetic, sumi ink and lotus parchment */
 /* Light                                                             */
 html[data-theme="kanagawa"] {
+  --notebook-banner-tint: oklch(0.78 0.08 185);
   --background: oklch(0.975 0.012 85);
   --foreground: oklch(0.20 0.02 280);
   --card: oklch(0.985 0.008 85);
@@ -147,6 +148,7 @@ html.dark[data-theme="kanagawa"] {
 /* Tokyo Night — Neon indigo dusk, electric cyan and midnight */
 /* Light                                                             */
 html[data-theme="tokyo-night"] {
+  --notebook-banner-tint: oklch(0.76 0.12 255);
   --background: oklch(0.975 0.012 265);
   --foreground: oklch(0.20 0.035 270);
   --card: oklch(0.985 0.008 265);
@@ -286,6 +288,7 @@ html.dark[data-theme="tokyo-night"] {
 /* Nord — Arctic frost, polar night and glacial blue */
 /* Light                                                             */
 html[data-theme="nord"] {
+  --notebook-banner-tint: oklch(0.76 0.08 215);
   --background: oklch(0.975 0.008 235);
   --foreground: oklch(0.20 0.02 245);
   --card: oklch(0.985 0.006 235);
@@ -425,6 +428,7 @@ html.dark[data-theme="nord"] {
 /* Rosé Pine — Velvet dusk, dusty rose and pine teal */
 /* Light                                                             */
 html[data-theme="rose-pine"] {
+  --notebook-banner-tint: oklch(0.74 0.13 15);
   --background: oklch(0.975 0.008 60);
   --foreground: oklch(0.22 0.025 320);
   --card: oklch(0.985 0.006 60);
@@ -565,6 +569,7 @@ html.dark[data-theme="rose-pine"] {
 /* Matrix — Cyber digital rain, phosphor green and CRT terminal depth */
 /* Light                                                             */
 html[data-theme="matrix"] {
+  --notebook-banner-tint: oklch(0.78 0.18 145);
   --background: oklch(0.975 0.015 145);
   --foreground: oklch(0.18 0.04 145);
   --card: oklch(0.985 0.01 145);
@@ -706,6 +711,7 @@ html.dark[data-theme="matrix"] {
 /* Dracula — Gothic vampire dusk, iconic purple, neon pink and cyan */
 /* Light                                                             */
 html[data-theme="dracula"] {
+  --notebook-banner-tint: oklch(0.74 0.14 295);
   --background: oklch(0.975 0.01 290);
   --foreground: oklch(0.18 0.03 285);
   --card: oklch(0.985 0.008 290);
@@ -847,6 +853,7 @@ html.dark[data-theme="dracula"] {
 /* Monokai — Warm dark charcoal, vivid lime, electric magenta and amber gold */
 /* Light                                                             */
 html[data-theme="monokai"] {
+  --notebook-banner-tint: oklch(0.78 0.16 115);
   --background: oklch(0.975 0.012 85);
   --foreground: oklch(0.18 0.02 105);
   --card: oklch(0.985 0.008 85);

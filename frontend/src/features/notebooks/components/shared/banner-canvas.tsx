@@ -9,6 +9,7 @@ import { NotebookIcon } from "../notebook-icon";
 import type { useBannerFocalPointDrag } from "../../hooks/use-banner-focal-point-drag";
 import { buildBannerSrcSet } from "../../utils/banner-variants";
 import { cn } from "@/shared/utils/cn";
+import { isPresetBannerUrl } from "@/features/notebooks/utils/preset-banner";
 
 export interface BannerCanvasProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -163,38 +164,42 @@ export function BannerImage({
   );
 
   if (visibleBannerUrl && !imageError) {
+    const isPreset = isPresetBannerUrl(visibleBannerUrl);
     return (
-      <img
-        src={visibleBannerUrl}
-        srcSet={buildBannerSrcSet(visibleBannerVariants)}
-        sizes="(min-width: 928px) 896px, 100vw"
-        alt=""
-        className={cn(
-          "pointer-events-none absolute inset-0 size-full object-cover object-(--banner-pos) transition-opacity duration-200 motion-reduce:transition-none",
-          isLoaded ? "opacity-100" : "opacity-0",
-        )}
-        style={
-          {
-            "--banner-pos": `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
-          } as React.CSSProperties
-        }
-        draggable={false}
-        fetchPriority="high"
-        decoding="async"
-        ref={(element) => {
-          if (element?.complete && element.naturalWidth > 0 && bannerKey) {
-            loadedBannerKeys.add(bannerKey);
-            setLoadedKey(bannerKey);
+      <div className={cn("pointer-events-none absolute inset-0", isPreset && "bg-(--notebook-banner-tint)")}>
+        <img
+          src={visibleBannerUrl}
+          srcSet={buildBannerSrcSet(visibleBannerVariants)}
+          sizes="(min-width: 928px) 896px, 100vw"
+          alt=""
+          className={cn(
+            "absolute inset-0 size-full object-cover object-(--banner-pos) transition-opacity duration-200 motion-reduce:transition-none",
+            isLoaded ? "opacity-100" : "opacity-0",
+            isPreset && "mix-blend-multiply",
+          )}
+          style={
+            {
+              "--banner-pos": `${Math.round(visibleFocalPoint.x * 100)}% ${Math.round(visibleFocalPoint.y * 100)}%`,
+            } as React.CSSProperties
           }
-        }}
-        onLoad={() => {
-          if (bannerKey) {
-            loadedBannerKeys.add(bannerKey);
-            setLoadedKey(bannerKey);
-          }
-        }}
-        onError={onImageError}
-      />
+          draggable={false}
+          fetchPriority="high"
+          decoding="async"
+          ref={(element) => {
+            if (element?.complete && element.naturalWidth > 0 && bannerKey) {
+              loadedBannerKeys.add(bannerKey);
+              setLoadedKey(bannerKey);
+            }
+          }}
+          onLoad={() => {
+            if (bannerKey) {
+              loadedBannerKeys.add(bannerKey);
+              setLoadedKey(bannerKey);
+            }
+          }}
+          onError={onImageError}
+        />
+      </div>
     );
   }
   return (
