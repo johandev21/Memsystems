@@ -43,6 +43,17 @@ export interface SourceIconProps {
   className?: string;
 }
 
-export function SourceIcon({ className }: SourceIconProps) {
+export function SourceIcon({ source, className }: SourceIconProps) {
+  if (source.kind === "url") {
+    return (
+      <SourceFavicon
+        url={source.url}
+        title={source.title}
+        className={className}
+        fallback={<MarkdownIcon className={className} />}
+      />
+    );
+  }
+
   return <MarkdownIcon className={className} />;
 }

@@ -128,6 +128,10 @@
     "emptyDescription": "Add material to ground your chats and study materials.",
     "emptyTitle": "No sources yet",
     "failedToLoad": "Failed to load sources",
+    "loadMore": "Load more sources",
+    "loadingMore": "Loading more sources…",
+    "searchPlaceholder": "Search sources...",
+    "searchPlaceholder": "Search sources...",
     "noMatches": "No matching sources",
     "noMatchesDescription": "Try another search term.",
     "retry": "Retry"
@@ -239,8 +243,6 @@
     "inputLabel": "What would you like to research?",
     "inputPlaceholder": "What would you like to research?",
     "intro": "Describe what you want to research. You can review every result before adding it.",
-    "limitReached": "Source limit reached",
-    "limitReachedDescription": "Remove a source before searching for more sources to add.",
     "resultsCleared": "Search results cleared",
     "retryFailed": "Retry failed",
     "search": "Search",
@@ -252,6 +254,7 @@
   },
   "webSearchResults": {
     "added": "Added",
+    "dismissLabel": "Dismiss {{title}}",
     "addedAndFailed": "{{added}} added · {{failed}} failed",
     "addedCount": "{{count}} added",
     "addedCount_one": "{{count}} added",
@@ -260,7 +263,6 @@
     "adding": "Adding",
     "addSelected": "Add selected",
     "fetchFailed": "source could not be fetched",
-    "limitReached": "Not added because the source limit was reached",
     "opensNewTab": "Opens in a new tab",
     "retryFailed": "Retry failed",
     "selectedCount": "{{count}} selected",
@@ -270,8 +272,6 @@
     "showLess": "Show less",
     "showMore": "Show more",
     "sourceFound_one": "{{count}} source found",
-    "sourceFound_other": "{{count}} sources found",
-    "sourceSlotsAvailable_one": "{{count}} source slot available",
-    "sourceSlotsAvailable_other": "{{count}} source slots available"
+    "sourceFound_other": "{{count}} sources found"
   }
 }

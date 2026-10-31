@@ -66,6 +66,48 @@ function createSourcesService(
 }
 
 describe.sequential('SourcesService', () => {
+  it('paginates Sources in stable order and searches without loading the full Notebook', async () => {
+    const { service } = createSourcesService();
+    const notebook = await seedNotebook();
+    const seeded = await Promise.all(
+      Array.from({ length: 5 }, (_, index) =>
+        seedSource(notebook.id, {
+          title: index === 3 ? 'Matching notes' : `Source ${index}`,
+          rawText: `Body ${index}`,
+        }),
+      ),
+    );
+
+    const first = await service.list(notebook.id, { limit: 2 });
+    expect(first.items).toHaveLength(2);
+    expect(first.nextCursor).toBeTruthy();
+    const second = await service.list(notebook.id, {
+      limit: 2,
+      cursor: first.nextCursor!,
+    });
+    const third = await service.list(notebook.id, {
+      limit: 2,
+      cursor: second.nextCursor!,
+    });
+    const ids = [...first.items, ...second.items, ...third.items].map((row) => row.id);
+    expect(ids).toHaveLength(5);
+    expect(new Set(ids).size).toBe(5);
+    expect(new Set(ids)).toEqual(new Set(seeded.map((source) => source.id)));
+    expect(third.nextCursor).toBeNull();
+
+    const filtered = await service.list(notebook.id, { query: 'matching' });
+    expect(filtered.items.map((row) => row.title)).toEqual(['Matching notes']);
+  });
+
+  it('rejects malformed source pagination cursors', async () => {
+    const { service } = createSourcesService();
+    const notebook = await seedNotebook();
+
+    await expect(service.list(notebook.id, { cursor: 'bad-cursor' })).rejects.toThrow(
+      'Invalid source pagination cursor',
+    );
+  });
+
   it('createText normalizes content, hashes it and enqueues indexing', async () => {
     const { service, jobs, db } = createSourcesService();
     const notebook = await seedNotebook();
@@ -270,7 +312,7 @@ describe.sequential('SourcesService', () => {
 
     // List and get should now exclude it
     const list = await service.list(notebook.id);
-    expect(list).toHaveLength(0);
+    expect(list.items).toHaveLength(0);
     await expect(service.get(source.id)).rejects.toThrow('Source not found');
   });
 

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { BookOpen, ChevronDown, FileText, Globe, Search } from "lucide-react";
+import { useDeferredValue, useMemo, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { BookOpen, ChevronDown, FileText, Globe, Loader2, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
@@ -19,6 +20,7 @@ import {
 } from "./option-row";
 import { cn } from "@/shared/utils/cn";
 import { SourceFavicon } from "@/features/sources";
+import { fetchSourcesPage, sourcePageQueryKey } from "@/features/sources";
 
 const CHECKED_SOURCE_CHECKBOX_CLASS =
   "border-primary-foreground/40 data-checked:border-primary-foreground data-checked:bg-primary-foreground data-checked:text-primary dark:border-primary-foreground/60 dark:data-checked:border-primary-foreground dark:data-checked:bg-primary-foreground dark:data-checked:text-primary";
@@ -26,25 +28,33 @@ const CHECKED_SOURCE_CHECKBOX_CLASS =
 export type GenerationSource = { id: string; title: string; kind: string; url?: string | null };
 
 interface GenerationSourcePopoverProps {
-  sources: GenerationSource[];
+  notebookId: string;
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   emptyMessage: string;
 }
 
 export function GenerationSourcePopover({
-  sources,
+  notebookId,
   selectedIds,
   onChange,
   emptyMessage,
 }: GenerationSourcePopoverProps) {
   const { t } = useTranslation("generation");
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const sourcesQuery = useInfiniteQuery({
+    queryKey: sourcePageQueryKey(notebookId, deferredSearch),
+    queryFn: ({ pageParam, signal }) =>
+      fetchSourcesPage(notebookId, { cursor: pageParam, query: deferredSearch, signal }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: Boolean(notebookId),
+  });
+  const sources = sourcesQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
-  const filteredSources = sources.filter((source) =>
-    source.title.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredSources = sources;
   const allFilteredSourcesSelected =
     filteredSources.length > 0 &&
     filteredSources.every((source) => selectedIdSet.has(source.id));
@@ -114,6 +124,13 @@ export function GenerationSourcePopover({
             selectedIdSet={selectedIdSet}
             onToggleSource={toggleSource}
             emptyMessage={emptyMessage}
+            isPending={sourcesQuery.isPending}
+            isError={sourcesQuery.isError}
+            isFetchNextPageError={sourcesQuery.isFetchNextPageError}
+            onRetry={() => void sourcesQuery.refetch()}
+            hasNextPage={Boolean(sourcesQuery.hasNextPage)}
+            isFetchingNextPage={sourcesQuery.isFetchingNextPage}
+            onLoadMore={() => void sourcesQuery.fetchNextPage()}
             isMobile
           />
 
@@ -149,6 +166,13 @@ export function GenerationSourcePopover({
           selectedIdSet={selectedIdSet}
           onToggleSource={toggleSource}
           emptyMessage={emptyMessage}
+          isPending={sourcesQuery.isPending}
+          isError={sourcesQuery.isError}
+          isFetchNextPageError={sourcesQuery.isFetchNextPageError}
+          onRetry={() => void sourcesQuery.refetch()}
+          hasNextPage={Boolean(sourcesQuery.hasNextPage)}
+          isFetchingNextPage={sourcesQuery.isFetchingNextPage}
+          onLoadMore={() => void sourcesQuery.fetchNextPage()}
         />
         <div className="border-t border-surface-border-subtle bg-surface-2 px-3.5 py-2 text-xs text-text-faint">
           {t("knowledge.selectedCount", { count: selectedIds.length })}
@@ -227,6 +251,13 @@ interface GenerationSourceOptionListProps {
   selectedIdSet: Set<string>;
   onToggleSource: (id: string) => void;
   emptyMessage: string;
+  isPending: boolean;
+  isError: boolean;
+  isFetchNextPageError: boolean;
+  onRetry: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
   isMobile?: boolean;
 }
 
@@ -236,8 +267,36 @@ function GenerationSourceOptionList({
   selectedIdSet,
   onToggleSource,
   emptyMessage,
+  isPending,
+  isError,
+  isFetchNextPageError,
+  onRetry,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
   isMobile,
 }: GenerationSourceOptionListProps) {
+  const { t } = useTranslation("generation");
+  const { t: tSources } = useTranslation("sources");
+  if (isPending && sources.length === 0) {
+    return (
+      <div className={cn("flex items-center justify-center text-xs text-text-faint", isMobile ? "py-8" : "p-4")}>
+        <Loader2 className="size-4 animate-spin" />
+      </div>
+    );
+  }
+
+  if (isError && sources.length === 0) {
+    return (
+      <div className={cn("flex flex-col items-center gap-2 text-center text-xs text-text-faint", isMobile ? "py-8" : "p-4")}>
+        <p>{tSources("sourcesList.failedToLoad")}</p>
+        <button type="button" onClick={onRetry} className="min-h-10 px-3 font-medium text-primary">
+          {tSources("sourcesList.retry")}
+        </button>
+      </div>
+    );
+  }
+
   if (sources.length === 0) {
     return (
       <div className={cn("text-center text-xs text-text-faint", isMobile ? "py-8" : "p-4")}>
@@ -264,6 +323,20 @@ function GenerationSourceOptionList({
           isMobile={isMobile}
         />
       ))}
+      {hasNextPage && (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          disabled={isFetchingNextPage}
+          className="min-h-10 w-full rounded-xl px-2 text-xs font-medium text-primary disabled:opacity-60"
+        >
+          {isFetchingNextPage
+            ? t("knowledge.loadingSources")
+            : isFetchNextPageError
+              ? tSources("sourcesList.retry")
+              : t("knowledge.loadMoreSources")}
+        </button>
+      )}
     </div>
   );
 }

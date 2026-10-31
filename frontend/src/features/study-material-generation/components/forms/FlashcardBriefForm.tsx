@@ -28,7 +28,7 @@ export function FlashcardBriefForm({
   disabled = false,
 }: BaseMaterialFormProps) {
   const { t } = useTranslation("generation");
-  const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
+  const { step, setStep, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: TOTAL_STEPS });
 
   const rawDifficulty = value.difficulty as string | undefined;
@@ -97,7 +97,7 @@ export function FlashcardBriefForm({
                 {t("flashcards.sourcesLabel")}
               </BriefFieldLabel>
               <GenerationSourcePopover
-                sources={sources}
+                notebookId={notebookId}
                 selectedIds={value.sourceIds}
                 onChange={(sourceIds) => patchFormData({ sourceIds })}
                 emptyMessage={t("knowledge.emptySources", { kind: t("kinds.simple_flashcard") })}

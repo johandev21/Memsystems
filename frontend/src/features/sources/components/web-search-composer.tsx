@@ -11,15 +11,13 @@ export type { WebSearchImportResultItem };
 
 export function WebSearchComposer({
   notebookId,
-  remainingSourceSlots,
   showHeader = true,
 }: {
   notebookId: string;
-  remainingSourceSlots: number;
   showHeader?: boolean;
 }) {
   const { t } = useTranslation("sources");
-  const webSearch = useWebSearch(notebookId, remainingSourceSlots);
+  const webSearch = useWebSearch(notebookId);
   const [expanded, setExpanded] = useState(false);
   const [clearAnnouncement, setClearAnnouncement] = useState("");
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
@@ -55,8 +53,6 @@ export function WebSearchComposer({
     [webSearch.importResults],
   );
 
-  const isAtSourceLimit = remainingSourceSlots === 0;
-
   return (
     <section aria-labelledby="web-source-search-title" className="flex flex-col gap-3">
       <div className="sr-only" aria-live="polite" aria-atomic="true">
@@ -77,7 +73,6 @@ export function WebSearchComposer({
             }
           }}
           placeholder={t("webSearch.inputPlaceholder")}
-          disabled={isAtSourceLimit}
           className="field-sizing-content min-h-16 w-full resize-none bg-transparent px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-60"
         />
 
@@ -88,7 +83,6 @@ export function WebSearchComposer({
             className="h-8 rounded-xl px-4"
             onClick={handleSubmit}
             disabled={
-              isAtSourceLimit ||
               webSearch.clearing ||
               !webSearch.query.trim() ||
               webSearch.phase === "searching"
@@ -108,10 +102,8 @@ export function WebSearchComposer({
 
       <WebSearchFeedback
         webSearch={webSearch}
-        isAtSourceLimit={isAtSourceLimit}
         expanded={expanded}
         onExpandedChange={setExpanded}
-        remainingSourceSlots={remainingSourceSlots}
         importedCount={importedCount}
         failedUrls={failedUrls}
         onClearResults={handleClearResults}
@@ -134,19 +126,15 @@ function WebSearchHeader() {
 
 function WebSearchFeedback({
   webSearch,
-  isAtSourceLimit,
   expanded,
   onExpandedChange,
-  remainingSourceSlots,
   importedCount,
   failedUrls,
   onClearResults,
 }: {
   webSearch: ReturnType<typeof useWebSearch>;
-  isAtSourceLimit: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
-  remainingSourceSlots: number;
   importedCount: number;
   failedUrls: string[];
   onClearResults: () => Promise<void>;
@@ -154,13 +142,6 @@ function WebSearchFeedback({
   const { t } = useTranslation("sources");
   return (
     <>
-      {isAtSourceLimit && (
-        <Alert>
-          <AlertTitle>{t("webSearch.limitReached")}</AlertTitle>
-          <AlertDescription>{t("webSearch.limitReachedDescription")}</AlertDescription>
-        </Alert>
-      )}
-
       <div aria-live="polite" aria-atomic="true">
         {webSearch.phase === "searching" && (
           <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
@@ -220,7 +201,6 @@ function WebSearchFeedback({
           webSearch={webSearch}
           expanded={expanded}
           onExpandedChange={onExpandedChange}
-          remainingSourceSlots={remainingSourceSlots}
           importedCount={importedCount}
           failedUrls={failedUrls}
           onClearResults={onClearResults}

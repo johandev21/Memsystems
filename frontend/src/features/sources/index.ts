@@ -27,21 +27,23 @@ export { WebSearchComposer } from "./components/web-search-composer";
 
 // API
 export {
-  SOURCE_LIMIT,
   cancelSource,
   createFileSource,
   createTextSource,
   createUrlSource,
   deleteSource,
+  fetchSourcesPage,
   moveSource,
   reindexAllSources,
   reindexSource,
   retrySource,
   sourceQueryOptions,
-  sourcesQueryOptions,
+  sourcePageQueryKey,
+  sourceSummaryQueryOptions,
   submitSourceTranscript,
   updateSource,
 } from "./api/sources";
+export type { SourcePage, SourceSummary } from "./api/sources";
 
 export {
   createSourceFolder,

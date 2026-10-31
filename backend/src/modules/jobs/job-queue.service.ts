@@ -240,6 +240,10 @@ export class JobQueueService implements OnModuleInit, OnModuleDestroy {
     return row ? this.mapJob<TPayload, TResult>(row) : null;
   }
 
+  async updateResult<TResult>(id: string, result: TResult): Promise<void> {
+    await this.db.update(jobs).set({ result }).where(eq(jobs.id, id));
+  }
+
   async isActive(id: string): Promise<boolean> {
     const [row] = await this.db
       .select({ status: jobs.status })

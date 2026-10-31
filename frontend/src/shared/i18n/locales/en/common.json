@@ -70,6 +70,9 @@
       }
     },
     "sources": {
+      "invalidPageLimit": "Source page limit is invalid",
+      "searchTooLong": "Source search query is too long",
+      "invalidCursor": "Source page cursor is invalid",
       "artifact": {
         "invalidKey": "Invalid source artifact key",
         "invalidSize": "Invalid source artifact size",

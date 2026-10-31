@@ -82,6 +82,26 @@ export class WebSearchJobsService {
     await this.jobQueue.deleteByGroup(`web_search:${notebookId}`);
   }
 
+  async removeCandidates(notebookId: string, urls: string[]): Promise<void> {
+    if (urls.length === 0) return;
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    const job = await this.jobQueue.getLatestByGroup<
+      WebSearchJobPayload,
+      WebSearchSearchResponse
+    >(`web_search:${notebookId}`);
+    if (!job?.result) return;
+
+    const removed = new Set(urls);
+    const sources = job.result.sources.filter(
+      (source) => !removed.has(source.url),
+    );
+    if (sources.length === 0) {
+      await this.jobQueue.deleteByGroup(`web_search:${notebookId}`);
+      return;
+    }
+    await this.jobQueue.updateResult(job.id, { ...job.result, sources });
+  }
+
   async drain(): Promise<void> {
     await this.jobQueue.drain();
   }

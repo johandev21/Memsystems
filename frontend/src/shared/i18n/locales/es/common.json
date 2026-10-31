@@ -70,6 +70,9 @@
       }
     },
     "sources": {
+      "invalidPageLimit": "El límite de página de fuentes no es válido",
+      "searchTooLong": "La búsqueda de fuentes es demasiado larga",
+      "invalidCursor": "El cursor de página de fuentes no es válido",
       "artifact": {
         "invalidKey": "Clave de artefacto de origen no válida",
         "invalidSize": "Tamaño de artefacto de origen no válido",

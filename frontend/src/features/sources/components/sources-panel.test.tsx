@@ -67,7 +67,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
         return new Response(JSON.stringify(folders), { status: 200 });
       }
       if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-        return new Response(JSON.stringify(sources), { status: 200 });
+        return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
       }
       return new Response("{}", { status: 200 });
     });
@@ -106,7 +106,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
         return new Response(JSON.stringify(folders), { status: 200 });
       }
       if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-        return new Response(JSON.stringify([]), { status: 200 });
+        return new Response(JSON.stringify({ items: [], nextCursor: null }), { status: 200 });
       }
       return new Response("{}", { status: 200 });
     });
@@ -157,7 +157,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
         return new Response(JSON.stringify(folders), { status: 200 });
       }
       if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-        return new Response(JSON.stringify([]), { status: 200 });
+        return new Response(JSON.stringify({ items: [], nextCursor: null }), { status: 200 });
       }
       return new Response("{}", { status: 200 });
     });
@@ -210,7 +210,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
         return new Response(JSON.stringify(foldersList), { status: 200 });
       }
       if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-        return new Response(JSON.stringify([]), { status: 200 });
+        return new Response(JSON.stringify({ items: [], nextCursor: null }), { status: 200 });
       }
       return new Response("{}", { status: 200 });
     });
@@ -249,7 +249,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
         return new Response(JSON.stringify([]), { status: 200 });
       }
       if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-        return new Response(JSON.stringify([source]), { status: 200 });
+        return new Response(JSON.stringify({ items: [source], nextCursor: null }), { status: 200 });
       }
       return new Response("{}", { status: 200 });
     });
@@ -303,7 +303,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           }
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -369,7 +369,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           }
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -420,7 +420,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           }
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -461,7 +461,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(folders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify([]), { status: 200 });
+          return new Response(JSON.stringify({ items: [], nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -508,7 +508,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(folders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify([]), { status: 200 });
+          return new Response(JSON.stringify({ items: [], nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -566,7 +566,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(folders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify([]), { status: 200 });
+          return new Response(JSON.stringify({ items: [], nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -612,7 +612,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(folders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify([]), { status: 200 });
+          return new Response(JSON.stringify({ items: [], nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -669,7 +669,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify([]), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -732,7 +732,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(currentFolders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(currentSources), { status: 200 });
+        return new Response(JSON.stringify({ items: currentSources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -789,7 +789,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(folders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -831,7 +831,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(folders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -940,7 +940,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify(folders), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });
@@ -1042,7 +1042,7 @@ describe("SourcesPanel with Source Folders (#104)", () => {
           return new Response(JSON.stringify([]), { status: 200 });
         }
         if (url.includes(`/api/notebooks/${notebookId}/sources`)) {
-          return new Response(JSON.stringify(sources), { status: 200 });
+          return new Response(JSON.stringify({ items: sources, nextCursor: null }), { status: 200 });
         }
         return new Response("{}", { status: 200 });
       });

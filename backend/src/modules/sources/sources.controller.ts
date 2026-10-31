@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
   UsePipes,
@@ -31,7 +32,10 @@ import { UpdateSpeakerLabelsDto } from './dto/update-speaker-labels.dto';
 import { AddTranscriptDto } from './dto/add-transcript.dto';
 import { UpdateSourceDto } from './dto/update-source.dto';
 import { MoveSourceDto } from './dto/move-source.dto';
-import { WebSearchDto } from './dto/web-search.dto';
+import {
+  DismissWebSearchCandidatesDto,
+  WebSearchDto,
+} from './dto/web-search.dto';
 import { ImportWebSearchResultsDto } from './dto/import-web-search-results.dto';
 
 @ApiTags('Sources')
@@ -50,8 +54,35 @@ export class SourcesController {
   })
   @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
   @ApiOkResponse({ description: 'Sources in the Notebook.' })
-  async listSources(@Param('notebookId') notebookId: string) {
-    return this.sourcesService.list(notebookId);
+  async listSources(
+    @Param('notebookId') notebookId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limitStr?: string,
+    @Query('q') query?: string,
+  ) {
+    const limit = limitStr === undefined ? undefined : Number(limitStr);
+    if (
+      limit !== undefined &&
+      (!Number.isInteger(limit) || limit < 1 || limit > 100)
+    ) {
+      throw new BadRequestError('Source page limit must be between 1 and 100', {
+        messageKey: 'errors.sources.invalidPageLimit',
+      });
+    }
+    if (query && query.length > 200) {
+      throw new BadRequestError('Source search query is too long', {
+        messageKey: 'errors.sources.searchTooLong',
+      });
+    }
+    return this.sourcesService.list(notebookId, { cursor, limit, query });
+  }
+
+  @Get('notebooks/:notebookId/sources/summary')
+  @ApiOperation({ summary: 'Get Source summary for a Notebook' })
+  @ApiParam({ name: 'notebookId', description: 'Notebook id.' })
+  @ApiOkResponse({ description: 'Source count in the Notebook.' })
+  async sourceSummary(@Param('notebookId') notebookId: string) {
+    return { count: await this.sourcesService.countForNotebook(notebookId) };
   }
 
   @Post('notebooks/:notebookId/sources/text')
@@ -336,6 +367,15 @@ export class SourcesController {
     await this.webSearchJobsService.dismiss(notebookId);
   }
 
+  @Post('notebooks/:notebookId/sources/web-search/dismiss-candidates')
+  @UsePipes(new ZodValidationPipe(DismissWebSearchCandidatesDto.schema))
+  async dismissWebSearchCandidates(
+    @Param('notebookId') notebookId: string,
+    @Body() body: DismissWebSearchCandidatesDto,
+  ) {
+    await this.webSearchJobsService.removeCandidates(notebookId, body.urls);
+  }
+
   @Post('notebooks/:notebookId/sources/web-search/import')
   @ApiOperation({
     summary: 'Import Web Search results',
@@ -350,9 +390,19 @@ export class SourcesController {
     @Param('notebookId') notebookId: string,
     @Body() body: ImportWebSearchResultsDto,
   ) {
-    return this.webSearchService.import(notebookId, {
+    const response = await this.webSearchService.import(notebookId, {
       candidates: body.candidates,
       query: body.query ?? '',
     });
+    await this.webSearchJobsService.removeCandidates(
+      notebookId,
+      response.results
+        .filter(
+          (result) =>
+            result.status === 'added' || result.status === 'duplicate',
+        )
+        .map((result) => result.url),
+    );
+    return response;
   }
 }

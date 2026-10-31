@@ -30,7 +30,6 @@ export function QuizBriefForm({
   const {
     step,
     setStep,
-    sources,
     hasSources,
     hasInstructions,
     canSubmit,
@@ -98,7 +97,7 @@ export function QuizBriefForm({
                 {t("fields.knowledgeSourcesStep3")}
               </BriefFieldLabel>
               <GenerationSourcePopover
-                sources={sources}
+                notebookId={notebookId}
                 selectedIds={value.sourceIds}
                 onChange={(sourceIds) => patchFormData({ sourceIds })}
                 emptyMessage={t("knowledge.emptySources", { kind: t("kinds.quiz") })}

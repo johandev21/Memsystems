@@ -10,3 +10,11 @@ export const webSearchSchema = z.object({
 });
 
 export class WebSearchDto extends createZodDto(webSearchSchema) {}
+
+export const dismissWebSearchCandidatesSchema = z.object({
+  urls: z.array(z.string().url()).min(1).max(50),
+});
+
+export class DismissWebSearchCandidatesDto extends createZodDto(
+  dismissWebSearchCandidatesSchema,
+) {}

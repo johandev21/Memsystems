@@ -8,7 +8,6 @@ export interface SearchResultsProps {
   webSearch: ReturnType<typeof useWebSearch>;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
-  remainingSourceSlots: number;
   importedCount: number;
   failedUrls: string[];
   onClearResults: () => Promise<void>;
@@ -18,20 +17,18 @@ export function SearchResults({
   webSearch,
   expanded,
   onExpandedChange,
-  remainingSourceSlots,
   importedCount,
   failedUrls,
   onClearResults,
 }: SearchResultsProps) {
   const selectedCount = webSearch.selectedUrls.size;
-  const selectableCount = Math.min(webSearch.candidates.length, remainingSourceSlots);
+  const selectableCount = webSearch.candidates.length;
   const allSelectableSelected = selectableCount > 0 && selectedCount === selectableCount;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
       <SearchResultsHeader
         candidatesCount={webSearch.candidates.length}
-        remainingSourceSlots={remainingSourceSlots}
         selectedCount={selectedCount}
         allSelectableSelected={allSelectableSelected}
         selectableCount={selectableCount}
@@ -55,11 +52,7 @@ export function SearchResults({
         {webSearch.candidates.map((candidate) => {
           const result = webSearch.importResults.get(candidate.url);
           const selected = webSearch.selectedUrls.has(candidate.url);
-          const selectionDisabled =
-            Boolean(result) ||
-            webSearch.importing ||
-            webSearch.clearing ||
-            (!selected && selectedCount >= remainingSourceSlots);
+          const selectionDisabled = Boolean(result) || webSearch.importing || webSearch.clearing;
 
           return (
             <SearchCandidateRow
@@ -68,7 +61,9 @@ export function SearchResults({
               result={result}
               selected={selected}
               selectionDisabled={selectionDisabled}
+              busy={webSearch.importing || webSearch.clearing}
               onToggleCandidate={webSearch.toggleCandidate}
+              onDismissCandidate={webSearch.dismissCandidate}
             />
           );
         })}

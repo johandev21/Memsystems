@@ -36,11 +36,8 @@ export function useAddSourceActions(
     textBody,
   } = sourceState;
 
-  const handleSourceCreated = (uploadId: string, source: Source, successMessage: string) => {
-    queryClient.setQueryData<Source[]>(["sources", notebookId], (current) => {
-      const existing = current ?? [];
-      return [source, ...existing.filter((item) => item.id !== source.id)];
-    });
+  const handleSourceCreated = (uploadId: string, successMessage: string) => {
+    void queryClient.invalidateQueries({ queryKey: ["sources", notebookId] });
     removePendingUpload(uploadId);
     toast.success(successMessage);
   };
@@ -79,10 +76,9 @@ export function useAddSourceActions(
         notebookId,
         uploadId,
         abortController,
-        onSuccess: (source) =>
+        onSuccess: () =>
           handleSourceCreated(
             uploadId,
-            source,
             isYouTube ? t("toasts.youtubeAdded") : t("toasts.urlAdded"),
           ),
         onAbort: () => removePendingUpload(uploadId),
@@ -145,10 +141,9 @@ export function useAddSourceActions(
       notebookId,
       uploadId,
       abortController,
-      onSuccess: (source) =>
+      onSuccess: () =>
         handleSourceCreated(
           uploadId,
-          source,
           isVideo
             ? t("toasts.videoAdded")
             : isAudio
@@ -207,7 +202,7 @@ export function useAddSourceActions(
       notebookId,
       uploadId,
       abortController,
-      onSuccess: (source) => handleSourceCreated(uploadId, source, t("toasts.textAdded")),
+      onSuccess: () => handleSourceCreated(uploadId, t("toasts.textAdded")),
       onAbort: () => removePendingUpload(uploadId),
       onError: (error) => handleUploadError(uploadId, t("toasts.textAddFailed"), error),
     });

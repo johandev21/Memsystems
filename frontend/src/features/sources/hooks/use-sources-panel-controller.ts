@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   KeyboardSensor,
   PointerSensor,
@@ -7,7 +7,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { useCallback, useMemo, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentProps } from "react";
 import {
   flattenVisibleTree,
   getTreeDragData,
@@ -18,7 +18,7 @@ import {
   useTreeSearch,
 } from "@/shared/components/ui/tree";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
-import { type Source, sourcesQueryOptions } from "../api/sources";
+import { fetchSourcesPage, type Source, sourcePageQueryKey, sourceSummaryQueryOptions } from "../api/sources";
 import { sourceFoldersQueryOptions } from "../api/source-folders";
 import type { SourceFolder } from "../types/source-folder.types";
 import { buildSourcesTree, canMoveSourcesItem } from "../model/sources-tree";
@@ -37,18 +37,28 @@ const MOBILE_LAYOUT_QUERY = "(max-width: 1023px)";
 
 export type SourceDeleteTarget = { id: string; title: string } | null;
 
-export function useSourcesPanelData(notebookId: string) {
+export function useSourcesPanelData(notebookId: string, query: string) {
   const {
-    data: sources,
+    data,
     isPending: isSourcesPending,
     isError: isSourcesError,
     refetch: refetchSources,
-  } = useQuery({
-    ...sourcesQueryOptions(notebookId),
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: sourcePageQueryKey(notebookId, query),
+    queryFn: ({ pageParam, signal }) =>
+      fetchSourcesPage(notebookId, { cursor: pageParam, query, signal }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: Boolean(notebookId),
     staleTime: 0,
     refetchInterval: (query) => {
-      const current = query.state.data as Source[] | undefined;
-      return current?.some(isSourceProcessing) ? SOURCE_POLL_INTERVAL_MS : false;
+      const current = query.state.data;
+      return current?.pages.some((page) => page.items.some(isSourceProcessing))
+        ? SOURCE_POLL_INTERVAL_MS
+        : false;
     },
   });
   const {
@@ -60,13 +70,18 @@ export function useSourcesPanelData(notebookId: string) {
     ...sourceFoldersQueryOptions(notebookId),
     enabled: Boolean(notebookId),
   });
+  const { data: sourceSummary } = useQuery(sourceSummaryQueryOptions(notebookId));
   const handleRetryLoad = useCallback(() => {
     refetchSources();
     refetchFolders();
   }, [refetchSources, refetchFolders]);
 
   return {
-    sources,
+    sources: data?.pages.flatMap((page) => page.items),
+    sourceSummary,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
     folders,
     isPending: isSourcesPending || isFoldersPending,
     isError: isSourcesError || isFoldersError,
@@ -78,6 +93,8 @@ export function useSourcesPanelTree(
   notebookId: string,
   folders: SourceFolder[] | undefined,
   sources: Source[] | undefined,
+  searchQuery: string,
+  setSearchQuery: (query: string) => void,
 ) {
   const [expandedIds, setExpandedIds] = usePersistentExpandedFolders(
     notebookId,
@@ -126,6 +143,8 @@ export function useSourcesPanelTree(
       })) ?? [],
       [folders],
     ),
+    query: searchQuery,
+    onQueryChange: setSearchQuery,
   });
   const effectiveOpenFolderIds = useMemo(
     () => search.isSearching
@@ -241,9 +260,28 @@ export function useSourcesPanelKeyboard({
 export function useSourcesPanelController(notebookId: string, onSelectSource: (id: string) => void) {
   const isMobileLayout = useMediaQuery(MOBILE_LAYOUT_QUERY);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
-  const panelData = useSourcesPanelData(notebookId);
-  const { sources, folders, isPending, isError, handleRetryLoad } = panelData;
-  const tree = useSourcesPanelTree(notebookId, folders, sources);
+  const [sourceSearchQuery, setSourceSearchQuery] = useState("");
+  const [serverSearchQuery, setServerSearchQuery] = useState("");
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setServerSearchQuery(sourceSearchQuery), 250);
+    return () => window.clearTimeout(timeout);
+  }, [sourceSearchQuery]);
+  const panelData = useSourcesPanelData(notebookId, serverSearchQuery);
+  const {
+    sources,
+    folders,
+    sourceSummary,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    isPending,
+    isError,
+    handleRetryLoad,
+  } = panelData;
+  const handleLoadMoreSources = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  const tree = useSourcesPanelTree(notebookId, folders, sources, sourceSearchQuery, setSourceSearchQuery);
   const {
     expandedIds,
     setExpandedIds,
@@ -339,6 +377,9 @@ export function useSourcesPanelController(notebookId: string, onSelectSource: (i
     pendingUploads,
     isPending,
     isError,
+    hasMoreSources: Boolean(hasNextPage),
+    isLoadingMoreSources: isFetchingNextPage,
+    onLoadMoreSources: handleLoadMoreSources,
     onRetryLoad: handleRetryLoad,
     onSelectSource,
     onCancelPendingUpload: cancelPendingUpload,
@@ -370,6 +411,9 @@ export function useSourcesPanelController(notebookId: string, onSelectSource: (i
     setFolderOpen,
     isPending,
     isError,
+    hasMoreSources: Boolean(hasNextPage),
+    isLoadingMoreSources: isFetchingNextPage,
+    onLoadMoreSources: handleLoadMoreSources,
     hasNoSources,
     scrollElement,
     onSelectSource,
@@ -430,6 +474,7 @@ export function useSourcesPanelController(notebookId: string, onSelectSource: (i
     collapseAll,
     sourceListProps,
     sources,
+    sourceCount: sourceSummary?.count ?? 0,
     folders,
     setScrollElement,
   };

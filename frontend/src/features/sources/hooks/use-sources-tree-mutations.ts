@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type InfiniteData, type QueryKey } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { moveSource, updateSource, type Source } from "../api/sources";
+import { moveSource, updateSource, type Source, type SourcePage } from "../api/sources";
 import {
   createSourceFolder,
   deleteSourceFolder,
@@ -10,6 +10,9 @@ import {
 } from "../api/source-folders";
 import { getDescendantFolderIds } from "../model/sources-tree";
 import type { SourceFolder } from "../types/source-folder.types";
+
+type SourcePagesCache = InfiniteData<SourcePage>;
+type SourcePagesSnapshot = Array<[QueryKey, SourcePagesCache | undefined]>;
 
 export interface UseSourcesTreeMutationsOptions {
   notebookId: string;
@@ -26,6 +29,30 @@ export function useSourcesTreeMutations({
 }: UseSourcesTreeMutationsOptions) {
   const { t } = useTranslation(["sources", "tree"]);
   const queryClient = useQueryClient();
+  const sourcePagesKey = ["sources", notebookId, "pages"] as const;
+  const getSourcePagesSnapshot = () =>
+    queryClient.getQueriesData<SourcePagesCache>({ queryKey: sourcePagesKey });
+  const updateSourcePages = (updateItems: (items: Source[]) => Source[]) => {
+    queryClient.setQueriesData<SourcePagesCache>({ queryKey: sourcePagesKey }, (old) =>
+      old
+        ? {
+            ...old,
+            pages: old.pages.map((page) => ({ ...page, items: updateItems(page.items) })),
+          }
+        : old,
+    );
+  };
+  const restoreSourcePages = (snapshot: SourcePagesSnapshot) => {
+    for (const [queryKey, data] of snapshot) queryClient.setQueryData(queryKey, data);
+  };
+  const findCachedSource = useCallback(
+    (id: string) =>
+      queryClient
+        .getQueriesData<SourcePagesCache>({ queryKey: ["sources", notebookId, "pages"] })
+        .flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? [])
+        .find((source) => source.id === id),
+    [notebookId, queryClient],
+  );
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
@@ -66,7 +93,7 @@ export function useSourcesTreeMutations({
       await queryClient.cancelQueries({ queryKey: ["sources", notebookId] });
       await queryClient.cancelQueries({ queryKey: ["source-folders", notebookId] });
 
-      const previousSources = queryClient.getQueryData<Source[]>(["sources", notebookId]);
+      const previousSources = getSourcePagesSnapshot();
       const previousFolders = queryClient.getQueryData<SourceFolder[]>(["source-folders", notebookId]);
 
       const now = new Date().toISOString();
@@ -78,17 +105,14 @@ export function useSourcesTreeMutations({
           return old.map((f) => (f.id === itemId ? { ...f, name: nextName, updatedAt: now } : f));
         });
       } else {
-        queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
-          if (!old) return old;
-          return old.map((s) => (s.id === itemId ? { ...s, title: nextName } : s));
-        });
+        updateSourcePages((items) => items.map((s) => (s.id === itemId ? { ...s, title: nextName } : s)));
       }
 
       return { previousSources, previousFolders };
     },
     onError: (err, _vars, context) => {
       if (context?.previousSources) {
-        queryClient.setQueryData(["sources", notebookId], context.previousSources);
+        restoreSourcePages(context.previousSources);
       }
       if (context?.previousFolders) {
         queryClient.setQueryData(["source-folders", notebookId], context.previousFolders);
@@ -120,16 +144,14 @@ export function useSourcesTreeMutations({
         return;
       }
 
-      const source = queryClient
-        .getQueryData<Source[]>(["sources", notebookId])
-        ?.find((s) => s.id === id);
+      const source = findCachedSource(id);
       if (source) {
         if (source.title === trimmed) return;
         renameMutation.mutate({ itemId: id, nextName: trimmed });
         return;
       }
     },
-    [folders, queryClient, notebookId, renameMutation],
+    [findCachedSource, folders, renameMutation],
   );
 
   const handleRenameCancel = useCallback(() => {
@@ -144,7 +166,7 @@ export function useSourcesTreeMutations({
       await queryClient.cancelQueries({ queryKey: ["sources", notebookId] });
       await queryClient.cancelQueries({ queryKey: ["source-folders", notebookId] });
 
-      const previousSources = queryClient.getQueryData<Source[]>(["sources", notebookId]);
+      const previousSources = getSourcePagesSnapshot();
       const previousFolders = queryClient.getQueryData<SourceFolder[]>(["source-folders", notebookId]);
 
       if (previousFolders) {
@@ -157,10 +179,7 @@ export function useSourcesTreeMutations({
         });
 
         if (previousSources) {
-          queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
-            if (!old) return old;
-            return old.filter((s) => !(s.folderId && deletedIds.has(s.folderId)));
-          });
+          updateSourcePages((items) => items.filter((s) => !(s.folderId && deletedIds.has(s.folderId))));
         }
       }
 
@@ -168,7 +187,7 @@ export function useSourcesTreeMutations({
     },
     onError: (err, _vars, context) => {
       if (context?.previousSources) {
-        queryClient.setQueryData(["sources", notebookId], context.previousSources);
+        restoreSourcePages(context.previousSources);
       }
       if (context?.previousFolders) {
         queryClient.setQueryData(["source-folders", notebookId], context.previousFolders);
@@ -210,7 +229,7 @@ export function useSourcesTreeMutations({
       await queryClient.cancelQueries({ queryKey: ["sources", notebookId] });
       await queryClient.cancelQueries({ queryKey: ["source-folders", notebookId] });
 
-      const previousSources = queryClient.getQueryData<Source[]>(["sources", notebookId]);
+      const previousSources = getSourcePagesSnapshot();
       const previousFolders = queryClient.getQueryData<SourceFolder[]>(["source-folders", notebookId]);
 
       const isFolder = previousFolders?.some((f) => f.id === itemId);
@@ -221,10 +240,7 @@ export function useSourcesTreeMutations({
           return old.map((f) => (f.id === itemId ? { ...f, parentId: targetFolderId } : f));
         });
       } else {
-        queryClient.setQueryData<Source[]>(["sources", notebookId], (old) => {
-          if (!old) return old;
-          return old.map((s) => (s.id === itemId ? { ...s, folderId: targetFolderId } : s));
-        });
+        updateSourcePages((items) => items.map((s) => (s.id === itemId ? { ...s, folderId: targetFolderId } : s)));
       }
 
       if (targetFolderId !== null) {
@@ -235,7 +251,7 @@ export function useSourcesTreeMutations({
     },
     onError: (err, _vars, context) => {
       if (context?.previousSources) {
-        queryClient.setQueryData(["sources", notebookId], context.previousSources);
+        restoreSourcePages(context.previousSources);
       }
       if (context?.previousFolders) {
         queryClient.setQueryData(["source-folders", notebookId], context.previousFolders);

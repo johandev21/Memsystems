@@ -21,7 +21,7 @@ export interface WebSearchJob {
   completedAt: string | null;
 }
 
-export type WebSearchImportResultStatus = "added" | "duplicate" | "limit_reached" | "scrape_failed";
+export type WebSearchImportResultStatus = "added" | "duplicate" | "scrape_failed";
 
 export interface WebSearchImportResultItem {
   url: string;
@@ -61,6 +61,12 @@ export const startWebSearchJob = (notebookId: string, input: { query: string }) 
 
 export const dismissWebSearchJob = (notebookId: string) =>
   apiDelete(`/api/notebooks/${notebookId}/sources/web-search/latest`);
+
+export const dismissWebSearchCandidates = (notebookId: string, urls: string[]) =>
+  apiPost<{ urls: string[] }, void>(
+    `/api/notebooks/${notebookId}/sources/web-search/dismiss-candidates`,
+    { urls },
+  );
 
 export const importWebSources = (
   notebookId: string,

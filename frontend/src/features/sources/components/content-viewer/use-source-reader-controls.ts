@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { fetchApi } from "@/shared/api";
 import type { Source, SourceWithContent } from "../../types/source.types";
+import type { SourcePage } from "../../api/sources";
 import type { ReaderControls } from "./source-content-types";
 
 export function useCachedSourceSummary(sourceId: string): Source | undefined {
   const queryClient = useQueryClient();
-  const allSources = queryClient.getQueriesData<Source[]>({ queryKey: ["sources"] });
-  for (const [, list] of allSources) {
-    const match = list?.find((s) => s.id === sourceId);
+  const allSources = queryClient.getQueriesData<InfiniteData<SourcePage>>({
+    predicate: (query) => query.queryKey[0] === "sources" && query.queryKey[2] === "pages",
+  });
+  for (const [, pages] of allSources) {
+    const match = pages?.pages.flatMap((page) => page.items).find((s) => s.id === sourceId);
     if (match) return match;
   }
   return undefined;

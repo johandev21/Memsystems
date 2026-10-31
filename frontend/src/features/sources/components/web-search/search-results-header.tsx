@@ -3,7 +3,6 @@ import { Button } from "@/shared/components/ui/button";
 
 export interface SearchResultsHeaderProps {
   candidatesCount: number;
-  remainingSourceSlots: number;
   selectedCount: number;
   allSelectableSelected: boolean;
   selectableCount: number;
@@ -15,7 +14,6 @@ export interface SearchResultsHeaderProps {
 
 export function SearchResultsHeader({
   candidatesCount,
-  remainingSourceSlots,
   selectedCount,
   allSelectableSelected,
   selectableCount,
@@ -25,10 +23,7 @@ export function SearchResultsHeader({
   onToggleSelectAll,
 }: SearchResultsHeaderProps) {
   const { t } = useTranslation("sources");
-  const subtitle =
-    remainingSourceSlots < candidatesCount
-      ? t("webSearchResults.sourceSlotsAvailable", { count: remainingSourceSlots })
-      : t("webSearchResults.selectedCount", { count: selectedCount });
+  const subtitle = t("webSearchResults.selectedCount", { count: selectedCount });
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">

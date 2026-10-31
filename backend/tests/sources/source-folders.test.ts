@@ -273,7 +273,7 @@ describe('Source Folders (backend)', () => {
 
       // Sources inside deleted folders are soft-deleted and hidden from active list
       const activeSources = await sourcesService.list(notebook.id);
-      expect(activeSources.map((s) => s.id)).toEqual([sourceAtRoot.id]);
+      expect(activeSources.items.map((s) => s.id)).toEqual([sourceAtRoot.id]);
 
       const [deletedParentSource] = await db
         .select()
@@ -294,7 +294,7 @@ describe('Source Folders (backend)', () => {
       const restoredFolders = await folderService.list(notebook.id);
       expect(restoredFolders).toHaveLength(2);
       const restoredSources = await sourcesService.list(notebook.id);
-      expect(restoredSources).toHaveLength(3);
+      expect(restoredSources.items).toHaveLength(3);
     });
   });
 
@@ -313,7 +313,7 @@ describe('Source Folders (backend)', () => {
       expect(moved.folderId).toBe(folder.id);
 
       const list = await sourcesService.list(notebook.id);
-      const listedSource = list.find((s) => s.id === source.id);
+      const listedSource = list.items.find((s) => s.id === source.id);
       expect(listedSource).toBeDefined();
       expect(listedSource?.folderId).toBe(folder.id);
     });
@@ -332,7 +332,7 @@ describe('Source Folders (backend)', () => {
       expect(moved.folderId).toBeNull();
 
       const list = await sourcesService.list(notebook.id);
-      const listedSource = list.find((s) => s.id === source.id);
+      const listedSource = list.items.find((s) => s.id === source.id);
       expect(listedSource?.folderId).toBeNull();
     });
 

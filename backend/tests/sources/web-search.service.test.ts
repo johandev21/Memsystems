@@ -130,13 +130,42 @@ describe('WebSearchService', () => {
     expect(result.results.every((r) => r.status === 'added')).toBe(true);
 
     const sources = await sourcesService.list(notebook.id);
-    expect(sources).toHaveLength(2);
-    const rows = await sourcesService.listUrlsForNotebook(notebook.id);
+    expect(sources.items).toHaveLength(2);
+    const rows = await sourcesService.listUrlsForNotebook(notebook.id, [
+      'https://example.com/one',
+      'https://example.com/two',
+    ]);
     expect(rows).toEqual(
       expect.arrayContaining([
         'https://example.com/one',
         'https://example.com/two',
       ]),
+    );
+  });
+
+  it('imports more than 300 candidates without an artificial source cap', async () => {
+    const notebookId = 'notebook-1';
+    const notebooksService = { assertNotebookOwner: vi.fn() } as any;
+    const sourcesService = {
+      listUrlsForNotebook: vi.fn().mockResolvedValue([]),
+      createUrl: vi.fn(async (_id: string, input: { url: string }) => ({
+        id: input.url,
+        title: input.url,
+      })),
+    } as any;
+    const service = new WebSearchService(notebooksService, sourcesService);
+    const candidates = Array.from({ length: 301 }, (_, index) => ({
+      url: `https://example.com/${index}`,
+    }));
+
+    const result = await service.import(notebookId, { candidates, query: 'scale' });
+
+    expect(result.results).toHaveLength(301);
+    expect(result.results.every((item) => item.status === 'added')).toBe(true);
+    expect(sourcesService.createUrl).toHaveBeenCalledTimes(301);
+    expect(sourcesService.listUrlsForNotebook).toHaveBeenCalledWith(
+      notebookId,
+      candidates.map((candidate) => candidate.url),
     );
   });
 

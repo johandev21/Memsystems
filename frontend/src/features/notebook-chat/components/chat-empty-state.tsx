@@ -28,6 +28,7 @@ export function ChatEmptyState({ notebookTitle, description, isUntitled }: ChatE
     <ConversationEmptyState
       title={t("empty.welcomeTitle", { title: notebookTitle })}
       description={t("empty.welcomeDescription")}
+      className="items-stretch text-left"
     />
   );
 }

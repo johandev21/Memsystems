@@ -497,6 +497,29 @@ describe('SourceJobsService', () => {
     expect(rows.length).toBeGreaterThanOrEqual(3);
   });
 
+  it('reindexes notebooks larger than one bounded source batch', async () => {
+    const embedding = fakeEmbeddingService();
+    const { jobs: service } = makeJobsService(embedding);
+    const notebook = await seedNotebook();
+
+    await Promise.all(
+      Array.from({ length: 205 }, (_, index) =>
+        seedSource(notebook.id, {
+          title: `Batch source ${index}`,
+          rawText: `Batch source content ${index}`,
+          kind: 'text',
+        }),
+      ),
+    );
+
+    expect(await service.reindexNotebook(notebook.id)).toBe(205);
+    const rows = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(eq(jobs.type, 'source_indexing'));
+    expect(rows).toHaveLength(205);
+  });
+
   it('routes an unextracted file to processing during notebook reindex', async () => {
     const embedding = fakeEmbeddingService();
     const { jobs: service } = makeJobsService(embedding);

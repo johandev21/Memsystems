@@ -1,5 +1,6 @@
-import { Check, ExternalLink } from "lucide-react";
+import { Check, ExternalLink, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { resolveDynamicMessage } from "@/shared/api/api-error";
 import { cn } from "@/shared/utils/cn";
@@ -11,7 +12,9 @@ export interface SearchCandidateRowProps {
   result?: WebSearchImportResultItem;
   selected: boolean;
   selectionDisabled: boolean;
+  busy: boolean;
   onToggleCandidate: (url: string) => void;
+  onDismissCandidate: (url: string) => void;
 }
 
 export function SearchCandidateRow({
@@ -19,7 +22,9 @@ export function SearchCandidateRow({
   result,
   selected,
   selectionDisabled,
+  busy,
   onToggleCandidate,
+  onDismissCandidate,
 }: SearchCandidateRowProps) {
   const { t } = useTranslation("sources");
   const settled = result && (result.status === "added" || result.status === "duplicate");
@@ -67,21 +72,28 @@ export function SearchCandidateRow({
             {candidate.description}
           </p>
         )}
-        {result && result.status !== "added" && result.status !== "duplicate" && (
+        {result?.status === "scrape_failed" && (
           <p
-            className={cn(
-              "mt-1 text-xs",
-              result.status === "scrape_failed" ? "text-destructive" : "text-muted-foreground",
-            )}
+            className="mt-1 text-xs text-destructive"
           >
-            {result.status === "scrape_failed"
-              ? t("webSearchResults.addError", {
-                  error: resolveDynamicMessage(result.error, t("webSearchResults.fetchFailed")),
-                })
-              : t("webSearchResults.limitReached")}
+            {t("webSearchResults.addError", {
+              error: resolveDynamicMessage(result.error, t("webSearchResults.fetchFailed")),
+            })}
           </p>
         )}
       </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-7 shrink-0"
+        aria-label={t("webSearchResults.dismissLabel", { title: candidate.title })}
+        title={t("webSearchResults.dismissLabel", { title: candidate.title })}
+        disabled={busy}
+        onClick={() => onDismissCandidate(candidate.url)}
+      >
+        <X aria-hidden="true" className="size-3.5" />
+      </Button>
     </div>
   );
 }

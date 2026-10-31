@@ -4,7 +4,7 @@ import {
   type CrawlerService,
 } from '../../crawler/crawler.types';
 import { NotebooksService } from '../../notebooks/notebooks.service';
-import { SOURCE_LIMIT, SourcesService } from '../sources.service';
+import { SourcesService } from '../sources.service';
 import {
   DomainError,
   ServiceUnavailableError,
@@ -41,8 +41,7 @@ export interface WebSearchImportInput {
   query: string;
 }
 
-export type WebSearchImportStatus =
-  'added' | 'duplicate' | 'limit_reached' | 'scrape_failed';
+export type WebSearchImportStatus = 'added' | 'duplicate' | 'scrape_failed';
 
 export interface WebSearchImportResultItem {
   url: string;
@@ -96,8 +95,10 @@ export class WebSearchService {
       WEB_SEARCH_RESULT_LIMIT,
     );
 
-    const existingUrls =
-      await this.sourcesService.listUrlsForNotebook(notebookId);
+    const existingUrls = await this.sourcesService.listUrlsForNotebook(
+      notebookId,
+      found.map((source) => source.url),
+    );
     const existing = new Set(existingUrls);
     const sources = found.filter((s) => !existing.has(s.url));
 
@@ -127,29 +128,17 @@ export class WebSearchService {
     await this.notebooksService.assertNotebookOwner(notebookId);
 
     const existingUrls = new Set(
-      await this.sourcesService.listUrlsForNotebook(notebookId),
+      await this.sourcesService.listUrlsForNotebook(
+        notebookId,
+        input.candidates.map((candidate) => candidate.url),
+      ),
     );
-    let count = await this.sourcesService.countForNotebook(notebookId);
 
     const results: WebSearchImportResultItem[] = [];
 
     for (const candidate of input.candidates) {
       const fallbackTitle = candidate.url;
       const description = candidate.description?.slice(0, 500) ?? null;
-
-      if (count >= SOURCE_LIMIT) {
-        this.logger.warn(`web-search import: limit reached, skipping`, {
-          url: candidate.url,
-          count,
-          limit: SOURCE_LIMIT,
-        });
-        results.push({
-          url: candidate.url,
-          title: candidate.title ?? fallbackTitle,
-          status: 'limit_reached',
-        });
-        continue;
-      }
 
       if (existingUrls.has(candidate.url)) {
         this.logger.log(`web-search import: duplicate, skipping`, {
@@ -179,7 +168,6 @@ export class WebSearchService {
           },
         });
         existingUrls.add(candidate.url);
-        count += 1;
         this.logger.log(`web-search import: added`, {
           url: candidate.url,
           sourceId: source.id,

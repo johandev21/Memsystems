@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,7 +10,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/components/ui/dialog";
-import { SOURCE_LIMIT, sourcesQueryOptions } from "../api/sources";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { useAddSourceDialogState } from "../hooks/use-add-source-dialog-state";
 import { useAddSourceActions } from "../hooks/use-add-source-actions";
@@ -34,7 +32,6 @@ export function AddSourceDialog({
   forceDrawer,
 }: AddSourceDialogProps) {
   const { t } = useTranslation("sources");
-  const { data: sources } = useQuery(sourcesQueryOptions(notebookId));
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
@@ -57,9 +54,6 @@ export function AddSourceDialog({
     reset,
   } = sourceState;
 
-  const count = sources?.length ?? 0;
-  const remainingSourceSlots = Math.max(SOURCE_LIMIT - count, 0);
-  const usedPercent = Math.min((count / SOURCE_LIMIT) * 100, 100);
 
   const handleCloseAndReset = () => {
     setOpen(false);
@@ -87,9 +81,6 @@ export function AddSourceDialog({
         notebookId={notebookId}
         mode={mode}
         setMode={setMode}
-        remainingSourceSlots={remainingSourceSlots}
-        count={count}
-        usedPercent={usedPercent}
         onUploadFile={handleStartFileUpload}
         urlValue={urlValue}
         onUrlValueChange={setUrlValue}
@@ -161,7 +152,6 @@ export function AddSourceDialog({
         <AddSourceDialogBody
           mode={mode}
           notebookId={notebookId}
-          remainingSourceSlots={remainingSourceSlots}
           onSelectUrlMode={() => setMode("url")}
           onSelectTextMode={() => setMode("text")}
           onUploadFile={handleStartFileUpload}
@@ -180,8 +170,6 @@ export function AddSourceDialog({
           textBody={textBody}
           onTextBodyChange={setTextBody}
           onSubmitText={handleStartTextUpload}
-          count={count}
-          usedPercent={usedPercent}
         />
       </DialogContent>
     </Dialog>

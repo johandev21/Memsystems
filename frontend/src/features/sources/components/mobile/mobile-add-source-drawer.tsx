@@ -15,7 +15,6 @@ import {
   ACCEPTED_SOURCE_MIME_TYPES,
   isClientSupportedSourceFile,
 } from "../../utils/source-upload-actions";
-import { SourceLimitMeter } from "../add-source/source-limit-meter";
 import { TextInputMode } from "../text-input-mode";
 import { UrlInputMode } from "../url-input-mode";
 import { WebSearchComposer } from "../web-search-composer";
@@ -27,9 +26,6 @@ export interface MobileAddSourceDrawerProps {
   notebookId: string;
   mode: string;
   setMode: (mode: "menu" | "url" | "text") => void;
-  remainingSourceSlots: number;
-  count: number;
-  usedPercent: number;
   onUploadFile: (file: File) => void;
   urlValue: string;
   onUrlValueChange: (v: string) => void;
@@ -65,7 +61,7 @@ export function MobileAddSourceDrawer(props: MobileAddSourceDrawerProps) {
     e.target.value = "";
   };
 
-  const isBusy = props.remainingSourceSlots === 0;
+  const isBusy = false;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -102,9 +98,6 @@ export function MobileAddSourceDrawer(props: MobileAddSourceDrawerProps) {
         ) : (
           <MobileAddSourceMenu
             notebookId={props.notebookId}
-            remainingSourceSlots={props.remainingSourceSlots}
-            count={props.count}
-            usedPercent={props.usedPercent}
             isBusy={isBusy}
             onTriggerFileInput={() => fileInputRef.current?.click()}
             onSelectMode={props.setMode}
@@ -220,9 +213,6 @@ function MobileAddSourceSubModeView({
 
 interface MobileAddSourceMenuProps {
   notebookId: string;
-  remainingSourceSlots: number;
-  count: number;
-  usedPercent: number;
   isBusy: boolean;
   onTriggerFileInput: () => void;
   onSelectMode: (mode: "url" | "text") => void;
@@ -230,9 +220,6 @@ interface MobileAddSourceMenuProps {
 
 function MobileAddSourceMenu({
   notebookId,
-  remainingSourceSlots,
-  count,
-  usedPercent,
   isBusy,
   onTriggerFileInput,
   onSelectMode,
@@ -252,7 +239,6 @@ function MobileAddSourceMenu({
       <div className="flex flex-col gap-4 py-1">
         <WebSearchComposer
           notebookId={notebookId}
-          remainingSourceSlots={remainingSourceSlots}
           showHeader={false}
         />
 
@@ -314,9 +300,6 @@ function MobileAddSourceMenu({
           </button>
         </div>
 
-        <div className="pt-1">
-          <SourceLimitMeter count={count} usedPercent={usedPercent} />
-        </div>
       </div>
     </>
   );

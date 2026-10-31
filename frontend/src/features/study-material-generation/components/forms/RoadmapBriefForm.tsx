@@ -29,7 +29,7 @@ export function RoadmapBriefForm({
   disabled = false,
 }: BaseMaterialFormProps) {
   const { t } = useTranslation("generation");
-  const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
+  const { step, setStep, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled });
 
   const currentOptions = value.roadmapOptions ?? DEFAULT_ROADMAP_OPTIONS;
@@ -97,7 +97,7 @@ export function RoadmapBriefForm({
                 {t("fields.knowledgeSourcesStep3")}
               </BriefFieldLabel>
               <GenerationSourcePopover
-                sources={sources}
+                notebookId={notebookId}
                 selectedIds={value.sourceIds}
                 onChange={(sourceIds) => patchFormData({ sourceIds })}
                 emptyMessage={t("knowledge.emptySources", { kind: t("kinds.roadmap") })}

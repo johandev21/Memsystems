@@ -3,10 +3,40 @@ import i18n from "@/shared/i18n";
 import type { SourceKind, Source, SourceWithContent } from "../types/source.types";
 
 export type { SourceKind, Source, SourceWithContent };
-export const SOURCE_LIMIT = 300;
 
-export const sourcesQueryOptions = (notebookId: string) =>
-  createQueryOptions<Source[]>(["sources", notebookId], `/api/notebooks/${notebookId}/sources`);
+export interface SourcePage {
+  items: Source[];
+  nextCursor: string | null;
+}
+
+export interface SourceSummary {
+  count: number;
+}
+
+export async function fetchSourcesPage(
+  notebookId: string,
+  { cursor, query, signal }: { cursor?: string | null; query?: string; signal?: AbortSignal } = {},
+): Promise<SourcePage> {
+  const params = new URLSearchParams({ limit: "50" });
+  if (cursor) params.set("cursor", cursor);
+  if (query?.trim()) params.set("q", query.trim());
+  const response = await fetchApi(`/api/notebooks/${notebookId}/sources?${params}`, { signal });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error ?? i18n.t("api.addSourceFailed", { ns: "sources", status: response.status }));
+  }
+  return response.json() as Promise<SourcePage>;
+}
+
+export const sourceSummaryQueryOptions = (notebookId: string) =>
+  createQueryOptions<SourceSummary>(
+    ["sources", notebookId, "summary"],
+    `/api/notebooks/${notebookId}/sources/summary`,
+    { enabled: Boolean(notebookId) },
+  );
+
+export const sourcePageQueryKey = (notebookId: string, query = "") =>
+  ["sources", notebookId, "pages", query.trim()] as const;
 
 export const sourceQueryOptions = (sourceId: string) =>
   createQueryOptions<SourceWithContent>(["source", sourceId], `/api/sources/${sourceId}`);

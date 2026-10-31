@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { resolveDynamicMessage } from "@/shared/api/api-error";
 import {
   dismissWebSearchJob,
+  dismissWebSearchCandidates,
   importWebSources,
   startWebSearchJob,
   webSearchJobQueryOptions,
@@ -26,7 +27,7 @@ export interface WebSearchState {
   clearError: string | null;
 }
 
-export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIVE_INFINITY) {
+export function useWebSearch(notebookId: string) {
   const { t } = useTranslation("sources");
   const queryClient = useQueryClient();
   const jobQuery = useQuery(webSearchJobQueryOptions(notebookId));
@@ -72,9 +73,9 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
 
   useEffect(() => {
     if (!jobId || candidates.length === 0 || initializedSelectionForJob.current === jobId) return;
-    setSelectedUrls(new Set(candidates.slice(0, selectionLimit).map((candidate) => candidate.url)));
+    setSelectedUrls(new Set(candidates.map((candidate) => candidate.url)));
     initializedSelectionForJob.current = jobId;
-  }, [candidates, jobId, selectionLimit]);
+  }, [candidates, jobId]);
 
   const searchError =
     job?.status === "failed"
@@ -98,16 +99,16 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
       setSelectedUrls((prev) => {
         const next = new Set(prev);
         if (next.has(url)) next.delete(url);
-        else if (next.size < selectionLimit) next.add(url);
+        else next.add(url);
         return next;
       });
     },
-    [selectionLimit],
+    [],
   );
 
   const selectAllCandidates = useCallback(() => {
-    setSelectedUrls(new Set(candidates.slice(0, selectionLimit).map((candidate) => candidate.url)));
-  }, [candidates, selectionLimit]);
+    setSelectedUrls(new Set(candidates.map((candidate) => candidate.url)));
+  }, [candidates]);
 
   const clearSelection = useCallback(() => setSelectedUrls(new Set()), []);
 
@@ -137,6 +138,9 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
       });
       await queryClient.invalidateQueries({
         queryKey: ["sources", notebookId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: webSearchJobQueryOptions(notebookId).queryKey,
       });
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : t("webSearch.importFailed"));
@@ -178,6 +182,22 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
       setImporting(false);
     }
   }, [candidates, importResults, importing, jobQueryText, notebookId, queryClient, t]);
+
+  const dismissCandidate = useCallback(async (url: string) => {
+    try {
+      await dismissWebSearchCandidates(notebookId, [url]);
+      setSelectedUrls((previous) => {
+        const next = new Set(previous);
+        next.delete(url);
+        return next;
+      });
+      await queryClient.invalidateQueries({
+        queryKey: webSearchJobQueryOptions(notebookId).queryKey,
+      });
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : t("webSearch.clearFailed"));
+    }
+  }, [notebookId, queryClient, t]);
 
   const clearResults = useCallback(async (): Promise<boolean> => {
     if (clearInFlight.current) return false;
@@ -222,6 +242,7 @@ export function useWebSearch(notebookId: string, selectionLimit = Number.POSITIV
     clearSelection,
     importSelected,
     retryFailed,
+    dismissCandidate,
     clearResults,
   };
 }

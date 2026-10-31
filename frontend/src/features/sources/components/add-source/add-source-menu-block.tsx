@@ -4,7 +4,6 @@ import { WebSearchComposer } from "../web-search-composer";
 
 export interface AddSourceMenuBlockProps {
   notebookId: string;
-  remainingSourceSlots: number;
   onSelectUrlMode: () => void;
   onSelectTextMode: () => void;
   onUploadFile: (file: File) => void;
@@ -12,7 +11,6 @@ export interface AddSourceMenuBlockProps {
 
 export function AddSourceMenuBlock({
   notebookId,
-  remainingSourceSlots,
   onSelectUrlMode,
   onSelectTextMode,
   onUploadFile,
@@ -20,7 +18,7 @@ export function AddSourceMenuBlock({
   const { t } = useTranslation("sources");
   return (
     <>
-      <WebSearchComposer notebookId={notebookId} remainingSourceSlots={remainingSourceSlots} />
+      <WebSearchComposer notebookId={notebookId} />
 
       <div className="flex items-center gap-3" aria-hidden="true">
         <div className="h-px flex-1 bg-border" />
@@ -33,7 +31,7 @@ export function AddSourceMenuBlock({
         onSelectTextMode={onSelectTextMode}
         onUploadFile={onUploadFile}
         isUploading={false}
-        busy={remainingSourceSlots === 0}
+        busy={false}
       />
     </>
   );

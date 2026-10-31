@@ -101,7 +101,11 @@ function getSourceRowPresentation(source: Source): SourceRowPresentation {
         .filter(Boolean)
         .join(" — ")
     : undefined;
-  const tooltip = degraded ? (degradedDetail ?? statusLabel) : (error ?? statusLabel);
+  const tooltip = degraded
+    ? (degradedDetail ?? statusLabel)
+    : status === "ready"
+      ? sourceDisplayTitle(source)
+      : (error ?? statusLabel);
 
   const statusText = degraded
     ? [sourceQualityReasonLabel(source) ?? statusLabel, sourceQualityCorrectiveAction(source)]

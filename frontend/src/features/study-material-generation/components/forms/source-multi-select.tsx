@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Label } from "@/shared/components/ui/label";
-import { type Source, sourcesQueryOptions } from "@/features/sources";
+import { fetchSourcesPage, sourcePageQueryKey, type Source } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 
 export interface SourceMultiSelectProps {
@@ -19,8 +19,18 @@ export function SourceMultiSelect({
   onChange,
   className,
 }: SourceMultiSelectProps) {
-  const { t } = useTranslation("notebooks");
-  const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
+  const { t } = useTranslation(["notebooks", "sources"]);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const sourcesQuery = useInfiniteQuery({
+    queryKey: sourcePageQueryKey(notebookId, deferredSearch),
+    queryFn: ({ pageParam, signal }) =>
+      fetchSourcesPage(notebookId, { cursor: pageParam, query: deferredSearch, signal }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: Boolean(notebookId),
+  });
+  const sources = sourcesQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const valueSet = useMemo(() => new Set(value), [value]);
 
   const toggle = (id: string, checked: boolean) => {
@@ -32,7 +42,22 @@ export function SourceMultiSelect({
     }
   };
 
-  if (sources.length === 0) {
+  if (sourcesQuery.isPending && sources.length === 0) {
+    return <div className={cn("px-3 py-4 text-center text-xs text-text-faint", className)}>{t("sources:sourcesList.loadingMore")}</div>;
+  }
+
+  if (sourcesQuery.isError && sources.length === 0) {
+    return (
+      <div className={cn("flex flex-col items-center gap-2 px-3 py-4 text-center text-xs text-text-faint", className)}>
+        <p>{t("sources:sourcesList.failedToLoad")}</p>
+        <button type="button" onClick={() => void sourcesQuery.refetch()} className="min-h-10 px-3 font-medium text-primary">
+          {t("sources:sourcesList.retry")}
+        </button>
+      </div>
+    );
+  }
+
+  if (sources.length === 0 && !search) {
     return (
       <div
         className={cn(
@@ -52,6 +77,16 @@ export function SourceMultiSelect({
         className,
       )}
     >
+      <input
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={t("sources:sourcesList.searchPlaceholder")}
+        aria-label={t("sources:sourcesList.searchPlaceholder")}
+        className="h-10 w-full rounded-xl bg-background px-3 text-sm outline-none placeholder:text-text-faint focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      {sources.length === 0 && search && (
+        <p className="px-2 py-3 text-center text-xs text-text-faint">{t("sources:sourcesList.noMatches")}</p>
+      )}
       {sources.map((source) => (
         <SourceRow
           key={source.id}
@@ -60,6 +95,20 @@ export function SourceMultiSelect({
           onToggle={(checked) => toggle(source.id, checked)}
         />
       ))}
+      {sourcesQuery.hasNextPage && (
+        <button
+          type="button"
+          onClick={() => void sourcesQuery.fetchNextPage()}
+          disabled={sourcesQuery.isFetchingNextPage}
+          className="min-h-10 w-full rounded-xl px-2 text-xs font-medium text-primary disabled:opacity-60"
+        >
+          {sourcesQuery.isFetchNextPageError
+            ? t("sources:sourcesList.retry")
+            : sourcesQuery.isFetchingNextPage
+            ? t("sources:sourcesList.loadingMore")
+            : t("sources:sourcesList.loadMore")}
+        </button>
+      )}
     </div>
   );
 }

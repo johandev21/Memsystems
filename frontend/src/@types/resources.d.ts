@@ -333,6 +333,8 @@ export default interface Resources {
           "videoTooLong": "The video duration ({{durationS}}s) is too long. Maximum is 4 hours.",
           "videoUnsupported": "Unsupported video format ({{hint}}). Use MP4, WebM, MOV, or MKV."
         },
+        "invalidCursor": "Source page cursor is invalid",
+        "invalidPageLimit": "Source page limit is invalid",
         "parse": {
           "crawlFailed": "We couldn't fetch this webpage. Please try again.",
           "epubCorrupted": "The ebook file appears to be corrupt or invalid.",
@@ -355,6 +357,7 @@ export default interface Resources {
           "paywall": "This source is mostly a paywall or sign-in message, so it cannot be used as evidence.",
           "unknown": "This source did not yield usable reading material, so it cannot be used as evidence."
         },
+        "searchTooLong": "Source search query is too long",
         "source": {
           "notFound": "Source not found"
         },
@@ -581,10 +584,12 @@ export default interface Resources {
       "defaultEmptySources": "No sources in notebook. Material will generate using general knowledge.",
       "defaultPlaceholder": "What should this cover? Describe topics, focus areas, or tone...",
       "emptySources": "No sources in notebook. {{kind}} will generate using general knowledge.",
+      "loadMoreSources": "Load more sources",
+      "loadingSources": "Loading sources…",
       "noneSelected": "None selected (General Knowledge)",
       "searchAriaLabel": "Search sources",
       "searchPlaceholder": "Search sources...",
-      "selectAll": "Select all",
+      "selectAll": "Select visible",
       "selectedCount": "{{count}} selected",
       "selectedCount_one": "{{count}} selected",
       "selectedCount_other": "{{count}} selected",
@@ -1461,9 +1466,12 @@ export default interface Resources {
       "emptyDescription": "Add material to ground your chats and study materials.",
       "emptyTitle": "No sources yet",
       "failedToLoad": "Failed to load sources",
+      "loadMore": "Load more sources",
+      "loadingMore": "Loading more sources…",
       "noMatches": "No matching sources",
       "noMatchesDescription": "Try another search term.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "searchPlaceholder": "Search sources..."
     },
     "states": {
       "backToSources": "Back to Sources"
@@ -1572,8 +1580,6 @@ export default interface Resources {
       "inputLabel": "What would you like to research?",
       "inputPlaceholder": "What would you like to research?",
       "intro": "Describe what you want to research. You can review every result before adding it.",
-      "limitReached": "Source limit reached",
-      "limitReachedDescription": "Remove a source before searching for more sources to add.",
       "resultsCleared": "Search results cleared",
       "retryFailed": "Retry failed",
       "search": "Search",
@@ -1592,8 +1598,8 @@ export default interface Resources {
       "addedCount_one": "{{count}} added",
       "addedCount_other": "{{count}} added",
       "adding": "Adding",
+      "dismissLabel": "Dismiss {{title}}",
       "fetchFailed": "source could not be fetched",
-      "limitReached": "Not added because the source limit was reached",
       "opensNewTab": "Opens in a new tab",
       "retryFailed": "Retry failed",
       "selectLabel": "Select {{title}}",
@@ -1603,9 +1609,7 @@ export default interface Resources {
       "showLess": "Show less",
       "showMore": "Show more",
       "sourceFound_one": "{{count}} source found",
-      "sourceFound_other": "{{count}} sources found",
-      "sourceSlotsAvailable_one": "{{count}} source slot available",
-      "sourceSlotsAvailable_other": "{{count}} source slots available"
+      "sourceFound_other": "{{count}} sources found"
     }
   },
   "theme": {
@@ -1718,13 +1722,13 @@ export default interface Resources {
     },
     "tree": {
       "ariaLabel": "Study materials",
-      "emptyDescription": "Create a folder to begin.",
+      "emptyDescription": "Add materials and organize them into folders.",
       "emptyDescriptionPrototype": "Create a folder to begin the in-memory prototype.",
       "emptyFolder": "This folder is empty",
       "emptyFolderDescription": "Move materials here or tap + to generate new ones.",
-      "emptyTitle": "No study materials",
+      "emptyTitle": "Make this your study space",
       "loading": "Loading study materials",
-      "mobileEmptyDescription": "Tap + to generate a quiz, flashcards, or study guide.",
+      "mobileEmptyDescription": "Add materials and organize them into folders.",
       "updating": "Updating study materials"
     }
   },

@@ -94,13 +94,22 @@ describe("SourceFavicon", () => {
 });
 
 describe("SourceIcon", () => {
+  it("renders a favicon for web sources", () => {
+    const { container } = render(
+      <SourceIcon source={createMockSource({ kind: "url", url: "https://example.com" })} />,
+    );
+
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(
+      "https://www.google.com/s2/favicons?domain=example.com&sz=32",
+    );
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
   it.each([
-    createMockSource({ kind: "url", url: "https://example.com" }),
-    createMockSource({ kind: "url", url: "https://youtube.com/watch?v=abc" }),
     createMockSource({ kind: "file", title: "notes.pdf", modality: "document" }),
     createMockSource({ kind: "file", title: "recording.mp3", modality: "audio" }),
     createMockSource({ kind: "file", title: "photo.png", modality: "image" }),
-  ])("renders the Markdown identity glyph for every source", (source) => {
+  ])("keeps the Markdown identity glyph for non-web sources", (source) => {
     const { container } = render(<SourceIcon source={source} className="size-5 text-muted-foreground" />);
     const svg = container.querySelector("svg");
 

@@ -87,10 +87,10 @@
     "ariaLabel": "Study materials",
     "emptyFolder": "This folder is empty",
     "emptyFolderDescription": "Move materials here or tap + to generate new ones.",
-    "emptyDescription": "Create a folder to begin.",
+    "emptyDescription": "Add materials and organize them into folders.",
     "emptyDescriptionPrototype": "Create a folder to begin the in-memory prototype.",
-    "emptyTitle": "No study materials",
-    "mobileEmptyDescription": "Tap + to generate a quiz, flashcards, or study guide.",
+    "emptyTitle": "Make this your study space",
+    "mobileEmptyDescription": "Add materials and organize them into folders.",
     "loading": "Loading study materials",
     "updating": "Updating study materials"
   }

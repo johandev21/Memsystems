@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { sourcesQueryOptions } from "@/features/sources";
 import {
   canSubmitBrief,
   useNotebookGroundingMode,
@@ -22,7 +20,6 @@ export function useBriefWizard({
   totalSteps = 2,
 }: UseBriefWizardOptions) {
   const [step, setStepState] = useState<number>(initialStep);
-  const { data: sources = [] } = useQuery(sourcesQueryOptions(notebookId));
   const groundingMode = useNotebookGroundingMode(notebookId);
 
   const hasSources = value.sourceIds.length > 0;
@@ -39,7 +36,6 @@ export function useBriefWizard({
   return {
     step,
     setStep,
-    sources,
     hasSources,
     hasInstructions,
     canSubmit,

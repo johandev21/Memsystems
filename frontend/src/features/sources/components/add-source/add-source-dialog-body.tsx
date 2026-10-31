@@ -1,12 +1,10 @@
 import { TextInputMode } from "../text-input-mode";
 import { UrlInputMode } from "../url-input-mode";
 import { AddSourceMenuBlock } from "./add-source-menu-block";
-import { SourceLimitMeter } from "./source-limit-meter";
 
 export interface AddSourceDialogBodyProps {
   mode: string;
   notebookId: string;
-  remainingSourceSlots: number;
   onSelectUrlMode: () => void;
   onSelectTextMode: () => void;
   onUploadFile: (file: File) => void;
@@ -25,14 +23,11 @@ export interface AddSourceDialogBodyProps {
   textBody: string;
   onTextBodyChange: (v: string) => void;
   onSubmitText: () => void;
-  count: number;
-  usedPercent: number;
 }
 
 export function AddSourceDialogBody({
   mode,
   notebookId,
-  remainingSourceSlots,
   onSelectUrlMode,
   onSelectTextMode,
   onUploadFile,
@@ -51,15 +46,12 @@ export function AddSourceDialogBody({
   textBody,
   onTextBodyChange,
   onSubmitText,
-  count,
-  usedPercent,
 }: AddSourceDialogBodyProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-safe-lg pt-2 sm:px-6 sm:pb-6">
       {mode === "menu" && (
         <AddSourceMenuBlock
           notebookId={notebookId}
-          remainingSourceSlots={remainingSourceSlots}
           onSelectUrlMode={onSelectUrlMode}
           onSelectTextMode={onSelectTextMode}
           onUploadFile={onUploadFile}
@@ -96,9 +88,6 @@ export function AddSourceDialogBody({
         />
       )}
 
-      <div className="mt-auto pt-2">
-        <SourceLimitMeter count={count} usedPercent={usedPercent} />
-      </div>
     </div>
   );
 }

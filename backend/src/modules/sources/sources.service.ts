@@ -1,6 +1,17 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { asc, and, count, desc, eq, isNull } from 'drizzle-orm';
+import {
+  asc,
+  and,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  or,
+} from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
@@ -95,7 +106,44 @@ export interface DownloadInfo {
   expiresIn: number;
 }
 
-export const SOURCE_LIMIT = 300;
+export const SOURCE_PAGE_DEFAULT = 50;
+export const SOURCE_PAGE_MAX = 100;
+
+export interface SourceListPageOptions {
+  cursor?: string;
+  limit?: number;
+  query?: string;
+}
+
+function decodeSourceCursor(cursor: string): { createdAt: Date; id: string } {
+  try {
+    const value = JSON.parse(
+      Buffer.from(cursor, 'base64url').toString('utf8'),
+    ) as {
+      createdAt?: unknown;
+      id?: unknown;
+    };
+    const createdAt =
+      typeof value.createdAt === 'string' ? new Date(value.createdAt) : null;
+    if (
+      !createdAt ||
+      Number.isNaN(createdAt.getTime()) ||
+      typeof value.id !== 'string' ||
+      !value.id
+    ) {
+      throw new Error('Invalid cursor');
+    }
+    return { createdAt, id: value.id };
+  } catch {
+    throw new BadRequestError('Invalid source pagination cursor', {
+      messageKey: 'errors.sources.invalidCursor',
+    });
+  }
+}
+
+function encodeSourceCursor(source: { createdAt: Date; id: string }): string {
+  return Buffer.from(JSON.stringify(source), 'utf8').toString('base64url');
+}
 
 const MAX_RAW_TEXT_BYTES = 5 * 1024 * 1024;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -172,9 +220,39 @@ export class SourcesService {
 
   private readonly sourceQuality: SourceQualityService;
 
-  async list(notebookId: string) {
+  async list(notebookId: string, options: SourceListPageOptions = {}) {
     await this.notebooksService.assertNotebookOwner(notebookId);
-    return this.db
+    const limit = Math.min(
+      SOURCE_PAGE_MAX,
+      Math.max(
+        1,
+        Math.trunc(options.limit ?? SOURCE_PAGE_DEFAULT) || SOURCE_PAGE_DEFAULT,
+      ),
+    );
+    const cursor = options.cursor ? decodeSourceCursor(options.cursor) : null;
+    const query = options.query?.trim();
+    const filters = [
+      eq(sources.notebookId, notebookId),
+      isNull(sources.deletedAt),
+    ];
+    if (cursor) {
+      filters.push(
+        or(
+          lt(sources.createdAt, cursor.createdAt),
+          and(
+            eq(sources.createdAt, cursor.createdAt),
+            lt(sources.id, cursor.id),
+          ),
+        )!,
+      );
+    }
+    if (query) {
+      const pattern = `%${query.replace(/[\\%_]/g, '\\$&')}%`;
+      filters.push(
+        or(ilike(sources.title, pattern), ilike(sources.url, pattern))!,
+      );
+    }
+    const rows = await this.db
       .select({
         id: sources.id,
         notebookId: sources.notebookId,
@@ -192,8 +270,19 @@ export class SourcesService {
         createdAt: sources.createdAt,
       })
       .from(sources)
-      .where(and(eq(sources.notebookId, notebookId), isNull(sources.deletedAt)))
-      .orderBy(desc(sources.createdAt));
+      .where(and(...filters))
+      .orderBy(desc(sources.createdAt), desc(sources.id))
+      .limit(limit + 1);
+    const hasNextPage = rows.length > limit;
+    const items = hasNextPage ? rows.slice(0, limit) : rows;
+    const last = items.at(-1);
+    return {
+      items,
+      nextCursor:
+        hasNextPage && last
+          ? encodeSourceCursor({ createdAt: last.createdAt, id: last.id })
+          : null,
+    };
   }
 
   async get(id: string) {
@@ -316,14 +405,21 @@ export class SourcesService {
     return row?.value ?? 0;
   }
 
-  async listUrlsForNotebook(notebookId: string): Promise<string[]> {
+  async listUrlsForNotebook(
+    notebookId: string,
+    candidateUrls: string[],
+  ): Promise<string[]> {
     await this.notebooksService.assertNotebookOwner(notebookId);
+    if (candidateUrls.length === 0) return [];
+    const filters = [
+      eq(sources.notebookId, notebookId),
+      isNull(sources.deletedAt),
+    ];
+    filters.push(inArray(sources.url, candidateUrls));
     const rows = await this.db
       .select({ url: sources.url })
       .from(sources)
-      .where(
-        and(eq(sources.notebookId, notebookId), isNull(sources.deletedAt)),
-      );
+      .where(and(...filters));
     return rows.map((r) => r.url).filter((url): url is string => url !== null);
   }
 

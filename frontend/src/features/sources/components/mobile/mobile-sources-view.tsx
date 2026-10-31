@@ -26,6 +26,9 @@ export interface MobileSourcesViewProps {
   pendingUploads: PendingSourceUpload[];
   isPending: boolean;
   isError: boolean;
+  hasMoreSources: boolean;
+  isLoadingMoreSources: boolean;
+  onLoadMoreSources: () => void;
   onRetryLoad: () => void;
   onSelectSource: (id: string) => void;
   onCancelPendingUpload: (id: string) => void;
@@ -78,6 +81,9 @@ export function MobileSourcesView(props: MobileSourcesViewProps) {
           pendingUploads={pendingUploads}
           isPending={isPending}
           isError={isError}
+          hasMoreSources={props.hasMoreSources}
+          isLoadingMoreSources={props.isLoadingMoreSources}
+          onLoadMoreSources={props.onLoadMoreSources}
           onCancelPendingUpload={props.onCancelPendingUpload}
           onRetryLoad={props.onRetryLoad}
           onAddSource={() => setAddSourceDialogOpen(true)}
@@ -173,6 +179,9 @@ function MobileSourcesContent({
   pendingUploads,
   isPending,
   isError,
+  hasMoreSources,
+  isLoadingMoreSources,
+  onLoadMoreSources,
   onCancelPendingUpload,
   onRetryLoad,
   onAddSource,
@@ -184,6 +193,9 @@ function MobileSourcesContent({
   pendingUploads: PendingSourceUpload[];
   isPending: boolean;
   isError: boolean;
+  hasMoreSources: boolean;
+  isLoadingMoreSources: boolean;
+  onLoadMoreSources: () => void;
   onCancelPendingUpload: (id: string) => void;
   onRetryLoad: () => void;
   onAddSource: () => void;
@@ -191,6 +203,7 @@ function MobileSourcesContent({
   onSourceActions: (id: string) => void;
   onFolderActions: (id: string) => void;
 }) {
+  const { t } = useTranslation("sources");
   const showPendingUploads = navigation.activeFolderId === null && pendingUploads.length > 0;
   const isEmpty = navigation.items.length === 0 && !showPendingUploads;
 
@@ -218,6 +231,16 @@ function MobileSourcesContent({
         onSourceActions={onSourceActions}
         onFolderActions={onFolderActions}
       />
+      {hasMoreSources && (
+        <button
+          type="button"
+          onClick={onLoadMoreSources}
+          disabled={isLoadingMoreSources}
+          className="mx-auto mt-2 min-h-11 rounded-xl px-4 text-sm font-medium text-primary disabled:opacity-60"
+        >
+          {isLoadingMoreSources ? t("sourcesList.loadingMore") : t("sourcesList.loadMore")}
+        </button>
+      )}
     </>
   );
 }

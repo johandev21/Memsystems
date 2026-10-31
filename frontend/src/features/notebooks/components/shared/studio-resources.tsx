@@ -7,7 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { useGenerationStore } from "@/features/study-material-generation";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
-import { sourcesQueryOptions } from "@/features/sources";
+import { sourceSummaryQueryOptions } from "@/features/sources";
 import { cn } from "@/shared/utils/cn";
 import {
   KIND_LABEL_KEYS,
@@ -29,8 +29,8 @@ export const StudioResources = memo(function StudioResources({
 }: StudioResourcesProps) {
   const storeGenerations = useGenerationStore((s) => s.generations);
   const cancelBackgroundGeneration = useGenerationStore((s) => s.cancelBackgroundGeneration);
-  const sourcesQuery = useQuery(sourcesQueryOptions(notebookId));
-  const totalSourceCount = sourcesQuery.data?.length ?? 0;
+  const sourcesQuery = useQuery(sourceSummaryQueryOptions(notebookId));
+  const totalSourceCount = sourcesQuery.data?.count ?? 0;
 
   const activeGenerations = Object.values(storeGenerations).filter(
     (g) => g.notebookId === notebookId,

@@ -1,8 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchApi } from "@/shared/api";
 import type { SourceWithContent } from "../../types/source.types";
-import { useSourceReaderControls } from "./use-source-reader-controls";
+import { useCachedSourceSummary, useSourceReaderControls } from "./use-source-reader-controls";
 
 vi.mock("@/shared/api", () => ({ fetchApi: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -68,5 +70,22 @@ describe("source reader original download", () => {
 
     expect(open).not.toHaveBeenCalled();
     expect(result.current.downloading).toBe(false);
+  });
+});
+
+describe("cached source summary", () => {
+  it("finds a Source in the loaded pages cache", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["sources", source.notebookId, "pages", ""], {
+      pages: [{ items: [source], nextCursor: null }],
+      pageParams: [null],
+    });
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    }
+
+    const { result } = renderHook(() => useCachedSourceSummary(source.id), { wrapper: Wrapper });
+
+    expect(result.current?.id).toBe(source.id);
   });
 });

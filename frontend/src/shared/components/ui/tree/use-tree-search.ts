@@ -15,6 +15,8 @@ export interface TreeSearchFolder {
 export interface UseTreeSearchOptions<TItem extends TreeSearchItem, TFolder extends TreeSearchFolder> {
   items: readonly TItem[] | undefined;
   folders: readonly TFolder[] | undefined;
+  query?: string;
+  onQueryChange?: (query: string) => void;
 }
 
 export interface UseTreeSearchResult {
@@ -36,13 +38,18 @@ export interface UseTreeSearchResult {
 export function useTreeSearch<TItem extends TreeSearchItem, TFolder extends TreeSearchFolder>({
   items,
   folders,
+  query: controlledQuery,
+  onQueryChange,
 }: UseTreeSearchOptions<TItem, TFolder>): UseTreeSearchResult {
   const [searchState, setSearchState] = useState({ searchQuery: "", isSearchOpen: false });
-  const { searchQuery, isSearchOpen } = searchState;
+  const isControlled = controlledQuery !== undefined;
+  const searchQuery = controlledQuery ?? searchState.searchQuery;
+  const { isSearchOpen } = searchState;
 
   const setSearchQuery = useCallback((searchQuery: string) => {
-    setSearchState((prev) => ({ ...prev, searchQuery }));
-  }, []);
+    if (isControlled) onQueryChange?.(searchQuery);
+    else setSearchState((prev) => ({ ...prev, searchQuery }));
+  }, [isControlled, onQueryChange]);
   const setIsSearchOpen = useCallback((isSearchOpen: boolean) => {
     setSearchState((prev) => ({ ...prev, isSearchOpen }));
   }, []);
@@ -51,14 +58,15 @@ export function useTreeSearch<TItem extends TreeSearchItem, TFolder extends Tree
   const isSearching = isSearchOpen && trimmedQuery.length > 0;
 
   const toggleSearch = useCallback(() => {
+    if (isSearchOpen && isControlled) onQueryChange?.("");
     setSearchState((prev) => {
       const isSearchOpen = !prev.isSearchOpen;
       return {
         isSearchOpen,
-        searchQuery: isSearchOpen ? prev.searchQuery : "",
+        searchQuery: isSearchOpen || isControlled ? prev.searchQuery : "",
       };
     });
-  }, []);
+  }, [isControlled, isSearchOpen, onQueryChange]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");

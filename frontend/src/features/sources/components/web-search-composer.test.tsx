@@ -72,7 +72,7 @@ describe("WebSearchComposer", () => {
 
   it("renders no model notice and no model selector", () => {
     const Wrapper = createWrapper("nb-1");
-    render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
+    render(<WebSearchComposer notebookId="nb-1" />, {
       wrapper: Wrapper,
     });
 
@@ -85,7 +85,7 @@ describe("WebSearchComposer", () => {
   it("enables search input and runs search without any model", async () => {
     const user = userEvent.setup();
     const Wrapper = createWrapper("nb-1");
-    render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
+    render(<WebSearchComposer notebookId="nb-1" />, {
       wrapper: Wrapper,
     });
 
@@ -123,7 +123,7 @@ describe("WebSearchComposer", () => {
       createdAt: "2026-09-03T12:00:00.000Z",
       completedAt: "2026-09-03T12:00:01.000Z",
     });
-    render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
+    render(<WebSearchComposer notebookId="nb-1" />, {
       wrapper: Wrapper,
     });
 
@@ -156,7 +156,7 @@ describe("WebSearchComposer", () => {
       completedAt: "2026-09-03T12:00:01.000Z",
     });
     const Wrapper = createWrapper("nb-1");
-    render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
+    render(<WebSearchComposer notebookId="nb-1" />, {
       wrapper: Wrapper,
     });
 
@@ -196,7 +196,7 @@ describe("WebSearchComposer", () => {
       createdAt: "2026-09-03T12:00:00.000Z",
       completedAt: "2026-09-03T12:00:01.000Z",
     });
-    render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
+    render(<WebSearchComposer notebookId="nb-1" />, {
       wrapper: Wrapper,
     });
 
@@ -234,7 +234,7 @@ describe("WebSearchComposer", () => {
       createdAt: "2026-09-03T12:00:00.000Z",
       completedAt: "2026-09-03T12:00:01.000Z",
     });
-    render(<WebSearchComposer notebookId="nb-1" remainingSourceSlots={295} />, {
+    render(<WebSearchComposer notebookId="nb-1" />, {
       wrapper: Wrapper,
     });
 

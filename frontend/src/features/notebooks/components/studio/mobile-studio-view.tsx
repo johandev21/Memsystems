@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useGenerationStore } from "@/features/study-material-generation";
-import { sourcesQueryOptions } from "@/features/sources";
+import { sourceSummaryQueryOptions } from "@/features/sources";
 import { ActiveGenerationList } from "../shared/studio-resources";
 import { MobileStudyMaterialCreateDrawer } from "./mobile-study-material-create-drawer";
 import { MobileStudyMaterialsPanel } from "@/features/study-material-tree";
@@ -24,8 +24,8 @@ export function MobileStudioView({
 
   const storeGenerations = useGenerationStore((s) => s.generations);
   const cancelBackgroundGeneration = useGenerationStore((s) => s.cancelBackgroundGeneration);
-  const sourcesQuery = useQuery(sourcesQueryOptions(notebookId));
-  const totalSourceCount = sourcesQuery.data?.length ?? 0;
+  const sourcesQuery = useQuery(sourceSummaryQueryOptions(notebookId));
+  const totalSourceCount = sourcesQuery.data?.count ?? 0;
 
   const activeGenerations = Object.values(storeGenerations).filter(
     (g) => g.notebookId === notebookId,

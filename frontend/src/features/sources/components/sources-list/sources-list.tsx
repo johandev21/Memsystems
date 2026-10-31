@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import type { Source } from "../../api/sources";
@@ -31,6 +31,9 @@ export interface SourcesListProps {
   isPending: boolean;
   isError: boolean;
   hasNoSources: boolean;
+  hasMoreSources?: boolean;
+  isLoadingMoreSources?: boolean;
+  onLoadMoreSources?: () => void;
   collapsed?: boolean;
   scrollElement?: HTMLDivElement | null;
   onSelectSource: (id: string) => void;
@@ -71,6 +74,9 @@ export const SourcesList = memo(function SourcesList({
   isPending,
   isError,
   hasNoSources,
+  hasMoreSources = false,
+  isLoadingMoreSources = false,
+  onLoadMoreSources,
   collapsed = false,
   scrollElement,
   onSelectSource,
@@ -97,6 +103,17 @@ export const SourcesList = memo(function SourcesList({
   isFolderVisible,
 }: SourcesListProps) {
   const { t } = useTranslation("sources");
+
+  useEffect(() => {
+    if (!scrollElement || !hasMoreSources || !onLoadMoreSources) return;
+    const loadNearEnd = () => {
+      const remaining = scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
+      if (remaining < 700 && !isLoadingMoreSources) onLoadMoreSources();
+    };
+    scrollElement.addEventListener("scroll", loadNearEnd, { passive: true });
+    loadNearEnd();
+    return () => scrollElement.removeEventListener("scroll", loadNearEnd);
+  }, [scrollElement, hasMoreSources, isLoadingMoreSources, onLoadMoreSources]);
 
   const tree = useMemo(
     () =>
@@ -252,6 +269,11 @@ export const SourcesList = memo(function SourcesList({
       {filteredTree.map((node) => (
         <SourcesTreeBranch key={node.id} node={node} depth={0} {...branchProps} />
       ))}
+      {hasMoreSources && isLoadingMoreSources && (
+        <div className="flex items-center justify-center py-2" aria-live="polite">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
     </div>
   );
 }, areSourcesListPropsEqual);
@@ -267,6 +289,8 @@ function areSourcesListPropsEqual(prev: SourcesListProps, next: SourcesListProps
     prev.isPending === next.isPending &&
     prev.isError === next.isError &&
     prev.hasNoSources === next.hasNoSources &&
+    prev.hasMoreSources === next.hasMoreSources &&
+    prev.isLoadingMoreSources === next.isLoadingMoreSources &&
     prev.collapsed === next.collapsed &&
     prev.deletingId === next.deletingId &&
     prev.retryingId === next.retryingId &&

@@ -128,6 +128,10 @@
     "emptyDescription": "Añade material para fundamentar tus chats y materiales de estudio.",
     "emptyTitle": "Aún no hay fuentes",
     "failedToLoad": "No se pudieron cargar las fuentes",
+    "loadMore": "Cargar más fuentes",
+    "loadingMore": "Cargando más fuentes…",
+    "searchPlaceholder": "Buscar fuentes...",
+    "searchPlaceholder": "Buscar fuentes...",
     "noMatches": "No hay fuentes coincidentes",
     "noMatchesDescription": "Prueba con otro término de búsqueda.",
     "retry": "Reintentar"
@@ -242,8 +246,6 @@
     "inputLabel": "¿Qué te gustaría investigar?",
     "inputPlaceholder": "¿Qué te gustaría investigar?",
     "intro": "Describe lo que quieres investigar. Puedes revisar cada resultado antes de añadirlo.",
-    "limitReached": "Límite de fuentes alcanzado",
-    "limitReachedDescription": "Elimina una fuente antes de buscar más fuentes para añadir.",
     "resultsCleared": "Resultados de búsqueda limpiados",
     "retryFailed": "No se pudo reintentar",
     "search": "Buscar",
@@ -255,6 +257,7 @@
   },
   "webSearchResults": {
     "added": "Añadida",
+    "dismissLabel": "Descartar {{title}}",
     "addedAndFailed": "{{added}} añadidas · {{failed}} fallidas",
     "addedCount": "{{count}} añadidas",
     "addedCount_one": "{{count}} añadida",
@@ -264,7 +267,6 @@
     "adding": "Añadiendo",
     "addSelected": "Añadir seleccionadas",
     "fetchFailed": "no se pudo obtener la fuente",
-    "limitReached": "No se añadió porque se alcanzó el límite de fuentes",
     "opensNewTab": "Se abre en una pestaña nueva",
     "retryFailed": "Reintentar fallidas",
     "selectedCount": "{{count}} seleccionadas",
@@ -276,9 +278,6 @@
     "showMore": "Mostrar más",
     "sourceFound_one": "{{count}} fuente encontrada",
     "sourceFound_many": "{{count}} fuentes encontradas",
-    "sourceFound_other": "{{count}} fuentes encontradas",
-    "sourceSlotsAvailable_one": "{{count}} espacio de fuente disponible",
-    "sourceSlotsAvailable_many": "{{count}} espacios de fuente disponibles",
-    "sourceSlotsAvailable_other": "{{count}} espacios de fuente disponibles"
+    "sourceFound_other": "{{count}} fuentes encontradas"
   }
 }

@@ -33,7 +33,7 @@ export function MindMapBriefForm({
   disabled = false,
 }: BaseMaterialFormProps) {
   const { t } = useTranslation("generation");
-  const { step, setStep, sources, hasSources, hasInstructions, canSubmit, patchFormData } =
+  const { step, setStep, hasSources, hasInstructions, canSubmit, patchFormData } =
     useBriefWizard({ notebookId, value, onChange, disabled, totalSteps: TOTAL_STEPS });
 
   const currentOptions = value.mindMapOptions ?? DEFAULT_MIND_MAP_OPTIONS;
@@ -107,7 +107,7 @@ export function MindMapBriefForm({
                 {t("fields.knowledgeSourcesStep3")}
               </BriefFieldLabel>
               <GenerationSourcePopover
-                sources={sources}
+                notebookId={notebookId}
                 selectedIds={value.sourceIds}
                 onChange={(sourceIds) => patchFormData({ sourceIds })}
                 emptyMessage={t("knowledge.emptySources", { kind: t("kinds.mind_map") })}

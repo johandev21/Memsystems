@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, count, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../../database/schema';
 import { appSettings, sources } from '../../../database/schema';
@@ -131,9 +131,9 @@ export class SourceJobsService {
   }
 
   async reembedAll(): Promise<{ sourcesQueued: number; jobId: string }> {
-    const targets = await this.listReindexTargets(null);
+    const targetCount = await this.countReindexTargets(null);
     const job = await this.enqueueReindexAll({ notebookId: null });
-    return { sourcesQueued: targets.length, jobId: job.id };
+    return { sourcesQueued: targetCount, jobId: job.id };
   }
 
   async ensureRepresentationCurrent(
@@ -145,8 +145,9 @@ export class SourceJobsService {
       .where(eq(appSettings.id, APP_SETTINGS_ID));
     if (row?.applied === representation) return { fanOutQueued: false };
 
-    const targets = await this.listReindexTargets(null);
-    if (targets.length === 0) return { fanOutQueued: false };
+    if ((await this.countReindexTargets(null)) === 0) {
+      return { fanOutQueued: false };
+    }
 
     await this.enqueueReindexAll({
       notebookId: null,
@@ -168,40 +169,65 @@ export class SourceJobsService {
   async fanOutReindexes(
     notebookId: string | null,
   ): Promise<SourceReindexAllResult> {
-    const rows = await this.listReindexTargets(notebookId);
     let sourcesQueued = 0;
     let skipped = 0;
-    for (const row of rows) {
-      if (row.kind === 'file' && row.s3Key && !row.currentVersionId) {
-        await this.enqueueProcessing(row.id);
-      } else if (row.currentVersionId || row.rawText.trim().length > 0) {
-        await this.enqueue(row.id);
-      } else {
-        skipped++;
-        continue;
+    for await (const rows of this.iterateReindexTargets(notebookId)) {
+      for (const row of rows) {
+        if (row.kind === 'file' && row.s3Key && !row.currentVersionId) {
+          await this.enqueueProcessing(row.id);
+        } else if (row.currentVersionId || row.hasRawText) {
+          await this.enqueue(row.id);
+        } else {
+          skipped++;
+          continue;
+        }
+        sourcesQueued++;
       }
-      sourcesQueued++;
     }
     return { sourcesQueued, skipped };
   }
 
-  private async listReindexTargets(notebookId: string | null) {
-    const rows = await this.db
-      .select({
-        id: sources.id,
-        kind: sources.kind,
-        s3Key: sources.s3Key,
-        rawText: sources.rawText,
-        currentVersionId: sources.currentVersionId,
-        processingStatus: sources.processingStatus,
-      })
+  private async *iterateReindexTargets(notebookId: string | null) {
+    let afterId: string | undefined;
+    while (true) {
+      const filters = [
+        isNull(sources.deletedAt),
+        ne(sources.processingStatus, 'degraded'),
+      ];
+      if (notebookId) filters.push(eq(sources.notebookId, notebookId));
+      if (afterId) filters.push(gt(sources.id, afterId));
+      const rows = await this.db
+        .select({
+          id: sources.id,
+          kind: sources.kind,
+          s3Key: sources.s3Key,
+          hasRawText: sql<boolean>`btrim(${sources.rawText}) <> ''`,
+          currentVersionId: sources.currentVersionId,
+        })
+        .from(sources)
+        .where(and(...filters))
+        .orderBy(sources.id)
+        .limit(100);
+      if (rows.length === 0) return;
+      yield rows;
+      afterId = rows.at(-1)?.id;
+      if (rows.length < 100) return;
+    }
+  }
+
+  private async countReindexTargets(
+    notebookId: string | null,
+  ): Promise<number> {
+    const filters = [
+      isNull(sources.deletedAt),
+      ne(sources.processingStatus, 'degraded'),
+    ];
+    if (notebookId) filters.push(eq(sources.notebookId, notebookId));
+    const [row] = await this.db
+      .select({ value: count() })
       .from(sources)
-      .where(
-        notebookId
-          ? and(eq(sources.notebookId, notebookId), isNull(sources.deletedAt))
-          : isNull(sources.deletedAt),
-      );
-    return rows.filter((row) => row.processingStatus !== 'degraded');
+      .where(and(...filters));
+    return row?.value ?? 0;
   }
 
   private async enqueueReindexAll(
