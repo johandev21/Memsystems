@@ -12,7 +12,6 @@ import type {
   MindMapViewProps,
   MindMapFlowNode,
 } from "./mind-map/mind-map-types";
-import { useTranslation } from "react-i18next";
 import { MindMapNode, HighlightEdge } from "./mind-map/mind-map-node";
 import { EmptyMindMap, MindMapControls } from "./mind-map/mind-map-controls";
 import { useMindMapLayout } from "./mind-map/use-mind-map-layout";
@@ -29,16 +28,17 @@ export function MindMapView(props: MindMapViewProps) {
 
 const nodeTypes = { mindMap: MindMapNode };
 const edgeTypes = { highlight: HighlightEdge };
+// Node controls use this class so pointer interactions don't start a graph drag.
+const nodeControlClass = "touch-manipulation";
 
 function MindMapFlow(props: MindMapViewProps) {
-  const { t } = useTranslation("viewer");
   const {
     root,
     nodes,
     edges,
     onNodesChange,
     onEdgesChange,
-    selectLeaf,
+    selectNode,
     handleCenterSelected,
     zoomIn,
     zoomOut,
@@ -51,7 +51,7 @@ function MindMapFlow(props: MindMapViewProps) {
   }
 
   return (
-    <div className="relative h-[min(520px,calc(100dvh-160px))] sm:h-[min(680px,calc(100dvh-180px))] min-h-105 w-full overflow-hidden rounded-xl border border-surface-border bg-surface-1">
+    <div className="relative h-[min(520px,calc(100dvh-160px))] sm:h-[min(680px,calc(100dvh-180px))] min-h-105 w-full overflow-hidden">
       <ReactFlow<MindMapFlowNode, Edge>
         nodes={nodes}
         edges={edges}
@@ -59,13 +59,15 @@ function MindMapFlow(props: MindMapViewProps) {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={(_, node) => selectLeaf(node.data.item)}
+        onNodeClick={(_, node) => selectNode(node.data.item)}
         onInit={(instance) => window.setTimeout(() => instance.fitView({ padding: 0.24 }), 100)}
         fitView
         minZoom={0.35}
         maxZoom={1.7}
         panOnDrag
-        zoomOnScroll
+        panOnScroll
+        noDragClassName={nodeControlClass}
+        zoomOnScroll={false}
         zoomOnPinch
         proOptions={{ hideAttribution: true }}
       >
@@ -84,10 +86,6 @@ function MindMapFlow(props: MindMapViewProps) {
         onExpandAll={expandAll}
         onCollapseAll={collapseAll}
       />
-
-      <div className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-surface-border-subtle bg-surface-2 px-3 py-2 text-xs text-text-faint sm:flex">
-        <span className="size-1.5 rounded-full bg-surface-border-strong" /> {t("mindMap.hint")}
-      </div>
     </div>
   );
 }

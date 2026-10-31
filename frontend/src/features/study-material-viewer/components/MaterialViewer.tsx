@@ -3,6 +3,7 @@ import type { StudyMaterialDTO } from "../types/study-material.types";
 import { useMaterialViewerFullscreen } from "../hooks/use-material-viewer-fullscreen";
 import { MaterialViewerHeader } from "./material-viewer-header";
 import { MaterialContentRenderer } from "./material-content-renderer";
+import { OverlayLayerContext, useOverlayLayer } from "@/shared/components/ui/overlay-layer";
 
 export interface MaterialViewerProps {
   material: StudyMaterialDTO;
@@ -19,6 +20,7 @@ export function MaterialViewer({
   defaultFullscreen,
   forceFullscreen,
 }: MaterialViewerProps) {
+  const overlayLayer = useOverlayLayer();
   const beforeCloseRef = useRef<(() => boolean) | null>(null);
 
   const handleClose = useCallback(() => {
@@ -50,6 +52,9 @@ export function MaterialViewer({
   };
 
   return (
+    <OverlayLayerContext.Provider
+      value={overlayLayer ?? (isEffectivelyFullscreen || isExitingFullscreen ? "z-viewer-popover" : undefined)}
+    >
     <div
       className={`flex h-full flex-col bg-surface-1 text-text-primary overflow-hidden ${
         isChatSuspended ? "hidden" : ""
@@ -88,5 +93,6 @@ export function MaterialViewer({
         />
       </div>
     </div>
+    </OverlayLayerContext.Provider>
   );
 }

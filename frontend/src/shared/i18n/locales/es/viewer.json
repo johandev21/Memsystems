@@ -54,6 +54,8 @@
     "audio_overview": "Resúmenes de audio"
   },
   "mindMap": {
+    "askInChat": "Preguntar en el chat",
+    "nodeActions": "Acciones para {{label}}",
     "center": "Centrar el nodo seleccionado",
     "collapse": "Contraer {{label}}",
     "collapseAll": "Contraer todos los nodos",
@@ -61,6 +63,13 @@
     "expand": "Expandir {{label}}",
     "expandAll": "Expandir todos los nodos",
     "hint": "Arrastra para desplazarte · Usa la rueda para hacer zoom · Haz clic en un nodo para explorar",
+    "tooltips": {
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "center": "Centrar",
+      "expandAll": "Expandir",
+      "collapseAll": "Contraer"
+    },
     "prompt": {
       "context": " del material de estudio \"{{title}}\"",
       "study": "Estoy estudiando el concepto del mapa mental \"{{label}}\"{{mindMapContext}}.\n\nExplícame este concepto en profundidad con ejemplos prácticos, ideas relacionadas y puntos clave que deba recordar."

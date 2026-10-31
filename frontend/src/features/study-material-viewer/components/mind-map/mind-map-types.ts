@@ -38,6 +38,7 @@ export type MindMapNodeDataInternal = {
   expanded: boolean;
   selected: boolean;
   onToggle: (id: string) => void;
+  onAskInChat: (item: MapItem) => void;
 };
 
 export type MindMapFlowNode = Node<MindMapNodeDataInternal, "mindMap">;

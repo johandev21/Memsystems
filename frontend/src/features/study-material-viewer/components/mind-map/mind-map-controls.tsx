@@ -1,6 +1,8 @@
 import { ChevronsDownUp, ChevronsUpDown, Crosshair, Minus, Plus } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
 export function EmptyMindMap() {
   const { t } = useTranslation("viewer");
@@ -19,6 +21,32 @@ export interface MindMapControlsProps {
   onCollapseAll?: () => void;
 }
 
+function Control({ label, description, onClick, children }: {
+  label: string;
+  description: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClick}
+            className="size-8 text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary cursor-pointer active:scale-95 touch-manipulation"
+            aria-label={label}
+          />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side="left">{description}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function MindMapControls({
   onZoomIn,
   onZoomOut,
@@ -28,64 +56,28 @@ export function MindMapControls({
 }: MindMapControlsProps) {
   const { t } = useTranslation("viewer");
   return (
-    <div className="absolute bottom-4 right-4 sm:bottom-auto sm:top-4 flex flex-row sm:flex-col gap-1.5 rounded-xl border border-surface-border bg-surface-2 p-1.5 shadow-sm">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onZoomIn}
-        className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary cursor-pointer active:scale-95 touch-manipulation"
-        aria-label={t("mindMap.zoomIn")}
-      >
-        <Plus className="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onZoomOut}
-        className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary cursor-pointer active:scale-95 touch-manipulation"
-        aria-label={t("mindMap.zoomOut")}
-      >
-        <Minus className="size-4" />
-      </Button>
-      <div className="mx-1 h-px bg-surface-border hidden sm:block" />
-      <div className="mx-1 w-px bg-surface-border sm:hidden" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onCenter}
-        className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary cursor-pointer active:scale-95 touch-manipulation"
-        aria-label={t("mindMap.center")}
-      >
-        <Crosshair className="size-4" />
-      </Button>
-      {(onExpandAll || onCollapseAll) && (
-        <>
-          <div className="mx-1 h-px bg-surface-border hidden sm:block" />
-          <div className="mx-1 w-px bg-surface-border sm:hidden" />
-          {onExpandAll && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onExpandAll}
-              className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary cursor-pointer active:scale-95 touch-manipulation"
-              aria-label={t("mindMap.expandAll", "Expand all nodes")}
-            >
-              <ChevronsUpDown className="size-4" />
-            </Button>
-          )}
-          {onCollapseAll && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onCollapseAll}
-              className="size-8 border border-surface-border-strong text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary cursor-pointer active:scale-95 touch-manipulation"
-              aria-label={t("mindMap.collapseAll", "Collapse all nodes")}
-            >
-              <ChevronsDownUp className="size-4" />
-            </Button>
-          )}
-        </>
-      )}
-    </div>
+    <TooltipProvider>
+      <div className="absolute bottom-4 right-4 sm:bottom-auto sm:top-4 flex flex-row sm:flex-col gap-1.5 rounded-xl border border-surface-border bg-surface-2 p-1.5 shadow-sm">
+        <Control label={t("mindMap.zoomIn")} description={t("mindMap.tooltips.zoomIn")} onClick={onZoomIn}>
+          <Plus className="size-4" />
+        </Control>
+        <Control label={t("mindMap.zoomOut")} description={t("mindMap.tooltips.zoomOut")} onClick={onZoomOut}>
+          <Minus className="size-4" />
+        </Control>
+        <Control label={t("mindMap.center")} description={t("mindMap.tooltips.center")} onClick={onCenter}>
+          <Crosshair className="size-4" />
+        </Control>
+        {onExpandAll && (
+          <Control label={t("mindMap.expandAll")} description={t("mindMap.tooltips.expandAll")} onClick={onExpandAll}>
+            <ChevronsUpDown className="size-4" />
+          </Control>
+        )}
+        {onCollapseAll && (
+          <Control label={t("mindMap.collapseAll")} description={t("mindMap.tooltips.collapseAll")} onClick={onCollapseAll}>
+            <ChevronsDownUp className="size-4" />
+          </Control>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

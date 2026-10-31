@@ -1,23 +1,38 @@
+import { ChevronsDownUp, ChevronsUpDown, Crosshair, Minus, Plus } from "lucide-react";
+import { useId } from "react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export function MindMapSkeleton() {
+  const dotsId = useId();
   return (
     <div
       data-slot="mind-map-skeleton"
-      className="relative mx-auto h-100 w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border-subtle bg-card/50"
+      className="relative h-[min(520px,calc(100dvh-160px))] min-h-105 w-full overflow-hidden sm:h-[min(680px,calc(100dvh-180px))]"
       aria-hidden="true"
     >
-      <Skeleton className="absolute top-1/2 left-1/2 h-14 w-44 -translate-x-1/2 -translate-y-1/2 rounded-2xl" />
-      <Skeleton className="absolute top-3/25 left-3/25 h-10 w-32 rounded-full" />
-      <Skeleton className="absolute top-9/50 right-1/10 h-10 w-36 rounded-full" />
-      <Skeleton className="absolute bottom-1/5 left-2/25 h-10 w-28 rounded-full" />
-      <Skeleton className="absolute right-3/25 bottom-7/50 h-10 w-32 rounded-full" />
-      <Skeleton className="absolute top-12/25 left-1/25 hidden h-8 w-24 rounded-full sm:block" />
-      <Skeleton className="absolute top-12/25 right-1/25 hidden h-8 w-24 rounded-full sm:block" />
-      <div className="absolute right-3 bottom-3 flex gap-1.5">
-        <Skeleton className="h-8 w-8 rounded-lg" />
-        <Skeleton className="h-8 w-8 rounded-lg" />
-        <Skeleton className="h-8 w-8 rounded-lg" />
+      <svg className="absolute inset-0 size-full text-surface-border opacity-60">
+        <defs>
+          <pattern id={dotsId} width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="currentColor" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#${dotsId})`} />
+      </svg>
+      <svg className="absolute inset-0 size-full text-surface-border-strong" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
+        <path d="M 33 50 C 47 50, 46 20, 60 20 M 33 50 C 47 50, 46 40, 60 40 M 33 50 C 47 50, 46 60, 60 60 M 33 50 C 47 50, 46 80, 60 80" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="absolute top-1/2 left-[8%] flex h-12 w-1/4 -translate-y-1/2 items-center rounded-xl border border-surface-border-strong bg-surface-3 px-3 sm:px-4">
+        <Skeleton className="h-3 w-4/5 rounded-full" />
+      </div>
+      {["top-[20%]", "top-[40%]", "top-[60%]", "top-[80%]"].map((top) => (
+        <div key={top} className={`absolute left-[60%] flex h-12 w-1/4 -translate-y-1/2 items-center rounded-lg border border-surface-border-subtle bg-surface-2 px-3 sm:px-4 ${top}`}>
+          <Skeleton className="h-3 w-3/4 rounded-full" />
+        </div>
+      ))}
+      <div className="absolute right-4 bottom-4 flex flex-row gap-1.5 rounded-xl border border-surface-border bg-surface-2 p-1.5 text-text-secondary sm:top-4 sm:bottom-auto sm:flex-col">
+        {[Plus, Minus, Crosshair, ChevronsUpDown, ChevronsDownUp].map((Icon, index) => (
+          <div key={index} className="flex size-8 items-center justify-center opacity-50"><Icon className="size-4" /></div>
+        ))}
       </div>
     </div>
   );

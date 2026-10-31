@@ -53,14 +53,17 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
     [depths, expandedIds],
   );
 
-  const selectLeaf = useCallback(
+  const selectNode = useCallback(
     (item: MapItem) => {
       setSelectedId(item.id);
-      if (item.children.length > 0) {
-        toggleNode(item.id);
-        return;
-      }
+      if (item.children.length > 0) toggleNode(item.id);
+    },
+    [toggleNode],
+  );
 
+  const askInChat = useCallback(
+    (item: MapItem) => {
+      setSelectedId(item.id);
       const mindMapContext = materialTitle
         ? i18n.t("mindMap.prompt.context", { ns: "viewer", title: materialTitle })
         : "";
@@ -80,7 +83,7 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
         }),
       );
     },
-    [materialTitle, toggleNode],
+    [materialTitle],
   );
 
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -96,9 +99,9 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
   const graph = useMemo(
     () =>
       root
-        ? buildGraph(root, expandedIds, selectedId, toggleNode, isMobileViewport)
+        ? buildGraph(root, expandedIds, selectedId, toggleNode, isMobileViewport, askInChat)
         : { nodes: [], edges: [] },
-    [expandedIds, root, selectedId, toggleNode, isMobileViewport],
+    [expandedIds, root, selectedId, toggleNode, isMobileViewport, askInChat],
   );
 
   useEffect(() => setNodes(graph.nodes), [graph.nodes, setNodes]);
@@ -176,7 +179,7 @@ export function useMindMapLayout({ content, materialTitle }: MindMapViewProps) {
     edges,
     onNodesChange,
     onEdgesChange,
-    selectLeaf,
+    selectNode,
     handleCenterSelected,
     zoomIn: () => zoomIn({ duration: 300 }),
     zoomOut: () => zoomOut({ duration: 300 }),

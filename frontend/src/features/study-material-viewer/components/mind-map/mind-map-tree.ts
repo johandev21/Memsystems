@@ -49,6 +49,7 @@ export function buildGraph(
   selectedId: string | null,
   onToggle: (id: string) => void,
   isMobileLayout = false,
+  onAskInChat: (item: MapItem) => void,
 ): { nodes: MindMapFlowNode[]; edges: Edge[] } {
   const nodes: MindMapFlowNode[] = [];
   const edges: Edge[] = [];
@@ -70,6 +71,7 @@ export function buildGraph(
         expanded: expandedIds.has(item.id),
         selected: selectedId === item.id,
         onToggle,
+        onAskInChat,
       },
     });
 

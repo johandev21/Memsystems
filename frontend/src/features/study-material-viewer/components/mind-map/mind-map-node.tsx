@@ -6,9 +6,11 @@ import {
   type EdgeProps,
   type NodeProps,
 } from "@xyflow/react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, MessageCircle, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils/cn";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/shared/components/ui/context-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import type { MindMapFlowNode } from "./mind-map-types";
 
 export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
@@ -17,15 +19,14 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
   const hasChildren = data.item.children.length > 0;
 
   return (
-    <div
-      className={cn(
+    <ContextMenu>
+      <ContextMenuTrigger render={<div className={cn(
         "group relative min-w-37.5 max-w-47.5 sm:min-w-47.5 sm:max-w-57.5 rounded-lg border bg-surface-2 border-surface-border-subtle px-3 sm:px-4 py-2.5 sm:py-3 text-left text-text-primary transition-all duration-200 shadow-2xs",
         isRoot &&
           "min-w-42.5 sm:min-w-52.5 rounded-xl border-surface-border-strong bg-surface-3 font-semibold shadow-xs",
         data.selected && !isRoot && "bg-surface-3 border-surface-border-strong ring-1 ring-surface-border-strong shadow-xs",
         !data.selected && !isRoot && "hover:bg-surface-3 hover:border-surface-border",
-      )}
-    >
+      )} />}>
       <Handle
         type="target"
         position={Position.Left}
@@ -40,6 +41,21 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
         >
           {data.item.label}
         </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-text-primary cursor-pointer hover:bg-foreground hover:text-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-popup-open:bg-foreground data-popup-open:text-background touch-manipulation"
+            aria-label={t("mindMap.nodeActions", { label: data.item.label })}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <MoreHorizontal className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-max min-w-36">
+            <DropdownMenuItem className="cursor-pointer hover:bg-foreground hover:text-background focus:bg-foreground focus:text-background data-highlighted:bg-foreground data-highlighted:text-background [&_svg_*]:text-inherit! [&_svg]:text-inherit!" onClick={(event) => { event.stopPropagation(); data.onAskInChat(data.item); }}>
+              <MessageCircle /> {t("mindMap.askInChat")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {hasChildren && (
@@ -66,7 +82,13 @@ export function MindMapNode({ data }: NodeProps<MindMapFlowNode>) {
         position={Position.Right}
         className="!h-1 !w-1 !border-0 !bg-transparent"
       />
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem className="cursor-pointer hover:bg-foreground hover:text-background focus:bg-foreground focus:text-background data-highlighted:bg-foreground data-highlighted:text-background focus:[&_svg]:text-background" onClick={(event) => { event.stopPropagation(); data.onAskInChat(data.item); }}>
+          <MessageCircle className="text-inherit!" /> {t("mindMap.askInChat")}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 

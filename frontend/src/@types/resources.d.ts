@@ -1897,6 +1897,7 @@ export default interface Resources {
       "slides": "Slides"
     },
     "mindMap": {
+      "askInChat": "Ask in chat",
       "center": "Center selected node",
       "collapse": "Collapse {{label}}",
       "collapseAll": "Collapse all nodes",
@@ -1904,9 +1905,17 @@ export default interface Resources {
       "expand": "Expand {{label}}",
       "expandAll": "Expand all nodes",
       "hint": "Drag to pan · Scroll to zoom · Click a node to explore",
+      "nodeActions": "Actions for {{label}}",
       "prompt": {
         "context": " from the study material \"{{title}}\"",
         "study": "I'm studying the mind-map concept \"{{label}}\"{{mindMapContext}}.\n\nPlease explain this concept in depth with practical examples, related ideas, and key insights I should remember."
+      },
+      "tooltips": {
+        "center": "Center",
+        "collapseAll": "Collapse",
+        "expandAll": "Expand",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out"
       },
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out"
