@@ -6,7 +6,9 @@ import type { SourceWithContent } from "../types/source.types";
 
 function renderWithClient(
   ui: React.ReactElement,
-  initialData?: { key: unknown[]; data: unknown } | Array<{ key: unknown[]; data: unknown }>,
+  initialData?:
+    | { key: unknown[]; data: unknown }
+    | Array<{ key: unknown[]; data: unknown }>,
 ) {
   const testClient = new QueryClient({
     defaultOptions: {
@@ -21,30 +23,43 @@ function renderWithClient(
       testClient.setQueryData(entry.key, entry.data);
     }
   }
-  return render(<QueryClientProvider client={testClient}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={testClient}>{ui}</QueryClientProvider>,
+  );
 }
 
 describe("SourceContentViewer", () => {
   it("uses the document skeleton for a pending audio source", () => {
     const onClose = vi.fn();
-    renderWithClient(<SourceContentViewer sourceId="src-audio-1" onClose={onClose} />, [
-      {
-        key: ["sources", "nb-1"],
-        data: [
-          {
-            id: "src-audio-1",
-            notebookId: "nb-1",
-            kind: "file",
-            title: "lecture.mp3",
-            url: null,
-            modality: "audio",
-            contentType: "audio/mpeg",
-            fileSize: 1000,
-            createdAt: "2026-08-30T12:00:00.000Z",
+    renderWithClient(
+      <SourceContentViewer sourceId="src-audio-1" onClose={onClose} />,
+      [
+        {
+          key: ["sources", "nb-1", "pages", ""],
+          data: {
+            pages: [
+              {
+                items: [
+                  {
+                    id: "src-audio-1",
+                    notebookId: "nb-1",
+                    kind: "file",
+                    title: "lecture.mp3",
+                    url: null,
+                    modality: "audio",
+                    contentType: "audio/mpeg",
+                    fileSize: 1000,
+                    createdAt: "2026-08-30T12:00:00.000Z",
+                  },
+                ],
+                nextCursor: null,
+              },
+            ],
+            pageParams: [null],
           },
-        ],
-      },
-    ]);
+        },
+      ],
+    );
 
     // Title should be visible immediately in header
     expect(screen.getByText("lecture")).toBeTruthy();
@@ -58,73 +73,106 @@ describe("SourceContentViewer", () => {
   });
 
   it("uses the document skeleton for a pending video source", () => {
-    renderWithClient(<SourceContentViewer sourceId="src-video-1" onClose={vi.fn()} />, [
-      {
-        key: ["sources", "nb-1"],
-        data: [
-          {
-            id: "src-video-1",
-            notebookId: "nb-1",
-            kind: "file",
-            title: "talk.mp4",
-            url: null,
-            modality: "video",
-            contentType: "video/mp4",
-            fileSize: 5000,
-            createdAt: "2026-08-30T12:00:00.000Z",
+    renderWithClient(
+      <SourceContentViewer sourceId="src-video-1" onClose={vi.fn()} />,
+      [
+        {
+          key: ["sources", "nb-1", "pages", ""],
+          data: {
+            pages: [
+              {
+                items: [
+                  {
+                    id: "src-video-1",
+                    notebookId: "nb-1",
+                    kind: "file",
+                    title: "talk.mp4",
+                    url: null,
+                    modality: "video",
+                    contentType: "video/mp4",
+                    fileSize: 5000,
+                    createdAt: "2026-08-30T12:00:00.000Z",
+                  },
+                ],
+                nextCursor: null,
+              },
+            ],
+            pageParams: [null],
           },
-        ],
-      },
-    ]);
+        },
+      ],
+    );
 
     expect(screen.getByText("talk")).toBeTruthy();
     expect(screen.getByTestId("document-viewer-skeleton")).toBeTruthy();
   });
 
   it("uses the document skeleton for a pending presentation source", () => {
-    renderWithClient(<SourceContentViewer sourceId="src-pptx-1" onClose={vi.fn()} />, [
-      {
-        key: ["sources", "nb-1"],
-        data: [
-          {
-            id: "src-pptx-1",
-            notebookId: "nb-1",
-            kind: "file",
-            title: "deck.pptx",
-            url: null,
-            modality: "slides",
-            contentType:
-              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            fileSize: 5000,
-            createdAt: "2026-08-30T12:00:00.000Z",
+    renderWithClient(
+      <SourceContentViewer sourceId="src-pptx-1" onClose={vi.fn()} />,
+      [
+        {
+          key: ["sources", "nb-1", "pages", ""],
+          data: {
+            pages: [
+              {
+                items: [
+                  {
+                    id: "src-pptx-1",
+                    notebookId: "nb-1",
+                    kind: "file",
+                    title: "deck.pptx",
+                    url: null,
+                    modality: "slides",
+                    contentType:
+                      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    fileSize: 5000,
+                    createdAt: "2026-08-30T12:00:00.000Z",
+                  },
+                ],
+                nextCursor: null,
+              },
+            ],
+            pageParams: [null],
           },
-        ],
-      },
-    ]);
+        },
+      ],
+    );
 
     expect(screen.getByText("deck")).toBeTruthy();
     expect(screen.getByTestId("document-viewer-skeleton")).toBeTruthy();
   });
 
   it("uses the document skeleton for a pending image source", () => {
-    renderWithClient(<SourceContentViewer sourceId="src-img-1" onClose={vi.fn()} />, [
-      {
-        key: ["sources", "nb-1"],
-        data: [
-          {
-            id: "src-img-1",
-            notebookId: "nb-1",
-            kind: "file",
-            title: "diagram.png",
-            url: null,
-            modality: "image",
-            contentType: "image/png",
-            fileSize: 5000,
-            createdAt: "2026-08-30T12:00:00.000Z",
+    renderWithClient(
+      <SourceContentViewer sourceId="src-img-1" onClose={vi.fn()} />,
+      [
+        {
+          key: ["sources", "nb-1", "pages", ""],
+          data: {
+            pages: [
+              {
+                items: [
+                  {
+                    id: "src-img-1",
+                    notebookId: "nb-1",
+                    kind: "file",
+                    title: "diagram.png",
+                    url: null,
+                    modality: "image",
+                    contentType: "image/png",
+                    fileSize: 5000,
+                    createdAt: "2026-08-30T12:00:00.000Z",
+                  },
+                ],
+                nextCursor: null,
+              },
+            ],
+            pageParams: [null],
           },
-        ],
-      },
-    ]);
+        },
+      ],
+    );
 
     expect(screen.getByText("diagram")).toBeTruthy();
     expect(screen.getByTestId("document-viewer-skeleton")).toBeTruthy();

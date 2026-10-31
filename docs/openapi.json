@@ -654,6 +654,30 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "cursor",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -662,6 +686,31 @@
           }
         },
         "summary": "List Sources",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/summary": {
+      "get": {
+        "operationId": "SourcesController_sourceSummary",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "description": "Notebook id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source count in the Notebook."
+          }
+        },
+        "summary": "Get Source summary for a Notebook",
         "tags": [
           "Sources"
         ]
@@ -1233,6 +1282,39 @@
           }
         },
         "summary": "Dismiss Web Search",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/notebooks/{notebookId}/sources/web-search/dismiss-candidates": {
+      "post": {
+        "operationId": "SourcesController_dismissWebSearchCandidates",
+        "parameters": [
+          {
+            "name": "notebookId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissWebSearchCandidatesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
         "tags": [
           "Sources"
         ]
@@ -2974,6 +3056,23 @@
         },
         "required": [
           "query"
+        ]
+      },
+      "DismissWebSearchCandidatesDto": {
+        "type": "object",
+        "properties": {
+          "urls": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "required": [
+          "urls"
         ]
       },
       "ImportWebSearchResultsDto": {

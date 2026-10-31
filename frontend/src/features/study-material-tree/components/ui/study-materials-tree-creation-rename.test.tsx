@@ -93,10 +93,10 @@ describe("StudyMaterialsTree — folder creation and inline rename (production)"
 
     // Wait for tree to load (empty -> shows empty state, but header always visible)
     await screen.findByText("Study Materials");
-    await screen.findByText("No study materials");
+    const emptyState = await screen.findByText("Make this your study space");
 
     // Create folder via right-click menu
-    fireEvent.contextMenu(screen.getByText("No study materials"));
+    fireEvent.contextMenu(emptyState);
     await user.click(await screen.findByRole("menuitem", { name: /New folder/i }));
 
     // Should be in rename mode with Untitled folder selected
@@ -164,8 +164,8 @@ describe("StudyMaterialsTree — folder creation and inline rename (production)"
       </QueryClientProvider>,
     );
     await screen.findByText("Study Materials");
-    await screen.findByText("No study materials");
-    fireEvent.contextMenu(screen.getByText("No study materials"));
+    const emptyState = await screen.findByText("Make this your study space");
+    fireEvent.contextMenu(emptyState);
     await user.click(await screen.findByRole("menuitem", { name: /New folder/i }));
     await screen.findByLabelText("Item name");
     await user.keyboard("{Escape}");

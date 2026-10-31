@@ -17,12 +17,16 @@ vi.mock("@/features/ai", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/sources", () => ({
-  sourcesQueryOptions: () => ({
-    queryKey: ["sources"],
-    queryFn: () => [{ id: "src-1", title: "Source 1", kind: "file" }],
-  }),
-}));
+vi.mock("@/features/sources/api/sources", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/sources/api/sources")>();
+  return {
+    ...actual,
+    fetchSourcesPage: vi.fn(async () => ({
+      items: [{ id: "src-1", title: "Source 1", kind: "file" }],
+      nextCursor: null,
+    })),
+  };
+});
 
 const VERIFIED_CATALOG = {
   models: [
