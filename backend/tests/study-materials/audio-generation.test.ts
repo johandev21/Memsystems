@@ -32,6 +32,14 @@ const sectionTexts = [
   Array(70).fill('connected').join(' '),
   Array(70).fill('synthesis').join(' '),
 ];
+const turnsFor = (text: string) => {
+  const split = Math.ceil(text.split(/\s+/).length / 2);
+  const words = text.split(/\s+/);
+  return [
+    { speaker: 'host' as const, text: words.slice(0, split).join(' ') },
+    { speaker: 'guest' as const, text: words.slice(split).join(' ') },
+  ];
+};
 
 function setup(synthesize: ReturnType<typeof vi.fn>) {
   const inserted: Record<string, unknown>[] = [];
@@ -130,18 +138,18 @@ function modelOutput() {
       yield {
         title: 'Learning',
         sections: [
-          { heading: 'Opening', text: sectionTexts[0] },
-          { heading: 'Connection', text: sectionTexts[1] },
-          { heading: 'Wrap-up', text: sectionTexts[2] },
+          { heading: 'Opening', turns: turnsFor(sectionTexts[0]) },
+          { heading: 'Connection', turns: turnsFor(sectionTexts[1]) },
+          { heading: 'Wrap-up', turns: turnsFor(sectionTexts[2]) },
         ],
       };
     })(),
     output: Promise.resolve({
       title: 'Learning',
       sections: [
-        { heading: 'Opening', text: sectionTexts[0] },
-        { heading: 'Connection', text: sectionTexts[1] },
-        { heading: 'Wrap-up', text: sectionTexts[2] },
+        { heading: 'Opening', turns: turnsFor(sectionTexts[0]) },
+        { heading: 'Connection', turns: turnsFor(sectionTexts[1]) },
+        { heading: 'Wrap-up', turns: turnsFor(sectionTexts[2]) },
       ],
     }),
   } as never);
@@ -152,6 +160,120 @@ async function read(stream: ReadableStream<Uint8Array>) {
 }
 
 describe('audio overview generation', () => {
+  it('preserves gateway access denials instead of retrying and reporting a generic failure', async () => {
+    vi.mocked(streamText).mockReset();
+    const denied = Object.assign(
+      new Error('Free tier users do not have access to this model.'),
+      { statusCode: 403 },
+    );
+    vi.mocked(streamText).mockImplementationOnce((options) => {
+      options.onError?.({ error: denied });
+      return {
+        partialOutputStream: (async function* () {})(),
+        output: Promise.resolve(undefined),
+      } as never;
+    });
+    const synthesize = vi.fn(async () => audio);
+    const { handler, inserted } = setup(synthesize);
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'audio_overview',
+        brief: '',
+        model: 'test',
+        audioOverviewOptions: {
+          format: 'briefing',
+          length: 'short',
+          audience: 'some_background',
+        },
+      },
+      { sources: [], evidence: [] },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    await expect(read(stream)).rejects.toThrow('gateway_entitlement');
+    expect(streamText).toHaveBeenCalledTimes(1);
+    expect(synthesize).not.toHaveBeenCalled();
+    expect(inserted).toHaveLength(0);
+  });
+
+  it('preserves provider failures emitted in the JSON fallback stream', async () => {
+    vi.mocked(streamText).mockReset();
+    vi.mocked(streamText).mockImplementationOnce(() => {
+      throw new Error('Native output unavailable');
+    });
+    vi.mocked(streamText).mockImplementationOnce((options) => {
+      options.onError?.({
+        error: Object.assign(new Error('Rate limited'), { statusCode: 429 }),
+      });
+      return { textStream: (async function* () {})() } as never;
+    });
+    const synthesize = vi.fn(async () => audio);
+    const { handler } = setup(synthesize);
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'audio_overview',
+        brief: '',
+        model: 'test',
+        audioOverviewOptions: {
+          format: 'briefing',
+          length: 'short',
+          audience: 'some_background',
+        },
+      },
+      { sources: [], evidence: [] },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    await expect(read(stream)).rejects.toThrow('gateway_rate_limited');
+    expect(synthesize).not.toHaveBeenCalled();
+  });
+
+  it('rejects single-speaker dialogue from the JSON fallback before synthesizing', async () => {
+    const synthesize = vi.fn(async () => audio);
+    const { handler, inserted } = setup(synthesize);
+    vi.mocked(streamText).mockImplementationOnce(() => {
+      throw new Error('Structured output unavailable');
+    });
+    vi.mocked(streamText).mockReturnValueOnce({
+      textStream: (async function* () {
+        yield JSON.stringify({
+          title: 'Invalid dialogue',
+          sections: sectionTexts.map((text, i) => ({
+            heading: `Section ${i}`,
+            turns: [
+              { speaker: 'host', text },
+              { speaker: 'host', text },
+            ],
+          })),
+        });
+      })(),
+    } as never);
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'audio_overview',
+        brief: '',
+        model: 'test',
+        audioOverviewOptions: {
+          format: 'briefing',
+          length: 'short',
+          audience: 'some_background',
+        },
+      },
+      { sources: [], evidence: [] },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    await expect(read(stream)).rejects.toThrow();
+    expect(synthesize).not.toHaveBeenCalled();
+    expect(inserted).toHaveLength(0);
+  });
+
   it('synthesizes spoken text without reference markers and saves audio before completion', async () => {
     modelOutput();
     const synthesize = vi.fn(async () => audio);
@@ -212,9 +334,21 @@ describe('audio overview generation', () => {
     ).toEqual(['writing_script', 'synthesizing_audio']);
     expect(synthesize).toHaveBeenCalledWith(
       [
-        { text: `Opening. ${sectionTexts[0].replace(' [ref:R1]', '')}` },
-        { text: `Connection. ${sectionTexts[1]}` },
-        { text: `Wrap-up. ${sectionTexts[2]}` },
+        {
+          text: `Opening. ${sectionTexts[0].replace(' [ref:R1]', '')}`,
+          turns: turnsFor(sectionTexts[0]).map((turn) => ({
+            ...turn,
+            text: turn.text.replace(' [ref:R1]', ''),
+          })),
+        },
+        {
+          text: `Connection. ${sectionTexts[1]}`,
+          turns: turnsFor(sectionTexts[1]),
+        },
+        {
+          text: `Wrap-up. ${sectionTexts[2]}`,
+          turns: turnsFor(sectionTexts[2]),
+        },
       ],
       'en',
       undefined,
@@ -225,6 +359,10 @@ describe('audio overview generation', () => {
       sections: [
         {
           text: expect.not.stringContaining('[ref:R1]'),
+          turns: expect.arrayContaining([
+            expect.objectContaining({ speaker: 'host' }),
+            expect.objectContaining({ speaker: 'guest' }),
+          ]),
           citations: [{ sourceId: 'source-1' }],
         },
         { citations: [] },

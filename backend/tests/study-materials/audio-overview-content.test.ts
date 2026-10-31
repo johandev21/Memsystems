@@ -36,6 +36,58 @@ describe('audio overview content', () => {
     ).toMatchObject({ transcript: 'A saved MVP transcript.' });
   });
 
+  it('preserves generated dialogue turns while accepting legacy sections without them', () => {
+    const turns = [
+      { speaker: 'host' as const, text: 'What connects these ideas?' },
+      {
+        speaker: 'guest' as const,
+        text: 'The shared mechanism is energy transfer.',
+      },
+    ];
+    expect(
+      validateContent('audio_overview', {
+        title: 'Dialogue',
+        sections: [
+          {
+            heading: 'Connection',
+            text: turns.map((turn) => turn.text).join(' '),
+            turns,
+          },
+        ],
+        citations: [],
+      }),
+    ).toMatchObject({ sections: [{ turns }] });
+    expect(
+      validateContent('audio_overview', {
+        title: 'Legacy section',
+        sections: [{ heading: 'Opening', text: 'A legacy section.' }],
+        citations: [],
+      }),
+    ).toMatchObject({ sections: [{ text: 'A legacy section.' }] });
+  });
+
+  it('counts canonical spoken turns once, rather than counting a duplicate section text view', () => {
+    const text = Array(210).fill('spoken').join(' ');
+    const content = AudioOverviewContent.parse({
+      title: 'Dialogue',
+      transcript: 'duplicate view should not count',
+      sections: [
+        {
+          heading: 'Main',
+          text,
+          turns: [
+            { speaker: 'host', text: Array(105).fill('spoken').join(' ') },
+            { speaker: 'guest', text: Array(105).fill('spoken').join(' ') },
+          ],
+        },
+      ],
+      citations: [],
+    });
+    expect(() =>
+      assertAudioOverviewScriptLength(content, 'short'),
+    ).not.toThrow();
+  });
+
   it('steers format, length, and audience independently in the generation prompt', () => {
     const prompt = getPromptTemplate('audio_overview').user;
     const briefing = prompt('', 'Evidence', {
@@ -54,6 +106,10 @@ describe('audio overview content', () => {
     });
 
     expect(briefing).toContain('2–3 minutes');
+    expect(getPromptTemplate('audio_overview').instructions).toContain(
+      'two-speaker',
+    );
+    expect(getPromptTemplate('audio_overview').instructions).toContain('host');
     expect(briefing).toContain('new to the topic');
     expect(deepDive).toContain('10–12 minutes');
     expect(deepDive).toContain('unpack concepts');

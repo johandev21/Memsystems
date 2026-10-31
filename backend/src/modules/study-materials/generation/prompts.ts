@@ -252,7 +252,7 @@ Composition rules: the first slide MUST be role 'title'; the final slide MUST be
 };
 
 const audioOverviewTemplate: PromptTemplate = {
-  instructions: `Create a coherent, single-speaker learning experience grounded only in the supplied evidence. Return JSON with a concise title and ordered sections, each with heading, text and citations: []. Build one arc: orient the listener, explain and connect ideas, make abstractions concrete when evidence supports examples, then synthesize. Define terms before relying on them, avoid repetition, and use natural spoken prose without stage directions. Cite source-supported claims inline using the exact [ref:R#] evidence markers. Never invent citations.`,
+  instructions: `Create a coherent, grounded two-speaker learning dialogue based only on the supplied evidence. Return JSON with a concise title and ordered sections, each with heading and turns: [{speaker:"host"|"guest",text:"..."}]. Alternate host and guest throughout the overall script. The host asks useful questions and clarifies transitions; the guest explains and connects ideas. Keep both speakers substantive and natural, with no filler, speaker labels, or stage directions in spoken text. Build one arc: orient the listener, explain and connect ideas, make abstractions concrete only when evidence supports examples, then synthesize. Define terms before relying on them and avoid repetition. Cite source-supported claims inline using exact [ref:R#] evidence markers. Never invent citations.`,
   user: (brief, sourceTexts, options) => {
     const choice = options?.audioOverviewOptions ?? {
       format: 'briefing' as const,
@@ -276,7 +276,7 @@ const audioOverviewTemplate: PromptTemplate = {
       advanced:
         'Assume strong foundations; focus on nuance, mechanisms and implications.',
     }[choice.audience];
-    return `Format: ${format}\nTarget length: ${length} (approximate).\nAudience: ${audience}\n\nSource material:\n${sourceTexts}\n\n${brief ? `Focus and instructions: ${brief}` : 'Explain the most useful ideas in the sources.'}`;
+    return `Format: ${format}\nTarget length: ${length} (approximate spoken words across both speakers).\nAudience: ${audience}\n\nSource material:\n${sourceTexts}\n\n${brief ? `Focus and instructions: ${brief}` : 'Explain the most useful ideas in the sources.'}`;
   },
 };
 

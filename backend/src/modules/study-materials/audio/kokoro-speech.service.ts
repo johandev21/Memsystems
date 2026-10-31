@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 const MAX_TEXT_CHARS = 30_000;
 const MAX_SECTION_CHARS = 4_000;
 const MAX_SECTIONS = 40;
+const MAX_TURNS = 120;
 const MAX_WAV_BYTES = 40 * 1024 * 1024;
 const MAX_AUDIO_SECONDS = 780;
 const TIMEOUT_MS = 900_000;
@@ -37,28 +38,64 @@ export class KokoroSpeechService {
   }
 
   async synthesizeSections(
-    sections: Array<{ text: string }>,
+    sections: Array<{
+      text: string;
+      turns?: Array<{ speaker: 'host' | 'guest'; text: string }>;
+    }>,
     language: string,
     signal?: AbortSignal,
   ): Promise<Buffer> {
     if (
       !Array.isArray(sections) ||
       sections.length === 0 ||
-      sections.length > MAX_SECTIONS ||
-      sections.some(
-        (section) =>
-          !section ||
-          typeof section.text !== 'string' ||
-          section.text.trim().length === 0 ||
-          section.text.length > MAX_SECTION_CHARS,
-      ) ||
-      sections.reduce((total, { text }) => total + text.length, 0) >
-        MAX_TEXT_CHARS
+      sections.length > MAX_SECTIONS
     ) {
       throw new KokoroSpeechError(
         `Speech must contain 1–${MAX_SECTIONS} non-empty sections, each at most ${MAX_SECTION_CHARS} characters and ${MAX_TEXT_CHARS} characters total.`,
       );
     }
+    let totalChars = 0;
+    let totalTurns = 0;
+    const spokenSections = sections.map((section) => {
+      if (!section || typeof section !== 'object')
+        throw new KokoroSpeechError('Invalid speech section.');
+      if (section.turns !== undefined && !Array.isArray(section.turns))
+        throw new KokoroSpeechError('Speech turns must be an array.');
+      const turns = section.turns?.length ? section.turns : undefined;
+      const text = turns
+        ? turns
+            .map((turn) => {
+              if (
+                !turn ||
+                (turn.speaker !== 'host' && turn.speaker !== 'guest') ||
+                typeof turn.text !== 'string' ||
+                !turn.text.trim()
+              )
+                throw new KokoroSpeechError(
+                  'Each speech turn needs a host or guest speaker and non-empty text.',
+                );
+              return turn.text;
+            })
+            .join('\n\n')
+        : section.text;
+      if (typeof text !== 'string' || !text.trim())
+        throw new KokoroSpeechError(
+          'Speech sections must contain non-empty text.',
+        );
+      if (text.length > MAX_SECTION_CHARS)
+        throw new KokoroSpeechError(
+          `A speech section exceeds ${MAX_SECTION_CHARS} characters.`,
+        );
+      totalChars += text.length;
+      totalTurns += turns?.length ?? 1;
+      if (totalChars > MAX_TEXT_CHARS)
+        throw new KokoroSpeechError(
+          `Speech exceeds ${MAX_TEXT_CHARS} characters total.`,
+        );
+      if (totalTurns > MAX_TURNS)
+        throw new KokoroSpeechError(`Speech exceeds ${MAX_TURNS} turns.`);
+      return turns ? { text, turns } : { text };
+    });
     const lang = language.toLowerCase().split(/[-_]/)[0];
     if (lang !== 'en' && lang !== 'es') {
       throw new KokoroSpeechError(
@@ -68,7 +105,7 @@ export class KokoroSpeechService {
     const release = await this.acquire(signal);
     try {
       if (signal?.aborted) throw abortedError();
-      return await this.run(sections, lang, signal);
+      return await this.run(spokenSections, lang, signal);
     } finally {
       release();
     }
@@ -115,7 +152,10 @@ export class KokoroSpeechService {
   }
 
   private run(
-    sections: Array<{ text: string }>,
+    sections: Array<{
+      text: string;
+      turns?: Array<{ speaker: 'host' | 'guest'; text: string }>;
+    }>,
     language: 'en' | 'es',
     signal?: AbortSignal,
   ): Promise<Buffer> {

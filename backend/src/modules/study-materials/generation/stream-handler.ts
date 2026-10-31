@@ -12,6 +12,7 @@ import {
 import { AiService } from '../../ai/ai.service';
 import type { GatewayRequestOptions } from '../../ai/providers/gateway.provider';
 import { toClientStreamError } from '../../ai/stream-error';
+import { classifyGatewayError } from '../../ai/providers/gateway-errors';
 import { languageDirective } from '../../../common/i18n/language';
 import { DRIZZLE } from '../../database/database.module';
 import {
@@ -47,7 +48,7 @@ import {
   repairJsonText,
 } from '../content/content-normalizer';
 import { withSlidePreviews } from '../slides/slides-preview';
-import { KokoroSpeechService } from '../audio/kokoro-speech.service';
+import { SpeechService } from '../audio/speech.service';
 import {
   GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD,
   GENERAL_KNOWLEDGE_SUPPLEMENT_LABEL,
@@ -74,7 +75,7 @@ export class StreamHandler {
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly aiService: AiService,
-    @Optional() private readonly kokoroSpeech?: KokoroSpeechService,
+    @Optional() private readonly speechService?: SpeechService,
   ) {}
 
   createStream(
@@ -141,6 +142,7 @@ export class StreamHandler {
         let guardTimer: ReturnType<typeof setTimeout> | undefined;
         let guardFired = false;
         let firstFrameEmitted = false;
+        let nativeStreamError: Error | undefined;
         const cleanup = () => {
           if (guardTimer !== undefined) {
             clearTimeout(guardTimer);
@@ -200,6 +202,10 @@ export class StreamHandler {
             prompt: userPrompt,
             ...requestOptions,
             abortSignal: modelAbort.signal,
+            onError: ({ error }) => {
+              nativeStreamError =
+                error instanceof Error ? error : new Error(String(error));
+            },
           });
 
           for await (const partial of result.partialOutputStream) {
@@ -207,13 +213,19 @@ export class StreamHandler {
           }
 
           const finalContent: unknown = await result.output;
+          if (nativeStreamError) throw nativeStreamError;
           if (guardTimer !== undefined) {
             clearTimeout(guardTimer);
             guardTimer = undefined;
           }
           const normalized = normalizeAudioContent(
             input.kind,
-            normalizeContent(input.kind, finalContent),
+            normalizeContent(
+              input.kind,
+              input.kind === 'audio_overview'
+                ? schema.parse(finalContent)
+                : finalContent,
+            ),
           );
           const validated = validateContent(input.kind, normalized);
           assertAudioLength(input, validated);
@@ -262,7 +274,8 @@ export class StreamHandler {
           );
           controller.close();
           onDone({ materialId: inserted.id });
-        } catch (nativeError) {
+        } catch (caughtError: unknown) {
+          const nativeError = nativeStreamError ?? caughtError;
           if (guardFired) {
             cleanup();
             return;
@@ -284,6 +297,18 @@ export class StreamHandler {
             onError(nativeError.message);
             return;
           }
+          const failure = classifyGatewayError(nativeError);
+          if (failure.kind !== 'unknown' && failure.kind !== 'capability') {
+            cleanup();
+            const error = new Error(
+              toClientStreamError(nativeError, {
+                id: input.model ?? 'unknown model',
+              }),
+            );
+            controller.error(error);
+            onError(error.message);
+            return;
+          }
           this.logger.warn(
             `Native structured output failed, falling back to strict JSON prompting for ${requestId}`,
             nativeError,
@@ -295,6 +320,7 @@ export class StreamHandler {
               `Use strict JSON: double quotes around all keys and strings (never single quotes), no trailing commas, no comments, ` +
               `no explanations, no markdown formatting, no backticks.\nSchema hint for "${input.kind}": ${fallbackSchemaHint(input.kind, input.groundingMode)}`;
 
+            let fallbackStreamError: Error | undefined;
             const fallbackResult = streamText({
               model,
               instructions: fallbackSystemPrompt,
@@ -303,6 +329,10 @@ export class StreamHandler {
               temperature: 0,
               maxOutputTokens: 16000,
               abortSignal: modelAbort.signal,
+              onError: ({ error }) => {
+                fallbackStreamError =
+                  error instanceof Error ? error : new Error(String(error));
+              },
             });
 
             let accumulatedText = '';
@@ -324,6 +354,7 @@ export class StreamHandler {
               }
             }
 
+            if (fallbackStreamError) throw fallbackStreamError;
             const cleanText = extractJson(accumulatedText);
 
             let parsedContent: unknown;
@@ -369,7 +400,12 @@ export class StreamHandler {
 
             const normalizedContent = normalizeAudioContent(
               input.kind,
-              normalizeContent(input.kind, parsedContent),
+              normalizeContent(
+                input.kind,
+                input.kind === 'audio_overview'
+                  ? schema.parse(parsedContent)
+                  : parsedContent,
+              ),
             );
 
             const validated = validateContent(input.kind, normalizedContent);
@@ -485,19 +521,31 @@ export class StreamHandler {
       return inserted;
     }
     try {
-      if (!this.kokoroSpeech)
-        throw new Error('Kokoro is not configured. See docs/kokoro-setup.md.');
+      if (!this.speechService)
+        throw new Error('Speech synthesis is not configured.');
       onAudioSynthesisStart?.();
       const audioContent = storable as {
         transcript: string;
-        sections?: Array<{ heading: string; text: string }>;
+        sections?: Array<{
+          heading: string;
+          text: string;
+          turns?: Array<{ speaker: 'host' | 'guest'; text: string }>;
+        }>;
       };
       const speechSections = audioContent.sections?.length
-        ? audioContent.sections.map(({ heading, text }) => ({
+        ? audioContent.sections.map(({ heading, text, turns }) => ({
             text: `${heading}. ${stripCitationMarkers(text)}`,
+            ...(turns
+              ? {
+                  turns: turns.map((turn) => ({
+                    speaker: turn.speaker,
+                    text: stripCitationMarkers(turn.text),
+                  })),
+                }
+              : {}),
           }))
         : [{ text: stripCitationMarkers(audioContent.transcript) }];
-      const audio = await this.kokoroSpeech.synthesizeSections(
+      const audio = await this.speechService.synthesizeSections(
         speechSections,
         input.language ?? 'en',
         signal,
@@ -587,13 +635,27 @@ export class StreamHandler {
         : (validated as Record<string, unknown>);
     if (input.kind === 'audio_overview') {
       const audio = storable as {
-        sections: Array<{ heading: string; text: string }>;
+        sections: Array<{
+          heading: string;
+          text: string;
+          turns?: Array<{ speaker: 'host' | 'guest'; text: string }>;
+        }>;
       };
-      audio.sections = audio.sections.map((section) => ({
-        ...section,
-        citations: extractGenerationCitations(section, grounding.evidence),
-        text: stripCitationMarkers(section.text),
-      }));
+      audio.sections = audio.sections.map((section) => {
+        const turns = section.turns?.map((turn) => ({
+          ...turn,
+          text: stripCitationMarkers(turn.text),
+        }));
+        const text = turns
+          ? turns.map((turn) => turn.text).join(' ')
+          : stripCitationMarkers(section.text);
+        return {
+          ...section,
+          ...(turns ? { turns } : {}),
+          text,
+          citations: extractGenerationCitations(section, grounding.evidence),
+        };
+      });
       (audio as { transcript?: string }).transcript = audio.sections
         .map((section) => section.text)
         .join('\n\n');
@@ -626,18 +688,37 @@ export class StreamHandler {
       mind_map: MindMapContent,
       slides: SlidesContent,
       // Citation metadata is attached after generation, not generated by the model.
-      audio_overview: z.object({
-        title: z.string().min(1).max(200),
-        sections: z
-          .array(
-            z.object({
-              heading: z.string().min(1).max(200),
-              text: z.string().min(1).max(30_000),
-            }),
-          )
-          .min(3)
-          .max(30),
-      }),
+      audio_overview: z
+        .object({
+          title: z.string().min(1).max(200),
+          sections: z
+            .array(
+              z.object({
+                heading: z.string().min(1).max(200),
+                turns: z
+                  .array(
+                    z.object({
+                      speaker: z.enum(['host', 'guest']),
+                      text: z.string().min(1).max(30_000),
+                    }),
+                  )
+                  .min(2),
+              }),
+            )
+            .min(3)
+            .max(30),
+        })
+        .refine(
+          (content) => {
+            const speakers = new Set(
+              content.sections.flatMap((section) =>
+                section.turns.map((turn) => turn.speaker),
+              ),
+            );
+            return speakers.has('host') && speakers.has('guest');
+          },
+          { message: 'Audio Overview dialogue must include both speakers' },
+        ),
     };
     return schemas[kind];
   }
@@ -736,9 +817,25 @@ function normalizeAudioContent(
     : [];
   return {
     ...record,
-    sections,
+    sections: sections.map((section) => {
+      const turns = Array.isArray(section.turns)
+        ? (section.turns as Array<{ speaker: string; text: string }>)
+        : undefined;
+      return {
+        ...section,
+        ...(turns ? { text: turns.map((turn) => turn.text).join(' ') } : {}),
+      };
+    }),
     transcript: sections
-      .map((section) => (typeof section.text === 'string' ? section.text : ''))
+      .map((section) =>
+        Array.isArray(section.turns)
+          ? (section.turns as Array<{ text: string }>)
+              .map((turn) => turn.text)
+              .join(' ')
+          : typeof section.text === 'string'
+            ? section.text
+            : '',
+      )
       .join('\n\n'),
     citations: [],
   };
@@ -791,7 +888,7 @@ function baseFallbackSchemaHint(kind: StudyMaterialKind): string {
     case 'slides':
       return `{"schemaVersion": 2, "title", "design": {"background", "surface", "primary", "secondary", "text", "muted" hex colors}, "slides": [{"id", "role": "content", "title", "elements": []}]}. Example: {"schemaVersion": 2, "title": "Sample Deck", "design": {"background": "#0F172A", "surface": "#1E293B", "primary": "#38BDF8", "secondary": "#818CF8", "text": "#F8FAFC", "muted": "#94A3B8"}, "slides": [{"id": "s1", "role": "content", "title": "Intro", "elements": []}]}`;
     case 'audio_overview':
-      return `{"title": "A concise title", "sections": [{"heading": "Opening", "text": "Orient the listener and introduce the topic."}, {"heading": "Main idea", "text": "Explain and connect the ideas."}, {"heading": "Wrap-up", "text": "Synthesize the learning."}]}`;
+      return `{"title": "A concise title", "sections": [{"heading": "Opening", "turns": [{"speaker": "host", "text": "Ask a useful opening question."}, {"speaker": "guest", "text": "Orient the listener and introduce the topic."}]}, {"heading": "Main idea", "turns": [{"speaker": "host", "text": "Ask how the ideas connect."}, {"speaker": "guest", "text": "Explain and connect the ideas."}]}, {"heading": "Wrap-up", "turns": [{"speaker": "host", "text": "Ask for the central takeaway."}, {"speaker": "guest", "text": "Synthesize the learning."}]}]}`;
     default:
       return `A JSON object with a "title" string field. Example: {"title": "Sample"}`;
   }

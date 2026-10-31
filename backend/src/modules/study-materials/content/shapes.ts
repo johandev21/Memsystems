@@ -122,6 +122,16 @@ export const MindMapContent = z.object({
 export const AudioOverviewSection = z.object({
   heading: z.string().min(1).max(200),
   text: z.string().min(1).max(30_000),
+  // Optional for persisted legacy sections; generated sections always include turns.
+  turns: z
+    .array(
+      z.object({
+        speaker: z.enum(['host', 'guest']),
+        text: z.string().min(1).max(30_000),
+      }),
+    )
+    .min(2)
+    .optional(),
   citations: GenerationCitationsSchema.default([]),
 });
 
@@ -214,7 +224,13 @@ export function assertAudioOverviewScriptLength(
   length: keyof typeof AUDIO_OVERVIEW_WORD_LIMITS,
 ): void {
   const text = content.sections?.length
-    ? content.sections.map((section) => section.text).join(' ')
+    ? content.sections
+        .map((section) =>
+          section.turns?.length
+            ? section.turns.map((turn) => turn.text).join(' ')
+            : section.text,
+        )
+        .join(' ')
     : (content.transcript ?? '');
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
   const { min, max } = AUDIO_OVERVIEW_WORD_LIMITS[length];
