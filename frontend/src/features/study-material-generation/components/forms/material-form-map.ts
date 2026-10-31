@@ -1,11 +1,11 @@
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 import type React from "react";
 import { FlashcardBriefForm } from "./FlashcardBriefForm";
+import { AudioOverviewBriefForm } from "./AudioOverviewBriefForm";
 import { MindMapBriefForm } from "./MindMapBriefForm";
 import { QuizBriefForm } from "./QuizBriefForm";
 import { RoadmapBriefForm } from "./RoadmapBriefForm";
 import { SlidesBriefForm } from "./SlidesBriefForm";
-import { StandardBriefForm } from "./StandardBriefForm";
 import type { BaseMaterialFormProps } from "./types";
 
 export const MATERIAL_FORM_MAP: Partial<
@@ -16,5 +16,5 @@ export const MATERIAL_FORM_MAP: Partial<
   roadmap: RoadmapBriefForm,
   mind_map: MindMapBriefForm,
   slides: SlidesBriefForm,
-  audio_overview: StandardBriefForm,
+  audio_overview: AudioOverviewBriefForm,
 };

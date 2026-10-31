@@ -160,10 +160,18 @@
   },
   "unsupportedMaterial": "Unsupported material type",
   "audioOverview": {
+    "setupTitle": "Audio Overview Setup",
+    "nextStep": "Next Step",
+    "back": "Back",
+    "nextHintAudience": "Choose who the overview is for next",
+    "nextHintInstructions": "Review focus and instructions next",
+    "savedSources": "Using {{count}} saved sources for the replacement.",
+    "overviewSummary": "{{format}} · {{length}} · {{audience}}",
+    "instructionsPlaceholder": "Describe the topics or ideas to emphasize in this audio overview...",
+    "sourceRequired": "This overview has no saved sources, so it cannot be regenerated.",
     "playerLabel": "Audio player for {{title}}",
-    "playbackError": "Audio playback failed. Try again or regenerate this overview.",
+    "playbackError": "Audio playback failed. Try again.",
     "transcript": "Transcript",
-    "outline": "Overview",
     "citations": "Audio overview citations",
     "regenerate": "Regenerate overview",
     "regenerating": "Generating replacement. Your current overview remains available until it is ready.",
@@ -176,20 +184,45 @@
     "format": {
       "label": "Format",
       "briefing": "Briefing",
-      "deep_dive": "Deep dive"
+      "briefingDesc": "A quick, clear summary of the key ideas.",
+      "deep_dive": "Deep dive",
+      "deep_diveDesc": "A detailed exploration of the topic and its connections."
     },
     "length": {
       "label": "Length",
       "short": "Short (2–3 min)",
+      "shortDesc": "A focused overview of the essentials.",
       "standard": "Standard (5–7 min)",
+      "standardDesc": "A balanced overview with room for context.",
       "extended": "Extended (10–12 min)",
+      "extendedDesc": "A thorough overview with more examples and detail.",
       "estimate": "Listening times are estimates."
     },
     "audience": {
       "label": "Audience",
       "new_to_topic": "New to the topic",
+      "new_to_topicDesc": "Introduce terms and explain the foundations.",
       "some_background": "Some background",
-      "advanced": "Advanced"
-    }
+      "some_backgroundDesc": "Build on familiar ideas and explain new connections.",
+      "advanced": "Advanced",
+      "advancedDesc": "Focus on nuance, assumptions, and implications."
+    },
+    "transcriptFor": "Transcript: {{title}}",
+    "player": {
+      "play": "Play {{title}}",
+      "pause": "Pause {{title}}",
+      "rewind": "Go back 15 seconds in {{title}}",
+      "forward": "Skip forward 15 seconds in {{title}}",
+      "progress": "Playback position",
+      "speed": "Playback speed",
+      "retry": "Retry",
+      "ready": "Ready to play",
+      "playing": "Playing",
+      "buffering": "Buffering audio",
+      "waveformUnavailable": "Waveform unavailable. Playback controls remain available."
+    },
+    "metadataSourceCount_one": "{{count}} source",
+    "metadataSourceCount_other": "{{count}} sources",
+    "timingUnavailable": "Regenerate this overview to enable synchronized transcript highlighting."
   }
 }

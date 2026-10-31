@@ -514,23 +514,38 @@ export default interface Resources {
     "audioOverview": {
       "audience": {
         "advanced": "Advanced",
+        "advancedDesc": "Focus on nuance, assumptions, and implications.",
         "label": "Audience",
         "new_to_topic": "New to the topic",
-        "some_background": "Some background"
+        "new_to_topicDesc": "Introduce terms and explain the foundations.",
+        "some_background": "Some background",
+        "some_backgroundDesc": "Build on familiar ideas and explain new connections."
       },
+      "briefLabel": "Focus and instructions",
       "format": {
         "briefing": "Briefing",
+        "briefingDesc": "A quick, clear summary of the key ideas.",
         "deep_dive": "Deep dive",
+        "deep_diveDesc": "A detailed exploration of the topic and its connections.",
         "label": "Format"
       },
+      "instructionsPlaceholder": "Describe the topics or ideas to emphasize in this audio overview...",
       "length": {
         "estimate": "Listening times are estimates.",
         "extended": "Extended (10–12 min)",
+        "extendedDesc": "A thorough overview with more examples and detail.",
         "label": "Length",
         "short": "Short (2–3 min)",
-        "standard": "Standard (5–7 min)"
+        "shortDesc": "A focused overview of the essentials.",
+        "standard": "Standard (5–7 min)",
+        "standardDesc": "A balanced overview with room for context."
       },
-      "sourceRequired": "Select at least one source to generate an Audio Overview.",
+      "nextHintAudience": "Choose who the overview is for next",
+      "overviewSummary": "{{format}} · {{length}} · {{audience}}",
+      "selectedSourceCount_one": "{{count}} source selected",
+      "selectedSourceCount_other": "{{count}} sources selected",
+      "selectedSources": "Selected sources: {{sources}}",
+      "sourceRequired": "Select at least one source. Audio Overviews use your selected material to keep the discussion grounded.",
       "synthesisFailed": "Audio generation failed. Check that the local Kokoro runtime is installed and configured, then try again."
     },
     "capabilityGate": {
@@ -1760,34 +1775,67 @@ export default interface Resources {
     "audioOverview": {
       "audience": {
         "advanced": "Advanced",
+        "advancedDesc": "Focus on nuance, assumptions, and implications.",
         "label": "Audience",
         "new_to_topic": "New to the topic",
-        "some_background": "Some background"
+        "new_to_topicDesc": "Introduce terms and explain the foundations.",
+        "some_background": "Some background",
+        "some_backgroundDesc": "Build on familiar ideas and explain new connections."
       },
+      "back": "Back",
       "briefLabel": "Focus and instructions",
       "cancel": "Cancel generation",
       "citations": "Audio overview citations",
       "dismiss": "Keep current overview",
       "format": {
         "briefing": "Briefing",
+        "briefingDesc": "A quick, clear summary of the key ideas.",
         "deep_dive": "Deep dive",
+        "deep_diveDesc": "A detailed exploration of the topic and its connections.",
         "label": "Format"
       },
+      "instructionsPlaceholder": "Describe the topics or ideas to emphasize in this audio overview...",
       "length": {
         "estimate": "Listening times are estimates.",
         "extended": "Extended (10–12 min)",
+        "extendedDesc": "A thorough overview with more examples and detail.",
         "label": "Length",
         "short": "Short (2–3 min)",
-        "standard": "Standard (5–7 min)"
+        "shortDesc": "A focused overview of the essentials.",
+        "standard": "Standard (5–7 min)",
+        "standardDesc": "A balanced overview with room for context."
       },
-      "outline": "Overview",
-      "playbackError": "Audio playback failed. Try again or regenerate this overview.",
+      "metadataSourceCount_one": "{{count}} source",
+      "metadataSourceCount_other": "{{count}} sources",
+      "nextHintAudience": "Choose who the overview is for next",
+      "nextHintInstructions": "Review focus and instructions next",
+      "nextStep": "Next Step",
+      "overviewSummary": "{{format}} · {{length}} · {{audience}}",
+      "playbackError": "Audio playback failed. Try again.",
+      "player": {
+        "buffering": "Buffering audio",
+        "forward": "Skip forward 15 seconds in {{title}}",
+        "pause": "Pause {{title}}",
+        "play": "Play {{title}}",
+        "playing": "Playing",
+        "progress": "Playback position",
+        "ready": "Ready to play",
+        "retry": "Retry",
+        "rewind": "Go back 15 seconds in {{title}}",
+        "speed": "Playback speed",
+        "waveformUnavailable": "Waveform unavailable. Playback controls remain available."
+      },
       "playerLabel": "Audio player for {{title}}",
       "regenerate": "Regenerate overview",
       "regenerateError": "Could not regenerate this overview. Your current version is unchanged.",
       "regenerating": "Generating replacement. Your current overview remains available until it is ready.",
+      "savedSources": "Using {{count}} saved sources for the replacement.",
+      "setupTitle": "Audio Overview Setup",
+      "sourceRequired": "This overview has no saved sources, so it cannot be regenerated.",
       "synthesizing_audio": "Creating replacement audio. Your current overview remains available.",
+      "timingUnavailable": "Regenerate this overview to enable synchronized transcript highlighting.",
       "transcript": "Transcript",
+      "transcriptFor": "Transcript: {{title}}",
       "writing_script": "Writing the replacement script. Your current overview remains available."
     },
     "common": {

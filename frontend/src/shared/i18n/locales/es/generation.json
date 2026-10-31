@@ -283,10 +283,40 @@
     "title": "Configuración de {{kind}}"
   },
   "audioOverview": {
-    "sourceRequired": "Selecciona al menos una fuente para generar un resumen de audio.",
+    "briefLabel": "Enfoque e instrucciones",
+    "instructionsPlaceholder": "Describe los temas o ideas que debe destacar este resumen de audio...",
+    "sourceRequired": "Selecciona al menos una fuente. El resumen de audio se basará en los materiales seleccionados.",
+    "selectedSources": "Fuentes seleccionadas: {{sources}}",
+    "overviewSummary": "{{format}} · {{length}} · {{audience}}",
+    "nextHintAudience": "A continuación, elige a quién va dirigido el resumen",
     "synthesisFailed": "No se pudo generar el audio. Comprueba que Kokoro esté instalado y configurado e inténtalo de nuevo.",
-    "format": { "label": "Formato", "briefing": "Resumen", "deep_dive": "Análisis profundo" },
-    "length": { "label": "Duración", "short": "Corto (2–3 min)", "standard": "Estándar (5–7 min)", "extended": "Extendido (10–12 min)", "estimate": "Los tiempos de escucha son estimados." },
-    "audience": { "label": "Público", "new_to_topic": "Sin conocimientos previos", "some_background": "Con algunos conocimientos", "advanced": "Avanzado" }
+    "format": {
+      "label": "Formato",
+      "briefing": "Resumen",
+      "briefingDesc": "Un resumen breve y claro de las ideas principales.",
+      "deep_dive": "Análisis profundo",
+      "deep_diveDesc": "Una exploración detallada del tema y sus conexiones."
+    },
+    "length": {
+      "label": "Duración",
+      "short": "Corto (2–3 min)",
+      "shortDesc": "Un resumen centrado en lo esencial.",
+      "standard": "Estándar (5–7 min)",
+      "standardDesc": "Un resumen equilibrado con contexto suficiente.",
+      "extended": "Extendido (10–12 min)",
+      "extendedDesc": "Un resumen completo con más ejemplos y detalles.",
+      "estimate": "Los tiempos de escucha son estimados."
+    },
+    "audience": {
+      "label": "Público",
+      "new_to_topic": "Sin conocimientos previos",
+      "new_to_topicDesc": "Introduce los términos y explica los fundamentos.",
+      "some_background": "Con algunos conocimientos",
+      "some_backgroundDesc": "Amplía ideas conocidas y explica nuevas conexiones.",
+      "advanced": "Avanzado",
+      "advancedDesc": "Se centra en matices, supuestos e implicaciones."
+    },
+    "selectedSourceCount_one": "{{count}} fuente seleccionada",
+    "selectedSourceCount_other": "{{count}} fuentes seleccionadas"
   }
 }

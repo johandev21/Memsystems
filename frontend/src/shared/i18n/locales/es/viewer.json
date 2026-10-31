@@ -161,10 +161,18 @@
   },
   "unsupportedMaterial": "Tipo de material no compatible",
   "audioOverview": {
+    "setupTitle": "Configuración del resumen de audio",
+    "nextStep": "Siguiente paso",
+    "back": "Atrás",
+    "nextHintAudience": "A continuación, elige a quién va dirigido el resumen",
+    "nextHintInstructions": "Revisa el enfoque y las instrucciones a continuación",
+    "savedSources": "Se usarán {{count}} fuentes guardadas en el reemplazo.",
+    "overviewSummary": "{{format}} · {{length}} · {{audience}}",
+    "instructionsPlaceholder": "Describe los temas o ideas que debe destacar este resumen de audio...",
+    "sourceRequired": "Este resumen no tiene fuentes guardadas, así que no se puede volver a generar.",
     "playerLabel": "Reproductor de audio de {{title}}",
-    "playbackError": "No se pudo reproducir el audio. Inténtalo de nuevo o vuelve a generar este resumen.",
+    "playbackError": "No se pudo reproducir el audio. Inténtalo de nuevo.",
     "transcript": "Transcripción",
-    "outline": "Esquema",
     "citations": "Citas del resumen de audio",
     "regenerate": "Volver a generar el resumen",
     "regenerating": "Generando reemplazo. El resumen actual seguirá disponible hasta que esté listo.",
@@ -177,20 +185,45 @@
     "format": {
       "label": "Formato",
       "briefing": "Resumen",
-      "deep_dive": "Análisis profundo"
+      "briefingDesc": "Un resumen breve y claro de las ideas principales.",
+      "deep_dive": "Análisis profundo",
+      "deep_diveDesc": "Una exploración detallada del tema y sus conexiones."
     },
     "length": {
       "label": "Duración",
       "short": "Corto (2–3 min)",
+      "shortDesc": "Un resumen centrado en lo esencial.",
       "standard": "Estándar (5–7 min)",
+      "standardDesc": "Un resumen equilibrado con contexto suficiente.",
       "extended": "Extendido (10–12 min)",
+      "extendedDesc": "Un resumen completo con más ejemplos y detalles.",
       "estimate": "Los tiempos de escucha son estimados."
     },
     "audience": {
       "label": "Público",
       "new_to_topic": "Sin conocimientos previos",
+      "new_to_topicDesc": "Introduce los términos y explica los fundamentos.",
       "some_background": "Con algunos conocimientos",
-      "advanced": "Avanzado"
-    }
+      "some_backgroundDesc": "Amplía ideas conocidas y explica nuevas conexiones.",
+      "advanced": "Avanzado",
+      "advancedDesc": "Se centra en matices, supuestos e implicaciones."
+    },
+    "transcriptFor": "Transcripción: {{title}}",
+    "player": {
+      "play": "Reproducir {{title}}",
+      "pause": "Pausar {{title}}",
+      "rewind": "Retroceder 15 segundos en {{title}}",
+      "forward": "Avanzar 15 segundos en {{title}}",
+      "progress": "Posición de reproducción",
+      "speed": "Velocidad de reproducción",
+      "retry": "Reintentar",
+      "ready": "Listo para reproducir",
+      "playing": "Reproduciendo",
+      "buffering": "Cargando audio",
+      "waveformUnavailable": "Forma de onda no disponible. Los controles de reproducción siguen disponibles."
+    },
+    "metadataSourceCount_one": "{{count}} fuente",
+    "metadataSourceCount_other": "{{count}} fuentes",
+    "timingUnavailable": "Vuelve a generar este resumen para activar el resaltado sincronizado de la transcripción."
   }
 }
