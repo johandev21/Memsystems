@@ -744,57 +744,32 @@ export class RetrievalService {
     },
   ): Promise<RetrievalChunkRow[]> {
     const sourceFilter = search.sourceIds
-      ? sql`AND sc.source_id IN (${sql.join(
-          search.sourceIds.map((id) => sql`${id}`),
-          sql`, `,
-        )})`
+      ? sql`AND sc.source_id = ANY(${sql.param(search.sourceIds)}::varchar[])`
       : null;
 
-    if (search.sourceIds) {
-      const result = await this.db.execute(
+    return this.db.transaction(async (tx) => {
+      // Notebook and selected-source predicates filter the global HNSW index.
+      // Iterative scans keep those filters from starving the candidate window.
+      await tx.execute(sql`SET LOCAL hnsw.iterative_scan = 'strict_order'`);
+      const result = await tx.execute(
         sql`
           ${leg.cte ?? sql``}
-          SELECT * FROM (
-            SELECT
-              ${leg.projection},
-              row_number() OVER (
-                PARTITION BY sc.source_id
-                ORDER BY ${leg.rank}, sc.id
-              ) AS source_rank
-            FROM source_chunks sc
-            JOIN sources s ON s.id = sc.source_id
-            ${leg.join ?? sql``}
-            WHERE sc.notebook_id = ${search.notebookId}
-              AND s.processing_status <> 'degraded'
-              AND s.deleted_at IS NULL
-              ${leg.predicate ?? sql``}
-              ${sourceFilter}
-              ${search.scopeFilter ?? sql``}
-          ) ranked
-          WHERE ranked.source_rank <= ${search.depth}
-          ORDER BY ranked.score DESC, ranked.chunk_id
+          SELECT ${leg.projection}
+          FROM source_chunks sc
+          JOIN sources s ON s.id = sc.source_id
+          ${leg.join ?? sql``}
+          WHERE sc.notebook_id = ${search.notebookId}
+            AND s.processing_status <> 'degraded'
+            AND s.deleted_at IS NULL
+            ${leg.predicate ?? sql``}
+            ${sourceFilter ?? sql``}
+            ${search.scopeFilter ?? sql``}
+          ORDER BY ${leg.rank}, sc.id
+          LIMIT ${search.depth}
         `,
       );
       return result.rows as unknown as RetrievalChunkRow[];
-    }
-
-    const result = await this.db.execute(
-      sql`
-        ${leg.cte ?? sql``}
-        SELECT ${leg.projection}
-        FROM source_chunks sc
-        JOIN sources s ON s.id = sc.source_id
-        ${leg.join ?? sql``}
-        WHERE sc.notebook_id = ${search.notebookId}
-          AND s.processing_status <> 'degraded'
-          AND s.deleted_at IS NULL
-          ${leg.predicate ?? sql``}
-          ${search.scopeFilter ?? sql``}
-        ORDER BY ${leg.rank}, sc.id
-        LIMIT ${search.depth}
-      `,
-    );
-    return result.rows as unknown as RetrievalChunkRow[];
+    });
   }
 }
 

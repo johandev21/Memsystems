@@ -70,7 +70,7 @@ function serviceWithRows(
     .mockResolvedValueOnce({ rows })
     .mockResolvedValueOnce({ rows: hybrid?.lexicalRows ?? rows });
   const service = new RetrievalService(
-    { execute } as never,
+    retrievalDatabase(execute) as never,
     fakeEmbeddingService(vi.fn().mockResolvedValue([0.1, 0.2])),
     config,
     rerank?.config ? { ...DEFAULT_RERANK_CONFIG, ...rerank.config } : undefined,
@@ -80,6 +80,25 @@ function serviceWithRows(
     evidence ? { ...DEFAULT_EVIDENCE_CONFIG, ...evidence } : undefined,
   );
   return { service, execute };
+}
+
+function retrievalDatabase(
+  execute: (query: unknown) => Promise<{ rows: unknown[] }>,
+) {
+  return {
+    transaction: (run: (tx: { execute: typeof execute }) => Promise<unknown>) => {
+      let firstStatement = true;
+      return run({
+        execute: vi.fn((query: unknown) => {
+          if (firstStatement) {
+            firstStatement = false;
+            return Promise.resolve({ rows: [] });
+          }
+          return execute(query);
+        }),
+      });
+    },
+  };
 }
 
 /** The real understanding stage over a scripted rewrite model. */
@@ -2153,7 +2172,7 @@ describe('RetrievalService query understanding', () => {
       .mockResolvedValue({ rows: [chunkRow({ chunk_id: 'chunk-osmosis' })] });
     const reranker = scriptedReranker({ 0: 0.9 });
     const service = new RetrievalService(
-      { execute } as never,
+      retrievalDatabase(execute) as never,
       fakeEmbeddingService(embedQuery),
       { relevanceFloor: 0 },
       { ...DEFAULT_RERANK_CONFIG, threshold: 0.5 },
@@ -2205,7 +2224,7 @@ describe('RetrievalService query understanding', () => {
     });
     const execute = vi.fn().mockResolvedValue({ rows: [] });
     const service = new RetrievalService(
-      { execute } as never,
+      retrievalDatabase(execute) as never,
       fakeEmbeddingService(vi.fn().mockResolvedValue([0.1, 0.2])),
       { relevanceFloor: 0 },
       { ...DEFAULT_RERANK_CONFIG, enabled: false },
@@ -2273,7 +2292,7 @@ describe('RetrievalService query understanding', () => {
         ],
       });
     const service = new RetrievalService(
-      { execute } as never,
+      retrievalDatabase(execute) as never,
       fakeEmbeddingService(vi.fn().mockResolvedValue([0.1, 0.2])),
       { relevanceFloor: 0 },
       { ...DEFAULT_RERANK_CONFIG, enabled: false },
@@ -2329,7 +2348,7 @@ describe('RetrievalService query understanding', () => {
       .fn()
       .mockResolvedValue({ rows: [chunkRow({ chunk_id: 'chunk-atp' })] });
     const service = new RetrievalService(
-      { execute } as never,
+      retrievalDatabase(execute) as never,
       fakeEmbeddingService(embedQuery),
       { relevanceFloor: 0 },
       { ...DEFAULT_RERANK_CONFIG, enabled: false },

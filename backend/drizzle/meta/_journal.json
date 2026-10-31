@@ -204,6 +204,13 @@
       "when": 1793294000000,
       "tag": "0028_remove_green_leaves_notebook_preset",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793457356000,
+      "tag": "0029_filtered_hnsw_iterative_scans",
+      "breakpoints": true
     }
   ]
 }
