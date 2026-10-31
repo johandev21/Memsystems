@@ -75,6 +75,16 @@ export const generateRequestSchema = z.object({
     })
     .optional()
     .describe('Slides-specific Generation options.'),
+  audioOverviewOptions: z
+    .object({
+      format: z.enum(['briefing', 'deep_dive']).default('briefing'),
+      length: z.enum(['short', 'standard', 'extended']).default('standard'),
+      audience: z
+        .enum(['new_to_topic', 'some_background', 'advanced'])
+        .default('some_background'),
+    })
+    .optional(),
+  replaceMaterialId: z.string().min(1).optional(),
 });
 
 export class GenerateStudyMaterialDto extends createZodDto(

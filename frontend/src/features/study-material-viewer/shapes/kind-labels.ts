@@ -7,6 +7,7 @@ export const KIND_LABELS: Record<StudyMaterialKind, string> = {
   roadmap: "Roadmap",
   mind_map: "Mind Map",
   slides: "Slides",
+  audio_overview: "Audio Overview",
 };
 
 export const KIND_PLURAL_LABELS: Record<StudyMaterialKind, string> = {
@@ -15,6 +16,7 @@ export const KIND_PLURAL_LABELS: Record<StudyMaterialKind, string> = {
   roadmap: "Roadmaps",
   mind_map: "Mind Maps",
   slides: "Slides",
+  audio_overview: "Audio Overviews",
 };
 
 export function getKindLabel(kind: StudyMaterialKind): string {
@@ -29,6 +31,8 @@ export function getKindLabel(kind: StudyMaterialKind): string {
       return i18n.t("kinds.mind_map", { ns: "viewer" });
     case "slides":
       return i18n.t("kinds.slides", { ns: "viewer" });
+    case "audio_overview":
+      return i18n.t("kinds.audio_overview", { ns: "viewer" });
     default:
       return KIND_LABELS[kind] ?? kind;
   }
@@ -46,6 +50,8 @@ export function getKindPluralLabel(kind: StudyMaterialKind): string {
       return i18n.t("kindsPlural.mind_map", { ns: "viewer" });
     case "slides":
       return i18n.t("kindsPlural.slides", { ns: "viewer" });
+    case "audio_overview":
+      return i18n.t("kindsPlural.audio_overview", { ns: "viewer" });
     default:
       return KIND_PLURAL_LABELS[kind] ?? kind;
   }

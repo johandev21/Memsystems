@@ -204,13 +204,18 @@
     "failedToGenerate": "Failed to generate {{kind}}",
     "generating": "Generating {{kind}}...",
     "generationFailed": "Generation failed",
+    "audioOverview": {
+      "writing_script": "Writing the overview script…",
+      "synthesizing_audio": "Creating the audio…"
+    },
     "newMaterial": "New study material",
     "resources": {
       "flashcards": "Flashcards",
       "mindMap": "Mind Map",
       "quiz": "Quiz",
       "roadmap": "Roadmap",
-      "slides": "Slides"
+      "slides": "Slides",
+      "audioOverview": "Audio Overview"
     },
     "tooltipGenerating": "{{label}} (Generating...)"
   },

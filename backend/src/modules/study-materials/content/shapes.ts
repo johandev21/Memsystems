@@ -4,7 +4,12 @@ import { GeneralKnowledgeSupplementSchema } from '../generation/generation-suppl
 import { BadRequestError } from '../../../common/errors/domain-error';
 
 export type StudyMaterialKind =
-  'quiz' | 'simple_flashcard' | 'roadmap' | 'mind_map' | 'slides';
+  | 'quiz'
+  | 'simple_flashcard'
+  | 'roadmap'
+  | 'mind_map'
+  | 'slides'
+  | 'audio_overview';
 
 export const QuizQuestionOption = z.object({
   id: z.string(),
@@ -114,6 +119,38 @@ export const MindMapContent = z.object({
   citations: GenerationCitationsSchema,
 });
 
+export const AudioOverviewSection = z.object({
+  heading: z.string().min(1).max(200),
+  text: z.string().min(1).max(30_000),
+  // Optional for persisted legacy sections; generated sections always include turns.
+  turns: z
+    .array(
+      z.object({
+        speaker: z.enum(['host', 'guest']),
+        text: z.string().min(1).max(30_000),
+      }),
+    )
+    .min(2)
+    .optional(),
+  citations: GenerationCitationsSchema.default([]),
+});
+
+export const AudioOverviewContent = z
+  .object({
+    title: z.string().max(200),
+    // transcript remains optional for section-first content and readable for legacy MVP items.
+    transcript: z.string().min(1).max(50_000).optional(),
+    sections: z.array(AudioOverviewSection).min(1).max(30).optional(),
+    citations: GenerationCitationsSchema,
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .refine(
+    (content) => Boolean(content.transcript || content.sections?.length),
+    {
+      message: 'Audio Overview requires a transcript or sections',
+    },
+  );
+
 export {
   SlideDeckSchema as SlidesContentSchema,
   SlideDesignSchema,
@@ -144,6 +181,7 @@ const contentSchemas: Record<StudyMaterialKind, z.ZodTypeAny> = {
   roadmap: RoadmapContent,
   mind_map: MindMapContent,
   slides: SlidesContent,
+  audio_overview: AudioOverviewContent,
 };
 
 export function validateContent(kind: string, content: unknown) {
@@ -173,6 +211,38 @@ export function validateContent(kind: string, content: unknown) {
     });
   }
   return result.data;
+}
+
+export const AUDIO_OVERVIEW_WORD_LIMITS = {
+  short: { min: 200, max: 450 },
+  standard: { min: 500, max: 1_000 },
+  extended: { min: 1_200, max: 1_800 },
+} as const;
+
+export function assertAudioOverviewScriptLength(
+  content: z.infer<typeof AudioOverviewContent>,
+  length: keyof typeof AUDIO_OVERVIEW_WORD_LIMITS,
+): void {
+  const text = content.sections?.length
+    ? content.sections
+        .map((section) =>
+          section.turns?.length
+            ? section.turns.map((turn) => turn.text).join(' ')
+            : section.text,
+        )
+        .join(' ')
+    : (content.transcript ?? '');
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const { min, max } = AUDIO_OVERVIEW_WORD_LIMITS[length];
+  if (text.length > 15_000 || wordCount < min || wordCount > max) {
+    throw new BadRequestError(
+      `Audio Overview script must contain ${min}–${max} words and no more than 15,000 characters.`,
+      {
+        messageKey: 'errors.studyMaterials.contentMismatch',
+        params: { kind: 'audio_overview' },
+      },
+    );
+  }
 }
 
 export function shuffleQuizOptions(

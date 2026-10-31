@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
+  Headers,
   Param,
   Patch,
   Post,
@@ -27,6 +29,8 @@ import { GenerationService } from './generation/generation.service';
 import { StudyMaterialKind } from './content/shapes';
 import { StudyMaterialFolderService } from './study-material-folder.service';
 import { StudyMaterialService } from './study-material.service';
+import { audioByteRange } from './audio/audio-byte-range';
+import { readAudioTimeline } from './audio/audio-timeline';
 import { TrashService } from './trash.service';
 import { CreateStudyMaterialDto } from './dto/create-study-material.dto';
 import { UpdateStudyMaterialDto } from './dto/update-study-material.dto';
@@ -103,6 +107,52 @@ export class StudyMaterialsController {
   @ApiOkResponse({ description: 'The Study Material.' })
   async getStudyMaterial(@Param('id') id: string) {
     return this.studyMaterialService.get(id);
+  }
+
+  @Get('study-materials/:id/audio/timeline')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary: 'Get measured waveform and synthesis section timings',
+  })
+  @ApiParam({ name: 'id', description: 'Audio Overview Study Material id.' })
+  @ApiOkResponse({
+    description:
+      'PCM waveform peaks and measured section boundaries. Legacy audio may have no section timings.',
+  })
+  async getAudioTimeline(@Param('id') id: string) {
+    const { audio } = await this.studyMaterialService.getAudio(id);
+    return readAudioTimeline(audio);
+  }
+
+  @Get('study-materials/:id/audio')
+  @ApiOperation({ summary: 'Get Audio Overview WAV' })
+  @ApiParam({ name: 'id', description: 'Audio Overview Study Material id.' })
+  @ApiProduces('audio/wav')
+  @ApiOkResponse({ description: 'Playable WAV audio.' })
+  async getAudioOverview(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @Headers('range') range?: string,
+  ) {
+    const { audio, contentType } = await this.studyMaterialService.getAudio(id);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Accept-Ranges', 'bytes');
+    const selection = audioByteRange(range, audio.length);
+    if (selection === 'unsatisfiable') {
+      res.setHeader('Content-Range', `bytes */${audio.length}`);
+      res.status(416).end();
+      return;
+    }
+    if (selection) {
+      const { start, end } = selection;
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${audio.length}`);
+      res.setHeader('Content-Length', String(end - start + 1));
+      res.status(206).send(audio.subarray(start, end + 1));
+      return;
+    }
+    res.setHeader('Content-Length', String(audio.length));
+    res.send(audio);
   }
 
   @Get('study-materials/:id/export')
@@ -366,7 +416,7 @@ export class StudyMaterialsController {
   @ApiResponse({
     status: 201,
     description:
-      'NDJSON stream of Generation frames. Partial content frames are followed by one terminal `done` or `error` frame.',
+      'NDJSON stream of Generation frames. Audio Overview progress frames may include `stage` (`writing_script` or `synthesizing_audio`); partial content frames are followed by one terminal `done` or `error` frame.',
     content: {
       'application/x-ndjson': {
         schema: { $ref: '#/components/schemas/GenerationStreamFrame' },

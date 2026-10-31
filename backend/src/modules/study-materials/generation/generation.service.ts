@@ -25,6 +25,7 @@ const MODELS_BY_KIND: Record<StudyMaterialKind, string> = {
   roadmap: 'openai/gpt-5.6-sol',
   mind_map: 'openai/gpt-5.6-sol',
   slides: 'openai/gpt-5.6-sol',
+  audio_overview: 'openai/gpt-5.6-sol',
 };
 
 @Injectable()
@@ -47,7 +48,38 @@ export class GenerationService {
     input: StartGenerationInput,
     externalSignal?: AbortSignal,
   ) {
+    const sourceIds = input.sourceIds ?? [];
+    input = { ...input, sourceIds: input.sourceIds ?? [] };
     await this.notebooksService.assertNotebookOwner(notebookId);
+    if (input.replaceMaterialId && input.kind !== 'audio_overview') {
+      throw new BadRequestError('Only Audio Overviews can be replaced.');
+    }
+    if (input.kind === 'audio_overview') {
+      input = {
+        ...input,
+        audioOverviewOptions: {
+          format: 'briefing',
+          length: 'standard',
+          audience: 'some_background',
+          ...input.audioOverviewOptions,
+        },
+      };
+    }
+    if (input.kind === 'audio_overview' && sourceIds.length === 0) {
+      throw new BadRequestError(
+        'Select at least one source for an audio overview.',
+        {
+          messageKey: 'errors.generation.sourcesUnavailable',
+        },
+      );
+    }
+    if (
+      input.kind === 'audio_overview' &&
+      input.language &&
+      !/^(en|es)(-|$)/i.test(input.language)
+    ) {
+      throw new BadRequestError('Audio overviews support English and Spanish.');
+    }
     const notebookGroundingMode =
       typeof this.notebooksService.getGroundingMode === 'function'
         ? await this.notebooksService.getGroundingMode(notebookId)
@@ -71,8 +103,13 @@ export class GenerationService {
       notebookId,
       kind: input.kind,
       brief: input.brief,
-      sourceIds: input.sourceIds,
+      sourceIds,
     });
+    if (input.kind === 'audio_overview' && grounding.evidence.length === 0) {
+      throw new BadRequestError('Selected sources have no usable evidence.', {
+        messageKey: 'errors.generation.sourcesUnavailable',
+      });
+    }
 
     const recordTraces = async (generationRequestId?: string) => {
       for (const trace of grounding.traces) {
@@ -86,7 +123,7 @@ export class GenerationService {
       }
     };
 
-    const hasSelectedSources = input.sourceIds.length > 0;
+    const hasSelectedSources = sourceIds.length > 0;
     if (
       grounding.unavailableSources.length > 0 &&
       (groundingMode !== 'free' || hasSelectedSources)
@@ -127,6 +164,15 @@ export class GenerationService {
         });
     }
     this.activeRequests.set(requestId, controller);
+    const markCancelled = () => {
+      this.activeRequests.delete(requestId);
+      void this.requestManager.cancel(requestId);
+    };
+    if (controller.signal.aborted) markCancelled();
+    else
+      controller.signal.addEventListener('abort', markCancelled, {
+        once: true,
+      });
 
     const { stream } = this.streamHandler.createStream(
       notebookId,

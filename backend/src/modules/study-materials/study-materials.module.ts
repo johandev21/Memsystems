@@ -9,6 +9,8 @@ import { StudyMaterialFolderService } from './study-material-folder.service';
 import { StudyMaterialService } from './study-material.service';
 import { StudyMaterialsController } from './study-materials.controller';
 import { TrashService } from './trash.service';
+import { KokoroSpeechService } from './audio/kokoro-speech.service';
+import { SpeechService } from './audio/speech.service';
 
 @Module({
   imports: [NotebooksModule],
@@ -22,6 +24,8 @@ import { TrashService } from './trash.service';
     StreamHandler,
     GenerationService,
     SlidesBuilderService,
+    KokoroSpeechService,
+    SpeechService,
   ],
   exports: [
     StudyMaterialService,

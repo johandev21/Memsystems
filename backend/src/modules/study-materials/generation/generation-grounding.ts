@@ -37,6 +37,11 @@ export const GENERATION_KIND_BUDGETS: Record<
   StudyMaterialKind,
   KindGroundingBudget
 > = {
+  audio_overview: {
+    maxTotalChunksSingleSource: 10,
+    maxTotalChunksMultiSource: 14,
+    maxPromptChars: 22_000,
+  },
   mind_map: {
     maxTotalChunksSingleSource: 8,
     maxTotalChunksMultiSource: 12,

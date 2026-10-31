@@ -2,7 +2,11 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
-import { studyMaterialFolders, studyMaterials } from '../../database/schema';
+import {
+  studyMaterialAudio,
+  studyMaterialFolders,
+  studyMaterials,
+} from '../../database/schema';
 import {
   BadRequestError,
   ForbiddenError,
@@ -36,6 +40,8 @@ export interface UpdateStudyMaterialInput {
 export interface MoveStudyMaterialInput {
   folderId: string | null;
 }
+
+const MAX_AUDIO_BYTES = 64 * 1024 * 1024;
 
 @Injectable()
 export class StudyMaterialService {
@@ -83,6 +89,12 @@ export class StudyMaterialService {
 
   async create(notebookId: string, input: CreateStudyMaterialInput) {
     await this.notebooksService.assertNotebookOwner(notebookId);
+    if (input.kind === 'audio_overview') {
+      throw new BadRequestError('Audio Overview requires its WAV asset', {
+        messageKey: 'errors.studyMaterials.contentMismatch',
+        params: { kind: input.kind },
+      });
+    }
     const validatedContent = validateContent(input.kind, input.content);
     const storable =
       input.kind === 'slides'
@@ -106,6 +118,58 @@ export class StudyMaterialService {
         ? { ...sm, content: normalizeContent('quiz', sm.content) }
         : sm,
     );
+  }
+
+  async createAudioOverview(
+    notebookId: string,
+    input: Omit<CreateStudyMaterialInput, 'kind'>,
+    audio: Buffer,
+  ) {
+    await this.notebooksService.assertNotebookOwner(notebookId);
+    const content = validateContent('audio_overview', input.content);
+    this.assertWav(audio);
+    if (input.folderId)
+      await this.assertFolderOwned(notebookId, input.folderId);
+    return this.db.transaction(async (tx) => {
+      const [material] = await tx
+        .insert(studyMaterials)
+        .values({
+          notebookId,
+          kind: 'audio_overview',
+          title: input.title.trim().slice(0, 200),
+          content,
+          folderId: input.folderId ?? null,
+        })
+        .returning();
+      await tx.insert(studyMaterialAudio).values({
+        studyMaterialId: material.id,
+        audio,
+        contentType: 'audio/wav',
+      });
+      return material;
+    });
+  }
+
+  async getAudio(smId: string) {
+    const material = await this.fetchOwned(smId);
+    if (material.deletedAt || material.kind !== 'audio_overview') {
+      throw new NotFoundError('Study material audio', {
+        messageKey: 'errors.studyMaterials.studyMaterialNotFound',
+      });
+    }
+    const [audio] = await this.db
+      .select({
+        audio: studyMaterialAudio.audio,
+        contentType: studyMaterialAudio.contentType,
+      })
+      .from(studyMaterialAudio)
+      .where(eq(studyMaterialAudio.studyMaterialId, smId));
+    if (!audio) {
+      throw new NotFoundError('Study material audio', {
+        messageKey: 'errors.studyMaterials.studyMaterialNotFound',
+      });
+    }
+    return audio;
   }
 
   async update(smId: string, input: UpdateStudyMaterialInput) {
@@ -273,17 +337,36 @@ export class StudyMaterialService {
       }
     }
 
-    const [copy] = await this.db
-      .insert(studyMaterials)
-      .values({
-        notebookId: source.notebookId,
-        kind: source.kind,
-        title: newTitle,
-        content: storable,
-        folderId: targetFolderId,
-        options: source.options ?? null,
-      })
-      .returning();
+    const copy = await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(studyMaterials)
+        .values({
+          notebookId: source.notebookId,
+          kind: source.kind,
+          title: newTitle,
+          content: storable,
+          folderId: targetFolderId,
+          options: source.options ?? null,
+        })
+        .returning();
+      if (source.kind === 'audio_overview') {
+        const [audio] = await tx
+          .select()
+          .from(studyMaterialAudio)
+          .where(eq(studyMaterialAudio.studyMaterialId, source.id));
+        if (!audio) {
+          throw new NotFoundError('Study material audio', {
+            messageKey: 'errors.studyMaterials.studyMaterialNotFound',
+          });
+        }
+        await tx.insert(studyMaterialAudio).values({
+          studyMaterialId: created.id,
+          audio: audio.audio,
+          contentType: audio.contentType,
+        });
+      }
+      return created;
+    });
 
     return this.refreshDerivedContent(
       copy.kind === 'quiz'
@@ -361,5 +444,20 @@ export class StudyMaterialService {
     }
     await this.notebooksService.assertNotebookOwner(sm.notebookId);
     return this.refreshDerivedContent(sm);
+  }
+
+  private assertWav(audio: Buffer) {
+    if (
+      !Buffer.isBuffer(audio) ||
+      audio.length < 12 ||
+      audio.length > MAX_AUDIO_BYTES ||
+      audio.toString('ascii', 0, 4) !== 'RIFF' ||
+      audio.toString('ascii', 8, 12) !== 'WAVE'
+    ) {
+      throw new BadRequestError('Audio must be a valid bounded WAV file', {
+        messageKey: 'errors.studyMaterials.contentMismatch',
+        params: { kind: 'audio_overview' },
+      });
+    }
   }
 }

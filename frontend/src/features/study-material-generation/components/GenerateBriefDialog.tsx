@@ -65,6 +65,9 @@ export function GenerateBriefDialog({
     roadmapOptions,
     mindMapOptions,
     slidesOptions,
+    format,
+    length,
+    audience,
   } = value;
   const { model: selectedModel, setModel } = useModelPersistence(notebookId);
   const groundingMode = useNotebookGroundingMode(notebookId);
@@ -96,6 +99,14 @@ export function GenerateBriefDialog({
           kind === "mind_map" ? (mindMapOptions ?? DEFAULT_MIND_MAP_OPTIONS) : mindMapOptions,
         slidesOptions:
           kind === "slides" ? (slidesOptions ?? DEFAULT_SLIDES_OPTIONS) : slidesOptions,
+        audioOverviewOptions:
+          kind === "audio_overview"
+            ? {
+                format: format ?? "briefing",
+                length: length ?? "standard",
+                audience: audience ?? "some_background",
+              }
+            : undefined,
       },
       queryClient,
       onComplete,
@@ -112,12 +123,7 @@ export function GenerateBriefDialog({
   const titleText = t("dialog.title", { kind: label });
 
   return (
-    <BriefDialogShell
-      open={open}
-      onClose={handleClose}
-      titleText={titleText}
-      isMobile={isMobile}
-    >
+    <BriefDialogShell open={open} onClose={handleClose} titleText={titleText} isMobile={isMobile}>
       {!isConnectionUsable(connection) ? (
         <GatewayKeyPrompt description={t("dialog.gatewayDescription")} />
       ) : isCapable ? (
@@ -151,13 +157,7 @@ interface BriefDialogShellProps {
   children: React.ReactNode;
 }
 
-function BriefDialogShell({
-  open,
-  onClose,
-  titleText,
-  isMobile,
-  children,
-}: BriefDialogShellProps) {
+function BriefDialogShell({ open, onClose, titleText, isMobile, children }: BriefDialogShellProps) {
   const { t } = useTranslation("generation");
 
   if (isMobile) {
@@ -251,9 +251,7 @@ function StudyMaterialCapabilityGate({
   return (
     <div className="py-4 space-y-4">
       <div className="space-y-1.5">
-        <h3 className="text-sm font-semibold text-text-primary">
-          {t("capabilityGate.title")}
-        </h3>
+        <h3 className="text-sm font-semibold text-text-primary">{t("capabilityGate.title")}</h3>
         <p className="text-sm text-text-secondary leading-relaxed">
           {capabilitiesVerified
             ? t("capabilityGate.description", { name: modelName })
@@ -315,6 +313,9 @@ function getInitialBriefState(kind?: StudyMaterialKind | null): BriefFormData {
     roadmapOptions: kind === "roadmap" ? { ...DEFAULT_ROADMAP_OPTIONS } : undefined,
     mindMapOptions: kind === "mind_map" ? { ...DEFAULT_MIND_MAP_OPTIONS } : undefined,
     slidesOptions: kind === "slides" ? { ...DEFAULT_SLIDES_OPTIONS } : undefined,
+    format: "briefing",
+    length: "standard",
+    audience: "some_background",
   };
 }
 

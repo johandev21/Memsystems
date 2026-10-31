@@ -7,6 +7,7 @@ export const KIND_LABEL_KEYS = {
   roadmap: "kinds.roadmap",
   mind_map: "kinds.mind_map",
   slides: "kinds.slides",
+  audio_overview: "kinds.audio_overview",
 } as const satisfies Record<StudyMaterialKind, string>;
 
 export function kindLabelKey(kind: StudyMaterialKind): (typeof KIND_LABEL_KEYS)[StudyMaterialKind] {

@@ -8,6 +8,7 @@ import {
   Map as MapIcon,
   Network,
   Presentation,
+  Headphones,
   type LucideIcon,
 } from "lucide-react";
 import type { TreeNode } from "../../model/tree";
@@ -48,6 +49,8 @@ function getTreeIcon(node: TreeNode, isOpen: boolean): LucideIcon {
       return MapIcon;
     case "slides":
       return Presentation;
+    case "audio_overview":
+      return Headphones;
     case "mind_map":
       return Network;
     case "quiz":

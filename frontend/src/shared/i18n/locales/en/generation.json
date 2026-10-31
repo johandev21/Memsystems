@@ -75,7 +75,8 @@
     "quiz": "Quiz",
     "roadmap": "Roadmap",
     "simple_flashcard": "Flashcards",
-    "slides": "Slides"
+    "slides": "Slides",
+    "audio_overview": "Audio Overview"
   },
   "knowledge": {
     "defaultEmptySources": "No sources in notebook. Material will generate using general knowledge.",
@@ -267,5 +268,42 @@
     "stepAria": "Step {{step}}",
     "stepOf": "Step {{step}} of {{total}}",
     "title": "{{kind}} Setup"
+  },
+  "audioOverview": {
+    "briefLabel": "Focus and instructions",
+    "instructionsPlaceholder": "Describe the topics or ideas to emphasize in this audio overview...",
+    "sourceRequired": "Select at least one source. Audio Overviews use your selected material to keep the discussion grounded.",
+    "selectedSources": "Selected sources: {{sources}}",
+    "overviewSummary": "{{format}} · {{length}} · {{audience}}",
+    "nextHintAudience": "Choose who the overview is for next",
+    "synthesisFailed": "Audio generation failed. Check that the local Kokoro runtime is installed and configured, then try again.",
+    "format": {
+      "label": "Format",
+      "briefing": "Briefing",
+      "briefingDesc": "A quick, clear summary of the key ideas.",
+      "deep_dive": "Deep dive",
+      "deep_diveDesc": "A detailed exploration of the topic and its connections."
+    },
+    "length": {
+      "label": "Length",
+      "short": "Short (2–3 min)",
+      "shortDesc": "A focused overview of the essentials.",
+      "standard": "Standard (5–7 min)",
+      "standardDesc": "A balanced overview with room for context.",
+      "extended": "Extended (10–12 min)",
+      "extendedDesc": "A thorough overview with more examples and detail.",
+      "estimate": "Listening times are estimates."
+    },
+    "audience": {
+      "label": "Audience",
+      "new_to_topic": "New to the topic",
+      "new_to_topicDesc": "Introduce terms and explain the foundations.",
+      "some_background": "Some background",
+      "some_backgroundDesc": "Build on familiar ideas and explain new connections.",
+      "advanced": "Advanced",
+      "advancedDesc": "Focus on nuance, assumptions, and implications."
+    },
+    "selectedSourceCount_one": "{{count}} source selected",
+    "selectedSourceCount_other": "{{count}} sources selected"
   }
 }

@@ -1,14 +1,21 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { create } from "zustand";
-import { cancelGeneration, type StudyMaterialKind, startGeneration } from "../api/generation";
+import {
+  cancelGeneration,
+  type StudyMaterialKind,
+  startGeneration,
+} from "../api/generation";
 import type { StudyMaterialDTO } from "@/features/study-material-viewer";
 import type {
   RoadmapGenerationOptions,
   MindMapGenerationOptions,
   SlidesGenerationOptions,
 } from "../api/generation";
-import { classifyChatError, isStructuredOutputUnsupportedError } from "@/features/ai";
+import {
+  classifyChatError,
+  isStructuredOutputUnsupportedError,
+} from "@/features/ai";
 import i18n from "@/shared/i18n";
 import { kindLabelKey } from "../kind-label";
 
@@ -20,6 +27,7 @@ export interface ActiveGeneration {
   sourceIds?: string[];
   status: "connecting" | "streaming" | "done" | "error";
   progress?: unknown;
+  stage?: "writing_script" | "synthesizing_audio";
   error?: string;
   startedAt: number;
   lastChunkAt: number;
@@ -43,6 +51,12 @@ interface GenerationState {
       roadmapOptions?: RoadmapGenerationOptions;
       mindMapOptions?: MindMapGenerationOptions;
       slidesOptions?: SlidesGenerationOptions;
+      audioOverviewOptions?: {
+        format: "briefing" | "deep_dive";
+        length: "short" | "standard" | "extended";
+        audience: "new_to_topic" | "some_background" | "advanced";
+      };
+      replaceMaterialId?: string;
       language?: string;
       groundingMode?: "strict" | "moderate" | "free";
     },
@@ -54,7 +68,14 @@ interface GenerationState {
 }
 
 export const GENERATION_STALL_TIMEOUT_MS = 5 * 60 * 1000;
+export const AUDIO_OVERVIEW_STALL_TIMEOUT_MS = 16 * 60 * 1000;
 export const GENERATION_ERROR_AUTO_DISMISS_MS = 30_000;
+
+function stallTimeoutFor(kind: StudyMaterialKind): number {
+  return kind === "audio_overview"
+    ? AUDIO_OVERVIEW_STALL_TIMEOUT_MS
+    : GENERATION_STALL_TIMEOUT_MS;
+}
 
 function activeBaseLanguage(): string {
   return (i18n.resolvedLanguage ?? i18n.language ?? "en").split("-")[0];
@@ -64,7 +85,10 @@ function createTempGenerationId(): string {
   return `temp-${Math.random().toString(36).substring(7)}-${Date.now()}`;
 }
 
-function removeGeneration(generations: Record<string, ActiveGeneration>, id: string) {
+function removeGeneration(
+  generations: Record<string, ActiveGeneration>,
+  id: string,
+) {
   const next = { ...generations };
   delete next[id];
   return next;
@@ -76,7 +100,10 @@ function updateGenerationError(
   error: string,
 ) {
   if (!generations[id]) return generations;
-  return { ...generations, [id]: { ...generations[id], status: "error" as const, error } };
+  return {
+    ...generations,
+    [id]: { ...generations[id], status: "error" as const, error },
+  };
 }
 
 export const useGenerationStore = create<GenerationState>((set, get) => {
@@ -123,7 +150,11 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
     );
   }
 
-  function failGeneration(id: string, kind: StudyMaterialKind, message: string) {
+  function failGeneration(
+    id: string,
+    kind: StudyMaterialKind,
+    message: string,
+  ) {
     const entry = get().generations[id];
     if (!entry) return;
     if (entry.status !== "connecting" && entry.status !== "streaming") return;
@@ -143,6 +174,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
 
   function scheduleStallCheck(id: string, kind: StudyMaterialKind) {
     clearStallTimer(id);
+    const timeoutMs = stallTimeoutFor(kind);
     stallTimers.set(
       id,
       setTimeout(() => {
@@ -155,7 +187,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
           stallTimers.delete(id);
           return;
         }
-        if (Date.now() - entry.lastChunkAt >= GENERATION_STALL_TIMEOUT_MS) {
+        if (Date.now() - entry.lastChunkAt >= timeoutMs) {
           failGeneration(
             id,
             kind,
@@ -164,7 +196,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         } else {
           scheduleStallCheck(id, kind);
         }
-      }, GENERATION_STALL_TIMEOUT_MS),
+      }, timeoutMs),
     );
   }
 
@@ -173,7 +205,12 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
     isCollapsed: false,
     setCollapsed: (collapsed) => set({ isCollapsed: collapsed }),
 
-    startBackgroundGeneration: async (notebookId, input, queryClient, onComplete) => {
+    startBackgroundGeneration: async (
+      notebookId,
+      input,
+      queryClient,
+      onComplete,
+    ) => {
       const tempId = createTempGenerationId();
       const now = Date.now();
 
@@ -215,9 +252,13 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         activeAborts.delete(tempId);
         clearStallTimer(tempId);
         set((state) => {
-          return { generations: updateGenerationError(state.generations, tempId, msg) };
+          return {
+            generations: updateGenerationError(state.generations, tempId, msg),
+          };
         });
-        toast.error(i18n.t("toasts.startFailed", { ns: "generation", message: msg }));
+        toast.error(
+          i18n.t("toasts.startFailed", { ns: "generation", message: msg }),
+        );
         scheduleErrorDismiss(tempId);
         return;
       }
@@ -228,8 +269,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         clearStallTimer(tempId);
         try {
           await cancelGeneration(notebookId, requestId);
-        } catch {
-        }
+        } catch {}
         return;
       }
 
@@ -262,12 +302,27 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
             if (!get().generations[requestId]) {
               try {
                 await cancelGeneration(notebookId, requestId);
-              } catch {
-              }
+              } catch {}
               return;
             }
 
-            if (event.type === "partial") {
+            if (event.type === "stage") {
+              const at = Date.now();
+              set((state) => {
+                if (!state.generations[requestId]) return state;
+                return {
+                  generations: {
+                    ...state.generations,
+                    [requestId]: {
+                      ...state.generations[requestId],
+                      stage: event.stage,
+                      lastChunkAt: at,
+                    },
+                  },
+                };
+              });
+              scheduleStallCheck(requestId, input.kind);
+            } else if (event.type === "partial") {
               const at = Date.now();
               set((state) => {
                 if (!state.generations[requestId]) return state;
@@ -297,17 +352,23 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
 
               if (!viewMaterialId) {
                 const list =
-                  queryClient.getQueryData<StudyMaterialDTO[]>(["study-materials", notebookId]) ||
-                  [];
+                  queryClient.getQueryData<StudyMaterialDTO[]>([
+                    "study-materials",
+                    notebookId,
+                  ]) || [];
                 const matching = list.filter((m) => m.kind === input.kind);
                 matching.sort(
-                  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                  (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime(),
                 );
                 viewMaterialId = matching[0]?.id;
               }
 
               set((state) => {
-                return { generations: removeGeneration(state.generations, requestId) };
+                return {
+                  generations: removeGeneration(state.generations, requestId),
+                };
               });
 
               const label = kindLabel(input.kind);
@@ -331,12 +392,32 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
           }
           if (!settled && get().generations[requestId]) {
             activeAborts.delete(requestId);
-            failGeneration(requestId, input.kind, i18n.t("errors.connectionClosed", { ns: "generation" }));
+            failGeneration(
+              requestId,
+              input.kind,
+              i18n.t("errors.connectionClosed", { ns: "generation" }),
+            );
           }
         } catch (err) {
           activeAborts.delete(requestId);
           const rawMessage = err instanceof Error ? err.message : String(err);
-          failGeneration(requestId, input.kind, classifyChatError(rawMessage).message);
+          let message = classifyChatError(rawMessage).message;
+          try {
+            const detail: unknown = JSON.parse(rawMessage);
+            if (
+              detail &&
+              typeof detail === "object" &&
+              "code" in detail &&
+              detail.code === "audio_synthesis_failed"
+            ) {
+              message = i18n.t("audioOverview.synthesisFailed", {
+                ns: "generation",
+              });
+            }
+          } catch {
+            // Other generation errors use the existing classifier.
+          }
+          failGeneration(requestId, input.kind, message);
         }
       })();
     },
@@ -351,8 +432,7 @@ export const useGenerationStore = create<GenerationState>((set, get) => {
         try {
           await cancelGeneration(notebookId, id);
           toast.info(i18n.t("toasts.cancelled", { ns: "generation" }));
-        } catch {
-        }
+        } catch {}
       }
     },
 

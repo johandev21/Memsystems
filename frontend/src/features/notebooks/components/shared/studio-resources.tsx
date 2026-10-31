@@ -4,7 +4,12 @@ import { CircleAlert, RefreshCw, X } from "lucide-react";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 import { useGenerationStore } from "@/features/study-material-generation";
 import type { StudyMaterialKind } from "@/features/study-material-viewer";
 import { sourceSummaryQueryOptions } from "@/features/sources";
@@ -28,7 +33,9 @@ export const StudioResources = memo(function StudioResources({
   onGenerate,
 }: StudioResourcesProps) {
   const storeGenerations = useGenerationStore((s) => s.generations);
-  const cancelBackgroundGeneration = useGenerationStore((s) => s.cancelBackgroundGeneration);
+  const cancelBackgroundGeneration = useGenerationStore(
+    (s) => s.cancelBackgroundGeneration,
+  );
   const sourcesQuery = useQuery(sourceSummaryQueryOptions(notebookId));
   const totalSourceCount = sourcesQuery.data?.count ?? 0;
 
@@ -48,11 +55,16 @@ export const StudioResources = memo(function StudioResources({
 
   return (
     <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2 @container">
-      <ResourceGrid totalSourceCount={totalSourceCount} onGenerate={onGenerate} />
+      <ResourceGrid
+        totalSourceCount={totalSourceCount}
+        onGenerate={onGenerate}
+      />
       <ActiveGenerationList
         generations={activeGenerations}
         totalSourceCount={totalSourceCount}
-        onCancel={(generationId) => cancelBackgroundGeneration(notebookId, generationId)}
+        onCancel={(generationId) =>
+          cancelBackgroundGeneration(notebookId, generationId)
+        }
       />
     </div>
   );
@@ -63,7 +75,9 @@ function CollapsedResourceList({
   totalSourceCount,
   onGenerate,
 }: {
-  activeGenerations: ReturnType<typeof useGenerationStore.getState>["generations"][string][];
+  activeGenerations: ReturnType<
+    typeof useGenerationStore.getState
+  >["generations"][string][];
   totalSourceCount: number;
   onGenerate: (kind: StudyMaterialKind) => void;
 }) {
@@ -76,7 +90,9 @@ function CollapsedResourceList({
             resource={resource}
             collapsed
             totalSourceCount={totalSourceCount}
-            isGenerating={activeGenerations.some((generation) => generation.kind === resource.kind)}
+            isGenerating={activeGenerations.some(
+              (generation) => generation.kind === resource.kind,
+            )}
             onGenerate={onGenerate}
           />
         ))}
@@ -162,12 +178,17 @@ function ResourceButton({
       )}
     >
       <span className="min-w-0 truncate leading-tight">{label}</span>
-      <resource.icon className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0" strokeWidth={1.75} />
+      <resource.icon
+        className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0"
+        strokeWidth={1.75}
+      />
     </button>
   );
 }
 
-type Generation = ReturnType<typeof useGenerationStore.getState>["generations"][string];
+type Generation = ReturnType<
+  typeof useGenerationStore.getState
+>["generations"][string];
 
 export function ActiveGenerationList({
   generations,
@@ -255,7 +276,9 @@ function ActiveGenerationCard({
             })}
           </span>
           <span className="text-xs text-muted-foreground truncate wrap-break-word">
-            {getGenerationSubtitle(generation, totalSourceCount, t)}
+            {generation.kind === "audio_overview" && generation.stage
+              ? t(`studio.audioOverview.${generation.stage}`)
+              : getGenerationSubtitle(generation, totalSourceCount, t)}
           </span>
         </div>
       </div>
@@ -278,6 +301,9 @@ function getGenerationSubtitle(
   t: TFunction<"notebooks">,
 ) {
   const sourceCount = generation.sourceIds?.length ?? totalSourceCount;
-  if (sourceCount > 0) return t("resources.basedOnSources", { count: sourceCount });
-  return generation.brief ? t("resources.basedOnBrief") : t("resources.processingSources");
+  if (sourceCount > 0)
+    return t("resources.basedOnSources", { count: sourceCount });
+  return generation.brief
+    ? t("resources.basedOnBrief")
+    : t("resources.processingSources");
 }

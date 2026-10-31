@@ -12,7 +12,7 @@ import { StudyMaterialKind } from '../content/shapes';
 export interface StartGenerationInput {
   kind: StudyMaterialKind;
   brief: string;
-  sourceIds: string[];
+  sourceIds?: string[];
   folderId?: string | null;
   model?: string;
   language?: string;
@@ -43,6 +43,12 @@ export interface StartGenerationInput {
       | 'auto';
     detailLevel: 'basic' | 'detailed' | 'auto';
   };
+  audioOverviewOptions?: {
+    format: 'briefing' | 'deep_dive';
+    length: 'short' | 'standard' | 'extended';
+    audience: 'new_to_topic' | 'some_background' | 'advanced';
+  };
+  replaceMaterialId?: string;
 }
 
 @Injectable()
@@ -62,7 +68,16 @@ export class GenerationRequestManager {
         notebookId,
         kind: input.kind,
         brief: input.brief,
-        sourceIds: input.sourceIds,
+        sourceIds: input.sourceIds ?? [],
+        generationOptions:
+          input.kind === 'audio_overview'
+            ? {
+                ...input.audioOverviewOptions,
+                ...(input.replaceMaterialId
+                  ? { replaceMaterialId: input.replaceMaterialId }
+                  : {}),
+              }
+            : null,
         targetFolderId: input.folderId ?? null,
         groundingMode: input.groundingMode ?? DEFAULT_GROUNDING_MODE,
         status: 'streaming',

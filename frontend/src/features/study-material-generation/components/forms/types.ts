@@ -29,6 +29,9 @@ export interface BriefFormData {
   roadmapOptions?: RoadmapOptions;
   mindMapOptions?: MindMapOptions;
   slidesOptions?: SlidesOptions;
+  format?: "briefing" | "deep_dive";
+  length?: "short" | "standard" | "extended";
+  audience?: "new_to_topic" | "some_background" | "advanced";
 }
 
 export interface BaseMaterialFormProps {

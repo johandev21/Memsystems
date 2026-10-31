@@ -4,6 +4,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { FolderPicker } from "./folder-picker";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/shared/utils/cn";
 import {
   BriefBackButton,
   BriefStep,
@@ -21,6 +22,8 @@ export interface BriefInstructionsStepProps {
   submitLabel: string;
   placeholder: string;
   textareaId: string;
+  instructionsLabel?: string;
+  longform?: boolean;
   extra?: ReactNode;
   disabled?: boolean;
   onBriefChange: (brief: string) => void;
@@ -38,6 +41,8 @@ export function BriefInstructionsStep({
   submitLabel,
   placeholder,
   textareaId,
+  instructionsLabel,
+  longform = false,
   extra,
   disabled = false,
   onBriefChange,
@@ -54,7 +59,7 @@ export function BriefInstructionsStep({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor={textareaId} className="text-sm font-medium text-text-primary">
-            {t("fields.customInstructions")}
+            {instructionsLabel ?? t("fields.customInstructions")}
             {!hasSources && <span className="text-destructive ml-0.5">*</span>}
           </Label>
           <Textarea
@@ -62,7 +67,10 @@ export function BriefInstructionsStep({
             value={brief}
             onChange={(event) => onBriefChange(event.target.value)}
             placeholder={placeholder}
-            className="min-h-36 sm:min-h-30 max-h-60 text-base sm:text-sm resize-none break-words max-w-full overflow-x-hidden w-full"
+            className={cn(
+              "min-h-36 sm:min-h-30 max-h-60 text-base sm:text-sm resize-none break-words max-w-full overflow-x-hidden w-full",
+              longform && "min-h-44 sm:min-h-40",
+            )}
             disabled={disabled}
           />
         </div>

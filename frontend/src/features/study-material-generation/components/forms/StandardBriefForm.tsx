@@ -5,10 +5,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { FolderPicker } from "./folder-picker";
 import { SourceMultiSelect } from "./source-multi-select";
-import {
-  canSubmitBrief,
-  useNotebookGroundingMode,
-} from "@/features/notebooks";
+import { canSubmitBrief, useNotebookGroundingMode } from "@/features/notebooks";
 import { kindLabelKey } from "../../kind-label";
 import type { BaseMaterialFormProps, BriefFormData } from "./types";
 
@@ -89,9 +86,7 @@ export function StandardBriefForm({
       >
         {submitLabel ?? t("actions.generate")}
       </Button>
-      {showFreeHint && (
-        <p className="text-xs text-text-secondary">{t("fields.freeHint")}</p>
-      )}
+      {showFreeHint && <p className="text-xs text-text-secondary">{t("fields.freeHint")}</p>}
     </div>
   );
 }
