@@ -36,6 +36,7 @@ export const StudioResources = memo(function StudioResources({
   const cancelBackgroundGeneration = useGenerationStore(
     (s) => s.cancelBackgroundGeneration,
   );
+  const dismissGeneration = useGenerationStore((s) => s.dismissGeneration);
   const sourcesQuery = useQuery(sourceSummaryQueryOptions(notebookId));
   const totalSourceCount = sourcesQuery.data?.count ?? 0;
 
@@ -62,9 +63,10 @@ export const StudioResources = memo(function StudioResources({
       <ActiveGenerationList
         generations={activeGenerations}
         totalSourceCount={totalSourceCount}
-        onCancel={(generationId) =>
-          cancelBackgroundGeneration(notebookId, generationId)
-        }
+        onCancel={(generationId) => {
+          if (storeGenerations[generationId]?.status === "error") dismissGeneration(generationId);
+          else void cancelBackgroundGeneration(notebookId, generationId);
+        }}
       />
     </div>
   );
@@ -199,17 +201,31 @@ export function ActiveGenerationList({
   totalSourceCount: number;
   onCancel: (generationId: string) => void;
 }) {
+  const { t } = useTranslation("notebooks");
   if (generations.length === 0) return null;
+  const failures = generations.filter((generation) => generation.status === "error");
+  const activeCount = generations.length - failures.length;
+
   return (
-    <div className="space-y-2 mt-1">
-      {generations.map((generation) => (
-        <ActiveGenerationCard
-          key={generation.id}
-          generation={generation}
-          totalSourceCount={totalSourceCount}
-          onCancel={onCancel}
-        />
-      ))}
+    <div className="mt-1">
+      <div className="flex items-center justify-between gap-2 px-1 py-2 text-xs font-medium">
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          <span>{t("studio.inProgress", { count: activeCount })}</span>
+          {failures.length > 0 && (
+            <span className="text-destructive">{t("studio.failedCount", { count: failures.length })}</span>
+          )}
+        </div>
+        {failures.length > 0 && (
+          <button type="button" className="min-h-11 sm:min-h-0 text-muted-foreground hover:text-foreground hover:underline cursor-pointer touch-manipulation" onClick={() => failures.forEach((failure) => onCancel(failure.id))}>
+            {t("studio.dismissErrors")}
+          </button>
+        )}
+      </div>
+      <div className="max-h-56 overflow-y-auto overscroll-contain" role="region" aria-label={t("studio.generationActivity")} tabIndex={0}>
+        {generations.map((generation) => (
+          <ActiveGenerationCard key={generation.id} generation={generation} totalSourceCount={totalSourceCount} onCancel={onCancel} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -224,70 +240,34 @@ function ActiveGenerationCard({
   onCancel: (generationId: string) => void;
 }) {
   const { t } = useTranslation("notebooks");
-
-  if (generation.status === "error") {
-    return (
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 shadow-xs transition-colors animate-in fade-in slide-in-from-top-1">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-destructive/30 shadow-2xs text-destructive shrink-0">
-            <CircleAlert className="h-4.5 w-4.5" />
-          </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-xs font-semibold text-foreground truncate">
-              {t("studio.failedToGenerate", {
-                kind: t(KIND_LABEL_KEYS[generation.kind]),
-              })}
-            </span>
-            <span className="text-xs text-muted-foreground truncate wrap-break-word">
-              {generation.error || t("studio.generationFailed")}
-            </span>
-            <button
-              type="button"
-              onClick={() => onCancel(generation.id)}
-              className="mt-1 min-h-11 py-2 sm:min-h-0 sm:py-0 self-start text-xs font-medium text-primary hover:underline cursor-pointer touch-manipulation active:scale-97 inline-flex items-center"
-            >
-              {t("studio.dismiss")}
-            </button>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="min-h-11 min-w-11 sm:size-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg touch-manipulation active:scale-97"
-          onClick={() => onCancel(generation.id)}
-          title={t("studio.dismissError")}
-        >
-          <X className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-        </Button>
-      </div>
-    );
-  }
+  const failed = generation.status === "error";
+  const kind = t(KIND_LABEL_KEYS[generation.kind]);
+  const title = failed ? t("studio.failedToGenerate", { kind }) : t("studio.generating", { kind });
+  const subtitle = failed
+    ? generation.error || t("studio.generationFailed")
+    : generation.kind === "audio_overview" && generation.stage
+      ? t(`studio.audioOverview.${generation.stage}`)
+      : getGenerationSubtitle(generation, totalSourceCount, t);
+  const action = failed ? t("studio.dismissError") : t("studio.cancelGeneration");
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/60 dark:bg-muted/30 p-3 shadow-xs transition-colors animate-in fade-in slide-in-from-top-1">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-border/50 shadow-2xs text-foreground shrink-0">
-          <RefreshCw className="h-4.5 w-4.5 animate-spin text-primary" />
-        </div>
-        <div className="flex flex-col min-w-0 flex-1">
-          <span className="text-xs font-semibold text-foreground truncate">
-            {t("studio.generating", {
-              kind: t(KIND_LABEL_KEYS[generation.kind]),
-            })}
-          </span>
-          <span className="text-xs text-muted-foreground truncate wrap-break-word">
-            {generation.kind === "audio_overview" && generation.stage
-              ? t(`studio.audioOverview.${generation.stage}`)
-              : getGenerationSubtitle(generation, totalSourceCount, t)}
-          </span>
-        </div>
+    <div className="flex min-w-0 items-center gap-3 border-b border-border/50 last:border-b-0 px-2.5 py-2">
+      {failed ? (
+        <CircleAlert aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+      ) : (
+        <RefreshCw aria-hidden="true" className="size-4 shrink-0 text-primary animate-spin motion-reduce:animate-none" />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-xs font-semibold text-foreground" title={title}>{title}</div>
+        <div className="truncate text-xs text-muted-foreground" title={subtitle}>{subtitle}</div>
       </div>
       <Button
         variant="ghost"
         size="icon"
         className="min-h-11 min-w-11 sm:size-7 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer rounded-lg touch-manipulation active:scale-97"
         onClick={() => onCancel(generation.id)}
-        title={t("studio.cancelGeneration")}
+        aria-label={`${action}: ${kind}`}
+        title={action}
       >
         <X className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
       </Button>

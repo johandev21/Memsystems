@@ -24,6 +24,7 @@ export function MobileStudioView({
 
   const storeGenerations = useGenerationStore((s) => s.generations);
   const cancelBackgroundGeneration = useGenerationStore((s) => s.cancelBackgroundGeneration);
+  const dismissGeneration = useGenerationStore((s) => s.dismissGeneration);
   const sourcesQuery = useQuery(sourceSummaryQueryOptions(notebookId));
   const totalSourceCount = sourcesQuery.data?.count ?? 0;
 
@@ -42,7 +43,10 @@ export function MobileStudioView({
             <ActiveGenerationList
               generations={activeGenerations}
               totalSourceCount={totalSourceCount}
-              onCancel={(generationId) => cancelBackgroundGeneration(notebookId, generationId)}
+              onCancel={(generationId) => {
+                if (storeGenerations[generationId]?.status === "error") dismissGeneration(generationId);
+                else void cancelBackgroundGeneration(notebookId, generationId);
+              }}
             />
           </div>
         )}

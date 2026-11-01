@@ -198,6 +198,12 @@
     "noSources": "No sources yet. Add a source first to generate a study material."
   },
   "studio": {
+    "generationActivity": "Generation activity",
+    "inProgress_one": "{{count}} in progress",
+    "inProgress_other": "{{count}} in progress",
+    "failedCount_one": "{{count}} failed",
+    "failedCount_other": "{{count}} failed",
+    "dismissErrors": "Dismiss errors",
     "cancelGeneration": "Cancel generation",
     "dismiss": "Dismiss",
     "dismissError": "Dismiss error",

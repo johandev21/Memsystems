@@ -200,6 +200,12 @@
     "noSources": "Aún no hay fuentes. Añade una fuente primero para generar un material de estudio."
   },
   "studio": {
+    "generationActivity": "Actividad de generación",
+    "inProgress_one": "{{count}} en curso",
+    "inProgress_other": "{{count}} en curso",
+    "failedCount_one": "{{count}} fallida",
+    "failedCount_other": "{{count}} fallidas",
+    "dismissErrors": "Descartar errores",
     "cancelGeneration": "Cancelar generación",
     "dismiss": "Descartar",
     "dismissError": "Descartar error",
