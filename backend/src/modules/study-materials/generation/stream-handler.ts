@@ -32,6 +32,7 @@ import type {
 import {
   MindMapContent,
   AudioOverviewContent,
+  AUDIO_OVERVIEW_WORD_LIMITS,
   assertAudioOverviewScriptLength,
   QuizContent,
   RoadmapContent,
@@ -48,7 +49,7 @@ import {
   repairJsonText,
 } from '../content/content-normalizer';
 import { withSlidePreviews } from '../slides/slides-preview';
-import { SpeechService } from '../audio/speech.service';
+import { KokoroSpeechService } from '../audio/kokoro-speech.service';
 import {
   GENERAL_KNOWLEDGE_SUPPLEMENT_FIELD,
   GENERAL_KNOWLEDGE_SUPPLEMENT_LABEL,
@@ -75,7 +76,7 @@ export class StreamHandler {
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof appSchema>,
     private readonly aiService: AiService,
-    @Optional() private readonly speechService?: SpeechService,
+    @Optional() private readonly speechService?: KokoroSpeechService,
   ) {}
 
   createStream(
@@ -187,6 +188,58 @@ export class StreamHandler {
             onError(standardError.message);
           }, NO_OUTPUT_GUARD_MS);
         };
+        const validateWithAudioRetry = async (content: unknown) => {
+          const validated = validateContent(input.kind, content);
+          try {
+            assertAudioLength(input, validated);
+            return validated;
+          } catch (error) {
+            if (!(error instanceof AudioScriptLengthError)) throw error;
+            this.logger.warn(
+              `Generation ${requestId}: ${error.message}; retrying once.`,
+            );
+            const target = {
+              short: '250–320',
+              standard: '550–700',
+              extended: '1250–1400',
+            }[input.audioOverviewOptions?.length ?? 'standard'];
+            const receivedWords = Number(
+              error.message.match(/Received (\d+) words/)?.[1],
+            );
+            const minimum =
+              AUDIO_OVERVIEW_WORD_LIMITS[
+                input.audioOverviewOptions?.length ?? 'standard'
+              ].min;
+            const revision =
+              receivedWords < minimum
+                ? 'Expand the explanations using the supplied evidence without adding unsupported claims.'
+                : 'Condense substantially: remove repetition and unnecessary examples; do not add new sections or ideas.';
+            let retryError: Error | undefined;
+            const retry = streamText({
+              model,
+              output: Output.object({ schema }),
+              instructions: systemPrompt,
+              prompt: `${userPrompt}\n\nThe previous script failed validation: ${error.message}. Rewrite it as a dialogue of ${target} spoken words total across all sections and speakers, not per section. Count carefully. ${revision} Preserve source references and the dialogue structure. Previous script:\n${JSON.stringify(validated)}\n\nFinal requirement: ${target} spoken words total across the entire script, with at most 15,000 characters.`,
+              ...requestOptions,
+              abortSignal: modelAbort.signal,
+              onError: ({ error: cause }) => {
+                retryError =
+                  cause instanceof Error ? cause : new Error(String(cause));
+              },
+            });
+            for await (const partial of retry.partialOutputStream)
+              emitFrame(partial);
+            const result: unknown = await retry.output;
+            if (retryError) throw retryError;
+            const normalized = normalizeAudioContent(
+              input.kind,
+              normalizeContent(input.kind, schema.parse(result)),
+            );
+            const repaired = validateContent(input.kind, normalized);
+            assertAudioLength(input, repaired);
+            return repaired;
+          }
+        };
         try {
           const modelId = input.model!;
           const provider = await this.aiService.getProviderForModel(modelId);
@@ -227,8 +280,7 @@ export class StreamHandler {
                 : finalContent,
             ),
           );
-          const validated = validateContent(input.kind, normalized);
-          assertAudioLength(input, validated);
+          const validated = await validateWithAudioRetry(normalized);
           const contentToStore =
             input.kind === 'quiz'
               ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)
@@ -408,8 +460,7 @@ export class StreamHandler {
               ),
             );
 
-            const validated = validateContent(input.kind, normalizedContent);
-            assertAudioLength(input, validated);
+            const validated = await validateWithAudioRetry(normalizedContent);
             const contentToStore =
               input.kind === 'quiz'
                 ? shuffleQuizOptions(validated as z.infer<typeof QuizContent>)

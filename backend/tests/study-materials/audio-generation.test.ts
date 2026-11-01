@@ -160,6 +160,49 @@ async function read(stream: ReadableStream<Uint8Array>) {
 }
 
 describe('audio overview generation', () => {
+  it('retries a script outside the requested length before synthesizing', async () => {
+    vi.mocked(streamText).mockReset();
+    const shortScript = {
+      title: 'Too short',
+      sections: ['A', 'B', 'C'].map((heading) => ({
+        heading,
+        turns: turnsFor('host guest'),
+      })),
+    };
+    vi.mocked(streamText).mockReturnValueOnce({
+      partialOutputStream: (async function* () {
+        yield shortScript;
+      })(),
+      output: Promise.resolve(shortScript),
+    } as never);
+    modelOutput();
+    const synthesize = vi.fn(async () => audio);
+    const { handler, inserted } = setup(synthesize);
+    const { stream } = handler.createStream(
+      'notebook-1',
+      {
+        kind: 'audio_overview',
+        brief: '',
+        model: 'test',
+        audioOverviewOptions: {
+          format: 'briefing',
+          length: 'short',
+          audience: 'some_background',
+        },
+      },
+      { sources: [], evidence: [] },
+      'request-1',
+      vi.fn(),
+      vi.fn(),
+    );
+    expect(await read(stream)).toContain('"done":true');
+    expect(streamText).toHaveBeenCalledTimes(2);
+    expect(String(vi.mocked(streamText).mock.calls[1][0].prompt)).toContain(
+      'Received 6 words',
+    );
+    expect(synthesize).toHaveBeenCalledOnce();
+    expect(inserted).toHaveLength(2);
+  });
   it('preserves gateway access denials instead of retrying and reporting a generic failure', async () => {
     vi.mocked(streamText).mockReset();
     const denied = Object.assign(

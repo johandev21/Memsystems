@@ -232,11 +232,14 @@ export function assertAudioOverviewScriptLength(
         )
         .join(' ')
     : (content.transcript ?? '');
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const spokenText = text
+    .replace(/\[ref:[^\]]+\]/gi, '')
+    .replace(/#reference-\d+/gi, '');
+  const wordCount = spokenText.trim().split(/\s+/).filter(Boolean).length;
   const { min, max } = AUDIO_OVERVIEW_WORD_LIMITS[length];
   if (text.length > 15_000 || wordCount < min || wordCount > max) {
     throw new BadRequestError(
-      `Audio Overview script must contain ${min}–${max} words and no more than 15,000 characters.`,
+      `Audio Overview script must contain ${min}–${max} words and no more than 15,000 characters. Received ${wordCount} words and ${text.length} characters.`,
       {
         messageKey: 'errors.studyMaterials.contentMismatch',
         params: { kind: 'audio_overview' },
