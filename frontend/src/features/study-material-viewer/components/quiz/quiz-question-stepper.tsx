@@ -76,7 +76,7 @@ export function QuizQuestionStepper({
         >
           {q.prompt}
         </h2>
-        {!isChecked && (
+        {currentIdx === 0 && !isChecked && (
           <p className="text-xs sm:text-sm text-text-secondary">{t("quiz.selectNotice")}</p>
         )}
         {isReviewMode && selectedIdx === undefined && (
