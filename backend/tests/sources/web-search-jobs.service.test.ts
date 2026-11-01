@@ -126,4 +126,19 @@ describe('WebSearchJobsService', () => {
     const latest = await service.latest(notebook.id);
     expect(latest).toBeNull();
   });
+
+  it('does not show a cancelled search after a newer search is dismissed', async () => {
+    const { service, queue } = createJobsService(async () => SEARCH_RESULT);
+    const notebook = await seedNotebook();
+
+    await service.enqueue(notebook.id, { query: 'old query' });
+    await queue.cancelByGroup(`web_search:${notebook.id}`);
+    expect(await service.latest(notebook.id)).toBeNull();
+
+    await service.enqueue(notebook.id, { query: 'new query' });
+    await queue.drain();
+    expect((await service.latest(notebook.id))?.status).toBe('ready');
+    await service.dismiss(notebook.id);
+    expect(await service.latest(notebook.id)).toBeNull();
+  });
 });

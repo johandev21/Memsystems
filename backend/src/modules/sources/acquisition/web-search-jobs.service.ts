@@ -74,7 +74,7 @@ export class WebSearchJobsService {
       WebSearchJobPayload,
       WebSearchSearchResponse
     >(`web_search:${notebookId}`);
-    return job ? formatWebSearchJob(job) : null;
+    return job && job.status !== 'cancelled' ? formatWebSearchJob(job) : null;
   }
 
   async dismiss(notebookId: string): Promise<void> {
@@ -89,7 +89,7 @@ export class WebSearchJobsService {
       WebSearchJobPayload,
       WebSearchSearchResponse
     >(`web_search:${notebookId}`);
-    if (!job?.result) return;
+    if (!job?.result || job.status === 'cancelled') return;
 
     const removed = new Set(urls);
     const sources = job.result.sources.filter(
