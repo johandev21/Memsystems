@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LibraryNotebookIcon } from "./library-notebook-icon";
 import type { CoverVariants } from "../model/types";
 import { coverSrcSet, primaryCoverUrl } from "../model/artwork-assets";
 import { isPresetBannerUrl } from "@/features/notebooks/utils/preset-banner";
@@ -234,111 +235,16 @@ export function ManyFolderArtwork({
 
 function NotebookCoverLabel({
   title,
+  icon,
   titleSlot,
 }: {
   title: string;
+  icon?: string;
   titleSlot?: ReactNode;
 }) {
   return (
     <span className="box-border w-fit max-w-[calc(100%_-_12px)] h-fit absolute left-1.5 top-[94.5px] flex flex-row gap-1.5 px-2 py-0 justify-start items-center bg-(--notebook-label-surface) rounded-md z-0">
-      <span className="box-border w-6 shrink-0 h-6 overflow-hidden relative">
-        <svg
-          viewBox="0 0 4 1"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-1 h-0.5 absolute left-0.5 top-1.5 overflow-visible z-0"
-        >
-          <path
-            d="M0 0l4 0"
-            fill="none"
-            stroke="var(--notebook-label-foreground)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          ></path>
-        </svg>
-        <svg
-          viewBox="0 0 4 1"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-1 h-0.5 absolute left-0.5 top-2.5 overflow-visible z-1"
-        >
-          <path
-            d="M0 0l4 0"
-            fill="none"
-            stroke="var(--notebook-label-foreground)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          ></path>
-        </svg>
-        <svg
-          viewBox="0 0 4 1"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-1 h-0.5 absolute left-0.5 top-3.5 overflow-visible z-2"
-        >
-          <path
-            d="M0 0l4 0"
-            fill="none"
-            stroke="var(--notebook-label-foreground)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          ></path>
-        </svg>
-        <svg
-          viewBox="0 0 4 1"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-1 h-0.5 absolute left-0.5 top-4.5 overflow-visible z-3"
-        >
-          <path
-            d="M0 0l4 0"
-            fill="none"
-            stroke="var(--notebook-label-foreground)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          ></path>
-        </svg>
-        <svg
-          viewBox="0 0 16 20"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-4 h-5 absolute left-1 top-0.5 overflow-visible z-4"
-        >
-          <path
-            d="M2 0l12 0c1.10457 0 2 0.89543 2 2l0 16c0 1.10457-0.89543 2-2 2l-12 0c-1.10457 0-2-0.89543-2-2l0-16c0-1.10457 0.89543-2 2-2z"
-            fill="none"
-            stroke="var(--notebook-label-foreground)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          ></path>
-        </svg>
-        <svg
-          viewBox="0 0 1 20"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="box-border w-0.5 h-5 absolute left-4 top-0.5 overflow-visible z-5"
-        >
-          <path
-            d="M0 0l0 20"
-            fill="none"
-            stroke="var(--notebook-label-foreground)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          ></path>
-        </svg>
-      </span>
+      <LibraryNotebookIcon name={icon} />
       <span className="min-w-0 text-base/[42px] box-border text-(--notebook-label-foreground) font-sans font-medium text-left whitespace-nowrap">
         {titleSlot ?? title}
       </span>
@@ -348,12 +254,14 @@ function NotebookCoverLabel({
 
 export function CoveredNotebookArtwork({
   title,
+  icon,
   coverUrl,
   coverVariants,
   titleSlot,
   hideLabel,
 }: {
   title: string;
+  icon?: string;
   coverUrl: string;
   coverVariants?: CoverVariants | null;
   titleSlot?: ReactNode;
@@ -364,23 +272,25 @@ export function CoveredNotebookArtwork({
       className="box-border w-64 h-[147px] relative block shrink-0 library-notebook-surface rounded-xl overflow-hidden z-0"
     >
       <CoverFill url={coverUrl} sizes="256px" srcSet={NotebookCoverSrcSet({ coverVariants })} />
-      {hideLabel ? null : <NotebookCoverLabel title={title} titleSlot={titleSlot} />}
+      {hideLabel ? null : <NotebookCoverLabel title={title} icon={icon} titleSlot={titleSlot} />}
     </span>
   );
 }
 
 export function EmptyNotebookArtwork({
   title,
+  icon,
   titleSlot,
   hideLabel,
 }: {
   title: string;
+  icon?: string;
   titleSlot?: ReactNode;
   hideLabel?: boolean;
 }) {
   return (
     <span className="box-border w-64 h-[147px] relative block shrink-0 bg-(--notebook-empty-cover) library-notebook-surface rounded-xl overflow-hidden z-1">
-      {hideLabel ? null : <NotebookCoverLabel title={title} titleSlot={titleSlot} />}
+      {hideLabel ? null : <NotebookCoverLabel title={title} icon={icon} titleSlot={titleSlot} />}
     </span>
   );
 }

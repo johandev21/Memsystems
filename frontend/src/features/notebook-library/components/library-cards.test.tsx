@@ -1,6 +1,6 @@
 import { DndContext } from "@dnd-kit/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -457,5 +457,30 @@ describe("compact drag preview", () => {
     const preview = screen.getByLabelText("Moving Philosophy");
     expect(preview.className).toContain("library-drag-preview--compact");
     expect(preview.textContent).not.toContain("Philosophy");
+  });
+});
+
+describe("notebook icons", () => {
+  it.each([null, "https://example.com/cover.jpg"])(
+    "renders the saved icon immediately with cover %s",
+    (coverUrl) => {
+      const { container } = renderWithProviders(
+        <NotebookPreview notebook={{ title: "Nietzsche", icon: "Hammer", coverUrl }} />,
+      );
+      expect(container.querySelector("svg.lucide-hammer")).toBeTruthy();
+    },
+  );
+
+  it("loads other selected icons and falls back for unknown names", async () => {
+    const { container, rerender } = renderWithProviders(
+      <NotebookPreview notebook={{ title: "Example", icon: "airplay", coverUrl: null }} />,
+    );
+    await waitFor(() => expect(container.querySelector('path[d="m12 15 5 6H7Z"]')).toBeTruthy());
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <NotebookPreview notebook={{ title: "Example", icon: "missing-icon", coverUrl: null }} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(container.querySelector("svg.lucide-notebook")).toBeTruthy());
   });
 });

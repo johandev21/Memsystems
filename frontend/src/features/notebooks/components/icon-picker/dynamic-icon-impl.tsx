@@ -22,7 +22,7 @@ export function DynamicIcon({
     .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
     .toLowerCase();
 
-  const isValid = normalized in dynamicIconImports;
+  const isValid = Object.hasOwn(dynamicIconImports, normalized);
   const className = cn(MOUNT_FADE, props.className);
 
   if (!isValid) {

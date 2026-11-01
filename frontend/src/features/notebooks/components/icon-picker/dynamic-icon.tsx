@@ -13,7 +13,8 @@ export interface DynamicIconProps extends Omit<LucideProps, "ref" | "name"> {
   fallbackIcon?: typeof BookOpen;
 }
 
-function IconPlaceholder({ className, size }: DynamicIconProps) {
+function IconPlaceholder({ className, size, fallbackIcon: Fallback }: DynamicIconProps) {
+  if (Fallback) return <Fallback aria-hidden="true" className={className} size={size} />;
   const px = typeof size === "number" ? size : undefined;
   return (
     <span

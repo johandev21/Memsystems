@@ -53,6 +53,7 @@ export type NotebookCardProps = {
     id: string;
     title: string;
     description: string;
+    icon?: string;
     coverUrl: string | null;
     coverVariants?: CoverVariants | null;
     folderId: string | null;
@@ -69,7 +70,7 @@ export type NotebookCardProps = {
 };
 
 export type NotebookPreviewProps = {
-  notebook: { title: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
+  notebook: { title: string; icon?: string; coverUrl: string | null; coverVariants?: CoverVariants | null };
   compact?: boolean;
 };
 
@@ -368,13 +369,14 @@ function NotebookArtwork({
       {notebook.coverUrl ? (
         <CoveredNotebookArtwork
           title={notebook.title}
+          icon={notebook.icon}
           coverUrl={notebook.coverUrl}
           coverVariants={notebook.coverVariants}
           titleSlot={titleSlot}
           hideLabel={hideTitle}
         />
       ) : (
-        <EmptyNotebookArtwork title={notebook.title} titleSlot={titleSlot} hideLabel={hideTitle} />
+        <EmptyNotebookArtwork title={notebook.title} icon={notebook.icon} titleSlot={titleSlot} hideLabel={hideTitle} />
       )}
     </span>
   );
