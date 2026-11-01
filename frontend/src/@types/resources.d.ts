@@ -1973,6 +1973,7 @@ export default interface Resources {
       "copied": "Copied",
       "copyFailed": "Copy failed",
       "copyTopic": "Copy {{title}}",
+      "fitRoadmap": "Fit roadmap",
       "keyObjectives": "Key Objectives:",
       "phase": "Phase {{number}}",
       "prompt": {

@@ -17,6 +17,7 @@ export interface MindMapControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onCenter: () => void;
+  centerLabel?: string;
   onExpandAll?: () => void;
   onCollapseAll?: () => void;
 }
@@ -51,6 +52,7 @@ export function MindMapControls({
   onZoomIn,
   onZoomOut,
   onCenter,
+  centerLabel,
   onExpandAll,
   onCollapseAll,
 }: MindMapControlsProps) {
@@ -64,7 +66,7 @@ export function MindMapControls({
         <Control label={t("mindMap.zoomOut")} description={t("mindMap.tooltips.zoomOut")} onClick={onZoomOut}>
           <Minus className="size-4" />
         </Control>
-        <Control label={t("mindMap.center")} description={t("mindMap.tooltips.center")} onClick={onCenter}>
+        <Control label={centerLabel ?? t("mindMap.center")} description={centerLabel ?? t("mindMap.tooltips.center")} onClick={onCenter}>
           <Crosshair className="size-4" />
         </Control>
         {onExpandAll && (

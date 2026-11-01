@@ -122,6 +122,7 @@
     "unansweredNotice": "Dejaste esta pregunta sin responder."
   },
   "roadmap": {
+    "fitRoadmap": "Ajustar ruta completa",
     "copied": "Copiado",
     "copyFailed": "No se pudo copiar",
     "copyTopic": "Copiar {{title}}",

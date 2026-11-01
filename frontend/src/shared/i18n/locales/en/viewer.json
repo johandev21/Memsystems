@@ -121,6 +121,7 @@
     "unansweredNotice": "You left this question unanswered."
   },
   "roadmap": {
+    "fitRoadmap": "Fit roadmap",
     "copied": "Copied",
     "copyFailed": "Copy failed",
     "copyTopic": "Copy {{title}}",

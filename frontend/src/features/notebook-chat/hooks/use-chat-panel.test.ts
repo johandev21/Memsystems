@@ -1,4 +1,6 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { createElement } from "react";
+import { RoadmapView } from "@/features/study-material-viewer/components/RoadmapView";
 import type { UIMessage } from "@ai-sdk/react";
 import type { RefObject } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -364,6 +366,18 @@ describe("useChatPanel send-chat-prompt handling", () => {
     });
 
     expect(result.current.input).toBe("Study this slide");
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("places a roadmap phase prompt in the visible chat composer", async () => {
+    const visiblePanelRef = { current: { getClientRects: () => [{ width: 800 }] } } as unknown as RefObject<HTMLElement | null>;
+    const { result } = renderHook(() => useChatPanel("notebook-1", visiblePanelRef));
+    render(createElement(RoadmapView, { materialId: "roadmap", content: { title: "Philosophy", phases: [{ id: "phase", title: "Essence", order: 0, topics: [{ id: "topic", title: "Substance", order: 0 }] }] } }));
+    const phase = await screen.findByTestId("rf__node-phase-0");
+    expect(phase.style.pointerEvents).toBe("all");
+    fireEvent.click(screen.getByText("Study in chat"));
+    expect(result.current.input).toContain("Essence");
+    expect(result.current.input).toContain("Substance");
     expect(mocks.sendMessage).not.toHaveBeenCalled();
   });
 
