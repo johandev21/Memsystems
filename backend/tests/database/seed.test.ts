@@ -62,23 +62,43 @@ it('initializes once, retries failures, and preserves existing databases', async
       expect(
         (await db.query('SELECT count(*)::int AS count FROM notebook_folders'))
           .rows[0].count,
-      ).toBe(4);
+      ).toBe(5);
+      const assignments = await db.query(`
+        SELECT n.title, concat_ws('/', parent.name, folder.name) AS path
+        FROM notebooks n
+        LEFT JOIN notebook_folders folder ON folder.id = n.folder_id
+        LEFT JOIN notebook_folders parent ON parent.id = folder.parent_id
+      `);
+      expect(
+        Object.fromEntries(assignments.rows.map(({ title, path }) => [title, path])),
+      ).toEqual({
+        Platón: 'Filosofía antigua/Filosofía griega',
+        Sócrates: 'Filosofía antigua/Filosofía griega',
+        Aristóteles: 'Filosofía antigua/Filosofía griega',
+        Confucio: 'Filosofía antigua/Filosofía china',
+        'René Descartes': 'Filosofía moderna',
+        'John Locke': 'Filosofía moderna',
+        'David Hume': 'Filosofía moderna',
+        'Immanuel Kant': 'Filosofía moderna',
+        'Friedrich Nietzsche': 'Filosofía del siglo XIX',
+        'Karl Marx': 'Filosofía del siglo XIX',
+      });
       await db.query(
-        "UPDATE notebook_folders SET name = 'Renamed' WHERE name = 'Classical Philosophy'",
+        "UPDATE notebook_folders SET name = 'Renamed' WHERE name = 'Filosofía antigua'",
       );
       await command('migrate');
       await command('seed');
       expect(
         (
           await db.query(
-            "SELECT count(*)::int AS count FROM notebook_folders WHERE name = 'Classical Philosophy'",
+            "SELECT count(*)::int AS count FROM notebook_folders WHERE name = 'Filosofía antigua'",
           )
         ).rows[0].count,
       ).toBe(0);
       expect(
         (await db.query('SELECT count(*)::int AS count FROM notebook_folders'))
           .rows[0].count,
-      ).toBe(4);
+      ).toBe(5);
     } finally {
       await db.end();
     }

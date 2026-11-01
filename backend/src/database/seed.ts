@@ -21,21 +21,23 @@ interface SeedNotebook {
 }
 
 const SEED_FOLDER_PATHS = [
-  'Classical Philosophy',
-  'Classical Philosophy/Aristotle',
-  'Modern Philosophy',
-  'Empty folder',
+  'Filosofía antigua/Filosofía griega',
+  'Filosofía antigua/Filosofía china',
+  'Filosofía moderna',
+  'Filosofía del siglo XIX',
 ] as const;
 
 const SEED_NOTEBOOK_FOLDERS: Record<string, string> = {
-  Platón: 'Classical Philosophy',
-  Sócrates: 'Classical Philosophy',
-  Aristóteles: 'Classical Philosophy/Aristotle',
-  'Immanuel Kant': 'Modern Philosophy',
-  'René Descartes': 'Modern Philosophy',
-  Confucio: 'Modern Philosophy',
-  'Friedrich Nietzsche': 'Modern Philosophy',
-  'John Locke': 'Modern Philosophy',
+  Platón: 'Filosofía antigua/Filosofía griega',
+  Sócrates: 'Filosofía antigua/Filosofía griega',
+  Aristóteles: 'Filosofía antigua/Filosofía griega',
+  'Immanuel Kant': 'Filosofía moderna',
+  'René Descartes': 'Filosofía moderna',
+  Confucio: 'Filosofía antigua/Filosofía china',
+  'Friedrich Nietzsche': 'Filosofía del siglo XIX',
+  'John Locke': 'Filosofía moderna',
+  'David Hume': 'Filosofía moderna',
+  'Karl Marx': 'Filosofía del siglo XIX',
 };
 
 config({ path: '.env.local' });
