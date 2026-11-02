@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { and, desc, eq, inArray, isNotNull, lt } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
@@ -35,7 +34,6 @@ export class TrashService {
     private readonly storageService: StorageService,
   ) {}
 
-  @Cron('0 0 * * *')
   async purgeExpired(retentionDays = RETENTION_DAYS) {
     const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
 

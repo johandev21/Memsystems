@@ -2,9 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
-// Generates the tiny cover variant used by notebook-folder artwork. The
-// outputs are committed next to the seed sources, so the production seed
-// script stays free of native image dependencies.
 const SEED_VARIANT_WIDTHS = [240] as const;
 const WEBP_QUALITY = 80;
 const SOURCE_EXTENSIONS = /\.(jpe?g|png)$/i;
@@ -24,7 +21,9 @@ function resolveSeedDir(): string {
 
 async function main() {
   const bannersDir = path.join(resolveSeedDir(), 'banners');
-  const sources = fs.readdirSync(bannersDir).filter((file) => SOURCE_EXTENSIONS.test(file));
+  const sources = fs
+    .readdirSync(bannersDir)
+    .filter((file) => SOURCE_EXTENSIONS.test(file));
 
   let written = 0;
   let skipped = 0;
@@ -44,7 +43,9 @@ async function main() {
       written++;
     }
   }
-  console.log(`Seed variants complete: ${written} written, ${skipped} already present.`);
+  console.log(
+    `Seed variants complete: ${written} written, ${skipped} already present.`,
+  );
 }
 
 main().catch((err) => {

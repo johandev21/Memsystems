@@ -2,7 +2,6 @@ import type { PoolClient } from 'pg';
 
 const SEED_LOCK = 173829104;
 
-// Create the state before migrations so existing databases are never reseeded.
 export async function prepareSeedState(client: PoolClient): Promise<void> {
   await client.query('BEGIN');
   try {

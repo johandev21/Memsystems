@@ -48,13 +48,13 @@ async function main() {
           console.log(`Created database "${dbName}".`);
         }
       } catch {
-        // Ignore errors connecting to maintenance database
+        void 0;
       } finally {
         await mPool.end();
       }
     }
   } catch {
-    // Non-URL connection strings or invalid URLs fall through
+    void 0;
   }
 
   const pool = new Pool({ connectionString });

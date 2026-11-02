@@ -1,0 +1,422 @@
+{
+  "version": 1,
+  "lineLimit": 500,
+  "entries": {
+    "backend/eslint.config.mjs": {
+      "lines": 0,
+      "comments": 1
+    },
+    "backend/scripts/generate-seed-variants.ts": {
+      "lines": 0,
+      "comments": 3
+    },
+    "backend/src/agent-docs/agent-docs.controller.ts": {
+      "lines": 36,
+      "comments": 1
+    },
+    "backend/src/agent-docs/llms.ts": {
+      "lines": 215,
+      "comments": 4
+    },
+    "backend/src/common/dto/shared-schemas.ts": {
+      "lines": 29,
+      "comments": 1
+    },
+    "backend/src/common/filters/domain-exception.filter.ts": {
+      "lines": 101,
+      "comments": 3
+    },
+    "backend/src/common/openapi/configure-openapi.ts": {
+      "lines": 68,
+      "comments": 2
+    },
+    "backend/src/common/openapi/generate-openapi-document.ts": {
+      "lines": 31,
+      "comments": 1
+    },
+    "backend/src/common/openapi/stream-schemas.ts": {
+      "lines": 416,
+      "comments": 1
+    },
+    "backend/src/database/migrate.ts": {
+      "lines": 154,
+      "comments": 2
+    },
+    "backend/src/database/schema.ts": {
+      "lines": 830,
+      "comments": 0
+    },
+    "backend/src/database/seed-state.ts": {
+      "lines": 40,
+      "comments": 1
+    },
+    "backend/src/modules/ai/retrieval/query-understanding.ts": {
+      "lines": 790,
+      "comments": 0
+    },
+    "backend/src/modules/ai/retrieval/retrieval.service.ts": {
+      "lines": 1032,
+      "comments": 2
+    },
+    "backend/src/modules/chat/chat-citations.ts": {
+      "lines": 773,
+      "comments": 0
+    },
+    "backend/src/modules/chat/chat.service.ts": {
+      "lines": 1356,
+      "comments": 13
+    },
+    "backend/src/modules/notebooks/notebook-export.service.ts": {
+      "lines": 356,
+      "comments": 5
+    },
+    "backend/src/modules/notebooks/notebook-import.service.ts": {
+      "lines": 657,
+      "comments": 19
+    },
+    "backend/src/modules/notebooks/notebooks.service.ts": {
+      "lines": 610,
+      "comments": 6
+    },
+    "backend/src/modules/sources/acquisition/youtube-acquisition.service.ts": {
+      "lines": 567,
+      "comments": 1
+    },
+    "backend/src/modules/sources/acquisition/youtube-oauth.service.ts": {
+      "lines": 172,
+      "comments": 1
+    },
+    "backend/src/modules/sources/extraction/audio-inspector.service.ts": {
+      "lines": 656,
+      "comments": 0
+    },
+    "backend/src/modules/sources/extraction/caption-parser.service.ts": {
+      "lines": 480,
+      "comments": 1
+    },
+    "backend/src/modules/sources/extraction/document-normalizer.service.ts": {
+      "lines": 915,
+      "comments": 0
+    },
+    "backend/src/modules/sources/extraction/epub-inspector.service.ts": {
+      "lines": 213,
+      "comments": 1
+    },
+    "backend/src/modules/sources/extraction/epub-parser.service.ts": {
+      "lines": 339,
+      "comments": 1
+    },
+    "backend/src/modules/sources/extraction/pptx-inspector.service.ts": {
+      "lines": 178,
+      "comments": 1
+    },
+    "backend/src/modules/sources/extraction/pptx-parser.service.ts": {
+      "lines": 189,
+      "comments": 1
+    },
+    "backend/src/modules/sources/extraction/tabular-parser.service.ts": {
+      "lines": 443,
+      "comments": 1
+    },
+    "backend/src/modules/sources/extraction/video-inspector.service.ts": {
+      "lines": 727,
+      "comments": 0
+    },
+    "backend/src/modules/sources/sources.service.ts": {
+      "lines": 968,
+      "comments": 0
+    },
+    "backend/src/modules/sources/uploads/source-uploads.service.ts": {
+      "lines": 527,
+      "comments": 0
+    },
+    "backend/src/modules/study-materials/audio/audio-byte-range.ts": {
+      "lines": 22,
+      "comments": 1
+    },
+    "backend/src/modules/study-materials/audio/audio-timeline.ts": {
+      "lines": 92,
+      "comments": 1
+    },
+    "backend/src/modules/study-materials/audio/kokoro-speech.service.ts": {
+      "lines": 352,
+      "comments": 1
+    },
+    "backend/src/modules/study-materials/content/content-normalizer.ts": {
+      "lines": 770,
+      "comments": 0
+    },
+    "backend/src/modules/study-materials/content/shapes.ts": {
+      "lines": 269,
+      "comments": 2
+    },
+    "backend/src/modules/study-materials/generation/generation-grounding.ts": {
+      "lines": 2315,
+      "comments": 59
+    },
+    "backend/src/modules/study-materials/generation/stream-handler.ts": {
+      "lines": 993,
+      "comments": 1
+    },
+    "backend/src/modules/study-materials/slides/slides-design-resolver.ts": {
+      "lines": 852,
+      "comments": 0
+    },
+    "backend/src/modules/study-materials/slides/slides-preview.ts": {
+      "lines": 1384,
+      "comments": 0
+    },
+    "backend/src/modules/study-materials/study-materials.controller.ts": {
+      "lines": 542,
+      "comments": 0
+    },
+    "backend/src/modules/trash/trash-ledger.service.ts": {
+      "lines": 927,
+      "comments": 41
+    },
+    "backend/tests/ai/ai.service.test.ts": {
+      "lines": 537,
+      "comments": 3
+    },
+    "backend/tests/ai/chunking.service.test.ts": {
+      "lines": 340,
+      "comments": 17
+    },
+    "backend/tests/ai/connection.service.test.ts": {
+      "lines": 43,
+      "comments": 2
+    },
+    "backend/tests/ai/evidence-assembly.test.ts": {
+      "lines": 433,
+      "comments": 6
+    },
+    "backend/tests/ai/indexing.service.test.ts": {
+      "lines": 294,
+      "comments": 4
+    },
+    "backend/tests/ai/model-catalog.test.ts": {
+      "lines": 241,
+      "comments": 5
+    },
+    "backend/tests/ai/model-sync.service.test.ts": {
+      "lines": 225,
+      "comments": 3
+    },
+    "backend/tests/ai/query-understanding.test.ts": {
+      "lines": 637,
+      "comments": 1
+    },
+    "backend/tests/ai/rank-fusion.test.ts": {
+      "lines": 126,
+      "comments": 5
+    },
+    "backend/tests/ai/retrieval.service.test.ts": {
+      "lines": 2641,
+      "comments": 44
+    },
+    "backend/tests/ai/voyage.client.test.ts": {
+      "lines": 370,
+      "comments": 8
+    },
+    "backend/tests/ai/voyage.contextual.test.ts": {
+      "lines": 200,
+      "comments": 7
+    },
+    "backend/tests/chat-history.test.ts": {
+      "lines": 472,
+      "comments": 6
+    },
+    "backend/tests/chat/chat-branch-lifecycle.test.ts": {
+      "lines": 660,
+      "comments": 2
+    },
+    "backend/tests/chat/chat-citations.test.ts": {
+      "lines": 537,
+      "comments": 6
+    },
+    "backend/tests/chat/chat-grounding-mode.test.ts": {
+      "lines": 514,
+      "comments": 1
+    },
+    "backend/tests/chat/chat.service.test.ts": {
+      "lines": 1593,
+      "comments": 3
+    },
+    "backend/tests/crawler/crawler.firecrawl.test.ts": {
+      "lines": 472,
+      "comments": 2
+    },
+    "backend/tests/db.ts": {
+      "lines": 342,
+      "comments": 1
+    },
+    "backend/tests/eval/deterministic-embedder.ts": {
+      "lines": 164,
+      "comments": 6
+    },
+    "backend/tests/eval/deterministic-reranker.ts": {
+      "lines": 78,
+      "comments": 4
+    },
+    "backend/tests/eval/deterministic-rewriter.ts": {
+      "lines": 117,
+      "comments": 9
+    },
+    "backend/tests/eval/generation-eval.ts": {
+      "lines": 566,
+      "comments": 26
+    },
+    "backend/tests/eval/golden-set.ts": {
+      "lines": 702,
+      "comments": 41
+    },
+    "backend/tests/eval/retrieval-eval.ts": {
+      "lines": 640,
+      "comments": 45
+    },
+    "backend/tests/eval/seed-corpus.ts": {
+      "lines": 118,
+      "comments": 7
+    },
+    "backend/tests/generation-eval.test.ts": {
+      "lines": 199,
+      "comments": 12
+    },
+    "backend/tests/jobs/job-queue.service.test.ts": {
+      "lines": 386,
+      "comments": 5
+    },
+    "backend/tests/notebooks/notebook-export-import.e2e.test.ts": {
+      "lines": 689,
+      "comments": 50
+    },
+    "backend/tests/notebooks/notebook-export.service.test.ts": {
+      "lines": 181,
+      "comments": 9
+    },
+    "backend/tests/notebooks/notebook-import.service.test.ts": {
+      "lines": 339,
+      "comments": 20
+    },
+    "backend/tests/notebooks/notebooks.service.test.ts": {
+      "lines": 127,
+      "comments": 5
+    },
+    "backend/tests/retrieval-eval.test.ts": {
+      "lines": 266,
+      "comments": 30
+    },
+    "backend/tests/sources/audio-inspector.service.test.ts": {
+      "lines": 477,
+      "comments": 59
+    },
+    "backend/tests/sources/document-normalizer.service.test.ts": {
+      "lines": 716,
+      "comments": 3
+    },
+    "backend/tests/sources/epub-inspector.service.test.ts": {
+      "lines": 166,
+      "comments": 2
+    },
+    "backend/tests/sources/epub-parser.service.test.ts": {
+      "lines": 206,
+      "comments": 5
+    },
+    "backend/tests/sources/image-inspector.service.test.ts": {
+      "lines": 265,
+      "comments": 41
+    },
+    "backend/tests/sources/pptx-inspector.service.test.ts": {
+      "lines": 189,
+      "comments": 6
+    },
+    "backend/tests/sources/pptx-parser.service.test.ts": {
+      "lines": 164,
+      "comments": 7
+    },
+    "backend/tests/sources/source-folders.test.ts": {
+      "lines": 417,
+      "comments": 8
+    },
+    "backend/tests/sources/source-indexing.handler.test.ts": {
+      "lines": 137,
+      "comments": 1
+    },
+    "backend/tests/sources/source-jobs.service.test.ts": {
+      "lines": 732,
+      "comments": 11
+    },
+    "backend/tests/sources/source-policy.service.test.ts": {
+      "lines": 242,
+      "comments": 3
+    },
+    "backend/tests/sources/source-processing.handler.test.ts": {
+      "lines": 1161,
+      "comments": 11
+    },
+    "backend/tests/sources/source-uploads.service.test.ts": {
+      "lines": 225,
+      "comments": 6
+    },
+    "backend/tests/sources/sources.service.test.ts": {
+      "lines": 925,
+      "comments": 17
+    },
+    "backend/tests/sources/tabular-parser.service.test.ts": {
+      "lines": 112,
+      "comments": 2
+    },
+    "backend/tests/sources/transcription.service.test.ts": {
+      "lines": 276,
+      "comments": 4
+    },
+    "backend/tests/sources/video-inspector.service.test.ts": {
+      "lines": 434,
+      "comments": 27
+    },
+    "backend/tests/sources/web-scraper.service.test.ts": {
+      "lines": 139,
+      "comments": 4
+    },
+    "backend/tests/study-materials/audio-generation.test.ts": {
+      "lines": 567,
+      "comments": 0
+    },
+    "backend/tests/study-materials/audio-migration-history.test.ts": {
+      "lines": 107,
+      "comments": 1
+    },
+    "backend/tests/study-materials/generation-grounding-mode.test.ts": {
+      "lines": 632,
+      "comments": 16
+    },
+    "backend/tests/study-materials/generation-grounding.test.ts": {
+      "lines": 1010,
+      "comments": 25
+    },
+    "backend/tests/study-materials/generation.service.test.ts": {
+      "lines": 427,
+      "comments": 2
+    },
+    "backend/tests/study-materials/kokoro-speech-runtime-bridge.test.ts": {
+      "lines": 128,
+      "comments": 1
+    },
+    "backend/tests/study-materials/slides-content.test.ts": {
+      "lines": 179,
+      "comments": 7
+    },
+    "backend/tests/study-materials/slides-structured-design.test.ts": {
+      "lines": 390,
+      "comments": 3
+    },
+    "backend/tests/study-materials/study-material-tree.service.test.ts": {
+      "lines": 222,
+      "comments": 2
+    },
+    "backend/tests/trash/trash-ledger.service.test.ts": {
+      "lines": 295,
+      "comments": 21
+    }
+  }
+}

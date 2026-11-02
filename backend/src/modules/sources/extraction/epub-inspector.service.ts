@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { Injectable } from '@nestjs/common';
 import { BadRequestError } from '../../../common/errors/domain-error';
 import { assertNotArchiveBomb, parseZipEntries } from './zip-helpers';

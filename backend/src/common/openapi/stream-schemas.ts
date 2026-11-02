@@ -1,16 +1,5 @@
 import type { SchemaObject } from '@nestjs/swagger';
 
-/**
- * Reusable component schemas for the two streaming endpoints:
- *
- * - `POST /api/notebooks/{id}/generate` writes newline-delimited JSON
- *   (`application/x-ndjson`).
- * - `POST /api/notebooks/{id}/chat` returns the AI SDK UI message stream
- *   (`text/event-stream`, one `data: <json>` line per frame).
- *
- * These are hand-written rather than generated from Zod DTOs because the
- * frames are emitted as partial model output and are not request bodies.
- */
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 
 const generationPartialFrame: SchemaObject = {

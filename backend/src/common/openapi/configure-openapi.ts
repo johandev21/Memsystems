@@ -10,14 +10,6 @@ import { openApiStreamSchemas } from './stream-schemas';
 export const OPENAPI_JSON_PATH = 'api/openapi.json';
 export const OPENAPI_DOCS_PATH = 'api/docs';
 
-/**
- * Builds the OpenAPI 3.1 document for the API.
- *
- * Request schemas come from the `nestjs-zod` DTOs; `cleanupOpenApiDoc` flattens
- * their generated definitions and fixes shared schema references. Streaming
- * frame schemas are appended as reusable components because they are not
- * request bodies.
- */
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle('Memsystems API')
@@ -48,11 +40,6 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   return cleaned;
 }
 
-/**
- * Serves the docs UI at `/api/docs` and the JSON document at
- * `/api/openapi.json`. Both paths live outside the controller router, so the
- * `api` global prefix is part of the path here.
- */
 export function configureOpenApi(app: INestApplication): OpenAPIObject {
   const document = buildOpenApiDocument(app);
 

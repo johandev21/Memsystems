@@ -4,7 +4,6 @@ export interface AudioTimeline {
   sections: Array<{ start: number; end: number }>;
 }
 
-/** Read PCM peaks and sample-accurate synthesis boundaries from standard WAV chunks. */
 export function readAudioTimeline(wav: Buffer): AudioTimeline {
   const empty: AudioTimeline = { duration: 0, waveform: [], sections: [] };
   if (

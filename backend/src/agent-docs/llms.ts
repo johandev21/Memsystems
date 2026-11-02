@@ -4,18 +4,12 @@ function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
-/** Base URL used when neither `PUBLIC_BASE_URL` nor a request host is set. */
 export function defaultBaseUrl(port = process.env.PORT): string {
   const resolvedPort =
     port && port.trim().length > 0 ? port.trim() : DEFAULT_PORT;
   return `http://localhost:${resolvedPort}`;
 }
 
-/**
- * Resolves the absolute base URL for the generated docs. `PUBLIC_BASE_URL`
- * wins so deployments behind a proxy can publish a stable address; otherwise
- * the incoming request host is used.
- */
 export function resolveBaseUrl(request?: {
   protocol?: string;
   get?: (name: string) => string | undefined;
@@ -38,11 +32,6 @@ function normalizedBaseUrl(baseUrl: string): string {
   return trimTrailingSlash(trimmed.length > 0 ? trimmed : defaultBaseUrl());
 }
 
-/**
- * `llms.txt`: the short, link-first index described by the llms.txt
- * convention. It is generated at request time so links always use the host the
- * caller reached.
- */
 export function buildLlmsTxt(baseUrl: string): string {
   const base = normalizedBaseUrl(baseUrl);
 
@@ -99,10 +88,6 @@ No API keys or bearer tokens required. All requests to the local API execute dir
 `;
 }
 
-/**
- * `llms-full.txt`: the self-contained reference detailing endpoint contracts,
- * parameters, schemas, and workflows.
- */
 export function buildLlmsFullTxt(baseUrl: string): string {
   const base = normalizedBaseUrl(baseUrl);
 

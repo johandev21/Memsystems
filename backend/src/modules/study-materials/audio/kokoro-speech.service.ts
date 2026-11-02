@@ -260,7 +260,6 @@ export class KokoroSpeechService {
           );
         } else chunks.push(chunk);
       });
-      // Child diagnostics can contain local paths; keep them out of application errors and logs.
       child.stderr.setEncoding('utf8');
       child.stderr.on('data', (chunk: string) => {
         if (diagnostics.length < 256) diagnostics += chunk.slice(0, 256);

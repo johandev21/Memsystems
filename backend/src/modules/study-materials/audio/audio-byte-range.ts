@@ -1,4 +1,3 @@
-/** Unsupported/multipart ranges are ignored; unsatisfiable single ranges receive 416. */
 export function audioByteRange(
   header: string | undefined,
   length: number,

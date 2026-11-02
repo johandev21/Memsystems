@@ -13,30 +13,13 @@ import {
 } from '../../../common/errors/domain-error';
 import { NotebooksService } from '../../notebooks/notebooks.service';
 import { StorageService } from '../../storage/storage.service';
-import {
-  isImageFile,
-  MAX_IMAGE_BYTES,
-} from '../extraction/image-inspector.service';
-import {
-  isAudioFile,
-  MAX_AUDIO_BYTES,
-} from '../extraction/audio-inspector.service';
-import {
-  isVideoFile,
-  MAX_VIDEO_BYTES,
-} from '../extraction/video-inspector.service';
-import {
-  isPptxFile,
-  MAX_PPTX_BYTES,
-} from '../extraction/pptx-inspector.service';
-import {
-  isEpubFile,
-  MAX_EPUB_BYTES,
-} from '../extraction/epub-inspector.service';
-import {
-  isTabularFile,
-  MAX_TABULAR_BYTES,
-} from '../extraction/tabular-inspector.service';
+import { MAX_IMAGE_BYTES } from '../extraction/image-inspector.service';
+import { MAX_AUDIO_BYTES } from '../extraction/audio-inspector.service';
+import { MAX_VIDEO_BYTES } from '../extraction/video-inspector.service';
+import { MAX_PPTX_BYTES } from '../extraction/pptx-inspector.service';
+import { MAX_EPUB_BYTES } from '../extraction/epub-inspector.service';
+import { MAX_TABULAR_BYTES } from '../extraction/tabular-inspector.service';
+import { classifySourceFile } from '../file-classification';
 import { SourceExtractionService } from '../extraction/source-extraction.service';
 import { SourcesService } from '../sources.service';
 
@@ -97,25 +80,11 @@ export class SourceUploadsService {
         messageKey: 'errors.sources.upload.sizePositive',
       });
     }
-    const isAudio = isAudioFile(contentType, filename);
-    const isImage = isImageFile(contentType, filename);
-    const isVideo = isVideoFile(contentType, filename);
-    const isPptx = isPptxFile(contentType, filename);
-    const isEpub = isEpubFile(contentType, filename);
-    const isTabular = isTabularFile(contentType, filename);
-    const maxBytes = isVideo
-      ? MAX_VIDEO_BYTES
-      : isAudio
-        ? MAX_AUDIO_BYTES
-        : isImage
-          ? MAX_IMAGE_BYTES
-          : isPptx
-            ? MAX_PPTX_BYTES
-            : isEpub
-              ? MAX_EPUB_BYTES
-              : isTabular
-                ? MAX_TABULAR_BYTES
-                : SOURCE_UPLOAD_MAX_BYTES;
+    const { maxBytes } = classifySourceFile(
+      contentType,
+      filename,
+      SOURCE_UPLOAD_MAX_BYTES,
+    );
     if (input.size > maxBytes) {
       throw new BadRequestError(
         `Upload exceeds maximum size of ${maxBytes} bytes`,
@@ -197,22 +166,12 @@ export class SourceUploadsService {
         },
       );
     }
-    const isAudio = isAudioFile(target.contentType, target.filename);
-    const isImage = isImageFile(target.contentType, target.filename);
-    const isVideo = isVideoFile(target.contentType, target.filename);
-    const isPptx = isPptxFile(target.contentType, target.filename);
-    const isEpub = isEpubFile(target.contentType, target.filename);
-    const maxBytes = isVideo
-      ? MAX_VIDEO_BYTES
-      : isAudio
-        ? MAX_AUDIO_BYTES
-        : isImage
-          ? MAX_IMAGE_BYTES
-          : isPptx
-            ? MAX_PPTX_BYTES
-            : isEpub
-              ? MAX_EPUB_BYTES
-              : SOURCE_UPLOAD_MAX_BYTES;
+    const { maxBytes } = classifySourceFile(
+      target.contentType,
+      target.filename,
+      SOURCE_UPLOAD_MAX_BYTES,
+      false,
+    );
     if (contentLength !== undefined && contentLength > maxBytes) {
       throw new BadRequestError(
         `Upload exceeds maximum size of ${maxBytes} bytes`,

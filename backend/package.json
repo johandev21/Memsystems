@@ -24,7 +24,8 @@
     "openapi:export": "ts-node --transpile-only scripts/export-openapi.ts",
     "openapi:check": "ts-node --transpile-only scripts/export-openapi.ts --check",
     "openapi:export": "ts-node --transpile-only scripts/export-openapi.ts",
-    "openapi:check": "ts-node --transpile-only scripts/export-openapi.ts --check"
+    "openapi:check": "ts-node --transpile-only scripts/export-openapi.ts --check",
+    "code-quality:check": "node scripts/check-code-quality.mjs"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.74",

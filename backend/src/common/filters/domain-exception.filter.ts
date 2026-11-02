@@ -61,9 +61,6 @@ export class DomainExceptionFilter implements ExceptionFilter {
             statusCode?: number;
             code?: string;
           };
-      // Guards for Agent traffic return a complete error contract
-      // (`statusCode`, `message`, `code`, optional `retryAfter`). Forward it
-      // verbatim instead of wrapping it as a generic HTTP exception.
       if (
         typeof res === 'object' &&
         typeof res.statusCode === 'number' &&

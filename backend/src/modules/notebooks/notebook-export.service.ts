@@ -55,7 +55,6 @@ export class NotebookExportService {
       });
     }
 
-    // 1. Gather all notebook contents (excluding chat state)
     const sourceFoldersList = await this.db
       .select({
         id: sourceFolders.id,
@@ -177,7 +176,6 @@ export class NotebookExportService {
       }
     }
 
-    // 2. Prepare blob file mappings
     const blobEntries: { storageKey: string; archivePath: string }[] = [];
 
     let bannerArchiveFile: string | null = null;
@@ -229,7 +227,6 @@ export class NotebookExportService {
       };
     });
 
-    // 3. Configure response and zip archive
     const baseSlug = sanitizeFilename(notebook.title);
     const downloadFilename = `${baseSlug}.memsys`;
 
@@ -257,7 +254,6 @@ export class NotebookExportService {
 
     archive.pipe(res);
 
-    // 4. Append manifest & metadata JSON files
     const manifest = {
       version: 1,
       format: 'memsys',
@@ -330,7 +326,6 @@ export class NotebookExportService {
       archive.append(row.audio, { name: `blobs/study-material-${id}.wav` });
     }
 
-    // 5. Append binary blobs safely
     for (const blob of blobEntries) {
       const exists = await this.storageService.objectExists(blob.storageKey);
       if (exists) {

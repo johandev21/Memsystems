@@ -1,23 +1,9 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { createHash } from 'node:crypto';
-import {
-  asc,
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  lt,
-  or,
-} from 'drizzle-orm';
+import { asc, and, count, eq, inArray, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as appSchema from '../../database/schema';
 import {
   SourceMetadata,
-  SourceQualityAssessment,
-  sourceChunks,
   sourceFolders,
   sourceSegments,
   sources,
@@ -29,50 +15,35 @@ import {
 import { DRIZZLE } from '../database/database.module';
 import { NotebooksService } from '../notebooks/notebooks.service';
 import { StorageService } from '../storage/storage.service';
-import {
-  contentHashOf,
-  DocumentSection,
-  EXTRACTOR_VERSION,
-  NormalizedDocument,
-  NORMALIZATION_VERSION,
-} from './extraction/document-normalizer.service';
 import { CaptionParserService } from './extraction/caption-parser.service';
-import {
-  isImageFile,
-  MAX_IMAGE_BYTES,
-} from './extraction/image-inspector.service';
-import {
-  isAudioFile,
-  MAX_AUDIO_BYTES,
-} from './extraction/audio-inspector.service';
-import {
-  isVideoFile,
-  MAX_VIDEO_BYTES,
-} from './extraction/video-inspector.service';
-import {
-  isPptxFile,
-  MAX_PPTX_BYTES,
-} from './extraction/pptx-inspector.service';
-import {
-  isEpubFile,
-  MAX_EPUB_BYTES,
-} from './extraction/epub-inspector.service';
-import {
-  isTabularFile,
-  MAX_TABULAR_BYTES,
-} from './extraction/tabular-inspector.service';
 import { SourceAcquisitionService } from './acquisition/source-acquisition.service';
 import { SourceExtractionService } from './extraction/source-extraction.service';
 import { SourceJobsService } from './jobs/source-jobs.service';
-import {
-  qualityFailureLifecycle,
-  qualityFailureOf,
-  SourceQualityService,
-} from './source-quality.service';
-import { WebScrapeError } from './source-errors';
+import { SourceQualityService } from './source-quality.service';
 import { SourceVersionService } from './source-version.service';
+import { SourceCreationCompletion } from './creation/source-creation-completion';
+import { SourceDocumentCreation } from './creation/source-document-creation';
+import { SourceFileCreation } from './creation/source-file-creation';
+import {
+  SOURCE_PAGE_DEFAULT,
+  SOURCE_PAGE_MAX,
+  SourceListPageOptions,
+  decodeSourceCursor,
+  encodeSourceCursor,
+  listByNotebook,
+} from './source-listing';
+import { SourceSpeakerOperations } from './source-speaker-operations';
+import { SourceTranscription } from './source-transcription';
 
 export type { SourceKind } from '../../database/schema';
+export {
+  SOURCE_PAGE_DEFAULT,
+  SOURCE_PAGE_MAX,
+  type SourceListPageOptions,
+  decodeSourceCursor,
+  encodeSourceCursor,
+  listByNotebook,
+};
 
 export interface CreateTextSourceInput {
   title: string;
@@ -106,101 +77,6 @@ export interface DownloadInfo {
   expiresIn: number;
 }
 
-export const SOURCE_PAGE_DEFAULT = 50;
-export const SOURCE_PAGE_MAX = 100;
-
-export interface SourceListPageOptions {
-  cursor?: string;
-  limit?: number;
-  query?: string;
-}
-
-function decodeSourceCursor(cursor: string): { createdAt: Date; id: string } {
-  try {
-    const value = JSON.parse(
-      Buffer.from(cursor, 'base64url').toString('utf8'),
-    ) as {
-      createdAt?: unknown;
-      id?: unknown;
-    };
-    const createdAt =
-      typeof value.createdAt === 'string' ? new Date(value.createdAt) : null;
-    if (
-      !createdAt ||
-      Number.isNaN(createdAt.getTime()) ||
-      typeof value.id !== 'string' ||
-      !value.id
-    ) {
-      throw new Error('Invalid cursor');
-    }
-    return { createdAt, id: value.id };
-  } catch {
-    throw new BadRequestError('Invalid source pagination cursor', {
-      messageKey: 'errors.sources.invalidCursor',
-    });
-  }
-}
-
-function encodeSourceCursor(source: { createdAt: Date; id: string }): string {
-  return Buffer.from(JSON.stringify(source), 'utf8').toString('base64url');
-}
-
-const MAX_RAW_TEXT_BYTES = 5 * 1024 * 1024;
-const MAX_FILE_BYTES = 50 * 1024 * 1024;
-
-function lifecycleValues(
-  modality:
-    | 'document'
-    | 'audio'
-    | 'video'
-    | 'image'
-    | 'slides'
-    | 'ebook'
-    | 'code'
-    | 'dataset',
-  stage: 'uploading' | 'extracting' | 'indexing',
-): Record<string, unknown> {
-  return {
-    modality,
-    processingStatus: 'pending',
-    processingStage: stage,
-    processingErrorCode: null,
-    processingErrorMessage: null,
-  };
-}
-
-function buildS3Key(
-  _notebookId: string,
-  sha256: string,
-  originalName: string,
-): string {
-  const ext = pickExtension(originalName);
-  return `sources/${sha256}${ext}`;
-}
-
-function pickExtension(originalName: string): string {
-  const idx = originalName.lastIndexOf('.');
-  if (idx === -1 || idx === originalName.length - 1) return '';
-  return originalName.slice(idx).toLowerCase();
-}
-
-function looksLikeUrlTitle(title: string): boolean {
-  if (/^https?:\/\//i.test(title)) return true;
-  return /^[\w-]+(\.[\w-]+)+(\/.*)?$/.test(title);
-}
-
-function resolveSourceTitle(
-  providedTitle?: string,
-  scrapedTitle?: string,
-): string {
-  const provided = providedTitle?.trim();
-  const scraped = scrapedTitle?.trim();
-
-  if (provided && !looksLikeUrlTitle(provided)) return provided.slice(0, 500);
-  if (scraped && !looksLikeUrlTitle(scraped)) return scraped.slice(0, 500);
-  return (provided || scraped || 'Untitled').slice(0, 500);
-}
-
 @Injectable()
 export class SourcesService {
   constructor(
@@ -216,73 +92,44 @@ export class SourcesService {
     @Optional() sourceQualityService?: SourceQualityService,
   ) {
     this.sourceQuality = sourceQualityService ?? new SourceQualityService();
+    this.creationCompletion = new SourceCreationCompletion(
+      this.sourceQuality,
+      this.sourceJobsService,
+      this.sourceVersionService,
+    );
+    this.documentCreation = new SourceDocumentCreation(
+      this.db,
+      this.notebooksService,
+      this.acquisitionService,
+      this.sourceExtractionService,
+      this.creationCompletion,
+    );
+    this.fileCreation = new SourceFileCreation(
+      this.db,
+      this.notebooksService,
+      this.storageService,
+      this.sourceExtractionService,
+      this.sourceJobsService,
+    );
+    this.speakerOperations = new SourceSpeakerOperations(this.db);
+    this.transcription = new SourceTranscription(
+      this.sourceExtractionService,
+      this.creationCompletion,
+      this.sourceJobsService,
+      this.captionParser,
+    );
   }
 
   private readonly sourceQuality: SourceQualityService;
+  private readonly creationCompletion: SourceCreationCompletion;
+  private readonly documentCreation: SourceDocumentCreation;
+  private readonly fileCreation: SourceFileCreation;
+  private readonly speakerOperations: SourceSpeakerOperations;
+  private readonly transcription: SourceTranscription;
 
   async list(notebookId: string, options: SourceListPageOptions = {}) {
     await this.notebooksService.assertNotebookOwner(notebookId);
-    const limit = Math.min(
-      SOURCE_PAGE_MAX,
-      Math.max(
-        1,
-        Math.trunc(options.limit ?? SOURCE_PAGE_DEFAULT) || SOURCE_PAGE_DEFAULT,
-      ),
-    );
-    const cursor = options.cursor ? decodeSourceCursor(options.cursor) : null;
-    const query = options.query?.trim();
-    const filters = [
-      eq(sources.notebookId, notebookId),
-      isNull(sources.deletedAt),
-    ];
-    if (cursor) {
-      filters.push(
-        or(
-          lt(sources.createdAt, cursor.createdAt),
-          and(
-            eq(sources.createdAt, cursor.createdAt),
-            lt(sources.id, cursor.id),
-          ),
-        )!,
-      );
-    }
-    if (query) {
-      const pattern = `%${query.replace(/[\\%_]/g, '\\$&')}%`;
-      filters.push(
-        or(ilike(sources.title, pattern), ilike(sources.url, pattern))!,
-      );
-    }
-    const rows = await this.db
-      .select({
-        id: sources.id,
-        notebookId: sources.notebookId,
-        folderId: sources.folderId,
-        kind: sources.kind,
-        title: sources.title,
-        url: sources.url,
-        contentType: sources.contentType,
-        fileSize: sources.fileSize,
-        modality: sources.modality,
-        processingStatus: sources.processingStatus,
-        processingStage: sources.processingStage,
-        processingErrorCode: sources.processingErrorCode,
-        processingErrorMessage: sources.processingErrorMessage,
-        createdAt: sources.createdAt,
-      })
-      .from(sources)
-      .where(and(...filters))
-      .orderBy(desc(sources.createdAt), desc(sources.id))
-      .limit(limit + 1);
-    const hasNextPage = rows.length > limit;
-    const items = hasNextPage ? rows.slice(0, limit) : rows;
-    const last = items.at(-1);
-    return {
-      items,
-      nextCursor:
-        hasNextPage && last
-          ? encodeSourceCursor({ createdAt: last.createdAt, id: last.id })
-          : null,
-    };
+    return listByNotebook(this.db, notebookId, options);
   }
 
   async get(id: string) {
@@ -300,98 +147,11 @@ export class SourcesService {
   }
 
   async createText(notebookId: string, input: CreateTextSourceInput) {
-    await this.notebooksService.assertNotebookOwner(notebookId);
-    const title = input.title.trim();
-    const rawText = input.rawText;
-    if (rawText.trim().length === 0) {
-      throw new BadRequestError('rawText must be non-empty', {
-        messageKey: 'errors.sources.create.textEmpty',
-      });
-    }
-    if (Buffer.byteLength(rawText, 'utf8') > MAX_RAW_TEXT_BYTES) {
-      throw new BadRequestError(
-        `rawText exceeds maximum size of ${MAX_RAW_TEXT_BYTES} bytes`,
-        {
-          messageKey: 'errors.sources.create.textTooLarge',
-          params: { maxBytes: MAX_RAW_TEXT_BYTES },
-        },
-      );
-    }
-
-    const document = this.acquisitionService.fromText(rawText, title);
-    const quality = this.assessDocument(document);
-    const [row] = await this.db
-      .insert(sources)
-      .values({
-        ...lifecycleValues('document', 'indexing'),
-        notebookId,
-        kind: 'text',
-        title: document.title.slice(0, 500),
-        rawText: document.text,
-        contentHash: document.contentHash,
-        extractionMethod: document.extractionMethod,
-        extractorVersion: EXTRACTOR_VERSION,
-        normalizationVersion: NORMALIZATION_VERSION,
-      })
-      .returning();
-
-    return this.persistVersionAndIndex(row, document, quality);
+    return this.documentCreation.createText(notebookId, input);
   }
 
   async createUrl(notebookId: string, input: CreateUrlSourceInput) {
-    await this.notebooksService.assertNotebookOwner(notebookId);
-    const document = await this.acquisitionService.acquireUrl(input.url, {
-      oauthToken: input.oauthToken,
-      captionText: input.captionText,
-      captionFormat: input.captionFormat,
-    });
-
-    const scrapedText = document.text.trim();
-    if (input.minTextLength && scrapedText.length < input.minTextLength) {
-      throw new WebScrapeError(
-        `Page has too little content (${scrapedText.length} chars, need at least ${input.minTextLength})`,
-        'not_readerable',
-        {
-          messageKey: 'errors.sources.create.urlTooLittleContent',
-          params: {
-            length: scrapedText.length,
-            minLength: input.minTextLength,
-          },
-        },
-      );
-    }
-
-    const isYouTube = this.sourceExtractionService.isYouTubeUrl(input.url);
-    const modality = isYouTube ? 'video' : 'document';
-    const title = resolveSourceTitle(input.title, document.title);
-    const quality = this.assessDocument(document);
-    const [row] = await this.db
-      .insert(sources)
-      .values({
-        ...lifecycleValues(modality, 'indexing'),
-        notebookId,
-        kind: 'url',
-        addedVia: input.provenance?.addedVia ?? 'manual',
-        metadata: input.provenance?.metadata ?? null,
-        title,
-        rawText: document.text,
-        url: input.url,
-        contentHash: document.contentHash,
-        canonicalUrl: document.canonicalUrl ?? null,
-        fetchedUrl: document.fetchedUrl ?? null,
-        httpStatus: document.status ?? null,
-        fetchedAt: new Date(),
-        etag: document.etag ?? null,
-        lastModified: document.lastModified ?? null,
-        contentType: document.httpContentType ?? null,
-        extractionMethod: document.extractionMethod,
-        extractorVersion: EXTRACTOR_VERSION,
-        normalizationVersion: NORMALIZATION_VERSION,
-        robotsDecision: document.robotsDecision ?? null,
-      })
-      .returning();
-
-    return this.persistVersionAndIndex(row, document, quality);
+    return this.documentCreation.createUrl(notebookId, input);
   }
 
   async countForNotebook(notebookId: string): Promise<number> {
@@ -430,208 +190,20 @@ export class SourcesService {
     fileType: string,
     customTitle?: string,
   ) {
-    await this.notebooksService.assertNotebookOwner(notebookId);
-    if (fileBuffer.length === 0) {
-      throw new BadRequestError('Uploaded file is empty', {
-        messageKey: 'errors.sources.create.fileEmpty',
-      });
-    }
-    const isAudio = isAudioFile(fileType, fileName);
-    const isImage = isImageFile(fileType, fileName);
-    const isVideo = isVideoFile(fileType, fileName);
-    const isPptx = isPptxFile(fileType, fileName);
-    const isEpub = isEpubFile(fileType, fileName);
-    const isTabular = isTabularFile(fileType, fileName);
-    const maxBytes = isVideo
-      ? MAX_VIDEO_BYTES
-      : isAudio
-        ? MAX_AUDIO_BYTES
-        : isImage
-          ? MAX_IMAGE_BYTES
-          : isPptx
-            ? MAX_PPTX_BYTES
-            : isEpub
-              ? MAX_EPUB_BYTES
-              : isTabular
-                ? MAX_TABULAR_BYTES
-                : MAX_FILE_BYTES;
-    if (fileBuffer.length > maxBytes) {
-      throw new BadRequestError(
-        `File exceeds maximum size of ${maxBytes} bytes`,
-        {
-          messageKey: 'errors.sources.create.fileTooLarge',
-          params: { maxBytes },
-        },
-      );
-    }
-    if (!this.sourceExtractionService.isSupportedFile(fileType, fileName)) {
-      throw new BadRequestError(
-        `Unsupported file type: ${fileType || 'unknown'} (${fileName})`,
-        {
-          messageKey: 'errors.sources.upload.unsupportedType',
-          params: { contentType: fileType || 'unknown', filename: fileName },
-        },
-      );
-    }
-
-    const sha256 = createHash('sha256').update(fileBuffer).digest('hex');
-    const s3Key = buildS3Key(notebookId, sha256, fileName);
-
-    await this.storageService.putObject({
-      key: s3Key,
-      body: fileBuffer,
-      contentType: fileType || 'application/octet-stream',
-    });
-
-    const title = (customTitle?.trim() || fileName).slice(0, 500);
-    const modality = isVideo
-      ? 'video'
-      : isAudio
-        ? 'audio'
-        : isImage
-          ? 'image'
-          : isPptx
-            ? 'slides'
-            : isEpub
-              ? 'ebook'
-              : isTabular
-                ? 'dataset'
-                : 'document';
-
-    const [row] = await this.db
-      .insert(sources)
-      .values({
-        ...lifecycleValues(modality, 'uploading'),
-        notebookId,
-        kind: 'file',
-        title,
-        rawText: '',
-        s3Key,
-        contentType: fileType || null,
-        fileSize: fileBuffer.length,
-        sha256,
-      })
-      .returning();
-
-    if (this.sourceJobsService.enqueueProcessing) {
-      await this.sourceJobsService.enqueueProcessing(row.id);
-    } else {
-      await this.sourceJobsService.enqueue(row.id);
-    }
-    return row;
+    return this.fileCreation.createFile(
+      notebookId,
+      fileBuffer,
+      fileName,
+      fileType,
+      customTitle,
+    );
   }
 
   async createFileFromArtifact(
     notebookId: string,
     input: CreateFileArtifactInput,
   ) {
-    await this.notebooksService.assertNotebookOwner(notebookId);
-    if (!input.artifactKey.startsWith('pending-sources/')) {
-      throw new BadRequestError('Invalid source artifact key', {
-        messageKey: 'errors.sources.artifact.invalidKey',
-      });
-    }
-    if (!Number.isSafeInteger(input.fileSize) || input.fileSize <= 0) {
-      throw new BadRequestError('Invalid source artifact size', {
-        messageKey: 'errors.sources.artifact.invalidSize',
-      });
-    }
-    const isAudio = isAudioFile(input.contentType, input.filename);
-    const isImage = isImageFile(input.contentType, input.filename);
-    const isVideo = isVideoFile(input.contentType, input.filename);
-    const isPptx = isPptxFile(input.contentType, input.filename);
-    const isEpub = isEpubFile(input.contentType, input.filename);
-    const isTabular = isTabularFile(input.contentType, input.filename);
-    const maxBytes = isVideo
-      ? MAX_VIDEO_BYTES
-      : isAudio
-        ? MAX_AUDIO_BYTES
-        : isImage
-          ? MAX_IMAGE_BYTES
-          : isPptx
-            ? MAX_PPTX_BYTES
-            : isEpub
-              ? MAX_EPUB_BYTES
-              : isTabular
-                ? MAX_TABULAR_BYTES
-                : MAX_FILE_BYTES;
-    if (input.fileSize > maxBytes) {
-      throw new BadRequestError(
-        `File exceeds maximum size of ${maxBytes} bytes`,
-        {
-          messageKey: 'errors.sources.create.fileTooLarge',
-          params: { maxBytes },
-        },
-      );
-    }
-    if (
-      !this.sourceExtractionService.isSupportedFile(
-        input.contentType,
-        input.filename,
-      )
-    ) {
-      throw new BadRequestError(
-        `Unsupported file type: ${input.contentType || 'unknown'} (${input.filename})`,
-        {
-          messageKey: 'errors.sources.upload.unsupportedType',
-          params: {
-            contentType: input.contentType || 'unknown',
-            filename: input.filename,
-          },
-        },
-      );
-    }
-    let storedSize: number;
-    try {
-      storedSize = (await this.storageService.objectMetadata(input.artifactKey))
-        .contentLength;
-    } catch {
-      throw new BadRequestError('Source artifact is unavailable', {
-        messageKey: 'errors.sources.artifact.unavailable',
-      });
-    }
-    if (storedSize !== input.fileSize) {
-      throw new BadRequestError(
-        'Source artifact size does not match upload metadata',
-        { messageKey: 'errors.sources.artifact.sizeMismatch' },
-      );
-    }
-
-    const modality = isVideo
-      ? 'video'
-      : isAudio
-        ? 'audio'
-        : isImage
-          ? 'image'
-          : isPptx
-            ? 'slides'
-            : isEpub
-              ? 'ebook'
-              : isTabular
-                ? 'dataset'
-                : 'document';
-
-    const [row] = await this.db
-      .insert(sources)
-      .values({
-        ...lifecycleValues(modality, 'uploading'),
-        notebookId,
-        kind: 'file',
-        title: (input.title?.trim() || input.filename).slice(0, 500),
-        rawText: '',
-        s3Key: input.artifactKey,
-        contentType: input.contentType || null,
-        fileSize: input.fileSize,
-        sha256: input.sha256 ?? null,
-      })
-      .returning();
-
-    if (this.sourceJobsService.enqueueProcessing) {
-      await this.sourceJobsService.enqueueProcessing(row.id);
-    } else {
-      await this.sourceJobsService.enqueue(row.id);
-    }
-    return row;
+    return this.fileCreation.createFileFromArtifact(notebookId, input);
   }
 
   async delete(id: string) {
@@ -786,128 +358,12 @@ export class SourcesService {
     speakerMap: Record<string, string>,
   ) {
     const source = await this.fetchOwned(sourceId);
-    if (!source.currentVersionId) {
-      throw new BadRequestError('Source has no current version to update', {
-        messageKey: 'errors.sources.speaker.noCurrentVersion',
-      });
-    }
-    if (!speakerMap || Object.keys(speakerMap).length === 0) {
-      throw new BadRequestError('Speaker map must not be empty', {
-        messageKey: 'errors.sources.speaker.emptyMap',
-      });
-    }
-
-    return this.db.transaction(async (tx) => {
-      const segments = await tx
-        .select()
-        .from(sourceSegments)
-        .where(eq(sourceSegments.sourceVersionId, source.currentVersionId!))
-        .orderBy(asc(sourceSegments.ordinal));
-
-      for (const segment of segments) {
-        const currentSpeaker = segment.locator?.speaker;
-        if (currentSpeaker && speakerMap[currentSpeaker] !== undefined) {
-          const newSpeaker = speakerMap[currentSpeaker];
-          await tx
-            .update(sourceSegments)
-            .set({
-              locator: {
-                ...segment.locator,
-                speaker: newSpeaker,
-              },
-            })
-            .where(eq(sourceSegments.id, segment.id));
-        }
-      }
-
-      const chunks = await tx
-        .select()
-        .from(sourceChunks)
-        .where(
-          and(
-            eq(sourceChunks.sourceId, sourceId),
-            eq(sourceChunks.sourceVersionId, source.currentVersionId!),
-          ),
-        );
-
-      for (const chunk of chunks) {
-        const currentSpeaker = chunk.locator?.speaker;
-        if (currentSpeaker && speakerMap[currentSpeaker] !== undefined) {
-          const newSpeaker = speakerMap[currentSpeaker];
-          await tx
-            .update(sourceChunks)
-            .set({
-              locator: {
-                ...(chunk.locator ?? {}),
-                speaker: newSpeaker,
-              },
-            })
-            .where(eq(sourceChunks.id, chunk.id));
-        }
-      }
-
-      return tx
-        .select()
-        .from(sourceSegments)
-        .where(eq(sourceSegments.sourceVersionId, source.currentVersionId!))
-        .orderBy(asc(sourceSegments.ordinal));
-    });
+    return this.speakerOperations.updateSpeakerLabels(source, speakerMap);
   }
 
   async addTranscript(sourceId: string, transcriptText: string) {
     const source = await this.fetchOwned(sourceId);
-    const trimmed = transcriptText.trim();
-    if (!trimmed) {
-      throw new BadRequestError('Transcript text must not be empty', {
-        messageKey: 'errors.sources.transcript.empty',
-      });
-    }
-
-    const captionParser = this.captionParser ?? new CaptionParserService();
-    const segments = captionParser.parse(trimmed, 'auto');
-    if (segments.length === 0) {
-      throw new BadRequestError(
-        'Failed to parse transcript segments from provided text',
-        { messageKey: 'errors.sources.transcript.parseFailed' },
-      );
-    }
-
-    const isYouTube = source.url
-      ? this.sourceExtractionService.isYouTubeUrl(source.url)
-      : false;
-    const extractionMethod = isYouTube ? 'youtube' : 'transcription';
-    const text = segments.map((s) => s.content).join('\n\n');
-
-    const sections: DocumentSection[] = segments.map((seg, idx) => ({
-      headingPath: seg.speaker ? [seg.speaker] : [],
-      content: seg.content,
-      ordinal: idx,
-      kind: 'transcript' as const,
-      locator: {
-        startOffsetMs: seg.startOffsetMs,
-        endOffsetMs: seg.endOffsetMs,
-        ...(seg.speaker ? { speaker: seg.speaker } : {}),
-      },
-    }));
-
-    const doc: NormalizedDocument = {
-      title: source.title,
-      text,
-      siteName: isYouTube ? 'YouTube' : undefined,
-      extractionMethod,
-      contentType: source.contentType ?? 'text/html',
-      sourceUrl: source.url ?? undefined,
-      canonicalUrl: source.canonicalUrl ?? undefined,
-      contentHash: contentHashOf(text),
-      sections,
-    };
-
-    const quality = this.assessDocument(doc);
-    await this.persistVersion(source.id, doc, quality);
-    if (quality.status !== 'degraded') {
-      await this.sourceJobsService.enqueue(source.id);
-    }
-
+    await this.transcription.addTranscript(source, transcriptText);
     return this.get(source.id);
   }
 
@@ -923,46 +379,5 @@ export class SourcesService {
     }
     await this.notebooksService.assertNotebookOwner(source.notebookId);
     return source;
-  }
-
-  private assessDocument(
-    document: NormalizedDocument,
-  ): SourceQualityAssessment {
-    return this.sourceQuality.assess(document);
-  }
-
-  private async persistVersionAndIndex(
-    row: typeof sources.$inferSelect,
-    document: NormalizedDocument,
-    quality: SourceQualityAssessment,
-  ): Promise<typeof sources.$inferSelect> {
-    await this.persistVersion(row.id, document, quality);
-    if (quality.status === 'degraded') {
-      return this.withQualityFailure(row, quality);
-    }
-    await this.sourceJobsService.enqueue(row.id);
-    return row;
-  }
-
-  private withQualityFailure(
-    row: typeof sources.$inferSelect,
-    quality: SourceQualityAssessment,
-  ): typeof sources.$inferSelect {
-    const failure = qualityFailureOf(quality);
-    if (!failure) return row;
-    return {
-      ...row,
-      ...qualityFailureLifecycle(failure),
-    };
-  }
-
-  private async persistVersion(
-    sourceId: string,
-    document: NormalizedDocument,
-    quality: SourceQualityAssessment | null = null,
-  ): Promise<void> {
-    if (this.sourceVersionService) {
-      await this.sourceVersionService.persist(sourceId, document, { quality });
-    }
   }
 }

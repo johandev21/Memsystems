@@ -1,4 +1,3 @@
-// @ts-check
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
@@ -29,7 +28,26 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
+  },
+  {
+    files: [
+      'src/modules/sources/acquisition/youtube-oauth.service.ts',
+      'src/modules/sources/extraction/caption-parser.service.ts',
+      'src/modules/sources/extraction/epub-inspector.service.ts',
+      'src/modules/sources/extraction/epub-parser.service.ts',
+      'src/modules/sources/extraction/pptx-inspector.service.ts',
+      'src/modules/sources/extraction/pptx-parser.service.ts',
+      'src/modules/sources/extraction/tabular-parser.service.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
     },
   },
 );

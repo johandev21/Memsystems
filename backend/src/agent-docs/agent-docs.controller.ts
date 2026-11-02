@@ -3,10 +3,6 @@ import { ApiExcludeEndpoint, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { buildLlmsFullTxt, buildLlmsTxt, resolveBaseUrl } from './llms';
 
-/**
- * Agent-facing documentation. Both routes are excluded from the `api` global
- * prefix in `main.ts` so they live at `/llms.txt` and `/llms-full.txt`.
- */
 @ApiTags('API Documentation')
 @Controller()
 export class AgentDocsController {

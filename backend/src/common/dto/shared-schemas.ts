@@ -1,12 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Shared Zod schemas that appear in more than one request body.
- *
- * Each shared schema carries an explicit `id` so `z.toJSONSchema` (and
- * `cleanupOpenApiDoc`) emit a single reusable component instead of colliding
- * inline definitions with the same generated name.
- */
 export const groundingModeSchema = z.enum(['strict', 'moderate', 'free']).meta({
   id: 'GroundingMode',
   description:

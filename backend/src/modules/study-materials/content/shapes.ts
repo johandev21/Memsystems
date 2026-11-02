@@ -122,7 +122,6 @@ export const MindMapContent = z.object({
 export const AudioOverviewSection = z.object({
   heading: z.string().min(1).max(200),
   text: z.string().min(1).max(30_000),
-  // Optional for persisted legacy sections; generated sections always include turns.
   turns: z
     .array(
       z.object({
@@ -138,7 +137,6 @@ export const AudioOverviewSection = z.object({
 export const AudioOverviewContent = z
   .object({
     title: z.string().max(200),
-    // transcript remains optional for section-first content and readable for legacy MVP items.
     transcript: z.string().min(1).max(50_000).optional(),
     sections: z.array(AudioOverviewSection).min(1).max(30).optional(),
     citations: GenerationCitationsSchema,
